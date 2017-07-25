@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-mc -triple=x86_64-pc-linux %p/Inputs/comdat.s -o %t2.o -filetype=obj
 ; RUN: ld.lld -m elf_x86_64 %t.o %t2.o -o %t.so -shared

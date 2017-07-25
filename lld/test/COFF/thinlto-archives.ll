@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: rm -fr %T/thinlto-archives
 ; RUN: mkdir %T/thinlto-archives %T/thinlto-archives/a %T/thinlto-archives/b
 ; RUN: opt -thinlto-bc -o %T/thinlto-archives/main.obj %s

@@ -138,10 +138,11 @@ void elf::printHelp(const char *Argv0) {
 std::string elf::createResponseFile(const opt::InputArgList &Args) {
   SmallString<0> Data;
   raw_svector_ostream OS(Data);
+  OS << "--chroot .\n";
 
   // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
     case OPT_reproduce:
       break;
     case OPT_INPUT:
@@ -154,10 +155,9 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
       // Strip directories to prevent the issue.
       OS << "-o " << quote(sys::path::filename(Arg->getValue())) << "\n";
       break;
-    case OPT_L:
     case OPT_dynamic_list:
+    case OPT_library_path:
     case OPT_rpath:
-    case OPT_alias_script_T:
     case OPT_script:
     case OPT_version_script:
       OS << Arg->getSpelling() << " " << quote(rewritePath(Arg->getValue()))

@@ -51802,6 +51802,206 @@ entry:
   ret i8 %4
 }
 
+define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask(i4 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,8,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %1 = bitcast <2 x i64> %__b to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vcmpeqps (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,8,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to4}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm2
+; NoVLX-NEXT:    vcmpeqps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,8,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <4 x float> undef, float %load, i32 0
+  %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+
 
 define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v16i1_mask:
@@ -51969,6 +52169,203 @@ entry:
   ret i16 %4
 }
 
+define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask(i4 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,1,16,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,16,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %1 = bitcast <2 x i64> %__b to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vcmpeqps (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,1,16,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,16,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to4}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm2
+; NoVLX-NEXT:    vcmpeqps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,1,16,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,16,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <4 x float> undef, float %load, i32 0
+  %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v32i1_mask:
@@ -52103,6 +52500,170 @@ entry:
   ret i32 %4
 }
 
+define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask(i4 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1817:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1818:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1819:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %1 = bitcast <2 x i64> %__b to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1820:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1821:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1822:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vcmpeqps (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to4}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1823:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1824:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1825:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm2
+; NoVLX-NEXT:    vcmpeqps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <4 x float> undef, float %load, i32 0
+  %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
 
 define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask:
@@ -52114,12 +52675,12 @@ define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1817:
+; NoVLX-NEXT:  .Lcfi1826:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1818:
+; NoVLX-NEXT:  .Lcfi1827:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1819:
+; NoVLX-NEXT:  .Lcfi1828:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -52164,12 +52725,12 @@ define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1820:
+; NoVLX-NEXT:  .Lcfi1829:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1821:
+; NoVLX-NEXT:  .Lcfi1830:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1822:
+; NoVLX-NEXT:  .Lcfi1831:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -52215,12 +52776,12 @@ define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1823:
+; NoVLX-NEXT:  .Lcfi1832:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1824:
+; NoVLX-NEXT:  .Lcfi1833:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1825:
+; NoVLX-NEXT:  .Lcfi1834:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -52257,6 +52818,191 @@ entry:
   %4 = bitcast <64 x i1> %3 to i64
   ret i64 %4
 }
+
+define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask(i4 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1835:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1836:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1837:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; NoVLX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm3, %zmm3, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %1 = bitcast <2 x i64> %__b to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1838:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1839:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1840:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NoVLX-NEXT:    vcmpeqps (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <4 x float>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to4}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1841:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1842:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1843:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NoVLX-NEXT:    vbroadcastss (%rsi), %xmm3
+; NoVLX-NEXT:    vcmpeqps %xmm3, %xmm0, %xmm0
+; NoVLX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <4 x float> undef, float %load, i32 0
+  %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x float> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
 
 
 define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
@@ -52346,6 +53092,106 @@ entry:
   ret i16 %4
 }
 
+define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask(i8 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %1 = bitcast <4 x i64> %__b to <8 x float>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vmovaps (%rsi), %ymm1
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <8 x float>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to8}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <8 x float> undef, float %load, i32 0
+  %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask:
@@ -52358,12 +53204,12 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1826:
+; NoVLX-NEXT:  .Lcfi1844:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1827:
+; NoVLX-NEXT:  .Lcfi1845:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1828:
+; NoVLX-NEXT:  .Lcfi1846:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -52434,12 +53280,12 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1829:
+; NoVLX-NEXT:  .Lcfi1847:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1830:
+; NoVLX-NEXT:  .Lcfi1848:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1831:
+; NoVLX-NEXT:  .Lcfi1849:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -52511,12 +53357,12 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1832:
+; NoVLX-NEXT:  .Lcfi1850:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1833:
+; NoVLX-NEXT:  .Lcfi1851:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1834:
+; NoVLX-NEXT:  .Lcfi1852:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -52578,6 +53424,253 @@ entry:
   ret i32 %4
 }
 
+define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask(i8 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1853:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1854:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1855:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    kandw %k1, %k0, %k0
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %1 = bitcast <4 x i64> %__b to <8 x float>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1856:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1857:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1858:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vmovaps (%rsi), %ymm1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    kandw %k1, %k0, %k0
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <8 x float>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to8}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1859:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1860:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1861:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    kandw %k1, %k0, %k0
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <8 x float> undef, float %load, i32 0
+  %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
 
 define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask:
@@ -52590,12 +53683,12 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1835:
+; NoVLX-NEXT:  .Lcfi1862:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1836:
+; NoVLX-NEXT:  .Lcfi1863:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1837:
+; NoVLX-NEXT:  .Lcfi1864:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -52671,12 +53764,12 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1838:
+; NoVLX-NEXT:  .Lcfi1865:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1839:
+; NoVLX-NEXT:  .Lcfi1866:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1840:
+; NoVLX-NEXT:  .Lcfi1867:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -52753,12 +53846,12 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1841:
+; NoVLX-NEXT:  .Lcfi1868:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1842:
+; NoVLX-NEXT:  .Lcfi1869:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1843:
+; NoVLX-NEXT:  .Lcfi1870:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -52825,6 +53918,268 @@ entry:
   ret i64 %4
 }
 
+define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask(i8 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1871:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1872:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1873:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    kandw %k1, %k0, %k0
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %1 = bitcast <4 x i64> %__b to <8 x float>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1874:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1875:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1876:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vmovaps (%rsi), %ymm1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    kandw %k1, %k0, %k0
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <8 x float>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to8}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1877:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1878:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1879:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    kandw %k1, %k0, %k0
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <8 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <8 x float> undef, float %load, i32 0
+  %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <8 x float> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v32i1_mask:
@@ -52837,12 +54192,12 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-LABEL: test_vcmpoeqps_v16i1_v32i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1844:
+; NoVLX-NEXT:  .Lcfi1880:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1845:
+; NoVLX-NEXT:  .Lcfi1881:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1846:
+; NoVLX-NEXT:  .Lcfi1882:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    pushq %r15
 ; NoVLX-NEXT:    pushq %r14
@@ -52851,15 +54206,15 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    pushq %rbx
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
-; NoVLX-NEXT:  .Lcfi1847:
+; NoVLX-NEXT:  .Lcfi1883:
 ; NoVLX-NEXT:    .cfi_offset %rbx, -56
-; NoVLX-NEXT:  .Lcfi1848:
+; NoVLX-NEXT:  .Lcfi1884:
 ; NoVLX-NEXT:    .cfi_offset %r12, -48
-; NoVLX-NEXT:  .Lcfi1849:
+; NoVLX-NEXT:  .Lcfi1885:
 ; NoVLX-NEXT:    .cfi_offset %r13, -40
-; NoVLX-NEXT:  .Lcfi1850:
+; NoVLX-NEXT:  .Lcfi1886:
 ; NoVLX-NEXT:    .cfi_offset %r14, -32
-; NoVLX-NEXT:  .Lcfi1851:
+; NoVLX-NEXT:  .Lcfi1887:
 ; NoVLX-NEXT:    .cfi_offset %r15, -24
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
 ; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -52961,12 +54316,12 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-LABEL: test_vcmpoeqps_v16i1_v32i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1852:
+; NoVLX-NEXT:  .Lcfi1888:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1853:
+; NoVLX-NEXT:  .Lcfi1889:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1854:
+; NoVLX-NEXT:  .Lcfi1890:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    pushq %r15
 ; NoVLX-NEXT:    pushq %r14
@@ -52975,15 +54330,15 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    pushq %rbx
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
-; NoVLX-NEXT:  .Lcfi1855:
+; NoVLX-NEXT:  .Lcfi1891:
 ; NoVLX-NEXT:    .cfi_offset %rbx, -56
-; NoVLX-NEXT:  .Lcfi1856:
+; NoVLX-NEXT:  .Lcfi1892:
 ; NoVLX-NEXT:    .cfi_offset %r12, -48
-; NoVLX-NEXT:  .Lcfi1857:
+; NoVLX-NEXT:  .Lcfi1893:
 ; NoVLX-NEXT:    .cfi_offset %r13, -40
-; NoVLX-NEXT:  .Lcfi1858:
+; NoVLX-NEXT:  .Lcfi1894:
 ; NoVLX-NEXT:    .cfi_offset %r14, -32
-; NoVLX-NEXT:  .Lcfi1859:
+; NoVLX-NEXT:  .Lcfi1895:
 ; NoVLX-NEXT:    .cfi_offset %r15, -24
 ; NoVLX-NEXT:    vcmpeqps (%rdi), %zmm0, %k0
 ; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -53086,12 +54441,12 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, float*
 ; NoVLX-LABEL: test_vcmpoeqps_v16i1_v32i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1860:
+; NoVLX-NEXT:  .Lcfi1896:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1861:
+; NoVLX-NEXT:  .Lcfi1897:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1862:
+; NoVLX-NEXT:  .Lcfi1898:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    pushq %r15
 ; NoVLX-NEXT:    pushq %r14
@@ -53100,15 +54455,15 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, float*
 ; NoVLX-NEXT:    pushq %rbx
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
-; NoVLX-NEXT:  .Lcfi1863:
+; NoVLX-NEXT:  .Lcfi1899:
 ; NoVLX-NEXT:    .cfi_offset %rbx, -56
-; NoVLX-NEXT:  .Lcfi1864:
+; NoVLX-NEXT:  .Lcfi1900:
 ; NoVLX-NEXT:    .cfi_offset %r12, -48
-; NoVLX-NEXT:  .Lcfi1865:
+; NoVLX-NEXT:  .Lcfi1901:
 ; NoVLX-NEXT:    .cfi_offset %r13, -40
-; NoVLX-NEXT:  .Lcfi1866:
+; NoVLX-NEXT:  .Lcfi1902:
 ; NoVLX-NEXT:    .cfi_offset %r14, -32
-; NoVLX-NEXT:  .Lcfi1867:
+; NoVLX-NEXT:  .Lcfi1903:
 ; NoVLX-NEXT:    .cfi_offset %r15, -24
 ; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -53201,6 +54556,394 @@ entry:
   ret i32 %4
 }
 
+define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask(i16 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1904:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1905:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1906:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:  .Lcfi1907:
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:  .Lcfi1908:
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:  .Lcfi1909:
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:  .Lcfi1910:
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:  .Lcfi1911:
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %1 = bitcast <8 x i64> %__b to <16 x float>
+  %2 = fcmp oeq <16 x float> %0, %1
+  %3 = bitcast i16 %__u to <16 x i1>
+  %4 = and <16 x i1> %2, %3
+  %5 = shufflevector <16 x i1> %4, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1912:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1913:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1914:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:  .Lcfi1915:
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:  .Lcfi1916:
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:  .Lcfi1917:
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:  .Lcfi1918:
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:  .Lcfi1919:
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps (%rsi), %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %load = load <8 x i64>, <8 x i64>* %__b
+  %1 = bitcast <8 x i64> %load to <16 x float>
+  %2 = fcmp oeq <16 x float> %0, %1
+  %3 = bitcast i16 %__u to <16 x i1>
+  %4 = and <16 x i1> %2, %3
+  %5 = shufflevector <16 x i1> %4, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1920:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1921:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1922:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:  .Lcfi1923:
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:  .Lcfi1924:
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:  .Lcfi1925:
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:  .Lcfi1926:
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:  .Lcfi1927:
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <16 x float> undef, float %load, i32 0
+  %1 = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <16 x float> %0, %1
+  %3 = bitcast i16 %__u to <16 x i1>
+  %4 = and <16 x i1> %2, %3
+  %5 = shufflevector <16 x i1> %4, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_sae_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v32i1_sae_mask:
@@ -53223,6 +54966,30 @@ entry:
   ret i32 %3
 }
 
+define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_sae_mask(i16 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_sae_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovw %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_sae_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %1 = bitcast <8 x i64> %__b to <16 x float>
+  %2 = call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, i16 %__u, i32 8)
+  %3 = zext i16 %2 to i32
+  ret i32 %3
+}
+
+
 
 define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v64i1_mask:
@@ -53235,12 +55002,12 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-LABEL: test_vcmpoeqps_v16i1_v64i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1868:
+; NoVLX-NEXT:  .Lcfi1928:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1869:
+; NoVLX-NEXT:  .Lcfi1929:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1870:
+; NoVLX-NEXT:  .Lcfi1930:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    pushq %r15
 ; NoVLX-NEXT:    pushq %r14
@@ -53249,15 +55016,15 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    pushq %rbx
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:  .Lcfi1871:
+; NoVLX-NEXT:  .Lcfi1931:
 ; NoVLX-NEXT:    .cfi_offset %rbx, -56
-; NoVLX-NEXT:  .Lcfi1872:
+; NoVLX-NEXT:  .Lcfi1932:
 ; NoVLX-NEXT:    .cfi_offset %r12, -48
-; NoVLX-NEXT:  .Lcfi1873:
+; NoVLX-NEXT:  .Lcfi1933:
 ; NoVLX-NEXT:    .cfi_offset %r13, -40
-; NoVLX-NEXT:  .Lcfi1874:
+; NoVLX-NEXT:  .Lcfi1934:
 ; NoVLX-NEXT:    .cfi_offset %r14, -32
-; NoVLX-NEXT:  .Lcfi1875:
+; NoVLX-NEXT:  .Lcfi1935:
 ; NoVLX-NEXT:    .cfi_offset %r15, -24
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
 ; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -53364,12 +55131,12 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-LABEL: test_vcmpoeqps_v16i1_v64i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1876:
+; NoVLX-NEXT:  .Lcfi1936:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1877:
+; NoVLX-NEXT:  .Lcfi1937:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1878:
+; NoVLX-NEXT:  .Lcfi1938:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    pushq %r15
 ; NoVLX-NEXT:    pushq %r14
@@ -53378,15 +55145,15 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    pushq %rbx
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:  .Lcfi1879:
+; NoVLX-NEXT:  .Lcfi1939:
 ; NoVLX-NEXT:    .cfi_offset %rbx, -56
-; NoVLX-NEXT:  .Lcfi1880:
+; NoVLX-NEXT:  .Lcfi1940:
 ; NoVLX-NEXT:    .cfi_offset %r12, -48
-; NoVLX-NEXT:  .Lcfi1881:
+; NoVLX-NEXT:  .Lcfi1941:
 ; NoVLX-NEXT:    .cfi_offset %r13, -40
-; NoVLX-NEXT:  .Lcfi1882:
+; NoVLX-NEXT:  .Lcfi1942:
 ; NoVLX-NEXT:    .cfi_offset %r14, -32
-; NoVLX-NEXT:  .Lcfi1883:
+; NoVLX-NEXT:  .Lcfi1943:
 ; NoVLX-NEXT:    .cfi_offset %r15, -24
 ; NoVLX-NEXT:    vcmpeqps (%rdi), %zmm0, %k0
 ; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -53494,12 +55261,12 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, float*
 ; NoVLX-LABEL: test_vcmpoeqps_v16i1_v64i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1884:
+; NoVLX-NEXT:  .Lcfi1944:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1885:
+; NoVLX-NEXT:  .Lcfi1945:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1886:
+; NoVLX-NEXT:  .Lcfi1946:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    pushq %r15
 ; NoVLX-NEXT:    pushq %r14
@@ -53508,15 +55275,15 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, float*
 ; NoVLX-NEXT:    pushq %rbx
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:  .Lcfi1887:
+; NoVLX-NEXT:  .Lcfi1947:
 ; NoVLX-NEXT:    .cfi_offset %rbx, -56
-; NoVLX-NEXT:  .Lcfi1888:
+; NoVLX-NEXT:  .Lcfi1948:
 ; NoVLX-NEXT:    .cfi_offset %r12, -48
-; NoVLX-NEXT:  .Lcfi1889:
+; NoVLX-NEXT:  .Lcfi1949:
 ; NoVLX-NEXT:    .cfi_offset %r13, -40
-; NoVLX-NEXT:  .Lcfi1890:
+; NoVLX-NEXT:  .Lcfi1950:
 ; NoVLX-NEXT:    .cfi_offset %r14, -32
-; NoVLX-NEXT:  .Lcfi1891:
+; NoVLX-NEXT:  .Lcfi1951:
 ; NoVLX-NEXT:    .cfi_offset %r15, -24
 ; NoVLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
 ; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -53614,6 +55381,409 @@ entry:
   ret i64 %4
 }
 
+define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask(i16 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1952:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1953:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1954:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:  .Lcfi1955:
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:  .Lcfi1956:
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:  .Lcfi1957:
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:  .Lcfi1958:
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:  .Lcfi1959:
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %1 = bitcast <8 x i64> %__b to <16 x float>
+  %2 = fcmp oeq <16 x float> %0, %1
+  %3 = bitcast i16 %__u to <16 x i1>
+  %4 = and <16 x i1> %2, %3
+  %5 = shufflevector <16 x i1> %4, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi), %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1960:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1961:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1962:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:  .Lcfi1963:
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:  .Lcfi1964:
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:  .Lcfi1965:
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:  .Lcfi1966:
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:  .Lcfi1967:
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps (%rsi), %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %load = load <8 x i64>, <8 x i64>* %__b
+  %1 = bitcast <8 x i64> %load to <16 x float>
+  %2 = fcmp oeq <16 x float> %0, %1
+  %3 = bitcast i16 %__u to <16 x i1>
+  %4 = and <16 x i1> %2, %3
+  %5 = shufflevector <16 x i1> %4, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, float* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1968:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1969:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1970:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:  .Lcfi1971:
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:  .Lcfi1972:
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:  .Lcfi1973:
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:  .Lcfi1974:
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:  .Lcfi1975:
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqps (%rsi){1to16}, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %load = load float, float* %__b
+  %vec = insertelement <16 x float> undef, float %load, i32 0
+  %1 = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <16 x float> %0, %1
+  %3 = bitcast i16 %__u to <16 x i1>
+  %4 = and <16 x i1> %2, %3
+  %5 = shufflevector <16 x i1> %4, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+
 
 define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_sae_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v64i1_sae_mask:
@@ -53637,6 +55807,32 @@ entry:
   %3 = zext i16 %2 to i64
   ret i64 %3
 }
+
+define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_sae_mask(i16 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_sae_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    movzwl %ax, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_sae_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movzwl %ax, %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <16 x float>
+  %1 = bitcast <8 x i64> %__b to <16 x float>
+  %2 = call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, i16 %__u, i32 8)
+  %3 = zext i16 %2 to i64
+  ret i64 %3
+}
+
 
 
 declare i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> , <8 x double> , i32, i8, i32)
@@ -53724,6 +55920,119 @@ entry:
   %4 = bitcast <4 x i1> %3 to i4
   ret i4 %4
 }
+
+define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask(i2 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; NoVLX-NEXT:    vpslld $31, %ymm0, %ymm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %1 = bitcast <2 x i64> %__b to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %6 = bitcast <4 x i1> %5 to i4
+  ret i4 %6
+}
+
+define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; NoVLX-NEXT:    vpslld $31, %ymm0, %ymm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %6 = bitcast <4 x i1> %5 to i4
+  ret i4 %6
+}
+
+define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to2}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; NoVLX-NEXT:    vcmpeqpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; NoVLX-NEXT:    vpslld $31, %ymm0, %ymm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <2 x double> undef, double %load, i32 0
+  %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %6 = bitcast <4 x i1> %5 to i4
+  ret i4 %6
+}
+
 
 
 define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
@@ -53847,6 +56156,155 @@ entry:
   ret i8 %4
 }
 
+define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask(i2 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %1 = bitcast <2 x i64> %__b to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to2}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; NoVLX-NEXT:    vcmpeqpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <2 x double> undef, double %load, i32 0
+  %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+
 
 define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v16i1_mask:
@@ -53966,6 +56424,152 @@ entry:
   ret i16 %4
 }
 
+define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask(i2 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %1 = bitcast <2 x i64> %__b to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to2}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; NoVLX-NEXT:    vcmpeqpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <2 x double> undef, double %load, i32 0
+  %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask:
@@ -53977,12 +56581,12 @@ define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1892:
+; NoVLX-NEXT:  .Lcfi1976:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1893:
+; NoVLX-NEXT:  .Lcfi1977:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1894:
+; NoVLX-NEXT:  .Lcfi1978:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -54020,12 +56624,12 @@ define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1895:
+; NoVLX-NEXT:  .Lcfi1979:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1896:
+; NoVLX-NEXT:  .Lcfi1980:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1897:
+; NoVLX-NEXT:  .Lcfi1981:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -54064,12 +56668,12 @@ define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1898:
+; NoVLX-NEXT:  .Lcfi1982:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1899:
+; NoVLX-NEXT:  .Lcfi1983:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1900:
+; NoVLX-NEXT:  .Lcfi1984:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -54100,6 +56704,167 @@ entry:
   ret i32 %4
 }
 
+define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask(i2 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1985:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1986:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1987:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %1 = bitcast <2 x i64> %__b to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1988:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1989:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1990:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to2}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi1991:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi1992:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi1993:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; NoVLX-NEXT:    vcmpeqpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <2 x double> undef, double %load, i32 0
+  %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
 
 define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask:
@@ -54111,12 +56876,12 @@ define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1901:
+; NoVLX-NEXT:  .Lcfi1994:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1902:
+; NoVLX-NEXT:  .Lcfi1995:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1903:
+; NoVLX-NEXT:  .Lcfi1996:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -54161,12 +56926,12 @@ define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1904:
+; NoVLX-NEXT:  .Lcfi1997:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1905:
+; NoVLX-NEXT:  .Lcfi1998:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1906:
+; NoVLX-NEXT:  .Lcfi1999:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -54212,12 +56977,12 @@ define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1907:
+; NoVLX-NEXT:  .Lcfi2000:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1908:
+; NoVLX-NEXT:  .Lcfi2001:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1909:
+; NoVLX-NEXT:  .Lcfi2002:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -54254,6 +57019,188 @@ entry:
   %4 = bitcast <64 x i1> %3 to i64
   ret i64 %4
 }
+
+define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask(i2 zeroext %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2003:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2004:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2005:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; NoVLX-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm3, %zmm3, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %1 = bitcast <2 x i64> %__b to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2006:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2007:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2008:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load <2 x i64>, <2 x i64>* %__b
+  %1 = bitcast <2 x i64> %load to <2 x double>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to2}, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2009:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2010:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2011:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NoVLX-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; NoVLX-NEXT:    vcmpeqpd %xmm3, %xmm0, %xmm0
+; NoVLX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <2 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <2 x double> undef, double %load, i32 0
+  %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  %2 = fcmp oeq <2 x double> %0, %1
+  %3 = bitcast i2 %__u to <2 x i1>
+  %4 = and <2 x i1> %2, %3
+  %5 = shufflevector <2 x i1> %4, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
 
 
 define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
@@ -54431,6 +57378,212 @@ entry:
   ret i8 %4
 }
 
+define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask(i4 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,8,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %1 = bitcast <4 x i64> %__b to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,8,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to4}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm2
+; NoVLX-NEXT:    vcmpeqpd %ymm2, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,8,2,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,3,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpsllq $63, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,8,4,5,6,7]
+; NoVLX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpsllq $63, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <4 x double> undef, double %load, i32 0
+  %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <8 x i1> %5 to i8
+  ret i8 %6
+}
+
+
 
 define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v16i1_mask:
@@ -54604,6 +57757,209 @@ entry:
   ret i16 %4
 }
 
+define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask(i4 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,1,16,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,16,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %1 = bitcast <4 x i64> %__b to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,1,16,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,16,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to4}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm2
+; NoVLX-NEXT:    vcmpeqpd %ymm2, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    andl $1, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $1, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $1, %k1, %k1
+; NoVLX-NEXT:    korw %k0, %k1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,16,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm1, %zmm2, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,1,16,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm2, %zmm1, %zmm3
+; NoVLX-NEXT:    vpslld $31, %zmm3, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NoVLX-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,2,16,4,5,6,7,8,9,10,11,12,13,14,15]
+; NoVLX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
+; NoVLX-NEXT:    vpslld $31, %zmm2, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <4 x double> undef, double %load, i32 0
+  %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask:
@@ -54616,12 +57972,12 @@ define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1910:
+; NoVLX-NEXT:  .Lcfi2012:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1911:
+; NoVLX-NEXT:  .Lcfi2013:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1912:
+; NoVLX-NEXT:  .Lcfi2014:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -54661,12 +58017,12 @@ define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1913:
+; NoVLX-NEXT:  .Lcfi2015:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1914:
+; NoVLX-NEXT:  .Lcfi2016:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1915:
+; NoVLX-NEXT:  .Lcfi2017:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -54707,12 +58063,12 @@ define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1916:
+; NoVLX-NEXT:  .Lcfi2018:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1917:
+; NoVLX-NEXT:  .Lcfi2019:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1918:
+; NoVLX-NEXT:  .Lcfi2020:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -54744,6 +58100,176 @@ entry:
   ret i32 %4
 }
 
+define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask(i4 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2021:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2022:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2023:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %1 = bitcast <4 x i64> %__b to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2024:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2025:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2026:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to4}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2027:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2028:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2029:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm2
+; NoVLX-NEXT:    vcmpeqpd %ymm2, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <4 x double> undef, double %load, i32 0
+  %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
 
 define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask:
@@ -54756,12 +58282,12 @@ define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1919:
+; NoVLX-NEXT:  .Lcfi2030:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1920:
+; NoVLX-NEXT:  .Lcfi2031:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1921:
+; NoVLX-NEXT:  .Lcfi2032:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -54808,12 +58334,12 @@ define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1922:
+; NoVLX-NEXT:  .Lcfi2033:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1923:
+; NoVLX-NEXT:  .Lcfi2034:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1924:
+; NoVLX-NEXT:  .Lcfi2035:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -54861,12 +58387,12 @@ define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1925:
+; NoVLX-NEXT:  .Lcfi2036:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1926:
+; NoVLX-NEXT:  .Lcfi2037:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1927:
+; NoVLX-NEXT:  .Lcfi2038:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -54904,6 +58430,197 @@ entry:
   %4 = bitcast <64 x i1> %3 to i64
   ret i64 %4
 }
+
+define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask(i4 zeroext %__u, <4 x i64> %__a, <4 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2039:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2040:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2041:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm2, %ymm2
+; NoVLX-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; NoVLX-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm3, %zmm3, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %1 = bitcast <4 x i64> %__b to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2042:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2043:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2044:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load <4 x i64>, <4 x i64>* %__b
+  %1 = bitcast <4 x i64> %load to <4 x double>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; VLX-NEXT:    kmovb -{{[0-9]+}}(%rsp), %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to4}, %ymm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2045:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2046:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2047:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $96, %rsp
+; NoVLX-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NoVLX-NEXT:    vpmovqd %zmm1, %ymm1
+; NoVLX-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NoVLX-NEXT:    vbroadcastsd (%rsi), %ymm3
+; NoVLX-NEXT:    vcmpeqpd %ymm3, %ymm0, %ymm0
+; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
+; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vptestmd %zmm2, %zmm2, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; NoVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; NoVLX-NEXT:    vpslld $31, %zmm1, %zmm1
+; NoVLX-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__a to <4 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <4 x double> undef, double %load, i32 0
+  %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <4 x double> %0, %1
+  %3 = bitcast i4 %__u to <4 x i1>
+  %4 = and <4 x i1> %2, %3
+  %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
 
 
 define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
@@ -54981,6 +58698,94 @@ entry:
   ret i16 %4
 }
 
+define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask(i8 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %1 = bitcast <8 x i64> %__b to <8 x double>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %load = load <8 x i64>, <8 x i64>* %__b
+  %1 = bitcast <8 x i64> %load to <8 x double>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <8 x double> undef, double %load, i32 0
+  %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <16 x i1> %5 to i16
+  ret i16 %6
+}
+
+
 
 define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_sae_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v16i1_sae_mask:
@@ -55007,6 +58812,34 @@ entry:
   ret i16 %3
 }
 
+define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_sae_mask(i8 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_sae_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmplepd {sae}, %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    movzbl %al, %eax
+; VLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_sae_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmplepd {sae}, %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movzbl %al, %eax
+; NoVLX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %1 = bitcast <8 x i64> %__b to <8 x double>
+  %2 = call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i8 %__u, i32 8)
+  %3 = zext i8 %2 to i16
+  ret i16 %3
+}
+
+
 
 define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_mask:
@@ -55019,12 +58852,12 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1928:
+; NoVLX-NEXT:  .Lcfi2048:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1929:
+; NoVLX-NEXT:  .Lcfi2049:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1930:
+; NoVLX-NEXT:  .Lcfi2050:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -55093,12 +58926,12 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1931:
+; NoVLX-NEXT:  .Lcfi2051:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1932:
+; NoVLX-NEXT:  .Lcfi2052:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1933:
+; NoVLX-NEXT:  .Lcfi2053:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -55168,12 +59001,12 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1934:
+; NoVLX-NEXT:  .Lcfi2054:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1935:
+; NoVLX-NEXT:  .Lcfi2055:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1936:
+; NoVLX-NEXT:  .Lcfi2056:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
@@ -55233,6 +59066,244 @@ entry:
   ret i32 %4
 }
 
+define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask(i8 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2057:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2058:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2059:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %1 = bitcast <8 x i64> %__b to <8 x double>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2060:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2061:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2062:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %load = load <8 x i64>, <8 x i64>* %__b
+  %1 = bitcast <8 x i64> %load to <8 x double>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2063:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2064:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2065:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <8 x double> undef, double %load, i32 0
+  %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
 
 define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_sae_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_sae_mask:
@@ -55256,6 +59327,31 @@ entry:
   ret i32 %3
 }
 
+define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_sae_mask(i8 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_sae_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmplepd {sae}, %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovb %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_sae_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmplepd {sae}, %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movzbl %al, %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %1 = bitcast <8 x i64> %__b to <8 x double>
+  %2 = call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i8 %__u, i32 8)
+  %3 = zext i8 %2 to i32
+  ret i32 %3
+}
+
+
 
 define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_mask:
@@ -55268,12 +59364,12 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_mask:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1937:
+; NoVLX-NEXT:  .Lcfi2066:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1938:
+; NoVLX-NEXT:  .Lcfi2067:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1939:
+; NoVLX-NEXT:  .Lcfi2068:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -55347,12 +59443,12 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_mask_mem:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1940:
+; NoVLX-NEXT:  .Lcfi2069:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1941:
+; NoVLX-NEXT:  .Lcfi2070:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1942:
+; NoVLX-NEXT:  .Lcfi2071:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -55427,12 +59523,12 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_mask_mem_b:
 ; NoVLX:       # BB#0: # %entry
 ; NoVLX-NEXT:    pushq %rbp
-; NoVLX-NEXT:  .Lcfi1943:
+; NoVLX-NEXT:  .Lcfi2072:
 ; NoVLX-NEXT:    .cfi_def_cfa_offset 16
-; NoVLX-NEXT:  .Lcfi1944:
+; NoVLX-NEXT:  .Lcfi2073:
 ; NoVLX-NEXT:    .cfi_offset %rbp, -16
 ; NoVLX-NEXT:    movq %rsp, %rbp
-; NoVLX-NEXT:  .Lcfi1945:
+; NoVLX-NEXT:  .Lcfi2074:
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
@@ -55497,6 +59593,259 @@ entry:
   ret i64 %4
 }
 
+define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask(i8 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2075:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2076:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2077:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %1 = bitcast <8 x i64> %__b to <8 x double>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2078:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2079:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2080:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %load = load <8 x i64>, <8 x i64>* %__b
+  %1 = bitcast <8 x i64> %load to <8 x double>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, double* %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovq %k0, %rax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:  .Lcfi2081:
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:  .Lcfi2082:
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:  .Lcfi2083:
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $64, %rsp
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; NoVLX-NEXT:    shlq $32, %rcx
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    orq %rcx, %rax
+; NoVLX-NEXT:    movq %rbp, %rsp
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %load = load double, double* %__b
+  %vec = insertelement <8 x double> undef, double %load, i32 0
+  %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %2 = fcmp oeq <8 x double> %0, %1
+  %3 = bitcast i8 %__u to <8 x i1>
+  %4 = and <8 x i1> %2, %3
+  %5 = shufflevector <8 x i1> %4, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = bitcast <64 x i1> %5 to i64
+  ret i64 %6
+}
+
+
 
 define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_sae_mask(<8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_sae_mask:
@@ -55517,6 +59866,31 @@ entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
   %2 = call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i8 -1, i32 8)
+  %3 = zext i8 %2 to i64
+  ret i64 %3
+}
+
+define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_sae_mask(i8 zeroext %__u, <8 x i64> %__a, <8 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_sae_mask:
+; VLX:       # BB#0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vcmplepd {sae}, %zmm1, %zmm0, %k0 {%k1}
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    movzbl %al, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_sae_mask:
+; NoVLX:       # BB#0: # %entry
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vcmplepd {sae}, %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    movzbl %al, %eax
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__a to <8 x double>
+  %1 = bitcast <8 x i64> %__b to <8 x double>
+  %2 = call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i8 %__u, i32 8)
   %3 = zext i8 %2 to i64
   ret i64 %3
 }

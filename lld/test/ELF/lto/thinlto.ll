@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; Basic ThinLTO tests.
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o

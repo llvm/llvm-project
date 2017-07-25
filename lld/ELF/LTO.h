@@ -30,7 +30,7 @@ namespace llvm {
 namespace lto {
 class LTO;
 }
-}
+} // namespace llvm
 
 namespace lld {
 namespace elf {
@@ -51,7 +51,7 @@ private:
   std::vector<SmallString<0>> Buff;
   std::vector<std::unique_ptr<MemoryBuffer>> Files;
 };
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

@@ -154,9 +154,9 @@ public:
 
   SBBreakpoint FindBreakpointByID(lldb::break_id_t);
 
-  void Append(const SBBreakpoint &sb_file);
+  void Append(const SBBreakpoint &sb_bkpt);
 
-  bool AppendIfUnique(const SBBreakpoint &sb_file);
+  bool AppendIfUnique(const SBBreakpoint &sb_bkpt);
 
   void AppendByID(lldb::break_id_t id);
 

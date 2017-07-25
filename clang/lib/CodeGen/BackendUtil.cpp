@@ -871,6 +871,14 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
 
+  // Register the target library analysis directly and give it a customized
+  // preset TLI.
+  Triple TargetTriple(TheModule->getTargetTriple());
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      createTLII(TargetTriple, CodeGenOpts));
+  FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
+  MAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
+
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);

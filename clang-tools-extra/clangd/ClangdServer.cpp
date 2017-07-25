@@ -205,14 +205,11 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
 
   std::vector<CompletionItem> Result;
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  // It would be nice to use runOnUnitWithoutReparse here, but we can't
-  // guarantee the correctness of code completion cache here if we don't do the
-  // reparse.
-  Units.runOnUnit(File, *OverridenContents, ResourceDir, CDB, PCHs,
-                  TaggedFS.Value, [&](ClangdUnit &Unit) {
-                    Result = Unit.codeComplete(*OverridenContents, Pos,
-                                               TaggedFS.Value);
-                  });
+  Units.runOnUnitWithoutReparse(File, *OverridenContents, ResourceDir, CDB,
+                                PCHs, TaggedFS.Value, [&](ClangdUnit &Unit) {
+                                  Result = Unit.codeComplete(
+                                      *OverridenContents, Pos, TaggedFS.Value);
+                                });
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 

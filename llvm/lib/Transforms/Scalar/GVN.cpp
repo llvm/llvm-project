@@ -1168,6 +1168,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
                                  LI->isVolatile(), LI->getAlignment(),
                                  LI->getOrdering(), LI->getSyncScopeID(),
                                  UnavailablePred->getTerminator());
+    NewLoad->setDebugLoc(LI->getDebugLoc());
 
     // Transfer the old load's AA tags to the new load.
     AAMDNodes Tags;

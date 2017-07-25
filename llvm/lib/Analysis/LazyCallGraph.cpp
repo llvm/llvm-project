@@ -144,7 +144,7 @@ LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
     // synthesize reference edges to it to model the fact that LLVM can turn
     // arbitrary code into a library function call.
     if (isKnownLibFunction(F, TLI))
-      LibFunctions.push_back(&F);
+      LibFunctions.insert(&F);
 
     if (F.hasLocalLinkage())
       continue;
@@ -1607,6 +1607,11 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   // functions which recursively call themselves.
   assert(F.use_empty() &&
          "This routine should only be called on trivially dead functions!");
+
+  // We shouldn't remove library functions as they are never really dead while
+  // the call graph is in use -- every function definition refers to them.
+  assert(!isLibFunction(F) &&
+         "Must not remove lib functions from the call graph!");
 
   auto NI = NodeMap.find(&F);
   if (NI == NodeMap.end())

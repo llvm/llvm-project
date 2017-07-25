@@ -188,6 +188,9 @@ public:
     return SectionName == ".debug" || SectionName.startswith(".debug$");
   }
 
+  // True if this is a DWARF debug info chunk.
+  bool isDWARF() const { return SectionName.startswith(".debug_"); }
+
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {
     return llvm::make_range(symbol_iterator(File, Relocs.begin()),

@@ -817,9 +817,7 @@ unsigned MipsGotSection::getLocalEntriesNum() const {
          LocalEntries32.size();
 }
 
-void MipsGotSection::finalizeContents() {
-  updateAllocSize();
-}
+void MipsGotSection::finalizeContents() { updateAllocSize(); }
 
 void MipsGotSection::updateAllocSize() {
   PageEntriesNum = 0;
@@ -843,9 +841,7 @@ bool MipsGotSection::empty() const {
   return Config->Relocatable;
 }
 
-uint64_t MipsGotSection::getGp() const {
-  return ElfSym::MipsGp->getVA(0);
-}
+uint64_t MipsGotSection::getGp() const { return ElfSym::MipsGp->getVA(0); }
 
 static uint64_t readUint(uint8_t *Buf) {
   if (Config->Is64)
@@ -1614,7 +1610,7 @@ HashTableSection<ELFT>::HashTableSection()
 template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
   getParent()->Link = InX::DynSymTab->getParent()->SectionIndex;
 
-  unsigned NumEntries = 2;                            // nbucket and nchain.
+  unsigned NumEntries = 2;                       // nbucket and nchain.
   NumEntries += InX::DynSymTab->getNumSymbols(); // The chain entries.
 
   // Create as many buckets as there are symbols.
@@ -1745,7 +1741,9 @@ static std::vector<AddressEntry> readAddressArea(DWARFContext &Dwarf,
       // Range list with zero size has no effect.
       if (R.LowPC == R.HighPC)
         continue;
-      Ret.push_back({cast<InputSection>(S), R.LowPC, R.HighPC, CurrentCu});
+      auto *IS = cast<InputSection>(S);
+      uint64_t Offset = IS->getOffsetInFile();
+      Ret.push_back({IS, R.LowPC - Offset, R.HighPC - Offset, CurrentCu});
     }
     ++CurrentCu;
   }
@@ -1754,8 +1752,8 @@ static std::vector<AddressEntry> readAddressArea(DWARFContext &Dwarf,
 
 static std::vector<NameTypeEntry> readPubNamesAndTypes(DWARFContext &Dwarf,
                                                        bool IsLE) {
-  StringRef Data[] = {Dwarf.getGnuPubNamesSection(),
-                      Dwarf.getGnuPubTypesSection()};
+  StringRef Data[] = {Dwarf.getDWARFObj().getGnuPubNamesSection(),
+                      Dwarf.getDWARFObj().getGnuPubTypesSection()};
 
   std::vector<NameTypeEntry> Ret;
   for (StringRef D : Data) {
@@ -1805,7 +1803,7 @@ void GdbIndexSection::buildIndex() {
   }
 }
 
-static GdbIndexChunk readDwarf(DWARFContextInMemory &Dwarf, InputSection *Sec) {
+static GdbIndexChunk readDwarf(DWARFContext &Dwarf, InputSection *Sec) {
   GdbIndexChunk Ret;
   Ret.DebugInfoSec = Sec;
   Ret.CompilationUnits = readCuList(Dwarf);
@@ -1817,16 +1815,8 @@ static GdbIndexChunk readDwarf(DWARFContextInMemory &Dwarf, InputSection *Sec) {
 template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
   std::vector<GdbIndexChunk> Chunks;
   for (InputSection *Sec : getDebugInfoSections()) {
-    InputFile *F = Sec->File;
-    std::error_code EC;
-    ELFObjectFile<ELFT> Obj(F->MB, EC);
-    if (EC)
-      fatal(EC.message());
-    DWARFContextInMemory Dwarf(Obj, nullptr, [&](Error E) {
-      error(toString(F) + ": error parsing DWARF data:\n>>> " +
-            toString(std::move(E)));
-      return ErrorPolicy::Continue;
-    });
+    elf::ObjectFile<ELFT> *F = Sec->getFile<ELFT>();
+    DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(F));
     Chunks.push_back(readDwarf(Dwarf, Sec));
   }
   return make<GdbIndexSection>(std::move(Chunks));
@@ -1933,9 +1923,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   StringPool.write(Buf);
 }
 
-bool GdbIndexSection::empty() const {
-  return !Out::DebugInfo;
-}
+bool GdbIndexSection::empty() const { return !Out::DebugInfo; }
 
 template <class ELFT>
 EhFrameHeader<ELFT>::EhFrameHeader()
@@ -2218,9 +2206,7 @@ void MergeSyntheticSection::finalizeContents() {
     finalizeNoTailMerge();
 }
 
-size_t MergeSyntheticSection::getSize() const {
-  return Builder.getSize();
-}
+size_t MergeSyntheticSection::getSize() const { return Builder.getSize(); }
 
 // This function decompresses compressed sections and scans over the input
 // sections to create mergeable synthetic sections. It removes
@@ -2253,16 +2239,15 @@ void elf::decompressAndMergeSections() {
       continue;
 
     StringRef OutsecName = getOutputSectionName(MS->Name);
-    uint64_t Flags = MS->Flags & ~(uint64_t)SHF_GROUP;
     uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
     auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
-      return Sec->Name == OutsecName && Sec->Flags == Flags &&
+      return Sec->Name == OutsecName && Sec->Flags == MS->Flags &&
              Sec->Alignment == Alignment;
     });
     if (I == MergeSections.end()) {
-      MergeSyntheticSection *Syn =
-          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
+      MergeSyntheticSection *Syn = make<MergeSyntheticSection>(
+          OutsecName, MS->Type, MS->Flags, Alignment);
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;
@@ -2319,7 +2304,7 @@ ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
 }
 
 void ThunkSection::addThunk(Thunk *T) {
-  uint64_t Off = alignTo(Size, T->alignment);
+  uint64_t Off = alignTo(Size, T->Alignment);
   T->Offset = Off;
   Thunks.push_back(T);
   T->addSymbols(*this);

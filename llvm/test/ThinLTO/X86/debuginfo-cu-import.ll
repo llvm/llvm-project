@@ -51,11 +51,11 @@ entry:
 !9 = !DIGlobalVariableExpression(var: !10)
 !10 = !DIGlobalVariable(name: "version", scope: !4, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
 !11 = !{!12, !16}
-!12 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !4, entity: !13, line: 8)
+!12 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !4, entity: !13, file: !1, line: 8)
 !13 = distinct !DISubprogram(name: "a", linkageName: "_ZN1A1aEv", scope: !4, file: !1, line: 7, type: !14, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !5)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null}
-!16 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !17, entity: !19, line: 8)
+!16 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !17, entity: !19, file: !1, line: 8)
 !17 = distinct !DILexicalBlock(scope: !18, file: !1, line: 9, column: 8)
 !18 = distinct !DISubprogram(name: "c", linkageName: "_ZN1A1cEv", scope: !4, file: !1, line: 9, type: !14, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !5)
 !19 = distinct !DILexicalBlock(scope: !20, file: !1, line: 10, column: 8)

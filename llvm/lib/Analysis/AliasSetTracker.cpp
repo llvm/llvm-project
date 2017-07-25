@@ -13,17 +13,29 @@
 
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <vector>
+
 using namespace llvm;
 
 static cl::opt<unsigned>
@@ -106,7 +118,6 @@ void AliasSetTracker::removeAliasSet(AliasSet *AS) {
     TotalMayAliasSetSize -= AS->size();
 
   AliasSets.erase(AS);
-
 }
 
 void AliasSet::removeFromTracker(AliasSetTracker &AST) {
@@ -580,7 +591,6 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
 AliasSet &AliasSetTracker::addPointer(Value *P, uint64_t Size,
                                       const AAMDNodes &AAInfo,
                                       AliasSet::AccessLattice E) {
-
   AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo);
   AS.Access |= E;
 
@@ -610,7 +620,6 @@ void AliasSet::print(raw_ostream &OS) const {
   if (isVolatile()) OS << "[volatile] ";
   if (Forward)
     OS << " forwarding to " << (void*)Forward;
-
 
   if (!empty()) {
     OS << "Pointers: ";
@@ -671,10 +680,13 @@ AliasSetTracker::ASTCallbackVH::operator=(Value *V) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
   class AliasSetPrinter : public FunctionPass {
     AliasSetTracker *Tracker;
+
   public:
     static char ID; // Pass identification, replacement for typeid
+
     AliasSetPrinter() : FunctionPass(ID) {
       initializeAliasSetPrinterPass(*PassRegistry::getPassRegistry());
     }
@@ -695,9 +707,11 @@ namespace {
       return false;
     }
   };
-}
+
+} // end anonymous namespace
 
 char AliasSetPrinter::ID = 0;
+
 INITIALIZE_PASS_BEGIN(AliasSetPrinter, "print-alias-sets",
                 "Alias Set Printer", false, true)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)

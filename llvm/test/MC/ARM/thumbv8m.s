@@ -215,16 +215,11 @@ MSR PSPLIM,r9
 // CHECK: msr psplim, r9             @ encoding: [0x89,0xf3,0x0b,0x88]
 
 MRS r10, MSPLIM_NS
-// CHECK-MAINLINE: mrs r10, msplim_ns    @ encoding: [0xef,0xf3,0x8a,0x8a]
-// UNDEF-BASELINE: error: invalid operand for instruction
+// CHECK: mrs r10, msplim_ns    @ encoding: [0xef,0xf3,0x8a,0x8a]
 MSR PSPLIM_NS, r11
-// CHECK-MAINLINE: msr psplim_ns, r11    @ encoding: [0x8b,0xf3,0x8b,0x88]
-// UNDEF-BASELINE: error: invalid operand for instruction
+// CHECK: msr psplim_ns, r11    @ encoding: [0x8b,0xf3,0x8b,0x88]
 MRS r12, BASEPRI_NS
 // CHECK-MAINLINE: mrs r12, basepri_ns   @ encoding: [0xef,0xf3,0x91,0x8c]
-// UNDEF-BASELINE: error: invalid operand for instruction
-MRS r12, BASEPRI_MAX_NS
-// CHECK-MAINLINE: mrs r12, basepri_max_ns @ encoding: [0xef,0xf3,0x92,0x8c]
 // UNDEF-BASELINE: error: invalid operand for instruction
 MSR FAULTMASK_NS, r14
 // CHECK-MAINLINE: msr faultmask_ns, lr  @ encoding: [0x8e,0xf3,0x93,0x88]

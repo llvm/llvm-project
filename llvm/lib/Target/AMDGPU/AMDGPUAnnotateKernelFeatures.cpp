@@ -201,11 +201,14 @@ static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
 }
 
 bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
-  bool HasApertureRegs = TM->getSubtarget<AMDGPUSubtarget>(F).hasApertureRegs();
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  bool HasFlat = ST.hasFlatAddressSpace();
+  bool HasApertureRegs = ST.hasApertureRegs();
   SmallPtrSet<const Constant *, 8> ConstantExprVisited;
 
   bool Changed = false;
   bool NeedQueuePtr = false;
+  bool HaveCall = false;
   bool IsFunc = !AMDGPU::isEntryFunctionCC(F.getCallingConv());
 
   for (BasicBlock &BB : F) {
@@ -215,11 +218,15 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
         Function *Callee = CS.getCalledFunction();
 
         // TODO: Do something with indirect calls.
-        if (!Callee)
+        if (!Callee) {
+          if (!CS.isInlineAsm())
+            HaveCall = true;
           continue;
+        }
 
         Intrinsic::ID IID = Callee->getIntrinsicID();
         if (IID == Intrinsic::not_intrinsic) {
+          HaveCall = true;
           copyFeaturesToFunction(F, *Callee, NeedQueuePtr);
           Changed = true;
         } else {
@@ -258,6 +265,14 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
 
   if (NeedQueuePtr) {
     F.addFnAttr("amdgpu-queue-ptr");
+    Changed = true;
+  }
+
+  // TODO: We could refine this to captured pointers that could possibly be
+  // accessed by flat instructions. For now this is mostly a poor way of
+  // estimating whether there are calls before argument lowering.
+  if (HasFlat && !IsFunc && HaveCall) {
+    F.addFnAttr("amdgpu-flat-scratch");
     Changed = true;
   }
 

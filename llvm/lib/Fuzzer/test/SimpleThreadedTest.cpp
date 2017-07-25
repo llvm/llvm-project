@@ -7,12 +7,13 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <ostream>
 #include <thread>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   auto C = [&] {
     if (Size >= 2 && Data[0] == 'H') {
-        std::cout << "BINGO; Found the target, exiting\n";
+        std::cout << "BINGO; Found the target, exiting\n" << std::flush;
         abort();
     }
   };

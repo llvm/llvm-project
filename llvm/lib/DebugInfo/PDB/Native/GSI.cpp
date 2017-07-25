@@ -29,6 +29,7 @@ static Error checkHashHdrVersion(const GSIHashHeader *HashHdr) {
 }
 
 Error readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
+                         ArrayRef<uint8_t> &HashBitmap,
                          const GSIHashHeader *HashHdr,
                          BinaryStreamReader &Reader) {
   if (auto EC = checkHashHdrVersion(HashHdr))
@@ -36,15 +37,14 @@ Error readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
 
   // Before the actual hash buckets, there is a bitmap of length determined by
   // IPHR_HASH.
-  ArrayRef<uint8_t> Bitmap;
   size_t BitmapSizeInBits = alignTo(IPHR_HASH + 1, 32);
   uint32_t NumBitmapEntries = BitmapSizeInBits / 8;
-  if (auto EC = Reader.readBytes(Bitmap, NumBitmapEntries))
+  if (auto EC = Reader.readBytes(HashBitmap, NumBitmapEntries))
     return joinErrors(std::move(EC),
                       make_error<RawError>(raw_error_code::corrupt_file,
                                            "Could not read a bitmap."));
   uint32_t NumBuckets = 0;
-  for (uint8_t B : Bitmap)
+  for (uint8_t B : HashBitmap)
     NumBuckets += countPopulation(B);
 
   // Hash buckets follow.

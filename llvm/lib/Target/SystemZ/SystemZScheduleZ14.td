@@ -455,10 +455,10 @@ def : InstRW<[FXa, LSU, Lat8], (instregex "MH(Y)?$")>;
 def : InstRW<[FXa2, Lat6, GroupAlone], (instregex "M(L)?R$")>;
 def : InstRW<[FXa2, LSU, Lat10, GroupAlone], (instregex "M(FY|L)?$")>;
 def : InstRW<[FXa, LSU, Lat8], (instregex "MGH$")>;
-def : InstRW<[FXa, LSU, Lat12, GroupAlone], (instregex "MG$")>;
-def : InstRW<[FXa, Lat8, GroupAlone], (instregex "MGRK$")>;
-def : InstRW<[FXa, LSU, Lat9, GroupAlone], (instregex "MSC$")>;
-def : InstRW<[FXa, LSU, Lat11, GroupAlone], (instregex "MSGC$")>;
+def : InstRW<[FXa, FXa, LSU, Lat12, GroupAlone], (instregex "MG$")>;
+def : InstRW<[FXa, FXa, Lat8, GroupAlone], (instregex "MGRK$")>;
+def : InstRW<[FXa, LSU, Lat9], (instregex "MSC$")>;
+def : InstRW<[FXa, LSU, Lat11], (instregex "MSGC$")>;
 def : InstRW<[FXa, Lat5], (instregex "MSRKC$")>;
 def : InstRW<[FXa, Lat7], (instregex "MSGRKC$")>;
 
@@ -620,7 +620,7 @@ def : InstRW<[FXa, Lat30], (instregex "(PCC|PPNO|PRNO)$")>;
 
 def : InstRW<[LSU], (instregex "LGG$")>;
 def : InstRW<[LSU, Lat5], (instregex "LLGFSG$")>;
-def : InstRW<[LSU, Lat30, GroupAlone], (instregex "(L|ST)GSC$")>;
+def : InstRW<[LSU, Lat30], (instregex "(L|ST)GSC$")>;
 
 //===----------------------------------------------------------------------===//
 // Decimal arithmetic
@@ -708,7 +708,7 @@ def : InstRW<[FXb, LSU, Lat5], (instregex "NTSTG$")>;
 // Processor assist
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXb], (instregex "PPA$")>;
+def : InstRW<[FXb, GroupAlone], (instregex "PPA$")>;
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous Instructions.
@@ -1276,9 +1276,9 @@ def : InstRW<[VecXsPm], (instregex "VESRL(B|F|G|H)?$")>;
 def : InstRW<[VecXsPm], (instregex "VESRLV(B|F|G|H)?$")>;
 
 def : InstRW<[VecXsPm], (instregex "VSL(DB)?$")>;
-def : InstRW<[VecXsPm, VecXsPm, Lat8], (instregex "VSLB$")>;
+def : InstRW<[VecXsPm], (instregex "VSLB$")>;
 def : InstRW<[VecXsPm], (instregex "VSR(A|L)$")>;
-def : InstRW<[VecXsPm, VecXsPm, Lat8], (instregex "VSR(A|L)B$")>;
+def : InstRW<[VecXsPm], (instregex "VSR(A|L)B$")>;
 
 def : InstRW<[VecXsPm], (instregex "VSB(I|IQ|CBI|CBIQ)?$")>;
 def : InstRW<[VecXsPm], (instregex "VSCBI(B|F|G|H|Q)?$")>;
@@ -1435,9 +1435,9 @@ def : InstRW<[VecStr, Lat5], (instregex "VSTRCZ(B|F|H)S$")>;
 // Vector: Packed-decimal instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecDF, VecDF, Lat10, GroupAlone], (instregex "VLIP$")>;
-def : InstRW<[VecDFX, LSU, Lat12, GroupAlone], (instregex "VPKZ$")>;
-def : InstRW<[VecDFX, FXb, LSU, Lat12, GroupAlone], (instregex "VUPKZ$")>;
+def : InstRW<[VecDF, VecDF, Lat10], (instregex "VLIP$")>;
+def : InstRW<[VecDFX, LSU, GroupAlone], (instregex "VPKZ$")>;
+def : InstRW<[VecDFX, FXb, LSU, Lat12, BeginGroup], (instregex "VUPKZ$")>;
 def : InstRW<[VecDF, VecDF, FXb, Lat20, GroupAlone], (instregex "VCVB(G)?$")>;
 def : InstRW<[VecDF, VecDF, FXb, Lat20, GroupAlone], (instregex "VCVD(G)?$")>;
 def : InstRW<[VecDFX], (instregex "V(A|S)P$")>;

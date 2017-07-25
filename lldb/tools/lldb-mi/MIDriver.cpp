@@ -9,6 +9,8 @@
 
 // Third party headers:
 #include "lldb/API/SBError.h"
+#include <cassert>
+#include <csignal>
 #include <fstream>
 
 // In-house headers:

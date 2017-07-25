@@ -27,6 +27,7 @@
 #include "polly/DeLICM.h"
 #include "polly/DependenceInfo.h"
 #include "polly/FlattenSchedule.h"
+#include "polly/ForwardOpTree.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/PolyhedralInfo.h"
@@ -117,7 +118,11 @@ static cl::opt<GPURuntime> GPURuntimeChoice(
 static cl::opt<GPUArch>
     GPUArchChoice("polly-gpu-arch", cl::desc("The GPU Architecture to target"),
                   cl::values(clEnumValN(GPUArch::NVPTX64, "nvptx64",
-                                        "target NVIDIA 64-bit architecture")),
+                                        "target NVIDIA 64-bit architecture"),
+                             clEnumValN(GPUArch::SPIR32, "spir32",
+                                        "target SPIR 32-bit architecture"),
+                             clEnumValN(GPUArch::SPIR64, "spir64",
+                                        "target SPIR 64-bit architecture")),
                   cl::init(GPUArch::NVPTX64), cl::ZeroOrMore,
                   cl::cat(PollyCategory));
 #endif
@@ -184,6 +189,11 @@ static cl::opt<bool>
                          cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
+    EnableForwardOpTree("polly-enable-optree",
+                        cl::desc("Enable operand tree forwarding"), cl::Hidden,
+                        cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool>
     DumpBefore("polly-dump-before",
                cl::desc("Dump module before Polly transformations into a file "
                         "suffixed with \"-before\""),
@@ -246,6 +256,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
+  initializeForwardOpTreePass(Registry);
   initializeDeLICMPass(Registry);
   initializeSimplifyPass(Registry);
   initializeDumpModulePass(Registry);
@@ -302,6 +313,8 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   if (EnablePolyhedralInfo)
     PM.add(polly::createPolyhedralInfoPass());
 
+  if (EnableForwardOpTree)
+    PM.add(polly::createForwardOpTreePass());
   if (EnableDeLICM)
     PM.add(polly::createDeLICMPass());
   if (EnableSimplify)
@@ -451,7 +464,7 @@ registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
 ///   be optimized away.
 ///
 /// We are currently evaluating the benefit or running Polly at position b) or
-/// c). b) is likely to early as it interacts with the inliner. c) is nice
+/// c). b) is likely too early as it interacts with the inliner. c) is nice
 /// as everything is fully inlined and canonicalized, but we need to be able
 /// to handle LICMed code to make it useful.
 static llvm::RegisterStandardPasses RegisterPollyOptimizerEarly(

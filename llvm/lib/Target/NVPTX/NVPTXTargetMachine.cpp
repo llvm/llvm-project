@@ -81,7 +81,7 @@ static std::string computeDataLayout(bool is64Bit) {
   if (!is64Bit)
     Ret += "-p:32:32";
 
-  Ret += "-i64:64-v16:16-v32:32-n16:32:64";
+  Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
 
   return Ret;
 }

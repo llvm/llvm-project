@@ -433,9 +433,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_UREM:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR: {
     unsigned ExtOp = MI.getOpcode() == TargetOpcode::G_SDIV ||
+                             MI.getOpcode() == TargetOpcode::G_SREM ||
                              MI.getOpcode() == TargetOpcode::G_ASHR
                          ? TargetOpcode::G_SEXT
                          : TargetOpcode::G_ZEXT;

@@ -61,7 +61,7 @@ private:
 // A chunk for the import descriptor table.
 class LookupChunk : public Chunk {
 public:
-  explicit LookupChunk(Chunk *C) : HintName(C) {}
+  explicit LookupChunk(Chunk *C) : HintName(C) { Align = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -76,7 +76,7 @@ public:
 // See Microsoft PE/COFF spec 7.1. Import Header for details.
 class OrdinalOnlyChunk : public Chunk {
 public:
-  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) {}
+  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) { Align = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -262,7 +262,7 @@ public:
 // A chunk for the import descriptor table.
 class DelayAddressChunk : public Chunk {
 public:
-  explicit DelayAddressChunk(Chunk *C) : Thunk(C) {}
+  explicit DelayAddressChunk(Chunk *C) : Thunk(C) { Align = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -319,12 +319,16 @@ public:
   size_t getSize() const override { return Size * 4; }
 
   void writeTo(uint8_t *Buf) const override {
+    uint32_t Bit = 0;
+    // Pointer to thumb code must have the LSB set, so adjust it.
+    if (Config->Machine == ARMNT)
+      Bit = 1;
     for (Export &E : Config->Exports) {
       uint8_t *P = Buf + OutputSectionOff + E.Ordinal * 4;
       if (E.ForwardChunk) {
-        write32le(P, E.ForwardChunk->getRVA());
+        write32le(P, E.ForwardChunk->getRVA() | Bit);
       } else {
-        write32le(P, cast<Defined>(E.Sym)->getRVA());
+        write32le(P, cast<Defined>(E.Sym)->getRVA() | Bit);
       }
     }
   }

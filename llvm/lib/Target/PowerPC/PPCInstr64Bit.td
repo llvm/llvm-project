@@ -643,7 +643,7 @@ defm SRADI  : XSForm_1rc<31, 413, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
                          "sradi", "$rA, $rS, $SH", IIC_IntRotateDI,
                          [(set i64:$rA, (sra i64:$rS, (i32 imm:$SH)))]>, isPPC64;
 // For fast-isel:
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1, Defs = [CARRY] in
 def SRADI_32  : XSForm_1<31, 413, (outs gprc:$rA), (ins gprc:$rS, u6imm:$SH),
                          "sradi $rA, $rS, $SH", IIC_IntRotateDI, []>, isPPC64;
 

@@ -1314,6 +1314,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
   bool ReflowInProgress = false;
   unsigned Penalty = 0;
   unsigned RemainingTokenColumns = 0;
+  unsigned TailOffset = 0;
   for (unsigned LineIndex = 0, EndIndex = Token->getLineCount();
        LineIndex != EndIndex; ++LineIndex) {
     BreakableToken::Split SplitBefore(StringRef::npos, 0);
@@ -1322,7 +1323,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
                                           RemainingSpace, CommentPragmasRegex);
     }
     ReflowInProgress = SplitBefore.first != StringRef::npos;
-    unsigned TailOffset =
+    TailOffset =
         ReflowInProgress ? (SplitBefore.first + SplitBefore.second) : 0;
     if (!DryRun)
       Token->replaceWhitespaceBefore(LineIndex, RemainingTokenColumns,
@@ -1377,6 +1378,16 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
       ReflowInProgress = true;
       BreakInserted = true;
     }
+  }
+
+  BreakableToken::Split SplitAfterLastLine = Token->getSplitAfterLastLine(
+      TailOffset, ColumnLimit, CommentPragmasRegex);
+  if (SplitAfterLastLine.first != StringRef::npos) {
+    if (!DryRun)
+      Token->replaceWhitespaceAfterLastLine(TailOffset, SplitAfterLastLine,
+                                            Whitespaces);
+    RemainingTokenColumns = Token->getLineLengthAfterSplitAfterLastLine(
+        TailOffset, SplitAfterLastLine);
   }
 
   State.Column = RemainingTokenColumns;

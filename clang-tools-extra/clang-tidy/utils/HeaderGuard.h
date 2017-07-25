@@ -28,8 +28,8 @@ class HeaderGuardCheck : public ClangTidyCheck {
 public:
   HeaderGuardCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        RawStringHeaderFileExtensions(
-            Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
+        RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
+            "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
     utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
                                      HeaderFileExtensions, ',');
   }

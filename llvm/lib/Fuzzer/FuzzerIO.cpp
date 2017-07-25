@@ -38,7 +38,9 @@ Unit FileToVector(const std::string &Path, size_t MaxSize, bool ExitOnError) {
   }
 
   T.seekg(0, T.end);
-  size_t FileLen = T.tellg();
+  auto EndPos = T.tellg();
+  if (EndPos < 0) return {};
+  size_t FileLen = EndPos;
   if (MaxSize)
     FileLen = std::min(FileLen, MaxSize);
 

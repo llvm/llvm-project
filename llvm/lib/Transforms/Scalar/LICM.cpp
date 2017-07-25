@@ -329,6 +329,29 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AliasAnalysis *AA,
   return Changed;
 }
 
+// Does a BFS from a given node to all of its children inside a given loop.
+// The returned vector of nodes includes the starting point.
+static SmallVector<DomTreeNode *, 16>
+collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
+  SmallVector<DomTreeNode *, 16> Worklist;
+  auto add_region_to_worklist = [&](DomTreeNode *DTN) {
+    // Only include subregions in the top level loop.
+    BasicBlock *BB = DTN->getBlock();
+    if (CurLoop->contains(BB))
+      Worklist.push_back(DTN);
+  };
+
+  add_region_to_worklist(N);
+
+  for (size_t I = 0; I < Worklist.size(); I++) {
+    DomTreeNode *DTN = Worklist[I];
+    for (DomTreeNode *Child : DTN->getChildren())
+      add_region_to_worklist(Child);
+  }
+
+  return Worklist;
+}
+
 /// Walk the specified region of the CFG (defined by all blocks dominated by
 /// the specified block, and that are in the current loop) in reverse depth
 /// first order w.r.t the DominatorTree.  This allows us to visit uses before
@@ -344,46 +367,43 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
          CurLoop != nullptr && CurAST != nullptr && SafetyInfo != nullptr &&
          "Unexpected input to sinkRegion");
 
-  BasicBlock *BB = N->getBlock();
-  // If this subregion is not in the top level loop at all, exit.
-  if (!CurLoop->contains(BB))
-    return false;
+  // We want to visit children before parents. We will enque all the parents
+  // before their children in the worklist and process the worklist in reverse
+  // order.
+  SmallVector<DomTreeNode *, 16> Worklist = collectChildrenInLoop(N, CurLoop);
 
-  // We are processing blocks in reverse dfo, so process children first.
   bool Changed = false;
-  const std::vector<DomTreeNode *> &Children = N->getChildren();
-  for (DomTreeNode *Child : Children)
-    Changed |=
-        sinkRegion(Child, AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo, ORE);
-
-  // Only need to process the contents of this block if it is not part of a
-  // subloop (which would already have been processed).
-  if (inSubLoop(BB, CurLoop, LI))
-    return Changed;
-
-  for (BasicBlock::iterator II = BB->end(); II != BB->begin();) {
-    Instruction &I = *--II;
-
-    // If the instruction is dead, we would try to sink it because it isn't used
-    // in the loop, instead, just delete it.
-    if (isInstructionTriviallyDead(&I, TLI)) {
-      DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
-      ++II;
-      CurAST->deleteValue(&I);
-      I.eraseFromParent();
-      Changed = true;
+  for (DomTreeNode *DTN : reverse(Worklist)) {
+    BasicBlock *BB = DTN->getBlock();
+    // Only need to process the contents of this block if it is not part of a
+    // subloop (which would already have been processed).
+    if (inSubLoop(BB, CurLoop, LI))
       continue;
-    }
 
-    // Check to see if we can sink this instruction to the exit blocks
-    // of the loop.  We can do this if the all users of the instruction are
-    // outside of the loop.  In this case, it doesn't even matter if the
-    // operands of the instruction are loop invariant.
-    //
-    if (isNotUsedInLoop(I, CurLoop, SafetyInfo) &&
-        canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE)) {
-      ++II;
-      Changed |= sink(I, LI, DT, CurLoop, CurAST, SafetyInfo, ORE);
+    for (BasicBlock::iterator II = BB->end(); II != BB->begin();) {
+      Instruction &I = *--II;
+
+      // If the instruction is dead, we would try to sink it because it isn't used
+      // in the loop, instead, just delete it.
+      if (isInstructionTriviallyDead(&I, TLI)) {
+        DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
+        ++II;
+        CurAST->deleteValue(&I);
+        I.eraseFromParent();
+        Changed = true;
+        continue;
+      }
+
+      // Check to see if we can sink this instruction to the exit blocks
+      // of the loop.  We can do this if the all users of the instruction are
+      // outside of the loop.  In this case, it doesn't even matter if the
+      // operands of the instruction are loop invariant.
+      //
+      if (isNotUsedInLoop(I, CurLoop, SafetyInfo) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE)) {
+        ++II;
+        Changed |= sink(I, LI, DT, CurLoop, CurAST, SafetyInfo, ORE);
+      }
     }
   }
   return Changed;
@@ -403,73 +423,70 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
          CurLoop != nullptr && CurAST != nullptr && SafetyInfo != nullptr &&
          "Unexpected input to hoistRegion");
 
-  BasicBlock *BB = N->getBlock();
+  // We want to visit parents before children. We will enque all the parents
+  // before their children in the worklist and process the worklist in order.
+  SmallVector<DomTreeNode *, 16> Worklist = collectChildrenInLoop(N, CurLoop);
 
-  // If this subregion is not in the top level loop at all, exit.
-  if (!CurLoop->contains(BB))
-    return false;
-
-  // Only need to process the contents of this block if it is not part of a
-  // subloop (which would already have been processed).
   bool Changed = false;
-  if (!inSubLoop(BB, CurLoop, LI))
-    for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
-      Instruction &I = *II++;
-      // Try constant folding this instruction.  If all the operands are
-      // constants, it is technically hoistable, but it would be better to just
-      // fold it.
-      if (Constant *C = ConstantFoldInstruction(
-              &I, I.getModule()->getDataLayout(), TLI)) {
-        DEBUG(dbgs() << "LICM folding inst: " << I << "  --> " << *C << '\n');
-        CurAST->copyValue(&I, C);
-        I.replaceAllUsesWith(C);
-        if (isInstructionTriviallyDead(&I, TLI)) {
-          CurAST->deleteValue(&I);
-          I.eraseFromParent();
+  for (DomTreeNode *DTN : Worklist) {
+    BasicBlock *BB = DTN->getBlock();
+    // Only need to process the contents of this block if it is not part of a
+    // subloop (which would already have been processed).
+    if (!inSubLoop(BB, CurLoop, LI))
+      for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
+        Instruction &I = *II++;
+        // Try constant folding this instruction.  If all the operands are
+        // constants, it is technically hoistable, but it would be better to
+        // just fold it.
+        if (Constant *C = ConstantFoldInstruction(
+                &I, I.getModule()->getDataLayout(), TLI)) {
+          DEBUG(dbgs() << "LICM folding inst: " << I << "  --> " << *C << '\n');
+          CurAST->copyValue(&I, C);
+          I.replaceAllUsesWith(C);
+          if (isInstructionTriviallyDead(&I, TLI)) {
+            CurAST->deleteValue(&I);
+            I.eraseFromParent();
+          }
+          Changed = true;
+          continue;
         }
-        Changed = true;
-        continue;
+
+        // Attempt to remove floating point division out of the loop by
+        // converting it to a reciprocal multiplication.
+        if (I.getOpcode() == Instruction::FDiv &&
+            CurLoop->isLoopInvariant(I.getOperand(1)) &&
+            I.hasAllowReciprocal()) {
+          auto Divisor = I.getOperand(1);
+          auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
+          auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
+          ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
+          ReciprocalDivisor->insertBefore(&I);
+
+          auto Product =
+              BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
+          Product->setFastMathFlags(I.getFastMathFlags());
+          Product->insertAfter(&I);
+          I.replaceAllUsesWith(Product);
+          I.eraseFromParent();
+
+          hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
+          Changed = true;
+          continue;
+        }
+
+        // Try hoisting the instruction out to the preheader.  We can only do
+        // this if all of the operands of the instruction are loop invariant and
+        // if it is safe to hoist the instruction.
+        //
+        if (CurLoop->hasLoopInvariantOperands(&I) &&
+            canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
+            isSafeToExecuteUnconditionally(
+                I, DT, CurLoop, SafetyInfo, ORE,
+                CurLoop->getLoopPreheader()->getTerminator()))
+          Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
       }
+  }
 
-      // Attempt to remove floating point division out of the loop by converting
-      // it to a reciprocal multiplication.
-      if (I.getOpcode() == Instruction::FDiv &&
-          CurLoop->isLoopInvariant(I.getOperand(1)) &&
-          I.hasAllowReciprocal()) {
-        auto Divisor = I.getOperand(1);
-        auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
-        auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
-        ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
-        ReciprocalDivisor->insertBefore(&I);
-
-        auto Product = BinaryOperator::CreateFMul(I.getOperand(0),
-                                                  ReciprocalDivisor);
-        Product->setFastMathFlags(I.getFastMathFlags());
-        Product->insertAfter(&I);
-        I.replaceAllUsesWith(Product);
-        I.eraseFromParent();
-
-        hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
-        Changed = true;
-        continue;
-      }
-
-      // Try hoisting the instruction out to the preheader.  We can only do this
-      // if all of the operands of the instruction are loop invariant and if it
-      // is safe to hoist the instruction.
-      //
-      if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
-          isSafeToExecuteUnconditionally(
-              I, DT, CurLoop, SafetyInfo, ORE,
-              CurLoop->getLoopPreheader()->getTerminator()))
-        Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
-    }
-
-  const std::vector<DomTreeNode *> &Children = N->getChildren();
-  for (DomTreeNode *Child : Children)
-    Changed |=
-        hoistRegion(Child, AA, LI, DT, TLI, CurLoop, CurAST, SafetyInfo, ORE);
   return Changed;
 }
 

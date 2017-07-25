@@ -604,21 +604,27 @@ distance(_InputIter __first, _InputIter __last)
 
 template <class _InputIter>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-_InputIter
+typename enable_if
+<
+    __is_input_iterator<_InputIter>::value, 
+    _InputIter
+>::type
 next(_InputIter __x,
-     typename iterator_traits<_InputIter>::difference_type __n = 1,
-     typename enable_if<__is_input_iterator<_InputIter>::value>::type* = 0)
+     typename iterator_traits<_InputIter>::difference_type __n = 1)
 {
     _VSTD::advance(__x, __n);
     return __x;
 }
 
-template <class _BidiretionalIter>
+template <class _BidirectionalIter>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-_BidiretionalIter
-prev(_BidiretionalIter __x,
-     typename iterator_traits<_BidiretionalIter>::difference_type __n = 1,
-     typename enable_if<__is_bidirectional_iterator<_BidiretionalIter>::value>::type* = 0)
+typename enable_if
+<
+    __is_bidirectional_iterator<_BidirectionalIter>::value, 
+    _BidirectionalIter
+>::type
+prev(_BidirectionalIter __x,
+     typename iterator_traits<_BidirectionalIter>::difference_type __n = 1)
 {
     _VSTD::advance(__x, -__n);
     return __x;

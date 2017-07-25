@@ -7,6 +7,7 @@
 // CHECK: "-internal-isystem" "{{.*[/\\]}}x86_64-fuchsia{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
 // CHECK: {{.*}}lld{{.*}}" "-flavor" "gnu"
+// CHECK: "-z" "rodynamic"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

@@ -36,6 +36,12 @@ ExternSData("mextern-sdata", cl::Hidden,
                      "current object."),
             cl::init(true));
 
+static cl::opt<bool>
+EmbeddedData("membedded-data", cl::Hidden,
+             cl::desc("MIPS: Try to allocate variables in the following"
+                      " sections if possible: .rodata, .sdata, .data ."),
+             cl::init(false));
+
 void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(TM.Options.UseInitArray);
@@ -77,8 +83,9 @@ bool MipsTargetObjectFile::IsGlobalInSmallSection(
 bool MipsTargetObjectFile::
 IsGlobalInSmallSection(const GlobalObject *GO, const TargetMachine &TM,
                        SectionKind Kind) const {
-  return (IsGlobalInSmallSectionImpl(GO, TM) &&
-          (Kind.isData() || Kind.isBSS() || Kind.isCommon()));
+  return IsGlobalInSmallSectionImpl(GO, TM) &&
+         (Kind.isData() || Kind.isBSS() || Kind.isCommon() ||
+          Kind.isReadOnly());
 }
 
 /// Return true if this global address should be placed into small data/bss
@@ -108,6 +115,10 @@ IsGlobalInSmallSectionImpl(const GlobalObject *GO,
                        GVA->hasCommonLinkage()))
     return false;
 
+  // Enforce -membedded-data.
+  if (EmbeddedData && GVA->isConstant())
+    return false;
+
   Type *Ty = GVA->getValueType();
   return IsInSmallSection(
       GVA->getParent()->getDataLayout().getTypeAllocSize(Ty));
@@ -122,6 +133,8 @@ MCSection *MipsTargetObjectFile::SelectSectionForGlobal(
   if (Kind.isBSS() && IsGlobalInSmallSection(GO, TM, Kind))
     return SmallBSSSection;
   if (Kind.isData() && IsGlobalInSmallSection(GO, TM, Kind))
+    return SmallDataSection;
+  if (Kind.isReadOnly() && IsGlobalInSmallSection(GO, TM, Kind))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.

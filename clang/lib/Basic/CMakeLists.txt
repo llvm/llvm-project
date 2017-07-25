@@ -100,6 +100,28 @@ add_clang_library(clangBasic
   SourceManager.cpp
   TargetInfo.cpp
   Targets.cpp
+  Targets/AArch64.cpp
+  Targets/AMDGPU.cpp
+  Targets/ARM.cpp
+  Targets/AVR.cpp
+  Targets/BPF.cpp
+  Targets/Hexagon.cpp
+  Targets/Lanai.cpp
+  Targets/Le64.cpp
+  Targets/MSP430.cpp
+  Targets/Mips.cpp
+  Targets/NVPTX.cpp
+  Targets/Nios2.cpp
+  Targets/OSTargets.cpp
+  Targets/PNaCl.cpp
+  Targets/PPC.cpp
+  Targets/SPIR.cpp
+  Targets/Sparc.cpp
+  Targets/SystemZ.cpp
+  Targets/TCE.cpp
+  Targets/WebAssembly.cpp
+  Targets/X86.cpp
+  Targets/XCore.cpp
   TokenKinds.cpp
   Version.cpp
   VersionTuple.cpp

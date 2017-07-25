@@ -15,6 +15,7 @@
 #define ASAN_INTERCEPTORS_H
 
 #include "asan_internal.h"
+#include "asan_interceptors_memintrinsics.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
@@ -85,8 +86,6 @@
 #endif
 
 DECLARE_REAL(int, memcmp, const void *a1, const void *a2, uptr size)
-DECLARE_REAL(void*, memcpy, void *to, const void *from, uptr size)
-DECLARE_REAL(void*, memset, void *block, int c, uptr size)
 DECLARE_REAL(char*, strchr, const char *str, int c)
 DECLARE_REAL(SIZE_T, strlen, const char *s)
 DECLARE_REAL(char*, strncpy, char *to, const char *from, uptr size)

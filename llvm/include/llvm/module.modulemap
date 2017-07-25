@@ -27,6 +27,7 @@ module LLVM_Backend {
 
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"
+    textual header "CodeGen/RuntimeLibcalls.def"
   }
 
   module Target {

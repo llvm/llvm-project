@@ -100,6 +100,16 @@ bool SBBreakpointLocation::IsEnabled() {
     return false;
 }
 
+uint32_t SBBreakpointLocation::GetHitCount() {
+  BreakpointLocationSP loc_sp = GetSP();
+  if (loc_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        loc_sp->GetTarget().GetAPIMutex());
+    return loc_sp->GetHitCount();
+  } else
+    return 0;
+}
+
 uint32_t SBBreakpointLocation::GetIgnoreCount() {
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {

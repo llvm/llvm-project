@@ -46,6 +46,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (llvm::sys::path::stem(Exec).equals_lower("lld")) {
     CmdArgs.push_back("-flavor");
     CmdArgs.push_back("gnu");
+
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("rodynamic");
   }
 
   if (!D.SysRoot.empty())

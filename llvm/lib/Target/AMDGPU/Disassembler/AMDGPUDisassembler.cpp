@@ -87,6 +87,7 @@ DECODE_OPERAND(Decode##RegClass##RegisterClass, decodeOperand_##RegClass)
 DECODE_OPERAND_REG(VGPR_32)
 DECODE_OPERAND_REG(VS_32)
 DECODE_OPERAND_REG(VS_64)
+DECODE_OPERAND_REG(VS_128)
 
 DECODE_OPERAND_REG(VReg_64)
 DECODE_OPERAND_REG(VReg_96)
@@ -94,6 +95,7 @@ DECODE_OPERAND_REG(VReg_128)
 
 DECODE_OPERAND_REG(SReg_32)
 DECODE_OPERAND_REG(SReg_32_XM0_XEXEC)
+DECODE_OPERAND_REG(SReg_32_XEXEC_HI)
 DECODE_OPERAND_REG(SReg_64)
 DECODE_OPERAND_REG(SReg_64_XEXEC)
 DECODE_OPERAND_REG(SReg_128)
@@ -318,6 +320,10 @@ MCOperand AMDGPUDisassembler::decodeOperand_VS_64(unsigned Val) const {
   return decodeSrcOp(OPW64, Val);
 }
 
+MCOperand AMDGPUDisassembler::decodeOperand_VS_128(unsigned Val) const {
+  return decodeSrcOp(OPW128, Val);
+}
+
 MCOperand AMDGPUDisassembler::decodeOperand_VSrc16(unsigned Val) const {
   return decodeSrcOp(OPW16, Val);
 }
@@ -357,6 +363,12 @@ MCOperand AMDGPUDisassembler::decodeOperand_SReg_32(unsigned Val) const {
 MCOperand AMDGPUDisassembler::decodeOperand_SReg_32_XM0_XEXEC(
   unsigned Val) const {
   // SReg_32_XM0 is SReg_32 without M0 or EXEC_LO/EXEC_HI
+  return decodeOperand_SReg_32(Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_SReg_32_XEXEC_HI(
+  unsigned Val) const {
+  // SReg_32_XM0 is SReg_32 without EXEC_HI
   return decodeOperand_SReg_32(Val);
 }
 

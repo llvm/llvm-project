@@ -260,8 +260,10 @@ static const Decl *adjustParent(const Decl *Parent) {
 static const Decl *getCanonicalDecl(const Decl *D) {
   D = D->getCanonicalDecl();
   if (auto TD = dyn_cast<TemplateDecl>(D)) {
-    D = TD->getTemplatedDecl();
-    assert(D->isCanonicalDecl());
+    if (auto TTD = TD->getTemplatedDecl()) {
+      D = TTD;
+      assert(D->isCanonicalDecl());
+    }
   }
 
   return D;

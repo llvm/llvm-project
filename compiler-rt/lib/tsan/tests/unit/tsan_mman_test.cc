@@ -56,6 +56,7 @@ TEST(Mman, UserRealloc) {
     // Realloc(NULL, N) is equivalent to malloc(N), thus must return
     // non-NULL pointer.
     EXPECT_NE(p, (void*)0);
+    user_free(thr, pc, p);
   }
   {
     void *p = user_realloc(thr, pc, 0, 100);
@@ -67,8 +68,9 @@ TEST(Mman, UserRealloc) {
     void *p = user_alloc(thr, pc, 100);
     EXPECT_NE(p, (void*)0);
     memset(p, 0xde, 100);
+    // Realloc(P, 0) is equivalent to free(P) and returns NULL.
     void *p2 = user_realloc(thr, pc, p, 0);
-    EXPECT_NE(p2, (void*)0);
+    EXPECT_EQ(p2, (void*)0);
   }
   {
     void *p = user_realloc(thr, pc, 0, 100);
@@ -135,12 +137,28 @@ TEST(Mman, Stats) {
   EXPECT_EQ(unmapped0, __sanitizer_get_unmapped_bytes());
 }
 
+TEST(Mman, Valloc) {
+  ThreadState *thr = cur_thread();
+
+  void *p = user_valloc(thr, 0, 100);
+  EXPECT_NE(p, (void*)0);
+  user_free(thr, 0, p);
+
+  p = user_pvalloc(thr, 0, 100);
+  EXPECT_NE(p, (void*)0);
+  user_free(thr, 0, p);
+
+  p = user_pvalloc(thr, 0, 0);
+  EXPECT_NE(p, (void*)0);
+  EXPECT_EQ(GetPageSizeCached(), __sanitizer_get_allocated_size(p));
+  user_free(thr, 0, p);
+}
+
+#if !SANITIZER_DEBUG
+// EXPECT_DEATH clones a thread with 4K stack,
+// which is overflown by tsan memory accesses functions in debug mode.
+
 TEST(Mman, CallocOverflow) {
-#if SANITIZER_DEBUG
-  // EXPECT_DEATH clones a thread with 4K stack,
-  // which is overflown by tsan memory accesses functions in debug mode.
-  return;
-#endif
   ThreadState *thr = cur_thread();
   uptr pc = 0;
   size_t kArraySize = 4096;
@@ -151,5 +169,58 @@ TEST(Mman, CallocOverflow) {
                "allocator is terminating the process instead of returning 0");
   EXPECT_EQ(0L, p);
 }
+
+TEST(Mman, Memalign) {
+  ThreadState *thr = cur_thread();
+
+  void *p = user_memalign(thr, 0, 8, 100);
+  EXPECT_NE(p, (void*)0);
+  user_free(thr, 0, p);
+
+  p = NULL;
+  EXPECT_DEATH(p = user_memalign(thr, 0, 7, 100),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_EQ(0L, p);
+}
+
+TEST(Mman, PosixMemalign) {
+  ThreadState *thr = cur_thread();
+
+  void *p = NULL;
+  int res = user_posix_memalign(thr, 0, &p, 8, 100);
+  EXPECT_NE(p, (void*)0);
+  EXPECT_EQ(res, 0);
+  user_free(thr, 0, p);
+
+  p = NULL;
+  // Alignment is not a power of two, although is a multiple of sizeof(void*).
+  EXPECT_DEATH(res = user_posix_memalign(thr, 0, &p, 3 * sizeof(p), 100),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_EQ(0L, p);
+  // Alignment is not a multiple of sizeof(void*), although is a power of 2.
+  EXPECT_DEATH(res = user_posix_memalign(thr, 0, &p, 2, 100),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_EQ(0L, p);
+}
+
+TEST(Mman, AlignedAlloc) {
+  ThreadState *thr = cur_thread();
+
+  void *p = user_aligned_alloc(thr, 0, 8, 64);
+  EXPECT_NE(p, (void*)0);
+  user_free(thr, 0, p);
+
+  p = NULL;
+  // Alignement is not a power of 2.
+  EXPECT_DEATH(p = user_aligned_alloc(thr, 0, 7, 100),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_EQ(0L, p);
+  // Size is not a multiple of alignment.
+  EXPECT_DEATH(p = user_aligned_alloc(thr, 0, 8, 100),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_EQ(0L, p);
+}
+
+#endif
 
 }  // namespace __tsan

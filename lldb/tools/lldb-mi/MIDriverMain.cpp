@@ -33,6 +33,7 @@
 
 // Third party headers:
 #include "lldb/API/SBHostOS.h"
+#include <csignal>
 #include <stdio.h>
 
 // In house headers:

@@ -42,7 +42,7 @@ void t5(void) {
 void t6(void) {
   __asm int 0x2c
 // CHECK: t6
-// CHECK: call void asm sideeffect inteldialect "int $$0x2c", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "int $$44", "~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t7() {
@@ -61,7 +61,7 @@ void t7() {
     mov eax, ebx
   }
 // CHECK: t7
-// CHECK: call void asm sideeffect inteldialect "int $$0x2cU", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "int $$44", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void asm sideeffect inteldialect "", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void asm sideeffect inteldialect "mov eax, ebx", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -94,7 +94,7 @@ void t9() {
 // CHECK: t9
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: push ebx
-// CHECK-SAME: mov ebx, $$0x07
+// CHECK-SAME: mov ebx, $$7
 // CHECK-SAME: pop ebx
 // CHECK-SAME: "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -265,7 +265,7 @@ void t21() {
 // CHECK: t21
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: push ebx
-// CHECK-SAME: mov ebx, $$07H
+// CHECK-SAME: mov ebx, $$7
 // CHECK-SAME: pop ebx
 // CHECK-SAME: "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -312,13 +312,13 @@ void t24() {
 void t25() {
 // CHECK: t25
   __asm mov eax, 0ffffffffh
-// CHECK: mov eax, $$0ffffffffh
+// CHECK: mov eax, $$4294967295
   __asm mov eax, 0fhU
 // CHECK: mov eax, $$15
   __asm mov eax, 0a2h
-// CHECK: mov eax, $$0a2h
+// CHECK: mov eax, $$162
   __asm mov eax, 10100010b
-// CHECK: mov eax, $$10100010b
+// CHECK: mov eax, $$162
   __asm mov eax, 10100010BU
 // CHECK: mov eax, $$162
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()

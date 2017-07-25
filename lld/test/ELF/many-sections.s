@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t
 // RUN: llvm-readobj -t %t | FileCheck  %s
 

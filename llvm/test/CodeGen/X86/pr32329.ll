@@ -52,7 +52,7 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    movl $9, %esi
 ; X86-NEXT:    xorl %ebp, %ebp
 ; X86-NEXT:    shldl %cl, %esi, %ebp
-; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    shlxl %ecx, %esi, %esi
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    cmovnel %esi, %ebp
 ; X86-NEXT:    movl $0, %ecx

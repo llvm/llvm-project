@@ -12,6 +12,7 @@
 
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
+#include <csignal>
 #include <map>
 #include <string>
 
@@ -24,7 +25,7 @@ class NativeThreadNetBSD : public NativeThreadProtocol {
   friend class NativeProcessNetBSD;
 
 public:
-  NativeThreadNetBSD(NativeProcessNetBSD *process, lldb::tid_t tid);
+  NativeThreadNetBSD(NativeProcessNetBSD &process, lldb::tid_t tid);
 
   // ---------------------------------------------------------------------
   // NativeThreadProtocol Interface

@@ -14,6 +14,7 @@
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/lldb-private-forward.h"
 
+#include <csignal>
 #include <map>
 #include <memory>
 #include <string>
@@ -27,7 +28,7 @@ class NativeThreadLinux : public NativeThreadProtocol {
   friend class NativeProcessLinux;
 
 public:
-  NativeThreadLinux(NativeProcessLinux *process, lldb::tid_t tid);
+  NativeThreadLinux(NativeProcessLinux &process, lldb::tid_t tid);
 
   // ---------------------------------------------------------------------
   // NativeThreadProtocol Interface

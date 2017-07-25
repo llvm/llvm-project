@@ -2735,8 +2735,6 @@ define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 ; AVX512F-32-LABEL: test_v8i64_2_5:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    vextracti32x4 $1, %zmm0, %xmm1
-; AVX512F-32-NEXT:    vpextrd $1, %xmm1, %eax
-; AVX512F-32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
 ; AVX512F-32-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
 ; AVX512F-32-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX512F-32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1

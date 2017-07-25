@@ -13,7 +13,7 @@
 
 ; GCN-LABEL: {{^}}main:
 
-; GCN-DAG: s_mov_b32 s[[OFFREG:[0-9]+]], s12
+; GCN-NOT: s_mov_b32 s12
 ; GCN-DAG: s_mov_b32 s[[DESC0:[0-9]+]], SCRATCH_RSRC_DWORD0
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, -1
@@ -22,8 +22,8 @@
 ; GFX9-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe00000
 
 ; OFFREG is offset system SGPR
-; GCN: buffer_store_dword {{v[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s[[OFFREG]] offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s[[OFFREG]] offset:{{[0-9]+}} ; 4-byte Folded Reload
+; GCN: buffer_store_dword {{v[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s12 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s{{\[}}[[DESC0]]:[[DESC3]]], s12 offset:{{[0-9]+}} ; 4-byte Folded Reload
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 1536
 

@@ -14,6 +14,7 @@
 
 #include "sanitizer_allocator.h"
 
+#include "sanitizer_allocator_checks.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
@@ -160,7 +161,7 @@ void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
 }
 
 void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
-  if (CheckForCallocOverflow(count, size))
+  if (UNLIKELY(CheckForCallocOverflow(count, size)))
     return InternalAllocator::FailureHandler::OnBadRequest();
   void *p = InternalAlloc(count * size, cache);
   if (p) internal_memset(p, 0, count * size);
@@ -200,12 +201,6 @@ void *LowLevelAllocator::Allocate(uptr size) {
 
 void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback) {
   low_level_alloc_callback = callback;
-}
-
-bool CheckForCallocOverflow(uptr size, uptr n) {
-  if (!size) return false;
-  uptr max = (uptr)-1L;
-  return (max / size) < n;
 }
 
 static atomic_uint8_t allocator_out_of_memory = {0};

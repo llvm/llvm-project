@@ -12,15 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <string>
 
 using namespace llvm;
 
@@ -71,7 +78,6 @@ cl::opt<bool>
 namespace llvm {
 
 static GVDAGType getGVDT() {
-
   if (PGOViewCounts)
     return GVDT_Count;
   return ViewBlockFreqPropagationDAG;
@@ -79,27 +85,31 @@ static GVDAGType getGVDT() {
 
 template <>
 struct GraphTraits<BlockFrequencyInfo *> {
-  typedef const BasicBlock *NodeRef;
-  typedef succ_const_iterator ChildIteratorType;
-  typedef pointer_iterator<Function::const_iterator> nodes_iterator;
+  using NodeRef = const BasicBlock *;
+  using ChildIteratorType = succ_const_iterator;
+  using nodes_iterator = pointer_iterator<Function::const_iterator>;
 
   static NodeRef getEntryNode(const BlockFrequencyInfo *G) {
     return &G->getFunction()->front();
   }
+
   static ChildIteratorType child_begin(const NodeRef N) {
     return succ_begin(N);
   }
+
   static ChildIteratorType child_end(const NodeRef N) { return succ_end(N); }
+
   static nodes_iterator nodes_begin(const BlockFrequencyInfo *G) {
     return nodes_iterator(G->getFunction()->begin());
   }
+
   static nodes_iterator nodes_end(const BlockFrequencyInfo *G) {
     return nodes_iterator(G->getFunction()->end());
   }
 };
 
-typedef BFIDOTGraphTraitsBase<BlockFrequencyInfo, BranchProbabilityInfo>
-    BFIDOTGTraitsBase;
+using BFIDOTGTraitsBase =
+    BFIDOTGraphTraitsBase<BlockFrequencyInfo, BranchProbabilityInfo>;
 
 template <>
 struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
@@ -127,7 +137,7 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
 
 } // end namespace llvm
 
-BlockFrequencyInfo::BlockFrequencyInfo() {}
+BlockFrequencyInfo::BlockFrequencyInfo() = default;
 
 BlockFrequencyInfo::BlockFrequencyInfo(const Function &F,
                                        const BranchProbabilityInfo &BPI,
@@ -148,7 +158,7 @@ BlockFrequencyInfo &BlockFrequencyInfo::operator=(BlockFrequencyInfo &&RHS) {
 // defined at the first ODR-use which is the BFI member in the
 // LazyBlockFrequencyInfo header.  The dtor needs the BlockFrequencyInfoImpl
 // template instantiated which is not available in the header.
-BlockFrequencyInfo::~BlockFrequencyInfo() {}
+BlockFrequencyInfo::~BlockFrequencyInfo() = default;
 
 bool BlockFrequencyInfo::invalidate(Function &F, const PreservedAnalyses &PA,
                                     FunctionAnalysisManager::Invalidator &) {
@@ -254,7 +264,6 @@ void BlockFrequencyInfo::print(raw_ostream &OS) const {
     BFI->print(OS);
 }
 
-
 INITIALIZE_PASS_BEGIN(BlockFrequencyInfoWrapperPass, "block-freq",
                       "Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
@@ -264,13 +273,12 @@ INITIALIZE_PASS_END(BlockFrequencyInfoWrapperPass, "block-freq",
 
 char BlockFrequencyInfoWrapperPass::ID = 0;
 
-
 BlockFrequencyInfoWrapperPass::BlockFrequencyInfoWrapperPass()
     : FunctionPass(ID) {
   initializeBlockFrequencyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-BlockFrequencyInfoWrapperPass::~BlockFrequencyInfoWrapperPass() {}
+BlockFrequencyInfoWrapperPass::~BlockFrequencyInfoWrapperPass() = default;
 
 void BlockFrequencyInfoWrapperPass::print(raw_ostream &OS,
                                           const Module *) const {

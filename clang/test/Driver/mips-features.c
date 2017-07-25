@@ -10,6 +10,61 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MNOABICALLS %s
 // CHECK-MNOABICALLS: "-target-feature" "+noabicalls"
 //
+// -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-gpopt -mgpopt -Wno-unsupported-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPT-DEF-ABICALLS %s
+// CHECK-MGPOPT-DEF-ABICALLS-NOT: "-mllvm" "-mgpopt"
+//
+// -mabicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mabicalls -mno-gpopt -mgpopt -Wno-unsupported-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPT-EXPLICIT-ABICALLS %s
+// CHECK-MGPOPT-EXPLICIT-ABICALLS-NOT: "-mllvm" "-mgpopt"
+//
+// -mno-abicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mno-gpopt -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPT %s
+// CHECK-MGPOPT: "-mllvm" "-mgpopt"
+//
+// -mno-abicalls -mno-gpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mno-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOGPOPT %s
+// CHECK-MNOGPOPT-NOT: "-mllvm" "-mgpopt"
+//
+// -mno-abicalls
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPTDEF %s
+// CHECK-MGPOPTDEF: "-mllvm" "-mgpopt"
+//
+// -mgpopt -mno-abicalls -mlocal-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mno-gpopt -mgpopt -mno-local-sdata -mlocal-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MLOCALSDATA %s
+// CHECK-MLOCALSDATA: "-mllvm" "-mlocal-sdata=1"
+//
+// -mgpopt -mno-abicalls -mno-local-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mno-gpopt -mgpopt -mlocal-sdata -mno-local-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOLOCALSDATA %s
+// CHECK-MNOLOCALSDATA: "-mllvm" "-mlocal-sdata=0"
+//
+// -mgpopt -mno-abicalls
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MLOCALSDATADEF %s
+// CHECK-MLOCALSDATADEF-NOT: "-mllvm" "-mlocal-sdata"
+//
+// -mno-abicalls -mgpopt -mextern-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mno-extern-sdata -mextern-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MEXTERNSDATA %s
+// CHECK-MEXTERNSDATA: "-mllvm" "-mextern-sdata=1"
+//
+// -mno-abicalls -mgpopt -mno-extern-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mextern-sdata -mno-extern-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOEXTERNSDATA %s
+// CHECK-MNOEXTERNSDATA: "-mllvm" "-mextern-sdata=0"
+//
+// -mno-abicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MEXTERNSDATADEF %s
+// CHECK-MEXTERNSDATADEF-NOT: "-mllvm" "-mextern-sdata"
+//
 // -mips16
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mips16 -mips16 2>&1 \

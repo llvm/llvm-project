@@ -36,8 +36,8 @@ v_pk_add_u16 v1, v2, v3 op_sel:[-1,0]
 // GFX9: 35: error: failed parsing operand.
 v_pk_add_u16 v1, v2, v3 op_sel:[0,-1]
 
-// GFX9: 40: error: not a valid operand.
-v_pk_add_u16 v1, v2, v3 op_sel:[0,0,0,0]
+// GFX9: 42: error: not a valid operand.
+v_pk_add_u16 v1, v2, v3 op_sel:[0,0,0,0,0]
 
 // XXGFX9: invalid operand for instruction
 v_pk_add_u16 v1, v2, v3 neg_lo:[0,0]

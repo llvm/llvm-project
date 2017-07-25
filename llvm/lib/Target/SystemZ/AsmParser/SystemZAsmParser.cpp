@@ -275,6 +275,10 @@ public:
   SMLoc getEndLoc() const override { return EndLoc; }
   void print(raw_ostream &OS) const override;
 
+  /// getLocRange - Get the range between the first and last token of this
+  /// operand.
+  SMRange getLocRange() const { return SMRange(StartLoc, EndLoc); }
+
   // Used by the TableGen code to add particular types of operand
   // to an instruction.
   void addRegOperands(MCInst &Inst, unsigned N) const {
@@ -1164,6 +1168,8 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
   return false;
 }
 
+std::string SystemZMnemonicSpellCheck(StringRef S, uint64_t FBS);
+
 bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,
                                                MCStreamer &Out,
@@ -1209,8 +1215,13 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(ErrorLoc, "invalid operand for instruction");
   }
 
-  case Match_MnemonicFail:
-    return Error(IDLoc, "invalid instruction");
+  case Match_MnemonicFail: {
+    uint64_t FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
+    std::string Suggestion = SystemZMnemonicSpellCheck(
+      ((SystemZOperand &)*Operands[0]).getToken(), FBS);
+    return Error(IDLoc, "invalid instruction" + Suggestion,
+                 ((SystemZOperand &)*Operands[0]).getLocRange());
+  }
   }
 
   llvm_unreachable("Unexpected match type");

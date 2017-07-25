@@ -218,14 +218,6 @@ public:
   lldb::SBProcess AttachToProcessWithID(SBListener &listener, lldb::pid_t pid,
                                         lldb::SBError &error);
 
-#if defined(__APPLE__)
-  // We need to keep this around for a build or two since Xcode links
-  // to the 32 bit version of this function. We will take it out soon.
-  lldb::SBProcess AttachToProcessWithID(SBListener &listener,
-                                        ::pid_t pid, // 32 bit int process ID
-                                        lldb::SBError &error); // DEPRECATED
-#endif
-
   //------------------------------------------------------------------
   /// Attach to process with name.
   ///

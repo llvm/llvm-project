@@ -9,20 +9,18 @@
 
 ; This test case ensures that we properly sign-extend the types we are using.
 
-; CODE: Code
-; CODE-NEXT: ====
-; CODE-NEXT: # host
-; CODE-NEXT: if (arg >= 1 && arg1 == 0) {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_arg3, MemRef_arg3, (arg) * sizeof(double), cudaMemcpyHostToDevice));
+; CODE:      if (arg >= 1 && arg1 == 0) {
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_arg3, MemRef_arg3, (arg) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
-; CODE-NEXT:     dim3 k0_dimGrid(arg >= 1048546 ? 32768 : floord(arg + 31, 32));
+; CODE-NEXT:     dim3 k0_dimGrid(arg >= 1048546 ? 32768 : (arg + 31) / 32);
 ; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_arg3, dev_MemRef_arg2, arg, arg1);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_arg2, dev_MemRef_arg2, (arg) * sizeof(double), cudaMemcpyDeviceToHost));
-; CODE-NEXT: }
+; CODE-NEXT  cudaCheckReturn(cudaFree(dev_MemRef_arg3));
+; CODE-NEXT  cudaCheckReturn(cudaFree(dev_MemRef_arg2));
 
 ; CODE: # kernel0
 ; CODE-NEXT: for (int c0 = 0; c0 <= (arg - 32 * b0 - 1) / 1048576; c0 += 1)

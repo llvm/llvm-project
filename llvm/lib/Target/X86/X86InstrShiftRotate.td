@@ -961,16 +961,40 @@ let Predicates = [HasBMI2] in {
                           (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
 
-  // Patterns on SARXrm/SHRXrm/SHLXrm are explicitly omitted to favor
-  //
+  // Artificially lower the complexity so that we'll favor
   //  mov (%ecx), %esi
   //  shl $imm, $esi
   //
   // over
   //
-  //  movb $imm %al
+  //  movb $imm, %al
   //  shlx %al, (%ecx), %esi
-  //
-  // As SARXrr/SHRXrr/SHLXrr is favored on variable shift, the peephole
-  // optimization will fold them into SARXrm/SHRXrm/SHLXrm if possible.
+  let AddedComplexity = -20 in {
+    def : Pat<(sra (loadi32 addr:$src1), GR8:$src2),
+              (SARX32rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(sra (loadi64 addr:$src1), GR8:$src2),
+              (SARX64rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(srl (loadi32 addr:$src1), GR8:$src2),
+              (SHRX32rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(srl (loadi64 addr:$src1), GR8:$src2),
+              (SHRX64rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(shl (loadi32 addr:$src1), GR8:$src2),
+              (SHLX32rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(shl (loadi64 addr:$src1), GR8:$src2),
+              (SHLX64rm addr:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  }
 }

@@ -460,7 +460,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   FormatTok->BlockKind = BK_Block;
 
   unsigned InitialLevel = Line->Level;
-  nextToken();
+  nextToken(/*LevelDifference=*/AddLevel ? 1 : 0);
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
@@ -486,7 +486,8 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
     return;
   }
 
-  nextToken(); // Munch the closing brace.
+  // Munch the closing brace.
+  nextToken(/*LevelDifference=*/AddLevel ? -1 : 0);
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
@@ -747,7 +748,7 @@ static bool mustBeJSIdent(const AdditionalKeywords &Keywords,
               Keywords.kw_let, Keywords.kw_var, tok::kw_const,
               Keywords.kw_abstract, Keywords.kw_extends, Keywords.kw_implements,
               Keywords.kw_instanceof, Keywords.kw_interface,
-              Keywords.kw_throws));
+              Keywords.kw_throws, Keywords.kw_from));
 }
 
 static bool mustBeJSIdentOrValue(const AdditionalKeywords &Keywords,
@@ -2287,13 +2288,13 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
   CommentsBeforeNextToken.clear();
 }
 
-void UnwrappedLineParser::nextToken() {
+void UnwrappedLineParser::nextToken(int LevelDifference) {
   if (eof())
     return;
   flushComments(isOnNewLine(*FormatTok));
   pushToken(FormatTok);
   if (Style.Language != FormatStyle::LK_JavaScript)
-    readToken();
+    readToken(LevelDifference);
   else
     readTokenWithJavaScriptASI();
 }
@@ -2362,7 +2363,7 @@ void UnwrappedLineParser::distributeComments(
   }
 }
 
-void UnwrappedLineParser::readToken() {
+void UnwrappedLineParser::readToken(int LevelDifference) {
   SmallVector<FormatToken *, 1> Comments;
   do {
     FormatTok = Tokens->getNextToken();
@@ -2375,6 +2376,10 @@ void UnwrappedLineParser::readToken() {
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
       ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
+      assert((LevelDifference >= 0 ||
+              static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
+             "LevelDifference makes Line->Level negative");
+      Line->Level += LevelDifference;
       // Comments stored before the preprocessor directive need to be output
       // before the preprocessor directive, at the same level as the
       // preprocessor directive, as we consider them to apply to the directive.

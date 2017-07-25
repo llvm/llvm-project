@@ -594,7 +594,7 @@ static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
         isl::manage(isl_ast_build_copy(IslAstInfo::getBuild(Node)));
     if (MemAcc->isAffine()) {
       isl_pw_multi_aff *PwmaPtr =
-          MemAcc->applyScheduleToAccessRelation(Build.get_schedule().release());
+          MemAcc->applyScheduleToAccessRelation(Build.get_schedule()).release();
       isl::pw_multi_aff Pwma = isl::manage(PwmaPtr);
       isl::ast_expr AccessExpr = Build.access_from(Pwma);
       P = isl_printer_print_ast_expr(P, AccessExpr.get());

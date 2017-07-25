@@ -270,13 +270,13 @@ let usesCustomInserter = 1 in {
     ISA_MIPS1_NOT_4_32;
 
   class SelectFP_Pseudo_T<RegisterOperand RC> :
-    PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
-             [(set RC:$dst, (MipsCMovFP_T RC:$T, GPR32Opnd:$cond, RC:$F))]>,
+    PseudoSE<(outs RC:$dst), (ins FCCRegsOpnd:$cond, RC:$T, RC:$F),
+             [(set RC:$dst, (MipsCMovFP_T RC:$T, FCCRegsOpnd:$cond, RC:$F))]>,
     ISA_MIPS1_NOT_4_32;
 
   class SelectFP_Pseudo_F<RegisterOperand RC> :
-    PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
-             [(set RC:$dst, (MipsCMovFP_F RC:$T, GPR32Opnd:$cond, RC:$F))]>,
+    PseudoSE<(outs RC:$dst), (ins FCCRegsOpnd:$cond, RC:$T, RC:$F),
+             [(set RC:$dst, (MipsCMovFP_F RC:$T, FCCRegsOpnd:$cond, RC:$F))]>,
     ISA_MIPS1_NOT_4_32;
 }
 

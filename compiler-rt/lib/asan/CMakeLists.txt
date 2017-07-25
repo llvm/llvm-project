@@ -11,6 +11,7 @@ set(ASAN_SOURCES
   asan_globals.cc
   asan_globals_win.cc
   asan_interceptors.cc
+  asan_interceptors_memintrinsics.cc
   asan_linux.cc
   asan_mac.cc
   asan_malloc_linux.cc

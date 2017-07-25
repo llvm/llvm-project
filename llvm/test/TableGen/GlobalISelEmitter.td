@@ -96,6 +96,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 //
 
 // CHECK-LABEL: MatchTable0[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 // CHECK-NEXT:    // MIs[0] dst
@@ -120,6 +121,8 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable0\n");
@@ -136,6 +139,7 @@ def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4
 //
 
 // CHECK-LABEL: MatchTable1[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/3, // MIs[1]
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/4,
@@ -176,6 +180,8 @@ def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable1\n");
@@ -191,6 +197,7 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 //===- Test a simple pattern with regclass operands. ----------------------===//
 
 // CHECK-LABEL: MatchTable2[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ADD,
 // CHECK-NEXT:    // MIs[0] dst
@@ -203,9 +210,11 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // (add:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (ADD:i32 GPR32:i32:$src1, GPR32:i32:$src2)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/MyTarget::ADD,
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::ADD,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable2\n");
@@ -220,6 +229,7 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 //
 
 // CHECK-LABEL: MatchTable3[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC,
 // CHECK-NEXT:    // MIs[0] dst
@@ -239,6 +249,8 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable3\n");
@@ -252,6 +264,7 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 //===- Test a nested instruction match. -----------------------------------===//
 
 // CHECK-LABEL: MatchTable4[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -285,6 +298,8 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable4\n");
@@ -294,6 +309,7 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 
 // We also get a second rule by commutativity.
 // CHECK-LABEL: MatchTable5[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2,
@@ -327,6 +343,8 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable5\n");
@@ -342,6 +360,7 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 //===- Test another simple pattern with regclass operands. ----------------===//
 
 // CHECK-LABEL: MatchTable6[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA_HasB_HasC,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_MUL,
@@ -363,6 +382,8 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable6\n");
@@ -377,6 +398,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 //===- Test a more complex multi-instruction match. -----------------------===//
 
 // CHECK-LABEL: MatchTable7[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -422,6 +444,8 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable7\n");
@@ -438,6 +462,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 //
 
 // CHECK-LABEL: MatchTable8[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SUB,
 // CHECK-NEXT:    // MIs[0] dst
@@ -458,6 +483,8 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable8\n");
@@ -472,6 +499,7 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 //
 
 // CHECK-LABEL: MatchTable9[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -492,6 +520,8 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable9\n");
@@ -507,6 +537,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 //
 
 // CHECK-LABEL: MatchTable10[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -527,6 +558,8 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable10\n");
@@ -542,6 +575,7 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 //
 
 // CHECK-LABEL: MatchTable11[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -563,6 +597,8 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable11\n");
@@ -578,6 +614,7 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 //
 
 // CHECK-LABEL: MatchTable12[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -600,6 +637,8 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable12\n");
@@ -617,6 +656,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // priority over register banks.
 
 // CHECK-LABEL: MatchTable13[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -637,6 +677,8 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable13\n");
@@ -651,6 +693,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 //
 
 // CHECK-LABEL: MatchTable14[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BITCAST,
 // CHECK-NEXT:    // MIs[0] dst
@@ -660,9 +703,11 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::FPR32RegClassID,
 // CHECK-NEXT:    // (bitconvert:i32 FPR32:f32:$src1) => (COPY_TO_REGCLASS:i32 FPR32:f32:$src1, GPR32:i32)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/TargetOpcode::COPY,
-// CHECK-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/ 1,
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/1,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable14\n");
@@ -676,6 +721,7 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 //===- Test a simple pattern with just a leaf immediate. ------------------===//
 
 // CHECK-LABEL: MatchTable15[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:    // MIs[0] dst
@@ -690,6 +736,8 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable15\n");
@@ -702,14 +750,17 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 //===- Test a pattern with an MBB operand. --------------------------------===//
 
 // CHECK-LABEL: MatchTable16[] = {
+// CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 0*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/1,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
 // CHECK-NEXT:    GIM_CheckIsMBB, /*MI*/0, /*Op*/0,
 // CHECK-NEXT:    // (br (bb:Other):$target) => (BR (bb:Other):$target)
-// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/MyTarget::BR,
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::BR,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:    // Label 0: @[[LABEL]]
+// CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable16\n");
