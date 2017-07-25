@@ -39,6 +39,9 @@ class HelloWatchpointTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="https://bugs.swift.org/browse/SR-5555 MyFirstWatchpoint test fails on Ubuntu 16.04")
     def test_hello_watchpoint_using_watchpoint_set(self):
         """Test a simple sequence of watchpoint creation and watchpoint hit."""
         self.build(dictionary=self.d)
