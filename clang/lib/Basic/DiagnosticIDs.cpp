@@ -516,7 +516,7 @@ std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
     std::string Diag(DiagGroupNames + I + 1, DiagGroupNames[I]);
     I += DiagGroupNames[I] + 1;
     Res.push_back("-W" + Diag);
-    Res.push_back("-Wno" + Diag);
+    Res.push_back("-Wno-" + Diag);
   }
 
   return Res;

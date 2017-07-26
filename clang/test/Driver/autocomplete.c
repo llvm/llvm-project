@@ -42,5 +42,5 @@
 // MRELOCMODEL_CC1: -mrelocation-model
 // RUN: %clang --autocomplete=-Wma | FileCheck %s -check-prefix=WARNING
 // WARNING: -Wmacro-redefined -Wmain -Wmain-return-type -Wmalformed-warning-check -Wmany-braces-around-scalar-init -Wmax-unsigned-zero
-// RUN: %clang --autocomplete=-Wnoinvalid-pp- | FileCheck %s -check-prefix=NOWARNING
-// NOWARNING: -Wnoinvalid-pp-token
+// RUN: %clang --autocomplete=-Wno-invalid-pp- | FileCheck %s -check-prefix=NOWARNING
+// NOWARNING: -Wno-invalid-pp-token
