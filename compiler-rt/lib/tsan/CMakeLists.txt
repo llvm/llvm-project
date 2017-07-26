@@ -109,8 +109,6 @@ if(APPLE)
     set_source_files_properties(${TSAN_ASM_SOURCES} PROPERTIES LANGUAGE C)
   endif()
 
-  set(TSAN_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
-
   add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
@@ -124,8 +122,7 @@ if(APPLE)
                 RTSanitizerCommonLibc
                 RTUbsan
     CFLAGS ${TSAN_RTL_CFLAGS}
-    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
-    LINK_LIBS ${TSAN_LINK_LIBS}
+    LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     PARENT_TARGET tsan)
   add_compiler_rt_object_libraries(RTTsan_dynamic
     OS ${TSAN_SUPPORTED_OS}

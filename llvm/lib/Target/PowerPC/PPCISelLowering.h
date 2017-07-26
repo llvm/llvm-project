@@ -37,6 +37,14 @@ namespace llvm {
 
   namespace PPCISD {
 
+    // When adding a NEW PPCISD node please add it to the correct position in
+    // the enum. The order of elements in this enum matters!
+    // Values that are added after this entry:
+    //     STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE
+    // are considerd memory opcodes and are treated differently than entries
+    // that come before it. For example, ADD or MUL should be placed before
+    // the ISD::FIRST_TARGET_MEMORY_OPCODE while a LOAD or STORE should come
+    // after it.
     enum NodeType : unsigned {
       // Start the numbering where the builtin ops and target ops leave off.
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
