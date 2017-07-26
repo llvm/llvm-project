@@ -1130,6 +1130,62 @@ void SIScheduleBlockCreator::regroupNoUserInstructions() {
   }
 }
 
+void SIScheduleBlockCreator::colorExports() {
+  unsigned ExportColor = NextNonReservedID++;
+  SmallVector<unsigned, 8> ExpGroup;
+
+  // Put all exports together in a block.
+  // The block will naturally end up being scheduled last,
+  // thus putting exports at the end of the schedule, which
+  // is better for performance.
+  // However we must ensure, for safety, the exports can be put
+  // together in the same block without any other instruction.
+  // This could happen, for example, when scheduling after regalloc
+  // if reloading a spilled register from memory using the same
+  // register than used in a previous export.
+  // If that happens, do not regroup the exports.
+  for (unsigned SUNum : DAG->TopDownIndex2SU) {
+    const SUnit &SU = DAG->SUnits[SUNum];
+    if (SIInstrInfo::isEXP(*SU.getInstr())) {
+      // Check the EXP can be added to the group safely,
+      // ie without needing any other instruction.
+      // The EXP is allowed to depend on other EXP
+      // (they will be in the same group).
+      for (unsigned j : ExpGroup) {
+        bool HasSubGraph;
+        std::vector<int> SubGraph;
+        // By construction (topological order), if SU and
+        // DAG->SUnits[j] are linked, DAG->SUnits[j] is neccessary
+        // in the parent graph of SU.
+#ifndef NDEBUG
+        SubGraph = DAG->GetTopo()->GetSubGraph(SU, DAG->SUnits[j],
+                                               HasSubGraph);
+        assert(!HasSubGraph);
+#endif
+        SubGraph = DAG->GetTopo()->GetSubGraph(DAG->SUnits[j], SU,
+                                               HasSubGraph);
+        if (!HasSubGraph)
+          continue; // No dependencies between each other
+
+        // SubGraph contains all the instructions required
+        // between EXP SUnits[j] and EXP SU.
+        for (unsigned k : SubGraph) {
+          if (!SIInstrInfo::isEXP(*DAG->SUnits[k].getInstr()))
+            // Other instructions than EXP would be required in the group.
+            // Abort the groupping.
+            return;
+        }
+      }
+
+      ExpGroup.push_back(SUNum);
+    }
+  }
+
+  // The group can be formed. Give the color.
+  for (unsigned j : ExpGroup)
+    CurrentColoring[j] = ExportColor;
+}
+
 void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVariant BlockVariant) {
   unsigned DAGSize = DAG->SUnits.size();
   std::map<unsigned,unsigned> RealID;
@@ -1159,6 +1215,7 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
   regroupNoUserInstructions();
   colorMergeConstantLoadsNextGroup();
   colorMergeIfPossibleNextGroupOnlyForReserved();
+  colorExports();
 
   // Put SUs of same color into same block
   Node2CurrentBlock.resize(DAGSize, -1);
@@ -1365,8 +1422,8 @@ void SIScheduleBlockCreator::fillStats() {
     else {
       unsigned Depth = 0;
       for (SIScheduleBlock *Pred : Block->getPreds()) {
-        if (Depth < Pred->Depth + 1)
-          Depth = Pred->Depth + 1;
+        if (Depth < Pred->Depth + Pred->getCost())
+          Depth = Pred->Depth + Pred->getCost();
       }
       Block->Depth = Depth;
     }
@@ -1380,7 +1437,7 @@ void SIScheduleBlockCreator::fillStats() {
     else {
       unsigned Height = 0;
       for (const auto &Succ : Block->getSuccs())
-        Height = std::min(Height, Succ.first->Height + 1);
+        Height = std::max(Height, Succ.first->Height + Succ.first->getCost());
       Block->Height = Height;
     }
   }

@@ -3310,13 +3310,34 @@ static const CFGBlock *findBlockForNode(const ExplodedNode *N) {
   return nullptr;
 }
 
+static bool isNoReturnBlock(const CFGBlock *Blk) {
+  if (Blk->hasNoReturnElement())
+    return true;
+
+  // FIXME: Throw-expressions are currently generating sinks during analysis:
+  // they're not supported yet, and also often used for actually terminating
+  // the program. So we should treat them as sinks in this analysis as well,
+  // at least for now, but once we have better support for exceptions,
+  // we'd need to carefully handle the case when the throw is being
+  // immediately caught.
+  if (std::any_of(Blk->begin(), Blk->end(), [](const CFGElement &Elm) {
+        if (Optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
+          if (isa<CXXThrowExpr>(StmtElm->getStmt()))
+            return true;
+        return false;
+      }))
+    return true;
+
+  return false;
+}
+
 static bool isDominatedByNoReturnBlocks(const ExplodedNode *N) {
   const CFG &Cfg = N->getCFG();
 
   const CFGBlock *StartBlk = findBlockForNode(N);
   if (!StartBlk)
     return false;
-  if (StartBlk->hasNoReturnElement())
+  if (isNoReturnBlock(StartBlk))
     return true;
 
   llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
@@ -3336,7 +3357,7 @@ static bool isDominatedByNoReturnBlocks(const ExplodedNode *N) {
           return false;
         }
 
-        if (!SuccBlk->hasNoReturnElement() && !Visited.count(SuccBlk)) {
+        if (!isNoReturnBlock(SuccBlk) && !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.
           DFSWorkList.push_back(SuccBlk);

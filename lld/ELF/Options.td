@@ -381,13 +381,12 @@ def plugin_opt_eq: J<"plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
-def cref: Flag<["--"], "cref">;
+def cref: F<"cref">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def g: Flag<["-"], "g">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
-def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
-  Alias<no_add_needed>;
+def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">;
 def no_keep_memory: F<"no-keep-memory">;
 def no_mmap_output_file: F<"no-mmap-output-file">;
 def no_warn_common: F<"no-warn-common">;
@@ -402,4 +401,3 @@ def EB : F<"EB">;
 def EL : F<"EL">;
 def G: JoinedOrSeparate<["-"], "G">;
 def Qy : F<"Qy">;
-

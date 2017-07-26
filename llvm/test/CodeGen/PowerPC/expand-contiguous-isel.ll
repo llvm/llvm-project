@@ -122,7 +122,7 @@ _ZNK4llvm9StringRef6substrEmm.exit:               ; preds = %_ZNK4llvm9StringRef
 ; CHECK-LABEL: @_Z3fn1N4llvm9StringRefE
 ; CHECK-GEN-ISEL-TRUE: isel [[SAME:r[0-9]+]], [[SAME]], [[SAME]]
 ; CHECK-GEN-ISEL-TRUE: isel [[SAME:r[0-9]+]], {{r[0-9]+}}, [[SAME]]
-; CHECK: bc 12, 2, [[TRUE:.LBB[0-9]+]]
+; CHECK: bc 12, eq, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NEXT: [[TRUE]]
 ; CHECK-NEXT: addi {{r[0-9]+}}, {{r[0-9]+}}, 0

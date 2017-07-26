@@ -133,13 +133,15 @@ void nacltools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.CCCIsCXX() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    bool OnlyLibstdcxxStatic =
-        Args.hasArg(options::OPT_static_libstdcxx) && !IsStatic;
-    if (OnlyLibstdcxxStatic)
-      CmdArgs.push_back("-Bstatic");
-    ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-    if (OnlyLibstdcxxStatic)
-      CmdArgs.push_back("-Bdynamic");
+    if (ToolChain.ShouldLinkCXXStdlib(Args)) {
+      bool OnlyLibstdcxxStatic =
+          Args.hasArg(options::OPT_static_libstdcxx) && !IsStatic;
+      if (OnlyLibstdcxxStatic)
+        CmdArgs.push_back("-Bstatic");
+      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (OnlyLibstdcxxStatic)
+        CmdArgs.push_back("-Bdynamic");
+    }
     CmdArgs.push_back("-lm");
   }
 

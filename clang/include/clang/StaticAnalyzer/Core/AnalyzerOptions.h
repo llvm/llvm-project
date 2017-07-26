@@ -275,6 +275,9 @@ private:
   /// \sa shouldWidenLoops
   Optional<bool> WidenLoops;
 
+  /// \sa shouldUnrollLoops
+  Optional<bool> UnrollLoops;
+
   /// \sa shouldDisplayNotesAsEvents
   Optional<bool> DisplayNotesAsEvents;
 
@@ -559,6 +562,10 @@ public:
   /// Returns true if the analysis should try to widen loops.
   /// This is controlled by the 'widen-loops' config option.
   bool shouldWidenLoops();
+
+  /// Returns true if the analysis should try to unroll loops with known bounds.
+  /// This is controlled by the 'unroll-loops' config option.
+  bool shouldUnrollLoops();
 
   /// Returns true if the bug reporter should transparently treat extra note
   /// diagnostic pieces as event diagnostic pieces. Useful when the diagnostic

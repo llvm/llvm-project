@@ -406,8 +406,6 @@ namespace {
                                   SDValue VecIn2, unsigned LeftIdx);
     SDValue matchVSelectOpSizesWithSetCC(SDNode *N);
 
-    SDValue GetDemandedBits(SDValue V, const APInt &Mask);
-
     /// Walk up chain skipping non-aliasing memory nodes,
     /// looking for aliasing nodes and adding them to the Aliases vector.
     void GatherAllAliases(SDNode *N, SDValue OriginalChain,
@@ -7904,59 +7902,6 @@ SDValue DAGCombiner::visitAssertZext(SDNode *N) {
   return SDValue();
 }
 
-/// See if the specified operand can be simplified with the knowledge that only
-/// the bits specified by Mask are used.  If so, return the simpler operand,
-/// otherwise return a null SDValue.
-///
-/// (This exists alongside SimplifyDemandedBits because GetDemandedBits can
-/// simplify nodes with multiple uses more aggressively.)
-SDValue DAGCombiner::GetDemandedBits(SDValue V, const APInt &Mask) {
-  switch (V.getOpcode()) {
-  default: break;
-  case ISD::Constant: {
-    const ConstantSDNode *CV = cast<ConstantSDNode>(V.getNode());
-    assert(CV && "Const value should be ConstSDNode.");
-    const APInt &CVal = CV->getAPIntValue();
-    APInt NewVal = CVal & Mask;
-    if (NewVal != CVal)
-      return DAG.getConstant(NewVal, SDLoc(V), V.getValueType());
-    break;
-  }
-  case ISD::OR:
-  case ISD::XOR:
-    // If the LHS or RHS don't contribute bits to the or, drop them.
-    if (DAG.MaskedValueIsZero(V.getOperand(0), Mask))
-      return V.getOperand(1);
-    if (DAG.MaskedValueIsZero(V.getOperand(1), Mask))
-      return V.getOperand(0);
-    break;
-  case ISD::SRL:
-    // Only look at single-use SRLs.
-    if (!V.getNode()->hasOneUse())
-      break;
-    if (ConstantSDNode *RHSC = getAsNonOpaqueConstant(V.getOperand(1))) {
-      // See if we can recursively simplify the LHS.
-      unsigned Amt = RHSC->getZExtValue();
-
-      // Watch out for shift count overflow though.
-      if (Amt >= Mask.getBitWidth()) break;
-      APInt NewMask = Mask << Amt;
-      if (SDValue SimplifyLHS = GetDemandedBits(V.getOperand(0), NewMask))
-        return DAG.getNode(ISD::SRL, SDLoc(V), V.getValueType(),
-                           SimplifyLHS, V.getOperand(1));
-    }
-    break;
-  case ISD::AND: {
-    // X & -1 -> X (ignoring bits which aren't demanded).
-    ConstantSDNode *AndVal = isConstOrConstSplat(V.getOperand(1));
-    if (AndVal && Mask.isSubsetOf(AndVal->getAPIntValue()))
-      return V.getOperand(0);
-    break;
-  }
-  }
-  return SDValue();
-}
-
 /// If the result of a wider load is shifted to right of N  bits and then
 /// truncated to a narrower type and where N is a multiple of number of bits of
 /// the narrower type, transform it to a narrower load from address + N / num of
@@ -8427,9 +8372,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // Currently we only perform this optimization on scalars because vectors
   // may have different active low bits.
   if (!VT.isVector()) {
-    if (SDValue Shorter =
-            GetDemandedBits(N0, APInt::getLowBitsSet(N0.getValueSizeInBits(),
-                                                     VT.getSizeInBits())))
+    APInt Mask =
+        APInt::getLowBitsSet(N0.getValueSizeInBits(), VT.getSizeInBits());
+    if (SDValue Shorter = DAG.GetDemandedBits(N0, Mask))
       return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Shorter);
   }
 
@@ -8500,7 +8445,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // Fold truncate of a bitcast of a vector to an extract of the low vector
   // element.
   //
-  // e.g. trunc (i64 (bitcast v2i32:x)) -> extract_vector_elt v2i32:x, 0
+  // e.g. trunc (i64 (bitcast v2i32:x)) -> extract_vector_elt v2i32:x, idx
   if (N0.getOpcode() == ISD::BITCAST && !VT.isVector()) {
     SDValue VecSrc = N0.getOperand(0);
     EVT SrcVT = VecSrc.getValueType();
@@ -8510,8 +8455,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       SDLoc SL(N);
 
       EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+      unsigned Idx = isLE ? 0 : SrcVT.getVectorNumElements() - 1;
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, VT,
-                         VecSrc, DAG.getConstant(0, SL, IdxVT));
+                         VecSrc, DAG.getConstant(Idx, SL, IdxVT));
     }
   }
 
@@ -13359,7 +13305,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     // See if we can simplify the input to this truncstore with knowledge that
     // only the low bits are being used.  For example:
     // "truncstore (or (shl x, 8), y), i8"  -> "truncstore y, i8"
-    SDValue Shorter = GetDemandedBits(
+    SDValue Shorter = DAG.GetDemandedBits(
         Value, APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),
                                     ST->getMemoryVT().getScalarSizeInBits()));
     AddToWorklist(Value.getNode());
@@ -13773,9 +13719,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // converts.
   }
 
-  // extract_vector_elt (v2i32 (bitcast i64:x)), 0 -> i32 (trunc i64:x)
+  // extract_vector_elt (v2i32 (bitcast i64:x)), EltTrunc -> i32 (trunc i64:x)
+  bool isLE = DAG.getDataLayout().isLittleEndian();
+  unsigned EltTrunc = isLE ? 0 : VT.getVectorNumElements() - 1;
   if (ConstEltNo && InVec.getOpcode() == ISD::BITCAST && InVec.hasOneUse() &&
-      ConstEltNo->isNullValue() && VT.isInteger()) {
+      ConstEltNo->getZExtValue() == EltTrunc && VT.isInteger()) {
     SDValue BCSrc = InVec.getOperand(0);
     if (BCSrc.getValueType().isScalarInteger())
       return DAG.getNode(ISD::TRUNCATE, SDLoc(N), NVT, BCSrc);

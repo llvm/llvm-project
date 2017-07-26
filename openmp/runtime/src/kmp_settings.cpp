@@ -641,6 +641,9 @@ static void __kmp_stg_print_blocktime(kmp_str_buf_t *buffer, char const *name,
   __kmp_stg_print_int(buffer, name, __kmp_dflt_blocktime);
 } // __kmp_stg_print_blocktime
 
+// Used for OMP_WAIT_POLICY
+static char const *blocktime_str = NULL;
+
 // -----------------------------------------------------------------------------
 // KMP_DUPLICATE_LIB_OK
 
@@ -677,8 +680,6 @@ static void __kmp_stg_print_inherit_fp_control(kmp_str_buf_t *buffer,
 
 // -----------------------------------------------------------------------------
 // KMP_LIBRARY, OMP_WAIT_POLICY
-
-static char const *blocktime_str = NULL;
 
 static void __kmp_stg_parse_wait_policy(char const *name, char const *value,
                                         void *data) {
@@ -1171,14 +1172,14 @@ static void __kmp_stg_print_max_task_priority(kmp_str_buf_t *buffer,
 // KMP_TASKLOOP_MIN_TASKS
 // taskloop threashold to switch from recursive to linear tasks creation
 static void __kmp_stg_parse_taskloop_min_tasks(char const *name,
-                                              char const *value, void *data) {
+                                               char const *value, void *data) {
   int tmp;
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &tmp);
   __kmp_taskloop_min_tasks = tmp;
 } // __kmp_stg_parse_taskloop_min_tasks
 
 static void __kmp_stg_print_taskloop_min_tasks(kmp_str_buf_t *buffer,
-                                              char const *name, void *data) {
+                                               char const *name, void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_taskloop_min_tasks);
 } // __kmp_stg_print_taskloop_min_tasks
 #endif // OMP_45_ENABLED
@@ -3381,8 +3382,6 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
         value = NULL; /* skip processing of comma */
       }
       if (value && comma) {
-        __kmp_env_chunk = TRUE;
-
         if (__kmp_sched == kmp_sch_static)
           __kmp_sched = kmp_sch_static_chunked;
         ++comma;
@@ -3406,8 +3405,7 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
                     __kmp_msg_null);
           KMP_INFORM(Using_int_Value, name, __kmp_chunk);
         }
-      } else
-        __kmp_env_chunk = FALSE;
+      }
     } else
       KMP_WARNING(EmptyString, name);
   }
@@ -4925,7 +4923,7 @@ void __kmp_env_initialize(char const *string) {
     }
   }; // for i
 
-  // We need to know if blocktime was set when processing OMP_WAIT_POLICY
+// We need to know if blocktime was set when processing OMP_WAIT_POLICY
   blocktime_str = __kmp_env_blk_var(&block, "KMP_BLOCKTIME");
 
   // Special case. If we parse environment, not a string, process KMP_WARNINGS
