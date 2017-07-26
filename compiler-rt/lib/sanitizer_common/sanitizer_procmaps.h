@@ -37,15 +37,20 @@ static const uptr kProtectionWrite = 2;
 static const uptr kProtectionExecute = 4;
 static const uptr kProtectionShared = 8;
 
-struct MemoryMappedSegment {
+struct MemoryMappedSegmentData;
+
+class MemoryMappedSegment {
+ public:
   MemoryMappedSegment(char *buff = nullptr, uptr size = 0)
-      : filename(buff), filename_size(size) {}
+      : filename(buff), filename_size(size), data_(nullptr) {}
   ~MemoryMappedSegment() {}
 
   bool IsReadable() const { return protection & kProtectionRead; }
   bool IsWritable() const { return protection & kProtectionWrite; }
   bool IsExecutable() const { return protection & kProtectionExecute; }
   bool IsShared() const { return protection & kProtectionShared; }
+
+  void AddAddressRanges(LoadedModule *module);
 
   uptr start;
   uptr end;
@@ -55,6 +60,12 @@ struct MemoryMappedSegment {
   uptr protection;
   ModuleArch arch;
   u8 uuid[kModuleUUIDSize];
+
+ private:
+  friend class MemoryMappingLayout;
+
+  // This field is assigned and owned by MemoryMappingLayout if needed
+  MemoryMappedSegmentData *data_;
 };
 
 class MemoryMappingLayout {
