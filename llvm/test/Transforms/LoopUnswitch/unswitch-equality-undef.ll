@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt < %s -instcombine -licm -loop-unswitch -loop-unswitch-threshold=1000 -disable-output -stats 2>&1| FileCheck %s
 ; Check no loop unswitch is done because unswitching of equality expr with
 ; undef is unsafe before the freeze patch is committed.
