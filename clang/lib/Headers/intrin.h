@@ -38,6 +38,10 @@
 #include <armintr.h>
 #endif
 
+#if defined(_M_ARM64)
+#include <arm64intr.h>
+#endif
+
 /* For the definition of jmp_buf. */
 #if __STDC_HOSTED__
 #include <setjmp.h>

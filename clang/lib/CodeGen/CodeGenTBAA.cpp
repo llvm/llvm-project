@@ -139,6 +139,12 @@ CodeGenTBAA::getTBAAInfo(QualType QTy) {
     }
   }
 
+  // C++1z [basic.lval]p10: "If a program attempts to access the stored value of
+  // an object through a glvalue of other than one of the following types the
+  // behavior is undefined: [...] a char, unsigned char, or std::byte type."
+  if (Ty->isStdByteType())
+    return MetadataCache[Ty] = getChar();
+
   // Handle pointers.
   // TODO: Implement C++'s type "similarity" and consider dis-"similar"
   // pointers distinct.

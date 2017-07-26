@@ -452,16 +452,20 @@ ALL-NEXT:            0x100D: ` Kits\8.1\include\um" -I"C:\Program Files (x86)\Wi
 ALL:        Type Index Offsets:
 ALL-NEXT:     TI: 0x1000, Offset: 0
 ALL:        Hash Adjusters:
+ALL:                             Global Symbols
+ALL-NEXT: ============================================================
+ALL-NEXT:   56 | S_PROCREF [size = 20] `main`
+ALL-NEXT:       module = 1, sum name = 0, offset = 120
+ALL-NEXT:   76 | S_GDATA32 [size = 28] `__purecall`
+ALL-NEXT:       type = 0x0403 (void*), addr = 0003:0000
+ALL-NOT:   S_PUB32
 ALL:                             Public Symbols
 ALL-NEXT: ============================================================
 ALL-NEXT:    0 | S_PUB32 [size = 36] `?__purecall@@3PAXA`
 ALL-NEXT:       flags = none, addr = 0003:0000
 ALL-NEXT:   36 | S_PUB32 [size = 20] `_main`
 ALL-NEXT:       flags = function, addr = 0001:0016
-ALL-NEXT:   56 | S_PROCREF [size = 20] `main`
-ALL-NEXT:       module = 1, sum name = 0, offset = 120
-ALL-NEXT:   76 | S_GDATA32 [size = 28] `__purecall`
-ALL-NEXT:       type = 0x0403 (void*), addr = 0003:0000
+ALL-NOT:   S_PROCREF
 ALL:                                Symbols
 ALL-NEXT: ============================================================
 ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:

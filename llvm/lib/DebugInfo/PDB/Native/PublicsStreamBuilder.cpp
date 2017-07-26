@@ -8,12 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PublicsStreamBuilder.h"
-
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-
-#include "GSI.h"
+#include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 
 using namespace llvm;
 using namespace llvm::msf;

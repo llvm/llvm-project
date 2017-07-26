@@ -427,10 +427,7 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
     if (!verifier.handleDebugLine())
       Success = false;
   }
-  if (DumpType == DIDT_All || DumpType == DIDT_AppleNames) {
-    if (!verifier.handleAppleNames())
-      Success = false;
-  }
+  Success &= verifier.handleAccelTables();
   return Success;
 }
 
