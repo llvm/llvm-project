@@ -945,6 +945,9 @@ public:
 using CVSymbol = CVRecord<SymbolKind>;
 using CVSymbolArray = VarStreamArray<CVSymbol>;
 
+Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
+                                        uint32_t Offset);
+
 } // end namespace codeview
 } // end namespace llvm
 

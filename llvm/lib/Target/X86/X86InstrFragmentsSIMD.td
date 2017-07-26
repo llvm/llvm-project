@@ -698,17 +698,20 @@ def alignedstore512 : PatFrag<(ops node:$val, node:$ptr),
 
 // Like 'load', but always requires 128-bit vector alignment.
 def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 16;
+  return cast<LoadSDNode>(N)->getAlignment() >= 16 &&
+         (!Subtarget->hasSSE41() || !cast<LoadSDNode>(N)->isNonTemporal());
 }]>;
 
 // Like 'load', but always requires 256-bit vector alignment.
 def alignedload256 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 32;
+  return cast<LoadSDNode>(N)->getAlignment() >= 32 &&
+         (!Subtarget->hasAVX2() || !cast<LoadSDNode>(N)->isNonTemporal());
 }]>;
 
 // Like 'load', but always requires 512-bit vector alignment.
 def alignedload512 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 64;
+  return cast<LoadSDNode>(N)->getAlignment() >= 64 &&
+         (!Subtarget->hasAVX512() || !cast<LoadSDNode>(N)->isNonTemporal());
 }]>;
 
 // 128-bit aligned load pattern fragments

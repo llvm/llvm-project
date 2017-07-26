@@ -91,11 +91,10 @@ void ananas::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    if (D.CCCIsCXX())
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+  if (ToolChain.ShouldLinkCXXStdlib(Args))
+    ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     CmdArgs.push_back("-lc");
-  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));

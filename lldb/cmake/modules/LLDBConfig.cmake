@@ -22,10 +22,6 @@ elseif(IOS)
   set(LLDB_DEFAULT_DISABLE_PYTHON 1)
 endif()
 
-if(IOS)
-  add_definitions(-DNO_XPC_SERVICES)
-endif()
-
 set(LLDB_DISABLE_PYTHON ${LLDB_DEFAULT_DISABLE_PYTHON} CACHE BOOL
   "Disables the Python scripting integration.")
 set(LLDB_DISABLE_CURSES ${LLDB_DEFAULT_DISABLE_CURSES} CACHE BOOL
@@ -282,6 +278,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN ".svn" EXCLUDE
     PATTERN ".cmake" EXCLUDE
     PATTERN "Config.h" EXCLUDE
+    PATTERN "lldb-*.h" EXCLUDE
+    PATTERN "API/*.h" EXCLUDE
     )
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
@@ -291,6 +289,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.h"
     PATTERN ".svn" EXCLUDE
     PATTERN ".cmake" EXCLUDE
+    PATTERN "lldb-*.h" EXCLUDE
+    PATTERN "API/*.h" EXCLUDE
     )
 endif()
 

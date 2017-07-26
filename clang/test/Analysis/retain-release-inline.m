@@ -299,7 +299,7 @@ void test_neg() {
   bar(s);
 }
 
-__attribute__((cf_returns_retained)) isl_basic_map *isl_basic_map_cow(__attribute__((cf_consumed)) isl_basic_map *bmap);
+__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_cow(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap);
 void free(void *);
 
 // As 'isl_basic_map_free' is annotated with 'rc_ownership_trusted_implementation', RetainCountChecker trusts its
@@ -307,7 +307,7 @@ void free(void *);
 // a leak warning is raised by RetainCountChecker as the analyzer is unable to detect a decrement in the reference
 // count of 'bmap' along the path in 'isl_basic_map_free' assuming the predicate of the second 'if' branch to be
 // true or assuming both the predicates in the function to be false.
-__attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *isl_basic_map_free(__attribute__((cf_consumed)) isl_basic_map *bmap) {
+__attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *isl_basic_map_free(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
   if (!bmap)
     return NULL;
 
@@ -322,7 +322,7 @@ __attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *
 // implementation and doesn't analyze its body. If that annotation is removed, a 'use-after-release' warning might
 // be raised by RetainCountChecker as the pointer which is passed as an argument to this function and the pointer
 // which is returned from the function point to the same memory location.
-__attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((cf_returns_retained)) isl_basic_map *isl_basic_map_copy(isl_basic_map *bmap) {
+__attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_copy(isl_basic_map *bmap) {
   if (!bmap)
     return NULL;
 
@@ -330,7 +330,7 @@ __attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((
   return bmap;
 }
 
-void test_use_after_release_with_trusted_implementation_annotate_attribute(__attribute__((cf_consumed)) isl_basic_map *bmap) {
+void test_use_after_release_with_trusted_implementation_annotate_attribute(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
   // After this call, 'bmap' has a +1 reference count.
   bmap = isl_basic_map_cow(bmap);
   // After the call to 'isl_basic_map_copy', 'bmap' has a +1 reference count.
@@ -341,7 +341,7 @@ void test_use_after_release_with_trusted_implementation_annotate_attribute(__att
   isl_basic_map_free(temp);
 }
 
-void test_leak_with_trusted_implementation_annotate_attribute(__attribute__((cf_consumed)) isl_basic_map *bmap) {
+void test_leak_with_trusted_implementation_annotate_attribute(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
   // After this call, 'bmap' has a +1 reference count.
   bmap = isl_basic_map_cow(bmap); // no-warning
   // After this call, 'bmap' has a +0 reference count.

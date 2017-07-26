@@ -156,6 +156,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     Unc = &Uncommons.back();
     *Unc = {};
     setStr(Unc->COFFWeakExternFallbackName, "");
+    setStr(Unc->SectionName, "");
     return *Unc;
   };
 
@@ -239,6 +240,9 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
       setStr(Uncommon().COFFWeakExternFallbackName, Saver.save(FallbackName));
     }
   }
+
+  if (!Base->getSection().empty())
+    setStr(Uncommon().SectionName, Saver.save(Base->getSection()));
 
   return Error::success();
 }

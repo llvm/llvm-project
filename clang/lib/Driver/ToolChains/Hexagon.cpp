@@ -248,7 +248,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   if (IncStdLib && IncDefLibs) {
     if (D.CCCIsCXX()) {
-      HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (HTC.ShouldLinkCXXStdlib(Args))
+        HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 

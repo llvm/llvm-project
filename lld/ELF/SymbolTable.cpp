@@ -358,9 +358,8 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding,
 // We have a new non-common defined symbol with the specified binding. Return 1
 // if the new symbol should win, -1 if the new symbol should lose, or 0 if there
 // is a conflict. If the new symbol wins, also update the binding.
-template <typename ELFT>
 static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding,
-                                   bool IsAbsolute, typename ELFT::uint Value,
+                                   bool IsAbsolute, uint64_t Value,
                                    StringRef Name) {
   if (int Cmp = compareDefined(S, WasInserted, Binding, Name)) {
     if (Cmp > 0)
@@ -430,7 +429,7 @@ static void reportDuplicate(SymbolBody *Sym, InputSectionBase *ErrSec,
                             typename ELFT::uint ErrOffset) {
   DefinedRegular *D = dyn_cast<DefinedRegular>(Sym);
   if (!D || !D->Section || !ErrSec) {
-    reportDuplicate(Sym, ErrSec ? ErrSec->getFile<ELFT>() : nullptr);
+    reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
     return;
   }
 
@@ -466,8 +465,8 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Type, getVisibility(StOther),
                                     /*CanOmitFromDynSym*/ false, File);
-  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, Binding,
-                                          Section == nullptr, Value, Name);
+  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
+                                    Value, Name);
   if (Cmp > 0)
     replaceBody<DefinedRegular>(S, Name, /*IsLocal=*/false, StOther, Type,
                                 Value, Size, Section, File);
@@ -512,8 +511,8 @@ Symbol *SymbolTable<ELFT>::addBitcode(StringRef Name, uint8_t Binding,
   bool WasInserted;
   std::tie(S, WasInserted) =
       insert(Name, Type, getVisibility(StOther), CanOmitFromDynSym, F);
-  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, Binding,
-                                          /*IsAbs*/ false, /*Value*/ 0, Name);
+  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
+                                    /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)
     replaceBody<DefinedRegular>(S, Name, /*IsLocal=*/false, StOther, Type, 0, 0,
                                 nullptr, F);

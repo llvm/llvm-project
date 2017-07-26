@@ -182,7 +182,7 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
 }
 
 template <class Callback>  // bool Callback(size_t Feature)
-ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 __attribute__((noinline))
 void TracePC::CollectFeatures(Callback HandleFeature) const {
   uint8_t *Counters = this->Counters();

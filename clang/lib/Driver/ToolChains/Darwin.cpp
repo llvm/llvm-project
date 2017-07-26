@@ -549,10 +549,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-threads=") + llvm::to_string(Parallelism)));
   }
 
+  if (getToolChain().ShouldLinkCXXStdlib(Args))
+    getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    if (getToolChain().getDriver().CCCIsCXX())
-      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
-
     // link_ssp spec is empty.
 
     // Let the tool chain choose which runtime library to link.

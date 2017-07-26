@@ -257,15 +257,15 @@ static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
                       "Buffer in Report is too short!\n"); \
       }
     if (append_pid) {
+      int pid = internal_getpid();
       const char *exe_name = GetProcessName();
       if (common_flags()->log_exe_name && exe_name) {
         needed_length += internal_snprintf(buffer, buffer_size,
                                            "==%s", exe_name);
         CHECK_NEEDED_LENGTH
       }
-      needed_length +=
-          internal_snprintf(buffer + needed_length, buffer_size - needed_length,
-                            "==%d:%d==", internal_getpid(), GetTid());
+      needed_length += internal_snprintf(
+          buffer + needed_length, buffer_size - needed_length, "==%d==", pid);
       CHECK_NEEDED_LENGTH
     }
     needed_length += VSNPrintf(buffer + needed_length,
@@ -307,7 +307,7 @@ void Printf(const char *format, ...) {
   va_end(args);
 }
 
-// Like Printf, but prints the current PID:TID before the output string.
+// Like Printf, but prints the current PID before the output string.
 FORMAT(1, 2)
 void Report(const char *format, ...) {
   va_list args;

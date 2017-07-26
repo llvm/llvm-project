@@ -8,17 +8,13 @@
 #include <assert.h>
 #include <errno.h>
 #include <malloc.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-// Reduce the size of the quarantine, or the test can run out of aligned memory
-// on 32-bit for the larger alignments.
-extern "C" const char *__scudo_default_options() {
-  return "QuarantineSizeMb=1";
-}
+#include <unistd.h>
 
 // Sometimes the headers may not have this...
-extern "C" void *aligned_alloc (size_t alignment, size_t size);
+extern "C" void *aligned_alloc(size_t alignment, size_t size);
 
 int main(int argc, char **argv)
 {
@@ -32,9 +28,11 @@ int main(int argc, char **argv)
   if (!strcmp(argv[1], "valid")) {
     posix_memalign(&p, alignment, size);
     assert(p);
+    assert(((uintptr_t)p & (alignment - 1)) == 0);
     free(p);
     p = aligned_alloc(alignment, size);
     assert(p);
+    assert(((uintptr_t)p & (alignment - 1)) == 0);
     free(p);
     // Tests various combinations of alignment and sizes
     for (int i = (sizeof(void *) == 4) ? 3 : 4; i < 19; i++) {
@@ -44,6 +42,7 @@ int main(int argc, char **argv)
         for (int k = 0; k < 3; k++) {
           p = memalign(alignment, size - (2 * sizeof(void *) * k));
           assert(p);
+          assert(((uintptr_t)p & (alignment - 1)) == 0);
           free(p);
         }
       }
@@ -54,6 +53,7 @@ int main(int argc, char **argv)
       for (int k = 0; k < 3; k++) {
         p = memalign(alignment, 0x1000 - (2 * sizeof(void *) * k));
         assert(p);
+        assert(((uintptr_t)p & (alignment - 1)) == 0);
         free(p);
       }
     }

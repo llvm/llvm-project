@@ -49,6 +49,7 @@
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
@@ -126,6 +127,11 @@ Error DumpOutputStyle::dump() {
   if (opts::dump::DumpIds || !opts::dump::DumpIdIndex.empty() ||
       opts::dump::DumpIdExtras) {
     if (auto EC = dumpTpiStream(StreamIPI))
+      return EC;
+  }
+
+  if (opts::dump::DumpGlobals) {
+    if (auto EC = dumpGlobals())
       return EC;
   }
 
@@ -851,57 +857,37 @@ Error DumpOutputStyle::dumpModuleSyms() {
   return Error::success();
 }
 
+Error DumpOutputStyle::dumpGlobals() {
+  printHeader(P, "Global Symbols");
+  AutoIndent Indent(P);
+  if (!File.hasPDBGlobalsStream()) {
+    P.formatLine("Globals stream not present");
+    return Error::success();
+  }
+  ExitOnError Err("Error dumping globals stream");
+  auto &Globals = Err(File.getPDBGlobalsStream());
+
+  const GSIHashTable &Table = Globals.getGlobalsTable();
+  Err(dumpSymbolsFromGSI(Table, opts::dump::DumpGlobalExtras));
+  return Error::success();
+}
+
 Error DumpOutputStyle::dumpPublics() {
   printHeader(P, "Public Symbols");
-
   AutoIndent Indent(P);
   if (!File.hasPDBPublicsStream()) {
     P.formatLine("Publics stream not present");
     return Error::success();
   }
-
   ExitOnError Err("Error dumping publics stream");
-
-  auto &Types = Err(initializeTypes(StreamTPI));
   auto &Publics = Err(File.getPDBPublicsStream());
-  SymbolVisitorCallbackPipeline Pipeline;
-  SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Types);
 
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(Dumper);
-  CVSymbolVisitor Visitor(Pipeline);
+  const GSIHashTable &PublicsTable = Publics.getPublicsTable();
+  Err(dumpSymbolsFromGSI(PublicsTable, opts::dump::DumpPublicExtras));
 
-  auto ExpectedSymbols = Publics.getSymbolArray();
-  if (!ExpectedSymbols) {
-    P.formatLine("Could not read public symbol record stream");
-    return Error::success();
-  }
-
-  if (auto EC = Visitor.visitSymbolStream(*ExpectedSymbols, 0))
-    P.formatLine("Error while processing public symbol records.  {0}",
-                 toString(std::move(EC)));
-
-  // Return early if we aren't dumping public hash table and address map info.
+  // Skip the rest if we aren't dumping extras.
   if (!opts::dump::DumpPublicExtras)
     return Error::success();
-
-  P.formatLine("Hash Records");
-  {
-    AutoIndent Indent2(P);
-    for (const PSHashRecord &HR : Publics.getHashRecords())
-      P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
-                   uint32_t(HR.CRef));
-  }
-
-  // FIXME: Dump the bitmap.
-
-  P.formatLine("Hash Buckets");
-  {
-    AutoIndent Indent2(P);
-    for (uint32_t Hash : Publics.getHashBuckets())
-      P.formatLine("{0:x8}", Hash);
-  }
 
   P.formatLine("Address Map");
   {
@@ -926,6 +912,56 @@ Error DumpOutputStyle::dumpPublics() {
     AutoIndent Indent2(P);
     for (const SectionOffset &SO : Publics.getSectionOffsets())
       P.formatLine("{0:x4}:{1:x8}", uint16_t(SO.Isect), uint32_t(SO.Off));
+  }
+
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
+                                          bool HashExtras) {
+  auto ExpectedSyms = File.getPDBSymbolStream();
+  if (!ExpectedSyms)
+    return ExpectedSyms.takeError();
+  auto ExpectedTypes = initializeTypes(StreamTPI);
+  if (!ExpectedTypes)
+    return ExpectedTypes.takeError();
+  SymbolVisitorCallbackPipeline Pipeline;
+  SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedTypes);
+
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(Dumper);
+  CVSymbolVisitor Visitor(Pipeline);
+
+  BinaryStreamRef SymStream =
+      ExpectedSyms->getSymbolArray().getUnderlyingStream();
+  for (uint32_t PubSymOff : Table) {
+    Expected<CVSymbol> Sym = readSymbolFromStream(SymStream, PubSymOff);
+    if (!Sym)
+      return Sym.takeError();
+    if (auto E = Visitor.visitSymbolRecord(*Sym, PubSymOff))
+      return E;
+  }
+
+  // Return early if we aren't dumping public hash table and address map info.
+  if (!HashExtras)
+    return Error::success();
+
+  P.formatLine("Hash Records");
+  {
+    AutoIndent Indent2(P);
+    for (const PSHashRecord &HR : Table.HashRecords)
+      P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
+                   uint32_t(HR.CRef));
+  }
+
+  // FIXME: Dump the bitmap.
+
+  P.formatLine("Hash Buckets");
+  {
+    AutoIndent Indent2(P);
+    for (uint32_t Hash : Table.HashBuckets)
+      P.formatLine("{0:x8}", Hash);
   }
 
   return Error::success();

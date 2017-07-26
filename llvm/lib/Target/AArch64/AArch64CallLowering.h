@@ -1,4 +1,4 @@
-//===--- AArch64CallLowering.h - Call lowering ------------------*- C++ -*-===//
+//===- AArch64CallLowering.h - Call lowering --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,12 +17,18 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/IR/CallingConv.h"
 #include <cstdint>
 #include <functional>
 
 namespace llvm {
 
 class AArch64TargetLowering;
+class CCValAssign;
+class DataLayout;
+class MachineIRBuilder;
+class MachineRegisterInfo;
+class Type;
 
 class AArch64CallLowering: public CallLowering {
 public:
@@ -39,14 +45,13 @@ public:
                  ArrayRef<ArgInfo> OrigArgs) const override;
 
 private:
-  typedef std::function<void(MachineIRBuilder &, Type *, unsigned,
-                             CCValAssign &)>
-      RegHandler;
+  using RegHandler = std::function<void(MachineIRBuilder &, Type *, unsigned,
+                                        CCValAssign &)>;
 
-  typedef std::function<void(MachineIRBuilder &, int, CCValAssign &)>
-      MemHandler;
+  using MemHandler =
+      std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
 
-  typedef std::function<void(unsigned, uint64_t)> SplitArgTy;
+  using SplitArgTy = std::function<void(unsigned, uint64_t)>;
 
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
