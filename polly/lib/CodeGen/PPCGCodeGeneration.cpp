@@ -2714,9 +2714,10 @@ public:
   /// Create the arrays for @p PPCGProg.
   ///
   /// @param PPCGProg The program to compute the arrays for.
-  void createArrays(gpu_prog *PPCGProg) {
+  void createArrays(gpu_prog *PPCGProg,
+                    const SmallVector<ScopArrayInfo *, 4> &ValidSAIs) {
     int i = 0;
-    for (auto &Array : S->arrays()) {
+    for (auto &Array : ValidSAIs) {
       std::string TypeName;
       raw_string_ostream OS(TypeName);
 
@@ -2800,11 +2801,25 @@ public:
         isl_union_map_empty(isl_set_get_space(PPCGScop->context));
     PPCGProg->n_stmts = std::distance(S->begin(), S->end());
     PPCGProg->stmts = getStatements();
-    PPCGProg->n_array = std::distance(S->array_begin(), S->array_end());
+
+    // Only consider arrays that have a non-empty extent.
+    // Otherwise, this will cause us to consider the following kinds of
+    // empty arrays:
+    //     1. Invariant loads that are represented by SAI objects.
+    //     2. Arrays with statically known zero size.
+    auto ValidSAIsRange =
+        make_filter_range(S->arrays(), [this](ScopArrayInfo *SAI) -> bool {
+          return !isl::manage(getExtent(SAI)).is_empty();
+        });
+    SmallVector<ScopArrayInfo *, 4> ValidSAIs(ValidSAIsRange.begin(),
+                                              ValidSAIsRange.end());
+
+    PPCGProg->n_array =
+        ValidSAIs.size(); // std::distance(S->array_begin(), S->array_end());
     PPCGProg->array = isl_calloc_array(S->getIslCtx(), struct gpu_array_info,
                                        PPCGProg->n_array);
 
-    createArrays(PPCGProg);
+    createArrays(PPCGProg, ValidSAIs);
 
     PPCGProg->may_persist = compute_may_persist(PPCGProg);
     return PPCGProg;

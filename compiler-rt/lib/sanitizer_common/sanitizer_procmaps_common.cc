@@ -64,6 +64,12 @@ uptr ParseHex(const char **p) {
   return ParseNumber(p, 16);
 }
 
+void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
+  // data_ should be unused on this platform
+  CHECK(!data_);
+  module->addAddressRange(start, end, IsExecutable(), IsWritable());
+}
+
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
   ReadProcMaps(&proc_self_maps_);
   if (cache_enabled) {
@@ -139,8 +145,7 @@ void MemoryMappingLayout::DumpListOfModules(
     uptr base_address = (i ? segment.start : 0) - segment.offset;
     LoadedModule cur_module;
     cur_module.set(cur_name, base_address);
-    cur_module.addAddressRange(segment.start, segment.end,
-                               segment.IsExecutable(), segment.IsWritable());
+    segment.AddAddressRanges(&cur_module);
     modules->push_back(cur_module);
   }
 }

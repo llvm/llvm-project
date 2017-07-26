@@ -665,6 +665,10 @@ void *scudoValloc(uptr Size) {
 
 void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(Size, PageSize))) {
+    errno = errno_ENOMEM;
+    return ScudoAllocator::FailureHandler::OnBadRequest();
+  }
   // pvalloc(0) should allocate one page.
   Size = Size ? RoundUpTo(Size, PageSize) : PageSize;
   return SetErrnoOnNull(Instance.allocate(Size, PageSize, FromMemalign));

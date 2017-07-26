@@ -136,8 +136,9 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // be removed.
     R.Prevailing = !ObjSym.isUndefined() && B->File == &F;
 
-    R.VisibleToRegularObj =
-        Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
+    R.VisibleToRegularObj = Sym->IsUsedInRegularObj ||
+                            (R.Prevailing && Sym->includeInDynsym()) ||
+                            isValidCIdentifier(ObjSym.getSectionName());
     if (R.Prevailing)
       undefine(Sym);
     R.LinkerRedefined = Config->RenamedSymbols.count(Sym);

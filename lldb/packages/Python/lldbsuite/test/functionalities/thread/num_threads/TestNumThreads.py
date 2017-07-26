@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -60,7 +61,8 @@ class NumberOfThreadsTestCase(TestBase):
         self.assertTrue(
             num_threads >= 13,
             'Number of expected threads and actual threads do not match.')
-        
+
+    @skipIfDarwin # rdar://33462362
     def test_unique_stacks(self):
         """Test backtrace unique with multiple threads executing the same stack."""
         self.build()
