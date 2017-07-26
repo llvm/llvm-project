@@ -4,6 +4,7 @@ set(files
   ammintrin.h
   arm_acle.h
   armintr.h
+  arm64intr.h
   avx2intrin.h
   avx512bwintrin.h
   avx512cdintrin.h

@@ -140,8 +140,7 @@ public:
 
   const SISubtarget *getSubtarget() const;
 
-  bool isShuffleMaskLegal(const SmallVectorImpl<int> &/*Mask*/,
-                          EVT /*VT*/) const override;
+  bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
                           unsigned IntrinsicID) const override;

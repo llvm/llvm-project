@@ -440,7 +440,7 @@ class InstrItineraryData;
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
     bool
-    isShuffleMaskLegal(const SmallVectorImpl<int> &M, EVT VT) const override;
+    isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the

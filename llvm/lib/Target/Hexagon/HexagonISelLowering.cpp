@@ -2278,8 +2278,8 @@ static StridedLoadKind isStridedLoad(const ArrayRef<int> &Mask) {
   return StridedLoadKind::NoPattern;
 }
 
-bool HexagonTargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &Mask,
-      EVT VT) const {
+bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
+                                               EVT VT) const {
   if (Subtarget.useHVXOps())
     return isStridedLoad(Mask) != StridedLoadKind::NoPattern;
   return true;

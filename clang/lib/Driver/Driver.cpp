@@ -1124,7 +1124,8 @@ void Driver::PrintHelp(bool ShowHidden) const {
     ExcludedFlagsBitmask |= HelpHidden;
 
   getOpts().PrintHelp(llvm::outs(), Name.c_str(), DriverTitle.c_str(),
-                      IncludedFlagsBitmask, ExcludedFlagsBitmask);
+                      IncludedFlagsBitmask, ExcludedFlagsBitmask,
+                      /*ShowAllAliases=*/false);
 }
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
@@ -1296,7 +1297,7 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     std::sort(SuggestedCompletions.begin(), SuggestedCompletions.end(),
               [](StringRef A, StringRef B) { return A.compare_lower(B) < 0; });
 
-    llvm::outs() << llvm::join(SuggestedCompletions, " ") << '\n';
+    llvm::outs() << llvm::join(SuggestedCompletions, "\n") << '\n';
     return false;
   }
 

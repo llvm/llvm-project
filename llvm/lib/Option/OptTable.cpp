@@ -235,7 +235,9 @@ OptTable::findByPrefix(StringRef Cur, unsigned short DisableFlags) const {
       continue;
 
     for (int I = 0; In.Prefixes[I]; I++) {
-      std::string S = std::string(In.Prefixes[I]) + std::string(In.Name);
+      std::string S = std::string(In.Prefixes[I]) + std::string(In.Name) + "\t";
+      if (In.HelpText)
+        S += In.HelpText;
       if (StringRef(S).startswith(Cur))
         Ret.push_back(S);
     }
@@ -444,15 +446,14 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
 }
 
 void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
-                         bool ShowHidden) const {
+                         bool ShowHidden, bool ShowAllAliases) const {
   PrintHelp(OS, Name, Title, /*Include*/ 0, /*Exclude*/
-            (ShowHidden ? 0 : HelpHidden));
+            (ShowHidden ? 0 : HelpHidden), ShowAllAliases);
 }
 
-
 void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
-                         unsigned FlagsToInclude,
-                         unsigned FlagsToExclude) const {
+                         unsigned FlagsToInclude, unsigned FlagsToExclude,
+                         bool ShowAllAliases) const {
   OS << "OVERVIEW: " << Title << "\n";
   OS << '\n';
   OS << "USAGE: " << Name << " [options] <inputs>\n";
@@ -476,10 +477,19 @@ void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
     if (Flags & FlagsToExclude)
       continue;
 
-    if (const char *Text = getOptionHelpText(Id)) {
+    // If an alias doesn't have a help text, show a help text for the aliased
+    // option instead.
+    const char *HelpText = getOptionHelpText(Id);
+    if (!HelpText && ShowAllAliases) {
+      const Option Alias = getOption(Id).getAlias();
+      if (Alias.isValid())
+        HelpText = getOptionHelpText(Alias.getID());
+    }
+
+    if (HelpText) {
       const char *HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
-      GroupedOptionHelp[HelpGroup].push_back({OptName, Text});
+      GroupedOptionHelp[HelpGroup].push_back({OptName, HelpText});
     }
   }
 

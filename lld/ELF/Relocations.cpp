@@ -535,6 +535,13 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, Off, false, SS, 0});
 }
 
+static void errorOrWarn(const Twine &Msg) {
+  if (!Config->NoinhibitExec)
+    error(Msg);
+  else
+    warn(Msg);
+}
+
 template <class ELFT>
 static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
                           const uint8_t *Data, InputSectionBase &S,
@@ -609,8 +616,8 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
     return toPlt(Expr);
   }
 
-  error("symbol '" + toString(Body) + "' defined in " + toString(Body.File) +
-        " has no type");
+  errorOrWarn("symbol '" + toString(Body) + "' defined in " +
+              toString(Body.File) + " has no type");
   return Expr;
 }
 
@@ -691,12 +698,10 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
     Msg += Src + "\n>>>               ";
   Msg += S.getObjMsg<ELFT>(Offset);
 
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::WarnAll ||
-      (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal)) {
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal)
     warn(Msg);
-  } else {
-    error(Msg);
-  }
+  else
+    errorOrWarn(Msg);
 }
 
 template <class RelTy>
@@ -905,9 +910,10 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
-        error("relocation " + toString(Type) +
-              " cannot be used against shared object; recompile with -fPIC" +
-              getLocation<ELFT>(Sec, Body, Offset));
+        errorOrWarn(
+            "relocation " + toString(Type) +
+            " cannot be used against shared object; recompile with -fPIC" +
+            getLocation<ELFT>(Sec, Body, Offset));
 
       In<ELFT>::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Body, Addend});

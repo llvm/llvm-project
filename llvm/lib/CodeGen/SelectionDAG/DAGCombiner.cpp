@@ -14349,7 +14349,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
 }
 
 // Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
-// operations which can be matched to a truncate.
+// operations which can be matched to a truncate or to a shuffle-truncate.
 SDValue DAGCombiner::reduceBuildVecToTrunc(SDNode *N) {
   // TODO: Add support for big-endian.
   if (DAG.getDataLayout().isBigEndian())
@@ -14378,13 +14378,12 @@ SDValue DAGCombiner::reduceBuildVecToTrunc(SDNode *N) {
     return cast<ConstantSDNode>(Extract.getOperand(1))->getSExtValue();
   };
 
-  // The first BUILD_VECTOR operand must be an an extract from index zero
-  // (assuming no undef and little-endian).
-  if (GetExtractIdx(N->getOperand(0)) != 0)
-    return SDValue();
+  // The offset is defined to be the BUILD_VECTOR's first operand (assuming no
+  // undef and little-endian).
+  int Offset = GetExtractIdx(N->getOperand(0));
 
-  // Compute the stride from the first index.
-  int Stride = GetExtractIdx(N->getOperand(1));
+  // Compute the stride from the next operand.
+  int Stride = GetExtractIdx(N->getOperand(1)) - Offset;
   SDValue ExtractedFromVec = N->getOperand(0).getOperand(0);
 
   // Proceed only if the stride and the types can be matched to a truncate.
@@ -14399,18 +14398,39 @@ SDValue DAGCombiner::reduceBuildVecToTrunc(SDNode *N) {
     SDValue Op = N->getOperand(i);
 
     if ((Op.getOperand(0) != ExtractedFromVec) ||
-        (GetExtractIdx(Op) != Stride * i))
+        (GetExtractIdx(Op) != Stride * i + Offset))
       return SDValue();
   }
 
-  // All checks were ok, construct the truncate.
+  SDValue Res = ExtractedFromVec;
+  EVT TruncVT =
+      VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
+  if (Offset) {
+    // If the first index is non-zero, need to shuffle elements of interest to
+    // lower parts of the vector's elements the truncate will act upon.
+    // TODO: Generalize to compute the permute-shuffle that will prepare any
+    // element permutation for the truncate, and let the target decide if
+    // profitable.
+    EVT ExtractedVT = ExtractedFromVec.getValueType();
+    SmallVector<int, 64> Mask;
+    for (unsigned i = 0; i != NumElems; ++i) {
+      Mask.push_back(Offset + i * Stride);
+      // Pad the elements that will be lost after the truncate with undefs.
+      Mask.append(Stride - 1, -1);
+    }
+    if (!TLI.isShuffleMaskLegal(Mask, ExtractedVT) ||
+        !TLI.isDesirableToCombineBuildVectorToShuffleTruncate(Mask, ExtractedVT,
+                                                              TruncVT))
+      return SDValue();
+    Res = DAG.getVectorShuffle(ExtractedVT, SDLoc(N), Res,
+                               DAG.getUNDEF(ExtractedVT), Mask);
+  }
+  // Construct the truncate.
   LLVMContext &Ctx = *DAG.getContext();
   EVT NewVT = VT.getVectorVT(
       Ctx, EVT::getIntegerVT(Ctx, VT.getScalarSizeInBits() * Stride), NumElems);
-  EVT TruncVT =
-      VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
 
-  SDValue Res = DAG.getBitcast(NewVT, ExtractedFromVec);
+  Res = DAG.getBitcast(NewVT, Res);
   Res = DAG.getNode(ISD::TRUNCATE, SDLoc(N), TruncVT, Res);
   return DAG.getBitcast(VT, Res);
 }
