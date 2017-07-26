@@ -58,6 +58,7 @@ bool InstructionSelector::executeMatchTable(
       // As an optimisation we require that MIs[0] is always the root. Refuse
       // any attempt to modify it.
       assert(NewInsnID != 0 && "Refusing to modify MIs[0]");
+      (void)NewInsnID;
 
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
       if (!MO.isReg()) {
@@ -73,14 +74,9 @@ bool InstructionSelector::executeMatchTable(
         break;
       }
 
-      MachineInstr *NewMI = MRI.getVRegDef(MO.getReg());
-      if ((size_t)NewInsnID < State.MIs.size())
-        State.MIs[NewInsnID] = NewMI;
-      else {
-        assert((size_t)NewInsnID == State.MIs.size() &&
-               "Expected to store MIs in order");
-        State.MIs.push_back(NewMI);
-      }
+      assert((size_t)NewInsnID == State.MIs.size() &&
+             "Expected to store MIs in order");
+      State.MIs.push_back(MRI.getVRegDef(MO.getReg()));
       DEBUG(dbgs() << CurrentIdx << ": MIs[" << NewInsnID
                    << "] = GIM_RecordInsn(" << InsnID << ", " << OpIdx
                    << ")\n");
@@ -217,8 +213,7 @@ bool InstructionSelector::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       MachineOperand &OM = State.MIs[InsnID]->getOperand(OpIdx);
       if (!OM.isIntrinsicID() || OM.getIntrinsicID() != Value)
-        if (handleReject() == RejectAndGiveUp)
-          return false;
+        return false;
       break;
     }
     case GIM_CheckIsMBB: {
