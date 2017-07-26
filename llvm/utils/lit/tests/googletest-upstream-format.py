@@ -1,5 +1,8 @@
 # Check the various features of the GoogleTest format.
 #
+# PR33935
+# XFAIL: windows
+#
 # RUN: not %{lit} -j 1 -v %{inputs}/googletest-upstream-format > %t.out
 # RUN: FileCheck < %t.out %s
 #

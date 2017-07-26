@@ -1,5 +1,5 @@
 ; RUN: llvm-rc /h > %t1
-; RUN: llvm-rc /? > %t2
+; RUN: llvm-rc '/?' > %t2
 ; RUN: diff %t1 %t2
 ; RUN: FileCheck -input-file=%t1 %s
 

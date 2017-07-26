@@ -1,5 +1,8 @@
 # REQUIRES: python-psutil
 
+# PR33944
+# XFAIL: windows
+
 # Test per test timeout using external shell
 # RUN: not %{lit} \
 # RUN: %{inputs}/shtest-timeout/infinite_loop.py \

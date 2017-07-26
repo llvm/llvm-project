@@ -535,6 +535,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Create an early function pass manager to cleanup the output of the
   // frontend.
   FunctionPassManager EarlyFPM(DebugLogging);
+  if (PGOOpt && PGOOpt->SamplePGOSupport)
+    EarlyFPM.addPass(AddDiscriminatorsPass());
   EarlyFPM.addPass(SimplifyCFGPass());
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
@@ -573,7 +575,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Add all the requested passes for PGO, if requested.
   if (PGOOpt) {
     assert(PGOOpt->RunProfileGen || !PGOOpt->SampleProfileFile.empty() ||
-           !PGOOpt->ProfileUseFile.empty());
+           !PGOOpt->ProfileUseFile.empty() || PGOOpt->SamplePGOSupport);
     if (PGOOpt->SampleProfileFile.empty())
       addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
                         PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
