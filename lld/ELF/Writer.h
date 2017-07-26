@@ -21,7 +21,7 @@ class InputFile;
 class OutputSection;
 class InputSectionBase;
 template <class ELFT> class ObjectFile;
-template <class ELFT> class SymbolTable;
+class SymbolTable;
 template <class ELFT> void writeResult();
 template <class ELFT> void markLive();
 

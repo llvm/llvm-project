@@ -3,7 +3,6 @@
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator:
 ; GCN: v_cmp_eq_u32
 ; GCN: s_and_saveexec_b64
-; GCN: s_xor_b64
 ; GCN: ; mask branch [[RET:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}: ; %unreachable
@@ -31,7 +30,6 @@ ret:
 ; GCN-LABEL: {{^}}lower_control_flow_unreachable_terminator_swap_block_order:
 ; GCN: v_cmp_ne_u32
 ; GCN: s_and_saveexec_b64
-; GCN: s_xor_b64
 ; GCN: ; mask branch [[RETURN:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %unreachable

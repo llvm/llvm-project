@@ -29,6 +29,9 @@
 
   define void @test_constants() { ret void }
 
+  @a_global = global float 1.0
+  define void @test_globals() { ret void }
+
   define void @test_anyext_s8_32() { ret void }
   define void @test_anyext_s16_32() { ret void }
 
@@ -653,6 +656,22 @@ body:             |
   bb.0:
     %0(s32) = G_CONSTANT 42
     %r0 = COPY %0(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_globals
+# CHECK-LABEL: name: test_globals
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @a_global
+    %r0 = COPY %0(p0)
     BX_RET 14, _, implicit %r0
 ...
 ---

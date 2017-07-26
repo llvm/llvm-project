@@ -1,5 +1,8 @@
 # Check the basic discovery process, including a sub-suite.
 #
+# PR33932
+# XFAIL: windows
+#
 # RUN: %{lit} %{inputs}/discovery \
 # RUN:   -j 1 --debug --show-tests --show-suites \
 # RUN:   -v > %t.out 2> %t.err

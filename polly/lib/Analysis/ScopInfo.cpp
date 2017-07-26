@@ -2263,10 +2263,11 @@ void Scop::addUserAssumptions(
 
     SmallVector<isl_set *, 2> ConditionSets;
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
-    auto &Stmt = InScop ? *getStmtFor(CI->getParent()) : *Stmts.begin();
-    auto *Dom = InScop ? getDomainConditions(&Stmt) : isl_set_copy(Context);
-    bool Valid = buildConditionSets(*this, Stmt.getEntryBlock(), Val, TI, L,
-                                    Dom, InvalidDomainMap, ConditionSets);
+    BasicBlock *BB = InScop ? CI->getParent() : getRegion().getEntry();
+    auto *Dom = InScop ? DomainMap[BB].copy() : isl_set_copy(Context);
+    assert(Dom && "Cannot propagate a nullptr.");
+    bool Valid = buildConditionSets(*this, BB, Val, TI, L, Dom,
+                                    InvalidDomainMap, ConditionSets);
     isl_set_free(Dom);
 
     if (!Valid)

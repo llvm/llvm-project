@@ -70,12 +70,20 @@ class MachineIRBuilder {
     return getMF().getRegInfo().createVirtualRegister(RC);
   }
 
-  unsigned getRegFromArg(unsigned Reg) { return Reg; }
-
-  unsigned getRegFromArg(const MachineInstrBuilder &MIB) {
-    return MIB->getOperand(0).getReg();
+  void addUseFromArg(MachineInstrBuilder &MIB, unsigned Reg) {
+    MIB.addUse(Reg);
   }
 
+  void addUseFromArg(MachineInstrBuilder &MIB, const MachineInstrBuilder &UseMIB) {
+    MIB.addUse(UseMIB->getOperand(0).getReg());
+  }
+
+  void addUsesFromArgs(MachineInstrBuilder &MIB) { }
+  template<typename UseArgTy, typename ... UseArgsTy>
+  void addUsesFromArgs(MachineInstrBuilder &MIB, UseArgTy &&Arg1, UseArgsTy &&... Args) {
+    addUseFromArg(MIB, Arg1);
+    addUsesFromArgs(std::forward<UseArgsTy>(Args)...);
+  }
 public:
   /// Getter for the function we currently build.
   MachineFunction &getMF() {
@@ -146,9 +154,7 @@ public:
   MachineInstrBuilder buildInstr(unsigned Opc, DstTy &&Ty,
                                  UseArgsTy &&... Args) {
     auto MIB = buildInstr(Opc).addDef(getDestFromArg(Ty));
-    unsigned It[] = {(getRegFromArg(Args))...};
-    for (const auto &i : It)
-      MIB.addUse(i);
+    addUsesFromArgs(MIB, std::forward<UseArgsTy>(Args)...);
     return MIB;
   }
 

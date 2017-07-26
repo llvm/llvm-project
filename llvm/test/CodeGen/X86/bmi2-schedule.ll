@@ -22,8 +22,8 @@ define i32 @test_bzhi_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; ZNVER1-LABEL: test_bzhi_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    bzhil %edi, (%rdx), %ecx # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    bzhil %edi, %esi, %eax # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    bzhil %edi, (%rdx), %ecx
+; ZNVER1-NEXT:    bzhil %edi, %esi, %eax
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i32, i32 *%a2
@@ -51,8 +51,8 @@ define i64 @test_bzhi_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; ZNVER1-LABEL: test_bzhi_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    bzhiq %rdi, (%rdx), %rcx # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    bzhiq %rdi, %rsi, %rax # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    bzhiq %rdi, (%rdx), %rcx
+; ZNVER1-NEXT:    bzhiq %rdi, %rsi, %rax
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i64, i64 *%a2
@@ -80,8 +80,8 @@ define i32 @test_pdep_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pdep_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    pdepl (%rdx), %edi, %ecx # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    pdepl %esi, %edi, %eax # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    pdepl (%rdx), %edi, %ecx
+; ZNVER1-NEXT:    pdepl %esi, %edi, %eax
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i32, i32 *%a2
@@ -109,8 +109,8 @@ define i64 @test_pdep_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pdep_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    pdepq (%rdx), %rdi, %rcx # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    pdepq %rsi, %rdi, %rax # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    pdepq (%rdx), %rdi, %rcx
+; ZNVER1-NEXT:    pdepq %rsi, %rdi, %rax
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i64, i64 *%a2
@@ -138,8 +138,8 @@ define i32 @test_pext_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pext_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    pextl (%rdx), %edi, %ecx # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    pextl %esi, %edi, %eax # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    pextl (%rdx), %edi, %ecx
+; ZNVER1-NEXT:    pextl %esi, %edi, %eax
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i32, i32 *%a2
@@ -167,8 +167,8 @@ define i64 @test_pext_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pext_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    pextq (%rdx), %rdi, %rcx # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    pextq %rsi, %rdi, %rax # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    pextq (%rdx), %rdi, %rcx
+; ZNVER1-NEXT:    pextq %rsi, %rdi, %rax
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i64, i64 *%a2

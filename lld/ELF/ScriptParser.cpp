@@ -652,6 +652,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   if (consume(">"))
     Cmd->MemoryRegionName = next();
+  else if (peek().startswith(">"))
+    Cmd->MemoryRegionName = next().drop_front();
 
   Cmd->Phdrs = readOutputSectionPhdrs();
 

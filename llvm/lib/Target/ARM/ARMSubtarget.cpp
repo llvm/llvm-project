@@ -333,8 +333,8 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexR5:
   case CortexR7:
   case CortexM3:
-  case ExynosM1:
   case CortexR52:
+  case ExynosM1:
   case Kryo:
     break;
   case Krait:

@@ -303,7 +303,6 @@ done:
 ; GCN-LABEL: {{^}}uniform_inside_divergent:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: s_cmp_lg_u32 {{s[0-9]+}}, 0
 ; GCN: s_cbranch_scc0 [[IF_UNIFORM_LABEL:[A-Z0-9_a-z]+]]
 ; GCN: s_endpgm
@@ -335,7 +334,6 @@ endif:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
 define amdgpu_kernel void @divergent_inside_uniform(i32 addrspace(1)* %out, i32 %cond) {
@@ -360,7 +358,6 @@ endif:
 ; GCN-LABEL: {{^}}divergent_if_uniform_if:
 ; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
 ; GCN: s_or_b64 exec, exec, [[MASK]]
