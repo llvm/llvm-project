@@ -41,8 +41,9 @@ public:
   ~PPCTargetMachine() override;
 
   const PPCSubtarget *getSubtargetImpl(const Function &F) const override;
-  // The no argument getSubtargetImpl, while it exists on some targets, is
-  // deprecated and should not be used.
+  // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
+  // subtargets are per-function entities based on the target-specific
+  // attributes of each function.
   const PPCSubtarget *getSubtargetImpl() const = delete;
 
   // Pass Pipeline Configuration

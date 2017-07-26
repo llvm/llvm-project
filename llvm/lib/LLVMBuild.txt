@@ -42,6 +42,7 @@ subdirectories =
  Testing
  ToolDrivers
  Transforms
+ WindowsManifest
 
 [component_0]
 type = Group

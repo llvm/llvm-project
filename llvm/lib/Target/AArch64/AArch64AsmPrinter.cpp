@@ -1,4 +1,4 @@
-//===-- AArch64AsmPrinter.cpp - AArch64 LLVM assembly writer --------------===//
+//===- AArch64AsmPrinter.cpp - AArch64 LLVM assembly writer ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,30 +19,39 @@
 #include "AArch64Subtarget.h"
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
-#include "llvm/MC/MCLinkerOptimizationHint.h"
-#include "llvm/MC/MCSectionELF.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <memory>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -57,7 +66,7 @@ class AArch64AsmPrinter : public AsmPrinter {
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this),
-        SM(*this), AArch64FI(nullptr) {}
+        SM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
@@ -118,7 +127,8 @@ private:
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
   void EmitEndOfAsmFile(Module &M) override;
-  AArch64FunctionInfo *AArch64FI;
+
+  AArch64FunctionInfo *AArch64FI = nullptr;
 
   /// \brief Emit the LOHs contained in AArch64FI.
   void EmitLOHs();
@@ -126,13 +136,12 @@ private:
   /// Emit instruction to set float register to zero.
   void EmitFMov0(const MachineInstr &MI);
 
-  typedef std::map<const MachineInstr *, MCSymbol *> MInstToMCSymbol;
+  using MInstToMCSymbol = std::map<const MachineInstr *, MCSymbol *>;
+
   MInstToMCSymbol LOHInstToLabel;
 };
 
-} // end of anonymous namespace
-
-//===----------------------------------------------------------------------===//
+} // end anonymous namespace
 
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
 {

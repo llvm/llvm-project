@@ -215,6 +215,22 @@ static const uint8_t ThunkX86[] = {
     0xFF, 0xE0,        // jmp   eax
 };
 
+static const uint8_t ThunkARM[] = {
+    0x40, 0xf2, 0x00, 0x0c, // mov.w   ip, #0 __imp_<FUNCNAME>
+    0xc0, 0xf2, 0x00, 0x0c, // mov.t   ip, #0 __imp_<FUNCNAME>
+    0x2d, 0xe9, 0x0f, 0x48, // push.w  {r0, r1, r2, r3, r11, lr}
+    0x0d, 0xf2, 0x10, 0x0b, // addw    r11, sp, #16
+    0x2d, 0xed, 0x10, 0x0b, // vpush   {d0, d1, d2, d3, d4, d5, d6, d7}
+    0x61, 0x46,             // mov     r1, ip
+    0x40, 0xf2, 0x00, 0x00, // mov.w   r0, #0 DELAY_IMPORT_DESCRIPTOR
+    0xc0, 0xf2, 0x00, 0x00, // mov.t   r0, #0 DELAY_IMPORT_DESCRIPTOR
+    0x00, 0xf0, 0x00, 0xd0, // bl      #0 __delayLoadHelper2
+    0x84, 0x46,             // mov     ip, r0
+    0xbd, 0xec, 0x10, 0x0b, // vpop    {d0, d1, d2, d3, d4, d5, d6, d7}
+    0xbd, 0xe8, 0x0f, 0x48, // pop.w   {r0, r1, r2, r3, r11, lr}
+    0x60, 0x47,             // bx      ip
+};
+
 // A chunk for the delay import thunk.
 class ThunkChunkX64 : public Chunk {
 public:
@@ -259,6 +275,30 @@ public:
   Defined *Helper = nullptr;
 };
 
+class ThunkChunkARM : public Chunk {
+public:
+  ThunkChunkARM(Defined *I, Chunk *D, Defined *H)
+      : Imp(I), Desc(D), Helper(H) {}
+
+  size_t getSize() const override { return sizeof(ThunkARM); }
+
+  void writeTo(uint8_t *Buf) const override {
+    memcpy(Buf + OutputSectionOff, ThunkARM, sizeof(ThunkARM));
+    applyMOV32T(Buf + OutputSectionOff + 0, Imp->getRVA() + Config->ImageBase);
+    applyMOV32T(Buf + OutputSectionOff + 22, Desc->getRVA() + Config->ImageBase);
+    applyBranch24T(Buf + OutputSectionOff + 30, Helper->getRVA() - RVA - 34);
+  }
+
+  void getBaserels(std::vector<Baserel> *Res) override {
+    Res->emplace_back(RVA + 0, IMAGE_REL_BASED_ARM_MOV32T);
+    Res->emplace_back(RVA + 22, IMAGE_REL_BASED_ARM_MOV32T);
+  }
+
+  Defined *Imp = nullptr;
+  Chunk *Desc = nullptr;
+  Defined *Helper = nullptr;
+};
+
 // A chunk for the import descriptor table.
 class DelayAddressChunk : public Chunk {
 public:
@@ -269,7 +309,11 @@ public:
     if (Config->is64()) {
       write64le(Buf + OutputSectionOff, Thunk->getRVA() + Config->ImageBase);
     } else {
-      write32le(Buf + OutputSectionOff, Thunk->getRVA() + Config->ImageBase);
+      uint32_t Bit = 0;
+      // Pointer to thumb code must have the LSB set, so adjust it.
+      if (Config->Machine == ARMNT)
+        Bit = 1;
+      write32le(Buf + OutputSectionOff, (Thunk->getRVA() + Config->ImageBase) | Bit);
     }
   }
 
@@ -510,6 +554,8 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *S, Chunk *Dir) {
     return make<ThunkChunkX64>(S, Dir, Helper);
   case I386:
     return make<ThunkChunkX86>(S, Dir, Helper);
+  case ARMNT:
+    return make<ThunkChunkARM>(S, Dir, Helper);
   default:
     llvm_unreachable("unsupported machine type");
   }

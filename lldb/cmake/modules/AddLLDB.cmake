@@ -101,11 +101,15 @@ function(add_lldb_executable name)
 
   if(LLDB_BUILD_FRAMEWORK)
     if(ARG_INCLUDE_IN_FRAMEWORK)
+      if(NOT IOS)
+        set(resource_dir "/Resources")
+        set(resource_dots "../")
+      endif()
       string(REGEX REPLACE "[^/]+" ".." _dots ${LLDB_FRAMEWORK_INSTALL_DIR})
       set_target_properties(${name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:liblldb>/Resources
+            RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:liblldb>${resource_dir}
             BUILD_WITH_INSTALL_RPATH On
-            INSTALL_RPATH "@loader_path/../../../../${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
+            INSTALL_RPATH "@loader_path/../../../${resource_dots}${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
       # For things inside the framework we don't need functional install targets
       # because CMake copies the resources and headers from the build directory.
       # But we still need this target to exist in order to use the

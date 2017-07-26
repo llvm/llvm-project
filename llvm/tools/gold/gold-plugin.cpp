@@ -605,6 +605,18 @@ static std::string getThinLTOObjectFileName(const std::string Path,
   return NewPath.str() + NewSuffix;
 }
 
+static bool isAlpha(char C) {
+  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
+}
+
+static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
+
+// Returns true if S is valid as a C language identifier.
+static bool isValidCIdentifier(StringRef S) {
+  return !S.empty() && isAlpha(S[0]) &&
+         std::all_of(S.begin() + 1, S.end(), isAlnum);
+}
+
 static void addModule(LTO &Lto, claimed_file &F, const void *View,
                       StringRef Filename) {
   MemoryBufferRef BufferRef(StringRef((const char *)View, F.filesize),
@@ -616,8 +628,12 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
             toString(ObjOrErr.takeError()).c_str());
 
   unsigned SymNum = 0;
+  std::unique_ptr<InputFile> Input = std::move(ObjOrErr.get());
+  auto InputFileSyms = Input->symbols();
+  assert(InputFileSyms.size() == F.syms.size());
   std::vector<SymbolResolution> Resols(F.syms.size());
   for (ld_plugin_symbol &Sym : F.syms) {
+    const InputFile::Symbol &InpSym = InputFileSyms[SymNum];
     SymbolResolution &R = Resols[SymNum++];
 
     ld_plugin_symbol_resolution Resolution =
@@ -653,6 +669,13 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
       break;
     }
 
+    // If the symbol has a C identifier section name, we need to mark
+    // it as visible to a regular object so that LTO will keep it around
+    // to ensure the linker generates special __start_<secname> and
+    // __stop_<secname> symbols which may be used elsewhere.
+    if (isValidCIdentifier(InpSym.getSectionName()))
+      R.VisibleToRegularObj = true;
+
     if (Resolution != LDPR_RESOLVED_DYN && Resolution != LDPR_UNDEF &&
         (IsExecutable || !Res.DefaultVisibility))
       R.FinalDefinitionInLinkageUnit = true;
@@ -660,7 +683,7 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
     freeSymName(Sym);
   }
 
-  check(Lto.add(std::move(*ObjOrErr), Resols),
+  check(Lto.add(std::move(Input), Resols),
         std::string("Failed to link module ") + F.name);
 }
 
@@ -726,6 +749,10 @@ static std::unique_ptr<LTO> createLTO() {
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
   Conf.Options.RelaxELFRelocations = false;
+
+  // Enable function/data sections by default.
+  Conf.Options.FunctionSections = true;
+  Conf.Options.DataSections = true;
 
   Conf.MAttrs = MAttrs;
   Conf.RelocModel = RelocationModel;

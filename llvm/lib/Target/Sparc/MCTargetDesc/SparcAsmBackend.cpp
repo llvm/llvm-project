@@ -61,14 +61,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_lo10:
     return Value & 0x3ff;
 
-  case Sparc::fixup_sparc_tls_ldo_hix22:
-  case Sparc::fixup_sparc_tls_le_hix22:
-    return (~Value >> 10) & 0x3fffff;
-
-  case Sparc::fixup_sparc_tls_ldo_lox10:
-  case Sparc::fixup_sparc_tls_le_lox10:
-    return (~(~Value & 0x3ff)) & 0x1fff;
-
   case Sparc::fixup_sparc_h44:
     return (Value >> 22) & 0x3fffff;
 
@@ -83,6 +75,13 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case Sparc::fixup_sparc_hm:
     return (Value >> 32) & 0x3ff;
+
+  case Sparc::fixup_sparc_tls_ldo_hix22:
+  case Sparc::fixup_sparc_tls_le_hix22:
+  case Sparc::fixup_sparc_tls_ldo_lox10:
+  case Sparc::fixup_sparc_tls_le_lox10:
+    assert(Value == 0 && "Sparc TLS relocs expect zero Value");
+    return 0;
 
   case Sparc::fixup_sparc_tls_gd_add:
   case Sparc::fixup_sparc_tls_gd_call:

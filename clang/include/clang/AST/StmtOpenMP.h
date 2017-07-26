@@ -1912,7 +1912,7 @@ class OMPTaskgroupDirective : public OMPExecutableDirective {
   OMPTaskgroupDirective(SourceLocation StartLoc, SourceLocation EndLoc,
                         unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTaskgroupDirectiveClass, OMPD_taskgroup,
-                               StartLoc, EndLoc, NumClauses, 1) {}
+                               StartLoc, EndLoc, NumClauses, 2) {}
 
   /// Build an empty directive.
   /// \param NumClauses Number of clauses.
@@ -1920,7 +1920,12 @@ class OMPTaskgroupDirective : public OMPExecutableDirective {
   explicit OMPTaskgroupDirective(unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTaskgroupDirectiveClass, OMPD_taskgroup,
                                SourceLocation(), SourceLocation(), NumClauses,
-                               1) {}
+                               2) {}
+
+  /// Sets the task_reduction return variable.
+  void setReductionRef(Expr *RR) {
+    *std::next(child_begin(), 1) = RR;
+  }
 
 public:
   /// Creates directive.
@@ -1930,10 +1935,12 @@ public:
   /// \param EndLoc Ending Location of the directive.
   /// \param Clauses List of clauses.
   /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param ReductionRef Reference to the task_reduction return variable.
   ///
   static OMPTaskgroupDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+         Expr *ReductionRef);
 
   /// Creates an empty directive.
   ///
@@ -1942,6 +1949,15 @@ public:
   ///
   static OMPTaskgroupDirective *CreateEmpty(const ASTContext &C,
                                             unsigned NumClauses, EmptyShell);
+
+
+  /// Returns reference to the task_reduction return variable.
+  const Expr *getReductionRef() const {
+    return static_cast<const Expr *>(*std::next(child_begin(), 1));
+  }
+  Expr *getReductionRef() {
+    return static_cast<Expr *>(*std::next(child_begin(), 1));
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPTaskgroupDirectiveClass;
