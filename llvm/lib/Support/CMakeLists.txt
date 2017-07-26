@@ -27,9 +27,6 @@ elseif( CMAKE_HOST_UNIX )
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
-  if( LLVM_LIBXML2_ENABLED )
-    set(system_libs ${system_libs} ${LIBXML2_LIBS})
-  endif()
 endif( MSVC OR MINGW )
 
 add_llvm_library(LLVMSupport
@@ -113,7 +110,6 @@ add_llvm_library(LLVMSupport
   Triple.cpp
   Twine.cpp
   Unicode.cpp
-  WindowsManifestMerger.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp

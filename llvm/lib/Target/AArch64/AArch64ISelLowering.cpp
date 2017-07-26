@@ -6912,8 +6912,7 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   return SDValue();
 }
 
-bool AArch64TargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &M,
-                                               EVT VT) const {
+bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   if (VT.getVectorNumElements() == 4 &&
       (VT.is128BitVector() || VT.is64BitVector())) {
     unsigned PFIndexes[4];

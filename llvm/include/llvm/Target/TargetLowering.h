@@ -733,8 +733,7 @@ public:
   /// VECTOR_SHUFFLE operations, those with specific masks.  By default, if a
   /// target supports the VECTOR_SHUFFLE node, all mask values are assumed to be
   /// legal.
-  virtual bool isShuffleMaskLegal(const SmallVectorImpl<int> &/*Mask*/,
-                                  EVT /*VT*/) const {
+  virtual bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const {
     return true;
   }
 

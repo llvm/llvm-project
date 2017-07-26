@@ -20,8 +20,8 @@
 ; RUN:   FileCheck %s -check-prefix=CHECK-LE-NOVSX --implicit-check-not xxswapd
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr9 -ppc-vsr-nums-as-vr < %s | FileCheck %s \
-; RUN:   -check-prefix=CHECK-P9 --implicit-check-not xxswapd
+; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s -check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX \

@@ -2,11 +2,10 @@
 // RUN: llvm-mc -target-abi=ilp32 -triple=aarch64-linux-gnu -filetype=obj \
 // RUN: -o - %s| llvm-readobj -r - | FileCheck -check-prefix=CHECK-ILP32 %s
         .text
-// These should produce an ADRP/ADD pair to calculate the address of
-// testfn. The important point is that LLVM shouldn't think it can deal with the
-// relocation on the ADRP itself (even though it knows everything about the
-// relative offsets of testfn and foo) because its value depends on where this
-// object file's .text section gets relocated in memory.
+// This tests that LLVM doesn't think it can deal with the relocation on the ADRP
+// itself (even though it knows everything about the relative offsets of sym and
+// the adrp instruction) because its value depends on where this object file's
+// .text section gets relocated in memory.
         adrp x0, sym
         adrp x0, :got:sym
         adrp x0, :gottprel:sym

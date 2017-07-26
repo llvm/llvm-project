@@ -415,9 +415,6 @@ void SCEVUnknown::deleted() {
 }
 
 void SCEVUnknown::allUsesReplacedWith(Value *New) {
-  // Clear this SCEVUnknown from various maps.
-  SE->forgetMemoizedResults(this);
-
   // Remove this SCEVUnknown from the uniquing map.
   SE->UniqueSCEVs.RemoveNode(this);
 
@@ -6260,6 +6257,14 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     PushDefUseChildren(I, Worklist);
   }
 
+  for (auto I = ExitLimits.begin(); I != ExitLimits.end();) {
+    auto &Query = I->first;
+    if (Query.L == L)
+      ExitLimits.erase(I++);
+    else
+      ++I;
+  }
+
   // Forget all contained loops too, to avoid dangling entries in the
   // ValuesAtScopes map.
   for (Loop *I : *L)
@@ -6522,6 +6527,18 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                   bool AllowPredicates) {
+  ExitLimitQuery Query(L, ExitingBlock, AllowPredicates);
+  auto MaybeEL = ExitLimits.find(Query);
+  if (MaybeEL != ExitLimits.end())
+    return MaybeEL->second;
+  ExitLimit EL = computeExitLimitImpl(L, ExitingBlock, AllowPredicates);
+  ExitLimits.insert({Query, EL});
+  return EL;
+}
+
+ScalarEvolution::ExitLimit
+ScalarEvolution::computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
+                                      bool AllowPredicates) {
 
   // Okay, we've chosen an exiting block.  See what condition causes us to exit
   // at this block and remember the exit block and whether all other targets
@@ -10385,6 +10402,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
+      ExitLimits(std::move(Arg.ExitLimits)),
       ConstantEvolutionLoopExitValue(
           std::move(Arg.ConstantEvolutionLoopExitValue)),
       ValuesAtScopes(std::move(Arg.ValuesAtScopes)),

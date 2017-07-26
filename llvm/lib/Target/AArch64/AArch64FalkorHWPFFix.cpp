@@ -1,4 +1,4 @@
-//===-- AArch64FalkorHWPFFix.cpp - Avoid HW prefetcher pitfalls on Falkor--===//
+//===- AArch64FalkorHWPFFix.cpp - Avoid HW prefetcher pitfalls on Falkor --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,21 +15,41 @@
 
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -60,6 +80,7 @@ private:
 class FalkorMarkStridedAccessesLegacy : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
+
   FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {
     initializeFalkorMarkStridedAccessesLegacyPass(
         *PassRegistry::getPassRegistry());
@@ -78,9 +99,11 @@ public:
 
   bool runOnFunction(Function &F) override;
 };
-} // namespace
+
+} // end anonymous namespace
 
 char FalkorMarkStridedAccessesLegacy::ID = 0;
+
 INITIALIZE_PASS_BEGIN(FalkorMarkStridedAccessesLegacy, DEBUG_TYPE,
                       "Falkor HW Prefetch Fix", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
@@ -165,7 +188,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -186,17 +209,16 @@ private:
 
 /// Bits from load opcodes used to compute HW prefetcher instruction tags.
 struct LoadInfo {
-  LoadInfo()
-      : DestReg(0), BaseReg(0), BaseRegIdx(-1), OffsetOpnd(nullptr),
-        IsPrePost(false) {}
-  unsigned DestReg;
-  unsigned BaseReg;
-  int BaseRegIdx;
-  const MachineOperand *OffsetOpnd;
-  bool IsPrePost;
+  LoadInfo() = default;
+
+  unsigned DestReg = 0;
+  unsigned BaseReg = 0;
+  int BaseRegIdx = -1;
+  const MachineOperand *OffsetOpnd = nullptr;
+  bool IsPrePost = false;
 };
 
-} // namespace
+} // end anonymous namespace
 
 char FalkorHWPFFix::ID = 0;
 

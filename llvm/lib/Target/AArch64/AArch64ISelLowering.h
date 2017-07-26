@@ -290,7 +290,7 @@ public:
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
-  bool isShuffleMaskLegal(const SmallVectorImpl<int> &M, EVT VT) const override;
+  bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
   /// Return the ISD::SETCC ValueType.
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,

@@ -306,3 +306,9 @@ module LLVM_Support_DataTypes_Src {
   header "llvm/Support/DataTypes.h"
   export *
 }
+
+module LLVM_WindowsManifest {
+  requires cplusplus
+  umbrella "WindowsManifest"
+  module * { export * }
+}

@@ -23,6 +23,20 @@ struct SectionOffset {
   char Padding[2];
 };
 
+/// Header of the hash tables found in the globals and publics sections.
+/// Based on GSIHashHdr in
+/// https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
+struct GSIHashHeader {
+  enum : unsigned {
+    HdrSignature = ~0U,
+    HdrVersion = 0xeffe0000 + 19990810,
+  };
+  support::ulittle32_t VerSignature;
+  support::ulittle32_t VerHdr;
+  support::ulittle32_t HrSize;
+  support::ulittle32_t NumBuckets;
+};
+
 // This is HRFile.
 struct PSHashRecord {
   support::ulittle32_t Off; // Offset in the symbol record stream
