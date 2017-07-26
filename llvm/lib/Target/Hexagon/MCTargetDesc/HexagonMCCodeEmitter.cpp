@@ -159,6 +159,7 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
 }
 
 namespace {
+LLVM_ATTRIBUTE_NORETURN
 void raise_relocation_error(unsigned bits, unsigned kind) {
   std::string Text;
   {

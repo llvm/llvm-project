@@ -9,16 +9,9 @@
 
 ; Check that the order of the sections is tin -> _start -> pat.
 
-; CHECK: Symbol table '.symtab' contains 8 entries:
-; CHECK-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-; CHECK-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
-; CHECK-NEXT:      1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS ld-temp.o
-; CHECK-NEXT:      2: 00000000004000d0     1 FUNC    LOCAL  DEFAULT    1 pat
-; CHECK-NEXT:      3: 00000000004000b0     1 FUNC    LOCAL  DEFAULT    1 tin
-; CHECK-NEXT:      4: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  ABS _end
-; CHECK-NEXT:      5: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  ABS __bss_start
-; CHECK-NEXT:      6: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  ABS _edata
-; CHECK-NEXT:      7: 00000000004000c0    15 FUNC    GLOBAL DEFAULT    1 _start
+; CHECK:      00000000004000d0     1 FUNC    LOCAL  DEFAULT    1 pat
+; CHECK:      00000000004000b0     1 FUNC    LOCAL  DEFAULT    1 tin
+; CHECK:      00000000004000c0    15 FUNC    GLOBAL DEFAULT    1 _start
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

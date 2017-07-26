@@ -202,7 +202,6 @@ exit:
 ; CHECK-LABEL: {{^}}test_kill_divergent_loop:
 ; CHECK: v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], vcc
-; CHECK-NEXT: s_xor_b64 [[SAVEEXEC]], exec, [[SAVEEXEC]]
 ; CHECK-NEXT: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: s_cbranch_execz [[EXIT]]
 
@@ -337,7 +336,6 @@ bb7:                                              ; preds = %bb4
 ; CHECK-LABEL: {{^}}if_after_kill_block:
 ; CHECK: ; BB#0:
 ; CHECK: s_and_saveexec_b64
-; CHECK: s_xor_b64
 ; CHECK-NEXT: mask branch [[BB4:BB[0-9]+_[0-9]+]]
 
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0,
@@ -347,7 +345,6 @@ bb7:                                              ; preds = %bb4
 
 ; CHECK: v_cmp_neq_f32_e32 vcc, 0,
 ; CHECK: s_and_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
-; CHECK: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, exec
 ; CHECK: mask branch [[END:BB[0-9]+_[0-9]+]]
 ; CHECK-NOT: branch
 

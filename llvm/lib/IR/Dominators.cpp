@@ -64,12 +64,10 @@ template class llvm::DomTreeNodeBase<BasicBlock>;
 template class llvm::DominatorTreeBase<BasicBlock, false>; // DomTreeBase
 template class llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
 
-template void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree, Function>(
-    DomTreeBuilder::BBDomTree &DT, Function &F);
-template void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBPostDomTree, Function>(
-    DomTreeBuilder::BBPostDomTree &DT, Function &F);
+template void llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree>(
+    DomTreeBuilder::BBDomTree &DT);
+template void llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBPostDomTree>(
+    DomTreeBuilder::BBPostDomTree &DT);
 
 template void llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBDomTree>(
     DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);

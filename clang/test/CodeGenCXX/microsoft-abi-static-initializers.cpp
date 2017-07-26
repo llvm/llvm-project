@@ -146,7 +146,7 @@ inline S &getS() {
 // CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.S* @"\01?getS@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: load i32, i32* @"\01??_B?1??getS@@YAAAUS@@XZ@51"
 // CHECK: and i32 {{.*}}, 1
-// CHECK: icmp ne i32 {{.*}}, 0
+// CHECK: icmp eq i32 {{.*}}, 0
 // CHECK: br i1
 //   init:
 // CHECK: or i32 {{.*}}, 1

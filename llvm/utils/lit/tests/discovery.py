@@ -6,17 +6,17 @@
 # RUN: FileCheck --check-prefix=CHECK-BASIC-OUT < %t.out %s
 # RUN: FileCheck --check-prefix=CHECK-BASIC-ERR < %t.err %s
 #
-# CHECK-BASIC-ERR: loading suite config '{{.*}}/discovery/lit.cfg'
-# CHECK-BASIC-ERR-DAG: loading suite config '{{.*}}/discovery/subsuite/lit.cfg'
-# CHECK-BASIC-ERR-DAG: loading local config '{{.*}}/discovery/subdir/lit.local.cfg'
+# CHECK-BASIC-ERR: loading suite config '{{.*(/|\\\\)discovery(/|\\\\)lit.cfg}}'
+# CHECK-BASIC-ERR-DAG: loading suite config '{{.*(/|\\\\)discovery(/|\\\\)subsuite(/|\\\\)lit.cfg}}'
+# CHECK-BASIC-ERR-DAG: loading local config '{{.*(/|\\\\)discovery(/|\\\\)subdir(/|\\\\)lit.local.cfg}}'
 #
 # CHECK-BASIC-OUT: -- Test Suites --
 # CHECK-BASIC-OUT:   sub-suite - 2 tests
-# CHECK-BASIC-OUT:     Source Root: {{.*/discovery/subsuite$}}
-# CHECK-BASIC-OUT:     Exec Root  : {{.*/discovery/subsuite$}}
+# CHECK-BASIC-OUT:     Source Root: {{.*[/\\]discovery[/\\]subsuite$}}
+# CHECK-BASIC-OUT:     Exec Root  : {{.*[/\\]discovery[/\\]subsuite$}}
 # CHECK-BASIC-OUT:   top-level-suite - 3 tests
-# CHECK-BASIC-OUT:     Source Root: {{.*/discovery$}}
-# CHECK-BASIC-OUT:     Exec Root  : {{.*/discovery$}}
+# CHECK-BASIC-OUT:     Source Root: {{.*[/\\]discovery$}}
+# CHECK-BASIC-OUT:     Exec Root  : {{.*[/\\]discovery$}}
 #
 # CHECK-BASIC-OUT: -- Available Tests --
 # CHECK-BASIC-OUT: sub-suite :: test-one
@@ -47,20 +47,20 @@
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-OUT < %t.out %s
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-ERR < %t.err %s
 #
-# CHECK-ASEXEC-ERR: loading suite config '{{.*}}/exec-discovery/lit.site.cfg'
-# CHECK-ASEXEC-ERR: load_config from '{{.*}}/discovery/lit.cfg'
-# CHECK-ASEXEC-ERR: loaded config '{{.*}}/discovery/lit.cfg'
-# CHECK-ASEXEC-ERR: loaded config '{{.*}}/exec-discovery/lit.site.cfg'
-# CHECK-ASEXEC-ERR-DAG: loading suite config '{{.*}}/discovery/subsuite/lit.cfg'
-# CHECK-ASEXEC-ERR-DAG: loading local config '{{.*}}/discovery/subdir/lit.local.cfg'
+# CHECK-ASEXEC-ERR: loading suite config '{{.*(/|\\\\)exec-discovery(/|\\\\)lit.site.cfg}}'
+# CHECK-ASEXEC-ERR: load_config from '{{.*(/|\\\\)discovery(/|\\\\)lit.cfg}}'
+# CHECK-ASEXEC-ERR: loaded config '{{.*(/|\\\\)discovery(/|\\\\)lit.cfg}}'
+# CHECK-ASEXEC-ERR: loaded config '{{.*(/|\\\\)exec-discovery(/|\\\\)lit.site.cfg}}'
+# CHECK-ASEXEC-ERR-DAG: loading suite config '{{.*(/|\\\\)discovery(/|\\\\)subsuite(/|\\\\)lit.cfg}}'
+# CHECK-ASEXEC-ERR-DAG: loading local config '{{.*(/|\\\\)discovery(/|\\\\)subdir(/|\\\\)lit.local.cfg}}'
 #
 # CHECK-ASEXEC-OUT: -- Test Suites --
 # CHECK-ASEXEC-OUT:   sub-suite - 2 tests
-# CHECK-ASEXEC-OUT:     Source Root: {{.*/discovery/subsuite$}}
-# CHECK-ASEXEC-OUT:     Exec Root  : {{.*/discovery/subsuite$}}
+# CHECK-ASEXEC-OUT:     Source Root: {{.*[/\\]discovery[/\\]subsuite$}}
+# CHECK-ASEXEC-OUT:     Exec Root  : {{.*[/\\]discovery[/\\]subsuite$}}
 # CHECK-ASEXEC-OUT:   top-level-suite - 3 tests
-# CHECK-ASEXEC-OUT:     Source Root: {{.*/discovery$}}
-# CHECK-ASEXEC-OUT:     Exec Root  : {{.*/exec-discovery$}}
+# CHECK-ASEXEC-OUT:     Source Root: {{.*[/\\]discovery$}}
+# CHECK-ASEXEC-OUT:     Exec Root  : {{.*[/\\]exec-discovery$}}
 #
 # CHECK-ASEXEC-OUT: -- Available Tests --
 # CHECK-ASEXEC-OUT: sub-suite :: test-one
@@ -91,7 +91,7 @@
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-INTREE < %t.out %s
 #
 #      CHECK-ASEXEC-INTREE:   exec-discovery-in-tree-suite - 1 tests
-# CHECK-ASEXEC-INTREE-NEXT:     Source Root: {{.*/exec-discovery-in-tree$}}
-# CHECK-ASEXEC-INTREE-NEXT:     Exec Root  : {{.*/exec-discovery-in-tree/obj$}}
+# CHECK-ASEXEC-INTREE-NEXT:     Source Root: {{.*[/\\]exec-discovery-in-tree$}}
+# CHECK-ASEXEC-INTREE-NEXT:     Exec Root  : {{.*[/\\]exec-discovery-in-tree[/\\]obj$}}
 # CHECK-ASEXEC-INTREE-NEXT: -- Available Tests --
 # CHECK-ASEXEC-INTREE-NEXT: exec-discovery-in-tree-suite :: test-one

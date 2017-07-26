@@ -314,7 +314,7 @@ SDValue WebAssemblyTargetLowering::LowerCall(
   // required, fail. Otherwise, just disable them.
   if ((CallConv == CallingConv::Fast && CLI.IsTailCall &&
        MF.getTarget().Options.GuaranteedTailCallOpt) ||
-      (CLI.CS && CLI.CS->isMustTailCall()))
+      (CLI.CS && CLI.CS.isMustTailCall()))
     fail(DL, DAG, "WebAssembly doesn't support tail call yet");
   CLI.IsTailCall = false;
 

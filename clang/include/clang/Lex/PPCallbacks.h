@@ -381,12 +381,6 @@ public:
     Second->Ident(Loc, str);
   }
 
-  void PragmaDirective(SourceLocation Loc,
-                       PragmaIntroducerKind Introducer) override {
-    First->PragmaDirective(Loc, Introducer);
-    Second->PragmaDirective(Loc, Introducer);
-  }
-
   void PragmaComment(SourceLocation Loc, const IdentifierInfo *Kind,
                      StringRef Str) override {
     First->PragmaComment(Loc, Kind, Str);

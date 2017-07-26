@@ -592,7 +592,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi8:
 ; KNL64:       # BB#0: # %entry
-; KNL64-NEXT:    vpbroadcastw {{.*}}(%rip), %ymm4
+; KNL64-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; KNL64-NEXT:    vpblendvb %ymm4, %ymm2, %ymm0, %ymm0
 ; KNL64-NEXT:    vpblendvb %ymm4, %ymm3, %ymm1, %ymm1
 ; KNL64-NEXT:    retq
@@ -617,7 +617,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; KNL32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL32-NEXT:    andl $-32, %esp
 ; KNL32-NEXT:    subl $32, %esp
-; KNL32-NEXT:    vpbroadcastw {{\.LCPI.*}}, %ymm3
+; KNL32-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; KNL32-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
 ; KNL32-NEXT:    vpblendvb %ymm3, 8(%ebp), %ymm1, %ymm1
 ; KNL32-NEXT:    movl %ebp, %esp

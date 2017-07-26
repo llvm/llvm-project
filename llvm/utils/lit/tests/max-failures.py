@@ -1,5 +1,8 @@
 # Check the behavior of --max-failures option.
 #
+# PR33941
+# XFAIL: windows
+#
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-shell > %t.out
 # RUN: not %{lit} --max-failures=1 -j 1 -v %{inputs}/shtest-shell >> %t.out
 # RUN: not %{lit} --max-failures=2 -j 1 -v %{inputs}/shtest-shell >> %t.out

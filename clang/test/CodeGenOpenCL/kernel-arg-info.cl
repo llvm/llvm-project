@@ -78,6 +78,21 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 typedef char char16 __attribute__((ext_vector_type(16)));
 __kernel void foo6(__global char16 arg[]) {}
 // CHECK: !kernel_arg_type ![[MD61:[0-9]+]]
+// ARGINFO: !kernel_arg_name ![[MD62:[0-9]+]]
+
+typedef read_only  image1d_t ROImage;
+typedef write_only image1d_t WOImage;
+typedef read_write image1d_t RWImage;
+kernel void foo7(ROImage ro, WOImage wo, RWImage rw) {
+}
+// CHECK: define spir_kernel void @foo7{{[^!]+}}
+// CHECK: !kernel_arg_addr_space ![[MD71:[0-9]+]]
+// CHECK: !kernel_arg_access_qual ![[MD72:[0-9]+]]
+// CHECK: !kernel_arg_type ![[MD73:[0-9]+]]
+// CHECK: !kernel_arg_base_type ![[MD74:[0-9]+]]
+// CHECK: !kernel_arg_type_qual ![[MD75:[0-9]+]]
+// CHECK-NOT: !kernel_arg_name
+// ARGINFO: !kernel_arg_name ![[MD76:[0-9]+]]
 
 // CHECK: ![[MD11]] = !{i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 1, i32 1, i32 1, i32 1, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 0, i32 0, i32 0, i32 0}
 // CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none"}
@@ -105,4 +120,11 @@ __kernel void foo6(__global char16 arg[]) {}
 // CHECK: ![[MD53]] = !{!"image1d_t", !"image1d_t"}
 // ARGINFO: ![[MD54]] = !{!"img1", !"img2"}
 // CHECK: ![[MD61]] = !{!"char16*"}
+// ARGINFO: ![[MD62]] = !{!"arg"}
+// CHECK: ![[MD71]] = !{i32 1, i32 1, i32 1}
+// CHECK: ![[MD72]] = !{!"read_only", !"write_only", !"read_write"}
+// CHECK: ![[MD73]] = !{!"ROImage", !"WOImage", !"RWImage"}
+// CHECK: ![[MD74]] = !{!"image1d_t", !"image1d_t", !"image1d_t"}
+// CHECK: ![[MD75]] = !{!"", !"", !""}
+// ARGINFO: ![[MD76]] = !{!"ro", !"wo", !"rw"}
 
