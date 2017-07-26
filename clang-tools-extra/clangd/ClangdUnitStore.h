@@ -79,13 +79,12 @@ private:
                      IntrusiveRefCntPtr<vfs::FileSystem> VFS, Func Action) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
-    auto Commands = getCompileCommands(CDB, File);
-    assert(!Commands.empty() &&
-           "getCompileCommands should add default command");
-    VFS->setCurrentWorkingDirectory(Commands.front().Directory);
-
     auto It = OpenedFiles.find(File);
     if (It == OpenedFiles.end()) {
+      auto Commands = getCompileCommands(CDB, File);
+      assert(!Commands.empty() &&
+             "getCompileCommands should add default command");
+
       It = OpenedFiles
                .insert(std::make_pair(File, ClangdUnit(File, FileContents,
                                                        ResourceDir, PCHs,

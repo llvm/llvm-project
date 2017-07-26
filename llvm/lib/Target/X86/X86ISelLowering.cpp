@@ -1672,8 +1672,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // TODO: These control memcmp expansion in CGP and could be raised higher, but
   // that needs to benchmarked and balanced with the potential use of vector
-  // load/store types (PR33329).
-  MaxLoadsPerMemcmp = 4;
+  // load/store types (PR33329, PR33914).
+  MaxLoadsPerMemcmp = 2;
   MaxLoadsPerMemcmpOptSize = 2;
 
   // Set loop alignment to 2^ExperimentalPrefLoopAlignment bytes (default: 2^4).

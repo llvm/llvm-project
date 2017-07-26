@@ -375,6 +375,12 @@ bool AnalyzerOptions::shouldWidenLoops() {
   return WidenLoops.getValue();
 }
 
+bool AnalyzerOptions::shouldUnrollLoops() {
+  if (!UnrollLoops.hasValue())
+    UnrollLoops = getBooleanOption("unroll-loops", /*Default=*/false);
+  return UnrollLoops.getValue();
+}
+
 bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
   if (!DisplayNotesAsEvents.hasValue())
     DisplayNotesAsEvents =

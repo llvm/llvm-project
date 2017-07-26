@@ -306,6 +306,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     Kinds &= ~Vptr;
   }
 
+  // Disable -fsanitize=vptr if -fsanitize=null is not enabled (the vptr
+  // instrumentation is broken without run-time null checks).
+  if ((Kinds & Vptr) && !(Kinds & Null)) {
+    Kinds &= ~Vptr;
+    D.Diag(diag::warn_drv_disabling_vptr_no_null_check);
+  }
+
   // Check that LTO is enabled if we need it.
   if ((Kinds & NeedsLTO) && !D.isUsingLTO()) {
     D.Diag(diag::err_drv_argument_only_allowed_with)

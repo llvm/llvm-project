@@ -130,7 +130,7 @@ struct Configuration {
   std::map<StringRef, uint32_t> Section;
 
   // Options for manifest files.
-  ManifestKind Manifest = SideBySide;
+  ManifestKind Manifest = No;
   int ManifestID = 1;
   StringRef ManifestDependency;
   bool ManifestUAC = true;

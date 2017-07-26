@@ -35,30 +35,17 @@ class MCTargetAsmParser;
 class SourceMgr;
 
 class InlineAsmIdentifierInfo {
-private:
-  enum IdDeclKind : uint8_t {
-    Default,
-    Variable,
-    ConstEnum,
-  };
-  IdDeclKind Kind;
-
 public:
   void *OpDecl;
+  bool IsVarDecl;
   unsigned Length, Size, Type;
-  APInt ConstIntValue;
-  bool isVarDecl() { return Kind == Variable; }
-  bool isConstEnum() { return Kind == ConstEnum; }
-  void setKindVariable() { Kind = Variable; }
-  void setKindConstEnum() { Kind = ConstEnum; }
+
   void clear() {
     OpDecl = nullptr;
-    Kind = Default;
+    IsVarDecl = false;
     Length = 1;
     Size = 0;
     Type = 0;
-    // On clear flush possibly old APInt value as a precaution;
-    ConstIntValue = APInt();
   }
 };
 

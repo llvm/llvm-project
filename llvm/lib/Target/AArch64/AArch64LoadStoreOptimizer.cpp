@@ -1,4 +1,4 @@
-//=- AArch64LoadStoreOptimizer.cpp - AArch64 load/store opt. pass -*- C++ -*-=//
+//===- AArch64LoadStoreOptimizer.cpp - AArch64 load/store opt. pass -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,6 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -64,7 +65,7 @@ static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
 
 namespace {
 
-typedef struct LdStPairFlags {
+using LdStPairFlags = struct LdStPairFlags {
   // If a matching instruction is found, MergeForward is set to true if the
   // merge is to remove the first instruction and replace the second with
   // a pair-wise insn, and false if the reverse is true.
@@ -83,8 +84,7 @@ typedef struct LdStPairFlags {
 
   void setSExtIdx(int V) { SExtIdx = V; }
   int getSExtIdx() const { return SExtIdx; }
-
-} LdStPairFlags;
+};
 
 struct AArch64LoadStoreOpt : public MachineFunctionPass {
   static char ID;
@@ -101,7 +101,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // Track which registers have been modified and used.
   BitVector ModifiedRegs, UsedRegs;
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }

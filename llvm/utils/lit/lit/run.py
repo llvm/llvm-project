@@ -44,6 +44,12 @@ class Run(object):
     def __init__(self, lit_config, tests):
         self.lit_config = lit_config
         self.tests = tests
+        # Set up semaphores to limit parallelism of certain classes of tests.
+        # For example, some ASan tests require lots of virtual memory and run
+        # faster with less parallelism on OS X.
+        self.parallelism_semaphores = \
+                {k: multiprocessing.Semaphore(v) for k, v in
+                 self.lit_config.parallelism_groups.items()}
 
     def execute_test(self, test):
         return _execute_test_impl(test, self.lit_config,
@@ -73,13 +79,6 @@ class Run(object):
         # Don't do anything if we aren't going to run any tests.
         if not self.tests or jobs == 0:
             return
-
-        # Set up semaphores to limit parallelism of certain classes of tests.
-        # For example, some ASan tests require lots of virtual memory and run
-        # faster with less parallelism on OS X.
-        self.parallelism_semaphores = \
-                {k: multiprocessing.Semaphore(v) for k, v in
-                 self.lit_config.parallelism_groups.items()}
 
         # Install a console-control signal handler on Windows.
         if win32api is not None:

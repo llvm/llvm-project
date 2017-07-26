@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -emit-llvm -fsanitize=vptr %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s
 
 struct Base1 {
   virtual void f1() {}
@@ -64,6 +64,11 @@ void t4() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED3]] {{.*}}, i{{[0-9]+}} %[[P1]]
 
   static_cast<Base1 *>(badp)->f1(); //< No devirt, test 'badp isa Base1'.
+  // We were able to skip the null check on the first type check because 'p'
+  // is backed by an alloca. We can't skip the second null check because 'badp'
+  // is a (bitcast (load ...)).
+  // CHECK: call void @__ubsan_handle_type_mismatch
+  //
   // CHECK: %[[BADP1:[0-9]+]] = ptrtoint %struct.Base1* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_BASE1]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
 }
@@ -76,6 +81,8 @@ void t5() {
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED4_1]] {{.*}}, i{{[0-9]+}} %[[P1]]
 
   static_cast<Base1 *>(badp)->f1(); //< Devirt Base1::f1 to Derived4::f1.
+  // CHECK: call void @__ubsan_handle_type_mismatch
+  //
   // CHECK: %[[BADP1:[0-9]+]] = ptrtoint %struct.Derived4* {{%[0-9]+}} to i{{[0-9]+}}, !nosanitize
   // CHECK-NEXT: call void @__ubsan_handle_dynamic_type_cache{{[_a-z]*}}({{.*}} [[UBSAN_TI_DERIVED4_2]] {{.*}}, i{{[0-9]+}} %[[BADP1]]
 }

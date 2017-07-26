@@ -59,6 +59,12 @@ INLINE bool CheckForCallocOverflow(uptr size, uptr n) {
   return (max / size) < n;
 }
 
+// Returns true if the size passed to pvalloc overflows when rounded to the next
+// multiple of page_size.
+INLINE bool CheckForPvallocOverflow(uptr size, uptr page_size) {
+  return RoundUpTo(size, page_size) < size;
+}
+
 } // namespace __sanitizer
 
 #endif  // SANITIZER_ALLOCATOR_CHECKS_H

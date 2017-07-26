@@ -92,8 +92,25 @@ LoadedModule *GetLinker() { return nullptr; }
 // required on Darwin.
 void InitializePlatformSpecificModules() {}
 
+// Sections which can't contain contain global pointers. This list errs on the
+// side of caution to avoid false positives, at the expense of performance.
+//
+// Other potentially safe sections include:
+// __all_image_info, __crash_info, __const, __got, __interpose, __objc_msg_break
+//
+// Sections which definitely cannot be included here are:
+// __objc_data, __objc_const, __data, __bss, __common, __thread_data,
+// __thread_bss, __thread_vars, __objc_opt_rw, __objc_opt_ptrs
+static const char *kSkippedSecNames[] = {
+    "__cfstring",       "__la_symbol_ptr",  "__mod_init_func",
+    "__mod_term_func",  "__nl_symbol_ptr",  "__objc_classlist",
+    "__objc_classrefs", "__objc_imageinfo", "__objc_nlclslist",
+    "__objc_protolist", "__objc_selrefs",   "__objc_superrefs"};
+
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
+  for (auto name : kSkippedSecNames) CHECK(ARRAY_SIZE(name) < kMaxSegName);
+
   MemoryMappingLayout memory_mapping(false);
   InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 128);
   memory_mapping.DumpListOfModules(&modules);
@@ -106,6 +123,10 @@ void ProcessGlobalRegions(Frontier *frontier) {
          modules[i].ranges()) {
       // Sections storing global variables are writable and non-executable
       if (range.executable || !range.writable) continue;
+
+      for (auto name : kSkippedSecNames) {
+        if (!internal_strcmp(range.name, name)) continue;
+      }
 
       ScanGlobalRange(range.beg, range.end, frontier);
     }

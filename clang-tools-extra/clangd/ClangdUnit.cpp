@@ -245,6 +245,8 @@ void ClangdUnit::reparse(StringRef Contents,
   for (const auto &S : Command.CommandLine)
     ArgStrs.push_back(S.c_str());
 
+  VFS->setCurrentWorkingDirectory(Command.Directory);
+
   std::unique_ptr<CompilerInvocation> CI;
   {
     // FIXME(ibiryukov): store diagnostics from CommandLine when we start
@@ -397,6 +399,8 @@ ClangdUnit::codeComplete(StringRef Contents, Position Pos,
   std::vector<const char *> ArgStrs;
   for (const auto &S : Command.CommandLine)
     ArgStrs.push_back(S.c_str());
+
+  VFS->setCurrentWorkingDirectory(Command.Directory);
 
   std::unique_ptr<CompilerInvocation> CI;
   EmptyDiagsConsumer DummyDiagsConsumer;

@@ -369,6 +369,9 @@ public:
   uint8_t Type;
 };
 
+void applyMOV32T(uint8_t *Off, uint32_t V);
+void applyBranch24T(uint8_t *Off, int32_t V);
+
 } // namespace coff
 } // namespace lld
 
