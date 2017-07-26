@@ -14,18 +14,15 @@ MATH_MANGLE(sincospi)(float x, __private float *cp)
     int ix = AS_INT(x);
     int ax = ix & 0x7fffffff;
 
-    float t;
-    int i = MATH_PRIVATE(trigpired)(AS_FLOAT(ax), &t);
+    struct redret r = MATH_PRIVATE(trigpired)(AS_FLOAT(ax));
+    struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
 
-    float cc;
-    float ss = MATH_PRIVATE(sincospired)(t, &cc);
-
-    int flip = i > 1 ? 0x80000000 : 0;
-    bool odd = (i & 1) != 0;
-    float s = odd ? cc : ss;
+    int flip = r.i > 1 ? 0x80000000 : 0;
+    bool odd = (r.i & 1) != 0;
+    float s = odd ? sc.c : sc.s;
     s = AS_FLOAT(AS_INT(s) ^ flip ^ (ax ^ ix));
-    ss = -ss;
-    float c = odd ? ss : cc;
+    sc.s = -sc.s;
+    float c = odd ? sc.s : sc.c;
     c = AS_FLOAT(AS_INT(c) ^ flip);
 
     if (!FINITE_ONLY_OPT()) {

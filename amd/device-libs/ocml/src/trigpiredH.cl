@@ -8,13 +8,16 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
-INLINEATTR short
-MATH_PRIVATE(trigpired)(half x, __private half *r)
+CONSTATTR INLINEATTR struct redret
+MATH_PRIVATE(trigpired)(half x)
 {
     half t = 2.0h * BUILTIN_FRACTION_F16(0.5h * x);
     x = x > 1.0h ? t : x;
     t = BUILTIN_RINT_F16(2.0h * x);
-    *r = MATH_MAD(t, -0.5h, x);
-    return (short)t & (short)0x3;
+
+    struct redret ret;
+    ret.hi = MATH_MAD(t, -0.5h, x);
+    ret.i = (short)t & (short)0x3;
+    return ret;
 }
 

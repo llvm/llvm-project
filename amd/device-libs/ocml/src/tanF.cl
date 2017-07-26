@@ -14,16 +14,12 @@ MATH_MANGLE(tan)(float x)
     int ix = AS_INT(x);
     int ax = ix & 0x7fffffff;
 
+    struct redret r = MATH_PRIVATE(trigred)(AS_FLOAT(ax));
+
 #if defined EXTRA_PRECISION
-    float r0, r1;
-    int regn = MATH_PRIVATE(trigred)(&r0, &r1, AS_FLOAT(ax));
-
-    float t = MATH_PRIVATE(tanred)(r0 + r1, regn & 1);
+    float t = MATH_PRIVATE(tanred)(r.hi + r.lo, r.i & 1);
 #else
-    float r;
-    int regn = MATH_PRIVATE(trigred)(&r, AS_FLOAT(ax));
-
-    float t = MATH_PRIVATE(tanred)(r, regn & 1);
+    float t = MATH_PRIVATE(tanred)(r.hi, r.i & 1);
 #endif
 
     t = AS_FLOAT(AS_INT(t) ^ (ix ^ ax));

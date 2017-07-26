@@ -6,11 +6,11 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathD.h"
+#include "trigpiredD.h"
 
-INLINEATTR double
-MATH_PRIVATE(sincospired)(double x, __private double *cp)
+CONSTATTR INLINEATTR struct scret
+MATH_PRIVATE(sincospired)(double x)
 {
-
     double t = x * x;
 
     double sx = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, 
@@ -26,7 +26,9 @@ MATH_PRIVATE(sincospired)(double x, __private double *cp)
                     -0x1.55d3c7e3c325bp+0), 0x1.03c1f081b5a67p+2), -0x1.3bd3cc9be45dep+2);
     cx = MATH_MAD(t, cx, 1.0);
 
-    *cp = cx;
-    return sx;
+    struct scret ret;
+    ret.c = cx;
+    ret.s = sx;
+    return ret;
 }
 

@@ -19,21 +19,18 @@ MATH_MANGLE2(sincos)(half2 x, __private half2 *cp)
     return s;
 }
 
-INLINEATTR half
+CONSTATTR INLINEATTR half
 MATH_MANGLE(sincos)(half x, __private half *cp)
 {
-    half r;
-    short regn = MATH_PRIVATE(trigred)(&r, BUILTIN_ABS_F16(x));
+    struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F16(x));
+    struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
 
-    half cc;
-    half ss = MATH_PRIVATE(sincosred)(r, &cc);
-
-    short flip = regn > (short)1 ? (short)0x8000 : (short)0;
-    bool odd = (regn & 1) != 0;
-    short s = AS_SHORT(odd ? cc : ss);
+    short flip = r.i > (short)1 ? (short)0x8000 : (short)0;
+    bool odd = (r.i & (short)1) != (short)0;
+    short s = AS_SHORT(odd ? sc.c : sc.s);
     s ^= flip ^ (AS_SHORT(x) & (short)0x8000);
-    ss = -ss;
-    short c = AS_SHORT(odd ? ss : cc);
+    sc.s = -sc.s;
+    short c = AS_SHORT(odd ? sc.s : sc.c);
     c ^= flip;
 
     if (!FINITE_ONLY_OPT()) {

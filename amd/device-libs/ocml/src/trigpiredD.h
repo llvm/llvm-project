@@ -5,7 +5,17 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-extern int MATH_PRIVATE(trigpired)(double x, __private double *r);
-extern double MATH_PRIVATE(sincospired)(double x, __private double *cp);
+struct redret {
+    double hi;
+    int i;
+};
+
+struct scret {
+    double c;
+    double s;
+};
+
+extern CONSTATTR struct redret MATH_PRIVATE(trigpired)(double x);
+extern CONSTATTR struct scret MATH_PRIVATE(sincospired)(double x);
 extern CONSTATTR double MATH_PRIVATE(tanpired)(double x, int i);
 

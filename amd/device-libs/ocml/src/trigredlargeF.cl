@@ -17,12 +17,8 @@
     HI = BUILTIN_MULHI_U32(A, B); \
     HI += LO < C
 
-int
-#if defined EXTRA_PRECISION
-MATH_PRIVATE(trigredlarge)(__private float *r, __private float *rr, float x)
-#else
-MATH_PRIVATE(trigredlarge)(__private float *r, float x)
-#endif
+CONSTATTR struct redret
+MATH_PRIVATE(trigredlarge)(float x)
 {
     int xe = (int)(AS_UINT(x) >> 23) - 127;
     uint xm = 0x00800000U | (AS_UINT(x) & 0x7fffffU);
@@ -152,16 +148,18 @@ MATH_PRIVATE(trigredlarge)(__private float *r, float x)
              MATH_MAD(q0, pio2h, q1*pio2t);
     }
 
+    struct redret ret;
 #if defined EXTRA_PRECISION
     float t = rh + rt;
     rt = rt - (t - rh);
 
-    *r = t;
-    *rr = rt;
+    ret.hi = t;
+    ret.lo = rt;
 #else
-    *r = rh + rt;
+    ret.hi  = rh + rt;
 #endif
 
-    return ((i >> 1) + (i & 1)) & 0x3;
+    ret.i = ((i >> 1) + (i & 1)) & 0x3;
+    return ret;
 }
 

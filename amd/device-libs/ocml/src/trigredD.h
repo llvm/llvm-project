@@ -5,12 +5,23 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-extern int MATH_PRIVATE(trigredsmall)(__private double *r, __private double *rr, double x);
-extern int MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x);
-extern int MATH_PRIVATE(trigred)(__private double *r, __private double *rr, double x);
+struct redret {
+    double lo;
+    double hi;
+    int i;
+};
 
-extern double MATH_PRIVATE(sincosred)(double x, __private double *cp);
-extern double MATH_PRIVATE(sincosred2)(double x, double y, __private double *cp);
+struct scret {
+    double s;
+    double c;
+};
+
+extern CONSTATTR struct redret MATH_PRIVATE(trigredsmall)(double x);
+extern CONSTATTR struct redret MATH_PRIVATE(trigredlarge)(double x);
+extern CONSTATTR struct redret MATH_PRIVATE(trigred)(double x);
+
+extern CONSTATTR struct scret MATH_PRIVATE(sincosred)(double x);
+extern CONSTATTR struct scret MATH_PRIVATE(sincosred2)(double x, double y);
 
 extern CONSTATTR double MATH_PRIVATE(tanred2)(double x, double xx, int sel);
 

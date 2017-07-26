@@ -8,8 +8,8 @@
 #include "mathF.h"
 #include "trigredF.h"
 
-INLINEATTR float
-MATH_PRIVATE(sincosred)(float x, __private float *cp)
+CONSTATTR INLINEATTR struct scret
+MATH_PRIVATE(sincosred)(float x)
 {
     float t = x * x;
 
@@ -17,7 +17,9 @@ MATH_PRIVATE(sincosred)(float x, __private float *cp)
     float c = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
                   0x1.aea668p-16f, -0x1.6c9e76p-10f), 0x1.5557eep-5f), -0x1.000008p-1f), 1.0f);
 
-    *cp = c;
-    return s;
+    struct scret ret;
+    ret.c = c;
+    ret.s = s;
+    return ret;
 }
 

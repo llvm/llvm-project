@@ -13,14 +13,12 @@ UGEN(cospi)
 INLINEATTR half
 MATH_MANGLE(cospi)(half x)
 {
-    half t;
-    int i = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x), &t);
+    struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));
+    struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
+    sc.s = -sc.s;
 
-    half cc;
-    half ss = -MATH_PRIVATE(sincospired)(t, &cc);
-
-    short c =  AS_SHORT((i & (short)1) == (short)0 ? cc : ss);
-    c ^= i > (short)1 ? (short)0x8000 : (short)0;
+    short c =  AS_SHORT((r.i & (short)1) == (short)0 ? sc.c : sc.s);
+    c ^= r.i > (short)1 ? (short)0x8000 : (short)0;
 
     if (!FINITE_ONLY_OPT()) {
         c = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? (short)QNANBITPATT_HP16 : c;

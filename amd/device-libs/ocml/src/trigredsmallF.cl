@@ -22,12 +22,8 @@
         D = __t + (((C - __t) - __ph) - __pt); \
     } while(0)
 
-static inline int
-#if defined EXTRA_PRECISION
-mad_reduce(__private float *hi, __private float *lo, float x)
-#else
-mad_reduce(__private float *hi, float x)
-#endif
+static inline struct redret
+mad_reduce(float x)
 {
 #if defined EXTRA_PRECISION
 #error Not implemented
@@ -54,17 +50,16 @@ mad_reduce(__private float *hi, float x)
     float r;
     FNMA(fn, fnh, fnl, piby2_h, piby2_hh, piby2_hl, x, r);
     FNMA(fn, fnh, fnl, piby2_m, piby2_mh, piby2_ml, r, r);
-    *hi = MATH_MAD(-piby2_l, fn, r);
-    return (int)fn & 0x3;
+
+    struct redret ret;
+    ret.hi = MATH_MAD(-piby2_l, fn, r);
+    ret.i = (int)fn & 0x3;
+    return ret;
 #endif
 }
 
-static inline int
-#if defined EXTRA_PRECISION
-fma_reduce(__private float *hi, __private float *lo, float x)
-#else
-fma_reduce(__private float *hi, float x)
-#endif
+static inline struct redret
+fma_reduce(float x)
 {
     const float twobypi = 0x1.45f306p-1f;
     const float piby2_h = 0x1.921fb4p+0f;
@@ -72,6 +67,9 @@ fma_reduce(__private float *hi, float x)
     const float piby2_l = 0x1.846988p-48f;
 
     float fn = BUILTIN_RINT_F32(x * twobypi);
+
+    struct redret ret;
+
 #if defined EXTRA_PRECISION
     float xt = BUILTIN_FMA_F32(fn, -piby2_h, x);
     float yh = BUILTIN_FMA_F32(fn, -piby2_m, xt);
@@ -82,34 +80,24 @@ fma_reduce(__private float *hi, float x)
     float yt = BUILTIN_FMA_F32(fn, -piby2_l, ((th - yh) + tt) - pt);
     float rh = yh + yt;
     float rt = yt - (rh - yh);
-    *hi = rh;
-    *lo = rt;
+    ret.hi = rh;
+    ret.lo = rt;
 #else
     float r = BUILTIN_FMA_F32(fn, -piby2_l, BUILTIN_FMA_F32(fn, -piby2_m, BUILTIN_FMA_F32(fn, -piby2_h, x)));
-    *hi = r;
+    ret.hi = r;
 #endif
-    return (int)fn & 0x3;
+
+    ret.i =(int)fn & 0x3;
+    return ret;
 }
 
-INLINEATTR int
-#if defined EXTRA_PRECISION
-MATH_PRIVATE(trigredsmall)(__private float *r, __private float *rr, float x)
-#else
-MATH_PRIVATE(trigredsmall)(__private float *r, float x)
-#endif
+CONSTATTR INLINEATTR struct redret
+MATH_PRIVATE(trigredsmall)(float x)
 {
     if (HAVE_FAST_FMA32()) {
-#if defined EXTRA_PRECISION
-	return fma_reduce(r, rr, x);
-#else
-	return fma_reduce(r, x);
-#endif
+	return fma_reduce(x);
     } else {
-#if defined EXTRA_PRECISION
-        return mad_reduce(r, rr, x);
-#else
-	return mad_reduce(r, x);
-#endif
+	return mad_reduce(x);
     }
 }
 

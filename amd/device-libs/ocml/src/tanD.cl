@@ -8,13 +8,12 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-INLINEATTR double
+CONSTATTR INLINEATTR double
 MATH_MANGLE(tan)(double x)
 {
-    double r, rr;
-    int i = MATH_PRIVATE(trigred)(&r, &rr, BUILTIN_ABS_F64(x));
+    struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F64(x));
 
-    int2 t = AS_INT2(MATH_PRIVATE(tanred2)(r, rr, i & 1));
+    int2 t = AS_INT2(MATH_PRIVATE(tanred2)(r.hi, r.lo, r.i & 1));
     t.hi ^= AS_INT2(x).hi & (int)0x80000000;
 
     if (!FINITE_ONLY_OPT()) {

@@ -6,9 +6,10 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathD.h"
+#include "trigredD.h"
 
-INLINEATTR double
-MATH_PRIVATE(sincosred)(double x, __private double *cp)
+CONSTATTR INLINEATTR struct scret
+MATH_PRIVATE(sincosred)(double x)
 {
     const double S0 = -0x1.5555555555555p-3;
     const double S1 =  0x1.1111111110bb3p-7;
@@ -33,7 +34,9 @@ MATH_PRIVATE(sincosred)(double x, __private double *cp)
     double cx = t + MATH_MAD(x2*x2, MATH_MAD(x2, MATH_MAD(x2, MATH_MAD(x2, MATH_MAD(x2, MATH_MAD(x2, C5, C4), C3), C2), C1), C0), v);
     double sx = MATH_MAD(x2*x, MATH_MAD(x2, MATH_MAD(x2, MATH_MAD(x2, MATH_MAD(x2, MATH_MAD(x2, S5, S4), S3), S2), S1), S0), x);
 
-    *cp = cx;
-    return sx;
+    struct scret ret;
+    ret.c = cx;
+    ret.s = sx;
+    return ret;
 }
 

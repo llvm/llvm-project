@@ -6,9 +6,10 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathF.h"
+#include "trigredF.h"
 
-INLINEATTR float
-MATH_PRIVATE(sincospired)(float x, __private float *cp)
+CONSTATTR INLINEATTR struct scret
+MATH_PRIVATE(sincospired)(float x)
 {
 
     float t = x * x;
@@ -23,7 +24,9 @@ MATH_PRIVATE(sincospired)(float x, __private float *cp)
                    -0x1.3bd3ccp+2f);
     cx = MATH_MAD(t, cx, 1.0f);
 
-    *cp = cx;
-    return sx;
+    struct scret ret;
+    ret.c = cx;
+    ret.s = sx;
+    return ret;
 }
 

@@ -23,19 +23,15 @@ MATH_MANGLE2(sincospi)(half2 x, __private half2 *cp)
 INLINEATTR half
 MATH_MANGLE(sincospi)(half x, __private half *cp)
 {
-    half t;
-    short i = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x), &t);
+    struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));
+    struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
 
-    half cc;
-    half ss = MATH_PRIVATE(sincospired)(t, &cc);
-
-    short flip = i > (short)1 ? (short)0x8000 : (short)0;
-    bool odd = (i & (short)1) != (short)0;
-
-    short s = AS_SHORT(odd ? cc : ss);
+    short flip = r.i > (short)1 ? (short)0x8000 : (short)0;
+    bool odd = (r.i & (short)1) != (short)0;
+    short s = AS_SHORT(odd ? sc.c : sc.s);
     s ^= flip ^ (AS_SHORT(x) & (short)0x8000);
-    ss = -ss;
-    short c = AS_SHORT(odd ? ss : cc);
+    sc.s = -sc.s;
+    short c = AS_SHORT(odd ? sc.s : sc.c);
     c ^= flip;
 
     if (!FINITE_ONLY_OPT()) {

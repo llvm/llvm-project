@@ -14,22 +14,16 @@ MATH_MANGLE(sin)(float x)
     int ix = AS_INT(x);
     int ax = ix & 0x7fffffff;
 
+    struct redret r =  MATH_PRIVATE(trigred)(AS_FLOAT(ax));
+
 #if defined EXTRA_PRECISION
-    float r0, r1;
-    int regn = MATH_PRIVATE(trigred)(&r0, &r1, AS_FLOAT(ax));
-
-    float cc;
-    float ss = MATH_PRIVATE(sincosred2)(r0, r1, &cc);
+    struct scret sc = MATH_PRIVATE(sincosred2)(r.hi, r.lo);
 #else
-    float r;
-    int regn = MATH_PRIVATE(trigred)(&r, AS_FLOAT(ax));
-
-    float cc;
-    float ss = MATH_PRIVATE(sincosred)(r, &cc);
+    struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
 #endif
 
-    float s = (regn & 1) != 0 ? cc : ss;
-    s = AS_FLOAT(AS_INT(s) ^ (regn > 1 ? 0x80000000 : 0) ^ (ix ^ ax));
+    float s = (r.i & 1) != 0 ? sc.c : sc.s;
+    s = AS_FLOAT(AS_INT(s) ^ (r.i > 1 ? 0x80000000 : 0) ^ (ix ^ ax));
 
     if (!FINITE_ONLY_OPT()) {
         s = ax >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : s;

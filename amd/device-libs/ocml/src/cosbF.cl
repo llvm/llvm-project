@@ -27,39 +27,34 @@
 INLINEATTR float
 MATH_PRIVATE(cosb)(float x, int n, float p)
 {
+    struct redret r = MATH_PRIVATE(trigred)(x);
+    bool b = r.hi < p;
+    r.i = (r.i - b - n) & 3;
 
 #if defined EXTRA_PRECISION
-    float ph, pl, rh, rl, sh, sl;
-    int i = MATH_PRIVATE(trigred)(&rh, &rl, x);
-    bool b = rh < p;
-    i = (i - b - n) & 3;
+    float ph = AS_FLOAT(0xbf490fdb ^ (b ? 0x80000000 : 0));
+    float pl = AS_FLOAT(0x32bbbd2e ^ (b ? 0x80000000 : 0));
 
-    ph = AS_FLOAT(0xbf490fdb ^ (b ? 0x80000000 : 0));
-    pl = AS_FLOAT(0x32bbbd2e ^ (b ? 0x80000000 : 0));
+    float sh, sl;
 
     FDIF2(ph, p, ph, sl);
     pl += sl;
     FSUM2(ph, pl, ph, pl);
 
-    FSUM2(ph, rh, sh, sl);
-    sl += pl + rl;
+    FSUM2(ph, r.hi, sh, sl);
+    sl += pl + r.lo;
     FSUM2(sh, sl, sh, sl);
 
-    float cc;
-    float ss = -MATH_PRIVATE(sincosred2)(sh, sl, &cc);
+    struct scret sc = MATH_PRIVATE(sincosred2)(sh, sl);
 #else
-    float r;
-    int i = MATH_PRIVATE(trigred)(&r, x);
-    bool b = r < p;
-    i = (i - b - n) & 3;
-    r = r - p + AS_FLOAT(0xbf490fdb ^ (b ? 0x80000000 : 0));
+    r.hi = r.hi - p + AS_FLOAT(0xbf490fdb ^ (b ? 0x80000000 : 0));
 
-    float cc;
-    float ss = -MATH_PRIVATE(sincosred)(r, &cc);
+    struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
 #endif
+    sc.s = -sc.s;
 
-    float c =  (i & 1) != 0 ? ss : cc;
-    c = AS_FLOAT(AS_INT(c) ^ (i > 1 ? 0x80000000 : 0));
+    float c =  (r.i & 1) != 0 ? sc.s : sc.c;
+    c = AS_FLOAT(AS_INT(c) ^ (r.i > 1 ? 0x80000000 : 0));
     return c;
 }
 

@@ -8,8 +8,8 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-INLINEATTR int
-MATH_PRIVATE(trigredsmall)(__private double *r, __private double *rr, double x)
+CONSTATTR INLINEATTR struct redret
+MATH_PRIVATE(trigredsmall)(double x)
 {
     const double twobypi = 0x1.45f306dc9c883p-1;
     const double piby2_h = 0x1.921fb54442d18p+0;
@@ -27,9 +27,10 @@ MATH_PRIVATE(trigredsmall)(__private double *r, __private double *rr, double x)
     double rh = yh + yt;
     double rt = yt - (rh - yh);
 
-    *r = rh;
-    *rr = rt;
-
-    return (int)dn & 0x3;
+    struct redret ret;
+    ret.hi = rh;
+    ret.lo = rt;
+    ret.i = (int)dn & 0x3;
+    return ret;
 }
 

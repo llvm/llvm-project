@@ -8,13 +8,16 @@
 #include "mathF.h"
 #include "trigpiredF.h"
 
-INLINEATTR int
-MATH_PRIVATE(trigpired)(float x, __private float *r)
+CONSTATTR INLINEATTR struct redret
+MATH_PRIVATE(trigpired)(float x)
 {
     float t = 2.0f * BUILTIN_FRACTION_F32(0.5f * x);
     x = x > 1.0f ? t : x;
     t = BUILTIN_RINT_F32(2.0f * x);
-    *r = MATH_MAD(t, -0.5f, x);
-    return (int)t & 0x3;
+
+    struct redret ret;
+    ret.hi = MATH_MAD(t, -0.5f, x);
+    ret.i = (int)t & 0x3;
+    return ret;
 }
 

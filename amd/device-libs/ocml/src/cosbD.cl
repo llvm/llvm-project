@@ -27,28 +27,28 @@
 INLINEATTR double
 MATH_PRIVATE(cosb)(double x, int n, double p)
 {
-    double ph, pl, rh, rl, sh, sl;
-    int i = MATH_PRIVATE(trigred)(&rh, &rl, x);
-    bool b = rh < p;
-    i = (i - b - n) & 3;
+    struct redret r = MATH_PRIVATE(trigred)(x);
+    bool b = r.hi < p;
+    r.i = (r.i - b - n) & 3;
 
     // This is a properly signed extra precise pi/4
-    ph = AS_DOUBLE((uint2)(0x54442d18, 0xbfe921fb ^ (b ? 0x80000000 : 0)));
-    pl = AS_DOUBLE((uint2)(0x33145c07, 0xbc81a626 ^ (b ? 0x80000000 : 0)));
+    double ph = AS_DOUBLE((uint2)(0x54442d18, 0xbfe921fb ^ (b ? 0x80000000 : 0)));
+    double pl = AS_DOUBLE((uint2)(0x33145c07, 0xbc81a626 ^ (b ? 0x80000000 : 0)));
 
+    double sh, sl;
     FDIF2(ph, p, ph, sl);
     pl += sl;
     FSUM2(ph, pl, ph, pl);
 
-    FSUM2(ph, rh, sh, sl);
-    sl += pl + rl;
+    FSUM2(ph, r.hi, sh, sl);
+    sl += pl + r.lo;
     FSUM2(sh, sl, sh, sl);
 
-    double cc;
-    double ss = -MATH_PRIVATE(sincosred2)(sh, sl, &cc);
+    struct scret sc = MATH_PRIVATE(sincosred2)(sh, sl);
+    sc.s = -sc.s;
 
-    int2 c = AS_INT2((i & 1) != 0 ? ss : cc);
-    c.hi ^= i > 1 ? 0x80000000 : 0;
+    int2 c = AS_INT2((r.i & 1) != 0 ? sc.s : sc.c);
+    c.hi ^= r.i > 1 ? 0x80000000 : 0;
 
     return AS_DOUBLE(c);
 }

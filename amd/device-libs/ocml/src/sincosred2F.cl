@@ -6,9 +6,10 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathF.h"
+#include "trigredF.h"
 
-INLINEATTR float
-MATH_PRIVATE(sincosred2)(float x, float y, __private float *cp)
+CONSTATTR INLINEATTR struct scret
+MATH_PRIVATE(sincosred2)(float x, float y)
 {
     const float c0 =  0x1.555556p-5f;
     const float c1 = -0x1.6c16b2p-10f;
@@ -32,7 +33,9 @@ MATH_PRIVATE(sincosred2)(float x, float y, __private float *cp)
     float sxy = MATH_MAD(x2, MATH_MAD(x2, s3, s2), s1);
     sxy = x - MATH_MAD(-x3, s0, MATH_MAD(x2, MATH_MAD(-x3, sxy, 0.5f*y), -y));
 
-    *cp = cxy;
-    return sxy;
+    struct scret ret;
+    ret.c = cxy;
+    ret.s = sxy;
+    return ret;
 }
 

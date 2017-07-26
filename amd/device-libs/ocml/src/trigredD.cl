@@ -8,12 +8,12 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-INLINEATTR int
-MATH_PRIVATE(trigred)(__private double *r, __private double *rr, double x)
+CONSTATTR INLINEATTR struct redret
+MATH_PRIVATE(trigred)(double x)
 {
     if (x < 0x1.0p+21)
-        return MATH_PRIVATE(trigredsmall)(r, rr, x);
+        return MATH_PRIVATE(trigredsmall)(x);
     else
-        return MATH_PRIVATE(trigredlarge)(r, rr, x);
+        return MATH_PRIVATE(trigredlarge)(x);
 }
 

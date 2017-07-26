@@ -11,19 +11,16 @@
 INLINEATTR double
 MATH_MANGLE(sincos)(double x, __private double * cp)
 {
-    double r, rr;
-    int regn = MATH_PRIVATE(trigred)(&r, &rr, BUILTIN_ABS_F64(x));
+    struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F64(x));
+    struct scret sc = MATH_PRIVATE(sincosred2)(r.hi, r.lo);
 
-    double cc;
-    double ss = MATH_PRIVATE(sincosred2)(r, rr, &cc);
+    int flip = r.i > 1 ? (int)0x80000000 : 0;
+    bool odd = (r.i & 1) != 0;
 
-    int flip = regn > 1 ? (int)0x80000000 : 0;
-    bool odd = (regn & 1) != 0;
-
-    int2 s = AS_INT2(odd ? cc : ss);
+    int2 s = AS_INT2(odd ? sc.c : sc.s);
     s.hi ^= flip ^ (AS_INT2(x).hi &(int)0x80000000);
-    ss = -ss;
-    int2 c = AS_INT2(odd ? ss : cc);
+    sc.s = -sc.s;
+    int2 c = AS_INT2(odd ? sc.s : sc.c);
     c.hi ^= flip;
 
     if (!FINITE_ONLY_OPT()) {

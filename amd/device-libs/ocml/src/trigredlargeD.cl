@@ -63,8 +63,8 @@
         C3 += C2; \
     } while (0)
 
-int
-MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x)
+CONSTATTR struct redret
+MATH_PRIVATE(trigredlarge)(double x)
 {
     // Scale x by relevant part of 2/pi
     double p2 = BUILTIN_TRIG_PREOP_F64(x, 0);
@@ -106,9 +106,11 @@ MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x)
     double rt = BUILTIN_FMA_F64(f1, pio2h, BUILTIN_FMA_F64(f2, pio2t, BUILTIN_FMA_F64(f2, pio2h, -rh)));
 
     FSUM2(rh, rt, rh, rt);
-    *r = rh;
-    *rr = rt;
 
-    return i & 0x3;
+    struct redret ret;
+    ret.hi = rh;
+    ret.lo = rt;
+    ret.i = i & 0x3;
+    return ret;
 }
 

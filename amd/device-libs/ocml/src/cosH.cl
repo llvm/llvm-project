@@ -13,14 +13,12 @@ UGEN(cos)
 INLINEATTR half
 MATH_MANGLE(cos)(half x)
 {
-    half r;
-    short i = MATH_PRIVATE(trigred)(&r, BUILTIN_ABS_F16(x));
+    struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F16(x));
+    struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
+    sc.s = -sc.s;
 
-    half cc;
-    half ss = -MATH_PRIVATE(sincosred)(r, &cc);
-
-    short c =  AS_SHORT((i & 1) == 0 ? cc : ss);
-    c ^= i > 1 ? (short)0x8000 : (short)0;
+    short c =  AS_SHORT((r.i & 1) == (short)0 ? sc.c : sc.s);
+    c ^= r.i > 1 ? (short)0x8000 : (short)0;
 
     if (!FINITE_ONLY_OPT()) {
         c = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? (short)QNANBITPATT_HP16 : c;
