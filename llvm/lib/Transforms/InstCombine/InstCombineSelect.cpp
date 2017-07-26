@@ -1157,6 +1157,22 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
 
+  // FIXME: Remove this workaround when freeze related patches are done.
+  // For select with undef operand which feeds into an equality comparison,
+  // don't simplify it so loop unswitch can know the equality comparison
+  // may have an undef operand. This is a workaround for PR31652 caused by
+  // descrepancy about branch on undef between LoopUnswitch and GVN.
+  if (isa<UndefValue>(TrueVal) || isa<UndefValue>(FalseVal)) {
+    if (any_of(SI.users(), [&](User *U) {
+          ICmpInst *CI = dyn_cast<ICmpInst>(U);
+          if (CI && CI->isEquality())
+            return true;
+          return false;
+        })) {
+      return nullptr;
+    }
+  }
+
   if (Value *V = SimplifySelectInst(CondVal, TrueVal, FalseVal,
                                     SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);

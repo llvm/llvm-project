@@ -450,6 +450,10 @@ cl::opt<bool> DumpTypeDependents(
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 // SYMBOL OPTIONS
+cl::opt<bool> DumpGlobals("globals", cl::desc("dump Globals symbol records"),
+                          cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpGlobalExtras("global-extras", cl::desc("dump Globals hashes"),
+                               cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublicExtras("public-extras",
@@ -1066,6 +1070,7 @@ int main(int argc_, const char *argv_[]) {
       opts::dump::DumpXme = true;
       opts::dump::DumpXmi = true;
       opts::dump::DumpIds = true;
+      opts::dump::DumpGlobals = true;
       opts::dump::DumpPublics = true;
       opts::dump::DumpSectionContribs = true;
       opts::dump::DumpSectionMap = true;

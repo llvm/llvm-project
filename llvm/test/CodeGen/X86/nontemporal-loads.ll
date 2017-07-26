@@ -1797,4 +1797,119 @@ define <64 x i8> @test_unaligned_v64i8(<64 x i8>* %src) {
   ret <64 x i8> %1
 }
 
+define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %mask1) {
+; SSE2-LABEL: test_masked_v16i32:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movdqa %xmm0, %xmm10
+; SSE2-NEXT:    pxor %xmm12, %xmm12
+; SSE2-NEXT:    pcmpeqd %xmm12, %xmm7
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa %xmm7, %xmm8
+; SSE2-NEXT:    pxor %xmm0, %xmm8
+; SSE2-NEXT:    pcmpeqd %xmm12, %xmm6
+; SSE2-NEXT:    movdqa %xmm6, %xmm9
+; SSE2-NEXT:    pxor %xmm0, %xmm9
+; SSE2-NEXT:    pcmpeqd %xmm12, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm11
+; SSE2-NEXT:    pxor %xmm0, %xmm11
+; SSE2-NEXT:    pcmpeqd %xmm12, %xmm4
+; SSE2-NEXT:    pxor %xmm4, %xmm0
+; SSE2-NEXT:    pandn (%rdi), %xmm4
+; SSE2-NEXT:    pandn %xmm10, %xmm0
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    pandn 16(%rdi), %xmm5
+; SSE2-NEXT:    pandn %xmm1, %xmm11
+; SSE2-NEXT:    por %xmm5, %xmm11
+; SSE2-NEXT:    pandn 32(%rdi), %xmm6
+; SSE2-NEXT:    pandn %xmm2, %xmm9
+; SSE2-NEXT:    por %xmm6, %xmm9
+; SSE2-NEXT:    pandn 48(%rdi), %xmm7
+; SSE2-NEXT:    pandn %xmm3, %xmm8
+; SSE2-NEXT:    por %xmm7, %xmm8
+; SSE2-NEXT:    movdqa %xmm11, %xmm1
+; SSE2-NEXT:    movdqa %xmm9, %xmm2
+; SSE2-NEXT:    movdqa %xmm8, %xmm3
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_masked_v16i32:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movdqa %xmm0, %xmm8
+; SSE41-NEXT:    pxor %xmm0, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm9
+; SSE41-NEXT:    pxor %xmm9, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm6
+; SSE41-NEXT:    pxor %xmm9, %xmm6
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    pxor %xmm9, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm0
+; SSE41-NEXT:    pxor %xmm9, %xmm0
+; SSE41-NEXT:    movntdqa 48(%rdi), %xmm9
+; SSE41-NEXT:    movntdqa 32(%rdi), %xmm10
+; SSE41-NEXT:    movntdqa 16(%rdi), %xmm11
+; SSE41-NEXT:    movntdqa (%rdi), %xmm4
+; SSE41-NEXT:    blendvps %xmm0, %xmm4, %xmm8
+; SSE41-NEXT:    movdqa %xmm5, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm11, %xmm1
+; SSE41-NEXT:    movdqa %xmm6, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm10, %xmm2
+; SSE41-NEXT:    movdqa %xmm7, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm9, %xmm3
+; SSE41-NEXT:    movaps %xmm8, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: test_masked_v16i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm6, %xmm6, %xmm6
+; AVX1-NEXT:    vpxor %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpxor %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpxor %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm4
+; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm5
+; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
+; AVX1-NEXT:    vblendvps %ymm3, %ymm4, %ymm1, %ymm1
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; AVX1-NEXT:    vblendvps %ymm2, %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_masked_v16i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm3, %ymm3
+; AVX2-NEXT:    vpcmpeqd %ymm5, %ymm5, %ymm5
+; AVX2-NEXT:    vpxor %ymm5, %ymm3, %ymm3
+; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpxor %ymm5, %ymm2, %ymm2
+; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm4
+; AVX2-NEXT:    vblendvps %ymm3, %ymm4, %ymm1, %ymm1
+; AVX2-NEXT:    vmovntdqa (%rdi), %ymm3
+; AVX2-NEXT:    vblendvps %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_masked_v16i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
+; AVX512-NEXT:    vmovntdqa (%rdi), %zmm1
+; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    retq
+  %mask = icmp ne <16 x i32> %mask1, zeroinitializer
+  %vaddr = bitcast i8* %addr to <16 x i32>*
+  %r = load <16 x i32>, <16 x i32>* %vaddr, align 64, !nontemporal !1
+  %res = select <16 x i1> %mask, <16 x i32> %r, <16 x i32> %old
+  ret <16 x i32>%res
+}
+
 !1 = !{i32 1}

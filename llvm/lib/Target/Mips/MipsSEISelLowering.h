@@ -43,8 +43,7 @@ namespace llvm {
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
 
-    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask,
-                            EVT VT) const override {
+    bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
       return false;
     }
 

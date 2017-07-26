@@ -553,6 +553,48 @@ bool LoopUnswitch::isUnreachableDueToPreviousUnswitching(BasicBlock *BB) {
   return false;
 }
 
+/// FIXME: Remove this workaround when freeze related patches are done.
+/// LoopUnswitch and Equality propagation in GVN have discrepancy about
+/// whether branch on undef/poison has undefine behavior. Here it is to
+/// rule out some common cases that we found such discrepancy already
+/// causing problems. Detail could be found in PR31652. Note if the
+/// func returns true, it is unsafe. But if it is false, it doesn't mean
+/// it is necessarily safe.
+static bool EqualityPropUnSafe(Value &LoopCond) {
+  ICmpInst *CI = dyn_cast<ICmpInst>(&LoopCond);
+  if (!CI || !CI->isEquality())
+    return false;
+
+  Value *LHS = CI->getOperand(0);
+  Value *RHS = CI->getOperand(1);
+  if (isa<UndefValue>(LHS) || isa<UndefValue>(RHS))
+    return true;
+
+  auto hasUndefInPHI = [](PHINode &PN) {
+    for (Value *Opd : PN.incoming_values()) {
+      if (isa<UndefValue>(Opd))
+        return true;
+    }
+    return false;
+  };
+  PHINode *LPHI = dyn_cast<PHINode>(LHS);
+  PHINode *RPHI = dyn_cast<PHINode>(RHS);
+  if ((LPHI && hasUndefInPHI(*LPHI)) || (RPHI && hasUndefInPHI(*RPHI)))
+    return true;
+
+  auto hasUndefInSelect = [](SelectInst &SI) {
+    if (isa<UndefValue>(SI.getTrueValue()) ||
+        isa<UndefValue>(SI.getFalseValue()))
+      return true;
+    return false;
+  };
+  SelectInst *LSI = dyn_cast<SelectInst>(LHS);
+  SelectInst *RSI = dyn_cast<SelectInst>(RHS);
+  if ((LSI && hasUndefInSelect(*LSI)) || (RSI && hasUndefInSelect(*RSI)))
+    return true;
+  return false;
+}
+
 /// Do actual work and unswitch loop if possible and profitable.
 bool LoopUnswitch::processCurrentLoop() {
   bool Changed = false;
@@ -666,8 +708,10 @@ bool LoopUnswitch::processCurrentLoop() {
         // unswitch on it if we desire.
         Value *LoopCond = FindLIVLoopCondition(BI->getCondition(),
                                                currentLoop, Changed).first;
-        if (LoopCond &&
-            UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context), TI)) {
+        if (!LoopCond || EqualityPropUnSafe(*LoopCond))
+          continue;
+
+        if (UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context), TI)) {
           ++NumBranches;
           return true;
         }
@@ -1034,6 +1078,9 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
     // block contains phi nodes, this isn't trivial.
     if (!LoopExitBB || isa<PHINode>(LoopExitBB->begin()))
       return false;   // Can't handle this.
+
+    if (EqualityPropUnSafe(*LoopCond))
+      return false;
 
     UnswitchTrivialCondition(currentLoop, LoopCond, CondVal, LoopExitBB,
                              CurrentTerm);

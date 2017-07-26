@@ -9,3 +9,7 @@
     lea rax, [rdi + rdx*32]
 // CHECK: error: scale factor in address must be 1, 2, 4 or 8
     lea rax, [rdi + rdx*16]
+// CHECK: error: Scale can't be negative
+    lea rax, [rdi + rdx*-8]
+// CHECK: error: scale factor in address must be 1, 2, 4 or 8
+    lea rax, [rdi + -1*rdx]

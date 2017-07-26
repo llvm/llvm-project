@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/BinaryByteStream.h"
 
@@ -146,4 +147,9 @@ Error llvm::codeview::consume(BinaryStreamReader &Reader, StringRef &Item) {
                                      "Null terminated string buffer is empty!");
 
   return Reader.readCString(Item);
+}
+
+Expected<CVSymbol> llvm::codeview::readSymbolFromStream(BinaryStreamRef Stream,
+                                                        uint32_t Offset) {
+  return readCVRecordFromStream<SymbolKind>(Stream, Offset);
 }

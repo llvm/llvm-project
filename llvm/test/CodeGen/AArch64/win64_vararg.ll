@@ -145,3 +145,29 @@ define i32 @snprintf(i8*, i64, i8*, ...) local_unnamed_addr #5 {
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %5) #2
   ret i32 %12
 }
+
+; CHECK-LABEL: fixed_params
+; CHECK: sub     sp,  sp, #32
+; CHECK: mov     w8,  w3
+; CHECK: mov     w9,  w2
+; CHECK: mov     w10, w1
+; CHECK: str     w4,  [sp]
+; CHECK: fmov    x1,  d0
+; CHECK: fmov    x3,  d1
+; CHECK: fmov    x5,  d2
+; CHECK: fmov    x7,  d3
+; CHECK: mov     w2,  w10
+; CHECK: mov     w4,  w9
+; CHECK: mov     w6,  w8
+; CHECK: str     x30, [sp, #16]
+; CHECK: str     d4,  [sp, #8]
+; CHECK: bl      varargs
+; CHECK: ldr     x30, [sp, #16]
+; CHECK: add     sp,  sp, #32
+; CHECK: ret
+define void @fixed_params(i32, double, i32, double, i32, double, i32, double, i32, double) nounwind {
+  tail call void (i32, ...) @varargs(i32 %0, double %1, i32 %2, double %3, i32 %4, double %5, i32 %6, double %7, i32 %8, double %9)
+  ret void
+}
+
+declare void @varargs(i32, ...) local_unnamed_addr
