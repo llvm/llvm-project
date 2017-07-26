@@ -225,17 +225,17 @@ template <class ELFT> void elf::markLive() {
   };
 
   // Add GC root symbols.
-  MarkSymbol(Symtab<ELFT>::X->find(Config->Entry));
-  MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
-  MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
+  MarkSymbol(Symtab->find(Config->Entry));
+  MarkSymbol(Symtab->find(Config->Init));
+  MarkSymbol(Symtab->find(Config->Fini));
   for (StringRef S : Config->Undefined)
-    MarkSymbol(Symtab<ELFT>::X->find(S));
+    MarkSymbol(Symtab->find(S));
   for (StringRef S : Script->Opt.ReferencedSymbols)
-    MarkSymbol(Symtab<ELFT>::X->find(S));
+    MarkSymbol(Symtab->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
+  for (const Symbol *S : Symtab->getSymbols())
     if (S->includeInDynsym())
       MarkSymbol(S->body());
 

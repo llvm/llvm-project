@@ -881,7 +881,7 @@ static int __kmp_reserve_threads(kmp_root_t *root, kmp_team_t *parent_team,
     KMP_ASSERT(0);
   }
 
-  // Respect KMP_ALL_THREADS, KMP_MAX_THREADS, OMP_THREAD_LIMIT.
+  // Respect KMP_ALL_THREADS, KMP_DEVICE_THREAD_LIMIT, OMP_THREAD_LIMIT.
   if (__kmp_nth + new_nthreads -
           (root->r.r_active ? 1 : root->r.r_hot_team->t.t_nproc) >
       __kmp_max_nth) {
@@ -3513,7 +3513,7 @@ static int __kmp_expand_threads(int nWish, int nNeed) {
     //
     // 1) The initialization thread (gtid = 0) exits.  __kmp_threads[0]
     //    may not be resused by another thread, so we may need to increase
-    //    __kmp_threads_capacity to __kmp_max_threads + 1.
+    //    __kmp_threads_capacity to __kmp_max_nth + 1.
     //
     // 2) New foreign root(s) are encountered.  We always register new foreign
     //    roots. This may cause a smaller # of threads to be allocated at
@@ -3521,7 +3521,7 @@ static int __kmp_expand_threads(int nWish, int nNeed) {
     //    eventually go to sleep) and need slots in the __kmp_threads[] array.
     //
     // Anyway, that is the reason for moving the check to see if
-    // __kmp_max_threads was exceeded into __kmp_reseerve_threads()
+    // __kmp_max_nth was exceeded into __kmp_reserve_threads()
     // instead of having it performed here. -BB
     old_tp_cached = __kmp_tp_cached;
     __kmp_actual_max_nth =

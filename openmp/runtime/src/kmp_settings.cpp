@@ -569,13 +569,15 @@ static void __kmp_stg_print_size(kmp_str_buf_t *buffer, char const *name,
 // Parse and print functions.
 
 // -----------------------------------------------------------------------------
-// KMP_ALL_THREADS, KMP_MAX_THREADS, OMP_THREAD_LIMIT
+// KMP_ALL_THREADS, KMP_DEVICE_THREAD_LIMIT, OMP_THREAD_LIMIT
 
-static void __kmp_stg_parse_all_threads(char const *name, char const *value,
-                                        void *data) {
-
+static void __kmp_stg_parse_device_thread_limit(char const *name,
+                                                char const *value, void *data) {
   kmp_setting_t **rivals = (kmp_setting_t **)data;
   int rc;
+  if (strcmp(name, "KMP_ALL_THREADS") == 0) {
+    KMP_INFORM(EnvVarDeprecated, name, "KMP_DEVICE_THREAD_LIMIT");
+  }
   rc = __kmp_stg_check_rivals(name, value, rivals);
   if (rc) {
     return;
@@ -589,12 +591,12 @@ static void __kmp_stg_parse_all_threads(char const *name, char const *value,
   }
   K_DIAG(1, ("__kmp_max_nth == %d\n", __kmp_max_nth));
 
-} // __kmp_stg_parse_all_threads
+} // __kmp_stg_parse_device_thread_limit
 
-static void __kmp_stg_print_all_threads(kmp_str_buf_t *buffer, char const *name,
-                                        void *data) {
+static void __kmp_stg_print_device_thread_limit(kmp_str_buf_t *buffer,
+                                                char const *name, void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_max_nth);
-} // __kmp_stg_print_all_threads
+} // __kmp_stg_print_device_thread_limit
 
 // -----------------------------------------------------------------------------
 // KMP_BLOCKTIME
@@ -4336,16 +4338,15 @@ static void __kmp_stg_print_omp_cancellation(kmp_str_buf_t *buffer,
 
 static kmp_setting_t __kmp_stg_table[] = {
 
-    {"KMP_ALL_THREADS", __kmp_stg_parse_all_threads,
-     __kmp_stg_print_all_threads, NULL, 0, 0},
+    {"KMP_ALL_THREADS", __kmp_stg_parse_device_thread_limit, NULL, NULL, 0, 0},
     {"KMP_BLOCKTIME", __kmp_stg_parse_blocktime, __kmp_stg_print_blocktime,
      NULL, 0, 0},
     {"KMP_DUPLICATE_LIB_OK", __kmp_stg_parse_duplicate_lib_ok,
      __kmp_stg_print_duplicate_lib_ok, NULL, 0, 0},
     {"KMP_LIBRARY", __kmp_stg_parse_wait_policy, __kmp_stg_print_wait_policy,
      NULL, 0, 0},
-    {"KMP_MAX_THREADS", __kmp_stg_parse_all_threads, NULL, NULL, 0,
-     0}, // For backward compatibility
+    {"KMP_DEVICE_THREAD_LIMIT", __kmp_stg_parse_device_thread_limit,
+     __kmp_stg_print_device_thread_limit, NULL, 0, 0},
 #if KMP_USE_MONITOR
     {"KMP_MONITOR_STACKSIZE", __kmp_stg_parse_monitor_stacksize,
      __kmp_stg_print_monitor_stacksize, NULL, 0, 0},
@@ -4385,8 +4386,8 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_TASKLOOP_MIN_TASKS", __kmp_stg_parse_taskloop_min_tasks,
      __kmp_stg_print_taskloop_min_tasks, NULL, 0, 0},
 #endif
-    {"OMP_THREAD_LIMIT", __kmp_stg_parse_all_threads,
-     __kmp_stg_print_all_threads, NULL, 0, 0},
+    {"OMP_THREAD_LIMIT", __kmp_stg_parse_device_thread_limit,
+     __kmp_stg_print_device_thread_limit, NULL, 0, 0},
     {"OMP_WAIT_POLICY", __kmp_stg_parse_wait_policy,
      __kmp_stg_print_wait_policy, NULL, 0, 0},
     {"KMP_DISP_NUM_BUFFERS", __kmp_stg_parse_disp_buffers,
@@ -4686,11 +4687,12 @@ static void __kmp_stg_init(void) {
       }; // if
     }
 
-    { // Initialize KMP_ALL_THREADS, KMP_MAX_THREADS, and OMP_THREAD_LIMIT data.
+    { // Initialize KMP_DEVICE_THREAD_LIMIT, KMP_ALL_THREADS, and
+      // OMP_THREAD_LIMIT data.
+      kmp_setting_t *kmp_device_thread_limit =
+          __kmp_stg_find("KMP_DEVICE_THREAD_LIMIT"); // 1st priority.
       kmp_setting_t *kmp_all_threads =
-          __kmp_stg_find("KMP_ALL_THREADS"); // 1st priority.
-      kmp_setting_t *kmp_max_threads =
-          __kmp_stg_find("KMP_MAX_THREADS"); // 2nd priority.
+          __kmp_stg_find("KMP_ALL_THREADS"); // 2nd priority.
       kmp_setting_t *omp_thread_limit =
           __kmp_stg_find("OMP_THREAD_LIMIT"); // 3rd priority.
 
@@ -4698,17 +4700,14 @@ static void __kmp_stg_init(void) {
       static kmp_setting_t *volatile rivals[4];
       int i = 0;
 
+      rivals[i++] = kmp_device_thread_limit;
       rivals[i++] = kmp_all_threads;
-      rivals[i++] = kmp_max_threads;
-      if (omp_thread_limit != NULL) {
-        rivals[i++] = omp_thread_limit;
-      }; // if
+      rivals[i++] = omp_thread_limit;
       rivals[i++] = NULL;
+
+      kmp_device_thread_limit->data = CCAST(kmp_setting_t **, rivals);
       kmp_all_threads->data = CCAST(kmp_setting_t **, rivals);
-      kmp_max_threads->data = CCAST(kmp_setting_t **, rivals);
-      if (omp_thread_limit != NULL) {
-        omp_thread_limit->data = CCAST(kmp_setting_t **, rivals);
-      }; // if
+      omp_thread_limit->data = CCAST(kmp_setting_t **, rivals);
     }
 
 #if KMP_AFFINITY_SUPPORTED

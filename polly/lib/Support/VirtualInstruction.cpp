@@ -167,8 +167,8 @@ static bool isRoot(const Instruction *Inst) {
 /// removed in order for its value to be available after the SCoP.
 static bool isEscaping(Scop *S, Instruction *ComputingInst) {
   for (Use &Use : ComputingInst->uses()) {
-    Instruction *User = cast<Instruction>(Use.getUser());
-    if (!S->contains(User))
+    BasicBlock *UserBB = getUseBlock(Use);
+    if (!S->contains(UserBB))
       return true;
   }
   return false;

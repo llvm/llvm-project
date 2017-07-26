@@ -587,15 +587,15 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return elf::Symtab<ELFT>::X
-        ->addUndefined(Name, /*IsLocal=*/false, Binding, StOther, Type,
-                       /*CanOmitFromDynSym=*/false, this)
+    return elf::Symtab
+        ->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding, StOther, Type,
+                             /*CanOmitFromDynSym=*/false, this)
         ->body();
   case SHN_COMMON:
     if (Value == 0 || Value >= UINT32_MAX)
       fatal(toString(this) + ": common symbol '" + Name +
             "' has invalid alignment: " + Twine(Value));
-    return elf::Symtab<ELFT>::X
+    return elf::Symtab
         ->addCommon(Name, Size, Value, Binding, StOther, Type, this)
         ->body();
   }
@@ -607,12 +607,12 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection::Discarded)
-      return elf::Symtab<ELFT>::X
-          ->addUndefined(Name, /*IsLocal=*/false, Binding, StOther, Type,
-                         /*CanOmitFromDynSym=*/false, this)
+      return elf::Symtab
+          ->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding, StOther, Type,
+                               /*CanOmitFromDynSym=*/false, this)
           ->body();
-    return elf::Symtab<ELFT>::X
-        ->addRegular(Name, StOther, Type, Value, Size, Binding, Sec, this)
+    return elf::Symtab
+        ->addRegular<ELFT>(Name, StOther, Type, Value, Size, Binding, Sec, this)
         ->body();
   }
 }
@@ -624,7 +624,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
 template <class ELFT> void ArchiveFile::parse() {
   Symbols.reserve(File->getNumberOfSymbols());
   for (const Archive::Symbol &Sym : File->symbols())
-    Symbols.push_back(Symtab<ELFT>::X->addLazyArchive(this, Sym));
+    Symbols.push_back(Symtab->addLazyArchive<ELFT>(this, Sym));
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -787,14 +787,14 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
         VersymIndex == VER_NDX_GLOBAL ? nullptr : Verdefs[VersymIndex];
 
     if (!Hidden)
-      elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
+      elf::Symtab->addShared(this, Name, Sym, V);
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
     if (V) {
       StringRef VerName = this->StringTable.data() + V->getAux()->vda_name;
       Name = Saver.save(Name + "@" + VerName);
-      elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
+      elf::Symtab->addShared(this, Name, Sym, V);
     }
   }
 }
@@ -832,6 +832,8 @@ static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
           T.str());
   }
 }
+
+std::vector<BitcodeFile *> BitcodeFile::Instances;
 
 BitcodeFile::BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
                          uint64_t OffsetInArchive)
@@ -881,22 +883,20 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 
   int C = ObjSym.getComdatIndex();
   if (C != -1 && !KeptComdats[C])
-    return Symtab<ELFT>::X->addUndefined(NameRef, /*IsLocal=*/false, Binding,
-                                         Visibility, Type, CanOmitFromDynSym,
-                                         F);
+    return Symtab->addUndefined<ELFT>(NameRef, /*IsLocal=*/false, Binding,
+                                      Visibility, Type, CanOmitFromDynSym, F);
 
   if (ObjSym.isUndefined())
-    return Symtab<ELFT>::X->addUndefined(NameRef, /*IsLocal=*/false, Binding,
-                                         Visibility, Type, CanOmitFromDynSym,
-                                         F);
+    return Symtab->addUndefined<ELFT>(NameRef, /*IsLocal=*/false, Binding,
+                                      Visibility, Type, CanOmitFromDynSym, F);
 
   if (ObjSym.isCommon())
-    return Symtab<ELFT>::X->addCommon(NameRef, ObjSym.getCommonSize(),
-                                      ObjSym.getCommonAlignment(), Binding,
-                                      Visibility, STT_OBJECT, F);
+    return Symtab->addCommon(NameRef, ObjSym.getCommonSize(),
+                             ObjSym.getCommonAlignment(), Binding, Visibility,
+                             STT_OBJECT, F);
 
-  return Symtab<ELFT>::X->addBitcode(NameRef, Binding, Visibility, Type,
-                                     CanOmitFromDynSym, F);
+  return Symtab->addBitcode(NameRef, Binding, Visibility, Type,
+                            CanOmitFromDynSym, F);
 }
 
 template <class ELFT>
@@ -929,6 +929,8 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
   return (Endian == ELFDATA2LSB) ? ELF64LEKind : ELF64BEKind;
 }
 
+std::vector<BinaryFile *> BinaryFile::Instances;
+
 template <class ELFT> void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
   auto *Section =
@@ -944,15 +946,13 @@ template <class ELFT> void BinaryFile::parse() {
     if (!isalnum(S[I]))
       S[I] = '_';
 
-  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_start"), STV_DEFAULT,
-                                   STT_OBJECT, 0, 0, STB_GLOBAL, Section,
-                                   nullptr);
-  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_end"), STV_DEFAULT,
-                                   STT_OBJECT, Data.size(), 0, STB_GLOBAL,
-                                   Section, nullptr);
-  elf::Symtab<ELFT>::X->addRegular(Saver.save(S + "_size"), STV_DEFAULT,
-                                   STT_OBJECT, Data.size(), 0, STB_GLOBAL,
-                                   nullptr, nullptr);
+  elf::Symtab->addRegular<ELFT>(Saver.save(S + "_start"), STV_DEFAULT,
+                                STT_OBJECT, 0, 0, STB_GLOBAL, Section, nullptr);
+  elf::Symtab->addRegular<ELFT>(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
+                                Data.size(), 0, STB_GLOBAL, Section, nullptr);
+  elf::Symtab->addRegular<ELFT>(Saver.save(S + "_size"), STV_DEFAULT,
+                                STT_OBJECT, Data.size(), 0, STB_GLOBAL, nullptr,
+                                nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
@@ -1010,7 +1010,7 @@ InputFile *LazyObjectFile::fetch() {
 
 template <class ELFT> void LazyObjectFile::parse() {
   for (StringRef Sym : getSymbols())
-    Symtab<ELFT>::X->addLazyObject(Sym, *this);
+    Symtab->addLazyObject<ELFT>(Sym, *this);
 }
 
 template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {

@@ -6,13 +6,20 @@
 ; %arrayidx101 that depends on that exit value cannot be affine.
 ; Derived from test-suite/MultiSource/Benchmarks/BitBench/uuencode/uuencode.c
 
-define void @encode_line(i8* nocapture readonly %input, i32 %octets, i64 %p) {
+define void @encode_line(i8* nocapture readonly %input, i32 %octets, i64 %p, i32 %n) {
 entry:
-  br i1 undef, label %for.body, label %for.end
+  br label %outer.for
+
+outer.for:
+  %j = phi i32 [0, %entry], [%j.inc, %for.end]
+  %j.cmp = icmp slt i32 %j, %n
+  br i1 %j.cmp, label %for.body, label %exit
+
+
 
 for.body:
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ %p, %entry ]
-  %octets.addr.02 = phi i32 [ undef, %for.inc ], [ %octets, %entry ]
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ %p, %outer.for ]
+  %octets.addr.02 = phi i32 [ undef, %for.inc ], [ %octets, %outer.for ]
   br i1 false, label %for.inc, label %if.else
 
 if.else:
@@ -30,9 +37,19 @@ for.inc:
   %indvars.iv.next = add nsw i64 %indvars.iv, 3
   br i1 %cmp, label %for.body, label %for.end
 
+
+
 for.end:
+  %j.inc = add nuw nsw i32 %j, 1
+  br label %outer.for
+
+exit:
+  br label %return
+
+return:
   ret void
 }
+
 
 ; AFFINE:       Region: %if.else---%for.end
 
@@ -46,23 +63,24 @@ for.end:
 ; AFFINE-NEXT:              [octets, p_1, p] -> { Stmt_if_then84[] -> MemRef_input[1 + p] };
 ; AFFINE-NEXT:  }
 
-; NONAFFINE:      Region: %for.body---%for.end
+
+; NONAFFINE:      Region: %outer.for---%return
 
 ; NONAFFINE:      Statements {
 ; NONAFFINE-NEXT: 	Stmt_for_body
 ; NONAFFINE-NEXT:         Domain :=
-; NONAFFINE-NEXT:             [octets] -> { Stmt_for_body[0] };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_for_body[i0, 0] : 0 <= i0 < n };
 ; NONAFFINE-NEXT:         Schedule :=
-; NONAFFINE-NEXT:             [octets] -> { Stmt_for_body[i0] -> [0, 0] };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_for_body[i0, i1] -> [i0, 0, 0] };
 ; NONAFFINE-NEXT:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
-; NONAFFINE-NEXT:             [octets] -> { Stmt_for_body[i0] -> MemRef_indvars_iv[] };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_for_body[i0, i1] -> MemRef_indvars_iv[] };
 ; NONAFFINE-NEXT: 	Stmt_if_then84
 ; NONAFFINE-NEXT:         Domain :=
-; NONAFFINE-NEXT:             [octets] -> { Stmt_if_then84[] : octets = 2 };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_if_then84[i0] : octets = 2 and 0 <= i0 < n };
 ; NONAFFINE-NEXT:         Schedule :=
-; NONAFFINE-NEXT:             [octets] -> { Stmt_if_then84[] -> [1, 0] };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_if_then84[i0] -> [i0, 1, 0] };
 ; NONAFFINE-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 1]
-; NONAFFINE-NEXT:             [octets] -> { Stmt_if_then84[] -> MemRef_indvars_iv[] };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_if_then84[i0] -> MemRef_indvars_iv[] };
 ; NONAFFINE-NEXT:         MayWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; NONAFFINE-NEXT:             [octets] -> { Stmt_if_then84[] -> MemRef_input[o0] };
+; NONAFFINE-NEXT:             [n, octets] -> { Stmt_if_then84[i0] -> MemRef_input[o0] };
 ; NONAFFINE-NEXT: }
