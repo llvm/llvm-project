@@ -867,9 +867,6 @@ private:
   SmallVector<ImportedSubmodule, 2> ImportedModules;
   //@}
 
-  /// \brief The directory that the PCH we are reading is stored in.
-  std::string CurrentDir;
-
   /// \brief The system include root to be used when loading the
   /// precompiled header.
   std::string isysroot;
