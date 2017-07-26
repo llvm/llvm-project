@@ -46,7 +46,6 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   void __sanitizer_report_error_summary(const char *error_summary);
 
-  SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_init();
   SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump();
   SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(
       const __sanitizer::uptr *pcs, const __sanitizer::uptr len);
