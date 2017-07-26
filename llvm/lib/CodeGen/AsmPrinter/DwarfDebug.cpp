@@ -520,6 +520,14 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
   return GVEs;
 }
 
+static bool isEmptyCU(DICompileUnit *CUNode) {
+  return CUNode->getEnumTypes().empty() &&
+         CUNode->getRetainedTypes().empty() &&
+         CUNode->getGlobalVariables().empty() &&
+         CUNode->getImportedEntities().empty() &&
+         CUNode->getMacros().empty();
+}
+
 // Emit all Dwarf sections that should come prior to the content. Create
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
@@ -546,10 +554,7 @@ void DwarfDebug::beginModule() {
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    if (CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
-        CUNode->getGlobalVariables().empty() &&
-        CUNode->getImportedEntities().empty() && CUNode->getMacros().empty() &&
-        !CUNode->getDWOId())
+    if (isEmptyCU(CUNode))
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
@@ -682,6 +687,11 @@ void DwarfDebug::finalizeModuleInfo() {
                         U.getMacroLabelBegin(),
                         TLOF.getDwarfMacinfoSection()->getBeginSymbol());
   }
+
+  // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
+  for (auto *CUNode : MMI->getModule()->debug_compile_units())
+    if (CUNode->getDWOId() && isEmptyCU(CUNode))
+      getOrCreateDwarfCompileUnit(CUNode);
 
   // Compute DIE offsets and sizes.
   InfoHolder.computeSizeAndOffsets();

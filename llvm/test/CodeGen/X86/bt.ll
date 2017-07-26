@@ -1084,3 +1084,67 @@ entry:
   %tobool = icmp ne i64 %and1, 0
   ret i1 %tobool
 }
+
+; TODO: BT fails to look through to demanded bits as c%32 has more than one use.
+; void demanded_i32(int *a, int *b, unsigned c) {
+;   if ((a[c/32] >> (c % 32)) & 1)
+;     b[c/32] |= 1 << (c % 32);
+; }
+define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind {
+; X86-LABEL: demanded_i32:
+; X86:       # BB#0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    movl (%edx,%eax,4), %esi
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    andb $31, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    btl %ecx, %esi
+; X86-NEXT:    jae .LBB30_2
+; X86-NEXT:  # BB#1:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl %edx, (%ecx,%eax,4)
+; X86-NEXT:  .LBB30_2:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: demanded_i32:
+; X64:       # BB#0:
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    shrl $5, %eax
+; X64-NEXT:    movl (%rdi,%rax,4), %r8d
+; X64-NEXT:    movl $1, %edi
+; X64-NEXT:    movl %edx, %ecx
+; X64-NEXT:    shll %cl, %edi
+; X64-NEXT:    andb $31, %dl
+; X64-NEXT:    movzbl %dl, %ecx
+; X64-NEXT:    btl %ecx, %r8d
+; X64-NEXT:    jae .LBB30_2
+; X64-NEXT:  # BB#1:
+; X64-NEXT:    orl %edi, (%rsi,%rax,4)
+; X64-NEXT:  .LBB30_2:
+; X64-NEXT:    retq
+  %4 = lshr i32 %2, 5
+  %5 = zext i32 %4 to i64
+  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  %7 = load i32, i32* %6, align 4
+  %8 = and i32 %2, 31
+  %9 = shl i32 1, %8
+  %10 = and i32 %7, %9
+  %11 = icmp eq i32 %10, 0
+  br i1 %11, label %16, label %12
+
+; <label>:12:
+  %13 = getelementptr inbounds i32, i32* %1, i64 %5
+  %14 = load i32, i32* %13, align 4
+  %15 = or i32 %14, %9
+  store i32 %15, i32* %13, align 4
+  br label %16
+
+; <label>:16:
+  ret void
+}

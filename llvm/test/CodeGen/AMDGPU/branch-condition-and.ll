@@ -14,7 +14,6 @@
 ; GCN-DAG: v_cmp_lt_f32_e32 vcc,
 ; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], vcc, [[OTHERCC]]
 ; GCN: s_and_saveexec_b64 [[SAVED:s\[[0-9]+:[0-9]+\]]], [[AND]]
-; GCN: s_xor_b64 {{s\[[0-9]+:[0-9]+\]}}, exec, [[SAVED]]
 ; GCN: ; mask branch [[BB5:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}: ; %bb4

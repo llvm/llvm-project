@@ -323,11 +323,11 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
-; ZNVER1-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %ecx, %esi # sched: [1:0.25]
-; ZNVER1-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; ZNVER1-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
@@ -394,10 +394,10 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
-; ZNVER1-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
-; ZNVER1-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %a0, i32 7, <16 x i8> %a1, i32 7, i8 7)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
@@ -454,9 +454,9 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; ZNVER1-LABEL: test_pcmpistri:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    movl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; ZNVER1-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
@@ -501,8 +501,8 @@ define <16 x i8> @test_pcmpistrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; ZNVER1-LABEL: test_pcmpistrm:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [100:0.00]
-; ZNVER1-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %a0, <16 x i8> %a1, i8 7)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16

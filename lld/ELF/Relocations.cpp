@@ -461,7 +461,7 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
     if (S.st_shndx != Shndx || S.st_value != Value)
       continue;
     StringRef Name = check(S.getName(File->getStringTable()));
-    SymbolBody *Sym = Symtab<ELFT>::X->find(Name);
+    SymbolBody *Sym = Symtab->find(Name);
     if (auto *Alias = dyn_cast_or_null<SharedSymbol>(Sym))
       Ret.push_back(Alias);
   }

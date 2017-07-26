@@ -47,7 +47,8 @@ protected:
   using BlockTraits = GraphTraits<BlockT *>;
 
   DomSetMapType Frontiers;
-  std::vector<BlockT *> Roots;
+  // Postdominators can have multiple roots.
+  SmallVector<BlockT *, IsPostDom ? 4 : 1> Roots;
   static constexpr bool IsPostDominators = IsPostDom;
 
 public:
@@ -56,9 +57,7 @@ public:
   /// getRoots - Return the root blocks of the current CFG.  This may include
   /// multiple blocks if we are computing post dominators.  For forward
   /// dominators, this will always be a single block (the entry node).
-  inline const std::vector<BlockT *> &getRoots() const {
-    return Roots;
-  }
+  const SmallVectorImpl<BlockT *> &getRoots() const { return Roots; }
 
   BlockT *getRoot() const {
     assert(Roots.size() == 1 && "Should always have entry node!");
@@ -131,9 +130,9 @@ public:
   using DomSetType = typename DominanceFrontierBase<BlockT, false>::DomSetType;
 
   void analyze(DomTreeT &DT) {
-    this->Roots = DT.getRoots();
-    assert(this->Roots.size() == 1 &&
+    assert(DT.getRoots().size() == 1 &&
            "Only one entry block for forward domfronts!");
+    this->Roots = {DT.getRoot()};
     calculate(DT, DT[this->Roots[0]]);
   }
 

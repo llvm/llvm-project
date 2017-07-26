@@ -5,7 +5,6 @@
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK: v_cmp_ne_u32_e32 vcc, 0
 ; CHECK: s_and_saveexec_b64
-; CHECK-NEXT: s_xor_b64
 ; CHECK-NEXT: ; mask branch
 ; CHECK-NEXT: s_cbranch_execz BB{{[0-9]+_[0-9]+}}
 ; CHECK-NEXT: BB{{[0-9]+_[0-9]+}}: ; %loop_body.preheader
@@ -35,7 +34,6 @@ out:
 
 ; CHECK-LABEL: {{^}}test2:
 ; CHECK: s_and_saveexec_b64
-; CHECK-NEXT: s_xor_b64
 ; CHECK-NEXT: ; mask branch
 ; CHECK-NEXT: s_cbranch_execz
 define amdgpu_kernel void @test2(i32 addrspace(1)* %out, i32 %a, i32 %b) {

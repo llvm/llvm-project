@@ -16,7 +16,6 @@ pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBUNWIND_ENABLE_SHARED)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
 pythonize_bool(LIBUNWIND_ENABLE_EXCEPTIONS)
-pythonize_bool(LIBUNWIND_USE_LLVM_UNWINDER)
 pythonize_bool(LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY)
 set(LIBUNWIND_TARGET_INFO "libcxx.test.target_info.LocalTI" CACHE STRING
     "TargetInfo to use when setting up test environment.")

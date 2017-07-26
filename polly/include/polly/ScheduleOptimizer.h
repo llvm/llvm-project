@@ -87,8 +87,8 @@ public:
   ///                 to.
   /// @param OAI      Target Transform Info and the SCoP dependencies.
   /// @returns        The transformed schedule.
-  static __isl_give isl_schedule *
-  optimizeSchedule(__isl_take isl_schedule *Schedule,
+  static isl::schedule
+  optimizeSchedule(isl::schedule Schedule,
                    const polly::OptimizerAdditionalInfoTy *OAI = nullptr);
 
   /// Apply schedule tree transformations.
@@ -103,8 +103,8 @@ public:
   /// @param Node The schedule object post-transformations will be applied to.
   /// @param OAI  Target Transform Info and the SCoP dependencies.
   /// @returns    The transformed schedule.
-  static __isl_give isl_schedule_node *
-  optimizeScheduleNode(__isl_take isl_schedule_node *Node,
+  static isl::schedule_node
+  optimizeScheduleNode(isl::schedule_node Node,
                        const polly::OptimizerAdditionalInfoTy *OAI = nullptr);
 
   /// Decide if the @p NewSchedule is profitable for @p S.
@@ -113,8 +113,7 @@ public:
   /// @param NewSchedule The new schedule we computed.
   ///
   /// @return True, if we believe @p NewSchedule is an improvement for @p S.
-  static bool isProfitableSchedule(polly::Scop &S,
-                                   __isl_keep isl_schedule *NewSchedule);
+  static bool isProfitableSchedule(polly::Scop &S, isl::schedule NewSchedule);
 
   /// Isolate a set of partial tile prefixes.
   ///
@@ -138,9 +137,10 @@ private:
   ///                        tiling.
   /// @param DefaultTileSize A default tile size that is used for dimensions
   ///                        that are not covered by the TileSizes vector.
-  static __isl_give isl_schedule_node *
-  tileNode(__isl_take isl_schedule_node *Node, const char *Identifier,
-           llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
+  static isl::schedule_node tileNode(isl::schedule_node Node,
+                                     const char *Identifier,
+                                     llvm::ArrayRef<int> TileSizes,
+                                     int DefaultTileSize);
 
   /// Tile a schedule node and unroll point loops.
   ///
@@ -148,9 +148,9 @@ private:
   /// @param TileSizes       A vector of tile sizes that should be used for
   ///                        tiling.
   /// @param DefaultTileSize A default tile size that is used for dimensions
-  static __isl_give isl_schedule_node *
-  applyRegisterTiling(__isl_take isl_schedule_node *Node,
-                      llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
+  static isl::schedule_node applyRegisterTiling(isl::schedule_node Node,
+                                                llvm::ArrayRef<int> TileSizes,
+                                                int DefaultTileSize);
 
   /// Apply the BLIS matmul optimization pattern.
   ///
@@ -197,8 +197,8 @@ private:
   /// @param TTI  Target Transform Info.
   /// @param MMI  Parameters of the matrix multiplication operands.
   /// @returns    The transformed schedule.
-  static __isl_give isl_schedule_node *
-  optimizeMatMulPattern(__isl_take isl_schedule_node *Node,
+  static isl::schedule_node
+  optimizeMatMulPattern(isl::schedule_node Node,
                         const llvm::TargetTransformInfo *TTI,
                         polly::MatMulInfoTy &MMI);
 
@@ -208,7 +208,7 @@ private:
   /// permutable.
   ///
   /// @param Node The node to check.
-  static bool isTileableBandNode(__isl_keep isl_schedule_node *Node);
+  static bool isTileableBandNode(isl::schedule_node Node);
 
   /// Pre-vectorizes one scheduling dimension of a schedule band.
   ///
@@ -241,9 +241,9 @@ private:
   /// DimToVectorize can be divided by VectorWidth. The default VectorWidth is
   /// currently constant and not yet target specific. This function does not
   /// reason about parallelism.
-  static __isl_give isl_schedule_node *
-  prevectSchedBand(__isl_take isl_schedule_node *Node, unsigned DimToVectorize,
-                   int VectorWidth);
+  static isl::schedule_node prevectSchedBand(isl::schedule_node Node,
+                                             unsigned DimToVectorize,
+                                             int VectorWidth);
 
   /// Apply additional optimizations on the bands in the schedule tree.
   ///
@@ -276,7 +276,7 @@ private:
   /// @param Node The schedule node to (possibly) optimize.
   /// @param User A pointer to forward some use information
   ///        (currently unused).
-  static isl_schedule_node *standardBandOpts(__isl_take isl_schedule_node *Node,
+  static isl::schedule_node standardBandOpts(isl::schedule_node Node,
                                              void *User);
 
   /// Check if this node contains a partial schedule that could
@@ -299,7 +299,7 @@ private:
   /// @param Node The node to check.
   /// @param D    The SCoP dependencies.
   /// @param MMI  Parameters of the matrix multiplication operands.
-  static bool isMatrMultPattern(__isl_keep isl_schedule_node *Node,
+  static bool isMatrMultPattern(isl::schedule_node Node,
                                 const polly::Dependences *D,
                                 polly::MatMulInfoTy &MMI);
 
@@ -313,8 +313,8 @@ private:
   /// @param Node The schedule node to be modified.
   /// @param MacroKernelParams Parameters of the macro kernel
   ///                          to be used as tile sizes.
-  static __isl_give isl_schedule_node *
-  createMacroKernel(__isl_take isl_schedule_node *Node,
+  static isl::schedule_node
+  createMacroKernel(isl::schedule_node Node,
                     MacroKernelParamsTy MacroKernelParams);
 
   /// Create the BLIS macro-kernel.
@@ -328,8 +328,8 @@ private:
   /// @param MicroKernelParams Parameters of the micro kernel
   ///                          to be used as tile sizes.
   /// @see MicroKernelParamsTy
-  static __isl_give isl_schedule_node *
-  createMicroKernel(__isl_take isl_schedule_node *Node,
+  static isl::schedule_node
+  createMicroKernel(isl::schedule_node Node,
                     MicroKernelParamsTy MicroKernelParams);
 };
 

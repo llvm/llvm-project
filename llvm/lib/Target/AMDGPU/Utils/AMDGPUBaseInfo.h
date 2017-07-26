@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+class Argument;
 class FeatureBitset;
 class Function;
 class GlobalValue;
@@ -347,6 +348,7 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
+bool isArgPassedInSGPR(const Argument *Arg);
 bool isUniformMMO(const MachineMemOperand *MMO);
 
 /// \returns The encoding that will be used for \p ByteOffset in the SMRD
