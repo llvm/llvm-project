@@ -16,12 +16,12 @@ import time
 import unittest2
 import lldb
 import lldbsuite.test.decorators as decorators
-from lldbsuite.test.lldbrepl import REPLTest, load_tests
+import lldbsuite.test.lldbrepl as lldbrepl
 
 
-class REPLBreakpointsTestCase (REPLTest):
+class REPLBreakpointsTestCase (lldbrepl.REPLTest):
 
-    mydir = REPLTest.compute_mydir(__file__)
+    mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
