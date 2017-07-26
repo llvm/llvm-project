@@ -780,6 +780,19 @@ namespace llvm {
       return true;
     }
 
+    // Return true if it is profitable to combine a BUILD_VECTOR with a
+    // stride-pattern to a shuffle and a truncate.
+    // Example of such a combine:
+    // v4i32 build_vector((extract_elt V, 1),
+    //                    (extract_elt V, 3),
+    //                    (extract_elt V, 5),
+    //                    (extract_elt V, 7))
+    //  -->
+    // v4i32 truncate (bitcast (shuffle<1,u,3,u,4,u,5,u,6,u,7,u> V, u) to
+    // v4i64)
+    bool isDesirableToCombineBuildVectorToShuffleTruncate(
+        ArrayRef<int> ShuffleMask, EVT SrcVT, EVT TruncVT) const override;
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
@@ -978,8 +991,7 @@ namespace llvm {
     /// VECTOR_SHUFFLE operations, those with specific masks. By default, if a
     /// target supports the VECTOR_SHUFFLE node, all mask values are assumed to
     /// be legal.
-    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask,
-                            EVT VT) const override;
+    bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
 
     /// Similar to isShuffleMaskLegal. This is used by Targets can use this to
     /// indicate if there is a suitable VECTOR_SHUFFLE that can be used to
@@ -1435,6 +1447,48 @@ namespace llvm {
     }
   };
 
+  /// Generate unpacklo/unpackhi shuffle mask.
+  template <typename T = int>
+  void createUnpackShuffleMask(MVT VT, SmallVectorImpl<T> &Mask, bool Lo,
+                               bool Unary) {
+    assert(Mask.empty() && "Expected an empty shuffle mask vector");
+    int NumElts = VT.getVectorNumElements();
+    int NumEltsInLane = 128 / VT.getScalarSizeInBits();
+    for (int i = 0; i < NumElts; ++i) {
+      unsigned LaneStart = (i / NumEltsInLane) * NumEltsInLane;
+      int Pos = (i % NumEltsInLane) / 2 + LaneStart;
+      Pos += (Unary ? 0 : NumElts * (i % 2));
+      Pos += (Lo ? 0 : NumEltsInLane / 2);
+      Mask.push_back(Pos);
+    }
+  }
+
+  /// Helper function to scale a shuffle or target shuffle mask, replacing each
+  /// mask index with the scaled sequential indices for an equivalent narrowed
+  /// mask. This is the reverse process to canWidenShuffleElements, but can
+  /// always succeed.
+  template <typename T>
+  void scaleShuffleMask(int Scale, ArrayRef<T> Mask,
+                        SmallVectorImpl<T> &ScaledMask) {
+    assert(0 < Scale && "Unexpected scaling factor");
+    int NumElts = Mask.size();
+    ScaledMask.assign(static_cast<size_t>(NumElts * Scale), -1);
+
+    for (int i = 0; i != NumElts; ++i) {
+      int M = Mask[i];
+
+      // Repeat sentinel values in every mask element.
+      if (M < 0) {
+        for (int s = 0; s != Scale; ++s)
+          ScaledMask[(Scale * i) + s] = M;
+        continue;
+      }
+
+      // Scale mask element and increment across each mask element.
+      for (int s = 0; s != Scale; ++s)
+        ScaledMask[(Scale * i) + s] = (Scale * M) + s;
+    }
+  }
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_X86_X86ISELLOWERING_H
