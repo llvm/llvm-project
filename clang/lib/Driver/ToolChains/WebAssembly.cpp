@@ -38,7 +38,6 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const char *LinkingOutput) const {
 
   const ToolChain &ToolChain = getToolChain();
-  const Driver &D = ToolChain.getDriver();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   ArgStringList CmdArgs;
   CmdArgs.push_back("-flavor");
@@ -77,7 +76,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    if (D.CCCIsCXX())
+    if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
     if (Args.hasArg(options::OPT_pthread))

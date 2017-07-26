@@ -227,7 +227,8 @@ static void ConstructGoldLinkJob(const Tool &T, Compilation &C,
     // libraries for both C and C++ compilations.
     CmdArgs.push_back("-lkernel");
     if (D.CCCIsCXX()) {
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
       if (Args.hasArg(options::OPT_pg))
         CmdArgs.push_back("-lm_p");
       else

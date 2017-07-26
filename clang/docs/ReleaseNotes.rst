@@ -155,7 +155,9 @@ Static Analyzer
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-...
+The C++ dynamic type check now requires run-time null checking (i.e,
+`-fsanitize=vptr` cannot be used without `-fsanitize=null`). This change does
+not impact users who rely on UBSan check groups (e.g `-fsanitize=undefined`).
 
 Core Analysis Improvements
 ==========================
