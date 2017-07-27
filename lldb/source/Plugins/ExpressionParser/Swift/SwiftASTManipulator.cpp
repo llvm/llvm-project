@@ -836,10 +836,16 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
     virtual bool walkToDeclPre(swift::Decl *decl) {
       if (swift::ValueDecl *value_decl =
               llvm::dyn_cast<swift::ValueDecl>(decl)) {
-        value_decl->overwriteAccessibility(swift::Accessibility::Public);
+        auto access = swift::Accessibility::Public;
+        if (swift::isa<swift::ClassDecl>(value_decl) ||
+            swift::isa<swift::ClassDecl>(value_decl->getDeclContext())) {
+          access = swift::Accessibility::Open;
+        }
+
+        value_decl->overwriteAccessibility(access);
         if (swift::AbstractStorageDecl *var_decl =
                 llvm::dyn_cast<swift::AbstractStorageDecl>(decl))
-          var_decl->overwriteSetterAccessibility(swift::Accessibility::Public);
+          var_decl->overwriteSetterAccessibility(access);
       }
 
       return true;

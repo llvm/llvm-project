@@ -15,13 +15,13 @@ import os
 import time
 import unittest2
 import lldb
-from lldbsuite.test.lldbrepl import REPLTest, load_tests
+import lldbsuite.test.lldbrepl as lldbrepl
 import lldbsuite.test.lldbtest as lldbtest
 
 
-class REPLQuickLookTestCase (REPLTest):
+class REPLQuickLookTestCase (lldbrepl.REPLTest):
 
-    mydir = REPLTest.compute_mydir(__file__)
+    mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     def doTest(self):
         self.command(
