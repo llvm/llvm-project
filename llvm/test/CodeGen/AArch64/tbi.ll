@@ -100,3 +100,14 @@ define i32 @ld_and32_narrower(i64 %p) {
   %load = load i32, i32* %cast
   ret i32 %load
 }
+
+; BOTH-LABEL:ld_and8:
+; BOTH: and x
+define i32 @ld_and8(i64 %base, i8 %off) {
+  %off_masked = and i8 %off, 63
+  %off_64 = zext i8 %off_masked to i64
+  %p = add i64 %base, %off_64
+  %cast = inttoptr i64 %p to i32*
+  %load = load i32, i32* %cast
+  ret i32 %load
+}
