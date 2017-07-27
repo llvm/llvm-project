@@ -1,8 +1,5 @@
 # Check the internal shell handling component of the ShTest format.
 #
-# PR33940
-# XFAIL: windows
-#
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-shell > %t.out
 # RUN: FileCheck --input-file %t.out %s
 #

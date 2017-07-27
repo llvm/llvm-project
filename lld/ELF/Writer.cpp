@@ -471,7 +471,7 @@ static bool includeInSymtab(const SymbolBody &B) {
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!InX::SymTab)
     return;
-  for (elf::ObjectFile<ELFT> *F : elf::ObjectFile<ELFT>::Instances) {
+  for (ObjFile<ELFT> *F : ObjFile<ELFT>::Instances) {
     for (SymbolBody *B : F->getLocalSymbols()) {
       if (!B->IsLocal)
         fatal(toString(F) +
@@ -893,7 +893,7 @@ template <class ELFT> static void sortBySymbolsOrder() {
 
   // Build a map from sections to their priorities.
   DenseMap<SectionBase *, int> SectionOrder;
-  for (elf::ObjectFile<ELFT> *File : elf::ObjectFile<ELFT>::Instances) {
+  for (ObjFile<ELFT> *File : ObjFile<ELFT>::Instances) {
     for (SymbolBody *Body : File->getSymbols()) {
       auto *D = dyn_cast<DefinedRegular>(Body);
       if (!D || !D->Section)

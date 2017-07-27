@@ -33,7 +33,7 @@ class Baserel;
 class Defined;
 class DefinedImportData;
 class DefinedRegular;
-class ObjectFile;
+class ObjFile;
 class OutputSection;
 class SymbolBody;
 
@@ -122,9 +122,9 @@ public:
                               std::random_access_iterator_tag, SymbolBody *> {
     friend SectionChunk;
 
-    ObjectFile *File;
+    ObjFile *File;
 
-    symbol_iterator(ObjectFile *File, const coff_relocation *I)
+    symbol_iterator(ObjFile *File, const coff_relocation *I)
         : symbol_iterator::iterator_adaptor_base(I), File(File) {}
 
   public:
@@ -135,7 +135,7 @@ public:
     }
   };
 
-  SectionChunk(ObjectFile *File, const coff_section *Header);
+  SectionChunk(ObjFile *File, const coff_section *Header);
   static bool classof(const Chunk *C) { return C->kind() == SectionKind; }
   size_t getSize() const override { return Header->SizeOfRawData; }
   ArrayRef<uint8_t> getContents() const;
@@ -213,7 +213,7 @@ public:
   const coff_section *Header;
 
   // The file that this chunk was created from.
-  ObjectFile *File;
+  ObjFile *File;
 
 private:
   StringRef SectionName;

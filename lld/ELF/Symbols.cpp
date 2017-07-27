@@ -325,7 +325,7 @@ LazyArchive::LazyArchive(ArchiveFile &File,
   this->File = &File;
 }
 
-LazyObject::LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
+LazyObject::LazyObject(StringRef Name, LazyObjFile &File, uint8_t Type)
     : Lazy(LazyObjectKind, Name, Type) {
   this->File = &File;
 }

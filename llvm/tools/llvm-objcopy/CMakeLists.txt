@@ -1,0 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  Object
+  Support
+  MC
+  )
+add_llvm_tool(llvm-objcopy
+  llvm-objcopy.cpp
+  Object.cpp
+  )

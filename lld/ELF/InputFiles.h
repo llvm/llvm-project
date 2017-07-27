@@ -138,7 +138,7 @@ protected:
 };
 
 // .o file.
-template <class ELFT> class ObjectFile : public ELFFileBase<ELFT> {
+template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
   typedef ELFFileBase<ELFT> Base;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
@@ -155,12 +155,12 @@ public:
     return F->kind() == Base::ObjectKind;
   }
 
-  static std::vector<ObjectFile<ELFT> *> Instances;
+  static std::vector<ObjFile<ELFT> *> Instances;
 
   ArrayRef<SymbolBody *> getSymbols();
   ArrayRef<SymbolBody *> getLocalSymbols();
 
-  ObjectFile(MemoryBufferRef M, StringRef ArchiveName);
+  ObjFile(MemoryBufferRef M, StringRef ArchiveName);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
   InputSectionBase *getSection(const Elf_Sym &Sym) const;
@@ -218,20 +218,19 @@ private:
   llvm::once_flag InitDwarfLine;
 };
 
-template <class ELFT>
-std::vector<ObjectFile<ELFT> *> ObjectFile<ELFT>::Instances;
+template <class ELFT> std::vector<ObjFile<ELFT> *> ObjFile<ELFT>::Instances;
 
-// LazyObjectFile is analogous to ArchiveFile in the sense that
+// LazyObjFile is analogous to ArchiveFile in the sense that
 // the file contains lazy symbols. The difference is that
-// LazyObjectFile wraps a single file instead of multiple files.
+// LazyObjFile wraps a single file instead of multiple files.
 //
 // This class is used for --start-lib and --end-lib options which
 // instruct the linker to link object files between them with the
 // archive file semantics.
-class LazyObjectFile : public InputFile {
+class LazyObjFile : public InputFile {
 public:
-  LazyObjectFile(MemoryBufferRef M, StringRef ArchiveName,
-                 uint64_t OffsetInArchive)
+  LazyObjFile(MemoryBufferRef M, StringRef ArchiveName,
+              uint64_t OffsetInArchive)
       : InputFile(LazyObjectKind, M), OffsetInArchive(OffsetInArchive) {
     this->ArchiveName = ArchiveName;
   }

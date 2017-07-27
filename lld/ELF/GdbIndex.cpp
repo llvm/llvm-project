@@ -49,7 +49,7 @@ void GdbHashTab::finalizeContents() {
 }
 
 template <class ELFT>
-LLDDwarfObj<ELFT>::LLDDwarfObj(elf::ObjectFile<ELFT> *Obj) : Obj(Obj) {
+LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) : Obj(Obj) {
   for (InputSectionBase *Sec : Obj->getSections()) {
     if (!Sec)
       continue;
@@ -84,7 +84,7 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   if (I == Rels.end())
     return None;
   const RelTy &Rel = *I;
-  const elf::ObjectFile<ELFT> *File = Sec.getFile<ELFT>();
+  const ObjFile<ELFT> *File = Sec.getFile<ELFT>();
   uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
   const typename ELFT::Sym &Sym = File->getELFSymbols()[SymIndex];
   uint32_t SecIndex = File->getSectionIndex(Sym);

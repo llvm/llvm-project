@@ -68,7 +68,7 @@ public:
 
   template <class ELFT>
   Symbol *addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
-  template <class ELFT> void addLazyObject(StringRef Name, LazyObjectFile &Obj);
+  template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
 
   Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
                      uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);

@@ -62,7 +62,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
   return MBRef;
 }
 
-template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
+template <class ELFT> void ObjFile<ELFT>::initializeDwarfLine() {
   DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(this));
   const DWARFObject &Obj = Dwarf.getDWARFObj();
   DwarfLine.reset(new DWARFDebugLine);
@@ -78,8 +78,8 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-Optional<DILineInfo> elf::ObjectFile<ELFT>::getDILineInfo(InputSectionBase *S,
-                                                          uint64_t Offset) {
+Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *S,
+                                                  uint64_t Offset) {
   llvm::call_once(InitDwarfLine, [this]() { initializeDwarfLine(); });
 
   // The offset to CU is 0.
@@ -101,8 +101,7 @@ Optional<DILineInfo> elf::ObjectFile<ELFT>::getDILineInfo(InputSectionBase *S,
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
-                                               uint64_t Offset) {
+std::string ObjFile<ELFT>::getLineInfo(InputSectionBase *S, uint64_t Offset) {
   if (Optional<DILineInfo> Info = getDILineInfo(S, Offset))
     return Info->FileName + ":" + std::to_string(Info->Line);
   return "";
@@ -157,27 +156,25 @@ void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
 }
 
 template <class ELFT>
-elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M, StringRef ArchiveName)
+ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
     : ELFFileBase<ELFT>(Base::ObjectKind, M) {
   this->ArchiveName = ArchiveName;
 }
 
-template <class ELFT>
-ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getLocalSymbols() {
+template <class ELFT> ArrayRef<SymbolBody *> ObjFile<ELFT>::getLocalSymbols() {
   if (this->SymbolBodies.empty())
     return this->SymbolBodies;
   return makeArrayRef(this->SymbolBodies).slice(1, this->FirstNonLocal - 1);
 }
 
-template <class ELFT>
-ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
+template <class ELFT> ArrayRef<SymbolBody *> ObjFile<ELFT>::getSymbols() {
   if (this->SymbolBodies.empty())
     return this->SymbolBodies;
   return makeArrayRef(this->SymbolBodies).slice(1);
 }
 
 template <class ELFT>
-void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
+void ObjFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
   initializeSections(ComdatGroups);
   initializeSymbols();
@@ -187,9 +184,8 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 // They are identified and deduplicated by group name. This function
 // returns a group name.
 template <class ELFT>
-StringRef
-elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
-                                            const Elf_Shdr &Sec) {
+StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
+                                              const Elf_Shdr &Sec) {
   // Group signatures are stored as symbol names in object files.
   // sh_info contains a symbol index, so we fetch a symbol and read its name.
   if (this->Symbols.empty())
@@ -214,8 +210,8 @@ elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
 }
 
 template <class ELFT>
-ArrayRef<typename elf::ObjectFile<ELFT>::Elf_Word>
-elf::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
+ArrayRef<typename ObjFile<ELFT>::Elf_Word>
+ObjFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->getObj();
   ArrayRef<Elf_Word> Entries = check(
       Obj.template getSectionContentsAsArray<Elf_Word>(&Sec), toString(this));
@@ -224,8 +220,7 @@ elf::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   return Entries.slice(1);
 }
 
-template <class ELFT>
-bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
+template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // We don't merge sections if -O0 (default is -O1). This makes sometimes
   // the linker significantly faster, although the output will be bigger.
   if (Config->Optimize == 0)
@@ -278,7 +273,7 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-void elf::ObjectFile<ELFT>::initializeSections(
+void ObjFile<ELFT>::initializeSections(
     DenseSet<CachedHashStringRef> &ComdatGroups) {
   const ELFFile<ELFT> &Obj = this->getObj();
 
@@ -356,7 +351,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
 }
 
 template <class ELFT>
-InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
+InputSectionBase *ObjFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
   if (Idx >= this->Sections.size())
     fatal(toString(this) + ": invalid relocated section index: " + Twine(Idx));
@@ -383,8 +378,7 @@ InputSectionBase *toRegularSection(MergeInputSection *Sec) {
 }
 
 template <class ELFT>
-InputSectionBase *
-elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
+InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   StringRef Name = getSectionName(Sec);
 
   switch (Sec.sh_type) {
@@ -523,19 +517,19 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-StringRef elf::ObjectFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
+StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
   return check(this->getObj().getSectionName(&Sec, SectionStringTable),
                toString(this));
 }
 
-template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
+template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   SymbolBodies.reserve(this->Symbols.size());
   for (const Elf_Sym &Sym : this->Symbols)
     SymbolBodies.push_back(createSymbolBody(&Sym));
 }
 
 template <class ELFT>
-InputSectionBase *elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
+InputSectionBase *ObjFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
@@ -559,7 +553,7 @@ InputSectionBase *elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 }
 
 template <class ELFT>
-SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
+SymbolBody *ObjFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
   InputSectionBase *Sec = getSection(*Sym);
 
@@ -965,13 +959,13 @@ InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName,
 
   switch (getELFKind(MB)) {
   case ELF32LEKind:
-    return make<ObjectFile<ELF32LE>>(MB, ArchiveName);
+    return make<ObjFile<ELF32LE>>(MB, ArchiveName);
   case ELF32BEKind:
-    return make<ObjectFile<ELF32BE>>(MB, ArchiveName);
+    return make<ObjFile<ELF32BE>>(MB, ArchiveName);
   case ELF64LEKind:
-    return make<ObjectFile<ELF64LE>>(MB, ArchiveName);
+    return make<ObjFile<ELF64LE>>(MB, ArchiveName);
   case ELF64BEKind:
-    return make<ObjectFile<ELF64BE>>(MB, ArchiveName);
+    return make<ObjFile<ELF64BE>>(MB, ArchiveName);
   default:
     llvm_unreachable("getELFKind");
   }
@@ -992,26 +986,26 @@ InputFile *elf::createSharedFile(MemoryBufferRef MB, StringRef DefaultSoName) {
   }
 }
 
-MemoryBufferRef LazyObjectFile::getBuffer() {
+MemoryBufferRef LazyObjFile::getBuffer() {
   if (Seen)
     return MemoryBufferRef();
   Seen = true;
   return MB;
 }
 
-InputFile *LazyObjectFile::fetch() {
+InputFile *LazyObjFile::fetch() {
   MemoryBufferRef MBRef = getBuffer();
   if (MBRef.getBuffer().empty())
     return nullptr;
   return createObjectFile(MBRef, ArchiveName, OffsetInArchive);
 }
 
-template <class ELFT> void LazyObjectFile::parse() {
+template <class ELFT> void LazyObjFile::parse() {
   for (StringRef Sym : getSymbols())
     Symtab->addLazyObject<ELFT>(Sym, *this);
 }
 
-template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
+template <class ELFT> std::vector<StringRef> LazyObjFile::getElfSymbols() {
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::SymRange Elf_Sym_Range;
@@ -1036,7 +1030,7 @@ template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
   return {};
 }
 
-std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
+std::vector<StringRef> LazyObjFile::getBitcodeSymbols() {
   std::unique_ptr<lto::InputFile> Obj =
       check(lto::InputFile::create(this->MB), toString(this));
   std::vector<StringRef> V;
@@ -1047,7 +1041,7 @@ std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
 }
 
 // Returns a vector of globally-visible defined symbol names.
-std::vector<StringRef> LazyObjectFile::getSymbols() {
+std::vector<StringRef> LazyObjFile::getSymbols() {
   if (isBitcode(this->MB))
     return getBitcodeSymbols();
 
@@ -1075,20 +1069,20 @@ template void BitcodeFile::parse<ELF32BE>(DenseSet<CachedHashStringRef> &);
 template void BitcodeFile::parse<ELF64LE>(DenseSet<CachedHashStringRef> &);
 template void BitcodeFile::parse<ELF64BE>(DenseSet<CachedHashStringRef> &);
 
-template void LazyObjectFile::parse<ELF32LE>();
-template void LazyObjectFile::parse<ELF32BE>();
-template void LazyObjectFile::parse<ELF64LE>();
-template void LazyObjectFile::parse<ELF64BE>();
+template void LazyObjFile::parse<ELF32LE>();
+template void LazyObjFile::parse<ELF32BE>();
+template void LazyObjFile::parse<ELF64LE>();
+template void LazyObjFile::parse<ELF64BE>();
 
 template class elf::ELFFileBase<ELF32LE>;
 template class elf::ELFFileBase<ELF32BE>;
 template class elf::ELFFileBase<ELF64LE>;
 template class elf::ELFFileBase<ELF64BE>;
 
-template class elf::ObjectFile<ELF32LE>;
-template class elf::ObjectFile<ELF32BE>;
-template class elf::ObjectFile<ELF64LE>;
-template class elf::ObjectFile<ELF64BE>;
+template class elf::ObjFile<ELF32LE>;
+template class elf::ObjFile<ELF32BE>;
+template class elf::ObjFile<ELF64LE>;
+template class elf::ObjFile<ELF64BE>;
 
 template class elf::SharedFile<ELF32LE>;
 template class elf::SharedFile<ELF32BE>;

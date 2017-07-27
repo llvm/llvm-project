@@ -51,7 +51,7 @@ static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 // Returns a list of all symbols that we want to print out.
 template <class ELFT> std::vector<DefinedRegular *> getSymbols() {
   std::vector<DefinedRegular *> V;
-  for (elf::ObjectFile<ELFT> *File : elf::ObjectFile<ELFT>::Instances)
+  for (ObjFile<ELFT> *File : ObjFile<ELFT>::Instances)
     for (SymbolBody *B : File->getSymbols())
       if (B->File == File && !B->isSection())
         if (auto *Sym = dyn_cast<DefinedRegular>(B))
