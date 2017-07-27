@@ -15,24 +15,21 @@ import os
 import time
 import unittest2
 import lldb
-from lldbsuite.test.lldbrepl import REPLTest, load_tests
+import lldbsuite.test.lldbrepl as lldbrepl
 from lldbsuite.test import decorators
 
 
-class REPLSubclassingTestCase (REPLTest):
+class REPLSubclassingTestCase (lldbrepl.REPLTest):
 
-    mydir = REPLTest.compute_mydir(__file__)
+    mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
-    @decorators.expectedFailureAll(
-        oslist=["macosx"],
-        bugnumber="rdar://26768714")
     def doTest(self):
         self.command('class A {init(a: Int) {}}')
         self.command(
-            'class B : A {let x: Int; init() { x = 10; super.init(a: x) } }')
+            'class B : A {let x: Int; init() { x = 5 + 5; super.init(a: x) } }')
         self.command('print(B().x)', patterns=['10'])
         self.command(
-            'extension B : CustomStringConvertible { var description:String { return "class B is a subclass of class A"} }')
+            'extension B : CustomStringConvertible { public var description:String { return "class B\(x) is a subclass of class A"} }')
         self.command(
             'print(B())',
-            patterns=['class B is a subclass of class A'])
+            patterns=['class B(10) is a subclass of class A'])
