@@ -174,3 +174,18 @@
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-Z-ARCH-Z196 %s
 // CHECK-Z-ARCH-Z196: as{{.*}} "-march=z196"
+//
+// RUN: %clang -target powerpc64le-linux -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PPC64LE %s
+// CHECK-PPC64LE: as{{.*}} "-mpower8"
+//
+// RUN: %clang -target powerpc64-linux -mcpu=pwr7 -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PPC64 %s
+// CHECK-PPC64: as{{.*}} "-mpower7"
+//
+// RUN: %clang -target powerpc-linux -mcpu=pwr9 -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PPC32 %s
+// CHECK-PPC32: as{{.*}} "-mpower9"

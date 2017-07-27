@@ -24,8 +24,8 @@ extern inline S &f() {
   static thread_local S s;
 // CHECK:       %[[guard:.*]] = load i32, i32* @"\01??__J?1??f@@YAAAUS@@XZ@51"
 // CHECK-NEXT:  %[[mask:.*]] = and i32 %[[guard]], 1
-// CHECK-NEXT:  %[[cmp:.*]] = icmp ne i32 %[[mask]], 0
-// CHECK-NEXT:  br i1 %[[cmp]], label %[[init_end:.*]], label %[[init:.*]]
+// CHECK-NEXT:  %[[cmp:.*]] = icmp eq i32 %[[mask]], 0
+// CHECK-NEXT:  br i1 %[[cmp]], label %[[init:.*]], label %[[init_end:.*]], !prof ![[unlikely_threadlocal:.*]]
 //
 // CHECK:     [[init]]:
 // CHECK-NEXT:  %[[or:.*]] = or i32 %[[guard]], 1
@@ -56,7 +56,7 @@ extern inline S &g() {
 // CHECK:  %[[guard:.*]] = load atomic i32, i32* @"\01?$TSS0@?1??g@@YAAAUS@@XZ@4HA" unordered, align 4
 // CHECK-NEXT:  %[[epoch:.*]] = load i32, i32* @_Init_thread_epoch
 // CHECK-NEXT:  %[[cmp:.*]] = icmp sgt i32 %[[guard]], %[[epoch]]
-// CHECK-NEXT:  br i1 %[[cmp]], label %[[init_attempt:.*]], label %[[init_end:.*]]
+// CHECK-NEXT:  br i1 %[[cmp]], label %[[init_attempt:.*]], label %[[init_end:.*]], !prof ![[unlikely_staticlocal:.*]]
 //
 // CHECK:     [[init_attempt]]:
 // CHECK-NEXT:  call void @_Init_thread_header(i32* @"\01?$TSS0@?1??g@@YAAAUS@@XZ@4HA")
@@ -95,3 +95,6 @@ int g1() {
   static int i = f1();
   return i;
 }
+
+// CHECK-DAG: ![[unlikely_threadlocal]] = !{!"branch_weights", i32 1, i32 1023}
+// CHECK-DAG: ![[unlikely_staticlocal]] = !{!"branch_weights", i32 1, i32 1048575}

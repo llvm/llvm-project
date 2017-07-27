@@ -20,7 +20,7 @@ void g() {
 // WEBASSEMBLY32:       %[[R0:.+]] = load atomic i8, i8* bitcast (i32* @_ZGVZ1gvE1a to i8*) acquire, align 4
 // WEBASSEMBLY32-NEXT:  %[[R1:.+]] = and i8 %[[R0]], 1
 // WEBASSEMBLY32-NEXT:  %[[R2:.+]] = icmp eq i8 %[[R1]], 0
-// WEBASSEMBLY32-NEXT:  br i1 %[[R2]], label %[[CHECK:.+]], label %[[END:.+]]
+// WEBASSEMBLY32-NEXT:  br i1 %[[R2]], label %[[CHECK:.+]], label %[[END:.+]],
 // WEBASSEMBLY32:       [[CHECK]]
 // WEBASSEMBLY32:       call i32 @__cxa_guard_acquire
 // WEBASSEMBLY32:       [[END]]
@@ -30,7 +30,7 @@ void g() {
 // WEBASSEMBLY64:       %[[R0:.+]] = load atomic i8, i8* bitcast (i64* @_ZGVZ1gvE1a to i8*) acquire, align 8
 // WEBASSEMBLY64-NEXT:  %[[R1:.+]] = and i8 %[[R0]], 1
 // WEBASSEMBLY64-NEXT:  %[[R2:.+]] = icmp eq i8 %[[R1]], 0
-// WEBASSEMBLY64-NEXT:  br i1 %[[R2]], label %[[CHECK:.+]], label %[[END:.+]]
+// WEBASSEMBLY64-NEXT:  br i1 %[[R2]], label %[[CHECK:.+]], label %[[END:.+]],
 // WEBASSEMBLY64:       [[CHECK]]
 // WEBASSEMBLY64:       call i32 @__cxa_guard_acquire
 // WEBASSEMBLY64:       [[END]]

@@ -1299,7 +1299,7 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     std::sort(SuggestedCompletions.begin(), SuggestedCompletions.end(),
               [](StringRef A, StringRef B) { return A.compare_lower(B) < 0; });
 
-    llvm::outs() << llvm::join(SuggestedCompletions, " ") << '\n';
+    llvm::outs() << llvm::join(SuggestedCompletions, "\n") << '\n';
     return false;
   }
 

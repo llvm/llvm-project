@@ -141,6 +141,10 @@ bool SymbolBody::isPreemptible() const {
   if (isShared())
     return !NeedsCopy && !NeedsPltAddr;
 
+  // That's all that can be preempted in a non-DSO.
+  if (!Config->Shared)
+    return false;
+
   // Only symbols that appear in dynsym can be preempted.
   if (!symbol()->includeInDynsym())
     return false;
@@ -148,15 +152,6 @@ bool SymbolBody::isPreemptible() const {
   // Only default visibility symbols can be preempted.
   if (symbol()->Visibility != STV_DEFAULT)
     return false;
-
-  // Undefined symbols in non-DSOs are usually just an error, so it
-  // doesn't matter whether we return true or false here. However, if
-  // -unresolved-symbols=ignore-all is specified, undefined symbols in
-  // executables are automatically exported so that the runtime linker
-  // can try to resolve them. In that case, they is preemptible. So, we
-  // return true for an undefined symbol in case the option is specified.
-  if (!Config->Shared)
-    return isUndefined();
 
   // -Bsymbolic means that definitions are not preempted.
   if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
@@ -362,11 +357,8 @@ uint8_t Symbol::computeBinding() const {
 bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (ExportDynamic || body()->isShared())
-    return true;
-  if (!body()->isUndefined())
-    return false;
-  return Config->Shared || !body()->symbol()->isWeak();
+  return ExportDynamic || body()->isShared() ||
+         (body()->isUndefined() && Config->Shared);
 }
 
 // Print out a log message for --trace-symbol.

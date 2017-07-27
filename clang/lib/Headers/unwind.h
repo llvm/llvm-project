@@ -76,7 +76,13 @@ typedef intptr_t _sleb128_t;
 typedef uintptr_t _uleb128_t;
 
 struct _Unwind_Context;
+#if defined(__arm__) && !(defined(__USING_SJLJ_EXCEPTIONS__) || defined(__ARM_DWARF_EH___))
+struct _Unwind_Control_Block;
+typedef struct _Unwind_Control_Block _Unwind_Exception; /* Alias */
+#else
 struct _Unwind_Exception;
+typedef struct _Unwind_Exception _Unwind_Exception;
+#endif
 typedef enum {
   _URC_NO_REASON = 0,
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
@@ -109,8 +115,42 @@ typedef enum {
 } _Unwind_Action;
 
 typedef void (*_Unwind_Exception_Cleanup_Fn)(_Unwind_Reason_Code,
-                                             struct _Unwind_Exception *);
+                                             _Unwind_Exception *);
 
+#if defined(__arm__) && !(defined(__USING_SJLJ_EXCEPTIONS__) || defined(__ARM_DWARF_EH___))
+typedef struct _Unwind_Control_Block _Unwind_Control_Block;
+typedef uint32_t _Unwind_EHT_Header;
+
+struct _Unwind_Control_Block {
+  uint64_t exception_class;
+  void (*exception_cleanup)(_Unwind_Reason_Code, _Unwind_Control_Block *);
+  /* unwinder cache (private fields for the unwinder's use) */
+  struct {
+    uint32_t reserved1; /* forced unwind stop function, 0 if not forced */
+    uint32_t reserved2; /* personality routine */
+    uint32_t reserved3; /* callsite */
+    uint32_t reserved4; /* forced unwind stop argument */
+    uint32_t reserved5;
+  } unwinder_cache;
+  /* propagation barrier cache (valid after phase 1) */
+  struct {
+    uint32_t sp;
+    uint32_t bitpattern[5];
+  } barrier_cache;
+  /* cleanup cache (preserved over cleanup) */
+  struct {
+    uint32_t bitpattern[4];
+  } cleanup_cache;
+  /* personality cache (for personality's benefit) */
+  struct {
+    uint32_t fnstart;         /* function start address */
+    _Unwind_EHT_Header *ehtp; /* pointer to EHT entry header word */
+    uint32_t additional;      /* additional data */
+    uint32_t reserved1;
+  } pr_cache;
+  long long int : 0; /* force alignment of next item to 8-byte boundary */
+};
+#else
 struct _Unwind_Exception {
   _Unwind_Exception_Class exception_class;
   _Unwind_Exception_Cleanup_Fn exception_cleanup;
@@ -120,16 +160,18 @@ struct _Unwind_Exception {
    * aligned".  GCC has interpreted this to mean "use the maximum useful
    * alignment for the target"; so do we. */
 } __attribute__((__aligned__));
+#endif
 
 typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)(int, _Unwind_Action,
                                                _Unwind_Exception_Class,
-                                               struct _Unwind_Exception *,
+                                               _Unwind_Exception *,
                                                struct _Unwind_Context *,
                                                void *);
 
-typedef _Unwind_Reason_Code (*_Unwind_Personality_Fn)(
-    int, _Unwind_Action, _Unwind_Exception_Class, struct _Unwind_Exception *,
-    struct _Unwind_Context *);
+typedef _Unwind_Reason_Code (*_Unwind_Personality_Fn)(int, _Unwind_Action,
+                                                      _Unwind_Exception_Class,
+                                                      _Unwind_Exception *,
+                                                      struct _Unwind_Context *);
 typedef _Unwind_Personality_Fn __personality_routine;
 
 typedef _Unwind_Reason_Code (*_Unwind_Trace_Fn)(struct _Unwind_Context *,
@@ -224,13 +266,12 @@ _Unwind_Ptr _Unwind_GetRegionStart(struct _Unwind_Context *);
 
 /* DWARF EH functions; currently not available on Darwin/ARM */
 #if !defined(__APPLE__) || !defined(__arm__)
-
-_Unwind_Reason_Code _Unwind_RaiseException(struct _Unwind_Exception *);
-_Unwind_Reason_Code _Unwind_ForcedUnwind(struct _Unwind_Exception *,
-                                         _Unwind_Stop_Fn, void *);
-void _Unwind_DeleteException(struct _Unwind_Exception *);
-void _Unwind_Resume(struct _Unwind_Exception *);
-_Unwind_Reason_Code _Unwind_Resume_or_Rethrow(struct _Unwind_Exception *);
+_Unwind_Reason_Code _Unwind_RaiseException(_Unwind_Exception *);
+_Unwind_Reason_Code _Unwind_ForcedUnwind(_Unwind_Exception *, _Unwind_Stop_Fn,
+                                         void *);
+void _Unwind_DeleteException(_Unwind_Exception *);
+void _Unwind_Resume(_Unwind_Exception *);
+_Unwind_Reason_Code _Unwind_Resume_or_Rethrow(_Unwind_Exception *);
 
 #endif
 
@@ -241,11 +282,11 @@ typedef struct SjLj_Function_Context *_Unwind_FunctionContext_t;
 
 void _Unwind_SjLj_Register(_Unwind_FunctionContext_t);
 void _Unwind_SjLj_Unregister(_Unwind_FunctionContext_t);
-_Unwind_Reason_Code _Unwind_SjLj_RaiseException(struct _Unwind_Exception *);
-_Unwind_Reason_Code _Unwind_SjLj_ForcedUnwind(struct _Unwind_Exception *,
+_Unwind_Reason_Code _Unwind_SjLj_RaiseException(_Unwind_Exception *);
+_Unwind_Reason_Code _Unwind_SjLj_ForcedUnwind(_Unwind_Exception *,
                                               _Unwind_Stop_Fn, void *);
-void _Unwind_SjLj_Resume(struct _Unwind_Exception *);
-_Unwind_Reason_Code _Unwind_SjLj_Resume_or_Rethrow(struct _Unwind_Exception *);
+void _Unwind_SjLj_Resume(_Unwind_Exception *);
+_Unwind_Reason_Code _Unwind_SjLj_Resume_or_Rethrow(_Unwind_Exception *);
 
 void *_Unwind_FindEnclosingFunction(void *);
 

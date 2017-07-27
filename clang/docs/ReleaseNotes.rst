@@ -54,6 +54,12 @@ Improvements to Clang's diagnostics
 
 -  ...
 
+Non-comprehensive list of changes in this release
+-------------------------------------------------
+
+- Bitrig OS was merged back into OpenBSD, so Bitrig support has been 
+  removed from Clang/LLVM.
+
 New Compiler Flags
 ------------------
 
