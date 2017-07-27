@@ -79,7 +79,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
   Driver->enqueueArchiveMember(C, Sym->getName(), getName());
 }
 
-void ObjectFile::parse() {
+void ObjFile::parse() {
   // Parse a memory buffer as a COFF file.
   std::unique_ptr<Binary> Bin = check(createBinary(MB), toString(this));
 
@@ -96,7 +96,7 @@ void ObjectFile::parse() {
   initializeSEH();
 }
 
-void ObjectFile::initializeChunks() {
+void ObjFile::initializeChunks() {
   uint32_t NumSections = COFFObj->getNumberOfSections();
   Chunks.reserve(NumSections);
   SparseChunks.resize(NumSections + 1);
@@ -147,7 +147,7 @@ void ObjectFile::initializeChunks() {
   }
 }
 
-void ObjectFile::initializeSymbols() {
+void ObjFile::initializeSymbols() {
   uint32_t NumSymbols = COFFObj->getNumberOfSymbols();
   SymbolBodies.reserve(NumSymbols);
   SparseSymbolBodies.resize(NumSymbols);
@@ -193,14 +193,14 @@ void ObjectFile::initializeSymbols() {
   }
 }
 
-SymbolBody *ObjectFile::createUndefined(COFFSymbolRef Sym) {
+SymbolBody *ObjFile::createUndefined(COFFSymbolRef Sym) {
   StringRef Name;
   COFFObj->getSymbolName(Sym, Name);
   return Symtab->addUndefined(Name, this, Sym.isWeakExternal())->body();
 }
 
-SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
-                                      bool IsFirst) {
+SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
+                                   bool IsFirst) {
   StringRef Name;
   if (Sym.isCommon()) {
     auto *C = make<CommonChunk>(Sym);
@@ -273,7 +273,7 @@ SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
   return B;
 }
 
-void ObjectFile::initializeSEH() {
+void ObjFile::initializeSEH() {
   if (!SEHCompat || !SXData)
     return;
   ArrayRef<uint8_t> A;
@@ -286,7 +286,7 @@ void ObjectFile::initializeSEH() {
     SEHandlers.insert(SparseSymbolBodies[*I]);
 }
 
-MachineTypes ObjectFile::getMachineType() {
+MachineTypes ObjFile::getMachineType() {
   if (COFFObj)
     return static_cast<MachineTypes>(COFFObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;

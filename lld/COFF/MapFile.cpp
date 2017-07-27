@@ -48,7 +48,7 @@ static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 // Returns a list of all symbols that we want to print out.
 static std::vector<DefinedRegular *> getSymbols() {
   std::vector<DefinedRegular *> V;
-  for (coff::ObjectFile *File : Symtab->ObjectFiles)
+  for (ObjFile *File : Symtab->ObjFiles)
     for (SymbolBody *B : File->getSymbols())
       if (auto *Sym = dyn_cast<DefinedRegular>(B))
         if (Sym && !Sym->getCOFFSymbol().isSectionDefinition())

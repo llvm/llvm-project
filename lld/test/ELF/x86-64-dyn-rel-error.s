@@ -10,3 +10,5 @@ _start:
         .long bar
 
 // CHECK: relocation R_X86_64_32 cannot be used against shared object; recompile with -fPIC
+
+// RUN: ld.lld --noinhibit-exec %t.o %t2.so -o %t 2>&1 | FileCheck %s

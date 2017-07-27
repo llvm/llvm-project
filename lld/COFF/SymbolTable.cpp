@@ -68,8 +68,8 @@ void SymbolTable::addFile(InputFile *File) {
           " conflicts with " + machineToStr(Config->Machine));
   }
 
-  if (auto *F = dyn_cast<ObjectFile>(File)) {
-    ObjectFiles.push_back(F);
+  if (auto *F = dyn_cast<ObjFile>(File)) {
+    ObjFiles.push_back(F);
   } else if (auto *F = dyn_cast<BitcodeFile>(File)) {
     BitcodeFiles.push_back(F);
   } else if (auto *F = dyn_cast<ImportFile>(File)) {
@@ -135,7 +135,7 @@ void SymbolTable::reportRemainingUndefines() {
   for (SymbolBody *B : Config->GCRoot)
     if (Undefs.count(B))
       warn("<root>: undefined symbol: " + B->getName());
-  for (ObjectFile *File : ObjectFiles)
+  for (ObjFile *File : ObjFiles)
     for (SymbolBody *Sym : File->getSymbols())
       if (Undefs.count(Sym))
         warn(toString(File) + ": undefined symbol: " + Sym->getName());
@@ -296,7 +296,7 @@ Symbol *SymbolTable::addImportThunk(StringRef Name, DefinedImportData *ID,
 
 std::vector<Chunk *> SymbolTable::getChunks() {
   std::vector<Chunk *> Res;
-  for (ObjectFile *File : ObjectFiles) {
+  for (ObjFile *File : ObjFiles) {
     std::vector<Chunk *> &V = File->getChunks();
     Res.insert(Res.end(), V.begin(), V.end());
   }
@@ -365,9 +365,9 @@ void SymbolTable::addCombinedLTOObjects() {
   if (BitcodeFiles.empty())
     return;
   for (StringRef Object : compileBitcodeFiles()) {
-    auto *Obj = make<ObjectFile>(MemoryBufferRef(Object, "lto.tmp"));
+    auto *Obj = make<ObjFile>(MemoryBufferRef(Object, "lto.tmp"));
     Obj->parse();
-    ObjectFiles.push_back(Obj);
+    ObjFiles.push_back(Obj);
   }
 }
 

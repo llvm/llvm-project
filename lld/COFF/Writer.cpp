@@ -322,7 +322,7 @@ void Writer::createMiscChunks() {
 
   std::set<Defined *> Handlers;
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+  for (ObjFile *File : Symtab->ObjFiles) {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers) {
@@ -501,7 +501,7 @@ void Writer::createSymbolAndStringTable() {
     Sec->setStringTableOff(addEntryToStringTable(Name));
   }
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+  for (ObjFile *File : Symtab->ObjFiles) {
     for (SymbolBody *B : File->getSymbols()) {
       auto *D = dyn_cast<Defined>(B);
       if (!D || D->WrittenToSymtab)

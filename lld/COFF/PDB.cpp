@@ -77,7 +77,7 @@ public:
   void addObjectsToPDB();
 
   /// Link CodeView from a single object file into the PDB.
-  void addObjectFile(ObjectFile *File);
+  void addObjFile(ObjFile *File);
 
   /// Produce a mapping from the type and item indices used in the object
   /// file to those in the destination PDB.
@@ -90,9 +90,9 @@ public:
   /// If the object does not use a type server PDB (compiled with /Z7), we merge
   /// all the type and item records from the .debug$S stream and fill in the
   /// caller-provided ObjectIndexMap.
-  const CVIndexMap &mergeDebugT(ObjectFile *File, CVIndexMap &ObjectIndexMap);
+  const CVIndexMap &mergeDebugT(ObjFile *File, CVIndexMap &ObjectIndexMap);
 
-  const CVIndexMap &maybeMergeTypeServerPDB(ObjectFile *File,
+  const CVIndexMap &maybeMergeTypeServerPDB(ObjFile *File,
                                             TypeServer2Record &TS);
 
   /// Add the section map and section contributions to the PDB.
@@ -153,7 +153,7 @@ static ArrayRef<uint8_t> consumeDebugMagic(ArrayRef<uint8_t> Data,
   return Data.slice(4);
 }
 
-static ArrayRef<uint8_t> getDebugSection(ObjectFile *File, StringRef SecName) {
+static ArrayRef<uint8_t> getDebugSection(ObjFile *File, StringRef SecName) {
   if (SectionChunk *Sec = findByName(File->getDebugChunks(), SecName))
     return consumeDebugMagic(Sec->getContents(), SecName);
   return {};
@@ -190,7 +190,7 @@ maybeReadTypeServerRecord(CVTypeArray &Types) {
   return std::move(TS);
 }
 
-const CVIndexMap &PDBLinker::mergeDebugT(ObjectFile *File,
+const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
                                          CVIndexMap &ObjectIndexMap) {
   ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
@@ -240,7 +240,7 @@ tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
   return std::move(NS);
 }
 
-const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjectFile *File,
+const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
                                                      TypeServer2Record &TS) {
   // First, check if we already loaded a PDB with this GUID. Return the type
   // index mapping if we have it.
@@ -296,7 +296,7 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
   return true;
 }
 
-static void remapTypesInSymbolRecord(ObjectFile *File,
+static void remapTypesInSymbolRecord(ObjFile *File,
                                      MutableArrayRef<uint8_t> Contents,
                                      const CVIndexMap &IndexMap,
                                      ArrayRef<TiReference> TypeRefs) {
@@ -408,7 +408,7 @@ static void scopeStackOpen(SmallVectorImpl<SymbolScope> &Stack,
 }
 
 static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
-                            uint32_t CurOffset, ObjectFile *File) {
+                            uint32_t CurOffset, ObjFile *File) {
   if (Stack.empty()) {
     warn("symbol scopes are not balanced in " + File->getName());
     return;
@@ -417,7 +417,7 @@ static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
   S.OpeningRecord->PtrEnd = CurOffset;
 }
 
-static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
+static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
                                const CVIndexMap &IndexMap,
                                BinaryStreamRef SymData) {
   // FIXME: Improve error recovery by warning and skipping records when
@@ -466,7 +466,7 @@ static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                            ".debug$S");
 }
 
-void PDBLinker::addObjectFile(ObjectFile *File) {
+void PDBLinker::addObjFile(ObjFile *File) {
   // Add a module descriptor for every object file. We need to put an absolute
   // path to the object into the PDB. If this is a plain object, we make its
   // path absolute. If it's an object in an archive, we make the archive path
@@ -548,8 +548,8 @@ void PDBLinker::addObjectFile(ObjectFile *File) {
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
-  for (ObjectFile *File : Symtab->ObjectFiles)
-    addObjectFile(File);
+  for (ObjFile *File : Symtab->ObjFiles)
+    addObjFile(File);
 
   Builder.getStringTableBuilder().setStrings(PDBStrTab);
 

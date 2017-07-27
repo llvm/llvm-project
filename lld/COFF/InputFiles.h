@@ -101,9 +101,9 @@ private:
 };
 
 // .obj or .o file. This may be a member of an archive file.
-class ObjectFile : public InputFile {
+class ObjFile : public InputFile {
 public:
-  explicit ObjectFile(MemoryBufferRef M) : InputFile(ObjectKind, M) {}
+  explicit ObjFile(MemoryBufferRef M) : InputFile(ObjectKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
   void parse() override;
   MachineTypes getMachineType() override;

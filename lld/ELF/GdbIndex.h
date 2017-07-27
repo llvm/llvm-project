@@ -24,7 +24,7 @@ struct LLDDWARFSection final : public llvm::DWARFSection {
 };
 
 template <class ELFT> class LLDDwarfObj final : public llvm::DWARFObject {
-  elf::ObjectFile<ELFT> *Obj;
+  ObjFile<ELFT> *Obj;
   LLDDWARFSection InfoSection;
   LLDDWARFSection RangeSection;
   LLDDWARFSection LineSection;
@@ -38,7 +38,7 @@ template <class ELFT> class LLDDwarfObj final : public llvm::DWARFObject {
                                                ArrayRef<RelTy> Rels) const;
 
 public:
-  explicit LLDDwarfObj(elf::ObjectFile<ELFT> *Obj);
+  explicit LLDDwarfObj(ObjFile<ELFT> *Obj);
   const llvm::DWARFSection &getInfoSection() const override {
     return InfoSection;
   }

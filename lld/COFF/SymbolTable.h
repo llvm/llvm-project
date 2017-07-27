@@ -80,7 +80,7 @@ public:
   std::vector<ImportFile *> ImportFiles;
 
   // The writer needs to infer the machine type from the object files.
-  std::vector<ObjectFile *> ObjectFiles;
+  std::vector<ObjFile *> ObjFiles;
 
   // Creates an Undefined symbol for a given name.
   SymbolBody *addUndefined(StringRef Name);

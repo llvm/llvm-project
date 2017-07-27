@@ -127,7 +127,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
     error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
   else
-    Symtab.addFile(make<ObjectFile>(MBRef));
+    Symtab.addFile(make<ObjFile>(MBRef));
 }
 
 void LinkerDriver::enqueuePath(StringRef Path) {
@@ -153,7 +153,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
 
   InputFile *Obj;
   if (Magic == file_magic::coff_object) {
-    Obj = make<ObjectFile>(MB);
+    Obj = make<ObjFile>(MB);
   } else if (Magic == file_magic::bitcode) {
     Obj = make<BitcodeFile>(MB);
   } else {
@@ -610,7 +610,7 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
   // Write out archive members that we used in symbol resolution and pass these
   // to MSVC before any archives, so that MSVC uses the same objects to satisfy
   // references.
-  for (const auto *O : Symtab.ObjectFiles) {
+  for (const auto *O : Symtab.ObjFiles) {
     if (O->ParentName.empty())
       continue;
     SmallString<128> S;
@@ -651,8 +651,8 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
     }
   }
 
-  std::vector<StringRef> ObjectFiles = Symtab.compileBitcodeFiles();
-  runMSVCLinker(Rsp, ObjectFiles);
+  std::vector<StringRef> ObjFiles = Symtab.compileBitcodeFiles();
+  runMSVCLinker(Rsp, ObjFiles);
 
   for (StringRef Path : Temps)
     sys::fs::remove(Path);
@@ -1143,7 +1143,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /safeseh.
   if (Args.hasArg(OPT_safeseh)) {
-    for (ObjectFile *File : Symtab.ObjectFiles)
+    for (ObjFile *File : Symtab.ObjFiles)
       if (!File->SEHCompat)
         error("/safeseh: " + File->getName() + " is not compatible with SEH");
     if (ErrorCount)
