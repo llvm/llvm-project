@@ -1,8 +1,5 @@
 # Check the various features of the ShTest format.
 #
-# PR33938
-# XFAIL: windows
-#
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-output-printing > %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
@@ -25,7 +22,7 @@
 # CHECK-NEXT: hi
 #
 # CHECK:      $ "wc" "missing-file"
-# CHECK-NEXT: # redirected output from '{{.*}}/basic.txt.tmp.out':
+# CHECK-NEXT: # redirected output from '{{.*(/|\\\\)}}basic.txt.tmp.out':
 # CHECK-NEXT: missing-file{{.*}} No such file or directory
 # CHECK:      note: command had no output on stdout or stderr
 # CHECK-NEXT: error: command failed with exit status: 1

@@ -11,7 +11,6 @@
 ; GCN-NEXT: ; %else
 
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64 [[XOR_EXEC:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE_EXEC]]
 ; GCN-NEXT: ; mask branch [[FLOW:BB[0-9]+_[0-9]+]]
 
 ; GCN: BB{{[0-9]+_[0-9]+}}: ; %unreachable.bb
@@ -60,7 +59,6 @@ ret.bb:                                          ; preds = %else, %main_body
 
 ; GCN: ; BB#{{[0-9]+}}: ; %else
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64 [[XOR_EXEC:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE_EXEC]]
 ; GCN-NEXT: ; mask branch [[FLOW1:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT:  ; %unreachable.bb

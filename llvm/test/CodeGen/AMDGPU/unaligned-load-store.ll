@@ -519,7 +519,7 @@ define amdgpu_kernel void @constant_unaligned_load_v4i32(<4 x i32> addrspace(2)*
 }
 
 ; SI-LABEL: {{^}}constant_align4_load_i8:
-; SI: buffer_load_ubyte
+; SI: s_load_dword
 ; SI: buffer_store_byte
 define amdgpu_kernel void @constant_align4_load_i8(i8 addrspace(2)* %p, i8 addrspace(1)* %r) #0 {
   %v = load i8, i8 addrspace(2)* %p, align 4

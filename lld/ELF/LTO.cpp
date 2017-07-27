@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Core/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
@@ -107,7 +108,14 @@ static std::unique_ptr<lto::LTO> createLTO() {
                                      Config->LTOPartitions);
 }
 
-BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
+BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
+  for (Symbol *Sym : Symtab->getSymbols()) {
+    StringRef Name = Sym->body()->getName();
+    for (StringRef Prefix : {"__start_", "__stop_"})
+      if (Name.startswith(Prefix))
+        UsedStartStop.insert(Name.substr(Prefix.size()));
+  }
+}
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
@@ -138,7 +146,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
     R.VisibleToRegularObj = Sym->IsUsedInRegularObj ||
                             (R.Prevailing && Sym->includeInDynsym()) ||
-                            isValidCIdentifier(ObjSym.getSectionName());
+                            UsedStartStop.count(ObjSym.getSectionName());
     if (R.Prevailing)
       undefine(Sym);
     R.LinkerRedefined = Config->RenamedSymbols.count(Sym);

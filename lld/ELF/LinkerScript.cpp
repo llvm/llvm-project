@@ -66,12 +66,12 @@ uint64_t ExprValue::getSecAddr() const {
   return 0;
 }
 
-template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
+static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
-      Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
-      /*File*/ nullptr);
+  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+                                              /*CanOmitFromDynSym*/ false,
+                                              /*File*/ nullptr);
   Sym->Binding = STB_GLOBAL;
   ExprValue Value = Cmd->Expression();
   SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
@@ -142,47 +142,17 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   }
 }
 
-static SymbolBody *findSymbol(StringRef S) {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return Symtab<ELF32LE>::X->find(S);
-  case ELF32BEKind:
-    return Symtab<ELF32BE>::X->find(S);
-  case ELF64LEKind:
-    return Symtab<ELF64LE>::X->find(S);
-  case ELF64BEKind:
-    return Symtab<ELF64BE>::X->find(S);
-  default:
-    llvm_unreachable("unknown Config->EKind");
-  }
-}
-
-static SymbolBody *addRegularSymbol(SymbolAssignment *Cmd) {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return addRegular<ELF32LE>(Cmd);
-  case ELF32BEKind:
-    return addRegular<ELF32BE>(Cmd);
-  case ELF64LEKind:
-    return addRegular<ELF64LE>(Cmd);
-  case ELF64BEKind:
-    return addRegular<ELF64BE>(Cmd);
-  default:
-    llvm_unreachable("unknown Config->EKind");
-  }
-}
-
 void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Name == ".")
     return;
 
   // If a symbol was in PROVIDE(), we need to define it only when
   // it is a referenced undefined symbol.
-  SymbolBody *B = findSymbol(Cmd->Name);
+  SymbolBody *B = Symtab->find(Cmd->Name);
   if (Cmd->Provide && (!B || B->isDefined()))
     return;
 
-  Cmd->Sym = addRegularSymbol(Cmd);
+  Cmd->Sym = addRegular(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -791,7 +761,7 @@ void LinkerScript::adjustSectionsAfterSorting() {
   removeEmptyCommands();
 }
 
-void LinkerScript::allocateHeaders(std::vector<PhdrEntry> &Phdrs) {
+void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
   uint64_t Min = std::numeric_limits<uint64_t>::max();
   for (OutputSectionCommand *Cmd : OutputSectionCommands) {
     OutputSection *Sec = Cmd->Sec;
@@ -799,10 +769,11 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry> &Phdrs) {
       Min = std::min<uint64_t>(Min, Sec->Addr);
   }
 
-  auto FirstPTLoad = llvm::find_if(
-      Phdrs, [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
-  if (FirstPTLoad == Phdrs.end())
+  auto It = llvm::find_if(
+      Phdrs, [](const PhdrEntry *E) { return E->p_type == PT_LOAD; });
+  if (It == Phdrs.end())
     return;
+  PhdrEntry *FirstPTLoad = *It;
 
   uint64_t HeaderSize = getHeaderSize();
   if (HeaderSize <= Min || Script->hasPhdrsCommands()) {
@@ -829,11 +800,11 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry> &Phdrs) {
     }
     FirstPTLoad->First = ActualFirst;
   } else {
-    Phdrs.erase(FirstPTLoad);
+    Phdrs.erase(It);
   }
 
   auto PhdrI = llvm::find_if(
-      Phdrs, [](const PhdrEntry &E) { return E.p_type == PT_PHDR; });
+      Phdrs, [](const PhdrEntry *E) { return E->p_type == PT_PHDR; });
   if (PhdrI != Phdrs.end())
     Phdrs.erase(PhdrI);
 }
@@ -875,24 +846,25 @@ void LinkerScript::assignAddresses() {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-std::vector<PhdrEntry> LinkerScript::createPhdrs() {
-  std::vector<PhdrEntry> Ret;
+std::vector<PhdrEntry *> LinkerScript::createPhdrs() {
+  std::vector<PhdrEntry *> Ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
-    Ret.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
-    PhdrEntry &Phdr = Ret.back();
+    PhdrEntry *Phdr =
+        make<PhdrEntry>(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
 
     if (Cmd.HasFilehdr)
-      Phdr.add(Out::ElfHeader);
+      Phdr->add(Out::ElfHeader);
     if (Cmd.HasPhdrs)
-      Phdr.add(Out::ProgramHeaders);
+      Phdr->add(Out::ProgramHeaders);
 
     if (Cmd.LMAExpr) {
-      Phdr.p_paddr = Cmd.LMAExpr().getValue();
-      Phdr.HasLMA = true;
+      Phdr->p_paddr = Cmd.LMAExpr().getValue();
+      Phdr->HasLMA = true;
     }
+    Ret.push_back(Phdr);
   }
 
   // Add output sections to program headers.
@@ -900,9 +872,9 @@ std::vector<PhdrEntry> LinkerScript::createPhdrs() {
     // Assign headers specified by linker script
     for (size_t Id : getPhdrIndices(Cmd)) {
       OutputSection *Sec = Cmd->Sec;
-      Ret[Id].add(Sec);
+      Ret[Id]->add(Sec);
       if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
-        Ret[Id].p_flags |= Sec->getPhdrFlags();
+        Ret[Id]->p_flags |= Sec->getPhdrFlags();
     }
   }
   return Ret;
@@ -1058,7 +1030,7 @@ static void finalizeShtGroup(OutputSection *OS,
 
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
-  elf::ObjectFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
+  ObjFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
   ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
   OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info - 1]);
 }
@@ -1189,7 +1161,7 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
     return {CurAddressState->OutSec, Dot - CurAddressState->OutSec->Addr, Loc};
-  if (SymbolBody *B = findSymbol(S)) {
+  if (SymbolBody *B = Symtab->find(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value, Loc};
     if (auto *C = dyn_cast<DefinedCommon>(B))
@@ -1199,7 +1171,7 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   return 0;
 }
 
-bool LinkerScript::isDefined(StringRef S) { return findSymbol(S) != nullptr; }
+bool LinkerScript::isDefined(StringRef S) { return Symtab->find(S) != nullptr; }
 
 static const size_t NoPhdr = -1;
 

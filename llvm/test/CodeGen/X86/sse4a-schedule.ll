@@ -16,7 +16,7 @@ define <2 x i64> @test_extrq(<2 x i64> %a0, <16 x i8> %a1) {
 ;
 ; ZNVER1-LABEL: test_extrq:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    extrq %xmm1, %xmm0 # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    extrq %xmm1, %xmm0
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %a0, <16 x i8> %a1)
   ret <2 x i64> %1
@@ -36,7 +36,7 @@ define <2 x i64> @test_extrqi(<2 x i64> %a0) {
 ;
 ; ZNVER1-LABEL: test_extrqi:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    extrq $2, $3, %xmm0 # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    extrq $2, $3, %xmm0
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %a0, i8 3, i8 2)
   ret <2 x i64> %1
@@ -56,7 +56,7 @@ define <2 x i64> @test_insertq(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; ZNVER1-LABEL: test_insertq:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    insertq %xmm1, %xmm0 # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    insertq %xmm1, %xmm0
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %a0, <2 x i64> %a1)
   ret <2 x i64> %1
@@ -76,7 +76,7 @@ define <2 x i64> @test_insertqi(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; ZNVER1-LABEL: test_insertqi:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    insertq $6, $5, %xmm1, %xmm0 # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    insertq $6, $5, %xmm1, %xmm0
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %a0, <2 x i64> %a1, i8 5, i8 6)
   ret <2 x i64> %1

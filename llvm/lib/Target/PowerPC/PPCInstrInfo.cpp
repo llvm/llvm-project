@@ -1640,8 +1640,10 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
          I != IE; ++I) {
       MachineInstr *UseMI = &*I;
       if (UseMI->getOpcode() == PPC::BCC) {
-        unsigned Pred = UseMI->getOperand(0).getImm();
-        if (Pred != PPC::PRED_EQ && Pred != PPC::PRED_NE)
+        PPC::Predicate Pred = (PPC::Predicate)UseMI->getOperand(0).getImm();
+        unsigned PredCond = PPC::getPredicateCondition(Pred);
+        // We ignore hint bits when checking for non-equality comparisons.
+        if (PredCond != PPC::PRED_EQ && PredCond != PPC::PRED_NE)
           return false;
       } else if (UseMI->getOpcode() == PPC::ISEL ||
                  UseMI->getOpcode() == PPC::ISEL8) {
@@ -1695,19 +1697,23 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
       MachineInstr *UseMI = &*MRI->use_instr_begin(CRReg);
       if (UseMI->getOpcode() == PPC::BCC) {
         PPC::Predicate Pred = (PPC::Predicate)UseMI->getOperand(0).getImm();
+        unsigned PredCond = PPC::getPredicateCondition(Pred);
+        unsigned PredHint = PPC::getPredicateHint(Pred);
         int16_t Immed = (int16_t)Value;
 
-        if (Immed == -1 && Pred == PPC::PRED_GT) {
+        // When modyfing the condition in the predicate, we propagate hint bits
+        // from the original predicate to the new one.
+        if (Immed == -1 && PredCond == PPC::PRED_GT) {
           // We convert "greater than -1" into "greater than or equal to 0",
           // since we are assuming signed comparison by !equalityOnly
           PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
-                                  PPC::PRED_GE));
+                                  PPC::getPredicate(PPC::PRED_GE, PredHint)));
           Success = true;
         }
-        else if (Immed == 1 && Pred == PPC::PRED_LT) {
+        else if (Immed == 1 && PredCond == PPC::PRED_LT) {
           // We convert "less than 1" into "less than or equal to 0".
           PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
-                                  PPC::PRED_LE));
+                                  PPC::getPredicate(PPC::PRED_LE, PredHint)));
           Success = true;
         }
       }
@@ -1804,9 +1810,11 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
       MachineInstr *UseMI = &*I;
       if (UseMI->getOpcode() == PPC::BCC) {
         PPC::Predicate Pred = (PPC::Predicate) UseMI->getOperand(0).getImm();
+        unsigned PredCond = PPC::getPredicateCondition(Pred);
         assert((!equalityOnly ||
-                Pred == PPC::PRED_EQ || Pred == PPC::PRED_NE) &&
+                PredCond == PPC::PRED_EQ || PredCond == PPC::PRED_NE) &&
                "Invalid predicate for equality-only optimization");
+        (void)PredCond; // To suppress warning in release build.
         PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
                                 PPC::getSwappedPredicate(Pred)));
       } else if (UseMI->getOpcode() == PPC::ISEL ||

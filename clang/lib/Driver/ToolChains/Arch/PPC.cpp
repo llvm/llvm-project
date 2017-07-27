@@ -86,6 +86,18 @@ std::string ppc::getPPCTargetCPU(const ArgList &Args) {
   return "";
 }
 
+const char *ppc::getPPCAsmModeForCPU(StringRef Name) {
+  return llvm::StringSwitch<const char *>(Name)
+        .Case("pwr7", "-mpower7")
+        .Case("power7", "-mpower7")
+        .Case("pwr8", "-mpower8")
+        .Case("power8", "-mpower8")
+        .Case("ppc64le", "-mpower8")
+        .Case("pwr9", "-mpower9")
+        .Case("power9", "-mpower9")
+        .Default("-many");
+}
+
 void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args,
                                std::vector<StringRef> &Features) {

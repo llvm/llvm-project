@@ -28,8 +28,8 @@ namespace elf {
 class ArchiveFile;
 class BitcodeFile;
 class InputFile;
-class LazyObjectFile;
-template <class ELFT> class ObjectFile;
+class LazyObjFile;
+template <class ELFT> class ObjFile;
 class OutputSection;
 template <class ELFT> class SharedFile;
 
@@ -292,13 +292,13 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type);
+  LazyObject(StringRef Name, LazyObjFile &File, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyObjectKind;
   }
 
-  LazyObjectFile *file() { return (LazyObjectFile *)this->File; }
+  LazyObjFile *file() { return (LazyObjFile *)this->File; }
   InputFile *fetch();
 };
 

@@ -181,6 +181,7 @@ endif()
 # we can include cmake files from this directory.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
+set (LIBXML2_FOUND 0)
 find_package(LibXml2 2.5.3 QUIET)
 if (LIBXML2_FOUND)
   set(CLANG_HAVE_LIBXML 1)

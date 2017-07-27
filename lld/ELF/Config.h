@@ -128,8 +128,8 @@ struct Configuration {
   bool ICF;
   bool MipsN32Abi = false;
   bool NoGnuUnique;
-  bool NoinhibitExec;
   bool NoUndefinedVersion;
+  bool NoinhibitExec;
   bool Nostdlib;
   bool OFormatBinary;
   bool Omagic;

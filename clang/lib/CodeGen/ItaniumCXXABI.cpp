@@ -2113,13 +2113,14 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
       (UseARMGuardVarABI && !useInt8GuardVariable)
           ? Builder.CreateAnd(LI, llvm::ConstantInt::get(CGM.Int8Ty, 1))
           : LI;
-  llvm::Value *isInitialized = Builder.CreateIsNull(V, "guard.uninitialized");
+  llvm::Value *NeedsInit = Builder.CreateIsNull(V, "guard.uninitialized");
 
   llvm::BasicBlock *InitCheckBlock = CGF.createBasicBlock("init.check");
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("init.end");
 
   // Check if the first byte of the guard variable is zero.
-  Builder.CreateCondBr(isInitialized, InitCheckBlock, EndBlock);
+  CGF.EmitCXXGuardedInitBranch(NeedsInit, InitCheckBlock, EndBlock,
+                               CodeGenFunction::GuardKind::VariableGuard, &D);
 
   CGF.EmitBlock(InitCheckBlock);
 

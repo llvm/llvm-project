@@ -2880,7 +2880,7 @@ public:
     ArgListTy Args;
     SelectionDAG &DAG;
     SDLoc DL;
-    ImmutableCallSite *CS = nullptr;
+    ImmutableCallSite CS;
     SmallVector<ISD::OutputArg, 32> Outs;
     SmallVector<SDValue, 32> OutVals;
     SmallVector<ISD::InputArg, 32> Ins;
@@ -2927,7 +2927,7 @@ public:
 
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
-                                ImmutableCallSite &Call) {
+                                ImmutableCallSite Call) {
       RetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
@@ -2946,7 +2946,7 @@ public:
       NumFixedArgs = FTy->getNumParams();
       Args = std::move(ArgsList);
 
-      CS = &Call;
+      CS = Call;
 
       return *this;
     }

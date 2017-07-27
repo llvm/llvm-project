@@ -167,7 +167,7 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType) const {
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType) const {
-  return TTIImpl->isLegalMaskedGather(DataType);
+  return TTIImpl->isLegalMaskedScatter(DataType);
 }
 
 bool TargetTransformInfo::prefersVectorizedAddressing() const {

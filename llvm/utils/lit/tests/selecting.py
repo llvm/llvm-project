@@ -1,9 +1,6 @@
 # RUN: %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-BASIC %s
 # CHECK-BASIC: Testing: 5 tests
 
-# PR33937
-# XFAIL: windows
-
 # Check that regex-filtering works
 #
 # RUN: %{lit} --filter 'o[a-z]e' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s

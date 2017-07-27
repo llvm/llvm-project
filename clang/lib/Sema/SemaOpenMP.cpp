@@ -255,17 +255,26 @@ public:
   /// Returns the location and reduction operation from the innermost parent
   /// region for the given \p D.
   DSAVarData getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
-                                              BinaryOperatorKind &BOK);
+                                              BinaryOperatorKind &BOK,
+                                              Expr *&TaskgroupDescriptor);
   /// Returns the location and reduction operation from the innermost parent
   /// region for the given \p D.
   DSAVarData getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
-                                              const Expr *&ReductionRef);
+                                              const Expr *&ReductionRef,
+                                              Expr *&TaskgroupDescriptor);
   /// Return reduction reference expression for the current taskgroup.
   Expr *getTaskgroupReductionRef() const {
     assert(Stack.back().first.back().Directive == OMPD_taskgroup &&
            "taskgroup reference expression requested for non taskgroup "
            "directive.");
     return Stack.back().first.back().TaskgroupReductionRef;
+  }
+  /// Checks if the given \p VD declaration is actually a taskgroup reduction
+  /// descriptor variable at the \p Level of OpenMP regions.
+  bool isTaskgroupReductionRef(ValueDecl *VD, unsigned Level) const {
+    return Stack.back().first[Level].TaskgroupReductionRef &&
+           cast<DeclRefExpr>(Stack.back().first[Level].TaskgroupReductionRef)
+                   ->getDecl() == VD;
   }
 
   /// \brief Returns data sharing attributes from top of the stack for the
@@ -831,7 +840,8 @@ void DSAStackTy::addTaskgroupReductionData(ValueDecl *D, SourceRange SR,
 
 DSAStackTy::DSAVarData
 DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
-                                             BinaryOperatorKind &BOK) {
+                                             BinaryOperatorKind &BOK,
+                                             Expr *&TaskgroupDescriptor) {
   D = getCanonicalDecl(D);
   assert(!isStackEmpty() && "Data-sharing attributes stack is empty.");
   if (Stack.back().first.empty())
@@ -848,6 +858,10 @@ DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
       return DSAVarData();
     SR = ReductionData.ReductionRange;
     BOK = ReductionData.ReductionOp.get<ReductionData::BOKPtrType>();
+    assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
+                                       "expression for the descriptor is not "
+                                       "set.");
+    TaskgroupDescriptor = I->TaskgroupReductionRef;
     return DSAVarData(OMPD_taskgroup, OMPC_reduction, Data.RefExpr.getPointer(),
                       Data.PrivateCopy, I->DefaultAttrLoc);
   }
@@ -856,7 +870,8 @@ DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
 
 DSAStackTy::DSAVarData
 DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
-                                             const Expr *&ReductionRef) {
+                                             const Expr *&ReductionRef,
+                                             Expr *&TaskgroupDescriptor) {
   D = getCanonicalDecl(D);
   assert(!isStackEmpty() && "Data-sharing attributes stack is empty.");
   if (Stack.back().first.empty())
@@ -873,6 +888,10 @@ DSAStackTy::getTopMostTaskgroupReductionData(ValueDecl *D, SourceRange &SR,
       return DSAVarData();
     SR = ReductionData.ReductionRange;
     ReductionRef = ReductionData.ReductionOp.get<const Expr *>();
+    assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
+                                       "expression for the descriptor is not "
+                                       "set.");
+    TaskgroupDescriptor = I->TaskgroupReductionRef;
     return DSAVarData(OMPD_taskgroup, OMPC_reduction, Data.RefExpr.getPointer(),
                       Data.PrivateCopy, I->DefaultAttrLoc);
   }
@@ -1298,7 +1317,14 @@ VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
 bool Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   return DSAStack->hasExplicitDSA(
-      D, [](OpenMPClauseKind K) -> bool { return K == OMPC_private; }, Level);
+             D, [](OpenMPClauseKind K) -> bool { return K == OMPC_private; },
+             Level) ||
+         // Consider taskgroup reduction descriptor variable a private to avoid
+         // possible capture in the region.
+         (DSAStack->hasExplicitDirective(
+              [](OpenMPDirectiveKind K) { return K == OMPD_taskgroup; },
+              Level) &&
+          DSAStack->isTaskgroupReductionRef(D, Level));
 }
 
 bool Sema::isOpenMPTargetCapturedDecl(ValueDecl *D, unsigned Level) {
@@ -2137,6 +2163,15 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
   SmallVector<OMPClauseWithPreInit *, 8> PICs;
   // This is required for proper codegen.
   for (auto *Clause : Clauses) {
+    if (isOpenMPTaskingDirective(DSAStack->getCurrentDirective()) &&
+        Clause->getClauseKind() == OMPC_in_reduction) {
+      // Capture taskgroup task_reduction descriptors inside the tasking regions
+      // with the corresponding in_reduction items.
+      auto *IRC = cast<OMPInReductionClause>(Clause);
+      for (auto *E : IRC->taskgroup_descriptors())
+        if (E)
+          MarkDeclarationsReferencedInExpr(E);
+    }
     if (isOpenMPPrivate(Clause->getClauseKind()) ||
         Clause->getClauseKind() == OMPC_copyprivate ||
         (getLangOpts().OpenMPUseTLS &&
@@ -2567,13 +2602,24 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     // Generate list of implicitly defined firstprivate variables.
     VarsWithInheritedDSA = DSAChecker.getVarsWithInheritedDSA();
 
-    if (!DSAChecker.getImplicitFirstprivate().empty()) {
+    SmallVector<Expr *, 4> ImplicitFirstprivates(
+        DSAChecker.getImplicitFirstprivate().begin(),
+        DSAChecker.getImplicitFirstprivate().end());
+    // Mark taskgroup task_reduction descriptors as implicitly firstprivate.
+    for (auto *C : Clauses) {
+      if (auto *IRC = dyn_cast<OMPInReductionClause>(C)) {
+        for (auto *E : IRC->taskgroup_descriptors())
+          if (E)
+            ImplicitFirstprivates.emplace_back(E);
+      }
+    }
+    if (!ImplicitFirstprivates.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPFirstprivateClause(
-              DSAChecker.getImplicitFirstprivate(), SourceLocation(),
-              SourceLocation(), SourceLocation())) {
+              ImplicitFirstprivates, SourceLocation(), SourceLocation(),
+              SourceLocation())) {
         ClausesWithImplicit.push_back(Implicit);
         ErrorFound = cast<OMPFirstprivateClause>(Implicit)->varlist_size() !=
-                     DSAChecker.getImplicitFirstprivate().size();
+                     ImplicitFirstprivates.size();
       } else
         ErrorFound = true;
     }
@@ -9047,6 +9093,9 @@ struct ReductionData {
   SmallVector<Expr *, 8> RHSs;
   /// Reduction operation expression.
   SmallVector<Expr *, 8> ReductionOps;
+  /// Taskgroup descriptors for the corresponding reduction items in
+  /// in_reduction clauses.
+  SmallVector<Expr *, 8> TaskgroupDescriptors;
   /// List of captures for clause.
   SmallVector<Decl *, 4> ExprCaptures;
   /// List of postupdate expressions.
@@ -9059,6 +9108,7 @@ struct ReductionData {
     LHSs.reserve(Size);
     RHSs.reserve(Size);
     ReductionOps.reserve(Size);
+    TaskgroupDescriptors.reserve(Size);
     ExprCaptures.reserve(Size);
     ExprPostUpdates.reserve(Size);
   }
@@ -9070,15 +9120,17 @@ struct ReductionData {
     LHSs.emplace_back(nullptr);
     RHSs.emplace_back(nullptr);
     ReductionOps.emplace_back(ReductionOp);
+    TaskgroupDescriptors.emplace_back(nullptr);
   }
   /// Stores reduction data.
-  void push(Expr *Item, Expr *Private, Expr *LHS, Expr *RHS,
-            Expr *ReductionOp) {
+  void push(Expr *Item, Expr *Private, Expr *LHS, Expr *RHS, Expr *ReductionOp,
+            Expr *TaskgroupDescriptor) {
     Vars.emplace_back(Item);
     Privates.emplace_back(Private);
     LHSs.emplace_back(LHS);
     RHSs.emplace_back(RHS);
     ReductionOps.emplace_back(ReductionOp);
+    TaskgroupDescriptors.emplace_back(TaskgroupDescriptor);
   }
 };
 } // namespace
@@ -9217,6 +9269,7 @@ static bool ActOnOMPReductionKindClause(
     if (!D)
       continue;
 
+    Expr *TaskgroupDescriptor = nullptr;
     QualType Type;
     auto *ASE = dyn_cast<ArraySubscriptExpr>(RefExpr->IgnoreParens());
     auto *OASE = dyn_cast<OMPArraySectionExpr>(RefExpr->IgnoreParens());
@@ -9593,11 +9646,13 @@ static bool ActOnOMPReductionKindClause(
       SourceRange ParentSR;
       BinaryOperatorKind ParentBOK;
       const Expr *ParentReductionOp;
+      Expr *ParentBOKTD, *ParentReductionOpTD;
       DSAStackTy::DSAVarData ParentBOKDSA =
-          Stack->getTopMostTaskgroupReductionData(D, ParentSR, ParentBOK);
+          Stack->getTopMostTaskgroupReductionData(D, ParentSR, ParentBOK,
+                                                  ParentBOKTD);
       DSAStackTy::DSAVarData ParentReductionOpDSA =
-          Stack->getTopMostTaskgroupReductionData(D, ParentSR,
-                                                  ParentReductionOp);
+          Stack->getTopMostTaskgroupReductionData(
+              D, ParentSR, ParentReductionOp, ParentReductionOpTD);
       bool IsParentBOK = ParentBOKDSA.DKind != OMPD_unknown;
       bool IsParentReductionOp = ParentReductionOpDSA.DKind != OMPD_unknown;
       if (!IsParentBOK && !IsParentReductionOp) {
@@ -9628,6 +9683,8 @@ static bool ActOnOMPReductionKindClause(
           continue;
         }
       }
+      TaskgroupDescriptor = IsParentBOK ? ParentBOKTD : ParentReductionOpTD;
+      assert(TaskgroupDescriptor && "Taskgroup descriptor must be defined.");
     }
 
     DeclRefExpr *Ref = nullptr;
@@ -9674,7 +9731,8 @@ static bool ActOnOMPReductionKindClause(
       else
         Stack->addTaskgroupReductionData(D, ReductionIdRange, BOK);
     }
-    RD.push(VarsExpr, PrivateDRE, LHSDRE, RHSDRE, ReductionOp.get());
+    RD.push(VarsExpr, PrivateDRE, LHSDRE, RHSDRE, ReductionOp.get(),
+            TaskgroupDescriptor);
   }
   return RD.Vars.empty();
 }
@@ -9737,7 +9795,7 @@ OMPClause *Sema::ActOnOpenMPInReductionClause(
   return OMPInReductionClause::Create(
       Context, StartLoc, LParenLoc, ColonLoc, EndLoc, RD.Vars,
       ReductionIdScopeSpec.getWithLocInContext(Context), ReductionId,
-      RD.Privates, RD.LHSs, RD.RHSs, RD.ReductionOps,
+      RD.Privates, RD.LHSs, RD.RHSs, RD.ReductionOps, RD.TaskgroupDescriptors,
       buildPreInits(Context, RD.ExprCaptures),
       buildPostUpdate(*this, RD.ExprPostUpdates));
 }
