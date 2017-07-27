@@ -66,15 +66,12 @@ bool ParseCommandLineOptions(int argc, const char *const *argv,
 void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = "");
 
-// Function pointer type for printing version information.
-using VersionPrinterTy = std::function<void(raw_ostream &)>;
-
 ///===---------------------------------------------------------------------===//
 /// SetVersionPrinter - Override the default (LLVM specific) version printer
 ///                     used to print out the version when --version is given
 ///                     on the command line. This allows other systems using the
 ///                     CommandLine utilities to print their own version string.
-void SetVersionPrinter(VersionPrinterTy func);
+void SetVersionPrinter(void (*func)());
 
 ///===---------------------------------------------------------------------===//
 /// AddExtraVersionPrinter - Add an extra printer to use in addition to the
@@ -83,7 +80,7 @@ void SetVersionPrinter(VersionPrinterTy func);
 ///                          which will be called after the basic LLVM version
 ///                          printing is complete. Each can then add additional
 ///                          information specific to the tool.
-void AddExtraVersionPrinter(VersionPrinterTy func);
+void AddExtraVersionPrinter(void (*func)());
 
 // PrintOptionValues - Print option values.
 // With -print-options print the difference between option values and defaults.
