@@ -1,4 +1,4 @@
-//===--- HexagonBitSimplify.cpp -------------------------------------------===//
+//===- HexagonBitSimplify.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BitTracker.h"
 #include "HexagonBitTracker.h"
-#include "HexagonTargetMachine.h"
+#include "HexagonInstrInfo.h"
+#include "HexagonRegisterInfo.h"
+#include "HexagonSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,13 +26,13 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -52,10 +56,10 @@ static cl::opt<bool> GenBitSplit("hexbit-bitsplit", cl::Hidden,
   cl::init(true), cl::desc("Generate bitsplit instructions"));
 
 static cl::opt<unsigned> MaxExtract("hexbit-max-extract", cl::Hidden,
-  cl::init(UINT_MAX));
+  cl::init(std::numeric_limits<unsigned>::max()));
 static unsigned CountExtract = 0;
 static cl::opt<unsigned> MaxBitSplit("hexbit-max-bitsplit", cl::Hidden,
-  cl::init(UINT_MAX));
+  cl::init(std::numeric_limits<unsigned>::max()));
 static unsigned CountBitSplit = 0;
 
 namespace llvm {
@@ -180,7 +184,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonBitSimplify() : MachineFunctionPass(ID), MDT(nullptr) {
+    HexagonBitSimplify() : MachineFunctionPass(ID) {
       initializeHexagonBitSimplifyPass(*PassRegistry::getPassRegistry());
     }
 
@@ -227,15 +231,14 @@ namespace {
         const BitTracker::RegisterRef &RS, MachineRegisterInfo &MRI);
 
   private:
-    MachineDominatorTree *MDT;
+    MachineDominatorTree *MDT = nullptr;
 
     bool visitBlock(MachineBasicBlock &B, Transformation &T, RegisterSet &AVs);
     static bool hasTiedUse(unsigned Reg, MachineRegisterInfo &MRI,
         unsigned NewSub = Hexagon::NoSubRegister);
   };
 
-  char HexagonBitSimplify::ID = 0;
-  typedef HexagonBitSimplify HBS;
+  using HBS = HexagonBitSimplify;
 
   // The purpose of this class is to provide a common facility to traverse
   // the function top-down or bottom-up via the dominator tree, and keep
@@ -251,6 +254,8 @@ namespace {
   };
 
 } // end anonymous namespace
+
+char HexagonBitSimplify::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexbit",
       "Hexagon bit simplification", false, false)
@@ -2767,31 +2772,32 @@ namespace {
   public:
     static char ID;
 
-    HexagonLoopRescheduling() : MachineFunctionPass(ID),
-        HII(nullptr), HRI(nullptr), MRI(nullptr), BTP(nullptr) {
+    HexagonLoopRescheduling() : MachineFunctionPass(ID) {
       initializeHexagonLoopReschedulingPass(*PassRegistry::getPassRegistry());
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
-    const HexagonInstrInfo *HII;
-    const HexagonRegisterInfo *HRI;
-    MachineRegisterInfo *MRI;
-    BitTracker *BTP;
+    const HexagonInstrInfo *HII = nullptr;
+    const HexagonRegisterInfo *HRI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    BitTracker *BTP = nullptr;
 
     struct LoopCand {
       LoopCand(MachineBasicBlock *lb, MachineBasicBlock *pb,
             MachineBasicBlock *eb) : LB(lb), PB(pb), EB(eb) {}
+
       MachineBasicBlock *LB, *PB, *EB;
     };
-    typedef std::vector<MachineInstr*> InstrList;
+    using InstrList = std::vector<MachineInstr *>;
     struct InstrGroup {
       BitTracker::RegisterRef Inp, Out;
       InstrList Ins;
     };
     struct PhiInfo {
       PhiInfo(MachineInstr &P, MachineBasicBlock &B);
+
       unsigned DefR;
       BitTracker::RegisterRef LR, PR; // Loop Register, Preheader Register
       MachineBasicBlock *LB, *PB;     // Loop Block, Preheader Block
@@ -3079,7 +3085,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
   // to the beginning of the loop, that input register would need to be
   // the loop-carried register (through a phi node) instead of the (currently
   // loop-carried) output register.
-  typedef std::vector<InstrGroup> InstrGroupList;
+  using InstrGroupList = std::vector<InstrGroup>;
   InstrGroupList Groups;
 
   for (unsigned i = 0, n = ShufIns.size(); i < n; ++i) {

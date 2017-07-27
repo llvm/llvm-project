@@ -93,21 +93,18 @@ Error mergeAttributes(XMLNodeImpl OriginalNode, XMLNodeImpl AdditionalNode) {
 Error treeMerge(XMLNodeImpl OriginalRoot, XMLNodeImpl AdditionalRoot) {
 #if LLVM_LIBXML2_ENABLED
   XMLNodeImpl AdditionalFirstChild = AdditionalRoot->children;
+  xmlNode StoreNext;
   for (XMLNodeImpl Child = AdditionalFirstChild; Child; Child = Child->next) {
     XMLNodeImpl OriginalChildWithName;
     if (!isMergeableElement(Child->name) ||
         !(OriginalChildWithName =
               getChildWithName(OriginalRoot, Child->name))) {
-      XMLNodeImpl NewChild = xmlCopyNode(Child, 1);
-      if (!NewChild)
-        return make_error<WindowsManifestError>(Twine("error when copying ") +
-                                                FROM_XML_CHAR(Child->name));
-      if (NewChild->ns)
-        xmlFreeNs(NewChild->ns); // xmlCopyNode explicitly defines default
-                                 // namespace, undo this here.
-      if (!xmlAddChild(OriginalRoot, NewChild))
+      StoreNext.next = Child->next;
+      xmlUnlinkNode(Child);
+      if (!xmlAddChild(OriginalRoot, Child))
         return make_error<WindowsManifestError>(Twine("could not merge ") +
-                                                FROM_XML_CHAR(NewChild->name));
+                                                FROM_XML_CHAR(Child->name));
+      Child = &StoreNext;
     } else if (auto E = treeMerge(OriginalChildWithName, Child)) {
       return E;
     }
@@ -167,11 +164,7 @@ Error WindowsManifestMerger::merge(const MemoryBuffer &Manifest) {
         return E;
       }
     } else {
-      XMLNodeImpl NewChild = xmlCopyNode(AdditionalRoot, 1);
-      if (!NewChild)
-        return make_error<WindowsManifestError>("could not copy manifest");
-      if (!xmlAddChild(CombinedRoot, NewChild))
-        return make_error<WindowsManifestError>("could not append manifest");
+      return make_error<WindowsManifestError>("multiple root nodes");
     }
   }
   MergedDocs.push_back(ManifestXML);

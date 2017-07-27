@@ -2985,7 +2985,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                      G->getGlobal()->hasProtectedVisibility());
      }
   }
-  if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
+  if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 

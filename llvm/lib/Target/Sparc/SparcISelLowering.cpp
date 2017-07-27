@@ -692,9 +692,9 @@ SparcTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 }
 
 static bool hasReturnsTwiceAttr(SelectionDAG &DAG, SDValue Callee,
-                                     ImmutableCallSite *CS) {
+                                ImmutableCallSite CS) {
   if (CS)
-    return CS->hasFnAttr(Attribute::ReturnsTwice);
+    return CS.hasFnAttr(Attribute::ReturnsTwice);
 
   const Function *CalleeFn = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
@@ -1334,7 +1334,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 
   // Set inreg flag manually for codegen generated library calls that
   // return float.
-  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && CLI.CS == nullptr)
+  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CS)
     CLI.Ins[0].Flags.setInReg();
 
   RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_Sparc64);

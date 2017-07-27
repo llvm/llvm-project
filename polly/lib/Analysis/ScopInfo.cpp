@@ -1965,7 +1965,7 @@ void ScopStmt::print(raw_ostream &OS, bool PrintInstructions) const {
   for (MemoryAccess *Access : MemAccs)
     Access->print(OS);
 
-  if (PrintInstructions)
+  if (PrintInstructions && isBlockStmt())
     printInstructions(OS.indent(12));
 }
 

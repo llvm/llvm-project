@@ -734,6 +734,7 @@ define void @crash() nounwind alwaysinline {
 ; X32-NEXT:  LBB33_1: ## %footer349VF
 ; X32-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    jmp LBB33_1
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: crash:
 ; X64:       ## BB#0: ## %WGLoopsEntry
@@ -746,6 +747,7 @@ define void @crash() nounwind alwaysinline {
 ; X64-NEXT:  LBB33_1: ## %footer349VF
 ; X64-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    jmp LBB33_1
+; X64-NEXT:    ## -- End function
 WGLoopsEntry:
   br i1 undef, label %ret, label %footer329VF
 

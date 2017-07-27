@@ -1,4 +1,4 @@
-//===--- HexagonBlockRanges.cpp -------------------------------------------===//
+//===- HexagonBlockRanges.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,8 +24,10 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iterator>
 #include <map>
+#include <utility>
 
 using namespace llvm;
 

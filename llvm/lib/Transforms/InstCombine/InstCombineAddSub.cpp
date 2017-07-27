@@ -1600,7 +1600,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
       return BinaryOperator::CreateNeg(Y);
   }
 
-  // (sub (or A, B) (xor A, B)) --> (and A, B)
+  // (sub (or A, B), (xor A, B)) --> (and A, B)
   {
     Value *A, *B;
     if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&

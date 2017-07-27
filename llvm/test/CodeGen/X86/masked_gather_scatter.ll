@@ -6,10 +6,6 @@
 ; RUN: opt -mtriple=x86_64-apple-darwin -scalarize-masked-mem-intrin -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefix=SCALAR
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu -mcpu=skx < %s -o /dev/null
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
-
 ; SCALAR-LABEL: test1
 ; SCALAR:      extractelement <16 x float*>
 ; SCALAR-NEXT: load float
@@ -461,7 +457,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; KNL_64-LABEL: test9:
 ; KNL_64:       # BB#0: # %entry
 ; KNL_64-NEXT:    vpbroadcastq %rdi, %zmm2
-; KNL_64-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm3
+; KNL_64-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [824,824,824,824,824,824,824,824]
 ; KNL_64-NEXT:    vpmuludq %zmm3, %zmm0, %zmm4
 ; KNL_64-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpmuludq %zmm3, %zmm0, %zmm0
@@ -479,13 +475,13 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; KNL_32-LABEL: test9:
 ; KNL_32:       # BB#0: # %entry
 ; KNL_32-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %ymm2
-; KNL_32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm3
+; KNL_32-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [80,80,80,80,80,80,80,80]
 ; KNL_32-NEXT:    vpmulld %ymm3, %ymm1, %ymm1
 ; KNL_32-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL_32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm3
+; KNL_32-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [820,820,820,820,820,820,820,820]
 ; KNL_32-NEXT:    vpmulld %ymm3, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; KNL_32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm1
+; KNL_32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [68,68,68,68,68,68,68,68]
 ; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm1
@@ -530,7 +526,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; KNL_64-LABEL: test10:
 ; KNL_64:       # BB#0: # %entry
 ; KNL_64-NEXT:    vpbroadcastq %rdi, %zmm2
-; KNL_64-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm3
+; KNL_64-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [824,824,824,824,824,824,824,824]
 ; KNL_64-NEXT:    vpmuludq %zmm3, %zmm0, %zmm4
 ; KNL_64-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpmuludq %zmm3, %zmm0, %zmm0
@@ -548,13 +544,13 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; KNL_32-LABEL: test10:
 ; KNL_32:       # BB#0: # %entry
 ; KNL_32-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %ymm2
-; KNL_32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm3
+; KNL_32-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [80,80,80,80,80,80,80,80]
 ; KNL_32-NEXT:    vpmulld %ymm3, %ymm1, %ymm1
 ; KNL_32-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL_32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm3
+; KNL_32-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [820,820,820,820,820,820,820,820]
 ; KNL_32-NEXT:    vpmulld %ymm3, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; KNL_32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm1
+; KNL_32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [68,68,68,68,68,68,68,68]
 ; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm1
@@ -782,7 +778,6 @@ declare <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*>, i32, <2 x 
 
 ; Gather smaller than existing instruction
 define <4 x float> @test15(float* %base, <4 x i32> %ind, <4 x i1> %mask) {
-;
 ; KNL_64-LABEL: test15:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %YMM1<def>
@@ -837,7 +832,6 @@ define <4 x float> @test15(float* %base, <4 x i32> %ind, <4 x i1> %mask) {
 
 ; Gather smaller than existing instruction
 define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x double> %src0) {
-;
 ; KNL_64-LABEL: test16:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<def>
@@ -895,7 +889,6 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 }
 
 define <2 x double> @test17(double* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x double> %src0) {
-;
 ; KNL_64-LABEL: test17:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
@@ -953,7 +946,6 @@ declare void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> , <2 x i32*> , i32 , <
 declare void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> , <2 x float*> , i32 , <2 x i1> )
 
 define void @test18(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
-;
 ; KNL_64-LABEL: test18:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
@@ -1000,7 +992,6 @@ define void @test18(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 }
 
 define void @test19(<4 x double>%a1, double* %ptr, <4 x i1>%mask, <4 x i64> %ind) {
-;
 ; KNL_64-LABEL: test19:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<def>
@@ -1055,7 +1046,6 @@ define void @test19(<4 x double>%a1, double* %ptr, <4 x i1>%mask, <4 x i64> %ind
 
 ; Data type requires widening
 define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
-;
 ; KNL_64-LABEL: test20:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
@@ -1109,7 +1099,6 @@ define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
 
 ; Data type requires promotion
 define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
-;
 ; KNL_64-LABEL: test21:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
@@ -1165,8 +1154,6 @@ define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
 declare <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*>, i32, <2 x i1>, <2 x float>)
 
 define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x float> %src0) {
-;
-;
 ; KNL_64-LABEL: test22:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
@@ -1281,7 +1268,6 @@ declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <
 declare <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*>, i32, <2 x i1>, <2 x i64>)
 
 define <2 x i32> @test23(i32* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %src0) {
-;
 ; KNL_64-LABEL: test23:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
@@ -1378,7 +1364,6 @@ define <2 x i32> @test24(i32* %base, <2 x i32> %ind) {
 }
 
 define <2 x i64> @test25(i64* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %src0) {
-;
 ; KNL_64-LABEL: test25:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
@@ -1429,7 +1414,6 @@ define <2 x i64> @test25(i64* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %
 }
 
 define <2 x i64> @test26(i64* %base, <2 x i32> %ind, <2 x i64> %src0) {
-;
 ; KNL_64-LABEL: test26:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
@@ -1477,7 +1461,6 @@ define <2 x i64> @test26(i64* %base, <2 x i32> %ind, <2 x i64> %src0) {
 
 ; Result type requires widening; all-ones mask
 define <2 x float> @test27(float* %base, <2 x i32> %ind) {
-;
 ; KNL_64-LABEL: test27:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -1525,8 +1508,6 @@ define <2 x float> @test27(float* %base, <2 x i32> %ind) {
 
 ; Data type requires promotion, mask is all-ones
 define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
-;
-;
 ; KNL_64-LABEL: test28:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
@@ -1571,7 +1552,6 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
   call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> <i1 true, i1 true>)
   ret void
 }
-
 
 ; SCALAR-LABEL: test29
 ; SCALAR:      extractelement <16 x float*>
@@ -1638,10 +1618,6 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 }
 
 declare <16 x float*> @llvm.masked.gather.v16p0f32.v16p0p0f32(<16 x float**>, i32, <16 x i1>, <16 x float*>)
-
-; KNL-LABEL: test31
-; KNL: vpgatherqq
-; KNL: vpgatherqq
 define <16 x float*> @test31(<16 x float**> %ptrs) {
 ; KNL_64-LABEL: test31:
 ; KNL_64:       # BB#0:

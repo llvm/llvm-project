@@ -39,7 +39,7 @@ StringRef SymbolBody::getName() {
   // is a waste of time.
   if (Name.empty()) {
     auto *D = cast<DefinedCOFF>(this);
-    cast<ObjectFile>(D->File)->getCOFFObj()->getSymbolName(D->Sym, Name);
+    cast<ObjFile>(D->File)->getCOFFObj()->getSymbolName(D->Sym, Name);
   }
   return Name;
 }
@@ -53,8 +53,7 @@ InputFile *SymbolBody::getFile() {
 }
 
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
-  size_t SymSize =
-      cast<ObjectFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
+  size_t SymSize = cast<ObjFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))
     return COFFSymbolRef(reinterpret_cast<const coff_symbol16 *>(Sym));
   assert(SymSize == sizeof(coff_symbol32));

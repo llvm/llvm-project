@@ -41,9 +41,8 @@ namespace DomTreeBuilder {
 using BBDomTree = DomTreeBase<BasicBlock>;
 using BBPostDomTree = PostDomTreeBase<BasicBlock>;
 
-extern template void Calculate<BBDomTree, Function>(BBDomTree &DT, Function &F);
-extern template void Calculate<BBPostDomTree, Function>(BBPostDomTree &DT,
-                                                        Function &F);
+extern template void Calculate<BBDomTree>(BBDomTree &DT);
+extern template void Calculate<BBPostDomTree>(BBPostDomTree &DT);
 
 extern template void InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From,
                                            BasicBlock *To);

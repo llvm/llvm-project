@@ -141,7 +141,6 @@ bb3:
 ; GCN: buffer_load_dword
 ; GCN: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN: s_xor_b64 [[SAVE]], exec, [[SAVE]]
 
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
@@ -385,7 +384,6 @@ bb3:
 ; GCN-LABEL: {{^}}uniform_inside_divergent:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN-NEXT: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: s_cbranch_execnz [[IF:BB[0-9]+_[0-9]+]]
 
@@ -436,7 +434,6 @@ endif:
 ; GCN-LABEL: {{^}}analyze_mask_branch:
 ; GCN: v_cmp_lt_f32_e32 vcc
 ; GCN-NEXT: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_xor_b64 [[MASK]], exec, [[MASK]]
 ; GCN-NEXT: ; mask branch [[RET:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: s_cbranch_execz [[BRANCH_SKIP:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: s_branch [[LOOP_BODY:BB[0-9]+_[0-9]+]]

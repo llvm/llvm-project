@@ -18,7 +18,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; SI-NOT: s_mov_b64 s[{{[0-9]:[0-9]}}], -1
 ; SI: v_mov_b32_e32 v{{[0-9]}}, -1
 ; SI: s_and_saveexec_b64
-; SI-NEXT: s_xor_b64
 ; SI-NEXT: ; mask branch
 
 ; v_mov should be after exec modification
@@ -66,8 +65,7 @@ end:
 ; SI-LABEL: {{^}}simple_test_v_if:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
-; SI: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: BB{{[0-9]+_[0-9]+}}:
 ; SI: buffer_store_dword
@@ -94,8 +92,7 @@ exit:
 ; SI-LABEL: {{^}}simple_test_v_if_ret_else_ret:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
-; SI: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: BB{{[0-9]+_[0-9]+}}:
 ; SI: buffer_store_dword
@@ -160,8 +157,8 @@ exit:
 ; SI-LABEL: {{^}}simple_test_v_loop:
 ; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
-; SI: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: ; mask branch
+; SI-NEXT: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
 
 ; SI: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
 
@@ -202,8 +199,8 @@ exit:
 ; SI: buffer_load_dword [[VBOUND:v[0-9]+]]
 ; SI: v_cmp_lt_i32_e32 vcc
 ; SI: s_and_saveexec_b64 [[OUTER_CMP_SREG:s\[[0-9]+:[0-9]+\]]], vcc
-; SI: s_xor_b64 [[OUTER_CMP_SREG]], exec, [[OUTER_CMP_SREG]]
-; SI: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
+; SI-NEXT: ; mask branch
+; SI-NEXT: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
 
 ; Initialize inner condition to false
 ; SI: BB{{[0-9]+_[0-9]+}}: ; %bb10.preheader
