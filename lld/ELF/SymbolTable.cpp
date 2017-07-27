@@ -74,7 +74,7 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
   }
 
   // Lazy object file
-  if (auto *F = dyn_cast<LazyObjectFile>(File)) {
+  if (auto *F = dyn_cast<LazyObjFile>(File)) {
     F->parse<ELFT>();
     return;
   }
@@ -101,8 +101,8 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
   }
 
   // Regular object file
-  auto *F = cast<ObjectFile<ELFT>>(File);
-  ObjectFile<ELFT>::Instances.push_back(F);
+  auto *F = cast<ObjFile<ELFT>>(File);
+  ObjFile<ELFT>::Instances.push_back(F);
   F->parse(ComdatGroups);
 }
 
@@ -123,10 +123,10 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
     LTO->add(*F);
 
   for (InputFile *File : LTO->compile()) {
-    ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(File);
+    ObjFile<ELFT> *Obj = cast<ObjFile<ELFT>>(File);
     DenseSet<CachedHashStringRef> DummyGroups;
     Obj->parse(DummyGroups);
-    ObjectFile<ELFT>::Instances.push_back(Obj);
+    ObjFile<ELFT>::Instances.push_back(Obj);
   }
 }
 
@@ -564,7 +564,7 @@ Symbol *SymbolTable::addLazyArchive(ArchiveFile *F,
 }
 
 template <class ELFT>
-void SymbolTable::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
+void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
@@ -833,10 +833,10 @@ template Symbol *
 SymbolTable::addLazyArchive<ELF64BE>(ArchiveFile *,
                                      const object::Archive::Symbol);
 
-template void SymbolTable::addLazyObject<ELF32LE>(StringRef, LazyObjectFile &);
-template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjectFile &);
-template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjectFile &);
-template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjectFile &);
+template void SymbolTable::addLazyObject<ELF32LE>(StringRef, LazyObjFile &);
+template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjFile &);
+template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjFile &);
+template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjFile &);
 
 template void SymbolTable::addShared<ELF32LE>(SharedFile<ELF32LE> *, StringRef,
                                               const typename ELF32LE::Sym &,

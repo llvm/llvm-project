@@ -1028,7 +1028,7 @@ static void finalizeShtGroup(OutputSection *OS,
 
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
-  elf::ObjectFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
+  ObjFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
   ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
   OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info - 1]);
 }

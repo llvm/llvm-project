@@ -1,4 +1,4 @@
-//===--- HexagonEarlyIfConv.cpp -------------------------------------------===//
+//===- HexagonEarlyIfConv.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -99,17 +99,18 @@ namespace llvm {
 
 } // end namespace llvm
 
-namespace {
+static cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
+  cl::init(false), cl::desc("Enable branch probability info"));
+static cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
+  cl::desc("Size limit in Hexagon early if-conversion"));
+static cl::opt<bool> SkipExitBranches("eif-no-loop-exit", cl::init(false),
+  cl::Hidden, cl::desc("Do not convert branches that may exit the loop"));
 
-  cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
-    cl::init(false), cl::desc("Enable branch probability info"));
-  cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
-    cl::desc("Size limit in Hexagon early if-conversion"));
-  cl::opt<bool> SkipExitBranches("eif-no-loop-exit", cl::init(false),
-    cl::Hidden, cl::desc("Do not convert branches that may exit the loop"));
+namespace {
 
   struct PrintMB {
     PrintMB(const MachineBasicBlock *B) : MB(B) {}
+
     const MachineBasicBlock *MB;
   };
   raw_ostream &operator<< (raw_ostream &OS, const PrintMB &P) {
@@ -154,9 +155,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonEarlyIfConversion() : MachineFunctionPass(ID),
-        HII(nullptr), TRI(nullptr), MFN(nullptr), MRI(nullptr), MDT(nullptr),
-        MLI(nullptr) {
+    HexagonEarlyIfConversion() : MachineFunctionPass(ID) {
       initializeHexagonEarlyIfConversionPass(*PassRegistry::getPassRegistry());
     }
 
@@ -175,7 +174,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
-    typedef DenseSet<MachineBasicBlock*> BlockSetType;
+    using BlockSetType = DenseSet<MachineBasicBlock *>;
 
     bool isPreheader(const MachineBasicBlock *B) const;
     bool matchFlowPattern(MachineBasicBlock *B, MachineLoop *L,
@@ -214,19 +213,19 @@ namespace {
     void mergeBlocks(MachineBasicBlock *PredB, MachineBasicBlock *SuccB);
     void simplifyFlowGraph(const FlowPattern &FP);
 
-    const HexagonInstrInfo *HII;
-    const TargetRegisterInfo *TRI;
-    MachineFunction *MFN;
-    MachineRegisterInfo *MRI;
-    MachineDominatorTree *MDT;
-    MachineLoopInfo *MLI;
+    const HexagonInstrInfo *HII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineFunction *MFN = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    MachineDominatorTree *MDT = nullptr;
+    MachineLoopInfo *MLI = nullptr;
     BlockSetType Deleted;
     const MachineBranchProbabilityInfo *MBPI;
   };
 
-  char HexagonEarlyIfConversion::ID = 0;
-
 } // end anonymous namespace
+
+char HexagonEarlyIfConversion::ID = 0;
 
 INITIALIZE_PASS(HexagonEarlyIfConversion, "hexagon-eif",
   "Hexagon early if conversion", false, false)
@@ -593,7 +592,9 @@ bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
 
   // Visit all dominated blocks from the same loop first, then process B.
   MachineDomTreeNode *N = MDT->getNode(B);
-  typedef GraphTraits<MachineDomTreeNode*> GTN;
+
+  using GTN = GraphTraits<MachineDomTreeNode *>;
+
   // We will change CFG/DT during this traversal, so take precautions to
   // avoid problems related to invalidated iterators. In fact, processing
   // a child C of B cannot cause another child to be removed, but it can
@@ -601,7 +602,7 @@ bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
   // was removed. This new child C, however, would have been processed
   // prior to processing B, so there is no need to process it again.
   // Simply keep a list of children of B, and traverse that list.
-  typedef SmallVector<MachineDomTreeNode*,4> DTNodeVectType;
+  using DTNodeVectType = SmallVector<MachineDomTreeNode *, 4>;
   DTNodeVectType Cn(GTN::child_begin(N), GTN::child_end(N));
   for (DTNodeVectType::iterator I = Cn.begin(), E = Cn.end(); I != E; ++I) {
     MachineBasicBlock *SB = (*I)->getBlock();
@@ -947,8 +948,10 @@ void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
   MachineDomTreeNode *IDN = N->getIDom();
   if (IDN) {
     MachineBasicBlock *IDB = IDN->getBlock();
-    typedef GraphTraits<MachineDomTreeNode*> GTN;
-    typedef SmallVector<MachineDomTreeNode*,4> DTNodeVectType;
+
+    using GTN = GraphTraits<MachineDomTreeNode *>;
+    using DTNodeVectType = SmallVector<MachineDomTreeNode *, 4>;
+
     DTNodeVectType Cn(GTN::child_begin(N), GTN::child_end(N));
     for (DTNodeVectType::iterator I = Cn.begin(), E = Cn.end(); I != E; ++I) {
       MachineBasicBlock *SB = (*I)->getBlock();

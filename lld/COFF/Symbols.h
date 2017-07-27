@@ -31,7 +31,7 @@ using llvm::object::coff_symbol_generic;
 
 class ArchiveFile;
 class InputFile;
-class ObjectFile;
+class ObjFile;
 struct Symbol;
 class SymbolTable;
 

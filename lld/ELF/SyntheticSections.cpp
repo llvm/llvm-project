@@ -108,7 +108,7 @@ template <class ELFT> MergeInputSection *elf::createCommentSection() {
   Hdr.sh_addralign = 1;
 
   auto *Ret =
-      make<MergeInputSection>((ObjectFile<ELFT> *)nullptr, &Hdr, ".comment");
+      make<MergeInputSection>((ObjFile<ELFT> *)nullptr, &Hdr, ".comment");
   Ret->Data = getVersion();
   Ret->splitIntoPieces();
   return Ret;
@@ -1815,7 +1815,7 @@ static GdbIndexChunk readDwarf(DWARFContext &Dwarf, InputSection *Sec) {
 template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
   std::vector<GdbIndexChunk> Chunks;
   for (InputSection *Sec : getDebugInfoSections()) {
-    elf::ObjectFile<ELFT> *F = Sec->getFile<ELFT>();
+    ObjFile<ELFT> *F = Sec->getFile<ELFT>();
     DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(F));
     Chunks.push_back(readDwarf(Dwarf, Sec));
   }

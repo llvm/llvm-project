@@ -29,7 +29,7 @@ using llvm::support::ulittle32_t;
 namespace lld {
 namespace coff {
 
-SectionChunk::SectionChunk(ObjectFile *F, const coff_section *H)
+SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
     : Chunk(SectionKind), Repl(this), Header(H), File(F),
       Relocs(File->getCOFFObj()->getRelocations(Header)),
       NumRelocs(std::distance(Relocs.begin(), Relocs.end())) {
