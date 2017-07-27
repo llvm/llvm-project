@@ -43,6 +43,10 @@ using llvm::support::ulittle32_t;
 namespace lld {
 namespace coff {
 
+std::vector<ObjFile *> ObjFile::Instances;
+std::vector<ImportFile *> ImportFile::Instances;
+std::vector<BitcodeFile *> BitcodeFile::Instances;
+
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.

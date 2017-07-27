@@ -548,7 +548,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
-  for (ObjFile *File : Symtab->ObjFiles)
+  for (ObjFile *File : ObjFile::Instances)
     addObjFile(File);
 
   Builder.getStringTableBuilder().setStrings(PDBStrTab);

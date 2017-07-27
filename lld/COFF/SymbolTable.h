@@ -75,13 +75,6 @@ public:
   void addCombinedLTOObjects();
   std::vector<StringRef> compileBitcodeFiles();
 
-  // The writer needs to handle DLL import libraries specially in
-  // order to create the import descriptor table.
-  std::vector<ImportFile *> ImportFiles;
-
-  // The writer needs to infer the machine type from the object files.
-  std::vector<ObjFile *> ObjFiles;
-
   // Creates an Undefined symbol for a given name.
   SymbolBody *addUndefined(StringRef Name);
 
@@ -111,8 +104,6 @@ private:
   StringRef findByPrefix(StringRef Prefix);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> Symtab;
-
-  std::vector<BitcodeFile *> BitcodeFiles;
   std::unique_ptr<BitcodeCompiler> LTO;
 };
 

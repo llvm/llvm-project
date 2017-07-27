@@ -610,16 +610,16 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
   // Write out archive members that we used in symbol resolution and pass these
   // to MSVC before any archives, so that MSVC uses the same objects to satisfy
   // references.
-  for (const auto *O : Symtab.ObjFiles) {
-    if (O->ParentName.empty())
+  for (ObjFile *Obj : ObjFile::Instances) {
+    if (Obj->ParentName.empty())
       continue;
     SmallString<128> S;
     int Fd;
     if (auto EC = sys::fs::createTemporaryFile(
-            "lld-" + sys::path::filename(O->ParentName), ".obj", Fd, S))
+            "lld-" + sys::path::filename(Obj->ParentName), ".obj", Fd, S))
       fatal(EC, "cannot create a temporary file");
     raw_fd_ostream OS(Fd, /*shouldClose*/ true);
-    OS << O->MB.getBuffer();
+    OS << Obj->MB.getBuffer();
     Temps.push_back(S.str());
     Rsp += quote(S) + "\n";
   }
@@ -1143,7 +1143,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /safeseh.
   if (Args.hasArg(OPT_safeseh)) {
-    for (ObjFile *File : Symtab.ObjFiles)
+    for (ObjFile *File : ObjFile::Instances)
       if (!File->SEHCompat)
         error("/safeseh: " + File->getName() + " is not compatible with SEH");
     if (ErrorCount)
