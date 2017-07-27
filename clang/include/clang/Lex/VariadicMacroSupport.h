@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines support types to help with preprocessing variadic macro 
-// (i.e. macros that use: ellipses __VA_ARGS__ ) definitions and 
+// This file defines support types to help with preprocessing variadic macro
+// (i.e. macros that use: ellipses __VA_ARGS__ ) definitions and
 // expansions.
 //
 //===----------------------------------------------------------------------===//
@@ -47,7 +47,7 @@ public:
   /// and the context is being exited.  This function is idempotent (might be
   /// explicitly called, and then reinvoked via the destructor).
   void exitScope() { Ident__VA_ARGS__.setIsPoisoned(true); }
-  
+
   ~VariadicMacroScopeGuard() { exitScope(); }
 };
 

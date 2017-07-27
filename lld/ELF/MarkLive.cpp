@@ -253,7 +253,7 @@ template <class ELFT> void elf::markLive() {
       Enqueue({Sec, 0});
     else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
-      CNamedSections[Saver.save("__end_" + Sec->Name)].push_back(Sec);
+      CNamedSections[Saver.save("__stop_" + Sec->Name)].push_back(Sec);
     }
   }
 

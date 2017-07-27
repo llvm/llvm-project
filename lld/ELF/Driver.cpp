@@ -188,7 +188,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // we'll handle it as if it had a symbol table.
     if (!File->isEmpty() && !File->hasSymbolTable()) {
       for (const auto &P : getArchiveMembers(MBRef))
-        Files.push_back(make<LazyObjectFile>(P.first, Path, P.second));
+        Files.push_back(make<LazyObjFile>(P.first, Path, P.second));
       return;
     }
 
@@ -217,7 +217,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   default:
     if (InLib)
-      Files.push_back(make<LazyObjectFile>(MBRef, "", 0));
+      Files.push_back(make<LazyObjFile>(MBRef, "", 0));
     else
       Files.push_back(createObjectFile(MBRef));
   }
@@ -1031,7 +1031,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.
   // Aggregate all input sections into one place.
-  for (elf::ObjectFile<ELFT> *F : ObjectFile<ELFT>::Instances)
+  for (ObjFile<ELFT> *F : ObjFile<ELFT>::Instances)
     for (InputSectionBase *S : F->getSections())
       if (S && S != &InputSection::Discarded)
         InputSections.push_back(S);

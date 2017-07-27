@@ -29,7 +29,7 @@ class InputSection;
 class InputSectionBase;
 class MergeInputSection;
 class OutputSection;
-template <class ELFT> class ObjectFile;
+template <class ELFT> class ObjFile;
 template <class ELFT> class SharedFile;
 class SharedSymbol;
 class DefinedRegular;

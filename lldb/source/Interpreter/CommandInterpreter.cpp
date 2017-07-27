@@ -2569,7 +2569,7 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 
   while (!text.empty()) {
     if (text.front() == '\n' ||
-        (text.front() == ' ' && nextWordLength(text.ltrim(' ')) < chars_left)) {
+        (text.front() == ' ' && nextWordLength(text.ltrim(' ')) > chars_left)) {
       strm.EOL();
       strm.Indent();
       chars_left = max_columns - indent_size;

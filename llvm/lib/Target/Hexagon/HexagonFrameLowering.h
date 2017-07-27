@@ -1,4 +1,4 @@
-//=- HexagonFrameLowering.h - Define frame lowering for Hexagon --*- C++ -*--=//
+//==- HexagonFrameLowering.h - Define frame lowering for Hexagon -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,8 +20,13 @@
 
 namespace llvm {
 
+class BitVector;
 class HexagonInstrInfo;
 class HexagonRegisterInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineRegisterInfo;
+class TargetRegisterClass;
 
 class HexagonFrameLowering : public TargetFrameLowering {
 public:
@@ -52,11 +57,13 @@ public:
     // We always reserve call frame as a part of the initial stack allocation.
     return true;
   }
+
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override {
     // Override this function to avoid calling hasFP before CSI is set
     // (the default implementation calls hasFP).
     return true;
   }
+
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
@@ -97,7 +104,7 @@ public:
   void insertCFIInstructions(MachineFunction &MF) const;
 
 private:
-  typedef std::vector<CalleeSavedInfo> CSIVect;
+  using CSIVect = std::vector<CalleeSavedInfo>;
 
   void expandAlloca(MachineInstr *AI, const HexagonInstrInfo &TII,
       unsigned SP, unsigned CF) const;
