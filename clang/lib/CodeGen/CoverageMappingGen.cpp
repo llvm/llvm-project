@@ -551,15 +551,17 @@ struct CounterCoverageMappingBuilder
 
   /// \brief Propagate counts through the children of \c S.
   Counter propagateCounts(Counter TopCount, const Stmt *S) {
-    size_t Index = pushRegion(TopCount, getStart(S), getEnd(S));
+    SourceLocation StartLoc = getStart(S);
+    SourceLocation EndLoc = getEnd(S);
+    size_t Index = pushRegion(TopCount, StartLoc, EndLoc);
     Visit(S);
     Counter ExitCount = getRegion().getCounter();
     popRegions(Index);
 
     // The statement may be spanned by an expansion. Make sure we handle a file
     // exit out of this expansion before moving to the next statement.
-    if (SM.isBeforeInTranslationUnit(getStart(S), S->getLocStart()))
-      MostRecentLocation = getEnd(S);
+    if (SM.isBeforeInTranslationUnit(StartLoc, S->getLocStart()))
+      MostRecentLocation = EndLoc;
 
     return ExitCount;
   }
