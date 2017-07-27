@@ -114,14 +114,14 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; IVY:       # BB#0:
 ; IVY-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [3:1.00]
 ; IVY-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
-; IVY-NEXT:    vzeroupper # sched: [?:0.000000e+00]
+; IVY-NEXT:    vzeroupper
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vcvtps2ph_256:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [4:1.00]
 ; HASWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [8:1.00]
-; HASWELL-NEXT:    vzeroupper # sched: [1:0.00]
+; HASWELL-NEXT:    vzeroupper # sched: [1:?]
 ; HASWELL-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: test_vcvtps2ph_256:
@@ -134,7 +134,7 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [12:1.00]
-; ZNVER1-NEXT:    vzeroupper # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    vzeroupper
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a0, i32 0)
   %2 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a1, i32 0)

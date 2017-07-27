@@ -3335,8 +3335,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsSibcall      = false;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   auto Attr = MF.getFunction()->getFnAttribute("disable-tail-calls");
-  const CallInst *CI =
-      CLI.CS ? dyn_cast<CallInst>(CLI.CS->getInstruction()) : nullptr;
+  const auto *CI = dyn_cast_or_null<CallInst>(CLI.CS.getInstruction());
   const Function *Fn = CI ? CI->getCalledFunction() : nullptr;
   bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers")) ||
                  (Fn && Fn->hasFnAttribute("no_caller_saved_registers"));
@@ -3360,7 +3359,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
-  bool IsMustTail = CLI.CS && CLI.CS->isMustTailCall();
+  bool IsMustTail = CLI.CS && CLI.CS.isMustTailCall();
   if (IsMustTail) {
     // Force this to be a tail call.  The verifier rules are enough to ensure
     // that we can lower this successfully without moving the return address
@@ -3764,7 +3763,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // is thrown, the runtime will not restore CSRs.
   // FIXME: Model this more precisely so that we can register allocate across
   // the normal edge and spill and fill across the exceptional edge.
-  if (!Is64Bit && CLI.CS && CLI.CS->isInvoke()) {
+  if (!Is64Bit && CLI.CS && CLI.CS.isInvoke()) {
     const Function *CallerFn = MF.getFunction();
     EHPersonality Pers =
         CallerFn->hasPersonalityFn()
@@ -35793,6 +35792,27 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
 
   PVT = MVT::i32;
   return Promote;
+}
+
+bool X86TargetLowering::
+    isDesirableToCombineBuildVectorToShuffleTruncate(
+        ArrayRef<int> ShuffleMask, EVT SrcVT, EVT TruncVT) const {
+
+  assert(SrcVT.getVectorNumElements() == ShuffleMask.size() &&
+         "Element count mismatch");
+  assert(
+      Subtarget.getTargetLowering()->isShuffleMaskLegal(ShuffleMask, SrcVT) &&
+      "Shuffle Mask expected to be legal");
+
+  // For 32-bit elements VPERMD is better than shuffle+truncate.
+  // TODO: After we improve lowerBuildVector, add execption for VPERMW.
+  if (SrcVT.getScalarSizeInBits() == 32 || !Subtarget.hasAVX2())
+    return false;
+
+  if (is128BitLaneCrossingShuffleMask(SrcVT.getSimpleVT(), ShuffleMask))
+    return false;
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

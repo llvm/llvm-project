@@ -394,8 +394,8 @@ define <8 x i16> @test_mpsadbw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; ZNVER1-LABEL: test_mpsadbw:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vmpsadbw $7, %xmm1, %xmm0, %xmm0 # sched: [100:0.00]
-; ZNVER1-NEXT:    vmpsadbw $7, (%rdi), %xmm0, %xmm0 # sched: [100:0.00]
+; ZNVER1-NEXT:    vmpsadbw $7, %xmm1, %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vmpsadbw $7, (%rdi), %xmm0, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %a0, <16 x i8> %a1, i8 7)
   %2 = bitcast <8 x i16> %1 to <16 x i8>

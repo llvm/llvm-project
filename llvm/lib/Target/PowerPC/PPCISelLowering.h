@@ -37,6 +37,14 @@ namespace llvm {
 
   namespace PPCISD {
 
+    // When adding a NEW PPCISD node please add it to the correct position in
+    // the enum. The order of elements in this enum matters!
+    // Values that are added after this entry:
+    //     STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE
+    // are considerd memory opcodes and are treated differently than entries
+    // that come before it. For example, ADD or MUL should be placed before
+    // the ISD::FIRST_TARGET_MEMORY_OPCODE while a LOAD or STORE should come
+    // after it.
     enum NodeType : unsigned {
       // Start the numbering where the builtin ops and target ops leave off.
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
@@ -899,7 +907,7 @@ namespace llvm {
     IsEligibleForTailCallOptimization_64SVR4(
                                     SDValue Callee,
                                     CallingConv::ID CalleeCC,
-                                    ImmutableCallSite *CS,
+                                    ImmutableCallSite CS,
                                     bool isVarArg,
                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -965,7 +973,7 @@ namespace llvm {
                        SDValue &Callee, int SPDiff, unsigned NumBytes,
                        const SmallVectorImpl<ISD::InputArg> &Ins,
                        SmallVectorImpl<SDValue> &InVals,
-                       ImmutableCallSite *CS) const;
+                       ImmutableCallSite CS) const;
 
     SDValue
     LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -1016,7 +1024,7 @@ namespace llvm {
                              const SmallVectorImpl<ISD::InputArg> &Ins,
                              const SDLoc &dl, SelectionDAG &DAG,
                              SmallVectorImpl<SDValue> &InVals,
-                             ImmutableCallSite *CS) const;
+                             ImmutableCallSite CS) const;
     SDValue LowerCall_64SVR4(SDValue Chain, SDValue Callee,
                              CallingConv::ID CallConv, bool isVarArg,
                              bool isTailCall, bool isPatchPoint,
@@ -1025,7 +1033,7 @@ namespace llvm {
                              const SmallVectorImpl<ISD::InputArg> &Ins,
                              const SDLoc &dl, SelectionDAG &DAG,
                              SmallVectorImpl<SDValue> &InVals,
-                             ImmutableCallSite *CS) const;
+                             ImmutableCallSite CS) const;
     SDValue LowerCall_32SVR4(SDValue Chain, SDValue Callee,
                              CallingConv::ID CallConv, bool isVarArg,
                              bool isTailCall, bool isPatchPoint,
@@ -1034,7 +1042,7 @@ namespace llvm {
                              const SmallVectorImpl<ISD::InputArg> &Ins,
                              const SDLoc &dl, SelectionDAG &DAG,
                              SmallVectorImpl<SDValue> &InVals,
-                             ImmutableCallSite *CS) const;
+                             ImmutableCallSite CS) const;
 
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;

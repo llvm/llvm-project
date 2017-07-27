@@ -339,42 +339,46 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
 static Optional<double>
 getRThroughputFromItineraries(unsigned schedClass,
                               const InstrItineraryData *IID){
-  double Unknown = std::numeric_limits<double>::infinity();
-  double Throughput = Unknown;
+  Optional<double> Throughput;
 
   for (const InstrStage *IS = IID->beginStage(schedClass),
                         *E = IID->endStage(schedClass);
        IS != E; ++IS) {
-    unsigned Cycles = IS->getCycles();
-    if (!Cycles)
-      continue;
-    Throughput =
-        std::min(Throughput, countPopulation(IS->getUnits()) * 1.0 / Cycles);
+    if (IS->getCycles()) {
+      double Temp = countPopulation(IS->getUnits()) * 1.0 / IS->getCycles();
+      Throughput = Throughput.hasValue()
+                        ? std::min(Throughput.getValue(), Temp)
+                        : Temp;
+    }
   }
-  // We need reciprocal throughput that's why we return such value.
-  return 1 / Throughput;
+  if (Throughput.hasValue())
+    // We need reciprocal throughput that's why we return such value.
+    return 1 / Throughput.getValue();
+  return Throughput;
 }
 
 static Optional<double>
 getRThroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
                                   const TargetSubtargetInfo *STI,
                                   const MCSchedModel &SchedModel) {
-  double Unknown = std::numeric_limits<double>::infinity();
-  double Throughput = Unknown;
+  Optional<double> Throughput;
 
   for (const MCWriteProcResEntry *WPR = STI->getWriteProcResBegin(SCDesc),
                                  *WEnd = STI->getWriteProcResEnd(SCDesc);
        WPR != WEnd; ++WPR) {
-    unsigned Cycles = WPR->Cycles;
-    if (!Cycles)
-      return Optional<double>();
-
-    unsigned NumUnits =
-        SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
-    Throughput = std::min(Throughput, NumUnits * 1.0 / Cycles);
+    if (WPR->Cycles) {
+      unsigned NumUnits =
+          SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
+      double Temp = NumUnits * 1.0 / WPR->Cycles;
+      Throughput = Throughput.hasValue()
+                       ? std::min(Throughput.getValue(), Temp)
+                       : Temp;
+    }
   }
-  // We need reciprocal throughput that's why we return such value.
-  return 1 / Throughput;
+  if (Throughput.hasValue())
+    // We need reciprocal throughput that's why we return such value.
+    return 1 / Throughput.getValue();
+  return Throughput;
 }
 
 Optional<double>

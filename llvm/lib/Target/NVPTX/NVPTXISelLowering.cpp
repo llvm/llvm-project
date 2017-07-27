@@ -1260,7 +1260,7 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, unsigned retAlignment,
-    const ImmutableCallSite *CS) const {
+    ImmutableCallSite CS) const {
   auto PtrVT = getPointerTy(DL);
 
   bool isABI = (STI.getSmVersion() >= 20);
@@ -1294,7 +1294,7 @@ std::string NVPTXTargetLowering::getPrototype(
     } else if (isa<PointerType>(retTy)) {
       O << ".param .b" << PtrVT.getSizeInBits() << " _";
     } else if (retTy->isAggregateType() || retTy->isVectorTy() || retTy->isIntegerTy(128)) {
-      auto &DL = CS->getCalledFunction()->getParent()->getDataLayout();
+      auto &DL = CS.getCalledFunction()->getParent()->getDataLayout();
       O << ".param .align " << retAlignment << " .b8 _["
         << DL.getTypeAllocSize(retTy) << "]";
     } else {
@@ -1317,7 +1317,7 @@ std::string NVPTXTargetLowering::getPrototype(
     if (!Outs[OIdx].Flags.isByVal()) {
       if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
         unsigned align = 0;
-        const CallInst *CallI = cast<CallInst>(CS->getInstruction());
+        const CallInst *CallI = cast<CallInst>(CS.getInstruction());
         // +1 because index 0 is reserved for return type alignment
         if (!getAlign(*CallI, i + 1, align))
           align = DL.getABITypeAlignment(Ty);
@@ -1370,7 +1370,7 @@ std::string NVPTXTargetLowering::getPrototype(
 }
 
 unsigned NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
-                                                   const ImmutableCallSite *CS,
+                                                   ImmutableCallSite CS,
                                                    Type *Ty, unsigned Idx,
                                                    const DataLayout &DL) const {
   if (!CS) {
@@ -1379,12 +1379,12 @@ unsigned NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
   }
 
   unsigned Align = 0;
-  const Value *DirectCallee = CS->getCalledFunction();
+  const Value *DirectCallee = CS.getCalledFunction();
 
   if (!DirectCallee) {
     // We don't have a direct function symbol, but that may be because of
     // constant cast instructions in the call.
-    const Instruction *CalleeI = CS->getInstruction();
+    const Instruction *CalleeI = CS.getInstruction();
     assert(CalleeI && "Call target is not a function or derived value?");
 
     // With bitcast'd call targets, the instruction will be the call
@@ -1433,7 +1433,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall = CLI.IsTailCall;
   ArgListTy &Args = CLI.getArgs();
   Type *RetTy = CLI.RetTy;
-  ImmutableCallSite *CS = CLI.CS;
+  ImmutableCallSite CS = CLI.CS;
   const DataLayout &DL = DAG.getDataLayout();
 
   bool isABI = (STI.getSmVersion() >= 20);

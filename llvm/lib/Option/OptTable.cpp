@@ -235,7 +235,9 @@ OptTable::findByPrefix(StringRef Cur, unsigned short DisableFlags) const {
       continue;
 
     for (int I = 0; In.Prefixes[I]; I++) {
-      std::string S = std::string(In.Prefixes[I]) + std::string(In.Name);
+      std::string S = std::string(In.Prefixes[I]) + std::string(In.Name) + "\t";
+      if (In.HelpText)
+        S += In.HelpText;
       if (StringRef(S).startswith(Cur))
         Ret.push_back(S);
     }

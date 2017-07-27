@@ -23,7 +23,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ;
 ; KNL-32-LABEL: pr25080:
 ; KNL-32:       # BB#0: # %entry
-; KNL-32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm1
+; KNL-32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [8388607,8388607,8388607,8388607,8388607,8388607,8388607,8388607]
 ; KNL-32-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; KNL-32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
 ; KNL-32-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0

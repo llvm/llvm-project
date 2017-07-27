@@ -1,4 +1,4 @@
-//===--- BitTracker.h -------------------------------------------*- C++ -*-===//
+//===- BitTracker.h ---------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include <cassert>
 #include <cstdint>
@@ -27,8 +26,11 @@ namespace llvm {
 class ConstantInt;
 class MachineRegisterInfo;
 class MachineBasicBlock;
+class MachineFunction;
 class MachineInstr;
 class raw_ostream;
+class TargetRegisterClass;
+class TargetRegisterInfo;
 
 struct BitTracker {
   struct BitRef;
@@ -38,9 +40,8 @@ struct BitTracker {
   struct RegisterCell;
   struct MachineEvaluator;
 
-  typedef SetVector<const MachineBasicBlock *> BranchTargetList;
-
-  typedef std::map<unsigned, RegisterCell> CellMapType;
+  using BranchTargetList = SetVector<const MachineBasicBlock *>;
+  using CellMapType = std::map<unsigned, RegisterCell>;
 
   BitTracker(const MachineEvaluator &E, MachineFunction &F);
   ~BitTracker();
@@ -64,10 +65,10 @@ private:
   void visitUsesOf(unsigned Reg);
   void reset();
 
-  typedef std::pair<int,int> CFGEdge;
-  typedef std::set<CFGEdge> EdgeSetType;
-  typedef std::set<const MachineInstr *> InstrSetType;
-  typedef std::queue<CFGEdge> EdgeQueueType;
+  using CFGEdge = std::pair<int, int>;
+  using EdgeSetType = std::set<CFGEdge>;
+  using InstrSetType = std::set<const MachineInstr *>;
+  using EdgeQueueType = std::queue<CFGEdge>;
 
   EdgeSetType EdgeExec;         // Executable flow graph edges.
   InstrSetType InstrExec;       // Executable instructions.
@@ -301,7 +302,7 @@ private:
   // The DefaultBitN is here only to avoid frequent reallocation of the
   // memory in the vector.
   static const unsigned DefaultBitN = 32;
-  typedef SmallVector<BitValue, DefaultBitN> BitValueList;
+  using BitValueList = SmallVector<BitValue, DefaultBitN>;
   BitValueList Bits;
 
   friend raw_ostream &operator<<(raw_ostream &OS, const RegisterCell &RC);

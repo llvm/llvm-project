@@ -461,7 +461,7 @@ define <16 x float> @test_v16f32_mul_sub_one_x_y(<16 x float> %x, <16 x float> %
 ;
 ; AVX512-INFS-LABEL: test_v16f32_mul_sub_one_x_y:
 ; AVX512-INFS:       # BB#0:
-; AVX512-INFS-NEXT:    vbroadcastss {{.*}}(%rip), %zmm2
+; AVX512-INFS-NEXT:    vbroadcastss {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512-INFS-NEXT:    vsubps %zmm0, %zmm2, %zmm0
 ; AVX512-INFS-NEXT:    vmulps %zmm1, %zmm0, %zmm0
 ; AVX512-INFS-NEXT:    retq
@@ -508,7 +508,7 @@ define <8 x double> @test_v8f64_mul_y_sub_one_x(<8 x double> %x, <8 x double> %y
 ;
 ; AVX512-INFS-LABEL: test_v8f64_mul_y_sub_one_x:
 ; AVX512-INFS:       # BB#0:
-; AVX512-INFS-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm2
+; AVX512-INFS-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1]
 ; AVX512-INFS-NEXT:    vsubpd %zmm0, %zmm2, %zmm0
 ; AVX512-INFS-NEXT:    vmulpd %zmm0, %zmm1, %zmm0
 ; AVX512-INFS-NEXT:    retq
@@ -555,7 +555,7 @@ define <16 x float> @test_v16f32_mul_sub_negone_x_y(<16 x float> %x, <16 x float
 ;
 ; AVX512-INFS-LABEL: test_v16f32_mul_sub_negone_x_y:
 ; AVX512-INFS:       # BB#0:
-; AVX512-INFS-NEXT:    vbroadcastss {{.*}}(%rip), %zmm2
+; AVX512-INFS-NEXT:    vbroadcastss {{.*#+}} zmm2 = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
 ; AVX512-INFS-NEXT:    vsubps %zmm0, %zmm2, %zmm0
 ; AVX512-INFS-NEXT:    vmulps %zmm1, %zmm0, %zmm0
 ; AVX512-INFS-NEXT:    retq
@@ -602,7 +602,7 @@ define <8 x double> @test_v8f64_mul_y_sub_negone_x(<8 x double> %x, <8 x double>
 ;
 ; AVX512-INFS-LABEL: test_v8f64_mul_y_sub_negone_x:
 ; AVX512-INFS:       # BB#0:
-; AVX512-INFS-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm2
+; AVX512-INFS-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [-1,-1,-1,-1,-1,-1,-1,-1]
 ; AVX512-INFS-NEXT:    vsubpd %zmm0, %zmm2, %zmm0
 ; AVX512-INFS-NEXT:    vmulpd %zmm0, %zmm1, %zmm0
 ; AVX512-INFS-NEXT:    retq
@@ -841,7 +841,7 @@ define <16 x float> @test_v16f32_interp(<16 x float> %x, <16 x float> %y, <16 x 
 ;
 ; AVX512-INFS-LABEL: test_v16f32_interp:
 ; AVX512-INFS:       # BB#0:
-; AVX512-INFS-NEXT:    vbroadcastss {{.*}}(%rip), %zmm3
+; AVX512-INFS-NEXT:    vbroadcastss {{.*#+}} zmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512-INFS-NEXT:    vsubps %zmm2, %zmm3, %zmm3
 ; AVX512-INFS-NEXT:    vmulps %zmm3, %zmm1, %zmm1
 ; AVX512-INFS-NEXT:    vfmadd213ps %zmm1, %zmm2, %zmm0
@@ -900,7 +900,7 @@ define <8 x double> @test_v8f64_interp(<8 x double> %x, <8 x double> %y, <8 x do
 ;
 ; AVX512-INFS-LABEL: test_v8f64_interp:
 ; AVX512-INFS:       # BB#0:
-; AVX512-INFS-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm3
+; AVX512-INFS-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1,1,1,1,1,1,1,1]
 ; AVX512-INFS-NEXT:    vsubpd %zmm2, %zmm3, %zmm3
 ; AVX512-INFS-NEXT:    vmulpd %zmm3, %zmm1, %zmm1
 ; AVX512-INFS-NEXT:    vfmadd213pd %zmm1, %zmm2, %zmm0

@@ -18,10 +18,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -484,10 +484,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilder<> &B,
     uint64_t LenTrue = GetStringLength(SI->getTrueValue(), CharSize);
     uint64_t LenFalse = GetStringLength(SI->getFalseValue(), CharSize);
     if (LenTrue && LenFalse) {
-      Function *Caller = CI->getParent()->getParent();
-      emitOptimizationRemark(CI->getContext(), "simplify-libcalls", *Caller,
-                             SI->getDebugLoc(),
-                             "folded strlen(select) to select of constants");
+      ORE.emit(OptimizationRemark("instcombine", "simplify-libcalls", CI)
+               << "folded strlen(select) to select of constants");
       return B.CreateSelect(SI->getCondition(),
                             ConstantInt::get(CI->getType(), LenTrue - 1),
                             ConstantInt::get(CI->getType(), LenFalse - 1));
@@ -2228,9 +2226,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
 
 LibCallSimplifier::LibCallSimplifier(
     const DataLayout &DL, const TargetLibraryInfo *TLI,
+    OptimizationRemarkEmitter &ORE,
     function_ref<void(Instruction *, Value *)> Replacer)
-    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), UnsafeFPShrink(false),
-      Replacer(Replacer) {}
+    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), ORE(ORE),
+      UnsafeFPShrink(false), Replacer(Replacer) {}
 
 void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
   // Indirect through the replacer used in this instance.

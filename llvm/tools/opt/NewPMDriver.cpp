@@ -94,6 +94,9 @@ static cl::opt<PGOKind> PGOKindFlag(
                           "Use sampled profile to guide PGO.")));
 static cl::opt<std::string> ProfileFile(
     "profile-file", cl::desc("Path to the profile."), cl::Hidden);
+static cl::opt<bool> DebugInfoForProfiling(
+    "new-pm-debug-info-for-profiling", cl::init(false), cl::Hidden,
+    cl::desc("Emit special debug info to enable PGO profile generation."));
 /// @}}
 
 template <typename PassManagerT>
@@ -179,7 +182,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       P = PGOOptions("", "", ProfileFile, false);
       break;
     case NoPGO:
-      P = None;      
+      if (DebugInfoForProfiling)
+        P = PGOOptions("", "", "", false, true);
+      else
+        P = None;
   }
   PassBuilder PB(TM, P);
   registerEPCallbacks(PB, VerifyEachPass, DebugPM);
