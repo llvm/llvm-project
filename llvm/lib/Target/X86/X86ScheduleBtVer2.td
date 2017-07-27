@@ -462,5 +462,16 @@ def WriteVSQRTYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
 }
 def : InstRW<[WriteVSQRTYPSLd], (instregex "VSQRTPSYm")>;
 
+def WriteJVZEROALL: SchedWriteRes<[]> {
+  let Latency = 90;
+  let NumMicroOps = 73;
+}
+def : InstRW<[WriteJVZEROALL], (instregex "VZEROALL")>;
+
+def WriteJVZEROUPPER: SchedWriteRes<[]> {
+  let Latency = 46;
+  let NumMicroOps = 37;
+}
+def : InstRW<[WriteJVZEROUPPER], (instregex "VZEROUPPER")>;
 } // SchedModel
 

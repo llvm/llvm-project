@@ -98,7 +98,7 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM,
 }
 }
 
-unsigned zero_reg = 0;
+const unsigned zero_reg = 0;
 
 #define GET_GLOBALISEL_IMPL
 #include "ARMGenGlobalISel.inc"

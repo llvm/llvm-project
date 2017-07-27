@@ -16,6 +16,7 @@ class ConcurrentTwoWatchpointsOneBreakpoint(ConcurrentEventsBase):
     @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
+    @expectedFlakeyLinux
     def test(self):
         """Test two threads that trigger a watchpoint and one breakpoint thread. """
         self.build(dictionary=self.getBuildFlags())

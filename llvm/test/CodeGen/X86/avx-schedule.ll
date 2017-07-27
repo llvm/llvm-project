@@ -2850,7 +2850,7 @@ define void @test_zeroall() {
 ;
 ; BTVER2-LABEL: test_zeroall:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vzeroall
+; BTVER2-NEXT:    vzeroall # sched: [90:?]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_zeroall:
@@ -2875,7 +2875,7 @@ define void @test_zeroupper() {
 ;
 ; BTVER2-LABEL: test_zeroupper:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vzeroupper
+; BTVER2-NEXT:    vzeroupper # sched: [46:?]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_zeroupper:

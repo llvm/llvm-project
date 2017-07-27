@@ -11,6 +11,7 @@
 #include "Linux.h"
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
+#include "Arch/PPC.h"
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "CommonArgs.h"
@@ -695,22 +696,28 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     else
       CmdArgs.push_back("--64");
     break;
-  case llvm::Triple::ppc:
+  case llvm::Triple::ppc: {
     CmdArgs.push_back("-a32");
     CmdArgs.push_back("-mppc");
-    CmdArgs.push_back("-many");
+    CmdArgs.push_back(
+      ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
     break;
-  case llvm::Triple::ppc64:
+  }
+  case llvm::Triple::ppc64: {
     CmdArgs.push_back("-a64");
     CmdArgs.push_back("-mppc64");
-    CmdArgs.push_back("-many");
+    CmdArgs.push_back(
+      ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
     break;
-  case llvm::Triple::ppc64le:
+  }
+  case llvm::Triple::ppc64le: {
     CmdArgs.push_back("-a64");
     CmdArgs.push_back("-mppc64");
-    CmdArgs.push_back("-many");
     CmdArgs.push_back("-mlittle-endian");
+    CmdArgs.push_back(
+      ppc::getPPCAsmModeForCPU(getCPUName(Args, getToolChain().getTriple())));
     break;
+  }
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
