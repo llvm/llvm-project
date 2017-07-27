@@ -29,17 +29,19 @@
 # BEFORE:       50:       00 01 00 fd     str     d0, [x8]
 # BEFORE:       54:       00 01 80 3d     str     q0, [x8]
 # BEFORE:       58:       00 05 40 f9     ldr     x0, [x8, #8]
-# BEFORE:       5c:       e0 03 1f 2a     mov      w0, wzr
-# BEFORE:       60:       fe 07 41 f8     ldr     x30, [sp], #16
-# BEFORE:       64:       c0 03 5f d6     ret
-# BEFORE:       68:       08 00 00 00     <unknown>
-# BEFORE:       6c:       00 00 00 00     <unknown>
+# BEFORE:       5c:       20 1a 01 b0     adrp    x0, #36982784
+# BEFORE:       60:       00 fc 4f f9     ldr     x0, [x0, #8184]
+# BEFORE:       64:       e0 03 1f 2a     mov      w0, wzr
+# BEFORE:       68:       fe 07 41 f8     ldr     x30, [sp], #16
+# BEFORE:       6c:       c0 03 5f d6     ret
+# BEFORE:       70:       08 00 00 00     <unknown>
+# BEFORE:       74:       00 00 00 00     <unknown>
 
 # AFTER: Disassembly of section .text:
 # AFTER:  140002000:      fe 0f 1f f8     str     x30, [sp, #-16]!
 # AFTER:  140002004:      e0 ff ff f0     adrp    x0, #-4096
 # AFTER:  140002008:      00 18 00 91     add     x0, x0, #6
-# AFTER:  14000200c:      19 00 00 94     bl      #100
+# AFTER:  14000200c:      1b 00 00 94     bl      #108
 # AFTER:  140002010:      00 21 40 39     ldrb    w0, [x8, #8]
 # AFTER:  140002014:      00 11 40 79     ldrh    w0, [x8, #8]
 # AFTER:  140002018:      00 09 40 b9     ldr     w0, [x8, #8]
@@ -59,14 +61,16 @@
 # AFTER:  140002050:      00 09 00 fd     str     d0, [x8, #16]
 # AFTER:  140002054:      00 05 80 3d     str     q0, [x8, #16]
 # AFTER:  140002058:      00 09 40 f9     ldr     x0, [x8, #16]
-# AFTER:  14000205c:      e0 03 1f 2a     mov      w0, wzr
-# AFTER:  140002060:      fe 07 41 f8     ldr     x30, [sp], #16
-# AFTER:  140002064:      c0 03 5f d6     ret
-# AFTER:  140002068:      10 10 00 40     <unknown>
-# AFTER:  14000206c:      01 00 00 00     <unknown>
-# AFTER:  140002070:      10 00 00 b0     adrp    x16, #4096
-# AFTER:  140002074:      10 1e 40 f9     ldr     x16, [x16, #56]
-# AFTER:  140002078:      00 02 1f d6     br      x16
+# AFTER:  14000205c:      00 00 00 b0     adrp    x0, #4096
+# AFTER:  140002060:      00 fc 47 f9     ldr     x0, [x0, #4088]
+# AFTER:  140002064:      e0 03 1f 2a     mov      w0, wzr
+# AFTER:  140002068:      fe 07 41 f8     ldr     x30, [sp], #16
+# AFTER:  14000206c:      c0 03 5f d6     ret
+# AFTER:  140002070:      10 10 00 40     <unknown>
+# AFTER:  140002074:      01 00 00 00     <unknown>
+# AFTER:  140002078:      10 00 00 b0     adrp    x16, #4096
+# AFTER:  14000207c:      10 1e 40 f9     ldr     x16, [x16, #56]
+# AFTER:  140002080:      00 02 1f d6     br      x16
 
 --- !COFF
 header:
@@ -76,7 +80,7 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F90001003900010079000100B9000100F90001403D0001407D000140BD000140FD0001C03D0001003D0001007D000100BD000100FD0001803D000540F9E0031F2AFE0741F8C0035FD60800000000000000
+    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F90001003900010079000100B9000100F90001403D0001407D000140BD000140FD0001C03D0001003D0001007D000100BD000100FD0001803D000540F9201A01B000FC4FF9E0031F2AFE0741F8C0035FD60800000000000000
     Relocations:
       - VirtualAddress:  4
         SymbolName:      .Lstr
@@ -144,7 +148,13 @@ sections:
       - VirtualAddress:  88
         SymbolName:      .Lglobal
         Type:            7
-      - VirtualAddress:  104
+      - VirtualAddress:  92
+        SymbolName:      .Lglobal16
+        Type:            4
+      - VirtualAddress:  96
+        SymbolName:      .Lglobal0
+        Type:            7
+      - VirtualAddress:  112
         SymbolName:      .Lglobal
         Type:            14
   - Name:            .data
@@ -204,6 +214,12 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_STATIC
   - Name:            .Lglobal16
     Value:           16
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .Lglobal0
+    Value:           0
     SectionNumber:   4
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL

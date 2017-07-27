@@ -337,13 +337,13 @@ TemporaryFile createDefaultXml() {
        << "      </requestedPrivileges>\n"
        << "    </security>\n"
        << "  </trustInfo>\n";
-    if (!Config->ManifestDependency.empty()) {
-      OS << "  <dependency>\n"
-         << "    <dependentAssembly>\n"
-         << "      <assemblyIdentity " << Config->ManifestDependency << " />\n"
-         << "    </dependentAssembly>\n"
-         << "  </dependency>\n";
-    }
+  }
+  if (!Config->ManifestDependency.empty()) {
+    OS << "  <dependency>\n"
+       << "    <dependentAssembly>\n"
+       << "      <assemblyIdentity " << Config->ManifestDependency << " />\n"
+       << "    </dependentAssembly>\n"
+       << "  </dependency>\n";
   }
   OS << "</assembly>\n";
   OS.close();

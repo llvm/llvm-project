@@ -230,3 +230,12 @@ class HelpCommandTestCase(TestBase):
             'command alias --long-help "I am a very friendly alias" -- averyfriendlyalias help')
         self.expect("help averyfriendlyalias", matching=True,
                     substrs=['I am a very friendly alias'])
+    @no_debug_info_test
+    def test_help_format_output(self):
+        """Test that help output reaches TerminalWidth."""
+        self.runCmd(
+            'settings set term-width 108')
+        self.expect(
+            "help format",
+            matching=True,
+            substrs=['<format> -- One of the format names'])
