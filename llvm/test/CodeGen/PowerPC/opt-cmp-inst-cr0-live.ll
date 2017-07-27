@@ -54,3 +54,27 @@ foo:
 bar:
   ret i32 0
 }
+
+; This test case confirms that a record-form instruction is
+; generated even if the branch has a static branch hint.
+
+; CHECK-LABEL: fn4
+define i64 @fn4(i64 %a, i64 %b) {
+; CHECK: ADD8o
+; CHECK-NOT: CMP
+; CHECK: BCC 71
+
+entry:
+  %add = add nsw i64 %b, %a
+  %cmp = icmp eq i64 %add, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @exit(i32 signext 0) #3
+  unreachable
+
+if.end:
+  ret i64 %add
+}
+
+declare void @exit(i32 signext)

@@ -73,6 +73,36 @@ public:
   }
 };
 
+/// Spelling locations for the start and end of a source region.
+struct SpellingRegion {
+  /// The line where the region starts.
+  unsigned LineStart;
+
+  /// The column where the region starts.
+  unsigned ColumnStart;
+
+  /// The line where the region ends.
+  unsigned LineEnd;
+
+  /// The column where the region ends.
+  unsigned ColumnEnd;
+
+  SpellingRegion(SourceManager &SM, SourceLocation LocStart,
+                 SourceLocation LocEnd) {
+    LineStart = SM.getSpellingLineNumber(LocStart);
+    ColumnStart = SM.getSpellingColumnNumber(LocStart);
+    LineEnd = SM.getSpellingLineNumber(LocEnd);
+    ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
+  }
+
+  /// Check if the start and end locations appear in source order, i.e
+  /// top->bottom, left->right.
+  bool isInSourceOrder() const {
+    return (LineStart < LineEnd) ||
+           (LineStart == LineEnd && ColumnStart <= ColumnEnd);
+  }
+};
+
 /// \brief Provides the common functionality for the different
 /// coverage mapping region builders.
 class CoverageMappingBuilder {
@@ -241,12 +271,9 @@ public:
       auto CovFileID = getCoverageFileID(LocStart);
       if (!CovFileID)
         continue;
-      unsigned LineStart = SM.getSpellingLineNumber(LocStart);
-      unsigned ColumnStart = SM.getSpellingColumnNumber(LocStart);
-      unsigned LineEnd = SM.getSpellingLineNumber(LocEnd);
-      unsigned ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
+      SpellingRegion SR{SM, LocStart, LocEnd};
       auto Region = CounterMappingRegion::makeSkipped(
-          *CovFileID, LineStart, ColumnStart, LineEnd, ColumnEnd);
+          *CovFileID, SR.LineStart, SR.ColumnStart, SR.LineEnd, SR.ColumnEnd);
       // Make sure that we only collect the regions that are inside
       // the souce code of this function.
       if (Region.LineStart >= FileLineRanges[*CovFileID].first &&
@@ -284,16 +311,12 @@ public:
       if (Filter.count(std::make_pair(LocStart, LocEnd)))
         continue;
 
-      // Find the spilling locations for the mapping region.
-      unsigned LineStart = SM.getSpellingLineNumber(LocStart);
-      unsigned ColumnStart = SM.getSpellingColumnNumber(LocStart);
-      unsigned LineEnd = SM.getSpellingLineNumber(LocEnd);
-      unsigned ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
-
-      assert(LineStart <= LineEnd && "region start and end out of order");
+      // Find the spelling locations for the mapping region.
+      SpellingRegion SR{SM, LocStart, LocEnd};
+      assert(SR.isInSourceOrder() && "region start and end out of order");
       MappingRegions.push_back(CounterMappingRegion::makeRegion(
-          Region.getCounter(), *CovFileID, LineStart, ColumnStart, LineEnd,
-          ColumnEnd));
+          Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
+          SR.LineEnd, SR.ColumnEnd));
     }
   }
 
@@ -317,14 +340,11 @@ public:
              "region spans multiple files");
       Filter.insert(std::make_pair(ParentLoc, LocEnd));
 
-      unsigned LineStart = SM.getSpellingLineNumber(ParentLoc);
-      unsigned ColumnStart = SM.getSpellingColumnNumber(ParentLoc);
-      unsigned LineEnd = SM.getSpellingLineNumber(LocEnd);
-      unsigned ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
-
+      SpellingRegion SR{SM, ParentLoc, LocEnd};
+      assert(SR.isInSourceOrder() && "region start and end out of order");
       MappingRegions.push_back(CounterMappingRegion::makeExpansion(
-          *ParentFileID, *ExpandedFileID, LineStart, ColumnStart, LineEnd,
-          ColumnEnd));
+          *ParentFileID, *ExpandedFileID, SR.LineStart, SR.ColumnStart,
+          SR.LineEnd, SR.ColumnEnd));
     }
     return Filter;
   }
@@ -481,15 +501,17 @@ struct CounterCoverageMappingBuilder
 
   /// \brief Propagate counts through the children of \c S.
   Counter propagateCounts(Counter TopCount, const Stmt *S) {
-    size_t Index = pushRegion(TopCount, getStart(S), getEnd(S));
+    SourceLocation StartLoc = getStart(S);
+    SourceLocation EndLoc = getEnd(S);
+    size_t Index = pushRegion(TopCount, StartLoc, EndLoc);
     Visit(S);
     Counter ExitCount = getRegion().getCounter();
     popRegions(Index);
 
     // The statement may be spanned by an expansion. Make sure we handle a file
     // exit out of this expansion before moving to the next statement.
-    if (SM.isBeforeInTranslationUnit(getStart(S), S->getLocStart()))
-      MostRecentLocation = getEnd(S);
+    if (SM.isBeforeInTranslationUnit(StartLoc, S->getLocStart()))
+      MostRecentLocation = EndLoc;
 
     return ExitCount;
   }

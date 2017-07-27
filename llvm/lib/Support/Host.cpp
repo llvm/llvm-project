@@ -380,7 +380,9 @@ enum ProcessorFeatures {
   // Only one bit free left in the first 32 features.
   FEATURE_MOVBE = 32,
   FEATURE_ADX,
-  FEATURE_EM64T
+  FEATURE_EM64T,
+  FEATURE_CLFLUSHOPT,
+  FEATURE_SHA,
 };
 
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
@@ -714,7 +716,21 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 
     default: // Unknown family 6 CPU, try to guess.
       if (Features & (1 << FEATURE_AVX512F)) {
-        *Type = INTEL_KNL; // knl
+        if (Features & (1 << FEATURE_AVX512VL)) {
+          *Type = INTEL_COREI7;
+          *Subtype = INTEL_COREI7_SKYLAKE_AVX512;
+        } else {
+          *Type = INTEL_KNL; // knl
+        }
+        break;
+      }
+      if (Features2 & (1 << (FEATURE_CLFLUSHOPT - 32))) {
+        if (Features2 & (1 << (FEATURE_SHA - 32))) {
+          *Type = INTEL_GOLDMONT;
+        } else {
+          *Type = INTEL_COREI7;
+          *Subtype = INTEL_COREI7_SKYLAKE;
+        }
         break;
       }
       if (Features2 & (1 << (FEATURE_ADX - 32))) {
@@ -974,12 +990,16 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     Features2 |= 1 << (FEATURE_ADX - 32);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
     Features |= 1 << FEATURE_AVX512IFMA;
+  if (HasLeaf7 && ((EBX >> 23) & 1))
+    Features2 |= 1 << (FEATURE_CLFLUSHOPT - 32);
   if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
     Features |= 1 << FEATURE_AVX512PF;
   if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
     Features |= 1 << FEATURE_AVX512ER;
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
     Features |= 1 << FEATURE_AVX512CD;
+  if (HasLeaf7 && ((EBX >> 29) & 1))
+    Features2 |= 1 << (FEATURE_SHA - 32);
   if (HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save)
     Features |= 1 << FEATURE_AVX512BW;
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
