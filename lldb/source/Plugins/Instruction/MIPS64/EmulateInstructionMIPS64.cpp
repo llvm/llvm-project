@@ -801,7 +801,9 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
       // Branch instructions
       //----------------------------------------------------------------------
       {"BEQ", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BEQ rs,rt,offset"},
+      {"BEQ64", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BEQ rs,rt,offset"},
       {"BNE", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BNE rs,rt,offset"},
+      {"BNE64", &EmulateInstructionMIPS64::Emulate_BXX_3ops, "BNE rs,rt,offset"},
       {"BEQL", &EmulateInstructionMIPS64::Emulate_BXX_3ops,
        "BEQL rs,rt,offset"},
       {"BNEL", &EmulateInstructionMIPS64::Emulate_BXX_3ops,
@@ -814,6 +816,7 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
       {"BALC", &EmulateInstructionMIPS64::Emulate_BALC, "BALC offset"},
       {"BC", &EmulateInstructionMIPS64::Emulate_BC, "BC offset"},
       {"BGEZ", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BGEZ rs,offset"},
+      {"BGEZ64", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BGEZ rs,offset"},
       {"BLEZALC", &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,
        "BLEZALC rs,offset"},
       {"BGEZALC", &EmulateInstructionMIPS64::Emulate_Bcond_Link_C,
@@ -828,34 +831,61 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
        "BNEZALC rs,offset"},
       {"BEQC", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
        "BEQC rs,rt,offset"},
+      {"BEQC64", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
+       "BEQC rs,rt,offset"},
       {"BNEC", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
+       "BNEC rs,rt,offset"},
+      {"BNEC64", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
        "BNEC rs,rt,offset"},
       {"BLTC", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
        "BLTC rs,rt,offset"},
+      {"BLTC64", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
+       "BLTC rs,rt,offset"},
       {"BGEC", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
+       "BGEC rs,rt,offset"},
+      {"BGEC64", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
        "BGEC rs,rt,offset"},
       {"BLTUC", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
        "BLTUC rs,rt,offset"},
+      {"BLTUC64", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
+       "BLTUC rs,rt,offset"},
       {"BGEUC", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
+       "BGEUC rs,rt,offset"},
+      {"BGEUC64", &EmulateInstructionMIPS64::Emulate_BXX_3ops_C,
        "BGEUC rs,rt,offset"},
       {"BLTZC", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
        "BLTZC rt,offset"},
+      {"BLTZC64", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
+       "BLTZC rt,offset"},
       {"BLEZC", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
+       "BLEZC rt,offset"},
+      {"BLEZC64", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
        "BLEZC rt,offset"},
       {"BGEZC", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
        "BGEZC rt,offset"},
+      {"BGEZC64", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
+       "BGEZC rt,offset"},
       {"BGTZC", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
+       "BGTZC rt,offset"},
+      {"BGTZC64", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
        "BGTZC rt,offset"},
       {"BEQZC", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
        "BEQZC rt,offset"},
+      {"BEQZC64", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
+       "BEQZC rt,offset"},
       {"BNEZC", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
+       "BNEZC rt,offset"},
+      {"BNEZC64", &EmulateInstructionMIPS64::Emulate_BXX_2ops_C,
        "BNEZC rt,offset"},
       {"BGEZL", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BGEZL rt,offset"},
       {"BGTZ", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BGTZ rt,offset"},
+      {"BGTZ64", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BGTZ rt,offset"},
       {"BGTZL", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BGTZL rt,offset"},
       {"BLEZ", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BLEZ rt,offset"},
+      {"BLEZ64", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BLEZ rt,offset"},
       {"BLEZL", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BLEZL rt,offset"},
       {"BLTZ", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BLTZ rt,offset"},
+      {"BLTZ64", &EmulateInstructionMIPS64::Emulate_BXX_2ops, "BLTZ rt,offset"},
       {"BLTZAL", &EmulateInstructionMIPS64::Emulate_Bcond_Link,
        "BLTZAL rt,offset"},
       {"BLTZALL", &EmulateInstructionMIPS64::Emulate_Bcond_Link,
@@ -872,8 +902,11 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
       {"JALR64", &EmulateInstructionMIPS64::Emulate_JALR, "JALR target"},
       {"JALR_HB", &EmulateInstructionMIPS64::Emulate_JALR, "JALR.HB target"},
       {"JIALC", &EmulateInstructionMIPS64::Emulate_JIALC, "JIALC rt,offset"},
+      {"JIALC64", &EmulateInstructionMIPS64::Emulate_JIALC, "JIALC rt,offset"},
       {"JIC", &EmulateInstructionMIPS64::Emulate_JIC, "JIC rt,offset"},
+      {"JIC64", &EmulateInstructionMIPS64::Emulate_JIC, "JIC rt,offset"},
       {"JR", &EmulateInstructionMIPS64::Emulate_JR, "JR target"},
+      {"JR64", &EmulateInstructionMIPS64::Emulate_JR, "JR target"},
       {"JR_HB", &EmulateInstructionMIPS64::Emulate_JR, "JR.HB target"},
       {"BC1F", &EmulateInstructionMIPS64::Emulate_FP_branch, "BC1F cc, offset"},
       {"BC1T", &EmulateInstructionMIPS64::Emulate_FP_branch, "BC1T cc, offset"},
@@ -1338,12 +1371,14 @@ bool EmulateInstructionMIPS64::Emulate_BXX_3ops(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BEQ") || !strcasecmp(op_name, "BEQL")) {
+  if (!strcasecmp(op_name, "BEQ") || !strcasecmp(op_name, "BEQL") 
+       || !strcasecmp(op_name, "BEQ64") ) {
     if (rs_val == rt_val)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BNE") || !strcasecmp(op_name, "BNEL")) {
+  } else if (!strcasecmp(op_name, "BNE") || !strcasecmp(op_name, "BNEL")
+              || !strcasecmp(op_name, "BNE64")) {
     if (rs_val != rt_val)
       target = pc + offset;
     else
@@ -1563,22 +1598,26 @@ bool EmulateInstructionMIPS64::Emulate_BXX_2ops(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BLTZL") || !strcasecmp(op_name, "BLTZ")) {
+  if (!strcasecmp(op_name, "BLTZL") || !strcasecmp(op_name, "BLTZ")
+       || !strcasecmp(op_name, "BLTZ64")) {
     if (rs_val < 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BGEZL") || !strcasecmp(op_name, "BGEZ")) {
+  } else if (!strcasecmp(op_name, "BGEZL") || !strcasecmp(op_name, "BGEZ")
+              || !strcasecmp(op_name, "BGEZ64")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BGTZL") || !strcasecmp(op_name, "BGTZ")) {
+  } else if (!strcasecmp(op_name, "BGTZL") || !strcasecmp(op_name, "BGTZ")
+              || !strcasecmp(op_name, "BGTZ64")) {
     if (rs_val > 0)
       target = pc + offset;
     else
       target = pc + 8;
-  } else if (!strcasecmp(op_name, "BLEZL") || !strcasecmp(op_name, "BLEZ")) {
+  } else if (!strcasecmp(op_name, "BLEZL") || !strcasecmp(op_name, "BLEZ") 
+              || !strcasecmp(op_name, "BLEZ64")) {
     if (rs_val <= 0)
       target = pc + offset;
     else
@@ -1657,32 +1696,32 @@ bool EmulateInstructionMIPS64::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BEQC")) {
+  if (!strcasecmp(op_name, "BEQC") || !strcasecmp(op_name, "BEQC64")) {
     if (rs_val == rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BNEC")) {
+  } else if (!strcasecmp(op_name, "BNEC") || !strcasecmp(op_name, "BNEC64")) {
     if (rs_val != rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLTC")) {
+  } else if (!strcasecmp(op_name, "BLTC") || !strcasecmp(op_name, "BLTC64")) {
     if (rs_val < rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEC")) {
+  } else if (!strcasecmp(op_name, "BGEC64") || !strcasecmp(op_name, "BGEC")) {
     if (rs_val >= rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLTUC")) {
+  } else if (!strcasecmp(op_name, "BLTUC") || !strcasecmp(op_name, "BLTUC64")) {
     if (rs_val < rt_val)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEUC")) {
+  } else if (!strcasecmp(op_name, "BGEUC") || !strcasecmp(op_name, "BGEUC64")) {
     if ((uint32_t)rs_val >= (uint32_t)rt_val)
       target = pc + offset;
     else
@@ -1734,32 +1773,32 @@ bool EmulateInstructionMIPS64::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   if (!success)
     return false;
 
-  if (!strcasecmp(op_name, "BLTZC")) {
+  if (!strcasecmp(op_name, "BLTZC") || !strcasecmp(op_name, "BLTZC64")) {
     if (rs_val < 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BLEZC")) {
+  } else if (!strcasecmp(op_name, "BLEZC") || !strcasecmp(op_name, "BLEZC64")) {
     if (rs_val <= 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGEZC")) {
+  } else if (!strcasecmp(op_name, "BGEZC") || !strcasecmp(op_name, "BGEZC64")) {
     if (rs_val >= 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BGTZC")) {
+  } else if (!strcasecmp(op_name, "BGTZC") || !strcasecmp(op_name, "BGTZC64")) {
     if (rs_val > 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BEQZC")) {
+  } else if (!strcasecmp(op_name, "BEQZC") || !strcasecmp(op_name, "BEQZC64")) {
     if (rs_val == 0)
       target = pc + offset;
     else
       target = pc + 4;
-  } else if (!strcasecmp(op_name, "BNEZC")) {
+  } else if (!strcasecmp(op_name, "BNEZC") || !strcasecmp(op_name, "BNEZC64")) {
     if (rs_val != 0)
       target = pc + offset;
     else

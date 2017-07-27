@@ -283,13 +283,13 @@ public:
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
-  std::vector<PhdrEntry> createPhdrs();
+  std::vector<PhdrEntry *> createPhdrs();
   bool ignoreInterpSection();
 
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void assignAddresses();
-  void allocateHeaders(std::vector<PhdrEntry> &Phdrs);
+  void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
   void addSymbol(SymbolAssignment *Cmd);
   void processCommands(OutputSectionFactory &Factory);
 
