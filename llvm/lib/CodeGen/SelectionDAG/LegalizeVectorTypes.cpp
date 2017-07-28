@@ -2965,7 +2965,12 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
   else if (N.getOpcode() == ISD::SIGN_EXTEND)
     N = N.getOperand(0);
 
-  return (N.getOpcode() == ISD::SETCC);
+  if (isLogicalMaskOp(N.getOpcode()))
+    return isSETCCorConvertedSETCC(N.getOperand(0)) &&
+           isSETCCorConvertedSETCC(N.getOperand(1));
+
+  return (N.getOpcode() == ISD::SETCC ||
+          ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
 }
 #endif
 
@@ -2973,28 +2978,20 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
 // to ToMaskVT if needed with vector extension or truncation.
 SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
                                       EVT ToMaskVT) {
-  LLVMContext &Ctx = *DAG.getContext();
-
   // Currently a SETCC or a AND/OR/XOR with two SETCCs are handled.
-  unsigned InMaskOpc = InMask->getOpcode();
-
   // FIXME: This code seems to be too restrictive, we might consider
   // generalizing it or dropping it.
-  assert((InMaskOpc == ISD::SETCC ||
-          ISD::isBuildVectorOfConstantSDNodes(InMask.getNode()) ||
-          (isLogicalMaskOp(InMaskOpc) &&
-           isSETCCorConvertedSETCC(InMask->getOperand(0)) &&
-           isSETCCorConvertedSETCC(InMask->getOperand(1)))) &&
-         "Unexpected mask argument.");
+  assert(isSETCCorConvertedSETCC(InMask) && "Unexpected mask argument.");
 
   // Make a new Mask node, with a legal result VT.
   SmallVector<SDValue, 4> Ops;
   for (unsigned i = 0; i < InMask->getNumOperands(); ++i)
     Ops.push_back(InMask->getOperand(i));
-  SDValue Mask = DAG.getNode(InMaskOpc, SDLoc(InMask), MaskVT, Ops);
+  SDValue Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops);
 
   // If MaskVT has smaller or bigger elements than ToMaskVT, a vector sign
   // extend or truncate is needed.
+  LLVMContext &Ctx = *DAG.getContext();
   unsigned MaskScalarBits = MaskVT.getScalarSizeInBits();
   unsigned ToMaskScalBits = ToMaskVT.getScalarSizeInBits();
   if (MaskScalarBits < ToMaskScalBits) {
