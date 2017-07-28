@@ -1167,17 +1167,15 @@ public:
 
   /// Creates a SDDbgValue node.
   SDDbgValue *getDbgValue(MDNode *Var, MDNode *Expr, SDNode *N, unsigned R,
-                          bool IsIndirect, uint64_t Off, const DebugLoc &DL,
-                          unsigned O);
+                          bool IsIndirect, const DebugLoc &DL, unsigned O);
 
   /// Constant
   SDDbgValue *getConstantDbgValue(MDNode *Var, MDNode *Expr, const Value *C,
-                                  uint64_t Off, const DebugLoc &DL, unsigned O);
+                                  const DebugLoc &DL, unsigned O);
 
   /// FrameIndex
   SDDbgValue *getFrameIndexDbgValue(MDNode *Var, MDNode *Expr, unsigned FI,
-                                    uint64_t Off, const DebugLoc &DL,
-                                    unsigned O);
+                                    const DebugLoc &DL, unsigned O);
 
   /// Remove the specified node from the system. If any of its
   /// operands then becomes dead, remove them as well. Inform UpdateListener
