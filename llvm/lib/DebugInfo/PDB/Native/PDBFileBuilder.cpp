@@ -212,8 +212,11 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   if (Publics) {
     auto PS = WritableMappedBlockStream::createIndexedStream(
         Layout, Buffer, Publics->getStreamIndex(), Allocator);
+    auto PRS = WritableMappedBlockStream::createIndexedStream(
+        Layout, Buffer, Publics->getRecordStreamIdx(), Allocator);
     BinaryStreamWriter PSWriter(*PS);
-    if (auto EC = Publics->commit(PSWriter))
+    BinaryStreamWriter RecWriter(*PRS);
+    if (auto EC = Publics->commit(PSWriter, RecWriter))
       return EC;
   }
 

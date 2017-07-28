@@ -1127,30 +1127,30 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
 }
 
 static MachO::CPUSubTypeARM getMachOSubTypeFromArch(StringRef Arch) {
-  unsigned AK = ARM::parseArch(Arch);
+  ARM::ArchKind AK = ARM::parseArch(Arch);
   switch (AK) {
   default:
     return MachO::CPU_SUBTYPE_ARM_V7;
-  case ARM::AK_ARMV4T:
+  case ARM::ArchKind::ARMV4T:
     return MachO::CPU_SUBTYPE_ARM_V4T;
-  case ARM::AK_ARMV5T:
-  case ARM::AK_ARMV5TE:
-  case ARM::AK_ARMV5TEJ:
+  case ARM::ArchKind::ARMV5T:
+  case ARM::ArchKind::ARMV5TE:
+  case ARM::ArchKind::ARMV5TEJ:
     return MachO::CPU_SUBTYPE_ARM_V5;
-  case ARM::AK_ARMV6:
-  case ARM::AK_ARMV6K:
+  case ARM::ArchKind::ARMV6:
+  case ARM::ArchKind::ARMV6K:
     return MachO::CPU_SUBTYPE_ARM_V6;
-  case ARM::AK_ARMV7A:
+  case ARM::ArchKind::ARMV7A:
     return MachO::CPU_SUBTYPE_ARM_V7;
-  case ARM::AK_ARMV7S:
+  case ARM::ArchKind::ARMV7S:
     return MachO::CPU_SUBTYPE_ARM_V7S;
-  case ARM::AK_ARMV7K:
+  case ARM::ArchKind::ARMV7K:
     return MachO::CPU_SUBTYPE_ARM_V7K;
-  case ARM::AK_ARMV6M:
+  case ARM::ArchKind::ARMV6M:
     return MachO::CPU_SUBTYPE_ARM_V6M;
-  case ARM::AK_ARMV7M:
+  case ARM::ArchKind::ARMV7M:
     return MachO::CPU_SUBTYPE_ARM_V7M;
-  case ARM::AK_ARMV7EM:
+  case ARM::ArchKind::ARMV7EM:
     return MachO::CPU_SUBTYPE_ARM_V7EM;
   }
 }

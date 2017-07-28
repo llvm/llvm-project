@@ -7,7 +7,8 @@
 # RUN:   -dbi-stream -ipi-stream -tpi-stream %t.pdb | FileCheck %s
 
 # RUN: llvm-pdbutil dump -modules -section-map -section-contribs \
-# RUN:   -types -ids -type-extras -id-extras %t.pdb | FileCheck -check-prefix RAW %s
+# RUN:   -publics -public-extras -types -ids -type-extras -id-extras %t.pdb \
+# RUN:   | FileCheck -check-prefix RAW %s
 
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
@@ -171,6 +172,22 @@ RAW-NEXT:            0x1003: `C:\vs14\VC\BIN\amd64\cl.exe`
 RAW-NEXT:            0x100A: `ret42-sub.c`
 RAW-NEXT:            0x1008: `D:\b\vc140.pdb`
 RAW-NEXT:            0x1006: ` -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X`
+RAW:                            Public Symbols
+RAW-NEXT:============================================================
+RAW-NEXT:      20 | S_PUB32 [size = 20] `main`
+RAW-NEXT:           flags = function, addr = 0002:0000
+RAW-NEXT:       0 | S_PUB32 [size = 20] `foo`
+RAW-NEXT:           flags = function, addr = 0002:0016
+RAW-NOT: S_PUB32
+RAW-NEXT:  Hash Records
+RAW-NEXT:    off = 21, refcnt = 1
+RAW-NEXT:    off = 1, refcnt = 1
+RAW-NEXT:  Hash Buckets
+RAW-NEXT:    0x00000000
+RAW-NEXT:    0x0000000c
+RAW-NEXT:  Address Map
+RAW-NEXT:    off = 20
+RAW-NEXT:    off = 0
 RAW:                        Section Contributions
 RAW-NEXT: ============================================================
 RAW-NEXT:   SC  | mod = 0, 65535:1288, size = 14, data crc = 0, reloc crc = 0

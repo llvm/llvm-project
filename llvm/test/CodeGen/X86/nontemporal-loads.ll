@@ -1886,7 +1886,7 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
 ;
 ; AVX2-LABEL: test_masked_v16i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm4, %ymm4, %ymm4
+; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm3, %ymm3
 ; AVX2-NEXT:    vpcmpeqd %ymm5, %ymm5, %ymm5
 ; AVX2-NEXT:    vpxor %ymm5, %ymm3, %ymm3

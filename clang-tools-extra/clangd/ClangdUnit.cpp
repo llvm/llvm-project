@@ -370,15 +370,11 @@ public:
         assert(CCS->getTypedText());
         Item.kind = getKind(Result.CursorKind);
         // Priority is a 16-bit integer, hence at most 5 digits.
-        // Since identifiers with higher priority need to come first,
-        // we subtract the priority from 99999.
-        // For example, the sort text of the identifier 'a' with priority 35
-        // is 99964a.
         assert(CCS->getPriority() < 99999 && "Expecting code completion result "
                                              "priority to have at most "
                                              "5-digits");
-        llvm::raw_string_ostream(Item.sortText) << llvm::format(
-            "%05d%s", 99999 - CCS->getPriority(), CCS->getTypedText());
+        llvm::raw_string_ostream(Item.sortText)
+            << llvm::format("%05d%s", CCS->getPriority(), CCS->getTypedText());
         Item.insertText = Item.filterText = CCS->getTypedText();
         if (CCS->getBriefComment())
           Item.documentation = CCS->getBriefComment();

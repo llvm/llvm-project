@@ -135,6 +135,7 @@ int __kmp_avail_proc = 0;
 size_t __kmp_sys_min_stksize = KMP_MIN_STKSIZE;
 int __kmp_sys_max_nth = KMP_MAX_NTH;
 int __kmp_max_nth = 0;
+int __kmp_cg_max_nth = 0;
 int __kmp_threads_capacity = 0;
 int __kmp_dflt_team_nth = 0;
 int __kmp_dflt_team_nth_ub = 0;

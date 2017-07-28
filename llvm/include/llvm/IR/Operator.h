@@ -472,6 +472,12 @@ public:
     return true;
   }
 
+  unsigned countNonConstantIndices() const {
+    return count_if(make_range(idx_begin(), idx_end()), [](const Use& use) {
+        return !isa<ConstantInt>(*use);
+      });
+  }
+
   /// \brief Accumulate the constant address offset of this GEP if possible.
   ///
   /// This routine accepts an APInt into which it will accumulate the constant

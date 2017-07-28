@@ -163,23 +163,12 @@ static bool isRoot(const Instruction *Inst) {
   return false;
 }
 
-/// Return true if @p ComputingInst is used after SCoP @p S. It must not be
-/// removed in order for its value to be available after the SCoP.
-static bool isEscaping(Scop *S, Instruction *ComputingInst) {
-  for (Use &Use : ComputingInst->uses()) {
-    BasicBlock *UserBB = getUseBlock(Use);
-    if (!S->contains(UserBB))
-      return true;
-  }
-  return false;
-}
-
 /// Return true for MemoryAccesses that cannot be removed because it represents
 /// an llvm::Value that is used after the SCoP.
 static bool isEscaping(MemoryAccess *MA) {
   assert(MA->isOriginalValueKind());
-  return isEscaping(MA->getStatement()->getParent(),
-                    cast<Instruction>(MA->getAccessValue()));
+  Scop *S = MA->getStatement()->getParent();
+  return S->isEscaping(cast<Instruction>(MA->getAccessValue()));
 }
 
 /// Add non-removable virtual instructions in @p Stmt to @p RootInsts.

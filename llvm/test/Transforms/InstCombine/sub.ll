@@ -989,3 +989,84 @@ define i32 @test57(i32 %A, i32 %B) {
   %X = add i32 %B, %A
   %Y = sub i32 %A, %X
   ret i32 %Y                                                                                                                                                                                                                                             }
+
+@dummy_global1 = external global i8*
+@dummy_global2 = external global i8*
+
+define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test58(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[J:%.*]], 4200
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[I:%.*]], 4200
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2:%.*]] [[TMP1:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+; Note the reassociate pass and another instcombine pass will further optimize this to
+; "%sub = i64 %i, %j, ret i64 %sub"
+;
+; gep1 and gep2 have only one use
+  %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
+  %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %j
+  %cast1 = ptrtoint i8* %gep1 to i64
+  %cast2 = ptrtoint i8* %gep2 to i64
+  %sub = sub i64 %cast1, %cast2
+  ret i64 %sub
+}
+
+define i64 @test59([100 x [100 x i8]]* %foo, i64 %i) {
+; CHECK-LABEL: @test59(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 0
+; CHECK-NEXT:    store i8* [[GEP1]], i8** @dummy_global1, align 8
+; CHECK-NEXT:    store i8* [[GEP2]], i8** @dummy_global2, align 8
+; CHECK-NEXT:    ret i64 %i
+;
+; gep1 and gep2 have more than one uses
+  %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
+  %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 0
+  %cast1 = ptrtoint i8* %gep1 to i64
+  %cast2 = ptrtoint i8* %gep2 to i64
+  %sub = sub i64 %cast1, %cast2
+  store i8* %gep1, i8** @dummy_global1
+  store i8* %gep2, i8** @dummy_global2
+  ret i64 %sub
+}
+
+define i64 @test60([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 %j, i64 %i
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 0
+; CHECK-NEXT:    [[CAST1:%.*]] = ptrtoint i8* [[GEP1]] to i64
+; CHECK-NEXT:    [[CAST2:%.*]] = ptrtoint i8* [[GEP2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[CAST1]], [[CAST2]]
+; CHECK-NEXT:    store i8* [[GEP1]], i8** @dummy_global1, align 8
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+; gep1 has a non-constant index and more than one uses. Shouldn't duplicate the arithmetic.
+  %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 %j, i64 %i
+  %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 0
+  %cast1 = ptrtoint i8* %gep1 to i64
+  %cast2 = ptrtoint i8* %gep2 to i64
+  %sub = sub i64 %cast1, %cast2
+  store i8* %gep1, i8** @dummy_global1
+  ret i64 %sub
+}
+
+define i64 @test61([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test61(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 %j, i64 %i
+; CHECK-NEXT:    [[CAST1:%.*]] = ptrtoint i8* [[GEP1]] to i64
+; CHECK-NEXT:    [[CAST2:%.*]] = ptrtoint i8* [[GEP2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[CAST1]], [[CAST2]]
+; CHECK-NEXT:    store i8* [[GEP2]], i8** @dummy_global2, align 8
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+; gep2 has a non-constant index and more than one uses. Shouldn't duplicate the arithmetic.
+  %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 0
+  %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 %j, i64 %i
+  %cast1 = ptrtoint i8* %gep1 to i64
+  %cast2 = ptrtoint i8* %gep2 to i64
+  %sub = sub i64 %cast1, %cast2
+  store i8* %gep2, i8** @dummy_global2
+  ret i64 %sub
+}

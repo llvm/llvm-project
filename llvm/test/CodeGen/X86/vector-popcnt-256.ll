@@ -37,7 +37,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -93,7 +93,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; AVX2-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]

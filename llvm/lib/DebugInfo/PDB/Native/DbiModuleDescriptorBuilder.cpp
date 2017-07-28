@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
+#include "llvm/DebugInfo/PDB/Native/PublicsStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryItemStream.h"
@@ -25,16 +26,6 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
-
-namespace llvm {
-template <> struct BinaryItemTraits<CVSymbol> {
-  static size_t length(const CVSymbol &Item) { return Item.RecordData.size(); }
-
-  static ArrayRef<uint8_t> bytes(const CVSymbol &Item) {
-    return Item.RecordData;
-  }
-};
-}
 
 static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize,
                                             uint32_t C13Size) {

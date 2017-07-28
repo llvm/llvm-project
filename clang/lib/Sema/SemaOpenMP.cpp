@@ -10486,23 +10486,26 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
         }
         OpsOffs.push_back({RHS, OOK});
       } else {
-        // OpenMP  [2.11.1.1, Restrictions, p.3]
-        //  A variable that is part of another variable (such as a field of a
-        //  structure) but is not an array element or an array section cannot
-        //  appear  in a depend clause.
-        auto *DE = dyn_cast<DeclRefExpr>(SimpleExpr);
         auto *ASE = dyn_cast<ArraySubscriptExpr>(SimpleExpr);
-        auto *OASE = dyn_cast<OMPArraySectionExpr>(SimpleExpr);
         if (!RefExpr->IgnoreParenImpCasts()->isLValue() ||
-            (!ASE && !DE && !OASE) || (DE && !isa<VarDecl>(DE->getDecl())) ||
             (ASE &&
              !ASE->getBase()
                   ->getType()
                   .getNonReferenceType()
                   ->isPointerType() &&
              !ASE->getBase()->getType().getNonReferenceType()->isArrayType())) {
-          Diag(ELoc, diag::err_omp_expected_var_name_member_expr_or_array_item)
-              << 0 << RefExpr->getSourceRange();
+          Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
+              << RefExpr->getSourceRange();
+          continue;
+        }
+        bool Suppress = getDiagnostics().getSuppressAllDiagnostics();
+        getDiagnostics().setSuppressAllDiagnostics(/*Val=*/true);
+        ExprResult Res = CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf,
+                                              RefExpr->IgnoreParenImpCasts());
+        getDiagnostics().setSuppressAllDiagnostics(Suppress);
+        if (!Res.isUsable() && !isa<OMPArraySectionExpr>(SimpleExpr)) {
+          Diag(ELoc, diag::err_omp_expected_addressable_lvalue_or_array_item)
+              << RefExpr->getSourceRange();
           continue;
         }
       }

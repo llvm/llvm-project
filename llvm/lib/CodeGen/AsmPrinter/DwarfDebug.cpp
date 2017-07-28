@@ -692,7 +692,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
   // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
   for (auto *CUNode : MMI->getModule()->debug_compile_units())
-    if (CUNode->getDWOId() && isEmptyCU(CUNode))
+    if (CUNode->getDWOId())
       getOrCreateDwarfCompileUnit(CUNode);
 
   // Compute DIE offsets and sizes.

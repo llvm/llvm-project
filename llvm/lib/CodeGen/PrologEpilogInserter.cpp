@@ -963,7 +963,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   MachineOptimizationRemarkAnalysis R(
       DEBUG_TYPE, "StackSize", Fn.getFunction()->getSubprogram(), &Fn.front());
-  R << ore::NV("NumStackBytes", static_cast<unsigned>(StackSize))
+  R << ore::NV("NumStackBytes", StackSize)
     << " stack bytes in function";
   ORE->emit(R);
 }

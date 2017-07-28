@@ -794,6 +794,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SanitizeCoverageNoPrune = Args.hasArg(OPT_fsanitize_coverage_no_prune);
   Opts.SanitizeCoverageInline8bitCounters =
       Args.hasArg(OPT_fsanitize_coverage_inline_8bit_counters);
+  Opts.SanitizeCoveragePCTable = Args.hasArg(OPT_fsanitize_coverage_pc_table);
   Opts.SanitizeMemoryTrackOrigins =
       getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
   Opts.SanitizeMemoryUseAfterDtor =

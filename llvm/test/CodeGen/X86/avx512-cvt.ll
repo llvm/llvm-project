@@ -1232,7 +1232,7 @@ define <8 x float> @sitofp_8i1_float(<8 x float> %a) {
 ; NOVLDQ-LABEL: sitofp_8i1_float:
 ; NOVLDQ:       # BB#0:
 ; NOVLDQ-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; NOVLDQ-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; NOVLDQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; NOVLDQ-NEXT:    vcmpltps %zmm0, %zmm1, %k1
 ; NOVLDQ-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; NOVLDQ-NEXT:    vpmovqd %zmm0, %ymm0
@@ -1259,7 +1259,7 @@ define <8 x float> @sitofp_8i1_float(<8 x float> %a) {
 ; AVX512DQ-LABEL: sitofp_8i1_float:
 ; AVX512DQ:       # BB#0:
 ; AVX512DQ-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; AVX512DQ-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vcmpltps %zmm0, %zmm1, %k0
 ; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -1301,7 +1301,7 @@ define <4 x float> @sitofp_4i1_float(<4 x float> %a) {
 define <4 x double> @sitofp_4i1_double(<4 x double> %a) {
 ; NOVL-LABEL: sitofp_4i1_double:
 ; NOVL:       # BB#0:
-; NOVL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; NOVL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
 ; NOVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
@@ -1459,7 +1459,7 @@ define <8 x float> @uitofp_8i1_float(<8 x i32> %a) {
 ; NOVL-LABEL: uitofp_8i1_float:
 ; NOVL:       # BB#0:
 ; NOVL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; NOVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; NOVL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
@@ -1483,7 +1483,7 @@ define <8 x double> @uitofp_8i1_double(<8 x i32> %a) {
 ; NOVL-LABEL: uitofp_8i1_double:
 ; NOVL:       # BB#0:
 ; NOVL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; NOVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; NOVL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; NOVL-NEXT:    vpmovqd %zmm0, %ymm0

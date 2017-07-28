@@ -787,9 +787,13 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # command. Note that we take care to return regular strings in
             # Python 2, to avoid other code having to differentiate between the
             # str and unicode types.
+            #
+            # Opening the file in binary mode prevented Windows \r newline
+            # characters from being converted to Unix \n newlines, so manually
+            # strip those from the yielded lines.
             keyword,ln = match.groups()
             yield (line_number, to_string(keyword.decode('utf-8')),
-                   to_string(ln.decode('utf-8')))
+                   to_string(ln.decode('utf-8').rstrip('\r')))
     finally:
         f.close()
 

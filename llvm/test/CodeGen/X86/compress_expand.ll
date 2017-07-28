@@ -346,7 +346,7 @@ define <16 x double> @test16(double* %base, <16 x double> %src0, <16 x i32> %tri
 ;
 ; KNL-LABEL: test16:
 ; KNL:       # BB#0:
-; KNL-NEXT:    vpxor %ymm3, %ymm3, %ymm3
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vextracti64x4 $1, %zmm2, %ymm4
 ; KNL-NEXT:    vpcmpeqd %zmm3, %zmm4, %k1
 ; KNL-NEXT:    vpcmpeqd %zmm3, %zmm2, %k2
