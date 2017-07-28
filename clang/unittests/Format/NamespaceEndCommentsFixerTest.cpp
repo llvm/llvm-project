@@ -509,6 +509,134 @@ TEST_F(NamespaceEndCommentsFixerTest,
                                     "}\n"));
 }
 
+TEST_F(NamespaceEndCommentsFixerTest, AddEndCommentForNamespacesAroundMacros) {
+  // Conditional blocks around are fine
+  EXPECT_EQ("namespace A {\n"
+            "#if 1\n"
+            "int i;\n"
+            "#endif\n"
+            "}// namespace A",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "#if 1\n"
+                                    "int i;\n"
+                                    "#endif\n"
+                                    "}"));
+  EXPECT_EQ("#if 1\n"
+            "#endif\n"
+            "namespace A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A",
+            fixNamespaceEndComments("#if 1\n"
+                                    "#endif\n"
+                                    "namespace A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ("namespace A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A\n"
+            "#if 1\n"
+            "#endif",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}\n"
+                                    "#if 1\n"
+                                    "#endif"));
+  EXPECT_EQ("#if 1\n"
+            "namespace A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A\n"
+            "#endif",
+            fixNamespaceEndComments("#if 1\n"
+                                    "namespace A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}\n"
+                                    "#endif"));
+
+  // Macro definition has no impact
+  EXPECT_EQ("namespace A {\n"
+            "#define FOO\n"
+            "int i;\n"
+            "}// namespace A",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "#define FOO\n"
+                                    "int i;\n"
+                                    "}"));
+  EXPECT_EQ("#define FOO\n"
+            "namespace A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A",
+            fixNamespaceEndComments("#define FOO\n"
+                                    "namespace A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ("namespace A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A\n"
+            "#define FOO\n",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}\n"
+                                    "#define FOO\n"));
+
+  // No replacement if open & close in different conditional blocks
+  EXPECT_EQ("#if 1\n"
+            "namespace A {\n"
+            "#endif\n"
+            "int i;\n"
+            "int j;\n"
+            "#if 1\n"
+            "}\n"
+            "#endif",
+            fixNamespaceEndComments("#if 1\n"
+                                    "namespace A {\n"
+                                    "#endif\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "#if 1\n"
+                                    "}\n"
+                                    "#endif"));
+  EXPECT_EQ("#ifdef A\n"
+            "namespace A {\n"
+            "#endif\n"
+            "int i;\n"
+            "int j;\n"
+            "#ifdef B\n"
+            "}\n"
+            "#endif",
+            fixNamespaceEndComments("#ifdef A\n"
+                                    "namespace A {\n"
+                                    "#endif\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "#ifdef B\n"
+                                    "}\n"
+                                    "#endif"));
+
+  // No replacement inside unreachable conditional block
+  EXPECT_EQ("#if 0\n"
+            "namespace A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}\n"
+            "#endif",
+            fixNamespaceEndComments("#if 0\n"
+                                    "namespace A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}\n"
+                                    "#endif"));
+}
+
 TEST_F(NamespaceEndCommentsFixerTest,
        DoesNotAddEndCommentForNamespacesInMacroDeclarations) {
   EXPECT_EQ("#ifdef 1\n"

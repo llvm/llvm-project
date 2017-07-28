@@ -64,4 +64,8 @@ void f() {
 #ifdef _M_ARM
   __dmb(_ARM_BARRIER_ISHST);
 #endif
+
+#ifdef _M_ARM64
+  __dmb(_ARM64_BARRIER_SY);
+#endif
 }

@@ -90,8 +90,7 @@ bool AArch64TargetInfo::setABI(const std::string &Name) {
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return Name == "generic" ||
-         llvm::AArch64::parseCPUArch(Name) !=
-             static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID);
+         llvm::AArch64::parseCPUArch(Name) != llvm::AArch64::ArchKind::INVALID;
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
@@ -178,10 +177,10 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   switch (ArchKind) {
   default:
     break;
-  case llvm::AArch64::ArchKind::AK_ARMV8_1A:
+  case llvm::AArch64::ArchKind::ARMV8_1A:
     getTargetDefinesARMV81A(Opts, Builder);
     break;
-  case llvm::AArch64::ArchKind::AK_ARMV8_2A:
+  case llvm::AArch64::ArchKind::ARMV8_2A:
     getTargetDefinesARMV82A(Opts, Builder);
     break;
   }
@@ -211,7 +210,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Crypto = 0;
   Unaligned = 1;
   HasFullFP16 = 0;
-  ArchKind = llvm::AArch64::ArchKind::AK_ARMV8A;
+  ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
     if (Feature == "+neon")
@@ -225,9 +224,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+strict-align")
       Unaligned = 0;
     if (Feature == "+v8.1a")
-      ArchKind = llvm::AArch64::ArchKind::AK_ARMV8_1A;
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
     if (Feature == "+v8.2a")
-      ArchKind = llvm::AArch64::ArchKind::AK_ARMV8_2A;
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
     if (Feature == "+fullfp16")
       HasFullFP16 = 1;
   }

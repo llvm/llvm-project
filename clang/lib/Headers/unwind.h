@@ -177,8 +177,7 @@ typedef _Unwind_Personality_Fn __personality_routine;
 typedef _Unwind_Reason_Code (*_Unwind_Trace_Fn)(struct _Unwind_Context *,
                                                 void *);
 
-#if defined(__arm__) && !defined(__APPLE__)
-
+#if defined(__arm__) && !(defined(__USING_SJLJ_EXCEPTIONS__) || defined(__ARM_DWARF_EH___))
 typedef enum {
   _UVRSC_CORE = 0,        /* integer register */
   _UVRSC_VFP = 1,         /* vfp */
@@ -200,14 +199,12 @@ typedef enum {
   _UVRSR_FAILED = 2
 } _Unwind_VRS_Result;
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__ARM_DWARF_EH__)
 typedef uint32_t _Unwind_State;
 #define _US_VIRTUAL_UNWIND_FRAME  ((_Unwind_State)0)
 #define _US_UNWIND_FRAME_STARTING ((_Unwind_State)1)
 #define _US_UNWIND_FRAME_RESUME   ((_Unwind_State)2)
 #define _US_ACTION_MASK           ((_Unwind_State)3)
 #define _US_FORCE_UNWIND          ((_Unwind_State)8)
-#endif
 
 _Unwind_VRS_Result _Unwind_VRS_Get(struct _Unwind_Context *__context,
   _Unwind_VRS_RegClass __regclass,

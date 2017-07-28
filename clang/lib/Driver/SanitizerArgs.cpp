@@ -55,8 +55,9 @@ enum CoverageFeature {
   Coverage8bitCounters = 1 << 8,  // Deprecated.
   CoverageTracePC = 1 << 9,
   CoverageTracePCGuard = 1 << 10,
-  CoverageInline8bitCounters = 1 << 12,
   CoverageNoPrune = 1 << 11,
+  CoverageInline8bitCounters = 1 << 12,
+  CoveragePCTable = 1 << 13,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -663,6 +664,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc"),
     std::make_pair(CoverageTracePCGuard, "-fsanitize-coverage-trace-pc-guard"),
     std::make_pair(CoverageInline8bitCounters, "-fsanitize-coverage-inline-8bit-counters"),
+    std::make_pair(CoveragePCTable, "-fsanitize-coverage-pc-table"),
     std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
@@ -825,6 +827,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A) {
         .Case("trace-pc-guard", CoverageTracePCGuard)
         .Case("no-prune", CoverageNoPrune)
         .Case("inline-8bit-counters", CoverageInline8bitCounters)
+        .Case("pc-table", CoveragePCTable)
         .Default(0);
     if (F == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

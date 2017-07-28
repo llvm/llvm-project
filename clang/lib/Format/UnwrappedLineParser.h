@@ -160,6 +160,11 @@ private:
 
   bool isOnNewLine(const FormatToken &FormatTok);
 
+  // Compute hash of the current preprocessor branch.
+  // This is used to identify the different branches, and thus track if block
+  // open and close in the same branch.
+  size_t computePPHash() const;
+
   // FIXME: We are constantly running into bugs where Line.Level is incorrectly
   // subtracted from beyond 0. Introduce a method to subtract from Line.Level
   // and use that everywhere in the Parser.
@@ -178,7 +183,7 @@ private:
 
   // Preprocessor directives are parsed out-of-order from other unwrapped lines.
   // Thus, we need to keep a list of preprocessor directives to be reported
-  // after an unwarpped line that has been started was finished.
+  // after an unwrapped line that has been started was finished.
   SmallVector<UnwrappedLine, 4> PreprocessorDirectives;
 
   // New unwrapped lines are added via CurrentLines.
@@ -211,8 +216,14 @@ private:
     PP_Unreachable  // #if 0 or a conditional preprocessor block inside #if 0
   };
 
+  struct PPBranch {
+    PPBranch(PPBranchKind Kind, size_t Line) : Kind(Kind), Line(Line) {}
+    PPBranchKind Kind;
+    size_t Line;
+  };
+
   // Keeps a stack of currently active preprocessor branching directives.
-  SmallVector<PPBranchKind, 16> PPStack;
+  SmallVector<PPBranch, 16> PPStack;
 
   // The \c UnwrappedLineParser re-parses the code for each combination
   // of preprocessor branches that can be taken.
