@@ -4013,8 +4013,8 @@ example:
 
     !foo = !{!4, !3}
 
-Metadata can be used as function arguments. Here ``llvm.dbg.value``
-function is using two metadata arguments:
+Metadata can be used as function arguments. Here the ``llvm.dbg.value``
+intrinsic is using three metadata arguments:
 
 .. code-block:: llvm
 
