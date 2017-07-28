@@ -27,7 +27,7 @@ class REPLNSStringTestCase (lldbrepl.REPLTest):
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
     def testREPL(self):
-        REPLTest.testREPL(self)
+        lldbrepl.REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('import Foundation', timeout=20)
