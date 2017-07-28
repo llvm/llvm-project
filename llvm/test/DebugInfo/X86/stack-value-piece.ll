@@ -48,8 +48,8 @@ target triple = "x86_64-apple-macosx10.12.0"
 ; Function Attrs: nounwind readnone ssp uwtable
 define i64 @i(i32 %i) local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !18, metadata !22), !dbg !21
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !23), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 %i, metadata !18, metadata !22), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !18, metadata !23), !dbg !21
   %retval.sroa.0.0.insert.ext = zext i32 %i to i64, !dbg !24
   ret i64 %retval.sroa.0.0.insert.ext, !dbg !24
 }
@@ -60,15 +60,15 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: nounwind readnone ssp uwtable
 define <2 x float> @f(float %f) local_unnamed_addr #0 !dbg !25 {
 entry:
-  tail call void @llvm.dbg.value(metadata float %f, i64 0, metadata !36, metadata !22), !dbg !38
-  tail call void @llvm.dbg.value(metadata float 0.000000e+00, i64 0, metadata !36, metadata !23), !dbg !38
+  tail call void @llvm.dbg.value(metadata float %f, metadata !36, metadata !22), !dbg !38
+  tail call void @llvm.dbg.value(metadata float 0.000000e+00, metadata !36, metadata !23), !dbg !38
   %retval.sroa.0.0.vec.insert = insertelement <2 x float> undef, float %f, i32 0, !dbg !39
   %retval.sroa.0.4.vec.insert = insertelement <2 x float> %retval.sroa.0.0.vec.insert, float 0.000000e+00, i32 1, !dbg !39
   ret <2 x float> %retval.sroa.0.4.vec.insert, !dbg !40
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone ssp uwtable }
 attributes #1 = { nounwind readnone }

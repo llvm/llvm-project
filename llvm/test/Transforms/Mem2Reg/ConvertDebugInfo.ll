@@ -8,8 +8,8 @@ entry:
   %0 = alloca double                              ; <double*> [#uses=2]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
   call void @llvm.dbg.declare(metadata i32* %i_addr, metadata !0, metadata !DIExpression()), !dbg !8
-; CHECK: call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata ![[IVAR:[0-9]*]], metadata {{.*}})
-; CHECK: call void @llvm.dbg.value(metadata double %j, i64 0, metadata ![[JVAR:[0-9]*]], metadata {{.*}})
+; CHECK: call void @llvm.dbg.value(metadata i32 %i, metadata ![[IVAR:[0-9]*]], metadata {{.*}})
+; CHECK: call void @llvm.dbg.value(metadata double %j, metadata ![[JVAR:[0-9]*]], metadata {{.*}})
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i"
 ; CHECK: ![[JVAR]] = !DILocalVariable(name: "j"
   store i32 %i, i32* %i_addr

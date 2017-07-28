@@ -28,23 +28,23 @@ entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*, !dbg !14
   call void @llvm.lifetime.start(i64 4, i8* %0) #4, !dbg !14
-  tail call void @llvm.dbg.value(metadata i32 23, i64 0, metadata !9, metadata !15), !dbg !16
+  tail call void @llvm.dbg.value(metadata i32 23, metadata !9, metadata !15), !dbg !16
   store i32 23, i32* %x, align 4, !dbg !16, !tbaa !17
-  tail call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !9, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  tail call void @llvm.dbg.value(metadata i32* %x, metadata !9, metadata !DIExpression(DW_OP_deref)), !dbg !16
   call void @g(i32* nonnull %x) #4, !dbg !21
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !9, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  call void @llvm.dbg.value(metadata i32* %x, metadata !9, metadata !DIExpression(DW_OP_deref)), !dbg !16
   %1 = load i32, i32* %x, align 4, !dbg !22, !tbaa !17
   %cmp = icmp eq i32 %1, 42, !dbg !24
   br i1 %cmp, label %if.then, label %if.end, !dbg !25
 
 if.then:                                          ; preds = %entry
-  call void @llvm.dbg.value(metadata i32 43, i64 0, metadata !9, metadata !15), !dbg !16
+  call void @llvm.dbg.value(metadata i32 43, metadata !9, metadata !15), !dbg !16
   store i32 43, i32* %x, align 4, !dbg !26, !tbaa !17
   br label %if.end, !dbg !26
 
 if.end:                                           ; preds = %if.then, %entry
   %2 = phi i32 [ 43, %if.then ], [ %1, %entry ], !dbg !27
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !9, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  call void @llvm.dbg.value(metadata i32* %x, metadata !9, metadata !DIExpression(DW_OP_deref)), !dbg !16
   call void @llvm.lifetime.end(i64 4, i8* %0) #4, !dbg !28
   ret i32 %2, !dbg !29
 }
@@ -58,7 +58,7 @@ declare void @g(i32*) #4
 declare void @llvm.lifetime.end(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { argmemonly nounwind }

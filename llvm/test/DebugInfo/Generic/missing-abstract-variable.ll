@@ -99,7 +99,7 @@
 ; Function Attrs: uwtable
 define void @_Z1bv() #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i1 false, i64 0, metadata !25, metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i1 false, metadata !25, metadata !DIExpression()), !dbg !27
   tail call void @_Z1fi(i32 0), !dbg !28
   ret void, !dbg !29
 }
@@ -107,13 +107,13 @@ entry:
 ; Function Attrs: uwtable
 define void @_Z1ab(i1 zeroext %u) #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata i1 %u, i64 0, metadata !13, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata i1 %u, i64 0, metadata !31, metadata !DIExpression()), !dbg !33
+  tail call void @llvm.dbg.value(metadata i1 %u, metadata !13, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i1 %u, metadata !31, metadata !DIExpression()), !dbg !33
   br i1 %u, label %if.then.i, label %_Z1xb.exit, !dbg !34
 
 if.then.i:                                        ; preds = %entry
   %0 = load i32, i32* @t, align 4, !dbg !35, !tbaa !36
-  tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !40, metadata !DIExpression()), !dbg !35
+  tail call void @llvm.dbg.value(metadata i32 %0, metadata !40, metadata !DIExpression()), !dbg !35
   tail call void @_Z1fi(i32 %0), !dbg !41
   br label %_Z1xb.exit, !dbg !42
 
@@ -125,7 +125,7 @@ _Z1xb.exit:                                       ; preds = %entry, %if.then.i
 declare void @_Z1fi(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

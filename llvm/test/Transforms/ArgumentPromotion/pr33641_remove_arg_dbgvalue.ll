@@ -13,11 +13,11 @@ define void @foo() {
 }
 
 define internal void @bar(%p_t %p)  {
-  call void @llvm.dbg.value(metadata %p_t %p, i64 0, metadata !4, metadata !5), !dbg !6
+  call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6
   ret void
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}

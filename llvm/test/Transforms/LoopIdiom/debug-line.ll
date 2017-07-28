@@ -5,8 +5,8 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 define void @foo(double* nocapture %a) nounwind ssp !dbg !0 {
 entry:
-  tail call void @llvm.dbg.value(metadata double* %a, i64 0, metadata !5, metadata !DIExpression()), !dbg !8
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !10, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata double* %a, metadata !5, metadata !DIExpression()), !dbg !8
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !DIExpression()), !dbg !14
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
@@ -19,13 +19,13 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.body, label %for.end, !dbg !14
 
 for.end:                                          ; preds = %for.body
-  tail call void @llvm.dbg.value(metadata !{null}, i64 0, metadata !10, metadata !DIExpression()), !dbg !16
+  tail call void @llvm.dbg.value(metadata !{null}, metadata !10, metadata !DIExpression()), !dbg !16
   ret void, !dbg !17
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.module.flags = !{!19}
 !llvm.dbg.cu = !{!2}

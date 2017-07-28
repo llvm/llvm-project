@@ -25,7 +25,7 @@ BB2:                                              ; preds = %BB1
 
 BB3:                                              ; preds = %BB2
   %6 = getelementptr inbounds [5 x %0], [5 x %0]* @0, i32 0, i32 %0, !dbg !6
-  call void @llvm.dbg.value(metadata %0* %6, i64 0, metadata !7, metadata !{}), !dbg !12
+  call void @llvm.dbg.value(metadata %0* %6, metadata !7, metadata !{}), !dbg !12
   %7 = icmp eq %0* %6, null, !dbg !13
   br i1 %7, label %BB5, label %BB4, !dbg !13
 
@@ -37,7 +37,7 @@ BB5:                                              ; preds = %BB3, %BB2, %BB1, %E
   ret void, !dbg !14
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
 
