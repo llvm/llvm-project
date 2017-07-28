@@ -183,7 +183,7 @@ if(LLDB_BUILD_FRAMEWORK)
   file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
   list(REMOVE_ITEM root_public_headers ${root_private_headers})
 
-  foreach(header ${public_headers} ${root_public_headers})
+  foreach(header ${public_headers} ${root_public_headers} ${LLDB_SOURCE_DIR}/include/lldb/Utility/SharingPtr.h)
     get_filename_component(basename ${header} NAME)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename}
                        DEPENDS ${header}

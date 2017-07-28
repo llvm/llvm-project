@@ -169,7 +169,7 @@ if(IOS)
                  COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
   endif()
 
-  add_lldb_tool(debugserver-nonui INCLUDE_IN_FRAMEWORK
+  add_lldb_tool(debugserver-nonui
     debugserver.cpp
 
     LINK_LIBS
