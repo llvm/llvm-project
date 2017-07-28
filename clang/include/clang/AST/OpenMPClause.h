@@ -2212,6 +2212,17 @@ class OMPInReductionClause final
     return llvm::makeArrayRef(getRHSExprs().end(), varlist_size());
   }
 
+  /// Set list of helper reduction taskgroup descriptors.
+  void setTaskgroupDescriptors(ArrayRef<Expr *> ReductionOps);
+
+  ///  Get the list of helper reduction taskgroup descriptors.
+  MutableArrayRef<Expr *> getTaskgroupDescriptors() {
+    return MutableArrayRef<Expr *>(getReductionOps().end(), varlist_size());
+  }
+  ArrayRef<const Expr *> getTaskgroupDescriptors() const {
+    return llvm::makeArrayRef(getReductionOps().end(), varlist_size());
+  }
+
 public:
   /// Creates clause with a list of variables \a VL.
   ///
@@ -2241,6 +2252,8 @@ public:
   /// \endcode
   /// Required for proper codegen of final reduction operation performed by the
   /// reduction clause.
+  /// \param TaskgroupDescriptors List of helper taskgroup descriptors for
+  /// corresponding items in parent taskgroup task_reduction clause.
   /// \param PreInit Statement that must be executed before entering the OpenMP
   /// region with this clause.
   /// \param PostUpdate Expression that must be executed after exit from the
@@ -2252,7 +2265,8 @@ public:
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, ArrayRef<Expr *> Privates,
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
-         ArrayRef<Expr *> ReductionOps, Stmt *PreInit, Expr *PostUpdate);
+         ArrayRef<Expr *> ReductionOps, ArrayRef<Expr *> TaskgroupDescriptors,
+         Stmt *PreInit, Expr *PostUpdate);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -2299,6 +2313,14 @@ public:
   helper_expr_range reduction_ops() {
     return helper_expr_range(getReductionOps().begin(),
                              getReductionOps().end());
+  }
+  helper_expr_const_range taskgroup_descriptors() const {
+    return helper_expr_const_range(getTaskgroupDescriptors().begin(),
+                                   getTaskgroupDescriptors().end());
+  }
+  helper_expr_range taskgroup_descriptors() {
+    return helper_expr_range(getTaskgroupDescriptors().begin(),
+                             getTaskgroupDescriptors().end());
   }
 
   child_range children() {

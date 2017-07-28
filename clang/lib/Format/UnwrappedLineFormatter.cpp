@@ -382,7 +382,9 @@ private:
       return 0;
     unsigned NumStmts = 0;
     unsigned Length = 0;
+    bool EndsWithComment = false;
     bool InPPDirective = I[0]->InPPDirective;
+    const unsigned Level = I[0]->Level;
     for (; NumStmts < 3; ++NumStmts) {
       if (I + 1 + NumStmts == E)
         break;
@@ -392,9 +394,26 @@ private:
       if (Line->First->isOneOf(tok::kw_case, tok::kw_default, tok::r_brace))
         break;
       if (Line->First->isOneOf(tok::kw_if, tok::kw_for, tok::kw_switch,
-                               tok::kw_while, tok::comment) ||
-          Line->Last->is(tok::comment))
+                               tok::kw_while) ||
+          EndsWithComment)
         return 0;
+      if (Line->First->is(tok::comment)) {
+        if (Level != Line->Level)
+          return 0;
+        SmallVectorImpl<AnnotatedLine *>::const_iterator J = I + 2 + NumStmts;
+        for (; J != E; ++J) {
+          Line = *J;
+          if (Line->InPPDirective != InPPDirective)
+            break;
+          if (Line->First->isOneOf(tok::kw_case, tok::kw_default, tok::r_brace))
+            break;
+          if (Line->First->isNot(tok::comment) || Level != Line->Level)
+            return 0;
+        }
+        break;
+      }
+      if (Line->Last->is(tok::comment))
+        EndsWithComment = true;
       Length += I[1 + NumStmts]->Last->TotalLength + 1; // 1 for the space.
     }
     if (NumStmts == 0 || NumStmts == 3 || Length > Limit)

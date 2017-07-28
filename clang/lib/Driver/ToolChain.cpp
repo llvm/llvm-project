@@ -505,7 +505,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
             : tools::arm::getARMTargetCPU(MCPU, MArch, Triple);
     StringRef Suffix =
       tools::arm::getLLVMArchSuffixForARM(CPU, MArch, Triple);
-    bool IsMProfile = ARM::parseArchProfile(Suffix) == ARM::PK_M;
+    bool IsMProfile = ARM::parseArchProfile(Suffix) == ARM::ProfileKind::M;
     bool ThumbDefault = IsMProfile || (ARM::parseArchVersion(Suffix) == 7 && 
                                        getTriple().isOSBinFormatMachO());
     // FIXME: this is invalid for WindowsCE
