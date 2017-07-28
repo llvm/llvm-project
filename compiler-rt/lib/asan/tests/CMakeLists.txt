@@ -125,20 +125,14 @@ append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_UNITTEST_NOINST_LIBS)
 # NDK r10 requires -latomic almost always.
 append_list_if(ANDROID atomic ASAN_UNITTEST_NOINST_LIBS)
 
-# Compile source for the given architecture, using compiler
-# options in ${ARGN}, and add it to the object list.
 macro(asan_compile obj_list source arch kind)
-  get_filename_component(basename ${source} NAME)
-  set(output_obj "${CMAKE_CFG_RESOLVED_INTDIR}${obj_list}.${basename}.${arch}${kind}.o")
-  get_target_flags_for_arch(${arch} TARGET_CFLAGS)
-  set(COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_BLACKLIST_FILE})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND COMPILE_DEPS gtest asan)
-  endif()
-  clang_compile(${output_obj} ${source}
-                CFLAGS ${ARGN} ${TARGET_CFLAGS}
-                DEPS ${COMPILE_DEPS})
-  list(APPEND ${obj_list} ${output_obj})
+  cmake_parse_arguments(ASAN_TEST "" "" "CFLAGS" ${ARGN})
+  sanitizer_test_compile(${obj_list} ${source} ${arch}
+    KIND ${kind}
+    COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_BLACKLIST_FILE}
+    DEPS gtest asan
+    CFLAGS ${ASAN_TEST_CFLAGS}
+  )
 endmacro()
 
 # Link ASan unit test for a given architecture from a set
@@ -200,17 +194,17 @@ set(ASAN_BENCHMARKS_SOURCES
   asan_benchmarks_test.cc)
 
 # Adds ASan unit tests and benchmarks for architecture.
-macro(add_asan_tests_for_arch_and_kind arch kind)
+macro(add_asan_tests_for_arch_and_kind arch kind cflags)
   # Instrumented tests.
   set(ASAN_INST_TEST_OBJECTS)
   foreach(src ${ASAN_INST_TEST_SOURCES})
     asan_compile(ASAN_INST_TEST_OBJECTS ${src} ${arch} ${kind}
-      ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${ARGN})
+                 CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags})
   endforeach()
   if (APPLE)
     # Add Mac-specific helper.
     asan_compile(ASAN_INST_TEST_OBJECTS asan_mac_test_helpers.mm ${arch} ${kind}
-                 ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -ObjC ${ARGN})
+                 CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -ObjC ${cflags})
   endif()
 
   if (MSVC)
@@ -219,7 +213,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
     set(ASAN_INST_DYNAMIC_TEST_OBJECTS)
     foreach(src ${ASAN_INST_TEST_SOURCES})
       asan_compile(ASAN_INST_DYNAMIC_TEST_OBJECTS ${src} ${arch} ${kind}
-        ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL ${ARGN})
+        CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL ${cflags})
     endforeach()
     # Clang links the static CRT by default. Override that to use the dynamic
     # CRT.
@@ -276,7 +270,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   set(ASAN_NOINST_TEST_OBJECTS)
   foreach(src ${ASAN_NOINST_TEST_SOURCES})
     asan_compile(ASAN_NOINST_TEST_OBJECTS ${src} ${arch} ${kind}
-                 ${ASAN_UNITTEST_COMMON_CFLAGS} ${ARGN})
+                CFLAGS ${ASAN_UNITTEST_COMMON_CFLAGS} ${cflags})
   endforeach()
   add_asan_test(AsanUnitTests "Asan-${arch}${kind}-Noinst-Test"
                 ${arch} ${kind} SUBDIR "default"
@@ -288,7 +282,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   set(ASAN_BENCHMARKS_OBJECTS)
   foreach(src ${ASAN_BENCHMARKS_SOURCES})
     asan_compile(ASAN_BENCHMARKS_OBJECTS ${src} ${arch} ${kind}
-                 ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${ARGN})
+                CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags})
   endforeach()
   add_asan_test(AsanBenchmarks "Asan-${arch}${kind}-Benchmark"
                 ${arch} ${kind} SUBDIR "default"
@@ -302,9 +296,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
     darwin_filter_host_archs(ASAN_SUPPORTED_ARCH ASAN_TEST_ARCH)
   endif()
   foreach(arch ${ASAN_TEST_ARCH})
-    add_asan_tests_for_arch_and_kind(${arch} "-inline")
+    add_asan_tests_for_arch_and_kind(${arch} "-inline" "")
     add_asan_tests_for_arch_and_kind(${arch} "-with-calls"
-      -mllvm -asan-instrumentation-with-call-threshold=0)
+      "-mllvm;-asan-instrumentation-with-call-threshold=0")
   endforeach()
 endif()
 

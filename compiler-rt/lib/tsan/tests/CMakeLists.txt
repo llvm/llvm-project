@@ -23,21 +23,6 @@ foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 
-# tsan_compile(obj_list, source, arch, {headers})
-macro(tsan_compile obj_list source arch)
-  get_filename_component(basename ${source} NAME)
-  set(output_obj "${basename}.${arch}.o")
-  get_target_flags_for_arch(${arch} TARGET_CFLAGS)
-  set(COMPILE_DEPS ${TSAN_RTL_HEADERS} ${ARGN})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND COMPILE_DEPS gtest tsan)
-  endif()
-  clang_compile(${output_obj} ${source}
-          CFLAGS ${TSAN_UNITTEST_CFLAGS} ${TARGET_CFLAGS}
-          DEPS ${COMPILE_DEPS})
-  list(APPEND ${obj_list} ${output_obj})
-endmacro()
-
 macro(add_tsan_unittest testname)
   set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
   if(APPLE)
@@ -48,7 +33,12 @@ macro(add_tsan_unittest testname)
       cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
       set(TEST_OBJECTS)
       foreach(SOURCE ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE})
-        tsan_compile(TEST_OBJECTS ${SOURCE} ${arch} ${TEST_HEADERS})
+        sanitizer_test_compile(
+          TEST_OBJECTS ${SOURCE} ${arch}
+          COMPILE_DEPS ${TSAN_RTL_HEADERS} ${TEST_HEADERS}
+          DEPS gtest tsan
+          CFLAGS ${TSAN_UNITTEST_CFLAGS}
+          )
       endforeach()
       get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
       set(TEST_DEPS ${TEST_OBJECTS})

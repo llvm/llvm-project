@@ -24,6 +24,41 @@ function(translate_msvc_cflags out_flags msvc_flags)
   set(${out_flags} "${clang_flags}" PARENT_SCOPE)
 endfunction()
 
+# Compile a sanitizer test with a freshly built clang
+# for a given architecture, adding the result to the object list.
+#  - obj_list: output list of objects, populated by path
+#              of the generated object file.
+#  - source:   source file of a test.
+#  - arch:     architecture to compile for.
+# sanitizer_test_compile(<obj_list> <source> <arch>
+#                        KIND <custom namespace>
+#                        COMPILE_DEPS <list of compile-time dependencies>
+#                        DEPS <list of dependencies>
+#                        CFLAGS <list of flags>
+# )
+macro(sanitizer_test_compile obj_list source arch)
+  cmake_parse_arguments(TEST
+      "" "" "KIND;COMPILE_DEPS;DEPS;CFLAGS" ${ARGN})
+  get_filename_component(basename ${source} NAME)
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_obj
+      "${CMAKE_CFG_INTDIR}/${obj_list}.${basename}.${arch}${TEST_KIND}.o")
+  else()
+    set(output_obj "${obj_list}.${basename}.${arch}${TEST_KIND}.o")
+  endif()
+
+  # Write out architecture-specific flags into TARGET_CFLAGS variable.
+  get_target_flags_for_arch(${arch} TARGET_CFLAGS)
+  set(COMPILE_DEPS ${TEST_COMPILE_DEPS})
+  if(NOT COMPILER_RT_STANDALONE_BUILD)
+    list(APPEND COMPILE_DEPS ${TEST_DEPS})
+  endif()
+  clang_compile(${output_obj} ${source}
+                CFLAGS ${TEST_CFLAGS} ${TARGET_CFLAGS}
+                DEPS ${TEST_COMPILE_DEPS})
+  list(APPEND ${obj_list} ${output_obj})
+endmacro()
+
 # Compile a source into an object file with COMPILER_RT_TEST_COMPILER using
 # a provided compile flags and dependenices.
 # clang_compile(<object> <source>

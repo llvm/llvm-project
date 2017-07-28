@@ -11,19 +11,6 @@ set(XRAY_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/xray
   -I${COMPILER_RT_SOURCE_DIR}/lib)
 
-macro(xray_compile obj_list source arch)
-  get_filename_component(basename ${source} NAME)
-  set(output_obj "${basename}.${arch}.o")
-  get_target_flags_for_arch(${arch} TARGET_CFLAGS)
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND COMPILE_DEPS gtest_main xray)
-  endif()
-  clang_compile(${output_obj} ${source}
-    CFLAGS ${XRAY_UNITTEST_CFLAGS} ${TARGET_CFLAGS}
-    DEPS ${COMPILE_DEPS})
-  list(APPEND ${obj_list} ${output_obj})
-endmacro()
-
 macro(add_xray_unittest testname)
   set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
   if (APPLE)
@@ -34,7 +21,9 @@ macro(add_xray_unittest testname)
       cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
       set(TEST_OBJECTS)
       foreach(SOURCE ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE})
-        xray_compile(TEST_OBJECTS ${SOURCE} ${arch} ${TEST_HEADERS})
+        sanitizer_test_compile(TEST_OBJECTS ${SOURCE} ${arch}
+                               DEPS gtest_main xray
+                               CFLAGS ${XRAY_UNITTEST_CFLAGS})
       endforeach()
       get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
       set(TEST_DEPS ${TEST_OBJECTS})
