@@ -129,11 +129,7 @@ append_list_if(ANDROID atomic ASAN_UNITTEST_NOINST_LIBS)
 # options in ${ARGN}, and add it to the object list.
 macro(asan_compile obj_list source arch kind)
   get_filename_component(basename ${source} NAME)
-  if(CMAKE_CONFIGURATION_TYPES)
-    set(output_obj "${CMAKE_CFG_INTDIR}/${obj_list}.${basename}.${arch}${kind}.o")
-  else()
-    set(output_obj "${obj_list}.${basename}.${arch}${kind}.o")
-  endif()
+  set(output_obj "${CMAKE_CFG_RESOLVED_INTDIR}${obj_list}.${basename}.${arch}${kind}.o")
   get_target_flags_for_arch(${arch} TARGET_CFLAGS)
   set(COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_BLACKLIST_FILE})
   if(NOT COMPILER_RT_STANDALONE_BUILD)
@@ -156,17 +152,7 @@ macro(add_asan_test test_suite test_name arch kind)
   endif()
   if(TEST_WITH_TEST_RUNTIME)
     list(APPEND TEST_DEPS ${ASAN_TEST_RUNTIME})
-    if(CMAKE_CONFIGURATION_TYPES)
-     set(configuration_path "${CMAKE_CFG_INTDIR}/")
-    else()
-     set(configuration_path "")
-    endif()
-    if(NOT MSVC)
-      set(asan_test_runtime_path ${configuration_path}lib${ASAN_TEST_RUNTIME}.a)
-    else()
-      set(asan_test_runtime_path ${configuration_path}${ASAN_TEST_RUNTIME}.lib)
-    endif()
-    list(APPEND TEST_OBJECTS ${asan_test_runtime_path})
+    list(APPEND TEST_OBJECTS $<TARGET_FILE:${ASAN_TEST_RUNTIME}>)
   endif()
   add_compiler_rt_test(${test_suite} ${test_name}
                        SUBDIR ${TEST_SUBDIR}
@@ -245,13 +231,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   endif()
 
   # Create the 'default' folder where ASAN tests are produced.
-  if(CMAKE_CONFIGURATION_TYPES)
-    foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
-      file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default/${build_mode}")
-    endforeach()
-  else()
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default")
-  endif()
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default/${CMAKE_CFG_RESOLVED_INTDIR}")
 
   add_asan_test(AsanUnitTests "Asan-${arch}${kind}-Test"
                 ${arch} ${kind} SUBDIR "default"
@@ -259,13 +239,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
                 LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
   if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
     # Create the 'dynamic' folder where ASAN tests are produced.
-    if(CMAKE_CONFIGURATION_TYPES)
-      foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
-        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic/${build_mode}")
-      endforeach()
-    else()
-      file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic")
-    endif()
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic/${CMAKE_CFG_RESOLVED_INTDIR}")
 
     add_asan_test(AsanDynamicUnitTests "Asan-${arch}${kind}-Dynamic-Test"
                   ${arch} ${kind} SUBDIR "dynamic"

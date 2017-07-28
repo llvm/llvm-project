@@ -22,8 +22,11 @@ extern "C" {
   // Record and dump coverage info.
   void __sanitizer_cov_dump();
 
-  //  Dump collected coverage info. Sorts pcs by module into individual
-  //  .sancov files.
+  // Clear collected coverage info.
+  void __sanitizer_cov_reset();
+
+  // Dump collected coverage info. Sorts pcs by module into individual .sancov
+  // files.
   void __sanitizer_dump_coverage(const uintptr_t *pcs, uintptr_t len);
 
 #ifdef __cplusplus
