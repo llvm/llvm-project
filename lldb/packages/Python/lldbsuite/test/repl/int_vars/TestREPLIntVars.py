@@ -29,7 +29,7 @@ class REPLIntVarsTestCase (lldbrepl.REPLTest):
         oslist=["linux"],
         bugnumber="rdar://23081322")
     def testREPL(self):
-        REPLTest.testREPL(self)
+        lldbrepl.REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('3 + 2', patterns=['\\$R0: Int = 5'])
