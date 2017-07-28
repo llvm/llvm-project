@@ -99,7 +99,7 @@ define <8 x float> @test_mm256_and_ps(<8 x float> %a0, <8 x float> %a1) nounwind
 define <4 x double> @test_mm256_andnot_pd(<4 x double> %a0, <4 x double> %a1) nounwind {
 ; X32-LABEL: test_mm256_andnot_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; X32-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vandps %ymm1, %ymm0, %ymm0
@@ -107,7 +107,7 @@ define <4 x double> @test_mm256_andnot_pd(<4 x double> %a0, <4 x double> %a1) no
 ;
 ; X64-LABEL: test_mm256_andnot_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; X64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vandps %ymm1, %ymm0, %ymm0
@@ -2945,12 +2945,12 @@ define <8 x float> @test_mm256_setr_ps(float %a0, float %a1, float %a2, float %a
 define <4 x double> @test_mm256_setzero_pd() nounwind {
 ; X32-LABEL: test_mm256_setzero_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_setzero_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   ret <4 x double> zeroinitializer
 }
@@ -2958,12 +2958,12 @@ define <4 x double> @test_mm256_setzero_pd() nounwind {
 define <8 x float> @test_mm256_setzero_ps() nounwind {
 ; X32-LABEL: test_mm256_setzero_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_setzero_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   ret <8 x float> zeroinitializer
 }
@@ -2971,12 +2971,12 @@ define <8 x float> @test_mm256_setzero_ps() nounwind {
 define <4 x i64> @test_mm256_setzero_si256() nounwind {
 ; X32-LABEL: test_mm256_setzero_si256:
 ; X32:       # BB#0:
-; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_setzero_si256:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   ret <4 x i64> zeroinitializer
 }

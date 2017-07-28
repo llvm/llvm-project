@@ -209,11 +209,11 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
     if (isTargetDarwin()) {
       StringRef ArchName = TargetTriple.getArchName();
-      unsigned ArchKind = ARM::parseArch(ArchName);
-      if (ArchKind == ARM::AK_ARMV7S)
+      ARM::ArchKind AK = ARM::parseArch(ArchName);
+      if (AK == ARM::ArchKind::ARMV7S)
         // Default to the Swift CPU when targeting armv7s/thumbv7s.
         CPUString = "swift";
-      else if (ArchKind == ARM::AK_ARMV7K)
+      else if (AK == ARM::ArchKind::ARMV7K)
         // Default to the Cortex-a7 CPU when targeting armv7k/thumbv7k.
         // ARMv7k does not use SjLj exception handling.
         CPUString = "cortex-a7";
@@ -396,17 +396,16 @@ bool ARMSubtarget::hasSinCos() const {
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {
-  // Enable the MachineScheduler before register allocation for out-of-order
-  // architectures where we do not use the PostRA scheduler anymore (for now
-  // restricted to swift).
-  return getSchedModel().isOutOfOrder() && isSwift();
+  // Enable the MachineScheduler before register allocation for subtargets
+  // with the use-misched feature.
+  return useMachineScheduler();
 }
 
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {
-  // No need for PostRA scheduling on out of order CPUs (for now restricted to
-  // swift).
-  if (getSchedModel().isOutOfOrder() && isSwift())
+  // No need for PostRA scheduling on subtargets where we use the
+  // MachineScheduler.
+  if (useMachineScheduler())
     return false;
   return (!isThumb() || hasThumb2());
 }

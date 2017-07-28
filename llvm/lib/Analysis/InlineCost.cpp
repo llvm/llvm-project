@@ -348,15 +348,14 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
 ///
 /// Respects any simplified values known during the analysis of this callsite.
 bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
-  SmallVector<Value *, 4> Indices;
+  SmallVector<Value *, 4> Operands;
+  Operands.push_back(GEP.getOperand(0));
   for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
     if (Constant *SimpleOp = SimplifiedValues.lookup(*I))
-       Indices.push_back(SimpleOp);
+       Operands.push_back(SimpleOp);
      else
-       Indices.push_back(*I);
-  return TargetTransformInfo::TCC_Free ==
-         TTI.getGEPCost(GEP.getSourceElementType(), GEP.getPointerOperand(),
-                        Indices);
+       Operands.push_back(*I);
+  return TargetTransformInfo::TCC_Free == TTI.getUserCost(&GEP, Operands);
 }
 
 bool CallAnalyzer::visitAlloca(AllocaInst &I) {

@@ -31,6 +31,30 @@ class StringRef;
 // back-end to TableGen to create these clean tables.
 namespace ARM {
 
+// FPU Version
+enum class FPUVersion {
+  NONE,
+  VFPV2,
+  VFPV3,
+  VFPV3_FP16,
+  VFPV4,
+  VFPV5
+};
+
+// An FPU name restricts the FPU in one of three ways:
+enum class FPURestriction {
+  None = 0, ///< No restriction
+  D16,      ///< Only 16 D registers
+  SP_D16    ///< Only single-precision instructions, with 16 D registers
+};
+
+// An FPU name implies one of three levels of Neon support:
+enum class NeonSupportLevel {
+  None = 0, ///< No Neon
+  Neon,     ///< Neon
+  Crypto    ///< Neon with Crypto
+};
+
 // FPU names.
 enum FPUKind {
 #define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION) KIND,
@@ -38,35 +62,10 @@ enum FPUKind {
   FK_LAST
 };
 
-// FPU Version
-enum FPUVersion {
-  FV_NONE = 0,
-  FV_VFPV2,
-  FV_VFPV3,
-  FV_VFPV3_FP16,
-  FV_VFPV4,
-  FV_VFPV5
-};
-
-// An FPU name implies one of three levels of Neon support:
-enum NeonSupportLevel {
-  NS_None = 0, ///< No Neon
-  NS_Neon,     ///< Neon
-  NS_Crypto    ///< Neon with Crypto
-};
-
-// An FPU name restricts the FPU in one of three ways:
-enum FPURestriction {
-  FR_None = 0, ///< No restriction
-  FR_D16,      ///< Only 16 D registers
-  FR_SP_D16    ///< Only single-precision instructions, with 16 D registers
-};
-
 // Arch names.
-enum ArchKind {
+enum class ArchKind {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) ID,
 #include "ARMTargetParser.def"
-  AK_LAST
 };
 
 // Arch extension modifiers for CPUs.
@@ -95,22 +94,22 @@ enum ArchExtKind : unsigned {
 };
 
 // ISA kinds.
-enum ISAKind { IK_INVALID = 0, IK_ARM, IK_THUMB, IK_AARCH64 };
+enum class ISAKind { INVALID = 0, ARM, THUMB, AARCH64 };
 
 // Endianness
 // FIXME: BE8 vs. BE32?
-enum EndianKind { EK_INVALID = 0, EK_LITTLE, EK_BIG };
+enum class EndianKind { INVALID = 0, LITTLE, BIG };
 
 // v6/v7/v8 Profile
-enum ProfileKind { PK_INVALID = 0, PK_A, PK_R, PK_M };
+enum class ProfileKind { INVALID = 0, A, R, M };
 
 StringRef getCanonicalArchName(StringRef Arch);
 
 // Information by ID
 StringRef getFPUName(unsigned FPUKind);
-unsigned getFPUVersion(unsigned FPUKind);
-unsigned getFPUNeonSupportLevel(unsigned FPUKind);
-unsigned getFPURestriction(unsigned FPUKind);
+FPUVersion getFPUVersion(unsigned FPUKind);
+NeonSupportLevel getFPUNeonSupportLevel(unsigned FPUKind);
+FPURestriction getFPURestriction(unsigned FPUKind);
 
 // FIXME: These should be moved to TargetTuple once it exists
 bool getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features);
@@ -118,28 +117,28 @@ bool getHWDivFeatures(unsigned HWDivKind, std::vector<StringRef> &Features);
 bool getExtensionFeatures(unsigned Extensions,
                           std::vector<StringRef> &Features);
 
-StringRef getArchName(unsigned ArchKind);
-unsigned getArchAttr(unsigned ArchKind);
-StringRef getCPUAttr(unsigned ArchKind);
-StringRef getSubArch(unsigned ArchKind);
+StringRef getArchName(ArchKind AK);
+unsigned getArchAttr(ArchKind AK);
+StringRef getCPUAttr(ArchKind AK);
+StringRef getSubArch(ArchKind AK);
 StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
 StringRef getHWDivName(unsigned HWDivKind);
 
 // Information by Name
-unsigned  getDefaultFPU(StringRef CPU, unsigned ArchKind);
-unsigned  getDefaultExtensions(StringRef CPU, unsigned ArchKind);
+unsigned  getDefaultFPU(StringRef CPU, ArchKind AK);
+unsigned  getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 
 // Parser
 unsigned parseHWDiv(StringRef HWDiv);
 unsigned parseFPU(StringRef FPU);
-unsigned parseArch(StringRef Arch);
+ArchKind parseArch(StringRef Arch);
 unsigned parseArchExt(StringRef ArchExt);
-unsigned parseCPUArch(StringRef CPU);
-unsigned parseArchISA(StringRef Arch);
-unsigned parseArchEndian(StringRef Arch);
-unsigned parseArchProfile(StringRef Arch);
+ArchKind parseCPUArch(StringRef CPU);
+ISAKind parseArchISA(StringRef Arch);
+EndianKind parseArchEndian(StringRef Arch);
+ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 
 StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
@@ -153,7 +152,6 @@ namespace AArch64 {
 enum class ArchKind {
 #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) ID,
 #include "AArch64TargetParser.def"
-  AK_LAST
 };
 
 // Arch extension modifiers for CPUs.
@@ -175,37 +173,37 @@ StringRef getCanonicalArchName(StringRef Arch);
 
 // Information by ID
 StringRef getFPUName(unsigned FPUKind);
-unsigned getFPUVersion(unsigned FPUKind);
-unsigned getFPUNeonSupportLevel(unsigned FPUKind);
-unsigned getFPURestriction(unsigned FPUKind);
+ARM::FPUVersion getFPUVersion(unsigned FPUKind);
+ARM::NeonSupportLevel getFPUNeonSupportLevel(unsigned FPUKind);
+ARM::FPURestriction getFPURestriction(unsigned FPUKind);
 
 // FIXME: These should be moved to TargetTuple once it exists
 bool getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features);
 bool getExtensionFeatures(unsigned Extensions,
                                    std::vector<StringRef> &Features);
-bool getArchFeatures(unsigned ArchKind, std::vector<StringRef> &Features);
+bool getArchFeatures(ArchKind AK, std::vector<StringRef> &Features);
 
-StringRef getArchName(unsigned ArchKind);
-unsigned getArchAttr(unsigned ArchKind);
-StringRef getCPUAttr(unsigned ArchKind);
-StringRef getSubArch(unsigned ArchKind);
+StringRef getArchName(ArchKind AK);
+unsigned getArchAttr(ArchKind AK);
+StringRef getCPUAttr(ArchKind AK);
+StringRef getSubArch(ArchKind AK);
 StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
 unsigned checkArchVersion(StringRef Arch);
 
 // Information by Name
-unsigned  getDefaultFPU(StringRef CPU, unsigned ArchKind);
-unsigned  getDefaultExtensions(StringRef CPU, unsigned ArchKind);
+unsigned  getDefaultFPU(StringRef CPU, ArchKind AK);
+unsigned  getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 
 // Parser
 unsigned parseFPU(StringRef FPU);
-unsigned parseArch(StringRef Arch);
+AArch64::ArchKind parseArch(StringRef Arch);
 unsigned parseArchExt(StringRef ArchExt);
-unsigned parseCPUArch(StringRef CPU);
-unsigned parseArchISA(StringRef Arch);
-unsigned parseArchEndian(StringRef Arch);
-unsigned parseArchProfile(StringRef Arch);
+ArchKind parseCPUArch(StringRef CPU);
+ARM::ISAKind parseArchISA(StringRef Arch);
+ARM::EndianKind parseArchEndian(StringRef Arch);
+ARM::ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 
 } // namespace AArch64

@@ -2,13 +2,11 @@
 ; RUN: opt -module-summary %p/Inputs/alias_import.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t1.bc %t2.bc
 ; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE
-; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t2.bc - -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE-INTERNALIZE
 ; RUN: llvm-lto -thinlto-action=import -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORT
 
-;
-; Alias can't point to "available_externally", so we can only import an alias
-; when we can import the aliasee with a linkage that won't be
-; available_externally, i.e linkOnceODR. (FIXME this limitation could be lifted)
+; Alias can't point to "available_externally", so they cannot be imported for
+; now. This could be implemented by importing the alias as an
+; available_externally definition copied from the aliasee's body.
 ; PROMOTE-DAG: @globalfuncAlias = alias void (...), bitcast (void ()* @globalfunc to void (...)*)
 ; PROMOTE-DAG: @globalfuncWeakAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
 ; PROMOTE-DAG: @globalfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
@@ -34,16 +32,12 @@
 ; PROMOTE-DAG: @weakODRfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
 ; PROMOTE-DAG: @weakODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
 ; PROMOTE-DAG: @weakODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-
-; Only alias to LinkonceODR aliasee can be imported
 ; PROMOTE-DAG: @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; PROMOTE-DAG: @linkonceODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; PROMOTE-DAG: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; Amongst these that are imported, check that we promote only linkonce->weak
 ; PROMOTE-DAG: @linkonceODRfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; PROMOTE-DAG: @linkonceODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 
-; These will be imported, check the linkage/renaming after promotion
 ; PROMOTE-DAG: define void @globalfunc()
 ; PROMOTE-DAG: define internal void @internalfunc()
 ; PROMOTE-DAG: define weak_odr void @linkonceODRfunc()
@@ -51,13 +45,12 @@
 ; PROMOTE-DAG: define weak void @linkoncefunc()
 ; PROMOTE-DAG: define weak void @weakfunc()
 
-; On the import side now, verify that aliases to a linkonce_odr are imported, but the weak/linkonce (we can't inline them)
+; On the import side now, verify that aliases are not imported
 ; IMPORT-DAG:  declare void @linkonceODRfuncWeakAlias
-; IMPORT-DAG: declare void @linkonceODRfuncLinkonceAlias
-; IMPORT-DAG:  @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; IMPORT-DAG:  @linkonceODRfuncWeakODRAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; IMPORT-DAG:  @linkonceODRfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; IMPORT-DAG:  define linkonce_odr void @linkonceODRfunc()
+; IMPORT-DAG:  declare void @linkonceODRfuncLinkonceAlias
+; IMPORT-DAG:  declare void @linkonceODRfuncAlias
+; IMPORT-DAG:  declare void @linkonceODRfuncWeakODRAlias
+; IMPORT-DAG:  declare void @linkonceODRfuncLinkonceODRAlias
 
 
 ; On the import side, these aliases are not imported (they don't point to a linkonce_odr)
@@ -86,46 +79,11 @@
 ; IMPORT-DAG: declare void @weakfuncLinkonceAlias()
 ; IMPORT-DAG: declare void @weakfuncWeakODRAlias()
 ; IMPORT-DAG: declare void @weakfuncLinkonceODRAlias()
-
-; Promotion + internalization should internalize all of these, except for aliases of
-; linkonce_odr functions, because alias to linkonce_odr are the only aliases we will
-; import (see selectCallee() in FunctionImport.cpp).
-; PROMOTE-INTERNALIZE-DAG: @globalfuncAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @globalfuncWeakAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @globalfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @globalfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @globalfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @internalfuncAlias = internal alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @internalfuncWeakAlias = internal alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @internalfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @internalfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @internalfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncWeakAlias = internal alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakODRfuncAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakODRfuncWeakAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakODRfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakODRfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakODRfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkoncefuncAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkoncefuncWeakAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkoncefuncLinkonceAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkoncefuncWeakODRAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @linkoncefuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakfuncAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakfuncWeakAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: @weakfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-; PROMOTE-INTERNALIZE-DAG: define internal void @globalfunc()
-; PROMOTE-INTERNALIZE-DAG: define internal void @internalfunc()
-; PROMOTE-INTERNALIZE-DAG: define internal void @linkonceODRfunc()
-; PROMOTE-INTERNALIZE-DAG: define internal void @weakODRfunc()
-; PROMOTE-INTERNALIZE-DAG: define internal void @linkoncefunc()
-; PROMOTE-INTERNALIZE-DAG: define internal void @weakfunc()
+; IMPORT-DAG: declare void @linkonceODRfuncAlias()
+; IMPORT-DAG: declare void @linkonceODRfuncWeakAlias()
+; IMPORT-DAG: declare void @linkonceODRfuncWeakODRAlias()
+; IMPORT-DAG: declare void @linkonceODRfuncLinkonceAlias()
+; IMPORT-DAG: declare void @linkonceODRfuncLinkonceODRAlias()
 
 define i32 @main() #0 {
 entry:

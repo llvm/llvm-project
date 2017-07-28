@@ -23,21 +23,15 @@ using namespace llvm;
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
     const GlobalValue *SGV, SetVector<GlobalValue *> *GlobalsToImport) {
 
-  // For alias, we tie the definition to the base object. Extract it and recurse
-  if (auto *GA = dyn_cast<GlobalAlias>(SGV)) {
-    if (GA->isInterposable())
-      return false;
-    const GlobalObject *GO = GA->getBaseObject();
-    if (!GO->hasLinkOnceODRLinkage())
-      return false;
-    return FunctionImportGlobalProcessing::doImportAsDefinition(
-        GO, GlobalsToImport);
-  }
   // Only import the globals requested for importing.
-  if (GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
-    return true;
-  // Otherwise no.
-  return false;
+  if (!GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
+    return false;
+
+  assert(!isa<GlobalAlias>(SGV) &&
+         "Unexpected global alias in the import list.");
+
+  // Otherwise yes.
+  return true;
 }
 
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
@@ -132,8 +126,10 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     return SGV->getLinkage();
 
   switch (SGV->getLinkage()) {
+  case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::ExternalLinkage:
-    // External defnitions are converted to available_externally
+    // External and linkonce definitions are converted to available_externally
     // definitions upon import, so that they are available for inlining
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
@@ -148,12 +144,6 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     if (!doImportAsDefinition(SGV))
       return GlobalValue::ExternalLinkage;
     // An imported available_externally declaration stays that way.
-    return SGV->getLinkage();
-
-  case GlobalValue::LinkOnceAnyLinkage:
-  case GlobalValue::LinkOnceODRLinkage:
-    // These both stay the same when importing the definition.
-    // The ThinLTO pass will eventually force-import their definitions.
     return SGV->getLinkage();
 
   case GlobalValue::WeakAnyLinkage:

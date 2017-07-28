@@ -96,7 +96,7 @@ define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1)
 ;
 ; AVX-LABEL: combine_shuffle_zero_pmuludq_256:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0

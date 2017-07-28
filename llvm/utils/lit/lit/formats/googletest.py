@@ -13,11 +13,14 @@ kIsWindows = sys.platform in ['win32', 'cygwin']
 class GoogleTest(TestFormat):
     def __init__(self, test_sub_dirs, test_suffix):
         self.test_sub_dirs = os.path.normcase(str(test_sub_dirs)).split(';')
-        self.test_suffix = str(test_suffix)
 
         # On Windows, assume tests will also end in '.exe'.
+        exe_suffix = str(test_suffix)
         if kIsWindows:
-            self.test_suffix += '.exe'
+            exe_suffix += '.exe'
+
+        # Also check for .py files for testing purposes.
+        self.test_suffixes = {exe_suffix, test_suffix + '.py'}
 
     def getGTestTests(self, path, litConfig, localConfig):
         """getGTestTests(path) - [name]
@@ -29,8 +32,10 @@ class GoogleTest(TestFormat):
           litConfig: LitConfig instance
           localConfig: TestingConfig instance"""
 
+        list_test_cmd = self.maybeAddPythonToCmd([path, '--gtest_list_tests'])
+
         try:
-            output = subprocess.check_output([path, '--gtest_list_tests'],
+            output = subprocess.check_output(list_test_cmd,
                                              env=localConfig.environment)
         except subprocess.CalledProcessError as exc:
             litConfig.warning(
@@ -82,7 +87,7 @@ class GoogleTest(TestFormat):
             if not os.path.isdir(dir_path):
                 continue
             for fn in lit.util.listdir_files(dir_path,
-                                             suffixes={self.test_suffix}):
+                                             suffixes=self.test_suffixes):
                 # Discover the tests in this executable.
                 execpath = os.path.join(source_path, subdir, fn)
                 testnames = self.getGTestTests(execpath, litConfig, localConfig)
@@ -100,6 +105,7 @@ class GoogleTest(TestFormat):
             testName = namePrefix + '/' + testName
 
         cmd = [testPath, '--gtest_filter=' + testName]
+        cmd = self.maybeAddPythonToCmd(cmd)
         if litConfig.useValgrind:
             cmd = litConfig.valgrindArgs + cmd
 
@@ -126,3 +132,14 @@ class GoogleTest(TestFormat):
             return lit.Test.UNRESOLVED, msg
 
         return lit.Test.PASS,''
+
+    def maybeAddPythonToCmd(self, cmd):
+        """Insert the python exe into the command if cmd[0] ends in .py
+
+        We cannot rely on the system to interpret shebang lines for us on
+        Windows, so add the python executable to the command if this is a .py
+        script.
+        """
+        if cmd[0].endswith('.py'):
+            return [sys.executable] + cmd
+        return cmd

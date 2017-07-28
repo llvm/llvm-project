@@ -58,8 +58,8 @@ define void @test2(<4 x i8>* %in, <4 x i64>* %out) nounwind {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -67,7 +67,7 @@ define void @test2(<4 x i8>* %in, <4 x i64>* %out) nounwind {
 ; AVX2-LABEL: test2:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxbq (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovups %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
@@ -78,7 +78,7 @@ define void @test2(<4 x i8>* %in, <4 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX2-NEXT:    vpmovsxbq (%ecx), %ymm0
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
@@ -141,8 +141,8 @@ define void @test4(<8 x i8>* %in, <8 x i32>* %out) nounwind {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -150,7 +150,7 @@ define void @test4(<8 x i8>* %in, <8 x i32>* %out) nounwind {
 ; AVX2-LABEL: test4:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxbd (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovups %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
@@ -161,7 +161,7 @@ define void @test4(<8 x i8>* %in, <8 x i32>* %out) nounwind {
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX2-NEXT:    vpmovsxbd (%ecx), %ymm0
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
@@ -222,8 +222,8 @@ define void @test6(<16 x i8>* %in, <16 x i16>* %out) nounwind {
 ; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm0
 ; AVX1-NEXT:    vpmovsxbw 8(%rdi), %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -231,7 +231,7 @@ define void @test6(<16 x i8>* %in, <16 x i16>* %out) nounwind {
 ; AVX2-LABEL: test6:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxbw (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovups %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
@@ -242,7 +242,7 @@ define void @test6(<16 x i8>* %in, <16 x i16>* %out) nounwind {
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX2-NEXT:    vpmovsxbw (%ecx), %ymm0
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
@@ -305,8 +305,8 @@ define void @test8(<4 x i16>* %in, <4 x i64>* %out) nounwind {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -314,7 +314,7 @@ define void @test8(<4 x i16>* %in, <4 x i64>* %out) nounwind {
 ; AVX2-LABEL: test8:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxwq (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovups %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
@@ -325,7 +325,7 @@ define void @test8(<4 x i16>* %in, <4 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX2-NEXT:    vpmovsxwq (%ecx), %ymm0
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
@@ -386,8 +386,8 @@ define void @test10(<8 x i16>* %in, <8 x i32>* %out) nounwind {
 ; AVX1-NEXT:    vpmovsxwd (%rdi), %xmm0
 ; AVX1-NEXT:    vpmovsxwd 8(%rdi), %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -395,7 +395,7 @@ define void @test10(<8 x i16>* %in, <8 x i32>* %out) nounwind {
 ; AVX2-LABEL: test10:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxwd (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovups %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
@@ -406,7 +406,7 @@ define void @test10(<8 x i16>* %in, <8 x i32>* %out) nounwind {
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX2-NEXT:    vpmovsxwd (%ecx), %ymm0
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
@@ -467,8 +467,8 @@ define void @test12(<4 x i32>* %in, <4 x i64>* %out) nounwind {
 ; AVX1-NEXT:    vpmovsxdq (%rdi), %xmm0
 ; AVX1-NEXT:    vpmovsxdq 8(%rdi), %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqu %ymm1, (%rax)
 ; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -476,7 +476,7 @@ define void @test12(<4 x i32>* %in, <4 x i64>* %out) nounwind {
 ; AVX2-LABEL: test12:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxdq (%rdi), %ymm0
-; AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovups %ymm1, (%rax)
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
@@ -487,7 +487,7 @@ define void @test12(<4 x i32>* %in, <4 x i64>* %out) nounwind {
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX2-NEXT:    vpmovsxdq (%ecx), %ymm0
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovups %ymm1, (%eax)
 ; X32-AVX2-NEXT:    vmovdqu %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper

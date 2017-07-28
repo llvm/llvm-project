@@ -5903,7 +5903,7 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512F-NEXT:    vpsllw $7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX512F-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpxor %ymm6, %ymm6, %ymm6
+; AVX512F-NEXT:    vpxor %xmm6, %xmm6, %xmm6
 ; AVX512F-NEXT:    vpcmpgtb %ymm2, %ymm6, %ymm2
 ; AVX512F-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
@@ -6190,7 +6190,7 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512DQ-NEXT:    vpsllw $7, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX512DQ-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpxor %ymm6, %ymm6, %ymm6
+; AVX512DQ-NEXT:    vpxor %xmm6, %xmm6, %xmm6
 ; AVX512DQ-NEXT:    vpcmpgtb %ymm2, %ymm6, %ymm2
 ; AVX512DQ-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpmovsxwd %ymm1, %zmm1

@@ -205,7 +205,7 @@ define <32 x i16> @shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<32 x i16> %a
 ; KNL-NEXT:    movl $65535, %eax ## imm = 0xFFFF
 ; KNL-NEXT:    vmovd %eax, %xmm1
 ; KNL-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
