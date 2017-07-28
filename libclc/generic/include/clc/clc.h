@@ -21,7 +21,7 @@
 #include <clc/as_type.h>
 
 /* 6.9 Preprocessor Directives and Macros */
-#include <clc/clcversion.h>
+#include <clc/clcmacros.h>
 
 /* 6.11.1 Work-Item Functions */
 #include <clc/workitem/get_global_size.h>

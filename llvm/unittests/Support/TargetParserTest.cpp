@@ -32,18 +32,18 @@ const char *ARMArch[] = {
 bool testARMCPU(StringRef CPUName, StringRef ExpectedArch,
                 StringRef ExpectedFPU, unsigned ExpectedFlags,
                 StringRef CPUAttr) {
-  unsigned ArchKind = ARM::parseCPUArch(CPUName);
-  bool pass = ARM::getArchName(ArchKind).equals(ExpectedArch);
-  unsigned FPUKind = ARM::getDefaultFPU(CPUName, ArchKind);
+  ARM::ArchKind AK = ARM::parseCPUArch(CPUName);
+  bool pass = ARM::getArchName(AK).equals(ExpectedArch);
+  unsigned FPUKind = ARM::getDefaultFPU(CPUName, AK);
   pass &= ARM::getFPUName(FPUKind).equals(ExpectedFPU);
 
-  unsigned ExtKind = ARM::getDefaultExtensions(CPUName, ArchKind);
+  unsigned ExtKind = ARM::getDefaultExtensions(CPUName, AK);
   if (ExtKind > 1 && (ExtKind & ARM::AEK_NONE))
     pass &= ((ExtKind ^ ARM::AEK_NONE) == ExpectedFlags);
   else
     pass &= (ExtKind == ExpectedFlags);
 
-  pass &= ARM::getCPUAttr(ArchKind).equals(CPUAttr);
+  pass &= ARM::getCPUAttr(AK).equals(CPUAttr);
 
   return pass;
 }
@@ -268,11 +268,11 @@ TEST(TargetParserTest, testARMCPU) {
 
 bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                  unsigned ArchAttr) {
-  unsigned ArchKind = ARM::parseArch(Arch);
-  return (ArchKind != ARM::AK_INVALID) &
+  ARM::ArchKind AK = ARM::parseArch(Arch);
+  return (AK!= ARM::ArchKind::INVALID) &
          ARM::getDefaultCPU(Arch).equals(DefaultCPU) &
-         ARM::getSubArch(ArchKind).equals(SubArch) &
-         (ARM::getArchAttr(ArchKind) == ArchAttr);
+         ARM::getSubArch(AK).equals(SubArch) &
+         (ARM::getArchAttr(AK) == ArchAttr);
 }
 
 TEST(TargetParserTest, testARMArch) {
@@ -368,94 +368,118 @@ TEST(TargetParserTest, testARMArch) {
                           ARMBuildAttrs::CPUArch::v7));
 }
 
-bool testARMExtension(StringRef CPUName, unsigned ArchKind, StringRef ArchExt) {
+bool testARMExtension(StringRef CPUName,ARM::ArchKind ArchKind, StringRef ArchExt) {
   return ARM::getDefaultExtensions(CPUName, ArchKind) &
          ARM::parseArchExt(ArchExt);
 }
 
 TEST(TargetParserTest, testARMExtension) {
-  EXPECT_FALSE(testARMExtension("arm2", 0, "thumb"));
-  EXPECT_FALSE(testARMExtension("arm3", 0, "thumb"));
-  EXPECT_FALSE(testARMExtension("arm6", 0, "thumb"));
-  EXPECT_FALSE(testARMExtension("arm7m", 0, "thumb"));
-  EXPECT_FALSE(testARMExtension("strongarm", 0, "dsp"));
-  EXPECT_FALSE(testARMExtension("arm7tdmi", 0, "dsp"));
-  EXPECT_FALSE(testARMExtension("arm10tdmi", 0, "simd"));
-  EXPECT_FALSE(testARMExtension("arm1022e", 0, "simd"));
-  EXPECT_FALSE(testARMExtension("arm926ej-s", 0, "simd"));
-  EXPECT_FALSE(testARMExtension("arm1136jf-s", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("arm1176j-s", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("arm1156t2-s", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("arm1176jzf-s", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-m0", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-a8", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-r4", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-m3", 0, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-a53", 0, "ras"));
-  EXPECT_FALSE(testARMExtension("cortex-r52", 0, "ras"));
-  EXPECT_FALSE(testARMExtension("iwmmxt", 0, "crc"));
-  EXPECT_FALSE(testARMExtension("xscale", 0, "crc"));
-  EXPECT_FALSE(testARMExtension("swift", 0, "crc"));
+  EXPECT_FALSE(testARMExtension("arm2", ARM::ArchKind::INVALID, "thumb"));
+  EXPECT_FALSE(testARMExtension("arm3", ARM::ArchKind::INVALID, "thumb"));
+  EXPECT_FALSE(testARMExtension("arm6", ARM::ArchKind::INVALID, "thumb"));
+  EXPECT_FALSE(testARMExtension("arm7m", ARM::ArchKind::INVALID, "thumb"));
+  EXPECT_FALSE(testARMExtension("strongarm", ARM::ArchKind::INVALID, "dsp"));
+  EXPECT_FALSE(testARMExtension("arm7tdmi", ARM::ArchKind::INVALID, "dsp"));
+  EXPECT_FALSE(testARMExtension("arm10tdmi",
+                                ARM::ArchKind::INVALID, "simd"));
+  EXPECT_FALSE(testARMExtension("arm1022e", ARM::ArchKind::INVALID, "simd"));
+  EXPECT_FALSE(testARMExtension("arm926ej-s",
+                                ARM::ArchKind::INVALID, "simd"));
+  EXPECT_FALSE(testARMExtension("arm1136jf-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("arm1176j-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("arm1156t2-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("arm1176jzf-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-m0",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-a8",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-r4",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-m3",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-a53",
+                                ARM::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testARMExtension("cortex-r52",
+                                ARM::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testARMExtension("iwmmxt", ARM::ArchKind::INVALID, "crc"));
+  EXPECT_FALSE(testARMExtension("xscale", ARM::ArchKind::INVALID, "crc"));
+  EXPECT_FALSE(testARMExtension("swift", ARM::ArchKind::INVALID, "crc"));
 
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV2, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV2A, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV3, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV3M, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV4, "dsp"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV4T, "dsp"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV5T, "simd"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV5TE, "simd"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV5TEJ, "simd"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV6, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV6K, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV6T2, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV6KZ, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV6M, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV7A, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV7R, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV7M, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV7EM, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV8A, "ras"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV8_1A, "ras"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV8_2A, "spe"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV8R, "ras"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV8MBaseline, "crc"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV8MMainline, "crc"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_IWMMXT, "crc"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_IWMMXT2, "crc"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_XSCALE, "crc"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV7S, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::AK_ARMV7K, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV2, "thumb"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV2A, "thumb"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV3, "thumb"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV3M, "thumb"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV4, "dsp"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV4T, "dsp"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV5T, "simd"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV5TE, "simd"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV5TEJ, "simd"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6K, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV6T2, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV6KZ, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6M, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7A, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7R, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7M, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV7EM, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8A, "ras"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_1A, "ras"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "spe"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8R, "ras"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV8MBaseline, "crc"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV8MMainline, "crc"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::IWMMXT, "crc"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::IWMMXT2, "crc"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::XSCALE, "crc"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7S, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7K, "crypto"));
 }
 
 TEST(TargetParserTest, ARMFPUVersion) {
-  for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
+  for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0); 
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST)
-      EXPECT_EQ(0U, ARM::getFPUVersion(FK));
+    if (FK == ARM::FK_LAST || ARM::getFPUName(FK) == "invalid" ||
+        ARM::getFPUName(FK) == "none" || ARM::getFPUName(FK) == "softvfp")
+      EXPECT_EQ(ARM::FPUVersion::NONE, ARM::getFPUVersion(FK));
     else
-      EXPECT_LE(0U, ARM::getFPUVersion(FK));
+      EXPECT_NE(ARM::FPUVersion::NONE, ARM::getFPUVersion(FK));
 }
 
 TEST(TargetParserTest, ARMFPUNeonSupportLevel) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST)
-      EXPECT_EQ(0U, ARM::getFPUNeonSupportLevel(FK));
+    if (FK == ARM::FK_LAST ||
+        ARM::getFPUName(FK).find("neon") == std::string::npos)
+      EXPECT_EQ(ARM::NeonSupportLevel::None,
+                 ARM::getFPUNeonSupportLevel(FK));
     else
-      EXPECT_LE(0U, ARM::getFPUNeonSupportLevel(FK));
+      EXPECT_NE(ARM::NeonSupportLevel::None,
+                ARM::getFPUNeonSupportLevel(FK));
 }
 
 TEST(TargetParserTest, ARMFPURestriction) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
-       FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST)
-      EXPECT_EQ(0U, ARM::getFPURestriction(FK));
+       FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1)) {
+    if (FK == ARM::FK_LAST ||
+        (ARM::getFPUName(FK).find("d16") == std::string::npos &&
+         ARM::getFPUName(FK).find("vfpv3xd") == std::string::npos))
+      EXPECT_EQ(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
     else
-      EXPECT_LE(0U, ARM::getFPURestriction(FK));
+      EXPECT_NE(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
+  }
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
@@ -527,57 +551,59 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
     std::string thumb_2 = "thumb" + (std::string)(Arch[i]) + "eb";
     std::string thumb_3 = "thumb" + (std::string)(Arch[i]);
 
-    EXPECT_EQ(ARM::EK_BIG, ARM::parseArchEndian(arm_1));
-    EXPECT_EQ(ARM::EK_BIG, ARM::parseArchEndian(arm_2));
-    EXPECT_EQ(ARM::EK_LITTLE, ARM::parseArchEndian(arm_3));
+    EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian(arm_1));
+    EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian(arm_2));
+    EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian(arm_3));
 
-    EXPECT_EQ(ARM::IK_ARM, ARM::parseArchISA(arm_1));
-    EXPECT_EQ(ARM::IK_ARM, ARM::parseArchISA(arm_2));
-    EXPECT_EQ(ARM::IK_ARM, ARM::parseArchISA(arm_3));
+    EXPECT_EQ(ARM::ISAKind::ARM, ARM::parseArchISA(arm_1));
+    EXPECT_EQ(ARM::ISAKind::ARM, ARM::parseArchISA(arm_2));
+    EXPECT_EQ(ARM::ISAKind::ARM, ARM::parseArchISA(arm_3));
     if (i >= 4) {
-      EXPECT_EQ(ARM::EK_BIG, ARM::parseArchEndian(thumb_1));
-      EXPECT_EQ(ARM::EK_BIG, ARM::parseArchEndian(thumb_2));
-      EXPECT_EQ(ARM::EK_LITTLE, ARM::parseArchEndian(thumb_3));
+      EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian(thumb_1));
+      EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian(thumb_2));
+      EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian(thumb_3));
 
-      EXPECT_EQ(ARM::IK_THUMB, ARM::parseArchISA(thumb_1));
-      EXPECT_EQ(ARM::IK_THUMB, ARM::parseArchISA(thumb_2));
-      EXPECT_EQ(ARM::IK_THUMB, ARM::parseArchISA(thumb_3));
+      EXPECT_EQ(ARM::ISAKind::THUMB, ARM::parseArchISA(thumb_1));
+      EXPECT_EQ(ARM::ISAKind::THUMB, ARM::parseArchISA(thumb_2));
+      EXPECT_EQ(ARM::ISAKind::THUMB, ARM::parseArchISA(thumb_3));
     }
   }
 
-  EXPECT_EQ(ARM::EK_LITTLE, ARM::parseArchEndian("aarch64"));
-  EXPECT_EQ(ARM::EK_BIG, ARM::parseArchEndian("aarch64_be"));
+  EXPECT_EQ(ARM::EndianKind::LITTLE, ARM::parseArchEndian("aarch64"));
+  EXPECT_EQ(ARM::EndianKind::BIG, ARM::parseArchEndian("aarch64_be"));
 
-  EXPECT_EQ(ARM::IK_AARCH64, ARM::parseArchISA("aarch64"));
-  EXPECT_EQ(ARM::IK_AARCH64, ARM::parseArchISA("aarch64_be"));
-  EXPECT_EQ(ARM::IK_AARCH64, ARM::parseArchISA("arm64"));
-  EXPECT_EQ(ARM::IK_AARCH64, ARM::parseArchISA("arm64_be"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("aarch64_be"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64"));
+  EXPECT_EQ(ARM::ISAKind::AARCH64, ARM::parseArchISA("arm64_be"));
 }
 
 TEST(TargetParserTest, ARMparseArchProfile) {
   for (unsigned i = 0; i < array_lengthof(ARMArch); i++) {
     switch (ARM::parseArch(ARMArch[i])) {
-    case ARM::AK_ARMV6M:
-    case ARM::AK_ARMV7M:
-    case ARM::AK_ARMV7EM:
-    case ARM::AK_ARMV8MMainline:
-    case ARM::AK_ARMV8MBaseline:
-      EXPECT_EQ(ARM::PK_M, ARM::parseArchProfile(ARMArch[i]));
-      continue;
-    case ARM::AK_ARMV7R:
-    case ARM::AK_ARMV8R:
-      EXPECT_EQ(ARM::PK_R, ARM::parseArchProfile(ARMArch[i]));
-      continue;
-    case ARM::AK_ARMV7A:
-    case ARM::AK_ARMV7VE:
-    case ARM::AK_ARMV7K:
-    case ARM::AK_ARMV8A:
-    case ARM::AK_ARMV8_1A:
-    case ARM::AK_ARMV8_2A:
-      EXPECT_EQ(ARM::PK_A, ARM::parseArchProfile(ARMArch[i]));
-      continue;
+    case ARM::ArchKind::ARMV6M:
+    case ARM::ArchKind::ARMV7M:
+    case ARM::ArchKind::ARMV7EM:
+    case ARM::ArchKind::ARMV8MMainline:
+    case ARM::ArchKind::ARMV8MBaseline:
+      EXPECT_EQ(ARM::ProfileKind::M, ARM::parseArchProfile(ARMArch[i]));
+      break;
+    case ARM::ArchKind::ARMV7R:
+    case ARM::ArchKind::ARMV8R:
+      EXPECT_EQ(ARM::ProfileKind::R, ARM::parseArchProfile(ARMArch[i]));
+      break;
+    case ARM::ArchKind::ARMV7A:
+    case ARM::ArchKind::ARMV7VE:
+    case ARM::ArchKind::ARMV7K:
+    case ARM::ArchKind::ARMV8A:
+    case ARM::ArchKind::ARMV8_1A:
+    case ARM::ArchKind::ARMV8_2A:
+      EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
+      break;
+    default:
+      EXPECT_EQ(ARM::ProfileKind::INVALID, ARM::parseArchProfile(ARMArch[i]));
+      break;
     }
-    EXPECT_EQ(ARM::PK_INVALID, ARM::parseArchProfile(ARMArch[i]));
   }
 }
 
@@ -592,18 +618,18 @@ TEST(TargetParserTest, ARMparseArchVersion) {
 bool testAArch64CPU(StringRef CPUName, StringRef ExpectedArch,
                     StringRef ExpectedFPU, unsigned ExpectedFlags,
                     StringRef CPUAttr) {
-  unsigned ArchKind = AArch64::parseCPUArch(CPUName);
-  bool pass = AArch64::getArchName(ArchKind).equals(ExpectedArch);
-  unsigned FPUKind = AArch64::getDefaultFPU(CPUName, ArchKind);
+  AArch64::ArchKind AK = AArch64::parseCPUArch(CPUName);
+  bool pass = AArch64::getArchName(AK).equals(ExpectedArch);
+  unsigned FPUKind = AArch64::getDefaultFPU(CPUName, AK);
   pass &= AArch64::getFPUName(FPUKind).equals(ExpectedFPU);
 
-  unsigned ExtKind = AArch64::getDefaultExtensions(CPUName, ArchKind);
+  unsigned ExtKind = AArch64::getDefaultExtensions(CPUName, AK);
   if (ExtKind > 1 && (ExtKind & AArch64::AEK_NONE))
     pass &= ((ExtKind ^ AArch64::AEK_NONE) == ExpectedFlags);
   else
     pass &= (ExtKind == ExpectedFlags);
 
-  pass &= AArch64::getCPUAttr(ArchKind).equals(CPUAttr);
+  pass &= AArch64::getCPUAttr(AK).equals(CPUAttr);
 
   return pass;
 }
@@ -687,11 +713,11 @@ TEST(TargetParserTest, testAArch64CPU) {
 
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                      unsigned ArchAttr) {
-  unsigned ArchKind = AArch64::parseArch(Arch);
-  return (ArchKind != static_cast<unsigned>(AArch64::ArchKind::AK_INVALID)) &
+  AArch64::ArchKind AK = AArch64::parseArch(Arch);
+  return (AK != AArch64::ArchKind::INVALID) &
          AArch64::getDefaultCPU(Arch).equals(DefaultCPU) &
-         AArch64::getSubArch(ArchKind).equals(SubArch) &
-         (AArch64::getArchAttr(ArchKind) == ArchAttr);
+         AArch64::getSubArch(AK).equals(SubArch) &
+         (AArch64::getArchAttr(AK) == ArchAttr);
 }
 
 TEST(TargetParserTest, testAArch64Arch) {
@@ -703,33 +729,46 @@ TEST(TargetParserTest, testAArch64Arch) {
                               ARMBuildAttrs::CPUArch::v8_A));
 }
 
-bool testAArch64Extension(StringRef CPUName, unsigned ArchKind,
+bool testAArch64Extension(StringRef CPUName, AArch64::ArchKind AK,
                           StringRef ArchExt) {
-  return AArch64::getDefaultExtensions(CPUName, ArchKind) &
+  return AArch64::getDefaultExtensions(CPUName, AK) &
          AArch64::parseArchExt(ArchExt);
 }
 
 TEST(TargetParserTest, testAArch64Extension) {
-  EXPECT_FALSE(testAArch64Extension("cortex-a35", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a53", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a57", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a72", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a73", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cyclone", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("exynos-m1", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("kryo", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("thunderx2t99", 0, "ras"));
-  EXPECT_FALSE(testAArch64Extension("thunderx", 0, "lse"));
-  EXPECT_FALSE(testAArch64Extension("thunderxt81", 0, "lse"));
-  EXPECT_FALSE(testAArch64Extension("thunderxt83", 0, "lse"));
-  EXPECT_FALSE(testAArch64Extension("thunderxt88", 0, "lse"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a35",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a53",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a57",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a72",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a73",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cyclone",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("exynos-m1",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("kryo",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("thunderx2t99",
+                                    AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("thunderx",
+                                    AArch64::ArchKind::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt81",
+                                    AArch64::ArchKind::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt83",
+                                    AArch64::ArchKind::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt88",
+                                    AArch64::ArchKind::INVALID, "lse"));
 
   EXPECT_FALSE(testAArch64Extension(
-      "generic", static_cast<unsigned>(AArch64::ArchKind::AK_ARMV8A), "ras"));
+      "generic", AArch64::ArchKind::ARMV8A, "ras"));
   EXPECT_FALSE(testAArch64Extension(
-      "generic", static_cast<unsigned>(AArch64::ArchKind::AK_ARMV8_1A), "ras"));
+      "generic", AArch64::ArchKind::ARMV8_1A, "ras"));
   EXPECT_FALSE(testAArch64Extension(
-      "generic", static_cast<unsigned>(AArch64::ArchKind::AK_ARMV8_2A), "spe"));
+      "generic", AArch64::ArchKind::ARMV8_2A, "spe"));
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
@@ -746,11 +785,14 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
   std::vector<StringRef> Features;
+  AArch64::ArchKind ArchKinds[] = {
+#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
+     AArch64::ArchKind::ID,
+#include "llvm/Support/AArch64TargetParser.def"
+  };
 
-  for (unsigned AK = 0; AK < static_cast<unsigned>(AArch64::ArchKind::AK_LAST);
-       AK++)
-    EXPECT_TRUE((AK == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID) ||
-                 AK == static_cast<unsigned>(AArch64::ArchKind::AK_LAST))
+  for (auto AK : ArchKinds)
+    EXPECT_TRUE((AK == AArch64::ArchKind::INVALID)
                     ? !AArch64::getArchFeatures(AK, Features)
                     : AArch64::getArchFeatures(AK, Features));
 }

@@ -20,6 +20,10 @@ type llattribute
 type llmemorybuffer
 type llmdkind
 
+exception FeatureDisabled of string
+
+let () = Callback.register_exception "Llvm.FeatureDisabled" (FeatureDisabled "")
+
 module TypeKind = struct
   type t =
   | Void

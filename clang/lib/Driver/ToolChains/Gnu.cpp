@@ -1491,7 +1491,7 @@ static void findAndroidArmMultilibs(const Driver &D,
   bool IsV7SubArch = TargetTriple.getSubArch() == llvm::Triple::ARMSubArch_v7;
   bool IsThumbMode = IsThumbArch ||
       Args.hasFlag(options::OPT_mthumb, options::OPT_mno_thumb, false) ||
-      (IsArmArch && llvm::ARM::parseArchISA(Arch) == llvm::ARM::IK_THUMB);
+      (IsArmArch && llvm::ARM::parseArchISA(Arch) == llvm::ARM::ISAKind::THUMB);
   bool IsArmV7Mode = (IsArmArch || IsThumbArch) &&
       (llvm::ARM::parseArchVersion(Arch) == 7 ||
        (IsArmArch && Arch == "" && IsV7SubArch));

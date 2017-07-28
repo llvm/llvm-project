@@ -8,7 +8,7 @@ define void @func() nounwind ssp {
 ; CHECK-LABEL: func:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovups 0, %xmm0
-; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,2,3,3]
 ; CHECK-NEXT:    vbroadcastss 32, %xmm3
@@ -26,6 +26,7 @@ define void @func() nounwind ssp {
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:    ## -- End function
   %tmp = load <4 x float>, <4 x float>* null, align 1
   %tmp14 = getelementptr <4 x float>, <4 x float>* null, i32 2
   %tmp15 = load <4 x float>, <4 x float>* %tmp14, align 1

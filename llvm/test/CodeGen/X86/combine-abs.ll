@@ -50,7 +50,7 @@ define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
 define <4 x i64> @combine_v4i64_abs_abs(<4 x i64> %a) {
 ; AVX2-LABEL: combine_v4i64_abs_abs:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm2
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0

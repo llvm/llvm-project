@@ -52,17 +52,17 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AArch64GenInstrInfo.inc"
 
-static cl::opt<unsigned>
-TBZDisplacementBits("aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
-                    cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
+static cl::opt<unsigned> TBZDisplacementBits(
+    "aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
+    cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
+
+static cl::opt<unsigned> CBZDisplacementBits(
+    "aarch64-cbz-offset-bits", cl::Hidden, cl::init(19),
+    cl::desc("Restrict range of CB[N]Z instructions (DEBUG)"));
 
 static cl::opt<unsigned>
-CBZDisplacementBits("aarch64-cbz-offset-bits", cl::Hidden, cl::init(19),
-                    cl::desc("Restrict range of CB[N]Z instructions (DEBUG)"));
-
-static cl::opt<unsigned>
-BCCDisplacementBits("aarch64-bcc-offset-bits", cl::Hidden, cl::init(19),
-                    cl::desc("Restrict range of Bcc instructions (DEBUG)"));
+    BCCDisplacementBits("aarch64-bcc-offset-bits", cl::Hidden, cl::init(19),
+                        cl::desc("Restrict range of Bcc instructions (DEBUG)"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP),
@@ -172,8 +172,8 @@ bool AArch64InstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   return isIntN(Bits, BrOffset / 4);
 }
 
-MachineBasicBlock *AArch64InstrInfo::getBranchDestBlock(
-  const MachineInstr &MI) const {
+MachineBasicBlock *
+AArch64InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("unexpected opcode!");
@@ -374,12 +374,9 @@ void AArch64InstrInfo::instantiateCondBranch(
   }
 }
 
-unsigned AArch64InstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                        MachineBasicBlock *TBB,
-                                        MachineBasicBlock *FBB,
-                                        ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL,
-                                        int *BytesAdded) const {
+unsigned AArch64InstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
 
@@ -485,10 +482,11 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   return Opc;
 }
 
-bool AArch64InstrInfo::canInsertSelect(
-    const MachineBasicBlock &MBB, ArrayRef<MachineOperand> Cond,
-    unsigned TrueReg, unsigned FalseReg, int &CondCycles, int &TrueCycles,
-    int &FalseCycles) const {
+bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
+                                       ArrayRef<MachineOperand> Cond,
+                                       unsigned TrueReg, unsigned FalseReg,
+                                       int &CondCycles, int &TrueCycles,
+                                       int &FalseCycles) const {
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
@@ -656,8 +654,10 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
   MRI.constrainRegClass(FalseReg, RC);
 
   // Insert the csel.
-  BuildMI(MBB, I, DL, get(Opc), DstReg).addReg(TrueReg).addReg(FalseReg).addImm(
-      CC);
+  BuildMI(MBB, I, DL, get(Opc), DstReg)
+      .addReg(TrueReg)
+      .addReg(FalseReg)
+      .addImm(CC);
 }
 
 /// Returns true if a MOVi32imm or MOVi64imm can be expanded to an  ORRxx.
@@ -1078,11 +1078,7 @@ static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
   }
 }
 
-enum AccessKind {
-  AK_Write = 0x01,
-  AK_Read  = 0x10,
-  AK_All   = 0x11
-};
+enum AccessKind { AK_Write = 0x01, AK_Read = 0x10, AK_All = 0x11 };
 
 /// True when condition flags are accessed (either by writing or reading)
 /// on the instruction trace starting at From and ending at To.
@@ -1111,21 +1107,24 @@ static bool areCFlagsAccessedBetweenInstrs(
   for (--To; To != From; --To) {
     const MachineInstr &Instr = *To;
 
-    if ( ((AccessToCheck & AK_Write) && Instr.modifiesRegister(AArch64::NZCV, TRI)) ||
-         ((AccessToCheck & AK_Read)  && Instr.readsRegister(AArch64::NZCV, TRI)))
+    if (((AccessToCheck & AK_Write) &&
+         Instr.modifiesRegister(AArch64::NZCV, TRI)) ||
+        ((AccessToCheck & AK_Read) && Instr.readsRegister(AArch64::NZCV, TRI)))
       return true;
   }
   return false;
 }
 
 /// Try to optimize a compare instruction. A compare instruction is an
-/// instruction which produces AArch64::NZCV. It can be truly compare instruction
+/// instruction which produces AArch64::NZCV. It can be truly compare
+/// instruction
 /// when there are no uses of its destination register.
 ///
 /// The following steps are tried in order:
 /// 1. Convert CmpInstr into an unconditional version.
 /// 2. Remove CmpInstr if above there is an instruction producing a needed
-///    condition code or an instruction which can be converted into such an instruction.
+///    condition code or an instruction which can be converted into such an
+///    instruction.
 ///    Only comparison with zero is supported.
 bool AArch64InstrInfo::optimizeCompareInstr(
     MachineInstr &CmpInstr, unsigned SrcReg, unsigned SrcReg2, int CmpMask,
@@ -1187,20 +1186,34 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::SUBSXri:
     return Instr.getOpcode();
 
-  case AArch64::ADDWrr:    return AArch64::ADDSWrr;
-  case AArch64::ADDWri:    return AArch64::ADDSWri;
-  case AArch64::ADDXrr:    return AArch64::ADDSXrr;
-  case AArch64::ADDXri:    return AArch64::ADDSXri;
-  case AArch64::ADCWr:     return AArch64::ADCSWr;
-  case AArch64::ADCXr:     return AArch64::ADCSXr;
-  case AArch64::SUBWrr:    return AArch64::SUBSWrr;
-  case AArch64::SUBWri:    return AArch64::SUBSWri;
-  case AArch64::SUBXrr:    return AArch64::SUBSXrr;
-  case AArch64::SUBXri:    return AArch64::SUBSXri;
-  case AArch64::SBCWr:     return AArch64::SBCSWr;
-  case AArch64::SBCXr:     return AArch64::SBCSXr;
-  case AArch64::ANDWri:    return AArch64::ANDSWri;
-  case AArch64::ANDXri:    return AArch64::ANDSXri;
+  case AArch64::ADDWrr:
+    return AArch64::ADDSWrr;
+  case AArch64::ADDWri:
+    return AArch64::ADDSWri;
+  case AArch64::ADDXrr:
+    return AArch64::ADDSXrr;
+  case AArch64::ADDXri:
+    return AArch64::ADDSXri;
+  case AArch64::ADCWr:
+    return AArch64::ADCSWr;
+  case AArch64::ADCXr:
+    return AArch64::ADCSXr;
+  case AArch64::SUBWrr:
+    return AArch64::SUBSWrr;
+  case AArch64::SUBWri:
+    return AArch64::SUBSWri;
+  case AArch64::SUBXrr:
+    return AArch64::SUBSXrr;
+  case AArch64::SUBXri:
+    return AArch64::SUBSXri;
+  case AArch64::SBCWr:
+    return AArch64::SBCSWr;
+  case AArch64::SBCXr:
+    return AArch64::SBCSXr;
+  case AArch64::ANDWri:
+    return AArch64::ANDSWri;
+  case AArch64::ANDXri:
+    return AArch64::ANDSXri;
   }
 }
 
@@ -1222,7 +1235,7 @@ struct UsedNZCV {
 
   UsedNZCV() = default;
 
-  UsedNZCV& operator |=(const UsedNZCV& UsedFlags) {
+  UsedNZCV &operator|=(const UsedNZCV &UsedFlags) {
     this->N |= UsedFlags.N;
     this->Z |= UsedFlags.Z;
     this->C |= UsedFlags.C;
@@ -1238,29 +1251,29 @@ struct UsedNZCV {
 /// codes or we don't optimize CmpInstr in the presence of such instructions.
 static AArch64CC::CondCode findCondCodeUsedByInstr(const MachineInstr &Instr) {
   switch (Instr.getOpcode()) {
-    default:
-      return AArch64CC::Invalid;
+  default:
+    return AArch64CC::Invalid;
 
-    case AArch64::Bcc: {
-      int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
-      assert(Idx >= 2);
-      return static_cast<AArch64CC::CondCode>(Instr.getOperand(Idx - 2).getImm());
-    }
+  case AArch64::Bcc: {
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+    assert(Idx >= 2);
+    return static_cast<AArch64CC::CondCode>(Instr.getOperand(Idx - 2).getImm());
+  }
 
-    case AArch64::CSINVWr:
-    case AArch64::CSINVXr:
-    case AArch64::CSINCWr:
-    case AArch64::CSINCXr:
-    case AArch64::CSELWr:
-    case AArch64::CSELXr:
-    case AArch64::CSNEGWr:
-    case AArch64::CSNEGXr:
-    case AArch64::FCSELSrrr:
-    case AArch64::FCSELDrrr: {
-      int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
-      assert(Idx >= 1);
-      return static_cast<AArch64CC::CondCode>(Instr.getOperand(Idx - 1).getImm());
-    }
+  case AArch64::CSINVWr:
+  case AArch64::CSINVXr:
+  case AArch64::CSINCWr:
+  case AArch64::CSINCXr:
+  case AArch64::CSELWr:
+  case AArch64::CSELXr:
+  case AArch64::CSNEGWr:
+  case AArch64::CSNEGXr:
+  case AArch64::FCSELSrrr:
+  case AArch64::FCSELDrrr: {
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+    assert(Idx >= 1);
+    return static_cast<AArch64CC::CondCode>(Instr.getOperand(Idx - 1).getImm());
+  }
   }
 }
 
@@ -1268,42 +1281,42 @@ static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
   assert(CC != AArch64CC::Invalid);
   UsedNZCV UsedFlags;
   switch (CC) {
-    default:
-      break;
+  default:
+    break;
 
-    case AArch64CC::EQ: // Z set
-    case AArch64CC::NE: // Z clear
-      UsedFlags.Z = true;
-      break;
+  case AArch64CC::EQ: // Z set
+  case AArch64CC::NE: // Z clear
+    UsedFlags.Z = true;
+    break;
 
-    case AArch64CC::HI: // Z clear and C set
-    case AArch64CC::LS: // Z set   or  C clear
-      UsedFlags.Z = true;
-      LLVM_FALLTHROUGH;
-    case AArch64CC::HS: // C set
-    case AArch64CC::LO: // C clear
-      UsedFlags.C = true;
-      break;
+  case AArch64CC::HI: // Z clear and C set
+  case AArch64CC::LS: // Z set   or  C clear
+    UsedFlags.Z = true;
+    LLVM_FALLTHROUGH;
+  case AArch64CC::HS: // C set
+  case AArch64CC::LO: // C clear
+    UsedFlags.C = true;
+    break;
 
-    case AArch64CC::MI: // N set
-    case AArch64CC::PL: // N clear
-      UsedFlags.N = true;
-      break;
+  case AArch64CC::MI: // N set
+  case AArch64CC::PL: // N clear
+    UsedFlags.N = true;
+    break;
 
-    case AArch64CC::VS: // V set
-    case AArch64CC::VC: // V clear
-      UsedFlags.V = true;
-      break;
+  case AArch64CC::VS: // V set
+  case AArch64CC::VC: // V clear
+    UsedFlags.V = true;
+    break;
 
-    case AArch64CC::GT: // Z clear, N and V the same
-    case AArch64CC::LE: // Z set,   N and V differ
-      UsedFlags.Z = true;
-      LLVM_FALLTHROUGH;
-    case AArch64CC::GE: // N and V the same
-    case AArch64CC::LT: // N and V differ 
-      UsedFlags.N = true;
-      UsedFlags.V = true;
-      break;
+  case AArch64CC::GT: // Z clear, N and V the same
+  case AArch64CC::LE: // Z set,   N and V differ
+    UsedFlags.Z = true;
+    LLVM_FALLTHROUGH;
+  case AArch64CC::GE: // N and V the same
+  case AArch64CC::LT: // N and V differ
+    UsedFlags.N = true;
+    UsedFlags.V = true;
+    break;
   }
   return UsedFlags;
 }
@@ -1328,7 +1341,7 @@ static bool isSUBSRegImm(unsigned Opcode) {
 ///        nor uses of flags between MI and CmpInstr.
 /// - and  C/V flags are not used after CmpInstr
 static bool canInstrSubstituteCmpInstr(MachineInstr *MI, MachineInstr *CmpInstr,
-    const TargetRegisterInfo *TRI) {
+                                       const TargetRegisterInfo *TRI) {
   assert(MI);
   assert(sForm(*MI) != AArch64::INSTRUCTION_LIST_END);
   assert(CmpInstr);
@@ -1350,7 +1363,8 @@ static bool canInstrSubstituteCmpInstr(MachineInstr *MI, MachineInstr *CmpInstr,
     return false;
 
   UsedNZCV NZCVUsedAfterCmp;
-  for (auto I = std::next(CmpInstr->getIterator()), E = CmpInstr->getParent()->instr_end();
+  for (auto I = std::next(CmpInstr->getIterator()),
+            E = CmpInstr->getParent()->instr_end();
        I != E; ++I) {
     const MachineInstr &Instr = *I;
     if (Instr.readsRegister(AArch64::NZCV, TRI)) {
@@ -1363,7 +1377,7 @@ static bool canInstrSubstituteCmpInstr(MachineInstr *MI, MachineInstr *CmpInstr,
     if (Instr.modifiesRegister(AArch64::NZCV, TRI))
       break;
   }
-  
+
   return !NZCVUsedAfterCmp.C && !NZCVUsedAfterCmp.V;
 }
 
@@ -1421,16 +1435,20 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addMemOperand(*MI.memoperands_begin());
   } else if (TM.getCodeModel() == CodeModel::Large) {
     BuildMI(MBB, MI, DL, get(AArch64::MOVZXi), Reg)
-        .addGlobalAddress(GV, 0, AArch64II::MO_G0 | MO_NC).addImm(0);
+        .addGlobalAddress(GV, 0, AArch64II::MO_G0 | MO_NC)
+        .addImm(0);
     BuildMI(MBB, MI, DL, get(AArch64::MOVKXi), Reg)
         .addReg(Reg, RegState::Kill)
-        .addGlobalAddress(GV, 0, AArch64II::MO_G1 | MO_NC).addImm(16);
+        .addGlobalAddress(GV, 0, AArch64II::MO_G1 | MO_NC)
+        .addImm(16);
     BuildMI(MBB, MI, DL, get(AArch64::MOVKXi), Reg)
         .addReg(Reg, RegState::Kill)
-        .addGlobalAddress(GV, 0, AArch64II::MO_G2 | MO_NC).addImm(32);
+        .addGlobalAddress(GV, 0, AArch64II::MO_G2 | MO_NC)
+        .addImm(32);
     BuildMI(MBB, MI, DL, get(AArch64::MOVKXi), Reg)
         .addReg(Reg, RegState::Kill)
-        .addGlobalAddress(GV, 0, AArch64II::MO_G3).addImm(48);
+        .addGlobalAddress(GV, 0, AArch64II::MO_G3)
+        .addImm(48);
     BuildMI(MBB, MI, DL, get(AArch64::LDRXui), Reg)
         .addReg(Reg, RegState::Kill)
         .addImm(0)
@@ -1812,7 +1830,7 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   } else
     return false;
 
-  // Get the scaling factor for the instruction and set the width for the 
+  // Get the scaling factor for the instruction and set the width for the
   // instruction.
   unsigned Scale = 0;
   int64_t Dummy1, Dummy2;
@@ -1835,10 +1853,10 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   return true;
 }
 
-MachineOperand&
+MachineOperand &
 AArch64InstrInfo::getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const {
   assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
-  MachineOperand &OfsOp = LdSt.getOperand(LdSt.getNumExplicitOperands()-1);
+  MachineOperand &OfsOp = LdSt.getOperand(LdSt.getNumExplicitOperands() - 1);
   assert(OfsOp.isImm() && "Offset operand wasn't immediate.");
   return OfsOp;
 }
@@ -1847,7 +1865,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
                                     unsigned &Width, int64_t &MinOffset,
                                     int64_t &MaxOffset) const {
   switch (Opcode) {
-  // Not a memory operation or something we want to handle.  
+  // Not a memory operation or something we want to handle.
   default:
     Scale = Width = 0;
     MinOffset = MaxOffset = 0;
@@ -2083,18 +2101,6 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
   return Offset1 + 1 == Offset2;
 }
 
-MachineInstr *AArch64InstrInfo::emitFrameIndexDebugValue(
-    MachineFunction &MF, int FrameIx, uint64_t Offset, const MDNode *Var,
-    const MDNode *Expr, const DebugLoc &DL) const {
-  MachineInstrBuilder MIB = BuildMI(MF, DL, get(AArch64::DBG_VALUE))
-                                .addFrameIndex(FrameIx)
-                                .addImm(0)
-                                .addImm(Offset)
-                                .addMetadata(Var)
-                                .addMetadata(Expr);
-  return &*MIB;
-}
-
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
                                             unsigned Reg, unsigned SubIdx,
                                             unsigned State,
@@ -2114,12 +2120,13 @@ static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
   return ((DestReg - SrcReg) & 0x1f) < NumRegs;
 }
 
-void AArch64InstrInfo::copyPhysRegTuple(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, const DebugLoc &DL,
-    unsigned DestReg, unsigned SrcReg, bool KillSrc, unsigned Opcode,
-    ArrayRef<unsigned> Indices) const {
-  assert(Subtarget.hasNEON() &&
-         "Unexpected register copy without NEON");
+void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator I,
+                                        const DebugLoc &DL, unsigned DestReg,
+                                        unsigned SrcReg, bool KillSrc,
+                                        unsigned Opcode,
+                                        ArrayRef<unsigned> Indices) const {
+  assert(Subtarget.hasNEON() && "Unexpected register copy without NEON");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
@@ -2172,8 +2179,9 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
       }
     } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroing()) {
-      BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg).addImm(0).addImm(
-          AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+      BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
+          .addImm(0)
+          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     } else {
       if (Subtarget.hasZeroCycleRegMove()) {
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
@@ -2208,8 +2216,9 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroing()) {
-      BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg).addImm(0).addImm(
-          AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+      BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
+          .addImm(0)
+          .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     } else {
       // Otherwise, expand to ORR XZR.
       BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestReg)
@@ -2222,8 +2231,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a DDDD register quad by copying the individual sub-registers.
   if (AArch64::DDDDRegClass.contains(DestReg) &&
       AArch64::DDDDRegClass.contains(SrcReg)) {
-    static const unsigned Indices[] = { AArch64::dsub0, AArch64::dsub1,
-                                        AArch64::dsub2, AArch64::dsub3 };
+    static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
+                                       AArch64::dsub2, AArch64::dsub3};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
                      Indices);
     return;
@@ -2232,8 +2241,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a DDD register triple by copying the individual sub-registers.
   if (AArch64::DDDRegClass.contains(DestReg) &&
       AArch64::DDDRegClass.contains(SrcReg)) {
-    static const unsigned Indices[] = { AArch64::dsub0, AArch64::dsub1,
-                                        AArch64::dsub2 };
+    static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
+                                       AArch64::dsub2};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
                      Indices);
     return;
@@ -2242,7 +2251,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a DD register pair by copying the individual sub-registers.
   if (AArch64::DDRegClass.contains(DestReg) &&
       AArch64::DDRegClass.contains(SrcReg)) {
-    static const unsigned Indices[] = { AArch64::dsub0, AArch64::dsub1 };
+    static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
                      Indices);
     return;
@@ -2251,8 +2260,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a QQQQ register quad by copying the individual sub-registers.
   if (AArch64::QQQQRegClass.contains(DestReg) &&
       AArch64::QQQQRegClass.contains(SrcReg)) {
-    static const unsigned Indices[] = { AArch64::qsub0, AArch64::qsub1,
-                                        AArch64::qsub2, AArch64::qsub3 };
+    static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
+                                       AArch64::qsub2, AArch64::qsub3};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
                      Indices);
     return;
@@ -2261,8 +2270,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a QQQ register triple by copying the individual sub-registers.
   if (AArch64::QQQRegClass.contains(DestReg) &&
       AArch64::QQQRegClass.contains(SrcReg)) {
-    static const unsigned Indices[] = { AArch64::qsub0, AArch64::qsub1,
-                                        AArch64::qsub2 };
+    static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
+                                       AArch64::qsub2};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
                      Indices);
     return;
@@ -2271,7 +2280,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a QQ register pair by copying the individual sub-registers.
   if (AArch64::QQRegClass.contains(DestReg) &&
       AArch64::QQRegClass.contains(SrcReg)) {
-    static const unsigned Indices[] = { AArch64::qsub0, AArch64::qsub1 };
+    static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
                      Indices);
     return;
@@ -2279,28 +2288,28 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if(Subtarget.hasNEON()) {
+    if (Subtarget.hasNEON()) {
       BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
           .addReg(SrcReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
       BuildMI(MBB, I, DL, get(AArch64::STRQpre))
-        .addReg(AArch64::SP, RegState::Define)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(AArch64::SP)
-        .addImm(-16);
+          .addReg(AArch64::SP, RegState::Define)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addReg(AArch64::SP)
+          .addImm(-16);
       BuildMI(MBB, I, DL, get(AArch64::LDRQpre))
-        .addReg(AArch64::SP, RegState::Define)
-        .addReg(DestReg, RegState::Define)
-        .addReg(AArch64::SP)
-        .addImm(16);
+          .addReg(AArch64::SP, RegState::Define)
+          .addReg(DestReg, RegState::Define)
+          .addReg(AArch64::SP)
+          .addImm(16);
     }
     return;
   }
 
   if (AArch64::FPR64RegClass.contains(DestReg) &&
       AArch64::FPR64RegClass.contains(SrcReg)) {
-    if(Subtarget.hasNEON()) {
+    if (Subtarget.hasNEON()) {
       DestReg = RI.getMatchingSuperReg(DestReg, AArch64::dsub,
                                        &AArch64::FPR128RegClass);
       SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::dsub,
@@ -2317,7 +2326,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::FPR32RegClass.contains(SrcReg)) {
-    if(Subtarget.hasNEON()) {
+    if (Subtarget.hasNEON()) {
       DestReg = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
                                        &AArch64::FPR128RegClass);
       SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
@@ -2334,7 +2343,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR16RegClass.contains(DestReg) &&
       AArch64::FPR16RegClass.contains(SrcReg)) {
-    if(Subtarget.hasNEON()) {
+    if (Subtarget.hasNEON()) {
       DestReg = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
                                        &AArch64::FPR128RegClass);
       SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
@@ -2355,7 +2364,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR8RegClass.contains(DestReg) &&
       AArch64::FPR8RegClass.contains(SrcReg)) {
-    if(Subtarget.hasNEON()) {
+    if (Subtarget.hasNEON()) {
       DestReg = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
                                        &AArch64::FPR128RegClass);
       SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
@@ -2404,17 +2413,17 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (DestReg == AArch64::NZCV) {
     assert(AArch64::GPR64RegClass.contains(SrcReg) && "Invalid NZCV copy");
     BuildMI(MBB, I, DL, get(AArch64::MSR))
-      .addImm(AArch64SysReg::NZCV)
-      .addReg(SrcReg, getKillRegState(KillSrc))
-      .addReg(AArch64::NZCV, RegState::Implicit | RegState::Define);
+        .addImm(AArch64SysReg::NZCV)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(AArch64::NZCV, RegState::Implicit | RegState::Define);
     return;
   }
 
   if (SrcReg == AArch64::NZCV) {
     assert(AArch64::GPR64RegClass.contains(DestReg) && "Invalid NZCV copy");
     BuildMI(MBB, I, DL, get(AArch64::MRS), DestReg)
-      .addImm(AArch64SysReg::NZCV)
-      .addReg(AArch64::NZCV, RegState::Implicit | getKillRegState(KillSrc));
+        .addImm(AArch64SysReg::NZCV)
+        .addReg(AArch64::NZCV, RegState::Implicit | getKillRegState(KillSrc));
     return;
   }
 
@@ -2470,45 +2479,39 @@ void AArch64InstrInfo::storeRegToStackSlot(
     if (AArch64::FPR128RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRQui;
     else if (AArch64::DDRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register store without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Twov1d;
       Offset = false;
     }
     break;
   case 24:
     if (AArch64::DDDRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register store without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Threev1d;
       Offset = false;
     }
     break;
   case 32:
     if (AArch64::DDDDRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register store without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Fourv1d;
       Offset = false;
     } else if (AArch64::QQRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register store without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Twov2d;
       Offset = false;
     }
     break;
   case 48:
     if (AArch64::QQQRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register store without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Threev2d;
       Offset = false;
     }
     break;
   case 64:
     if (AArch64::QQQQRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register store without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Fourv2d;
       Offset = false;
     }
@@ -2517,8 +2520,8 @@ void AArch64InstrInfo::storeRegToStackSlot(
   assert(Opc && "Unknown register class");
 
   const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
-                                      .addReg(SrcReg, getKillRegState(isKill))
-                                      .addFrameIndex(FI);
+                                     .addReg(SrcReg, getKillRegState(isKill))
+                                     .addFrameIndex(FI);
 
   if (Offset)
     MI.addImm(0);
@@ -2574,45 +2577,39 @@ void AArch64InstrInfo::loadRegFromStackSlot(
     if (AArch64::FPR128RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRQui;
     else if (AArch64::DDRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register load without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Twov1d;
       Offset = false;
     }
     break;
   case 24:
     if (AArch64::DDDRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register load without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Threev1d;
       Offset = false;
     }
     break;
   case 32:
     if (AArch64::DDDDRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register load without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Fourv1d;
       Offset = false;
     } else if (AArch64::QQRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register load without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Twov2d;
       Offset = false;
     }
     break;
   case 48:
     if (AArch64::QQQRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register load without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Threev2d;
       Offset = false;
     }
     break;
   case 64:
     if (AArch64::QQQQRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasNEON() &&
-             "Unexpected register load without NEON");
+      assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Fourv2d;
       Offset = false;
     }
@@ -2621,8 +2618,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   assert(Opc && "Unknown register class");
 
   const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
-                                      .addReg(DestReg, getDefRegState(true))
-                                      .addFrameIndex(FI);
+                                     .addReg(DestReg, getDefRegState(true))
+                                     .addFrameIndex(FI);
   if (Offset)
     MI.addImm(0);
   MI.addMemOperand(MMO);
@@ -2767,7 +2764,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
 
     if (DstMO.getSubReg() == 0 && SrcMO.getSubReg() == 0) {
       assert(TRI.getRegSizeInBits(*getRegClass(DstReg)) ==
-             TRI.getRegSizeInBits(*getRegClass(SrcReg)) &&
+                 TRI.getRegSizeInBits(*getRegClass(SrcReg)) &&
              "Mismatched register size in non subreg COPY");
       if (IsSpill)
         storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
@@ -3150,10 +3147,7 @@ void AArch64InstrInfo::getNoop(MCInst &NopInst) const {
 }
 
 // AArch64 supports MachineCombiner.
-bool AArch64InstrInfo::useMachineCombiner() const {
-
-  return true;
-}
+bool AArch64InstrInfo::useMachineCombiner() const { return true; }
 
 // True when Opc sets flag
 static bool isCombineInstrSettingFlag(unsigned Opc) {
@@ -3287,7 +3281,8 @@ static bool canCombineWithFMUL(MachineBasicBlock &MBB, MachineOperand &MO,
 //       1. Other data types (integer, vectors)
 //       2. Other math / logic operations (xor, or)
 //       3. Other forms of the same operation (intrinsics and other variants)
-bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
+bool AArch64InstrInfo::isAssociativeAndCommutative(
+    const MachineInstr &Inst) const {
   switch (Inst.getOpcode()) {
   case AArch64::FADDDrr:
   case AArch64::FADDSrr:
@@ -3607,8 +3602,8 @@ static bool getFMAPatterns(MachineInstr &Root,
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
-bool
-AArch64InstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
+bool AArch64InstrInfo::isThroughputPattern(
+    MachineCombinerPattern Pattern) const {
   switch (Pattern) {
   default:
     break;
@@ -3759,8 +3754,8 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
 static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
                               const TargetInstrInfo *TII, MachineInstr &Root,
                               SmallVectorImpl<MachineInstr *> &InsInstrs,
-                              unsigned IdxMulOpd, unsigned MaddOpc,
-                              unsigned VR, const TargetRegisterClass *RC) {
+                              unsigned IdxMulOpd, unsigned MaddOpc, unsigned VR,
+                              const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1 || IdxMulOpd == 2);
 
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
@@ -3779,11 +3774,11 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
   if (TargetRegisterInfo::isVirtualRegister(VR))
     MRI.constrainRegClass(VR, RC);
 
-  MachineInstrBuilder MIB = BuildMI(MF, Root.getDebugLoc(), TII->get(MaddOpc),
-                                    ResultReg)
-                                .addReg(SrcReg0, getKillRegState(Src0IsKill))
-                                .addReg(SrcReg1, getKillRegState(Src1IsKill))
-                                .addReg(VR);
+  MachineInstrBuilder MIB =
+      BuildMI(MF, Root.getDebugLoc(), TII->get(MaddOpc), ResultReg)
+          .addReg(SrcReg0, getKillRegState(Src0IsKill))
+          .addReg(SrcReg1, getKillRegState(Src1IsKill))
+          .addReg(VR);
   // Insert the MADD
   InsInstrs.push_back(MIB);
   return MUL;
@@ -4413,12 +4408,9 @@ AArch64InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace AArch64II;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_PAGE, "aarch64-page"},
-      {MO_PAGEOFF, "aarch64-pageoff"},
-      {MO_G3, "aarch64-g3"},
-      {MO_G2, "aarch64-g2"},
-      {MO_G1, "aarch64-g1"},
-      {MO_G0, "aarch64-g0"},
+      {MO_PAGE, "aarch64-page"}, {MO_PAGEOFF, "aarch64-pageoff"},
+      {MO_G3, "aarch64-g3"},     {MO_G2, "aarch64-g2"},
+      {MO_G1, "aarch64-g1"},     {MO_G0, "aarch64-g0"},
       {MO_HI12, "aarch64-hi12"}};
   return makeArrayRef(TargetFlags);
 }
@@ -4428,9 +4420,7 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace AArch64II;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_GOT, "aarch64-got"},
-      {MO_NC, "aarch64-nc"},
-      {MO_TLS, "aarch64-tls"}};
+      {MO_GOT, "aarch64-got"}, {MO_NC, "aarch64-nc"}, {MO_TLS, "aarch64-tls"}};
   return makeArrayRef(TargetFlags);
 }
 
@@ -4442,26 +4432,27 @@ AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-unsigned AArch64InstrInfo::getOutliningBenefit(size_t SequenceSize,
-                                               size_t Occurrences,
-                                               bool CanBeTailCall) const {
-  unsigned NotOutlinedSize = SequenceSize * Occurrences;
-  unsigned OutlinedSize;
+size_t AArch64InstrInfo::getOutliningCallOverhead(
+    MachineBasicBlock::iterator &StartIt,
+    MachineBasicBlock::iterator &EndIt) const {
+  // Is this a tail-call?
+  if (EndIt->isTerminator())
+    return 1; // Yes, so we don't need to save/restore LR.
 
-  // Is this candidate something we can outline as a tail call?
-  if (CanBeTailCall) {
-    // If yes, then we just outline the sequence and replace each of its
-    // occurrences with a branch instruction.
-    OutlinedSize = SequenceSize + Occurrences;
-  } else {
-    // If no, then we outline the sequence (SequenceSize), add a return (+1),
-    // and replace each occurrence with a save/restore to LR and a call
-    // (3 * Occurrences)
-    OutlinedSize = (SequenceSize + 1) + (3 * Occurrences);
-  }
+  // No, so save + restore LR.
+  return 3;
+}
 
-  // Return the number of instructions saved by outlining this sequence.
-  return NotOutlinedSize > OutlinedSize ? NotOutlinedSize - OutlinedSize : 0;
+size_t AArch64InstrInfo::getOutliningFrameOverhead(
+    MachineBasicBlock::iterator &StartIt,
+    MachineBasicBlock::iterator &EndIt) const {
+
+  // Is this a tail-call?
+  if (EndIt->isTerminator())
+    return 0; // Yes, so we already have a return.
+
+  // No, so we have to add a return to the end.
+  return 1;
 }
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
@@ -4487,7 +4478,7 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
 
     // Is this the end of a function?
     if (MI.getParent()->succ_empty())
-        return MachineOutlinerInstrType::Legal;
+      return MachineOutlinerInstrType::Legal;
 
     // It's not, so don't outline it.
     return MachineOutlinerInstrType::Illegal;
@@ -4506,7 +4497,7 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
   // Don't outline anything that uses the link register.
   if (MI.modifiesRegister(AArch64::LR, &RI) ||
       MI.readsRegister(AArch64::LR, &RI))
-      return MachineOutlinerInstrType::Illegal;
+    return MachineOutlinerInstrType::Illegal;
 
   // Does this use the stack?
   if (MI.modifiesRegister(AArch64::SP, &RI) ||
@@ -4514,13 +4505,13 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
 
     // Is it a memory operation?
     if (MI.mayLoadOrStore()) {
-      unsigned Base; // Filled with the base regiser of MI.
+      unsigned Base;  // Filled with the base regiser of MI.
       int64_t Offset; // Filled with the offset of MI.
       unsigned DummyWidth;
 
       // Does it allow us to offset the base register and is the base SP?
       if (!getMemOpBaseRegImmOfsWidth(MI, Base, Offset, DummyWidth, &RI) ||
-                                      Base != AArch64::SP)
+          Base != AArch64::SP)
         return MachineOutlinerInstrType::Illegal;
 
       // Find the minimum/maximum offset for this instruction and check if
@@ -4534,7 +4525,7 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
       // This is tricky to test with IR tests, but when the outliner is moved
       // to a MIR test, it really ought to be checked.
       if (Offset + 16 < MinOffset || Offset + 16 > MaxOffset)
-	return MachineOutlinerInstrType::Illegal;
+        return MachineOutlinerInstrType::Illegal;
 
       // It's in range, so we can outline it.
       return MachineOutlinerInstrType::Legal;
@@ -4570,7 +4561,7 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
     // We've pushed the return address to the stack, so add 16 to the offset.
     // This is safe, since we already checked if it would overflow when we
     // checked if this instruction was legal to outline.
-    int64_t NewImm = (Offset + 16)/Scale;
+    int64_t NewImm = (Offset + 16) / Scale;
     StackOffsetOperand.setImm(NewImm);
   }
 }
@@ -4636,4 +4627,3 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
 
   return It;
 }
-

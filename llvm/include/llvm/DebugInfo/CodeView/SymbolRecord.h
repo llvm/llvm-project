@@ -363,12 +363,12 @@ public:
       : SymbolRecord(SymbolRecordKind::PublicSym32),
         RecordOffset(RecordOffset) {}
 
-  PublicSymFlags Flags;
-  uint32_t Offset;
-  uint16_t Segment;
+  PublicSymFlags Flags = PublicSymFlags::None;
+  uint32_t Offset = 0;
+  uint16_t Segment = 0;
   StringRef Name;
 
-  uint32_t RecordOffset;
+  uint32_t RecordOffset = 0;
 };
 
 // S_REGISTER

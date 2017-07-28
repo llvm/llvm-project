@@ -566,9 +566,11 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  unsigned getOutliningBenefit(size_t SequenceSize,
-                               size_t Occurrences,
-                               bool CanBeTailCall) const override;
+  size_t getOutliningCallOverhead(MachineBasicBlock::iterator &StartIt,
+  MachineBasicBlock::iterator &EndIt) const override;
+  
+  size_t getOutliningFrameOverhead(MachineBasicBlock::iterator &StartIt,
+  MachineBasicBlock::iterator &EndIt) const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const override;
 

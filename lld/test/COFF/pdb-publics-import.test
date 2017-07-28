@@ -1,0 +1,23 @@
+Make a DLL that exports a few functions, then make a DLL with PDBs that imports
+them. Check that the __imp_ pointer and the generated thunks appear in the
+publics stream.
+
+RUN: yaml2obj < %p/Inputs/export.yaml > %t1.obj
+RUN: lld-link /out:%t1.dll /dll %t1.obj /implib:%t1.lib \
+RUN:   /export:exportfn1 /export:exportfn2
+RUN: yaml2obj < %p/Inputs/import.yaml > %t2.obj
+RUN: lld-link /out:%t2.exe /pdb:%t2.pdb /debug /entry:main %t2.obj %t1.lib
+RUN: llvm-pdbutil dump %t2.pdb -publics | FileCheck %s
+
+CHECK:                             Public Symbols
+CHECK-NEXT: ============================================================
+CHECK-NEXT:      112 | S_PUB32 [size = 20] `main`
+CHECK-NEXT:            flags = function, addr = 0001:0000
+CHECK-NEXT:       64 | S_PUB32 [size = 24] `exportfn1`
+CHECK-NEXT:            flags = function, addr = 0001:0016
+CHECK-NEXT:       88 | S_PUB32 [size = 24] `exportfn2`
+CHECK-NEXT:            flags = function, addr = 0001:0032
+CHECK-NEXT:       32 | S_PUB32 [size = 32] `__imp_exportfn2`
+CHECK-NEXT:            flags = none, addr = 0003:0072
+CHECK-NEXT:        0 | S_PUB32 [size = 32] `__imp_exportfn1`
+CHECK-NEXT:            flags = none, addr = 0003:0064

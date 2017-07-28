@@ -194,10 +194,6 @@ public:
   bool shouldClusterMemOps(MachineInstr &FirstLdSt, MachineInstr &SecondLdSt,
                            unsigned NumLoads) const override;
 
-  MachineInstr *emitFrameIndexDebugValue(MachineFunction &MF, int FrameIx,
-                                         uint64_t Offset, const MDNode *Var,
-                                         const MDNode *Expr,
-                                         const DebugLoc &DL) const;
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                         bool KillSrc, unsigned Opcode,
@@ -303,8 +299,10 @@ public:
   getSerializableMachineMemOperandTargetFlags() const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const override;
-  unsigned getOutliningBenefit(size_t SequenceSize, size_t Occurrences,
-                               bool CanBeTailCall) const override;
+  size_t getOutliningCallOverhead(MachineBasicBlock::iterator &StartIt,
+  MachineBasicBlock::iterator &EndIt) const override;
+  size_t getOutliningFrameOverhead(MachineBasicBlock::iterator &StartIt,
+  MachineBasicBlock::iterator &EndIt) const override;
   AArch64GenInstrInfo::MachineOutlinerInstrType
   getOutliningType(MachineInstr &MI) const override;
   void insertOutlinerEpilogue(MachineBasicBlock &MBB,

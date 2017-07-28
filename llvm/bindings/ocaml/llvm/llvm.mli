@@ -371,6 +371,8 @@ type ('a, 'b) llrev_pos =
 
 (** {6 Exceptions} *)
 
+exception FeatureDisabled of string
+
 exception IoError of string
 
 

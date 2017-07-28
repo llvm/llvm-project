@@ -593,14 +593,23 @@ void OMPInReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
   std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
 }
 
+void OMPInReductionClause::setTaskgroupDescriptors(
+    ArrayRef<Expr *> TaskgroupDescriptors) {
+  assert(TaskgroupDescriptors.size() == varlist_size() &&
+         "Number of in reduction descriptors is not the same as the "
+         "preallocated buffer");
+  std::copy(TaskgroupDescriptors.begin(), TaskgroupDescriptors.end(),
+            getReductionOps().end());
+}
+
 OMPInReductionClause *OMPInReductionClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     SourceLocation EndLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL,
     NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
     ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
-    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps, Stmt *PreInit,
-    Expr *PostUpdate) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size()));
+    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps,
+    ArrayRef<Expr *> TaskgroupDescriptors, Stmt *PreInit, Expr *PostUpdate) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(6 * VL.size()));
   OMPInReductionClause *Clause = new (Mem) OMPInReductionClause(
       StartLoc, LParenLoc, EndLoc, ColonLoc, VL.size(), QualifierLoc, NameInfo);
   Clause->setVarRefs(VL);
@@ -608,6 +617,7 @@ OMPInReductionClause *OMPInReductionClause::Create(
   Clause->setLHSExprs(LHSExprs);
   Clause->setRHSExprs(RHSExprs);
   Clause->setReductionOps(ReductionOps);
+  Clause->setTaskgroupDescriptors(TaskgroupDescriptors);
   Clause->setPreInitStmt(PreInit);
   Clause->setPostUpdateExpr(PostUpdate);
   return Clause;
@@ -615,7 +625,7 @@ OMPInReductionClause *OMPInReductionClause::Create(
 
 OMPInReductionClause *OMPInReductionClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * N));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(6 * N));
   return new (Mem) OMPInReductionClause(N);
 }
 

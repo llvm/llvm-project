@@ -52,6 +52,17 @@ InputFile *SymbolBody::getFile() {
   return nullptr;
 }
 
+bool SymbolBody::isLive() const {
+  if (auto *R = dyn_cast<DefinedRegular>(this))
+    return R->getChunk()->isLive();
+  if (auto *Imp = dyn_cast<DefinedImportData>(this))
+    return Imp->File->Live;
+  if (auto *Imp = dyn_cast<DefinedImportThunk>(this))
+    return Imp->WrappedSym->File->Live;
+  // Assume any other kind of symbol is live.
+  return true;
+}
+
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
   size_t SymSize = cast<ObjFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))
