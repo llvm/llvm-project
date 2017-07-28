@@ -65,10 +65,14 @@ _clang()
     return
   fi
 
-  if [[ "$cur" == '=' ]]; then
-    COMPREPLY=( $( compgen -W "$flags" -- "") )
-  elif [[ "$flags" == "" || "$arg" == "" ]]; then
+  # When clang does not emit any possible autocompletion, or user pushed tab after " ",
+  # just autocomplete files.
+  if [[ "$flags" == "$(echo -e '\n')" || "$arg" == "" ]]; then
+    # If -foo=<tab> and there was no possible values, autocomplete files.
+    [[ "$cur" == '=' || "$cur" == -*= ]] && cur=""
     _clang_filedir
+  elif [[ "$cur" == '=' ]]; then
+    COMPREPLY=( $( compgen -W "$flags" -- "") )
   else
     # Bash automatically appends a space after '=' by default.
     # Disable it so that it works nicely for options in the form of -foo=bar.
