@@ -433,7 +433,7 @@ SubmitBugReport              "Please submit a bug report with this message, comp
 OBSOLETE                     "Check NLSPATH environment variable, its value is \"%1$s\"."
 ChangeStackLimit             "Please try changing the shell stack limit or adjusting the "
                              "OMP_STACKSIZE environment variable."
-Unset_ALL_THREADS            "Consider unsetting KMP_ALL_THREADS and OMP_THREAD_LIMIT (if either is set)."
+Unset_ALL_THREADS            "Consider unsetting KMP_DEVICE_THREAD_LIMIT (KMP_ALL_THREADS) and OMP_THREAD_LIMIT (if either is set)."
 Set_ALL_THREADPRIVATE        "Consider setting KMP_ALL_THREADPRIVATE to a value larger than %1$d."
 PossibleSystemLimitOnThreads "This could also be due to a system-related limit on the number of threads."
 DuplicateLibrary             "This means that multiple copies of the OpenMP runtime have been "

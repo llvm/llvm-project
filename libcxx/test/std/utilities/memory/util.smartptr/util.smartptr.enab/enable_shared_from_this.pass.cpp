@@ -80,7 +80,6 @@ int main()
     }
     {
       typedef std::shared_ptr<PrivateBase> APtr;
-      typedef std::weak_ptr<PrivateBase> WeakAPtr;
       APtr a1 = std::make_shared<PrivateBase>();
       assert(a1.use_count() == 1);
     }

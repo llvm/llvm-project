@@ -99,6 +99,12 @@ public:
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> LocalImportChunks;
 
+  // Iterates symbols in non-determinstic hash table order.
+  template <typename T> void forEachSymbol(T Callback) {
+    for (auto &Pair : Symtab)
+      Callback(Pair.second);
+  }
+
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
   StringRef findByPrefix(StringRef Prefix);

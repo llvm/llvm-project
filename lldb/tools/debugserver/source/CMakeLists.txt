@@ -1,4 +1,5 @@
 include(CheckCXXCompilerFlag)
+include(CheckLibraryExists)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
 include_directories(MacOSX/DarwinLog)
@@ -25,6 +26,8 @@ check_cxx_compiler_flag("-Wno-extended-offsetof"
 if (CXX_SUPPORTS_NO_EXTENDED_OFFSETOF)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-extended-offsetof")
 endif ()
+
+check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
 
 add_subdirectory(MacOSX)
 
@@ -112,6 +115,10 @@ if (APPLE)
   endif()
 endif()
 
+if(HAVE_LIBCOMPRESSION)
+  set(LIBCOMPRESSION compression)
+endif()
+
 if(NOT SKIP_DEBUGSERVER)
   target_link_libraries(lldbDebugserverCommon
                         INTERFACE ${COCOA_LIBRARY}
@@ -123,8 +130,12 @@ if(NOT SKIP_DEBUGSERVER)
                         ${MOBILESERVICES_LIBRARY}
                         ${LOCKDOWN_LIBRARY}
                         lldbDebugserverArchSupport
-                        lldbDebugserverDarwin_DarwinLog)
-
+                        lldbDebugserverDarwin_DarwinLog
+                        ${LIBCOMPRESSION})
+  if(HAVE_LIBCOMPRESSION)
+    set_property(TARGET lldbDebugserverCommon APPEND PROPERTY
+                 COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
+  endif()
   set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
   add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
     debugserver.cpp
@@ -151,9 +162,14 @@ if(IOS)
                       ${CORE_FOUNDATION_LIBRARY}
                       ${FOUNDATION_LIBRARY}
                       lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog)
+                      lldbDebugserverDarwin_DarwinLog
+                      ${LIBCOMPRESSION})
+  if(HAVE_LIBCOMPRESSION)
+    set_property(TARGET lldbDebugserverCommon_NonUI APPEND PROPERTY
+                 COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
+  endif()
 
-  add_lldb_tool(debugserver_nonui INCLUDE_IN_FRAMEWORK
+  add_lldb_tool(debugserver-nonui INCLUDE_IN_FRAMEWORK
     debugserver.cpp
 
     LINK_LIBS
@@ -183,7 +199,7 @@ if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
   if(IOS)
-    add_custom_command(TARGET debugserver_nonui
+    add_custom_command(TARGET debugserver-nonui
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE}
               codesign --force --sign ${LLDB_CODESIGN_IDENTITY}

@@ -550,7 +550,7 @@ int FTN_STDCALL xexpand(FTN_GET_THREAD_LIMIT)(void) {
     __kmp_serial_initialize();
   };
   /* global ICV */
-  return __kmp_max_nth;
+  return __kmp_cg_max_nth;
 #endif
 }
 

@@ -180,23 +180,19 @@ if(LLDB_BUILD_FRAMEWORK)
   file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
       ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
   file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
-
-  foreach(header ${root_public_headers})
-    list(APPEND copy_headers_commands
-         COMMAND ${CMAKE_COMMAND} -E copy ${header} ${LLDB_SOURCE_DIR}/include/lldb/API ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders)
-  endforeach()
+  file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
+  list(REMOVE_ITEM root_public_headers ${root_private_headers})
 
   foreach(header ${public_headers} ${root_public_headers})
     get_filename_component(basename ${header} NAME)
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename}
+                       DEPENDS ${header}
+                       COMMAND ${CMAKE_COMMAND} -E copy ${header} ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename})
     list(APPEND framework_headers ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename})
   endforeach()
 
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/LLDB.h
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LLDB_SOURCE_DIR}/include/lldb/API ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders
-                    ${copy_headers_commands}
-                    COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders ${LLDB_VERSION}
-                    )
-  add_custom_target(lldb-framework-headers DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/LLDB.h)
+  add_custom_target(lldb-framework-headers DEPENDS ${framework_headers}
+                    COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders ${LLDB_VERSION})
   add_dependencies(liblldb lldb-framework-headers)
 
   set_target_properties(liblldb PROPERTIES
