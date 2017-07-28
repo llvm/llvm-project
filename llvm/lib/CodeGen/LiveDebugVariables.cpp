@@ -89,7 +89,6 @@ class LDVImpl;
 class UserValue {
   const MDNode *Variable;   ///< The debug info variable we are part of.
   const MDNode *Expression; ///< Any complex address expression.
-  unsigned offset;        ///< Byte offset into variable.
   bool IsIndirect;        ///< true if this is a register-indirect+offset value.
   DebugLoc dl;            ///< The debug location for the variable. This is
                           ///< used by dwarf writer to find lexical scope.
@@ -118,10 +117,10 @@ class UserValue {
 
 public:
   /// UserValue - Create a new UserValue.
-  UserValue(const MDNode *var, const MDNode *expr, unsigned o, bool i,
-            DebugLoc L, LocMap::Allocator &alloc)
-      : Variable(var), Expression(expr), offset(o), IsIndirect(i),
-        dl(std::move(L)), leader(this), next(nullptr), locInts(alloc) {}
+  UserValue(const MDNode *var, const MDNode *expr, bool i, DebugLoc L,
+            LocMap::Allocator &alloc)
+      : Variable(var), Expression(expr), IsIndirect(i), dl(std::move(L)),
+        leader(this), next(nullptr), locInts(alloc) {}
 
   /// getLeader - Get the leader of this value's equivalence class.
   UserValue *getLeader() {
@@ -136,9 +135,9 @@ public:
 
   /// match - Does this UserValue match the parameters?
   bool match(const MDNode *Var, const MDNode *Expr, const DILocation *IA,
-             unsigned Offset, bool indirect) const {
+             bool indirect) const {
     return Var == Variable && Expr == Expression && dl->getInlinedAt() == IA &&
-           Offset == offset && indirect == IsIndirect;
+           indirect == IsIndirect;
   }
 
   /// merge - Merge equivalence classes.
@@ -278,7 +277,7 @@ class LDVImpl {
 
   /// getUserValue - Find or create a UserValue.
   UserValue *getUserValue(const MDNode *Var, const MDNode *Expr,
-                          unsigned Offset, bool IsIndirect, const DebugLoc &DL);
+                          bool IsIndirect, const DebugLoc &DL);
 
   /// lookupVirtReg - Find the EC leader for VirtReg or null.
   UserValue *lookupVirtReg(unsigned VirtReg);
@@ -372,8 +371,6 @@ void UserValue::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   printExtendedName(OS, DV, dl);
 
   OS << "\"\t";
-  if (offset)
-    OS << '+' << offset;
   for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I) {
     OS << " [" << I.start() << ';' << I.stop() << "):";
     if (I.value() == ~0u)
@@ -430,19 +427,18 @@ void UserValue::mapVirtRegs(LDVImpl *LDV) {
 }
 
 UserValue *LDVImpl::getUserValue(const MDNode *Var, const MDNode *Expr,
-                                 unsigned Offset, bool IsIndirect,
-                                 const DebugLoc &DL) {
+                                 bool IsIndirect, const DebugLoc &DL) {
   UserValue *&Leader = userVarMap[Var];
   if (Leader) {
     UserValue *UV = Leader->getLeader();
     Leader = UV;
     for (; UV; UV = UV->getNext())
-      if (UV->match(Var, Expr, DL->getInlinedAt(), Offset, IsIndirect))
+      if (UV->match(Var, Expr, DL->getInlinedAt(), IsIndirect))
         return UV;
   }
 
   userValues.push_back(
-      make_unique<UserValue>(Var, Expr, Offset, IsIndirect, DL, allocator));
+      make_unique<UserValue>(Var, Expr, IsIndirect, DL, allocator));
   UserValue *UV = userValues.back().get();
   Leader = UserValue::merge(Leader, UV);
   return UV;
@@ -471,11 +467,12 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
 
   // Get or create the UserValue for (variable,offset).
   bool IsIndirect = MI.isIndirectDebugValue();
-  unsigned Offset = IsIndirect ? MI.getOperand(1).getImm() : 0;
+  if (IsIndirect)
+    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
   const MDNode *Var = MI.getDebugVariable();
   const MDNode *Expr = MI.getDebugExpression();
   //here.
-  UserValue *UV = getUserValue(Var, Expr, Offset, IsIndirect, MI.getDebugLoc());
+  UserValue *UV = getUserValue(Var, Expr, IsIndirect, MI.getDebugLoc());
   UV->addDef(Idx, MI.getOperand(0));
   return true;
 }
@@ -945,7 +942,7 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx,
   else
     BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE))
         .add(Loc)
-        .addImm(offset)
+        .addImm(0U)
         .addMetadata(Variable)
         .addMetadata(Expression);
 }
