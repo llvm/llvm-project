@@ -13,9 +13,22 @@ set(TSAN_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/tsan/rtl
   -DGTEST_HAS_RTTI=0)
 
+set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
 if(APPLE)
+  darwin_filter_host_archs(TSAN_SUPPORTED_ARCH TSAN_TEST_ARCH)
   list(APPEND TSAN_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
-  list(APPEND TSAN_UNITTEST_LINKFLAGS ${DARWIN_osx_LINKFLAGS})
+
+  # Create a static library for test dependencies.
+  set(TSAN_TEST_RUNTIME_OBJECTS
+    $<TARGET_OBJECTS:RTTsan_dynamic.osx>
+    $<TARGET_OBJECTS:RTInterception.osx>
+    $<TARGET_OBJECTS:RTSanitizerCommon.osx>
+    $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
+    $<TARGET_OBJECTS:RTUbsan.osx>)
+  set(TSAN_TEST_RUNTIME RTTsanTest)
+  add_library(${TSAN_TEST_RUNTIME} STATIC ${TSAN_TEST_RUNTIME_OBJECTS})
+  set_target_properties(${TSAN_TEST_RUNTIME} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 set(TSAN_RTL_HEADERS)
@@ -23,14 +36,13 @@ foreach (header ${TSAN_HEADERS})
   list(APPEND TSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 
+# add_tsan_unittest(<name>
+#                   SOURCES <sources list>
+#                   HEADERS <extra headers list>)
 macro(add_tsan_unittest testname)
-  set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
-  if(APPLE)
-    darwin_filter_host_archs(TSAN_SUPPORTED_ARCH TSAN_TEST_ARCH)
-  endif()
+  cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
   if(UNIX)
     foreach(arch ${TSAN_TEST_ARCH})
-      cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
       set(TEST_OBJECTS)
       foreach(SOURCE ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE})
         sanitizer_test_compile(
@@ -42,9 +54,6 @@ macro(add_tsan_unittest testname)
       endforeach()
       get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
       set(TEST_DEPS ${TEST_OBJECTS})
-      if(NOT COMPILER_RT_STANDALONE_BUILD)
-        list(APPEND TEST_DEPS tsan)
-      endif()
       if(NOT APPLE)
         # FIXME: Looks like we should link TSan with just-built runtime,
         # and not rely on -fsanitize=thread, as these tests are essentially
@@ -56,17 +65,7 @@ macro(add_tsan_unittest testname)
                            -fsanitize=thread
                            -lstdc++ -lm)
       else()
-        set(TSAN_TEST_RUNTIME_OBJECTS
-          $<TARGET_OBJECTS:RTTsan_dynamic.osx>
-          $<TARGET_OBJECTS:RTInterception.osx>
-          $<TARGET_OBJECTS:RTSanitizerCommon.osx>
-          $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
-          $<TARGET_OBJECTS:RTUbsan.osx>)
-        set(TSAN_TEST_RUNTIME RTTsanTest.${testname}.${arch})
-        add_library(${TSAN_TEST_RUNTIME} STATIC ${TSAN_TEST_RUNTIME_OBJECTS})
-        set_target_properties(${TSAN_TEST_RUNTIME} PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        list(APPEND TEST_OBJECTS lib${TSAN_TEST_RUNTIME}.a)
+        list(APPEND TEST_OBJECTS $<TARGET_FILE:${TSAN_TEST_RUNTIME}>)
         list(APPEND TEST_DEPS ${TSAN_TEST_RUNTIME})
 
         add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
