@@ -941,7 +941,7 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx,
          "Expected inlined-at fields to agree");
   if (Loc.isReg())
     BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE),
-            IsIndirect, Loc.getReg(), offset, Variable, Expression);
+            IsIndirect, Loc.getReg(), Variable, Expression);
   else
     BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE))
         .add(Loc)

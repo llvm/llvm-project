@@ -461,7 +461,7 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
       int SpillOffset = extractSpillBaseRegAndOffset(MI, SpillBase);
       const MachineInstr *DMI = &VarLocIDs[ID].MI;
       MachineInstr *SpDMI =
-          BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase, 0,
+          BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase,
                   DMI->getDebugVariable(), DMI->getDebugExpression());
       SpDMI->getOperand(1).setImm(SpillOffset);
       DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
@@ -582,7 +582,7 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
     const MachineInstr *DMI = &DiffIt.MI;
     MachineInstr *MI =
         BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
-                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(), 0,
+                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(),
                 DMI->getDebugVariable(), DMI->getDebugExpression());
     if (DMI->isIndirectDebugValue())
       MI->getOperand(1).setImm(DMI->getOperand(1).getImm());

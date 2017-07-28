@@ -2330,8 +2330,8 @@ void MachineInstr::emitError(StringRef Msg) const {
 
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
-                                  unsigned Reg, unsigned Offset,
-                                  const MDNode *Variable, const MDNode *Expr) {
+                                  unsigned Reg, const MDNode *Variable,
+                                  const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
@@ -2339,30 +2339,26 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   if (IsIndirect)
     return BuildMI(MF, DL, MCID)
         .addReg(Reg, RegState::Debug)
-        .addImm(Offset)
+        .addImm(0U)
         .addMetadata(Variable)
         .addMetadata(Expr);
-  else {
-    assert(Offset == 0 && "A direct address cannot have an offset.");
+  else
     return BuildMI(MF, DL, MCID)
         .addReg(Reg, RegState::Debug)
         .addReg(0U, RegState::Debug)
         .addMetadata(Variable)
         .addMetadata(Expr);
-  }
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, const MCInstrDesc &MCID,
                                   bool IsIndirect, unsigned Reg,
-                                  unsigned Offset, const MDNode *Variable,
-                                  const MDNode *Expr) {
+                                  const MDNode *Variable, const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   MachineFunction &MF = *BB.getParent();
-  MachineInstr *MI =
-      BuildMI(MF, DL, MCID, IsIndirect, Reg, Offset, Variable, Expr);
+  MachineInstr *MI = BuildMI(MF, DL, MCID, IsIndirect, Reg, Variable, Expr);
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI);
 }
@@ -2374,7 +2370,8 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
   const MDNode *Var = Orig.getDebugVariable();
   const auto *Expr = cast_or_null<DIExpression>(Orig.getDebugExpression());
   bool IsIndirect = Orig.isIndirectDebugValue();
-  uint64_t Offset = IsIndirect ? Orig.getOperand(1).getImm() : 0;
+  if (IsIndirect)
+    assert(Orig.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
   DebugLoc DL = Orig.getDebugLoc();
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -2385,7 +2382,7 @@ MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
     Expr = DIExpression::prepend(Expr, DIExpression::WithDeref);
   return BuildMI(BB, I, DL, Orig.getDesc())
       .addFrameIndex(FrameIndex)
-      .addImm(Offset)
+      .addImm(0U)
       .addMetadata(Var)
       .addMetadata(Expr);
 }

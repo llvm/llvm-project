@@ -4828,7 +4828,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (Op->isReg())
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsIndirect,
-                Op->getReg(), 0, Variable, Expr));
+                Op->getReg(), Variable, Expr));
   else
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE))

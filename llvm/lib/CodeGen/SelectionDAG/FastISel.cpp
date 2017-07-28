@@ -1187,7 +1187,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
         // into an indirect DBG_VALUE.
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
-                Op->getReg(), 0, DI->getVariable(), DI->getExpression());
+                Op->getReg(), DI->getVariable(), DI->getExpression());
       } else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_VALUE))
@@ -1239,7 +1239,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     } else if (unsigned Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
       bool IsIndirect = false;
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, IsIndirect, Reg, 0,
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, IsIndirect, Reg,
               DI->getVariable(), DI->getExpression());
     } else {
       // We can't yet handle anything else here because it would require

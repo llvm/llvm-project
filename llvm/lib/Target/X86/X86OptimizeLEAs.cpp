@@ -553,10 +553,11 @@ MachineInstr *OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
   MachineBasicBlock *MBB = MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   bool IsIndirect = MI.isIndirectDebugValue();
-  int64_t Offset = IsIndirect ? MI.getOperand(1).getImm() : 0;
   const MDNode *Var = MI.getDebugVariable();
+  if (IsIndirect)
+    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
   return BuildMI(*MBB, MBB->erase(&MI), DL, TII->get(TargetOpcode::DBG_VALUE),
-                 IsIndirect, VReg, Offset, Var, Expr);
+                 IsIndirect, VReg, Var, Expr);
 }
 
 // Try to find similar LEAs in the list and replace one with another.
