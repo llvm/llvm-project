@@ -168,11 +168,12 @@ public:
                                           const MDNode *Expr);
 
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
-  /// associated \p Variable lives in memory at \p Reg + \p Offset (suitably
-  /// modified by \p Expr).
-  MachineInstrBuilder buildIndirectDbgValue(unsigned Reg, unsigned Offset,
+  /// associated \p Variable lives in memory at \p Reg (suitably modified by \p
+  /// Expr).
+  MachineInstrBuilder buildIndirectDbgValue(unsigned Reg,
                                             const MDNode *Variable,
                                             const MDNode *Expr);
+
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
   /// associated \p Variable lives in the stack slot specified by \p FI
   /// (suitably modified by \p Expr).
@@ -181,7 +182,7 @@ public:
 
   /// Build and insert a DBG_VALUE instructions specifying that \p Variable is
   /// given by \p C (suitably modified by \p Expr).
-  MachineInstrBuilder buildConstDbgValue(const Constant &C, unsigned Offset,
+  MachineInstrBuilder buildConstDbgValue(const Constant &C,
                                          const MDNode *Variable,
                                          const MDNode *Expr);
 
