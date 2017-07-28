@@ -74,7 +74,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    unsigned ArchKind = llvm::AArch64::parseCPUArch(CPU);
+    llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseCPUArch(CPU);
     if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
       return false;
 
@@ -96,8 +96,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
-  unsigned ArchKind = llvm::AArch64::parseArch(Split.first);
-  if (ArchKind == static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID) ||
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+  if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
       (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features)))
     return false;

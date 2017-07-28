@@ -74,7 +74,7 @@ define <8 x i32> @d(<8 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: d:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
 ; AVX2-NEXT:    retq
   %b = trunc <8 x i32> %a to <8 x i16>

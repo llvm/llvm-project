@@ -2018,6 +2018,8 @@ void OMPClauseWriter::VisitOMPInReductionClause(OMPInReductionClause *C) {
     Record.AddStmt(E);
   for (auto *E : C->reduction_ops())
     Record.AddStmt(E);
+  for (auto *E : C->taskgroup_descriptors())
+    Record.AddStmt(E);
 }
 
 void OMPClauseWriter::VisitOMPLinearClause(OMPLinearClause *C) {

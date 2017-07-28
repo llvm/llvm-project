@@ -293,13 +293,13 @@ define <16 x i16> @mul_const3(<16 x i16> %x) {
 define <4 x i64> @mul_const4(<4 x i64> %x) {
 ; X32-LABEL: mul_const4:
 ; X32:       # BB#0:
-; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_const4:
 ; X64:       # BB#0:
-; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %y = mul <4 x i64> %x, <i64 -1, i64 -1, i64 -1, i64 -1>
@@ -309,12 +309,12 @@ define <4 x i64> @mul_const4(<4 x i64> %x) {
 define <8 x i32> @mul_const5(<8 x i32> %x) {
 ; X32-LABEL: mul_const5:
 ; X32:       # BB#0:
-; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_const5:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %y = mul <8 x i32> %x, <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x i32> %y

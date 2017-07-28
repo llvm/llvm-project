@@ -99,8 +99,7 @@ getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
   return Ret;
 }
 
-template <class ELFT>
-void elf::writeMapFile(llvm::ArrayRef<OutputSectionCommand *> Script) {
+template <class ELFT> void elf::writeMapFile() {
   if (Config->MapFile.empty())
     return;
 
@@ -123,13 +122,12 @@ void elf::writeMapFile(llvm::ArrayRef<OutputSectionCommand *> Script) {
      << " Align Out     In      Symbol\n";
 
   // Print out file contents.
-  for (OutputSectionCommand *Cmd : Script) {
-    OutputSection *OSec = Cmd->Sec;
+  for (OutputSection *OSec : OutputSections) {
     writeHeader<ELFT>(OS, OSec->Addr, OSec->Size, OSec->Alignment);
     OS << OSec->Name << '\n';
 
     // Dump symbols for each input section.
-    for (BaseCommand *Base : Cmd->Commands) {
+    for (BaseCommand *Base : OSec->Commands) {
       auto *ISD = dyn_cast<InputSectionDescription>(Base);
       if (!ISD)
         continue;
@@ -144,7 +142,7 @@ void elf::writeMapFile(llvm::ArrayRef<OutputSectionCommand *> Script) {
   }
 }
 
-template void elf::writeMapFile<ELF32LE>(ArrayRef<OutputSectionCommand *>);
-template void elf::writeMapFile<ELF32BE>(ArrayRef<OutputSectionCommand *>);
-template void elf::writeMapFile<ELF64LE>(ArrayRef<OutputSectionCommand *>);
-template void elf::writeMapFile<ELF64BE>(ArrayRef<OutputSectionCommand *>);
+template void elf::writeMapFile<ELF32LE>();
+template void elf::writeMapFile<ELF32BE>();
+template void elf::writeMapFile<ELF64LE>();
+template void elf::writeMapFile<ELF64BE>();

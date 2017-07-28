@@ -1283,9 +1283,11 @@ skipAlignedDPRCS2Spills(MachineBasicBlock::iterator MI,
   case 7:
     ++MI;
     assert(MI->mayStore() && "Expecting spill instruction");
+    LLVM_FALLTHROUGH;
   default:
     ++MI;
     assert(MI->mayStore() && "Expecting spill instruction");
+    LLVM_FALLTHROUGH;
   case 1:
   case 2:
   case 4:
@@ -1741,7 +1743,6 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     (MFI.adjustsStack() && !canSimplifyCallFramePseudos(MF)) ||
     // For large argument stacks fp relative addressed may overflow.
     (HasFP && (MaxFixedOffset - MaxFPOffset) >= (int)EstimatedRSStackSizeLimit);
-  bool ExtraCSSpill = false;
   if (BigFrameOffsets ||
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
@@ -1765,6 +1766,10 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (FramePtr == ARM::R7)
         CS1Spilled = true;
     }
+
+    // This is true when we inserted a spill for an unused register that can now
+    // be used for register scavenging.
+    bool ExtraCSSpill = false;
 
     if (AFI->isThumb1OnlyFunction()) {
       // For Thumb1-only targets, we need some low registers when we save and
@@ -1868,7 +1873,9 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         SavedRegs.set(Reg);
         NumGPRSpills++;
         CS1Spilled = true;
-        ExtraCSSpill = true;
+        assert(!MRI.isReserved(Reg) && "Should not be reserved");
+        if (!MRI.isPhysRegUsed(Reg))
+          ExtraCSSpill = true;
         UnspilledCS1GPRs.erase(llvm::find(UnspilledCS1GPRs, Reg));
         if (Reg == ARM::LR)
           LRSpilled = true;
@@ -1887,7 +1894,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         UnspilledCS1GPRs.erase(LRPos);
 
       ForceLRSpill = false;
-      ExtraCSSpill = true;
+      if (!MRI.isReserved(ARM::LR) && !MRI.isPhysRegUsed(ARM::LR))
+        ExtraCSSpill = true;
     }
 
     // If stack and double are 8-byte aligned and we are spilling an odd number
@@ -1907,7 +1915,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
             SavedRegs.set(Reg);
             DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
                          << " to make up alignment\n");
-            if (!MRI.isReserved(Reg))
+            if (!MRI.isReserved(Reg) && !MRI.isPhysRegUsed(Reg))
               ExtraCSSpill = true;
             break;
           }
@@ -1917,7 +1925,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         SavedRegs.set(Reg);
         DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
                      << " to make up alignment\n");
-        if (!MRI.isReserved(Reg))
+        if (!MRI.isReserved(Reg) && !MRI.isPhysRegUsed(Reg))
           ExtraCSSpill = true;
       }
     }
@@ -1953,11 +1961,14 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
           }
         }
       }
-      if (Extras.size() && NumExtras == 0) {
-        for (unsigned i = 0, e = Extras.size(); i != e; ++i) {
-          SavedRegs.set(Extras[i]);
+      if (NumExtras == 0) {
+        for (unsigned Reg : Extras) {
+          SavedRegs.set(Reg);
+          if (!MRI.isPhysRegUsed(Reg))
+            ExtraCSSpill = true;
         }
-      } else if (!AFI->isThumb1OnlyFunction()) {
+      }
+      if (!ExtraCSSpill && !AFI->isThumb1OnlyFunction()) {
         // note: Thumb1 functions spill to R12, not the stack.  Reserve a slot
         // closest to SP or frame pointer.
         assert(RS && "Register scavenging not provided");

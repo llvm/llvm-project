@@ -416,6 +416,9 @@ public:
 private:
   struct TreeEntry;
 
+  /// Checks if all users of \p I are the part of the vectorization tree.
+  bool areAllUsersVectorized(Instruction *I) const;
+
   /// \returns the cost of the vectorizable entry.
   int getEntryCost(TreeEntry *E);
 
@@ -1702,6 +1705,13 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue) const {
   return true;
 }
 
+bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
+  return I->hasOneUse() ||
+         std::all_of(I->user_begin(), I->user_end(), [this](User *U) {
+           return ScalarToTreeEntry.count(U) > 0;
+         });
+}
+
 int BoUpSLP::getEntryCost(TreeEntry *E) {
   ArrayRef<Value*> VL = E->Scalars;
 
@@ -1742,10 +1752,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
           // If all users are going to be vectorized, instruction can be
           // considered as dead.
           // The same, if have only one user, it will be vectorized for sure.
-          if (E->hasOneUse() ||
-              std::all_of(E->user_begin(), E->user_end(), [this](User *U) {
-                return ScalarToTreeEntry.count(U) > 0;
-              }))
+          if (areAllUsersVectorized(E))
             // Take credit for instruction that will become dead.
             DeadCost +=
                 TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);

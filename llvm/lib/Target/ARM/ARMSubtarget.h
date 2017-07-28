@@ -180,6 +180,9 @@ protected:
   /// UseSoftFloat - True if we're using software floating point features.
   bool UseSoftFloat = false;
 
+  /// UseMISched - True if MachineScheduler should be used for this subtarget.
+  bool UseMISched = false;
+
   /// HasThumb2 - True if Thumb2 instructions are supported.
   bool HasThumb2 = false;
 
@@ -645,6 +648,7 @@ public:
   bool isROPI() const;
   bool isRWPI() const;
 
+  bool useMachineScheduler() const { return UseMISched; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }

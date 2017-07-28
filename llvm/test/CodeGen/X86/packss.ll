@@ -35,7 +35,7 @@ define <4 x i32> @trunc_ashr_v4i64(<4 x i64> %a) nounwind {
 ;
 ; X64-AVX2-LABEL: trunc_ashr_v4i64:
 ; X64-AVX2:       # BB#0:
-; X64-AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0

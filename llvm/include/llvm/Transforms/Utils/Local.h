@@ -378,7 +378,7 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 ///
 /// Most passes can and should ignore this information, and it is only used
 /// during lowering by the GC infrastructure.
-bool callsGCLeafFunction(ImmutableCallSite CS);
+bool callsGCLeafFunction(ImmutableCallSite CS, const TargetLibraryInfo &TLI);
 
 /// Copy a nonnull metadata node to a new load instruction.
 ///

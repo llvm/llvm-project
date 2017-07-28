@@ -356,7 +356,7 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c, <32 x i16> %d) {
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vzeroupper

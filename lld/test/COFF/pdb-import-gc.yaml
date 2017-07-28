@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link %t.obj %S/Inputs/pdb-import-gc.lib -debug -entry:main \
 # RUN:          -nodefaultlib -debug -out:%t.exe -pdb:%t.pdb
-# RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
+# RUN: llvm-pdbutil dump -publics -symbols %t.pdb | FileCheck %s
 
 # This tests the case where an __imp_ chunk is discarded by linker GC. The debug
 # info may refer to the __imp_ symbol still.

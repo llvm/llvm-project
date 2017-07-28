@@ -137,14 +137,14 @@ define <4 x double> @merge_4f64_f64_45zz(double* %ptr) nounwind uwtable noinline
 define <4 x double> @merge_4f64_f64_34z6(double* %ptr) nounwind uwtable noinline ssp {
 ; AVX-LABEL: merge_4f64_f64_34z6:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorpd %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3]
 ; AVX-NEXT:    retq
 ;
 ; X32-AVX-LABEL: merge_4f64_f64_34z6:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vxorpd %ymm0, %ymm0, %ymm0
+; X32-AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3]
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds double, double* %ptr, i64 3
@@ -278,7 +278,7 @@ define <8 x float> @merge_8f32_2f32_23z5(<2 x float>* %ptr) nounwind uwtable noi
 ; X32-AVX-LABEL: merge_8f32_2f32_23z5:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vxorpd %ymm0, %ymm0, %ymm0
+; X32-AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3]
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 2
@@ -339,14 +339,14 @@ define <8 x float> @merge_8f32_f32_12zzuuzz(float* %ptr) nounwind uwtable noinli
 define <8 x float> @merge_8f32_f32_1u3u5zu8(float* %ptr) nounwind uwtable noinline ssp {
 ; AVX-LABEL: merge_8f32_f32_1u3u5zu8:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4],ymm0[5],mem[6,7]
 ; AVX-NEXT:    retq
 ;
 ; X32-AVX-LABEL: merge_8f32_f32_1u3u5zu8:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4],ymm0[5],mem[6,7]
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 1
@@ -418,26 +418,26 @@ define <8 x i32> @merge_8i32_i32_56zz9uzz(i32* %ptr) nounwind uwtable noinline s
 define <8 x i32> @merge_8i32_i32_1u3u5zu8(i32* %ptr) nounwind uwtable noinline ssp {
 ; AVX1-LABEL: merge_8i32_i32_1u3u5zu8:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4],ymm0[5],mem[6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: merge_8i32_i32_1u3u5zu8:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = mem[0,1,2,3,4],ymm0[5],mem[6,7]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: merge_8i32_i32_1u3u5zu8:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = mem[0,1,2,3,4],ymm0[5],mem[6,7]
 ; AVX512F-NEXT:    retq
 ;
 ; X32-AVX-LABEL: merge_8i32_i32_1u3u5zu8:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4],ymm0[5],mem[6,7]
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds i32, i32* %ptr, i64 1

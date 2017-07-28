@@ -335,7 +335,7 @@ define <4 x double> @shuffle_v4f64_zz01_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_zz23(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_zz23:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
@@ -344,7 +344,7 @@ define <4 x double> @shuffle_v4f64_zz23(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_zz23_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz23_optsize:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
@@ -371,7 +371,7 @@ define <4 x double> @shuffle_v4f64_zz45_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_zz67(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_zz67:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
@@ -380,7 +380,7 @@ define <4 x double> @shuffle_v4f64_zz67(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_zz67_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz67_optsize:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
@@ -390,7 +390,7 @@ define <4 x double> @shuffle_v4f64_zz67_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_01zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_01zz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -399,7 +399,7 @@ define <4 x double> @shuffle_v4f64_01zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_01zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_01zz_optsize:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -426,7 +426,7 @@ define <4 x double> @shuffle_v4f64_23zz_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_45zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_45zz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
@@ -435,7 +435,7 @@ define <4 x double> @shuffle_v4f64_45zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_45zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_45zz_optsize:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 4, i32 5, i32 0, i32 1>

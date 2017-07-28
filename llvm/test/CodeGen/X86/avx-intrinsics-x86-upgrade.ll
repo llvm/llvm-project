@@ -661,7 +661,7 @@ define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
 ; X86-LABEL: test_x86_avx_storeu_pd_256:
 ; X86:       # BB#0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vmovupd %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -669,7 +669,7 @@ define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
 ;
 ; X64-LABEL: test_x86_avx_storeu_pd_256:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vmovupd %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper

@@ -55,7 +55,7 @@ public:
 
 private:
   void addFile(StringRef Path);
-  OutputSection *checkSection(OutputSectionCommand *Cmd, StringRef Loccation);
+  OutputSection *checkSection(OutputSection *Cmd, StringRef Loccation);
 
   void readAsNeeded();
   void readEntry();
@@ -76,8 +76,8 @@ private:
   BytesDataCommand *readBytesDataCommand(StringRef Tok);
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
-  void readSectionAddressType(OutputSectionCommand *Cmd);
-  OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
+  void readSectionAddressType(OutputSection *Cmd);
+  OutputSection *readOutputSectionDescription(StringRef OutSec);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   StringMatcher readFilePatterns();
@@ -581,7 +581,7 @@ uint32_t ScriptParser::readFill() {
 //
 // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
-void ScriptParser::readSectionAddressType(OutputSectionCommand *Cmd) {
+void ScriptParser::readSectionAddressType(OutputSection *Cmd) {
   if (consume("(")) {
     if (consume("NOLOAD")) {
       expect(")");
@@ -601,10 +601,9 @@ void ScriptParser::readSectionAddressType(OutputSectionCommand *Cmd) {
   }
 }
 
-OutputSectionCommand *
-ScriptParser::readOutputSectionDescription(StringRef OutSec) {
-  OutputSectionCommand *Cmd =
-      Script->createOutputSectionCommand(OutSec, getCurrentLocation());
+OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
+  OutputSection *Cmd =
+      Script->createOutputSection(OutSec, getCurrentLocation());
 
   if (peek() != ":")
     readSectionAddressType(Cmd);
@@ -857,14 +856,11 @@ StringRef ScriptParser::readParenLiteral() {
   return Tok;
 }
 
-OutputSection *ScriptParser::checkSection(OutputSectionCommand *Cmd,
+OutputSection *ScriptParser::checkSection(OutputSection *Cmd,
                                           StringRef Location) {
   if (Cmd->Location.empty() && Script->ErrorOnMissingSection)
     error(Location + ": undefined section " + Cmd->Name);
-  if (Cmd->Sec)
-    return Cmd->Sec;
-  static OutputSection Dummy("", 0, 0);
-  return &Dummy;
+  return Cmd;
 }
 
 Expr ScriptParser::readPrimary() {
@@ -895,7 +891,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
-    OutputSectionCommand *Cmd = Script->getOrCreateOutputSectionCommand(Name);
+    OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
     return [=]() -> ExprValue {
       return {checkSection(Cmd, Location), 0, Location};
     };
@@ -916,7 +912,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
-    OutputSectionCommand *Cmd = Script->getOrCreateOutputSectionCommand(Name);
+    OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
     return [=] { return checkSection(Cmd, Location)->Alignment; };
   }
   if (Tok == "ASSERT")
@@ -962,7 +958,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
-    OutputSectionCommand *Cmd = Script->getOrCreateOutputSectionCommand(Name);
+    OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
     return [=] { return checkSection(Cmd, Location)->getLMA(); };
   }
   if (Tok == "ORIGIN") {
@@ -981,11 +977,11 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    OutputSectionCommand *Cmd = Script->getOrCreateOutputSectionCommand(Name);
+    OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
     // Linker script does not create an output section if its content is empty.
     // We want to allow SIZEOF(.foo) where .foo is a section which happened to
     // be empty.
-    return [=] { return Cmd->Sec ? Cmd->Sec->Size : 0; };
+    return [=] { return Cmd->Size; };
   }
   if (Tok == "SIZEOF_HEADERS")
     return [=] { return elf::getHeaderSize(); };

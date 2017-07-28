@@ -88,6 +88,10 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE8BIT
 // CHECK_INLINE8BIT: -fsanitize-coverage-inline-8bit-counters
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=trace-pc-guard,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE
+// CHECK_PC_TABLE: -fsanitize-coverage-pc-table
+
 // RUN: %clang_cl --target=i386-pc-win32 -fsanitize=address -fsanitize-coverage=func,trace-pc-guard -c -### -- %s 2>&1 | FileCheck %s -check-prefix=CLANG-CL-COVERAGE
 // CLANG-CL-COVERAGE-NOT: error:
 // CLANG-CL-COVERAGE-NOT: warning:

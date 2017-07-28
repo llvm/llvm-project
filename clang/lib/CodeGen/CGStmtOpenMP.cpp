@@ -2805,7 +2805,57 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
                                                            RedCG, Cnt);
       }
     }
+    // Privatize all private variables except for in_reduction items.
     (void)Scope.Privatize();
+    SmallVector<const Expr *, 4> InRedVars;
+    SmallVector<const Expr *, 4> InRedPrivs;
+    SmallVector<const Expr *, 4> InRedOps;
+    SmallVector<const Expr *, 4> TaskgroupDescriptors;
+    for (const auto *C : S.getClausesOfKind<OMPInReductionClause>()) {
+      auto IPriv = C->privates().begin();
+      auto IRed = C->reduction_ops().begin();
+      auto ITD = C->taskgroup_descriptors().begin();
+      for (const auto *Ref : C->varlists()) {
+        InRedVars.emplace_back(Ref);
+        InRedPrivs.emplace_back(*IPriv);
+        InRedOps.emplace_back(*IRed);
+        TaskgroupDescriptors.emplace_back(*ITD);
+        std::advance(IPriv, 1);
+        std::advance(IRed, 1);
+        std::advance(ITD, 1);
+      }
+    }
+    // Privatize in_reduction items here, because taskgroup descriptors must be
+    // privatized earlier.
+    OMPPrivateScope InRedScope(CGF);
+    if (!InRedVars.empty()) {
+      ReductionCodeGen RedCG(InRedVars, InRedPrivs, InRedOps);
+      for (unsigned Cnt = 0, E = InRedVars.size(); Cnt < E; ++Cnt) {
+        RedCG.emitSharedLValue(CGF, Cnt);
+        RedCG.emitAggregateType(CGF, Cnt);
+        // The taskgroup descriptor variable is always implicit firstprivate and
+        // privatized already during procoessing of the firstprivates.
+        llvm::Value *ReductionsPtr = CGF.EmitLoadOfScalar(
+            CGF.EmitLValue(TaskgroupDescriptors[Cnt]), SourceLocation());
+        Address Replacement = CGF.CGM.getOpenMPRuntime().getTaskReductionItem(
+            CGF, S.getLocStart(), ReductionsPtr, RedCG.getSharedLValue(Cnt));
+        Replacement = Address(
+            CGF.EmitScalarConversion(
+                Replacement.getPointer(), CGF.getContext().VoidPtrTy,
+                CGF.getContext().getPointerType(InRedPrivs[Cnt]->getType()),
+                SourceLocation()),
+            Replacement.getAlignment());
+        Replacement = RedCG.adjustPrivateAddress(CGF, Cnt, Replacement);
+        InRedScope.addPrivate(RedCG.getBaseDecl(Cnt),
+                              [Replacement]() { return Replacement; });
+        // FIXME: This must removed once the runtime library is fixed.
+        // Emit required threadprivate variables for
+        // initilizer/combiner/finalizer.
+        CGF.CGM.getOpenMPRuntime().emitTaskReductionFixups(CGF, S.getLocStart(),
+                                                           RedCG, Cnt);
+      }
+    }
+    (void)InRedScope.Privatize();
 
     Action.Enter(CGF);
     BodyGen(CGF);

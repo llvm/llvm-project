@@ -508,6 +508,12 @@ void MCStreamer::EmitCFIWindowSave() {
   CurFrame->Instructions.push_back(Instruction);
 }
 
+void MCStreamer::EmitCFIReturnColumn(int64_t Register) {
+  EnsureValidDwarfFrame();
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  CurFrame->RAReg = Register;
+}
+
 void MCStreamer::EnsureValidWinFrameInfo() {
   const MCAsmInfo *MAI = Context.getAsmInfo();
   if (!MAI->usesWindowsCFI())
