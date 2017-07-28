@@ -2974,6 +2974,9 @@ public:
   /// Return all MemoryAccesses for all incoming statements of a PHINode,
   /// represented by a ScopArrayInfo.
   ArrayRef<MemoryAccess *> getPHIIncomings(const ScopArrayInfo *SAI) const;
+
+  /// Return whether @p Inst has a use outside of this SCoP.
+  bool isEscaping(Instruction *Inst);
 };
 
 /// Print Scop scop to raw_ostream O.

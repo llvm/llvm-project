@@ -12,6 +12,7 @@
 
 #include "Config.h"
 #include "InputSection.h"
+#include "LinkerScript.h"
 #include "Relocations.h"
 
 #include "lld/Core/LLVM.h"
@@ -38,13 +39,14 @@ class DefinedRegular;
 // It is composed of multiple InputSections.
 // The writer creates multiple OutputSections and assign them unique,
 // non-overlapping file offsets and VAs.
-class OutputSection final : public SectionBase {
+class OutputSection final : public BaseCommand, public SectionBase {
 public:
   OutputSection(StringRef Name, uint32_t Type, uint64_t Flags);
 
   static bool classof(const SectionBase *S) {
     return S->kind() == SectionBase::Output;
   }
+  static bool classof(const BaseCommand *C);
 
   uint64_t getLMA() const { return Addr + LMAOffset; }
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *SHdr);
@@ -80,7 +82,6 @@ public:
   uint32_t ShName = 0;
 
   void addSection(InputSection *S);
-  std::vector<InputSection *> Sections;
 
   // Used for implementation of --compress-debug-sections option.
   std::vector<uint8_t> ZDebugHeader;
@@ -88,7 +89,32 @@ public:
 
   // Location in the output buffer.
   uint8_t *Loc = nullptr;
+
+  // The following members are normally only used in linker scripts.
+  MemoryRegion *MemRegion = nullptr;
+  Expr AddrExpr;
+  Expr AlignExpr;
+  Expr LMAExpr;
+  Expr SubalignExpr;
+  std::vector<BaseCommand *> Commands;
+  std::vector<StringRef> Phdrs;
+  llvm::Optional<uint32_t> Filler;
+  ConstraintKind Constraint = ConstraintKind::NoConstraint;
+  std::string Location;
+  std::string MemoryRegionName;
+  bool Noload = false;
+
+  template <class ELFT> void finalize();
+  template <class ELFT> void writeTo(uint8_t *Buf);
+  template <class ELFT> void maybeCompress();
+  uint32_t getFiller();
+
+  void sort(std::function<int(InputSectionBase *S)> Order);
+  void sortInitFini();
+  void sortCtorsDtors();
 };
+
+int getPriority(StringRef S);
 
 // All output sections that are handled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
@@ -146,7 +172,6 @@ uint64_t getHeaderSize();
 void reportDiscarded(InputSectionBase *IS);
 
 extern std::vector<OutputSection *> OutputSections;
-extern std::vector<OutputSectionCommand *> OutputSectionCommands;
 } // namespace elf
 } // namespace lld
 

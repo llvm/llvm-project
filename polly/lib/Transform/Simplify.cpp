@@ -415,7 +415,7 @@ private:
                           << '\n';
     OS.indent(Indent + 4) << "Redundant writes removed: "
                           << RedundantWritesRemoved << "\n";
-    OS.indent(Indent + 4) << "Access with empty domains removed: "
+    OS.indent(Indent + 4) << "Accesses with empty domains removed: "
                           << EmptyPartialAccessesRemoved << "\n";
     OS.indent(Indent + 4) << "Dead accesses removed: " << DeadAccessesRemoved
                           << '\n';
@@ -455,14 +455,14 @@ public:
     this->S = &S;
     ScopsProcessed++;
 
+    DEBUG(dbgs() << "Removing partial writes that never happen...\n");
+    removeEmptyPartialAccesses();
+
     DEBUG(dbgs() << "Removing overwrites...\n");
     removeOverwrites();
 
     DEBUG(dbgs() << "Removing redundant writes...\n");
     removeRedundantWrites();
-
-    DEBUG(dbgs() << "Removing partial writes that never happen...\n");
-    removeEmptyPartialAccesses();
 
     DEBUG(dbgs() << "Cleanup unused accesses...\n");
     LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();

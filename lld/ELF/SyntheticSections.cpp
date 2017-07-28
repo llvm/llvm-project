@@ -2282,7 +2282,7 @@ void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   // sentinel last. We need to find the InputSection that precedes the
   // sentinel. By construction the Sentinel is in the last
   // InputSectionDescription as the InputSection that precedes it.
-  OutputSectionCommand *C = Script->getCmd(getParent());
+  OutputSection *C = getParent();
   auto ISD = std::find_if(C->Commands.rbegin(), C->Commands.rend(),
                           [](const BaseCommand *Base) {
                             return isa<InputSectionDescription>(Base);

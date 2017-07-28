@@ -242,8 +242,6 @@ public:
   VirtualInstruction(ScopStmt *Stmt, Instruction *Inst)
       : Stmt(Stmt), Inst(Inst) {
     assert(Stmt && Inst);
-    assert(Stmt->contains(Inst) &&
-           "A virtual instruction must be exist in that statement");
   }
 
   VirtualOperandIterator operand_begin() const {
