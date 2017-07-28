@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/TargetParser.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -124,9 +125,9 @@ public:
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                                     StringRef StringValue = "");
   virtual void emitFPU(unsigned FPU);
-  virtual void emitArch(unsigned Arch);
+  virtual void emitArch(ARM::ArchKind Arch);
   virtual void emitArchExtension(unsigned ArchExt);
-  virtual void emitObjectArch(unsigned Arch);
+  virtual void emitObjectArch(ARM::ArchKind Arch);
   void emitTargetAttributes(const MCSubtargetInfo &STI);
   virtual void finishAttributeSection();
   virtual void emitInst(uint32_t Inst, char Suffix = '\0');

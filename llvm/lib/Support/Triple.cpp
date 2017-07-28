@@ -307,37 +307,44 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
 }
 
 static Triple::ArchType parseARMArch(StringRef ArchName) {
-  unsigned ISA = ARM::parseArchISA(ArchName);
-  unsigned ENDIAN = ARM::parseArchEndian(ArchName);
+  ARM::ISAKind ISA = ARM::parseArchISA(ArchName);
+  ARM::EndianKind ENDIAN = ARM::parseArchEndian(ArchName);
 
   Triple::ArchType arch = Triple::UnknownArch;
   switch (ENDIAN) {
-  case ARM::EK_LITTLE: {
+  case ARM::EndianKind::LITTLE: {
     switch (ISA) {
-    case ARM::IK_ARM:
+    case ARM::ISAKind::ARM:
       arch = Triple::arm;
       break;
-    case ARM::IK_THUMB:
+    case ARM::ISAKind::THUMB:
       arch = Triple::thumb;
       break;
-    case ARM::IK_AARCH64:
+    case ARM::ISAKind::AARCH64:
       arch = Triple::aarch64;
+      break;
+    case ARM::ISAKind::INVALID:
       break;
     }
     break;
   }
-  case ARM::EK_BIG: {
+  case ARM::EndianKind::BIG: {
     switch (ISA) {
-    case ARM::IK_ARM:
+    case ARM::ISAKind::ARM:
       arch = Triple::armeb;
       break;
-    case ARM::IK_THUMB:
+    case ARM::ISAKind::THUMB:
       arch = Triple::thumbeb;
       break;
-    case ARM::IK_AARCH64:
+    case ARM::ISAKind::AARCH64:
       arch = Triple::aarch64_be;
       break;
+    case ARM::ISAKind::INVALID:
+      break;
     }
+    break;
+  }
+  case ARM::EndianKind::INVALID: {
     break;
   }
   }
@@ -347,15 +354,15 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
     return Triple::UnknownArch;
 
   // Thumb only exists in v4+
-  if (ISA == ARM::IK_THUMB &&
+  if (ISA == ARM::ISAKind::THUMB &&
       (ArchName.startswith("v2") || ArchName.startswith("v3")))
     return Triple::UnknownArch;
 
   // Thumb only for v6m
-  unsigned Profile = ARM::parseArchProfile(ArchName);
+  ARM::ProfileKind Profile = ARM::parseArchProfile(ArchName);
   unsigned Version = ARM::parseArchVersion(ArchName);
-  if (Profile == ARM::PK_M && Version == 6) {
-    if (ENDIAN == ARM::EK_BIG)
+  if (Profile == ARM::ProfileKind::M && Version == 6) {
+    if (ENDIAN == ARM::EndianKind::BIG)
       return Triple::thumbeb;
     else
       return Triple::thumb;
@@ -534,51 +541,51 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   // ARM sub arch.
   switch(ARM::parseArch(ARMSubArch)) {
-  case ARM::AK_ARMV4:
+  case ARM::ArchKind::ARMV4:
     return Triple::NoSubArch;
-  case ARM::AK_ARMV4T:
+  case ARM::ArchKind::ARMV4T:
     return Triple::ARMSubArch_v4t;
-  case ARM::AK_ARMV5T:
+  case ARM::ArchKind::ARMV5T:
     return Triple::ARMSubArch_v5;
-  case ARM::AK_ARMV5TE:
-  case ARM::AK_IWMMXT:
-  case ARM::AK_IWMMXT2:
-  case ARM::AK_XSCALE:
-  case ARM::AK_ARMV5TEJ:
+  case ARM::ArchKind::ARMV5TE:
+  case ARM::ArchKind::IWMMXT:
+  case ARM::ArchKind::IWMMXT2:
+  case ARM::ArchKind::XSCALE:
+  case ARM::ArchKind::ARMV5TEJ:
     return Triple::ARMSubArch_v5te;
-  case ARM::AK_ARMV6:
+  case ARM::ArchKind::ARMV6:
     return Triple::ARMSubArch_v6;
-  case ARM::AK_ARMV6K:
-  case ARM::AK_ARMV6KZ:
+  case ARM::ArchKind::ARMV6K:
+  case ARM::ArchKind::ARMV6KZ:
     return Triple::ARMSubArch_v6k;
-  case ARM::AK_ARMV6T2:
+  case ARM::ArchKind::ARMV6T2:
     return Triple::ARMSubArch_v6t2;
-  case ARM::AK_ARMV6M:
+  case ARM::ArchKind::ARMV6M:
     return Triple::ARMSubArch_v6m;
-  case ARM::AK_ARMV7A:
-  case ARM::AK_ARMV7R:
+  case ARM::ArchKind::ARMV7A:
+  case ARM::ArchKind::ARMV7R:
     return Triple::ARMSubArch_v7;
-  case ARM::AK_ARMV7VE:
+  case ARM::ArchKind::ARMV7VE:
     return Triple::ARMSubArch_v7ve;
-  case ARM::AK_ARMV7K:
+  case ARM::ArchKind::ARMV7K:
     return Triple::ARMSubArch_v7k;
-  case ARM::AK_ARMV7M:
+  case ARM::ArchKind::ARMV7M:
     return Triple::ARMSubArch_v7m;
-  case ARM::AK_ARMV7S:
+  case ARM::ArchKind::ARMV7S:
     return Triple::ARMSubArch_v7s;
-  case ARM::AK_ARMV7EM:
+  case ARM::ArchKind::ARMV7EM:
     return Triple::ARMSubArch_v7em;
-  case ARM::AK_ARMV8A:
+  case ARM::ArchKind::ARMV8A:
     return Triple::ARMSubArch_v8;
-  case ARM::AK_ARMV8_1A:
+  case ARM::ArchKind::ARMV8_1A:
     return Triple::ARMSubArch_v8_1a;
-  case ARM::AK_ARMV8_2A:
+  case ARM::ArchKind::ARMV8_2A:
     return Triple::ARMSubArch_v8_2a;
-  case ARM::AK_ARMV8R:
+  case ARM::ArchKind::ARMV8R:
     return Triple::ARMSubArch_v8r;
-  case ARM::AK_ARMV8MBaseline:
+  case ARM::ArchKind::ARMV8MBaseline:
     return Triple::ARMSubArch_v8m_baseline;
-  case ARM::AK_ARMV8MMainline:
+  case ARM::ArchKind::ARMV8MMainline:
     return Triple::ARMSubArch_v8m_mainline;
   default:
     return Triple::NoSubArch;
@@ -1550,7 +1557,7 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
     return StringRef();
 
   StringRef CPU = ARM::getDefaultCPU(MArch);
-  if (!CPU.empty())
+  if (!CPU.empty() && !CPU.equals("invalid"))
     return CPU;
 
   // If no specific architecture version is requested, return the minimum CPU

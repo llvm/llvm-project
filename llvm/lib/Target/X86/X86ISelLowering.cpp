@@ -30573,8 +30573,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask(APInt::getSignMask(BitWidth));
     KnownBits Known;
-    TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
-                                          DCI.isBeforeLegalizeOps());
+    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                          !DCI.isBeforeLegalizeOps());
     if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
         TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
       // If we changed the computation somewhere in the DAG, this change will
@@ -32967,6 +32967,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
     WideSrc0 = DAG.getVectorShuffle(WideVecVT, dl, WideSrc0,
                                     DAG.getUNDEF(WideVecVT), ShuffleVec);
   }
+
   // Prepare the new mask.
   SDValue NewMask;
   SDValue Mask = Mld->getMask();
@@ -32989,12 +32990,9 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                      WidenNumElts);
 
     unsigned NumConcat = WidenNumElts / MaskNumElts;
-    SmallVector<SDValue, 16> Ops(NumConcat);
     SDValue ZeroVal = DAG.getConstant(0, dl, Mask.getValueType());
+    SmallVector<SDValue, 16> Ops(NumConcat, ZeroVal);
     Ops[0] = Mask;
-    for (unsigned i = 1; i != NumConcat; ++i)
-      Ops[i] = ZeroVal;
-
     NewMask = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewMaskVT, Ops);
   }
 
@@ -33112,12 +33110,9 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
                                      WidenNumElts);
 
     unsigned NumConcat = WidenNumElts / MaskNumElts;
-    SmallVector<SDValue, 16> Ops(NumConcat);
     SDValue ZeroVal = DAG.getConstant(0, dl, Mask.getValueType());
+    SmallVector<SDValue, 16> Ops(NumConcat, ZeroVal);
     Ops[0] = Mask;
-    for (unsigned i = 1; i != NumConcat; ++i)
-      Ops[i] = ZeroVal;
-
     NewMask = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewMaskVT, Ops);
   }
 

@@ -236,7 +236,7 @@ define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovaps (%ecx), %xmm0
-; X32-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vmovaps %ymm1, (%eax)
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
@@ -244,7 +244,7 @@ define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
 ; X64-LABEL: PR29088:
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vmovaps %ymm1, (%rsi)
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq

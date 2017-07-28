@@ -33,7 +33,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-LABEL: _Z10test_shortPsS_i:
 ; AVX2:       # BB#0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB0_1: # %vector.body
@@ -59,7 +59,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX512-LABEL: _Z10test_shortPsS_i:
 ; AVX512:       # BB#0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
-; AVX512-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB0_1: # %vector.body
@@ -148,7 +148,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-LABEL: test_unsigned_short:
 ; AVX2:       # BB#0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB1_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -173,7 +173,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX512-LABEL: test_unsigned_short:
 ; AVX512:       # BB#0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
-; AVX512-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB1_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -281,8 +281,8 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX2-LABEL: _Z9test_charPcS_i:
 ; AVX2:       # BB#0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB2_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -309,7 +309,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX512:       # BB#0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; AVX512-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB2_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1

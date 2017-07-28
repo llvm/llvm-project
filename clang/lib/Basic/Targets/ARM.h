@@ -51,9 +51,9 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
 
   enum { FP_Default, FP_VFP, FP_Neon } FPMath;
 
-  unsigned ArchISA;
-  unsigned ArchKind = llvm::ARM::AK_ARMV4T;
-  unsigned ArchProfile;
+  llvm::ARM::ISAKind ArchISA;
+  llvm::ARM::ArchKind ArchKind = llvm::ARM::ArchKind::ARMV4T;
+  llvm::ARM::ProfileKind ArchProfile;
   unsigned ArchVersion;
 
   unsigned FPU : 5;
@@ -93,7 +93,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   void setABIAPCS(bool IsAAPCS16);
 
   void setArchInfo();
-  void setArchInfo(unsigned Kind);
+  void setArchInfo(llvm::ARM::ArchKind Kind);
 
   void setAtomic();
 

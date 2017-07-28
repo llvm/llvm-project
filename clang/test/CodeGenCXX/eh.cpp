@@ -466,7 +466,7 @@ int foo() {
   // CHECK: [[T0:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
   // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to %"class.test17::DerivedException"*
   // CHECK-NEXT: [[T2:%.*]] = bitcast %"class.test17::DerivedException"* [[T1]] to i8*
-  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T2]], i8 0, i64 16, i32 8, i1 false)
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T2]], i8 0, i64 16, i32 16, i1 false)
 }
 }
 

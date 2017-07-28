@@ -105,27 +105,8 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
   // Check for uses of this instruction outside the scop. Because we do not
   // iterate over such instructions and therefore did not "ensure" the existence
   // of a write, we must determine such use here.
-  for (Use &U : Inst->uses()) {
-    Instruction *UI = dyn_cast<Instruction>(U.getUser());
-    if (!UI)
-      continue;
-
-    BasicBlock *UseParent = getUseBlock(U);
-    BasicBlock *UserParent = UI->getParent();
-
-    // An escaping value is either used by an instruction not within the scop,
-    // or (when the scop region's exit needs to be simplified) by a PHI in the
-    // scop's exit block. This is because region simplification before code
-    // generation inserts new basic blocks before the PHI such that its incoming
-    // blocks are not in the scop anymore.
-    if (!scop->contains(UseParent) ||
-        (isa<PHINode>(UI) && scop->isExit(UserParent) &&
-         scop->hasSingleExitEdge())) {
-      // At least one escaping use found.
-      ensureValueWrite(Inst);
-      break;
-    }
-  }
+  if (scop->isEscaping(Inst))
+    ensureValueWrite(Inst);
 }
 
 /// Check that a value is a Fortran Array descriptor.

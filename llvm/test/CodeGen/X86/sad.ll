@@ -35,9 +35,9 @@ define i32 @sad_16i8() nounwind {
 ;
 ; AVX2-LABEL: sad_16i8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB0_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -281,9 +281,9 @@ define i32 @sad_32i8() nounwind {
 ;
 ; AVX2-LABEL: sad_32i8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB1_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -684,15 +684,15 @@ define i32 @sad_avx64i8() nounwind {
 ;
 ; AVX2-LABEL: sad_avx64i8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm4, %ymm4, %ymm4
-; AVX2-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpxor %ymm6, %ymm6, %ymm6
-; AVX2-NEXT:    vpxor %ymm5, %ymm5, %ymm5
-; AVX2-NEXT:    vpxor %ymm7, %ymm7, %ymm7
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; AVX2-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX2-NEXT:    vpxor %xmm7, %xmm7, %xmm7
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB2_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1

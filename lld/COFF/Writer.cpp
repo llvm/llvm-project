@@ -432,19 +432,12 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   if (isa<DefinedSynthetic>(Def))
     return None;
 
-  if (auto *D = dyn_cast<DefinedRegular>(Def)) {
-    // Don't write dead symbols or symbols in codeview sections to the symbol
-    // table.
-    if (!D->getChunk()->isLive() || D->getChunk()->isCodeView())
-      return None;
-  }
-
-  if (auto *Sym = dyn_cast<DefinedImportData>(Def))
-    if (!Sym->File->Live)
-      return None;
-
-  if (auto *Sym = dyn_cast<DefinedImportThunk>(Def))
-    if (!Sym->WrappedSym->File->Live)
+  // Don't write dead symbols or symbols in codeview sections to the symbol
+  // table.
+  if (!Def->isLive())
+    return None;
+  if (auto *D = dyn_cast<DefinedRegular>(Def))
+    if (D->getChunk()->isCodeView())
       return None;
 
   coff_symbol16 Sym;

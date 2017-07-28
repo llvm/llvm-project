@@ -17,7 +17,7 @@ define <8 x float> @expand(<4 x float> %a) {
 ; KNL64-LABEL: expand:
 ; KNL64:       # BB#0:
 ; KNL64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; KNL64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3,4,5,6,7]
 ; KNL64-NEXT:    retq
 ;
@@ -32,7 +32,7 @@ define <8 x float> @expand(<4 x float> %a) {
 ; KNL32-LABEL: expand:
 ; KNL32:       # BB#0:
 ; KNL32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; KNL32-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3,4,5,6,7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <4 x float> %a, <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 5, i32 1, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -53,7 +53,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL64-NEXT:    vmovaps {{.*#+}} ymm1 = <u,0,u,1,u,2,u,3>
 ; KNL64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; KNL64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; KNL64-NEXT:    retq
 ;
@@ -70,7 +70,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL32-NEXT:    vmovaps {{.*#+}} ymm1 = <u,0,u,1,u,2,u,3>
 ; KNL32-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; KNL32-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
@@ -91,7 +91,7 @@ define <4 x double> @expand2(<2 x double> %a) {
 ; KNL64:       # BB#0:
 ; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL64-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
 ; KNL64-NEXT:    retq
 ;
@@ -107,7 +107,7 @@ define <4 x double> @expand2(<2 x double> %a) {
 ; KNL32:       # BB#0:
 ; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL32-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
 ; KNL32-NEXT:    retl
    %res = shufflevector <2 x double> %a, <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 2, i32 1>
@@ -127,7 +127,7 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ; KNL64-LABEL: expand3:
 ; KNL64:       # BB#0:
 ; KNL64-NEXT:    vpbroadcastq %xmm0, %ymm0
-; KNL64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
 ; KNL64-NEXT:    retq
 ;
@@ -142,7 +142,7 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ; KNL32-LABEL: expand3:
 ; KNL32:       # BB#0:
 ; KNL32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; KNL32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <4 x i32> zeroinitializer, <4 x i32> %a, <8 x i32> <i32 4, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0,i32 5>
@@ -163,7 +163,7 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ; KNL64:       # BB#0:
 ; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
 ; KNL64-NEXT:    retq
 ;
@@ -179,7 +179,7 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ; KNL32:       # BB#0:
 ; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,2,1]
-; KNL32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <2 x i64> zeroinitializer, <2 x i64> %a, <4 x i32> <i32 2, i32 0, i32 0, i32 3>
@@ -198,7 +198,7 @@ define <8 x float> @expand5(<4 x float> %a ) {
 ; KNL64-LABEL: expand5:
 ; KNL64:       # BB#0:
 ; KNL64-NEXT:    vbroadcastss %xmm0, %ymm0
-; KNL64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; KNL64-NEXT:    retq
 ;
@@ -212,7 +212,7 @@ define <8 x float> @expand5(<4 x float> %a ) {
 ; KNL32-LABEL: expand5:
 ; KNL32:       # BB#0:
 ; KNL32-NEXT:    vbroadcastss %xmm0, %ymm0
-; KNL32-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <8 x i32> <i32 0, i32 4, i32 1, i32 4, i32 2, i32 4, i32 3, i32 4>
@@ -479,7 +479,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 ;
 ; KNL64-LABEL: expand13:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; KNL64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; KNL64-NEXT:    retq
 ;
@@ -491,7 +491,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 ;
 ; KNL32-LABEL: expand13:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; KNL32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; KNL32-NEXT:    retl
    %res = shufflevector <8 x float> zeroinitializer, <8 x float> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

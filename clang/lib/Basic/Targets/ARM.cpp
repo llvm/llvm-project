@@ -133,13 +133,13 @@ void ARMTargetInfo::setArchInfo() {
 
   ArchISA = llvm::ARM::parseArchISA(ArchName);
   CPU = llvm::ARM::getDefaultCPU(ArchName);
-  unsigned AK = llvm::ARM::parseArch(ArchName);
-  if (AK != llvm::ARM::AK_INVALID)
+  llvm::ARM::ArchKind AK = llvm::ARM::parseArch(ArchName);
+  if (AK != llvm::ARM::ArchKind::INVALID)
     ArchKind = AK;
   setArchInfo(ArchKind);
 }
 
-void ARMTargetInfo::setArchInfo(unsigned Kind) {
+void ARMTargetInfo::setArchInfo(llvm::ARM::ArchKind Kind) {
   StringRef SubArch;
 
   // cache TargetParser info
@@ -157,10 +157,10 @@ void ARMTargetInfo::setAtomic() {
   // when triple does not specify a sub arch,
   // then we are not using inline atomics
   bool ShouldUseInlineAtomic =
-      (ArchISA == llvm::ARM::IK_ARM && ArchVersion >= 6) ||
-      (ArchISA == llvm::ARM::IK_THUMB && ArchVersion >= 7);
+      (ArchISA == llvm::ARM::ISAKind::ARM && ArchVersion >= 6) ||
+      (ArchISA == llvm::ARM::ISAKind::THUMB && ArchVersion >= 7);
   // Cortex M does not support 8 byte atomics, while general Thumb2 does.
-  if (ArchProfile == llvm::ARM::PK_M) {
+  if (ArchProfile == llvm::ARM::ProfileKind::M) {
     MaxAtomicPromoteWidth = 32;
     if (ShouldUseInlineAtomic)
       MaxAtomicInlineWidth = 32;
@@ -171,7 +171,9 @@ void ARMTargetInfo::setAtomic() {
   }
 }
 
-bool ARMTargetInfo::isThumb() const { return (ArchISA == llvm::ARM::IK_THUMB); }
+bool ARMTargetInfo::isThumb() const {
+  return ArchISA == llvm::ARM::ISAKind::THUMB;
+}
 
 bool ARMTargetInfo::supportsThumb() const {
   return CPUAttr.count('T') || ArchVersion >= 6;
@@ -188,42 +190,42 @@ StringRef ARMTargetInfo::getCPUAttr() const {
   switch (ArchKind) {
   default:
     return llvm::ARM::getCPUAttr(ArchKind);
-  case llvm::ARM::AK_ARMV6M:
+  case llvm::ARM::ArchKind::ARMV6M:
     return "6M";
-  case llvm::ARM::AK_ARMV7S:
+  case llvm::ARM::ArchKind::ARMV7S:
     return "7S";
-  case llvm::ARM::AK_ARMV7A:
+  case llvm::ARM::ArchKind::ARMV7A:
     return "7A";
-  case llvm::ARM::AK_ARMV7R:
+  case llvm::ARM::ArchKind::ARMV7R:
     return "7R";
-  case llvm::ARM::AK_ARMV7M:
+  case llvm::ARM::ArchKind::ARMV7M:
     return "7M";
-  case llvm::ARM::AK_ARMV7EM:
+  case llvm::ARM::ArchKind::ARMV7EM:
     return "7EM";
-  case llvm::ARM::AK_ARMV7VE:
+  case llvm::ARM::ArchKind::ARMV7VE:
     return "7VE";
-  case llvm::ARM::AK_ARMV8A:
+  case llvm::ARM::ArchKind::ARMV8A:
     return "8A";
-  case llvm::ARM::AK_ARMV8_1A:
+  case llvm::ARM::ArchKind::ARMV8_1A:
     return "8_1A";
-  case llvm::ARM::AK_ARMV8_2A:
+  case llvm::ARM::ArchKind::ARMV8_2A:
     return "8_2A";
-  case llvm::ARM::AK_ARMV8MBaseline:
+  case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
-  case llvm::ARM::AK_ARMV8MMainline:
+  case llvm::ARM::ArchKind::ARMV8MMainline:
     return "8M_MAIN";
-  case llvm::ARM::AK_ARMV8R:
+  case llvm::ARM::ArchKind::ARMV8R:
     return "8R";
   }
 }
 
 StringRef ARMTargetInfo::getCPUProfile() const {
   switch (ArchProfile) {
-  case llvm::ARM::PK_A:
+  case llvm::ARM::ProfileKind::A:
     return "A";
-  case llvm::ARM::PK_R:
+  case llvm::ARM::ProfileKind::R:
     return "R";
-  case llvm::ARM::PK_M:
+  case llvm::ARM::ProfileKind::M:
     return "M";
   default:
     return "";
@@ -260,7 +262,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     // the frontend matches that.
     if (Triple.getEnvironment() == llvm::Triple::EABI ||
         Triple.getOS() == llvm::Triple::UnknownOS ||
-        ArchProfile == llvm::ARM::PK_M) {
+        ArchProfile == llvm::ARM::ProfileKind::M) {
       setABI("aapcs");
     } else if (Triple.isWatchABI()) {
       setABI("aapcs16");
@@ -347,7 +349,7 @@ bool ARMTargetInfo::initFeatureMap(
     const std::vector<std::string> &FeaturesVec) const {
 
   std::vector<StringRef> TargetFeatures;
-  unsigned Arch = llvm::ARM::parseArch(getTriple().getArchName());
+  llvm::ARM::ArchKind Arch = llvm::ARM::parseArch(getTriple().getArchName());
 
   // get default FPU features
   unsigned FPUKind = llvm::ARM::getDefaultFPU(CPU, Arch);
@@ -437,15 +439,15 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
   switch (ArchVersion) {
   case 6:
-    if (ArchProfile == llvm::ARM::PK_M)
+    if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = 0;
-    else if (ArchKind == llvm::ARM::AK_ARMV6K)
+    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K)
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
     else
       LDREX = LDREX_W;
     break;
   case 7:
-    if (ArchProfile == llvm::ARM::PK_M)
+    if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = LDREX_W | LDREX_H | LDREX_B;
     else
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
@@ -487,14 +489,14 @@ bool ARMTargetInfo::hasFeature(StringRef Feature) const {
 
 bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
   return Name == "generic" ||
-         llvm::ARM::parseCPUArch(Name) != llvm::ARM::AK_INVALID;
+         llvm::ARM::parseCPUArch(Name) != llvm::ARM::ArchKind::INVALID;
 }
 
 bool ARMTargetInfo::setCPU(const std::string &Name) {
   if (Name != "generic")
     setArchInfo(llvm::ARM::parseCPUArch(Name));
 
-  if (ArchKind == llvm::ARM::AK_INVALID)
+  if (ArchKind == llvm::ARM::ArchKind::INVALID)
     return false;
   setAtomic();
   CPU = Name;
@@ -566,7 +568,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   // __ARM_ARCH_ISA_ARM is defined to 1 if the core supports the ARM ISA.  It
   // is not defined for the M-profile.
   // NOTE that the default profile is assumed to be 'A'
-  if (CPUProfile.empty() || ArchProfile != llvm::ARM::PK_M)
+  if (CPUProfile.empty() || ArchProfile != llvm::ARM::ProfileKind::M)
     Builder.defineMacro("__ARM_ARCH_ISA_ARM", "1");
 
   // __ARM_ARCH_ISA_THUMB is defined to 1 if the core supports the original
@@ -638,7 +640,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (SoftFloat)
     Builder.defineMacro("__SOFTFP__");
 
-  if (ArchKind == llvm::ARM::AK_XSCALE)
+  if (ArchKind == llvm::ARM::ArchKind::XSCALE)
     Builder.defineMacro("__XSCALE__");
 
   if (isThumb()) {
@@ -720,10 +722,10 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   switch (ArchKind) {
   default:
     break;
-  case llvm::ARM::AK_ARMV8_1A:
+  case llvm::ARM::ArchKind::ARMV8_1A:
     getTargetDefinesARMV81A(Opts, Builder);
     break;
-  case llvm::ARM::AK_ARMV8_2A:
+  case llvm::ARM::ArchKind::ARMV8_2A:
     getTargetDefinesARMV82A(Opts, Builder);
     break;
   }

@@ -881,7 +881,7 @@ static int __kmp_reserve_threads(kmp_root_t *root, kmp_team_t *parent_team,
     KMP_ASSERT(0);
   }
 
-  // Respect KMP_ALL_THREADS, KMP_DEVICE_THREAD_LIMIT, OMP_THREAD_LIMIT.
+  // Respect KMP_ALL_THREADS/KMP_DEVICE_THREAD_LIMIT.
   if (__kmp_nth + new_nthreads -
           (root->r.r_active ? 1 : root->r.r_hot_team->t.t_nproc) >
       __kmp_max_nth) {
@@ -899,12 +899,41 @@ static int __kmp_reserve_threads(kmp_root_t *root, kmp_team_t *parent_team,
                 KMP_HNT(Unset_ALL_THREADS), __kmp_msg_null);
     }
     if (tl_nthreads == 1) {
-      KC_TRACE(10, ("__kmp_reserve_threads: T#%d KMP_ALL_THREADS reduced "
-                    "reservation to 1 thread\n",
+      KC_TRACE(10, ("__kmp_reserve_threads: T#%d KMP_DEVICE_THREAD_LIMIT "
+                    "reduced reservation to 1 thread\n",
                     master_tid));
       return 1;
     }
-    KC_TRACE(10, ("__kmp_reserve_threads: T#%d KMP_ALL_THREADS reduced "
+    KC_TRACE(10, ("__kmp_reserve_threads: T#%d KMP_DEVICE_THREAD_LIMIT reduced "
+                  "reservation to %d threads\n",
+                  master_tid, tl_nthreads));
+    new_nthreads = tl_nthreads;
+  }
+
+  // Respect OMP_THREAD_LIMIT
+  if (root->r.r_cg_nthreads + new_nthreads -
+          (root->r.r_active ? 1 : root->r.r_hot_team->t.t_nproc) >
+      __kmp_cg_max_nth) {
+    int tl_nthreads = __kmp_cg_max_nth - root->r.r_cg_nthreads +
+                      (root->r.r_active ? 1 : root->r.r_hot_team->t.t_nproc);
+    if (tl_nthreads <= 0) {
+      tl_nthreads = 1;
+    }
+
+    // If dyn-var is false, emit a 1-time warning.
+    if (!get__dynamic_2(parent_team, master_tid) && (!__kmp_reserve_warn)) {
+      __kmp_reserve_warn = 1;
+      __kmp_msg(kmp_ms_warning,
+                KMP_MSG(CantFormThrTeam, set_nthreads, tl_nthreads),
+                KMP_HNT(Unset_ALL_THREADS), __kmp_msg_null);
+    }
+    if (tl_nthreads == 1) {
+      KC_TRACE(10, ("__kmp_reserve_threads: T#%d OMP_THREAD_LIMIT "
+                    "reduced reservation to 1 thread\n",
+                    master_tid));
+      return 1;
+    }
+    KC_TRACE(10, ("__kmp_reserve_threads: T#%d OMP_THREAD_LIMIT reduced "
                   "reservation to %d threads\n",
                   master_tid, tl_nthreads));
     new_nthreads = tl_nthreads;
@@ -3116,6 +3145,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   root->r.r_in_parallel = 0;
   root->r.r_blocktime = __kmp_dflt_blocktime;
   root->r.r_nested = __kmp_dflt_nested;
+  root->r.r_cg_nthreads = 1;
 
   /* setup the root team for this task */
   /* allocate the root team structure */
@@ -3508,7 +3538,7 @@ static int __kmp_expand_threads(int nWish, int nNeed) {
 
     // Note that __kmp_threads_capacity is not bounded by __kmp_max_nth. If
     // __kmp_max_nth is set to some value less than __kmp_sys_max_nth by the
-    // user via OMP_THREAD_LIMIT, then __kmp_threads_capacity may become
+    // user via KMP_DEVICE_THREAD_LIMIT, then __kmp_threads_capacity may become
     // > __kmp_max_nth in one of two ways:
     //
     // 1) The initialization thread (gtid = 0) exits.  __kmp_threads[0]
@@ -3889,6 +3919,8 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
 
   TCW_4(__kmp_nth,
         __kmp_nth - 1); // __kmp_reap_thread will decrement __kmp_all_nth.
+  root->r.r_cg_nthreads--;
+
   __kmp_reap_thread(root->r.r_uber_thread, 1);
 
   // We canot put root thread to __kmp_thread_pool, so we have to reap it istead
@@ -4169,6 +4201,7 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
     KMP_DEBUG_ASSERT(new_thr->th.th_serial_team);
 
     TCW_4(__kmp_nth, __kmp_nth + 1);
+    root->r.r_cg_nthreads++;
 
     new_thr->th.th_task_state = 0;
     new_thr->th.th_task_state_top = 0;
@@ -4315,6 +4348,8 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   /* adjust the global counters */
   __kmp_all_nth++;
   __kmp_nth++;
+
+  root->r.r_cg_nthreads++;
 
   // if __kmp_adjust_gtid_mode is set, then we use method #1 (sp search) for low
   // numbers of procs, and method #2 (keyed API call) for higher numbers.
@@ -5378,6 +5413,7 @@ kmp_team_t *__kmp_reap_team(kmp_team_t *team) {
 void __kmp_free_thread(kmp_info_t *this_th) {
   int gtid;
   kmp_info_t **scan;
+  kmp_root_t *root = this_th->th.th_root;
 
   KA_TRACE(20, ("__kmp_free_thread: T#%d putting T#%d back on free pool.\n",
                 __kmp_get_gtid(), this_th->th.th_info.ds.ds_gtid));
@@ -5436,6 +5472,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
   __kmp_thread_pool_nth++;
 
   TCW_4(__kmp_nth, __kmp_nth - 1);
+  root->r.r_cg_nthreads--;
 
 #ifdef KMP_ADJUST_BLOCKTIME
   /* Adjust blocktime back to user setting or default if necessary */
@@ -6375,6 +6412,7 @@ static void __kmp_do_serial_initialize(void) {
     __kmp_dflt_team_nth_ub = __kmp_sys_max_nth;
   }
   __kmp_max_nth = __kmp_sys_max_nth;
+  __kmp_cg_max_nth = __kmp_sys_max_nth;
 
   // Three vars below moved here from __kmp_env_initialize() "KMP_BLOCKTIME"
   // part
@@ -6977,7 +7015,7 @@ void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
     if (num_teams * num_threads > __kmp_max_nth) {
       int new_threads = __kmp_max_nth / num_teams;
       if (!__kmp_reserve_warn) { // user asked for too many threads
-        __kmp_reserve_warn = 1; // that conflicts with OMP_THREAD_LIMIT
+        __kmp_reserve_warn = 1; // that conflicts with KMP_DEVICE_THREAD_LIMIT
         __kmp_msg(kmp_ms_warning,
                   KMP_MSG(CantFormThrTeam, num_threads, new_threads),
                   KMP_HNT(Unset_ALL_THREADS), __kmp_msg_null);

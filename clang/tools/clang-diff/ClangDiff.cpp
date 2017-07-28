@@ -24,7 +24,7 @@ using namespace clang::tooling;
 static cl::OptionCategory ClangDiffCategory("clang-diff options");
 
 static cl::opt<bool>
-    DumpAST("ast-dump",
+    ASTDump("ast-dump",
             cl::desc("Print the internal representation of the AST as JSON."),
             cl::init(false), cl::cat(ClangDiffCategory));
 
@@ -74,7 +74,7 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  if (DumpAST) {
+  if (ASTDump) {
     if (!DestinationPath.empty()) {
       llvm::errs() << "Error: Please specify exactly one filename.\n";
       return 1;

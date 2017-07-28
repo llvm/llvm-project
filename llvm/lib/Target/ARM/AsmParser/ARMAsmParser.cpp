@@ -9419,9 +9419,9 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
 ///  ::= .arch token
 bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
   StringRef Arch = getParser().parseStringToEndOfStatement().trim();
-  unsigned ID = ARM::parseArch(Arch);
+  ARM::ArchKind ID = ARM::parseArch(Arch);
 
-  if (ID == ARM::AK_INVALID)
+  if (ID == ARM::ArchKind::INVALID)
     return Error(L, "Unknown arch name");
 
   bool WasThumb = isThumb();
@@ -10069,9 +10069,9 @@ bool ARMAsmParser::parseDirectiveObjectArch(SMLoc L) {
   SMLoc ArchLoc = Parser.getTok().getLoc();
   Lex();
 
-  unsigned ID = ARM::parseArch(Arch);
+  ARM::ArchKind ID = ARM::parseArch(Arch);
 
-  if (ID == ARM::AK_INVALID)
+  if (ID == ARM::ArchKind::INVALID)
     return Error(ArchLoc, "unknown architecture '" + Arch + "'");
   if (parseToken(AsmToken::EndOfStatement))
     return true;

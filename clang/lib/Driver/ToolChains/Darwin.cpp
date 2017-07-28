@@ -68,14 +68,14 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
 
 void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
-  unsigned ArchKind = llvm::ARM::parseArch(Str);
+  llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
   if (Str == "x86_64h")
     T.setArchName(Str);
-  else if (ArchKind == llvm::ARM::AK_ARMV6M ||
-           ArchKind == llvm::ARM::AK_ARMV7M ||
-           ArchKind == llvm::ARM::AK_ARMV7EM) {
+  else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
+           ArchKind == llvm::ARM::ArchKind::ARMV7M ||
+           ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }
@@ -739,8 +739,8 @@ static const char *ArmMachOArchName(StringRef Arch) {
 }
 
 static const char *ArmMachOArchNameCPU(StringRef CPU) {
-  unsigned ArchKind = llvm::ARM::parseCPUArch(CPU);
-  if (ArchKind == llvm::ARM::AK_INVALID)
+  llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
+  if (ArchKind == llvm::ARM::ArchKind::INVALID)
     return nullptr;
   StringRef Arch = llvm::ARM::getArchName(ArchKind);
 

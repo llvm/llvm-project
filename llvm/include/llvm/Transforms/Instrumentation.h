@@ -40,6 +40,7 @@ namespace llvm {
 
 class FunctionPass;
 class ModulePass;
+class OptimizationRemarkEmitter;
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -109,7 +110,8 @@ bool isLegalToPromote(Instruction *Inst, Function *F, const char **Reason);
 // Returns the promoted direct call instruction.
 Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
                                  uint64_t TotalCount,
-                                 bool AttachProfToDirectCall);
+                                 bool AttachProfToDirectCall,
+                                 OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {

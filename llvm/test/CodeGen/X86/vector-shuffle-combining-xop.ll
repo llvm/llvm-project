@@ -138,12 +138,12 @@ define <8 x float> @combine_vpermil2ps256_08z945Az(<8 x float> %a0, <8 x float> 
 define <8 x float> @combine_vpermil2ps256_zero(<8 x float> %a0, <8 x float> %a1) {
 ; X32-LABEL: combine_vpermil2ps256_zero:
 ; X32:       # BB#0:
-; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermil2ps256_zero:
 ; X64:       # BB#0:
-; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %res0 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a1, <8 x float> %a0, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11>, i8 2)
   ret <8 x float> %res0

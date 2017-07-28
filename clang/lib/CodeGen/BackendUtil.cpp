@@ -840,28 +840,27 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     return;
   TheModule->setDataLayout(TM->createDataLayout());
 
-  PGOOptions PGOOpt;
+  Optional<PGOOptions> PGOOpt;
 
-  // -fprofile-generate.
-  PGOOpt.RunProfileGen = CodeGenOpts.hasProfileIRInstr();
-  if (PGOOpt.RunProfileGen)
-    PGOOpt.ProfileGenFile = CodeGenOpts.InstrProfileOutput.empty() ?
-      DefaultProfileGenName : CodeGenOpts.InstrProfileOutput;
+  if (CodeGenOpts.hasProfileIRInstr())
+    // -fprofile-generate.
+    PGOOpt = PGOOptions(CodeGenOpts.InstrProfileOutput.empty()
+                            ? DefaultProfileGenName
+                            : CodeGenOpts.InstrProfileOutput,
+                        "", "", true, CodeGenOpts.DebugInfoForProfiling);
+  else if (CodeGenOpts.hasProfileIRUse())
+    // -fprofile-use.
+    PGOOpt = PGOOptions("", CodeGenOpts.ProfileInstrumentUsePath, "", false,
+                        CodeGenOpts.DebugInfoForProfiling);
+  else if (!CodeGenOpts.SampleProfileFile.empty())
+    // -fprofile-sample-use
+    PGOOpt = PGOOptions("", "", CodeGenOpts.SampleProfileFile, false,
+                        CodeGenOpts.DebugInfoForProfiling);
+  else if (CodeGenOpts.DebugInfoForProfiling)
+    // -fdebug-info-for-profiling
+    PGOOpt = PGOOptions("", "", "", false, true);
 
-  // -fprofile-use.
-  if (CodeGenOpts.hasProfileIRUse())
-    PGOOpt.ProfileUseFile = CodeGenOpts.ProfileInstrumentUsePath;
-
-  if (!CodeGenOpts.SampleProfileFile.empty())
-    PGOOpt.SampleProfileFile = CodeGenOpts.SampleProfileFile;
-
-  // Only pass a PGO options struct if -fprofile-generate or
-  // -fprofile-use were passed on the cmdline.
-  PassBuilder PB(TM.get(),
-    (PGOOpt.RunProfileGen ||
-      !PGOOpt.ProfileUseFile.empty() ||
-      !PGOOpt.SampleProfileFile.empty()) ?
-        Optional<PGOOptions>(PGOOpt) : None);
+  PassBuilder PB(TM.get(), PGOOpt);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

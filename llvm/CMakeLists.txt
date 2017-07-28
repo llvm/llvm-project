@@ -897,6 +897,7 @@ if( LLVM_INCLUDE_TESTS )
       NO_INSTALL
       ALWAYS_CLEAN)
   endif()
+  add_subdirectory(utils/lit)
   add_subdirectory(test)
   add_subdirectory(unittests)
   if( LLVM_INCLUDE_UTILS )
