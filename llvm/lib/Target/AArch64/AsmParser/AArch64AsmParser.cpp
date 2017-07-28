@@ -3862,8 +3862,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  unsigned ID = AArch64::parseArch(Arch);
-  if (ID == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID))
+  AArch64::ArchKind ID = AArch64::parseArch(Arch);
+  if (ID == AArch64::ArchKind::INVALID)
     return Error(ArchLoc, "unknown arch name");
 
   if (parseToken(AsmToken::EndOfStatement))

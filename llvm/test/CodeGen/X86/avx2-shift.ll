@@ -455,13 +455,13 @@ define <32 x i8> @shr9(<32 x i8> %A) nounwind {
 define <32 x i8> @sra_v32i8_7(<32 x i8> %A) nounwind {
 ; X32-LABEL: sra_v32i8_7:
 ; X32:       # BB#0:
-; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: sra_v32i8_7:
 ; X64:       # BB#0:
-; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %B = ashr <32 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>

@@ -19,6 +19,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -103,6 +104,7 @@ struct RewriteStatepointsForGC : public ModulePass {
     // else.  We could in theory preserve a lot more analyses here.
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 
   /// The IR fed into RewriteStatepointsForGC may have had attributes and
@@ -2419,10 +2421,12 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  const TargetLibraryInfo &TLI =
+      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
-  auto NeedsRewrite = [](Instruction &I) {
+  auto NeedsRewrite = [&TLI](Instruction &I) {
     if (ImmutableCallSite CS = ImmutableCallSite(&I))
-      return !callsGCLeafFunction(CS) && !isStatepoint(CS);
+      return !callsGCLeafFunction(CS, TLI) && !isStatepoint(CS);
     return false;
   };
 

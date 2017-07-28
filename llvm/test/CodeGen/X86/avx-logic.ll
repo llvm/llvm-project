@@ -6,7 +6,7 @@ define <4 x double> @andpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable
 ; CHECK-LABEL: andpd256:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vandpd %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -23,7 +23,7 @@ define <4 x double> @andpd256fold(<4 x double> %y) nounwind uwtable readnone ssp
 ; CHECK-LABEL: andpd256fold:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vandpd {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -64,7 +64,7 @@ define <4 x double> @xorpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable
 ; CHECK-LABEL: xorpd256:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vxorpd %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -81,7 +81,7 @@ define <4 x double> @xorpd256fold(<4 x double> %y) nounwind uwtable readnone ssp
 ; CHECK-LABEL: xorpd256fold:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -122,7 +122,7 @@ define <4 x double> @orpd256(<4 x double> %y, <4 x double> %x) nounwind uwtable 
 ; CHECK-LABEL: orpd256:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vorpd %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -139,7 +139,7 @@ define <4 x double> @orpd256fold(<4 x double> %y) nounwind uwtable readnone ssp 
 ; CHECK-LABEL: orpd256fold:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vorpd {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -180,7 +180,7 @@ define <4 x double> @andnotpd256(<4 x double> %y, <4 x double> %x) nounwind uwta
 ; CHECK-LABEL: andnotpd256:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vandnpd %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -198,7 +198,7 @@ define <4 x double> @andnotpd256fold(<4 x double> %y, <4 x double>* nocapture %x
 ; CHECK-LABEL: andnotpd256fold:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vandnpd (%rdi), %ymm0, %ymm0
-; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -281,7 +281,7 @@ define <4 x i32> @and_xor_splat1_v4i32(<4 x i32> %x) nounwind {
 ;
 ; AVX512-LABEL: and_xor_splat1_v4i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX512-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %xor = xor <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
@@ -297,7 +297,7 @@ define <4 x i64> @and_xor_splat1_v4i64(<4 x i64> %x) nounwind {
 ;
 ; AVX512-LABEL: and_xor_splat1_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm1
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
 ; AVX512-NEXT:    vandnps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %xor = xor <4 x i64> %x, <i64 1, i64 1, i64 1, i64 1>

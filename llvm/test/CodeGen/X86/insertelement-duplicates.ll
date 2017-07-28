@@ -32,7 +32,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vbroadcastss 304(%ecx), %xmm0
-; AVX-32-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX-32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
 ; AVX-32-NEXT:    vmovups %ymm0, 608(%eax)
 ; AVX-32-NEXT:    vzeroupper
@@ -41,7 +41,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; AVX-64-LABEL: PR15298:
 ; AVX-64:       # BB#0: # %L.entry
 ; AVX-64-NEXT:    vbroadcastss 304(%rdi), %xmm0
-; AVX-64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX-64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
 ; AVX-64-NEXT:    vmovups %ymm0, 608(%rsi)
 ; AVX-64-NEXT:    vzeroupper

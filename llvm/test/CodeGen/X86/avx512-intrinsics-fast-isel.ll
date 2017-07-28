@@ -1156,14 +1156,14 @@ define <8 x double> @test_mm512_zextpd256_pd512(<4 x double> %a0) nounwind {
 ; X32-LABEL: test_mm512_zextpd256_pd512:
 ; X32:       # BB#0:
 ; X32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; X32-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_zextpd256_pd512:
 ; X64:       # BB#0:
 ; X64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; X64-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %res = shufflevector <4 x double> %a0, <4 x double> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1196,14 +1196,14 @@ define <16 x float> @test_mm512_zextps256_ps512(<8 x float> %a0) nounwind {
 ; X32-LABEL: test_mm512_zextps256_ps512:
 ; X32:       # BB#0:
 ; X32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; X32-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_zextps256_ps512:
 ; X64:       # BB#0:
 ; X64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; X64-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %res = shufflevector <8 x float> %a0, <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1236,14 +1236,14 @@ define <8 x i64> @test_mm512_zextsi256_si512(<4 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm512_zextsi256_si512:
 ; X32:       # BB#0:
 ; X32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_zextsi256_si512:
 ; X64:       # BB#0:
 ; X64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %res = shufflevector <4 x i64> %a0, <4 x i64> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

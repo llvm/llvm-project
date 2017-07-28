@@ -459,7 +459,7 @@ define <4 x i64> @test_abs_gt_v4i64(<4 x i64> %a) nounwind {
 ;
 ; AVX2-LABEL: test_abs_gt_v4i64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
@@ -523,7 +523,7 @@ define <8 x i64> @test_abs_le_v8i64(<8 x i64> %a) nounwind {
 ;
 ; AVX2-LABEL: test_abs_le_v8i64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm2, %ymm3
 ; AVX2-NEXT:    vpaddq %ymm3, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
@@ -598,7 +598,7 @@ define <8 x i64> @test_abs_le_v8i64_fold(<8 x i64>* %a.ptr) nounwind {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX2-NEXT:    vmovdqu 32(%rdi), %ymm1
-; AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm2, %ymm3
 ; AVX2-NEXT:    vpaddq %ymm3, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0

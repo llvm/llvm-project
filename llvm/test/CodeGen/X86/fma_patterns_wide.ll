@@ -1091,14 +1091,14 @@ define <16 x float> @test_v16f32_fma_fmul_x_c1_c2_y(<16 x float> %x, <16 x float
 define <16 x float> @test_v16f32_fneg_fmul(<16 x float> %x, <16 x float> %y) #0 {
 ; FMA-LABEL: test_v16f32_fneg_fmul:
 ; FMA:       # BB#0:
-; FMA-NEXT:    vxorps %ymm4, %ymm4, %ymm4
+; FMA-NEXT:    vxorps %xmm4, %xmm4, %xmm4
 ; FMA-NEXT:    vfnmsub213ps %ymm4, %ymm2, %ymm0
 ; FMA-NEXT:    vfnmsub213ps %ymm4, %ymm3, %ymm1
 ; FMA-NEXT:    retq
 ;
 ; FMA4-LABEL: test_v16f32_fneg_fmul:
 ; FMA4:       # BB#0:
-; FMA4-NEXT:    vxorps %ymm4, %ymm4, %ymm4
+; FMA4-NEXT:    vxorps %xmm4, %xmm4, %xmm4
 ; FMA4-NEXT:    vfnmsubps %ymm4, %ymm2, %ymm0, %ymm0
 ; FMA4-NEXT:    vfnmsubps %ymm4, %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    retq
@@ -1116,14 +1116,14 @@ define <16 x float> @test_v16f32_fneg_fmul(<16 x float> %x, <16 x float> %y) #0 
 define <8 x double> @test_v8f64_fneg_fmul(<8 x double> %x, <8 x double> %y) #0 {
 ; FMA-LABEL: test_v8f64_fneg_fmul:
 ; FMA:       # BB#0:
-; FMA-NEXT:    vxorpd %ymm4, %ymm4, %ymm4
+; FMA-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; FMA-NEXT:    vfnmsub213pd %ymm4, %ymm2, %ymm0
 ; FMA-NEXT:    vfnmsub213pd %ymm4, %ymm3, %ymm1
 ; FMA-NEXT:    retq
 ;
 ; FMA4-LABEL: test_v8f64_fneg_fmul:
 ; FMA4:       # BB#0:
-; FMA4-NEXT:    vxorpd %ymm4, %ymm4, %ymm4
+; FMA4-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm2, %ymm0, %ymm0
 ; FMA4-NEXT:    vfnmsubpd %ymm4, %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    retq

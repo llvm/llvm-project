@@ -900,13 +900,15 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     Expr E = readExpr();
     if (consume(")"))
-      return [=] { return alignTo(Script->getDot(), E().getValue()); };
+      return [=] {
+        return alignTo(Script->getDot(), std::max((uint64_t)1, E().getValue()));
+      };
     expect(",");
     Expr E2 = readExpr();
     expect(")");
     return [=] {
       ExprValue V = E();
-      V.Alignment = E2().getValue();
+      V.Alignment = std::max((uint64_t)1, E2().getValue());
       return V;
     };
   }
@@ -927,7 +929,9 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=] { return alignTo(Script->getDot(), E().getValue()); };
+    return [=] {
+      return alignTo(Script->getDot(), std::max((uint64_t)1, E().getValue()));
+    };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");

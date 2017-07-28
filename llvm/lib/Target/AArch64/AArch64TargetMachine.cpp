@@ -212,8 +212,6 @@ AArch64TargetMachine::AArch64TargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
     CodeModel::Model CM, CodeGenOpt::Level OL, bool LittleEndian)
-    // This nested ternary is horrible, but DL needs to be properly
-    // initialized before TLInfo is constructed.
     : LLVMTargetMachine(T, computeDataLayout(TT, Options.MCOptions,
                                              LittleEndian),
                         TT, CPU, FS, Options,

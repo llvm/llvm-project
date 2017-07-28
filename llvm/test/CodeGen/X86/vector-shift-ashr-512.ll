@@ -456,7 +456,7 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) nounwind {
 define <64 x i8> @ashr_const7_v64i8(<64 x i8> %a) {
 ; AVX512DQ-LABEL: ashr_const7_v64i8:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
 ; AVX512DQ-NEXT:    vpcmpgtb %ymm1, %ymm2, %ymm1
 ; AVX512DQ-NEXT:    retq
