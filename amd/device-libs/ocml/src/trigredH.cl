@@ -8,7 +8,7 @@
 #include "mathH.h"
 #include "trigredH.h"
 
-CONSTATTR INLINEATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigred)(half hx)
 {
     const float twobypi = 0x1.45f306p-1f;

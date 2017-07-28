@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(fmax)(float x, float y)
 {
     float ret;

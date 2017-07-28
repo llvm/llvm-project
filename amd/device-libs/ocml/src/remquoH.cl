@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-INLINEATTR half2
+half2
 MATH_MANGLE2(remquo)(half2 x, half2 y, __private int2 *q7p)
 {
     int qlo, qhi;

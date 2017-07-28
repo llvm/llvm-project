@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(rcbrt)(float x)
 {
     if (DAZ_OPT()) {

@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigpiredD.h"
 
-CONSTATTR INLINEATTR struct scret
+CONSTATTR struct scret
 MATH_PRIVATE(sincospired)(double x)
 {
     double t = x * x;

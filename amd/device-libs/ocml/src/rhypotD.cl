@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(rhypot)(double x, double y)
 {
     double a = BUILTIN_ABS_F64(x);

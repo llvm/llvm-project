@@ -9,7 +9,7 @@
 
 CONSTATTR BGEN(maxmag)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(maxmag)(half x, half y)
 {
     x = BUILTIN_CANONICALIZE_F16(x);

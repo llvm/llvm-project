@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(sqrt)(double x)
 {
     return MATH_SQRT(x);
@@ -17,7 +17,7 @@ MATH_MANGLE(sqrt)(double x)
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR double \
+CONSTATTR double \
 MATH_MANGLE(NAME)(double x) \
 { \
     return BUILTIN_FULL_UNARY(fsqrt, false, ROUND, x); \

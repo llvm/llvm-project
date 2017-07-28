@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(erfinv)
 
-INLINEATTR PUREATTR half
+PUREATTR half
 MATH_MANGLE(erfinv)(half x)
 {
     return (half)MATH_UPMANGLE(erfinv)((float)x);

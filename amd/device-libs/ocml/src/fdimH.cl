@@ -9,7 +9,7 @@
 
 CONSTATTR BGEN(fdim)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(fdim)(half x, half y)
 {
     if (!FINITE_ONLY_OPT()) {

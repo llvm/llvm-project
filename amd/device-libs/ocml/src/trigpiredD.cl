@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigpiredD.h"
 
-CONSTATTR INLINEATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigpired)(double x)
 {
     double t = 2.0 * BUILTIN_FRACTION_F64(0.5 * x);

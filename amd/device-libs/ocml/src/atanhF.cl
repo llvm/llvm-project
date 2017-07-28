@@ -12,7 +12,7 @@
 
 extern CONSTATTR float MATH_PRIVATE(lnep)(float2 x);
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(atanh)(float x)
 {
     float y = BUILTIN_ABS_F32(x);

@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(sqrt)(float x)
 {
     if (CORRECTLY_ROUNDED_SQRT32()) {
@@ -21,7 +21,7 @@ MATH_MANGLE(sqrt)(float x)
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR float \
+CONSTATTR float \
 MATH_MANGLE(NAME)(float x) \
 { \
     float ret; \

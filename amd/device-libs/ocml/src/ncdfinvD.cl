@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-INLINEATTR PUREATTR double
+PUREATTR double
 MATH_MANGLE(ncdfinv)(double x)
 {
     return -0x1.6a09e667f3bcdp+0 * MATH_MANGLE(erfcinv)(x + x);

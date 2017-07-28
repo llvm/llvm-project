@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(fdim)(float x, float y)
 {
     if (!FINITE_ONLY_OPT()) {

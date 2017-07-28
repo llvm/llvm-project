@@ -10,7 +10,7 @@
 
 CONSTATTR UGEN(tanpi)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(tanpi)(half x)
 {
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));

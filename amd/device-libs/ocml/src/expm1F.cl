@@ -12,7 +12,7 @@
 
 extern CONSTATTR float2 MATH_PRIVATE(epexpep)(float2 x);
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(expm1)(float x)
 {
     float2 e = sub(MATH_PRIVATE(epexpep)(con(x, 0.0f)), 1.0f);

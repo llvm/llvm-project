@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(fdim)(double x, double y)
 {
     long d = AS_LONG(x - y);

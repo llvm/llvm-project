@@ -17,7 +17,7 @@ MATH_MANGLE(fma)(float a, float b, float c)
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR float \
+CONSTATTR float \
 MATH_MANGLE(NAME)(float a, float b, float c) \
 { \
     float ret; \

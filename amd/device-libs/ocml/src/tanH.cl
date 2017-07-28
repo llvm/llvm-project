@@ -10,7 +10,7 @@
 
 UGEN(tan)
 
-INLINEATTR half
+half
 MATH_MANGLE(tan)(half x)
 {
     struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F16(x));

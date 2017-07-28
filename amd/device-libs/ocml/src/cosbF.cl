@@ -24,7 +24,7 @@
         L = __e; \
     } while (0)
 
-INLINEATTR float
+float
 MATH_PRIVATE(cosb)(float x, int n, float p)
 {
     struct redret r = MATH_PRIVATE(trigred)(x);

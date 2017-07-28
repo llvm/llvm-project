@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-INLINEATTR float
+float
 MATH_MANGLE(frexp)(float x, __private int *ep)
 {
     int e = BUILTIN_FREXP_EXP_F32(x);

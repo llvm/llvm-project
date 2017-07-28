@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-INLINEATTR float
+float
 MATH_MANGLE(fract)(float x, __private float *ip)
 {
     float i = BUILTIN_FLOOR_F32(x);

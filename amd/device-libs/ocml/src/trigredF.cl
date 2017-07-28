@@ -8,7 +8,7 @@
 #include "mathF.h"
 #include "trigredF.h"
 
-CONSTATTR INLINEATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigred)(float x)
 {
     if (x < SMALL_BOUND)

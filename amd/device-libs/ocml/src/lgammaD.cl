@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-INLINEATTR double
+double
 MATH_MANGLE(lgamma)(double x)
 {
     int s;

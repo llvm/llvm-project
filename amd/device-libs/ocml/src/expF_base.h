@@ -32,7 +32,7 @@
 // 
 //    e^x = (2^m) * ( (2^(j/64)) + q*(2^(j/64)) ) 
 
-PUREATTR INLINEATTR float
+PUREATTR float
 #if defined COMPILING_EXP2
 MATH_MANGLE(exp2)(float x)
 #elif defined COMPILING_EXP10

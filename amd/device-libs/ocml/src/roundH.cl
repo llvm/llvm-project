@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR INLINEATTR half2
+CONSTATTR half2
 MATH_MANGLE2(round)(half2 x)
 {
     half2 t = BUILTIN_TRUNC_2F16(x);
@@ -18,7 +18,7 @@ MATH_MANGLE2(round)(half2 x)
     return t + o;
 }
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(round)(half x)
 {
     half t = BUILTIN_TRUNC_F16(x);

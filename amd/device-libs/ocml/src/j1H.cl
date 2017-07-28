@@ -9,7 +9,7 @@
 
 UGEN(j1)
 
-INLINEATTR half
+half
 MATH_MANGLE(j1)(half x)
 {
     return (half)MATH_UPMANGLE(j1)((float)x);

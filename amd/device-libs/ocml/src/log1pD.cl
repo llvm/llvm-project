@@ -12,7 +12,7 @@ extern CONSTATTR double MATH_PRIVATE(lnep)(double2 x);
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(log1p)(double x)
 {
     double z = MATH_PRIVATE(lnep)(add(1.0, x));

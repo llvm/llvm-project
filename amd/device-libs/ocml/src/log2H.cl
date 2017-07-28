@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(log2)
 
-PUREATTR INLINEATTR half
+PUREATTR half
 MATH_MANGLE(log2)(half x)
 {
     return BUILTIN_LOG2_F16(x);

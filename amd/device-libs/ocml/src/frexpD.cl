@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-INLINEATTR double
+double
 MATH_MANGLE(frexp)(double x, __private int *ep)
 {
     int e = BUILTIN_FREXP_EXP_F64(x);

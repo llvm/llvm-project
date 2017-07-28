@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-INLINEATTR CONSTATTR float
+CONSTATTR float
 #if defined COMPILING_LOG2
 MATH_MANGLE(log2)(float x)
 #elif defined COMPILING_LOG10

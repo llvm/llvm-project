@@ -10,7 +10,7 @@
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-INLINEATTR CONSTATTR double2
+CONSTATTR double2
 MATH_PRIVATE(epexpep)(double2 x)
 {
     double dn = BUILTIN_RINT_F64(x.hi * 0x1.71547652b82fep+0);

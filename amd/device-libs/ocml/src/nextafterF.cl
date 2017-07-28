@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(nextafter)(float x, float y)
 {
     int ix = AS_INT(x);

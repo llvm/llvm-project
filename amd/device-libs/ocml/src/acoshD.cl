@@ -12,7 +12,7 @@
 
 extern CONSTATTR double MATH_PRIVATE(lnep)(double2 x);
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(acosh)(double x)
 {
     bool b = x >= 0x1.0p+512;

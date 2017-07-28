@@ -8,7 +8,7 @@
 #include "mathH.h"
 #include "trigredH.h"
 
-CONSTATTR INLINEATTR struct scret
+CONSTATTR struct scret
 MATH_PRIVATE(sincosred)(half x)
 {
     half t = x * x;

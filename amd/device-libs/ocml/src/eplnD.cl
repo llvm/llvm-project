@@ -10,7 +10,7 @@
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-INLINEATTR CONSTATTR double2
+CONSTATTR double2
 MATH_PRIVATE(epln)(double a)
 {
     double m = BUILTIN_FREXP_MANT_F64(a);

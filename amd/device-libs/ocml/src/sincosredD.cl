@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-CONSTATTR INLINEATTR struct scret
+CONSTATTR struct scret
 MATH_PRIVATE(sincosred)(double x)
 {
     const double S0 = -0x1.5555555555555p-3;

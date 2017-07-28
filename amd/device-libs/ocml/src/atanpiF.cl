@@ -9,7 +9,7 @@
 
 extern CONSTATTR float MATH_PRIVATE(atanpired)(float);
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(atanpi)(float x)
 {
     float v = BUILTIN_ABS_F32(x);

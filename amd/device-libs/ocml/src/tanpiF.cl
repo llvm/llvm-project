@@ -8,7 +8,7 @@
 #include "mathF.h"
 #include "trigpiredF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(tanpi)(float x)
 {
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F32(x));

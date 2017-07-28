@@ -10,7 +10,7 @@
 
 UGEN(sinpi)
 
-INLINEATTR half
+half
 MATH_MANGLE(sinpi)(half x)
 {
     struct redret r =  MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));

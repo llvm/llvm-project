@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-INLINEATTR CONSTATTR double
+CONSTATTR double
 MATH_PRIVATE(tanred2)(double x, double xx, int sel)
 {
     const double piby4_lead = 0x1.921fb54442d18p-1;

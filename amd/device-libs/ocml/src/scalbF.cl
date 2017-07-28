@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(scalb)(float x, float y)
 {
     float t = BUILTIN_CLAMP_F32(y, -0x1.0p+20f, 0x1.0p+20f);

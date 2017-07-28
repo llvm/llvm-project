@@ -9,7 +9,7 @@
 
 CONSTATTR UGEN(logb)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(logb)(half x)
 {
     half ret = (half)(BUILTIN_FREXP_EXP_F16(x) - (short)1);

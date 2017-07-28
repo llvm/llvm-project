@@ -91,7 +91,7 @@ fma_reduce(float x)
     return ret;
 }
 
-CONSTATTR INLINEATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigredsmall)(float x)
 {
     if (HAVE_FAST_FMA32()) {

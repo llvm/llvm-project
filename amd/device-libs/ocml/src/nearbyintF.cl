@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(nearbyint)(float x)
 {
     return BUILTIN_RINT_F32(x);

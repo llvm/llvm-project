@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-INLINEATTR double
+double
 MATH_MANGLE(fract)(double x, __private double *ip)
 {
     double i = BUILTIN_FLOOR_F64(x);

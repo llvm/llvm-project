@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(log1p)
 
-PUREATTR INLINEATTR half
+PUREATTR half
 MATH_MANGLE(log1p)(half x)
 {
     half ret;

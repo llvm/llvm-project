@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(ldexp)(double x, int n)
 {
     return BUILTIN_FLDEXP_F64(x, n);

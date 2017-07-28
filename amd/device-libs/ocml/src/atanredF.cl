@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_PRIVATE(atanred)(float v)
 {
     float t = v * v;

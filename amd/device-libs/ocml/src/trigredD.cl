@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-CONSTATTR INLINEATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigred)(double x)
 {
     if (x < 0x1.0p+21)

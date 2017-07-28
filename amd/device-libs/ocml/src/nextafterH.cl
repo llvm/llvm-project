@@ -9,7 +9,7 @@
 
 CONSTATTR BGEN(nextafter)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(nextafter)(half x, half y)
 {
     short ix = AS_SHORT(x);

@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigpiredD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_PRIVATE(tanpired)(double x, int i)
 {
     double s = x * x;

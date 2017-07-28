@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR int
+CONSTATTR int
 MATH_MANGLE(ilogb)(float x)
 {
     int r = BUILTIN_FREXP_EXP_F32(x) - 1;

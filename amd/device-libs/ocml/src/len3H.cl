@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(len3)(half x, half y, half z)
 {
     float fx = (float)x;

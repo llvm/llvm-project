@@ -8,7 +8,7 @@
 #include "mathF.h"
 #include "trigredF.h"
 
-INLINEATTR float
+float
 MATH_MANGLE(sin)(float x)
 {
     int ix = AS_INT(x);

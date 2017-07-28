@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(min)(double x, double y)
 {
     return BUILTIN_CMIN_F64(x, y);

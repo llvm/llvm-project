@@ -12,7 +12,7 @@
 
 extern CONSTATTR float MATH_PRIVATE(lnep)(float2 x);
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(acosh)(float x)
 {
     bool b = x >= 0x1.0p+64f;

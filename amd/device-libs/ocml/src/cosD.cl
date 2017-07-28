@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-INLINEATTR double
+double
 MATH_MANGLE(cos)(double x)
 {
     struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F64(x));

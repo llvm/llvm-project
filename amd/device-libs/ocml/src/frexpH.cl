@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-INLINEATTR half2
+half2
 MATH_MANGLE2(frexp)(half2 x, __private int2 *ep)
 {
     int elo, ehi;
@@ -18,7 +18,7 @@ MATH_MANGLE2(frexp)(half2 x, __private int2 *ep)
     return r;
 }
 
-INLINEATTR half
+half
 MATH_MANGLE(frexp)(half x, __private int *ep)
 {
     int e = (int)BUILTIN_FREXP_EXP_F16(x);

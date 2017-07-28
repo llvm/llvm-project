@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(logb)(float x)
 {
     float ret = (float)(BUILTIN_FREXP_EXP_F32(x) - 1);

@@ -8,7 +8,7 @@
 #include "mathF.h"
 #include "trigpiredF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(cospi)(float x)
 {
     int ax = AS_INT(x) & 0x7fffffff;

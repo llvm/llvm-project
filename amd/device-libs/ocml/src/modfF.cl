@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-INLINEATTR float
+float
 MATH_MANGLE(modf)(float x, __private float *iptr)
 {
     float tx = BUILTIN_TRUNC_F32(x);

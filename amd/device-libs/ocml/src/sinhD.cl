@@ -12,7 +12,7 @@
 
 extern CONSTATTR double2 MATH_PRIVATE(epexpep)(double2 x);
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(sinh)(double x)
 {
     double y = BUILTIN_ABS_F64(x);

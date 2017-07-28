@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(exp2)
 
-PUREATTR INLINEATTR half
+PUREATTR half
 MATH_MANGLE(exp2)(half x)
 {
     return BUILTIN_EXP2_F16(x);

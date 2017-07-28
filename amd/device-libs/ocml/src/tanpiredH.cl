@@ -8,7 +8,7 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_PRIVATE(tanpired)(half x, short i)
 {
     half s = x * x;

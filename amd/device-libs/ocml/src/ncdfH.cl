@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(ncdf)
 
-INLINEATTR PUREATTR half
+PUREATTR half
 MATH_MANGLE(ncdf)(half x)
 {
     return (half)MATH_UPMANGLE(ncdf)((float)x);

@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_PRIVATE(atanred)(half v)
 {
     half t = v * v;

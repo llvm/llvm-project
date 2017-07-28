@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-INLINEATTR float
+float
 MATH_MANGLE(lgamma)(float x)
 {
     int s;

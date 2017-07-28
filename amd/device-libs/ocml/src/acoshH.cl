@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(acosh)
 
-PUREATTR INLINEATTR half
+PUREATTR half
 MATH_MANGLE(acosh)(half hx)
 {
     half ret;

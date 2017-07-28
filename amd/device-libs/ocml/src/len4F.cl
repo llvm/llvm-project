@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(len4)(float x, float y, float z, float w)
 {
     float a = BUILTIN_ABS_F32(x);

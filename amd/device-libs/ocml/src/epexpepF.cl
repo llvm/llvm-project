@@ -10,7 +10,7 @@
 #define FLOAT_SPECIALIZATION
 #include "ep.h"
 
-INLINEATTR CONSTATTR float2
+CONSTATTR float2
 MATH_PRIVATE(epexpep)(float2 x)
 {
     float fn = BUILTIN_RINT_F32(x.hi * 0x1.715476p+0f);

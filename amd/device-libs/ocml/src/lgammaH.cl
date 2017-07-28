@@ -9,7 +9,7 @@
 
 UGEN(lgamma)
 
-INLINEATTR half
+half
 MATH_MANGLE(lgamma)(half x)
 {
     int s;

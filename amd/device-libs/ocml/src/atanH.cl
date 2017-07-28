@@ -11,7 +11,7 @@ extern CONSTATTR half MATH_PRIVATE(atanred)(half);
 
 CONSTATTR UGEN(atan)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(atan)(half x)
 {
     half v = BUILTIN_ABS_F16(x);

@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(ldexp)(float x, int n)
 {
     return BUILTIN_FLDEXP_F32(x, n);

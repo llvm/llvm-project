@@ -8,7 +8,7 @@
 #include "mathD.h"
 #include "trigredD.h"
 
-CONSTATTR INLINEATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigredsmall)(double x)
 {
     const double twobypi = 0x1.45f306dc9c883p-1;

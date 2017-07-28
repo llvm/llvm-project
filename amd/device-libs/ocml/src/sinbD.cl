@@ -24,7 +24,7 @@
         L = __e; \
     } while (0)
 
-INLINEATTR double
+double
 MATH_PRIVATE(sinb)(double x, int n, double p)
 {
     struct redret r = MATH_PRIVATE(trigred)(x);

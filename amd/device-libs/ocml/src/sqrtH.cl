@@ -9,7 +9,7 @@
 
 CONSTATTR UGEN(sqrt)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(sqrt)(half x)
 {
     return BUILTIN_SQRT_F16(x);
@@ -19,7 +19,7 @@ MATH_MANGLE(sqrt)(half x)
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR half \
+CONSTATTR half \
 MATH_MANGLE(NAME)(half x) \
 { \
     return BUILTIN_FULL_UNARY(fsqrth, false, ROUND, x); \

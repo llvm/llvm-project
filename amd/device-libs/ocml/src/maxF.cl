@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(max)(float x, float y)
 {
     return BUILTIN_CMAX_F32(x, y);

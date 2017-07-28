@@ -10,7 +10,7 @@
 #define FLOAT_SPECIALIZATION
 #include "ep.h"
 
-INLINEATTR CONSTATTR float2
+CONSTATTR float2
 MATH_PRIVATE(epln)(float a)
 {
     float m = BUILTIN_FREXP_MANT_F32(a);

@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR INLINEATTR short2
+CONSTATTR short2
 MATH_MANGLE2(isnan)(half2 x)
 {
     return (short2)
@@ -15,7 +15,7 @@ MATH_MANGLE2(isnan)(half2 x)
          BUILTIN_CLASS_F16(x.hi, CLASS_SNAN|CLASS_QNAN) ? (short)-1 : (short)0);
 }
 
-CONSTATTR INLINEATTR int
+CONSTATTR int
 MATH_MANGLE(isnan)(half x)
 {
     return BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN);

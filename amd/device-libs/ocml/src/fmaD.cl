@@ -17,7 +17,7 @@ MATH_MANGLE(fma)(double a, double b, double c)
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR double \
+CONSTATTR double \
 MATH_MANGLE(NAME)(double a, double b, double c) \
 { \
     return BUILTIN_FULL_TERNARY(ffma, false, ROUND, a, b, c); \

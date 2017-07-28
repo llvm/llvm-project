@@ -11,7 +11,7 @@
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR double \
+CONSTATTR double \
 MATH_MANGLE(NAME)(double x, double y) \
 { \
     return BUILTIN_FULL_BINARY(fdiv, false, ROUND, x, y); \

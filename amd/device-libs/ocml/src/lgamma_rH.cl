@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-INLINEATTR half2
+half2
 MATH_MANGLE2(lgamma_r)(half2 x, __private int2 *signp)
 {
     int slo, shi;
@@ -18,7 +18,7 @@ MATH_MANGLE2(lgamma_r)(half2 x, __private int2 *signp)
     return r;
 }
 
-INLINEATTR half
+half
 MATH_MANGLE(lgamma_r)(half x, __private int *signp)
 {
     return (half)MATH_UPMANGLE(lgamma_r)((float)x, signp);

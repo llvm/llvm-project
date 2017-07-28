@@ -9,7 +9,7 @@
 
 PUREATTR UGEN(expm1)
 
-PUREATTR INLINEATTR half
+PUREATTR half
 MATH_MANGLE(expm1)(half x)
 {
     half ret;

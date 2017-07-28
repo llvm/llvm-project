@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(round)(float x)
 {
     float t = BUILTIN_TRUNC_F32(x);

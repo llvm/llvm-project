@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR int
+CONSTATTR int
 MATH_MANGLE(ilogb)(double x)
 {
     int r = BUILTIN_FREXP_EXP_F64(x) - 1;

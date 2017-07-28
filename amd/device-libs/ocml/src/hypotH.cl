@@ -9,7 +9,7 @@
 
 CONSTATTR BGEN(hypot)
 
-CONSTATTR INLINEATTR half
+CONSTATTR half
 MATH_MANGLE(hypot)(half x, half y)
 {
     float fx = (float)x;

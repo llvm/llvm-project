@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(rsqrt)(double x)
 {
     double y0 = BUILTIN_RSQRT_F64(x);

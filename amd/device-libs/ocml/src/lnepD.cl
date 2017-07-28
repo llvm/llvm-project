@@ -10,7 +10,7 @@
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-INLINEATTR CONSTATTR double
+CONSTATTR double
 MATH_PRIVATE(lnep)(double2 a)
 {
     int b = BUILTIN_FREXP_MANT_F64(a.hi) < (2.0/3.0);

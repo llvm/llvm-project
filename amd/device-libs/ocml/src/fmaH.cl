@@ -23,7 +23,7 @@ MATH_MANGLE(fma)(half a, half b, half c)
 #if defined HSAIL_BUILD
 
 #define GEN(NAME,ROUND)\
-CONSTATTR INLINEATTR half \
+CONSTATTR half \
 MATH_MANGLE(NAME)(half a, half b, half c) \
 { \
     return BUILTIN_FULL_TERNARY(ffmah, false, ROUND, a, b, c); \

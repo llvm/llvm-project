@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-CONSTATTR INLINEATTR float
+CONSTATTR float
 MATH_MANGLE(min)(float x, float y)
 {
     return BUILTIN_CMIN_F32(x, y);

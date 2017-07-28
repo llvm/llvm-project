@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-CONSTATTR INLINEATTR int
+CONSTATTR int
 MATH_MANGLE(fpclassify)(half x)
 {
     int ret = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) ? FP_INFINITE : FP_NAN;

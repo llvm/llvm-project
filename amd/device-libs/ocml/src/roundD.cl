@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR double
+CONSTATTR double
 MATH_MANGLE(round)(double x)
 {
     double t = BUILTIN_TRUNC_F64(x);
