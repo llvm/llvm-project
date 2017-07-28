@@ -29,7 +29,7 @@ class REPLDictionaryTestCase (lldbrepl.REPLTest):
         oslist=['linux'],
         bugnumber="bugs.swift.org/SR-843")
     def testREPL(self):
-        REPLTest.testREPL(self)
+        lldbrepl.REPLTest.testREPL(self)
 
     def doTest(self):
         self.sendline('[1:2, 2:3, 3:9]')
