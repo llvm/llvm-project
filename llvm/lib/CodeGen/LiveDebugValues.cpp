@@ -114,10 +114,7 @@ private:
     /// The value location. Stored separately to avoid repeatedly
     /// extracting it from MI.
     union {
-      struct {
-        uint32_t RegNo;
-        uint32_t Offset;
-      } RegisterLoc;
+      uint64_t RegNo;
       uint64_t Hash;
     } Loc;
 
@@ -130,17 +127,7 @@ private:
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
-        Loc.RegisterLoc.RegNo = RegNo;
-        int64_t Offset =
-            MI.isIndirectDebugValue() ? MI.getOperand(1).getImm() : 0;
-        // We don't support offsets larger than 4GiB here. They are
-        // slated to be replaced with DIExpressions anyway.
-        // With indirect debug values used for spill locations, Offset 
-        // can be negative.
-        if (Offset == INT64_MIN || std::abs(Offset) >= (1LL << 32))
-          Kind = InvalidKind;
-        else
-          Loc.RegisterLoc.Offset = Offset;
+        Loc.RegNo = RegNo;
       }
     }
 
@@ -148,7 +135,7 @@ private:
     /// otherwise return 0.
     unsigned isDescribedByReg() const {
       if (Kind == RegisterKind)
-        return Loc.RegisterLoc.RegNo;
+        return Loc.RegNo;
       return 0;
     }
 
