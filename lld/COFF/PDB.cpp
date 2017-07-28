@@ -13,6 +13,7 @@
 #include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "Writer.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -34,6 +35,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/PublicsStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
@@ -545,6 +547,23 @@ void PDBLinker::addObjFile(ObjFile *File) {
   }
 }
 
+static PublicSym32 createPublic(Defined *Def) {
+  PublicSym32 Pub(SymbolKind::S_PUB32);
+  Pub.Name = Def->getName();
+  if (auto *D = dyn_cast<DefinedCOFF>(Def)) {
+    if (D->getCOFFSymbol().isFunctionDefinition())
+      Pub.Flags = PublicSymFlags::Function;
+  } else if (isa<DefinedImportThunk>(Def)) {
+    Pub.Flags = PublicSymFlags::Function;
+  }
+
+  OutputSection *OS = Def->getChunk()->getOutputSection();
+  assert(OS && "all publics should be in final image");
+  Pub.Offset = Def->getRVA() - OS->getRVA();
+  Pub.Segment = OS->SectionIndex;
+  return Pub;
+}
+
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
@@ -559,12 +578,25 @@ void PDBLinker::addObjectsToPDB() {
   // Construct IPI stream contents.
   addTypeInfo(Builder.getIpiBuilder(), IDTable);
 
-  // Add public and symbol records stream.
+  // Compute the public symbols.
+  std::vector<PublicSym32> Publics;
+  Symtab->forEachSymbol([&Publics](Symbol *S) {
+    // Only emit defined, live symbols that have a chunk.
+    auto *Def = dyn_cast<Defined>(S->body());
+    if (Def && Def->isLive() && Def->getChunk())
+      Publics.push_back(createPublic(Def));
+  });
 
-  // For now we don't actually write any thing useful to the publics stream, but
-  // the act of "getting" it also creates it lazily so that we write an empty
-  // stream.
-  (void)Builder.getPublicsBuilder();
+  if (!Publics.empty()) {
+    // Sort the public symbols and add them to the stream.
+    std::sort(Publics.begin(), Publics.end(),
+              [](const PublicSym32 &L, const PublicSym32 &R) {
+                return L.Name < R.Name;
+              });
+    auto &PublicsBuilder = Builder.getPublicsBuilder();
+    for (const PublicSym32 &Pub : Publics)
+      PublicsBuilder.addPublicSymbol(Pub);
+  }
 }
 
 static void addLinkerModuleSymbols(StringRef Path,

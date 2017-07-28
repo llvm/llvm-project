@@ -125,11 +125,17 @@ class TracePcGuardController {
   }
 
   void TracePcGuard(u32* guard, uptr pc) {
-    atomic_uint32_t* guard_ptr = reinterpret_cast<atomic_uint32_t*>(guard);
-    u32 idx = atomic_exchange(guard_ptr, 0, memory_order_relaxed);
+    u32 idx = *guard;
     if (!idx) return;
     // we start indices from 1.
-    pc_vector[idx - 1] = pc;
+    atomic_uintptr_t* pc_ptr =
+        reinterpret_cast<atomic_uintptr_t*>(&pc_vector[idx - 1]);
+    if (atomic_load(pc_ptr, memory_order_relaxed) == 0)
+      atomic_store(pc_ptr, pc, memory_order_relaxed);
+  }
+
+  void Reset() {
+    internal_memset(&pc_vector[0], 0, sizeof(pc_vector[0]) * pc_vector.size());
   }
 
   void Dump() {
@@ -180,6 +186,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_trace_pc_guard_coverage() {
 }
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
   __sanitizer_dump_trace_pc_guard_coverage();
+}
+SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_reset() {
+  __sancov::pc_guard_controller.Reset();
 }
 // Default empty implementations (weak). Users should redefine them.
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
