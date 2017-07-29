@@ -83,7 +83,7 @@ function(add_ocaml_library name)
   endforeach()
 
   string(REPLACE ";" " " ARG_CFLAGS "${ARG_CFLAGS}")
-  set(c_flags "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${ARG_CFLAGS} ${LLVM_DEFINITIONS}")
+  set(c_flags "${ARG_CFLAGS} ${LLVM_DEFINITIONS}")
   foreach( include_dir ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR} )
     set(c_flags "${c_flags} -I${include_dir}")
   endforeach()

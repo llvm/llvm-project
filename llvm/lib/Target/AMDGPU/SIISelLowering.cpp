@@ -899,6 +899,13 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
                      DAG.getConstant(Offset, SL, PtrVT));
 }
 
+SDValue SITargetLowering::getImplicitArgPtr(SelectionDAG &DAG,
+                                            const SDLoc &SL) const {
+  auto MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+  uint64_t Offset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
+  return lowerKernArgParameterPtr(DAG, SL, DAG.getEntryNode(), Offset);
+}
+
 SDValue SITargetLowering::convertArgType(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                          const SDLoc &SL, SDValue Val,
                                          bool Signed,
@@ -3029,8 +3036,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 TRI->getPreloadedValue(MF, Reg), VT);
   }
   case Intrinsic::amdgcn_implicitarg_ptr: {
-    unsigned offset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
-    return lowerKernArgParameterPtr(DAG, DL, DAG.getEntryNode(), offset);
+    if (MFI->isEntryFunction())
+      return getImplicitArgPtr(DAG, DL);
+    report_fatal_error("amdgcn.implicitarg.ptr not implemented for functions");
   }
   case Intrinsic::amdgcn_kernarg_segment_ptr: {
     unsigned Reg

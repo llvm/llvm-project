@@ -237,52 +237,59 @@ define void @func_indirect_use_kernarg_segment_ptr() #1 {
   ret void
 }
 
-; HSA: define void @use_implicitarg_ptr() #14 {
+; HSA: define amdgpu_kernel void @kern_use_implicitarg_ptr() #15 {
+define amdgpu_kernel void @kern_use_implicitarg_ptr() #1 {
+  %implicitarg.ptr = call i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
+  store volatile i8 addrspace(2)* %implicitarg.ptr, i8 addrspace(2)* addrspace(1)* undef
+  ret void
+}
+
+; HSA: define void @use_implicitarg_ptr() #15 {
 define void @use_implicitarg_ptr() #1 {
   %implicitarg.ptr = call i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
   store volatile i8 addrspace(2)* %implicitarg.ptr, i8 addrspace(2)* addrspace(1)* undef
   ret void
 }
 
-; HSA: define void @func_indirect_use_implicitarg_ptr() #14 {
+; HSA: define void @func_indirect_use_implicitarg_ptr() #15 {
 define void @func_indirect_use_implicitarg_ptr() #1 {
   call void @use_implicitarg_ptr()
   ret void
 }
 
-; HSA: declare void @external.func() #15
+; HSA: declare void @external.func() #16
 declare void @external.func() #3
 
-; HSA: define internal void @defined.func() #15 {
+; HSA: define internal void @defined.func() #16 {
 define internal void @defined.func() #3 {
   ret void
 }
 
-; HSA: define void @func_call_external() #15 {
+; HSA: define void @func_call_external() #16 {
 define void @func_call_external() #3 {
   call void @external.func()
   ret void
 }
 
-; HSA: define void @func_call_defined() #15 {
+; HSA: define void @func_call_defined() #16 {
 define void @func_call_defined() #3 {
   call void @defined.func()
   ret void
 }
 
-; HSA: define void @func_call_asm() #15 {
+; HSA: define void @func_call_asm() #16 {
 define void @func_call_asm() #3 {
   call void asm sideeffect "", ""() #3
   ret void
 }
 
-; HSA: define amdgpu_kernel void @kern_call_external() #16 {
+; HSA: define amdgpu_kernel void @kern_call_external() #17 {
 define amdgpu_kernel void @kern_call_external() #3 {
   call void @external.func()
   ret void
 }
 
-; HSA: define amdgpu_kernel void @func_kern_defined() #16 {
+; HSA: define amdgpu_kernel void @func_kern_defined() #17 {
 define amdgpu_kernel void @func_kern_defined() #3 {
   call void @defined.func()
   ret void
@@ -308,5 +315,6 @@ attributes #3 = { nounwind }
 ; HSA: attributes #12 = { nounwind "target-cpu"="gfx900" }
 ; HSA: attributes #13 = { nounwind "amdgpu-queue-ptr" "target-cpu"="gfx900" }
 ; HSA: attributes #14 = { nounwind "amdgpu-kernarg-segment-ptr" "target-cpu"="fiji" }
-; HSA: attributes #15 = { nounwind }
-; HSA: attributes #16 = { nounwind "amdgpu-flat-scratch" }
+; HSA: attributes #15 = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" }
+; HSA: attributes #16 = { nounwind }
+; HSA: attributes #17 = { nounwind "amdgpu-flat-scratch" }

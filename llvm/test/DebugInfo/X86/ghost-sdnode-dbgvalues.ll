@@ -31,27 +31,27 @@
 ; Function Attrs: nounwind ssp uwtable
 define i32 @foo(i32 %a) #0 !dbg !8 {
 entry:
-  call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !16, metadata !17), !dbg !18
+  call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !17), !dbg !18
   %conv = trunc i32 %a to i16, !dbg !19
   %conv1 = sext i16 %conv to i32, !dbg !19
   %add = add nsw i32 %conv1, 8, !dbg !19
-  call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !20, metadata !17), !dbg !21
+  call void @llvm.dbg.value(metadata i32 %add, metadata !20, metadata !17), !dbg !21
   %conv2 = trunc i32 %add to i16, !dbg !22
   %conv3 = sext i16 %conv2 to i32, !dbg !22
   %add4 = add nsw i32 %conv3, 8, !dbg !22
-  call void @llvm.dbg.value(metadata i32 %add4, i64 0, metadata !23, metadata !17), !dbg !24
+  call void @llvm.dbg.value(metadata i32 %add4, metadata !23, metadata !17), !dbg !24
   %conv5 = trunc i32 %add4 to i16, !dbg !25
   %conv6 = sext i16 %conv5 to i32, !dbg !25
   %add7 = add nsw i32 %conv6, 8, !dbg !25
-  call void @llvm.dbg.value(metadata i32 %add7, i64 0, metadata !26, metadata !17), !dbg !27
+  call void @llvm.dbg.value(metadata i32 %add7, metadata !26, metadata !17), !dbg !27
   %conv8 = trunc i32 %add7 to i16, !dbg !28
   %conv9 = sext i16 %conv8 to i32, !dbg !28
   %add10 = add nsw i32 %conv9, 8, !dbg !28
-  call void @llvm.dbg.value(metadata i32 %add10, i64 0, metadata !29, metadata !17), !dbg !30
+  call void @llvm.dbg.value(metadata i32 %add10, metadata !29, metadata !17), !dbg !30
   %conv11 = trunc i32 %add10 to i16, !dbg !31
   %conv12 = sext i16 %conv11 to i32, !dbg !31
   %add13 = add nsw i32 %conv12, 8, !dbg !31
-  call void @llvm.dbg.value(metadata i32 %add13, i64 0, metadata !32, metadata !17), !dbg !33
+  call void @llvm.dbg.value(metadata i32 %add13, metadata !32, metadata !17), !dbg !33
   ret i32 %add13, !dbg !34
 }
 
@@ -59,7 +59,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

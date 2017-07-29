@@ -33,7 +33,7 @@ entry:
   %block.addr = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>*, align 8
   store i8* %.block_descriptor, i8** %.block_descriptor.addr, align 8
   %0 = load i8*, i8** %.block_descriptor.addr
-  call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !47, metadata !43), !dbg !66
+  call void @llvm.dbg.value(metadata i8* %0, metadata !47, metadata !43), !dbg !66
   call void @llvm.dbg.declare(metadata i8* %.block_descriptor, metadata !47, metadata !43), !dbg !66
   %block = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>*, !dbg !67
   store <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>* %block, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>** %block.addr, align 8
@@ -50,7 +50,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 
 attributes #0 = { nounwind ssp uwtable }

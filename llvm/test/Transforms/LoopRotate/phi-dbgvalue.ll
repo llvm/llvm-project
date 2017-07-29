@@ -3,21 +3,21 @@
 ;CHECK-LABEL: func
 ;CHECK-LABEL: entry
 ;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %a
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !13, metadata !11), !dbg !15
+;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !11), !dbg !15
 ;CHECK-LABEL: for.body:
 ;CHECK-NEXT: [[I:%.*]] = phi i32 [ 1, %entry ], [ %inc, %for.body ]
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 [[I]], i64 0, metadata !13, metadata !11), !dbg !15
+;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 [[I]], metadata !13, metadata !11), !dbg !15
 
 ; Function Attrs: noinline nounwind
 define void @func(i32 %a) local_unnamed_addr #0 !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !10, metadata !11), !dbg !12
-  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !13, metadata !11), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !10, metadata !11), !dbg !12
+  tail call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !11), !dbg !15
   br label %for.cond, !dbg !16
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 1, %entry ], [ %inc, %for.body ]
-  tail call void @llvm.dbg.value(metadata i32 %i.0, i64 0, metadata !13, metadata !11), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %i.0, metadata !13, metadata !11), !dbg !15
   %cmp = icmp slt i32 %i.0, 10, !dbg !17
   br i1 %cmp, label %for.body, label %for.end, !dbg !20
 
@@ -25,7 +25,7 @@ for.body:                                         ; preds = %for.cond
   %add = add nsw i32 %i.0, %a, !dbg !22
   %call = tail call i32 @func2(i32 %i.0, i32 %add) #3, !dbg !24
   %inc = add nsw i32 %i.0, 1, !dbg !25
-  tail call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !13, metadata !11), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !13, metadata !11), !dbg !15
   br label %for.cond, !dbg !27, !llvm.loop !28
 
 for.end:                                          ; preds = %for.cond
@@ -35,7 +35,7 @@ for.end:                                          ; preds = %for.cond
 declare i32 @func2(i32, i32) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { noinline nounwind }
 attributes #2 = { nounwind readnone }

@@ -299,8 +299,10 @@ public:
   getSerializableMachineMemOperandTargetFlags() const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const override;
-  unsigned getOutliningBenefit(size_t SequenceSize, size_t Occurrences,
-                               bool CanBeTailCall) const override;
+  size_t getOutliningCallOverhead(MachineBasicBlock::iterator &StartIt,
+  MachineBasicBlock::iterator &EndIt) const override;
+  size_t getOutliningFrameOverhead(MachineBasicBlock::iterator &StartIt,
+  MachineBasicBlock::iterator &EndIt) const override;
   AArch64GenInstrInfo::MachineOutlinerInstrType
   getOutliningType(MachineInstr &MI) const override;
   void insertOutlinerEpilogue(MachineBasicBlock &MBB,

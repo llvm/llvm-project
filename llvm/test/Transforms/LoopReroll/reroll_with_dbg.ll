@@ -15,10 +15,10 @@ define void @foo(float* noalias nocapture %a, float* noalias nocapture readonly 
 entry:
 ;CHECK-LABEL: @foo
 
-  tail call void @llvm.dbg.value(metadata float* %a, i64 0, metadata !12, metadata !22), !dbg !23
-  tail call void @llvm.dbg.value(metadata float* %b, i64 0, metadata !13, metadata !22), !dbg !24
-  tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !14, metadata !22), !dbg !25
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !15, metadata !22), !dbg !26
+  tail call void @llvm.dbg.value(metadata float* %a, metadata !12, metadata !22), !dbg !23
+  tail call void @llvm.dbg.value(metadata float* %b, metadata !13, metadata !22), !dbg !24
+  tail call void @llvm.dbg.value(metadata i32 %n, metadata !14, metadata !22), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !22), !dbg !26
   %cmp.30 = icmp sgt i32 %n, 0, !dbg !27
   br i1 %cmp.30, label %for.body.preheader, label %for.cond.cleanup, !dbg !29
 
@@ -70,13 +70,13 @@ for.body:                                         ; preds = %for.body.preheader,
   %11 = bitcast float* %arrayidx12 to i32*, !dbg !50
   store i32 %10, i32* %11, align 4, !dbg !50, !tbaa !33
   %add13 = add nuw nsw i32 %i.031, 4, !dbg !51
-  tail call void @llvm.dbg.value(metadata i32 %add13, i64 0, metadata !15, metadata !22), !dbg !26
+  tail call void @llvm.dbg.value(metadata i32 %add13, metadata !15, metadata !22), !dbg !26
   %cmp = icmp slt i32 %add13, %n, !dbg !27
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !dbg !29
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+strict-align" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

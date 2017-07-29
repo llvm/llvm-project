@@ -87,7 +87,10 @@ class TracePC {
     ValueProfileMap.Reset();
     memset(Counters(), 0, GetNumPCs());
     ClearExtraCounters();
+    ClearInlineCounters();
   }
+
+  void ClearInlineCounters();
 
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
   void PrintFeatureSet();
@@ -201,8 +204,11 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   };
 
   size_t FirstFeature = 0;
-  ForEachNonZeroByte(Counters, Counters + N, FirstFeature, Handle8bitCounter);
-  FirstFeature += N * 8;
+  if (!NumInline8bitCounters) {
+    ForEachNonZeroByte(Counters, Counters + N, FirstFeature, Handle8bitCounter);
+    FirstFeature += N * 8;
+  }
+
   for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
     ForEachNonZeroByte(ModuleCounters[i].Start, ModuleCounters[i].Stop,
                        FirstFeature, Handle8bitCounter);

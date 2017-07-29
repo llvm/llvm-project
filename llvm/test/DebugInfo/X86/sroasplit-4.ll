@@ -2,11 +2,11 @@
 ;
 ; Test that recursively splitting an alloca updates the debug info correctly.
 ; CHECK: %[[T:.*]] = load i64, i64* @t, align 8
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], i64 0, metadata ![[Y:.*]], metadata ![[P1:.*]])
+; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], metadata ![[Y:.*]], metadata ![[P1:.*]])
 ; CHECK: %[[T1:.*]] = load i64, i64* @t, align 8
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], i64 0, metadata ![[Y]], metadata ![[P2:.*]])
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], i64 0, metadata ![[R:.*]], metadata ![[P3:.*]])
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], i64 0, metadata ![[R]], metadata ![[P4:.*]])
+; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], metadata ![[Y]], metadata ![[P2:.*]])
+; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], metadata ![[R:.*]], metadata ![[P3:.*]])
+; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], metadata ![[R]], metadata ![[P4:.*]])
 ; CHECK: ![[P1]] = !DIExpression(DW_OP_LLVM_fragment, 0, 64)
 ; CHECK: ![[P2]] = !DIExpression(DW_OP_LLVM_fragment, 64, 64)
 ; CHECK: ![[P3]] = !DIExpression(DW_OP_LLVM_fragment, 192, 64)

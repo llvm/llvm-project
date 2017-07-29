@@ -38,8 +38,8 @@ if.then.i.i:
 _ZN1NIN1K1LELi0EE11getOrInsertIiEE1AIPS1_ET_.exit.i: ; preds = %if.then.i.i, %entry
   %retval.sroa.0.0.i.i = phi %"class.K::L"* [ %Payload.i.i, %if.then.i.i ], [ undef, %entry ]
   %call4.i = call %"struct.K::M"* @_ZN1FIN1K1MEE3getEv(%struct.F* undef)
-  call void @llvm.dbg.value(metadata %"struct.K::M"* %call4.i, i64 0, metadata !7, metadata !11), !dbg !12
-  call void @llvm.dbg.value(metadata %"struct.K::M"* %call4.i, i64 0, metadata !7, metadata !18), !dbg !12
+  call void @llvm.dbg.value(metadata %"struct.K::M"* %call4.i, metadata !7, metadata !11), !dbg !12
+  call void @llvm.dbg.value(metadata %"struct.K::M"* %call4.i, metadata !7, metadata !18), !dbg !12
   %Handle2.i.i.i.i.i = getelementptr inbounds %"struct.K::M", %"struct.K::M"* %call4.i, i32 0, i32 0, i32 0
   %Handle.i.i.i.i.i = getelementptr inbounds %"struct.K::M", %"struct.K::M"* %call4.i, i32 0, i32 1, i32 0
   %4 = getelementptr inbounds %"class.K::L", %"class.K::L"* %retval.sroa.0.0.i.i, i32 0, i32 0, i32 0
@@ -67,7 +67,7 @@ declare zeroext i1 @_Z24__libcpp_thread_id_equalii(i32, i32) local_unnamed_addr
 declare void @_ZN23ConditionPlatformHelper4waitERii(i32* dereferenceable(4), i32) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind "no-frame-pointer-elim-non-leaf" }
 attributes #1 = { nounwind readnone }

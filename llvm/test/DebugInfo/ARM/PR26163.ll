@@ -52,16 +52,16 @@ target triple = "armv4t--freebsd11.0-gnueabi"
 %struct.timeval = type { i64, i32 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 declare void @foo()
 
 define i32 @parse_config_file() !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !15, metadata !26), !dbg !27
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !26), !dbg !27
   tail call void @llvm.dbg.declare(metadata %struct.timeval* undef, metadata !16, metadata !26), !dbg !29
-  tail call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !16, metadata !30), !dbg !29
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !16, metadata !31), !dbg !29
+  tail call void @llvm.dbg.value(metadata i64 0, metadata !16, metadata !30), !dbg !29
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !31), !dbg !29
   tail call void @foo() #3, !dbg !32
   ret i32 0, !dbg !33
 }

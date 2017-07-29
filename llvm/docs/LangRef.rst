@@ -1381,6 +1381,9 @@ example:
 ``naked``
     This attribute disables prologue / epilogue emission for the
     function. This can have very system-specific consequences.
+``no-jump-tables``
+    When this attribute is set to true, the jump tables and lookup tables that
+    can be generated from a switch case lowering are disabled.
 ``nobuiltin``
     This indicates that the callee function at a call site is not recognized as
     a built-in function. LLVM will retain the original call and not replace it
@@ -4013,12 +4016,12 @@ example:
 
     !foo = !{!4, !3}
 
-Metadata can be used as function arguments. Here ``llvm.dbg.value``
-function is using two metadata arguments:
+Metadata can be used as function arguments. Here the ``llvm.dbg.value``
+intrinsic is using three metadata arguments:
 
 .. code-block:: llvm
 
-    call void @llvm.dbg.value(metadata !24, i64 0, metadata !25)
+    call void @llvm.dbg.value(metadata !24, metadata !25, metadata !26)
 
 Metadata can be attached to an instruction. Here metadata ``!21`` is attached
 to the ``add`` instruction using the ``!dbg`` identifier:

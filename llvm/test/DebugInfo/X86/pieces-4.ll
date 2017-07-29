@@ -34,8 +34,8 @@ define i32 @bitpiece_spill() local_unnamed_addr #0 !dbg !7 {
 entry:
   tail call void @llvm.dbg.declare(metadata %struct.IntPair* undef, metadata !12, metadata !17), !dbg !18
   %call = tail call i32 @g() #3, !dbg !19
-  tail call void @llvm.dbg.value(metadata i32 %call, i64 0, metadata !12, metadata !20), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !12, metadata !21), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !12, metadata !20), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !21), !dbg !18
   tail call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"() #3, !dbg !22, !srcloc !23
   ret i32 %call, !dbg !24
 }
@@ -46,7 +46,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare i32 @g() local_unnamed_addr #2
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

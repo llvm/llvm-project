@@ -181,6 +181,7 @@ addInstructionRoots(ScopStmt *Stmt,
     for (auto *BB : Stmt->getRegion()->blocks())
       for (Instruction &Inst : *BB)
         RootInsts.emplace_back(Stmt, &Inst);
+    return;
   }
 
   for (Instruction *Inst : Stmt->getInstructions())
@@ -354,7 +355,8 @@ static void walkReachable(Scop *S, LoopInfo *LI,
       continue;
 
     // Add all operands to the worklists.
-    if (PHINode *PHI = dyn_cast<PHINode>(Inst)) {
+    PHINode *PHI = dyn_cast<PHINode>(Inst);
+    if (PHI && PHI->getParent() == Stmt->getEntryBlock()) {
       if (MemoryAccess *PHIRead = Stmt->lookupPHIReadOf(PHI))
         WorklistAccs.push_back(PHIRead);
     } else {

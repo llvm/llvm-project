@@ -1475,13 +1475,14 @@ ReoptimizeBlock:
       bool PredAnalyzable =
           !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
-      if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB) {
+      if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB &&
+          PredTBB != PredFBB) {
         // The predecessor has a conditional branch to this block which consists
         // of only a tail call. Try to fold the tail call into the conditional
         // branch.
         if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
           // TODO: It would be nice if analyzeBranch() could provide a pointer
-          // to the branch insturction so replaceBranchWithTailCall() doesn't
+          // to the branch instruction so replaceBranchWithTailCall() doesn't
           // have to search for it.
           TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
           ++NumTailCalls;

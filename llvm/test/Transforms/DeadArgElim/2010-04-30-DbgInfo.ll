@@ -4,10 +4,10 @@
 
 define i8* @vfs_addname(i8* %name, i32 %len, i32 %hash, i32 %flags) nounwind ssp {
 entry:
-  call void @llvm.dbg.value(metadata i8* %name, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-  call void @llvm.dbg.value(metadata i32 %len, i64 0, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-  call void @llvm.dbg.value(metadata i32 %hash, i64 0, metadata !11, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-  call void @llvm.dbg.value(metadata i32 %flags, i64 0, metadata !12, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i8* %name, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i32 %len, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i32 %hash, metadata !11, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i32 %flags, metadata !12, metadata !DIExpression()), !dbg !DILocation(scope: !1)
 ; CHECK:  call fastcc i8* @add_name_internal(i8* %name, i32 %hash) [[NUW:#[0-9]+]], !dbg !{{[0-9]+}}
   %0 = call fastcc i8* @add_name_internal(i8* %name, i32 %len, i32 %hash, i8 zeroext 0, i32 %flags) nounwind, !dbg !13 ; <i8*> [#uses=1]
   ret i8* %0, !dbg !13
@@ -17,11 +17,11 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 define internal fastcc i8* @add_name_internal(i8* %name, i32 %len, i32 %hash, i8 zeroext %extra, i32 %flags) noinline nounwind ssp {
 entry:
-  call void @llvm.dbg.value(metadata i8* %name, i64 0, metadata !15, metadata !DIExpression()), !dbg !DILocation(scope: !16)
-  call void @llvm.dbg.value(metadata i32 %len, i64 0, metadata !20, metadata !DIExpression()), !dbg !DILocation(scope: !16)
-  call void @llvm.dbg.value(metadata i32 %hash, i64 0, metadata !21, metadata !DIExpression()), !dbg !DILocation(scope: !16)
-  call void @llvm.dbg.value(metadata i8 %extra, i64 0, metadata !22, metadata !DIExpression()), !dbg !DILocation(scope: !16)
-  call void @llvm.dbg.value(metadata i32 %flags, i64 0, metadata !23, metadata !DIExpression()), !dbg !DILocation(scope: !16)
+  call void @llvm.dbg.value(metadata i8* %name, metadata !15, metadata !DIExpression()), !dbg !DILocation(scope: !16)
+  call void @llvm.dbg.value(metadata i32 %len, metadata !20, metadata !DIExpression()), !dbg !DILocation(scope: !16)
+  call void @llvm.dbg.value(metadata i32 %hash, metadata !21, metadata !DIExpression()), !dbg !DILocation(scope: !16)
+  call void @llvm.dbg.value(metadata i8 %extra, metadata !22, metadata !DIExpression()), !dbg !DILocation(scope: !16)
+  call void @llvm.dbg.value(metadata i32 %flags, metadata !23, metadata !DIExpression()), !dbg !DILocation(scope: !16)
   %0 = icmp eq i32 %hash, 0, !dbg !24             ; <i1> [#uses=1]
   br i1 %0, label %bb, label %bb1, !dbg !24
 
@@ -36,7 +36,7 @@ bb2:                                              ; preds = %bb1, %bb
   ret i8* %.0, !dbg !27
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind ssp }
 ; CHECK: attributes #1 = { nounwind readnone speculatable }

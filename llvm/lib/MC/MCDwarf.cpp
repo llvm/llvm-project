@@ -1037,7 +1037,7 @@ public:
   const MCSymbol &EmitCIE(const MCSymbol *personality,
                           unsigned personalityEncoding, const MCSymbol *lsda,
                           bool IsSignalFrame, unsigned lsdaEncoding,
-                          bool IsSimple);
+                          bool IsSimple, unsigned RAReg);
   void EmitFDE(const MCSymbol &cieStart, const MCDwarfFrameInfo &frame,
                bool LastInSection, const MCSymbol &SectionStart);
   void EmitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
@@ -1277,8 +1277,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCSymbol *personality,
                                           unsigned personalityEncoding,
                                           const MCSymbol *lsda,
                                           bool IsSignalFrame,
-                                          unsigned lsdaEncoding,
-                                          bool IsSimple) {
+                                          unsigned lsdaEncoding, bool IsSimple,
+                                          unsigned RAReg) {
   MCContext &context = Streamer.getContext();
   const MCRegisterInfo *MRI = context.getRegisterInfo();
   const MCObjectFileInfo *MOFI = context.getObjectFileInfo();
@@ -1331,13 +1331,15 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCSymbol *personality,
   Streamer.EmitSLEB128IntValue(getDataAlignmentFactor(Streamer));
 
   // Return Address Register
+  if (RAReg == static_cast<unsigned>(INT_MAX))
+    RAReg = MRI->getDwarfRegNum(MRI->getRARegister(), IsEH);
+
   if (CIEVersion == 1) {
-    assert(MRI->getRARegister() <= 255 &&
+    assert(RAReg <= 255 &&
            "DWARF 2 encodes return_address_register in one byte");
-    Streamer.EmitIntValue(MRI->getDwarfRegNum(MRI->getRARegister(), IsEH), 1);
+    Streamer.EmitIntValue(RAReg, 1);
   } else {
-    Streamer.EmitULEB128IntValue(
-        MRI->getDwarfRegNum(MRI->getRARegister(), IsEH));
+    Streamer.EmitULEB128IntValue(RAReg);
   }
 
   // Augmentation Data Length (optional)
@@ -1563,9 +1565,9 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                Frame.LsdaEncoding, Frame.IsSignalFrame, Frame.IsSimple);
     const MCSymbol *&CIEStart = IsEH ? CIEStarts[Key] : DummyDebugKey;
     if (!CIEStart)
-      CIEStart = &Emitter.EmitCIE(Frame.Personality, Frame.PersonalityEncoding,
-                                  Frame.Lsda, Frame.IsSignalFrame,
-                                  Frame.LsdaEncoding, Frame.IsSimple);
+      CIEStart = &Emitter.EmitCIE(
+          Frame.Personality, Frame.PersonalityEncoding, Frame.Lsda,
+          Frame.IsSignalFrame, Frame.LsdaEncoding, Frame.IsSimple, Frame.RAReg);
 
     Emitter.EmitFDE(*CIEStart, Frame, I == E, *SectionStart);
   }

@@ -114,7 +114,7 @@ struct OutlinedFunction {
   /// This is initialized after we go through and create the actual function.
   MachineFunction *MF = nullptr;
 
-  /// A number assigned to this function which appears at the end of its name.
+  /// A numbefr assigned to this function which appears at the end of its name.
   size_t Name;
 
   /// The number of candidates for this OutlinedFunction.
@@ -187,8 +187,7 @@ struct SuffixTreeNode {
   /// \brief For internal nodes, a pointer to the internal node representing
   /// the same sequence with the first character chopped off.
   ///
-  /// This has two major purposes in the suffix tree. The first is as a
-  /// shortcut in Ukkonen's construction algorithm. One of the things that
+  /// This acts as a shortcut in Ukkonen's algorithm. One of the things that
   /// Ukkonen's algorithm does to achieve linear-time construction is
   /// keep track of which node the next insert should be at. This makes each
   /// insert O(1), and there are a total of O(N) inserts. The suffix link
@@ -203,27 +202,6 @@ struct SuffixTreeNode {
   /// move to the next insertion point in O(1) time. If we don't, then we'd
   /// have to query from the root, which takes O(N) time. This would make the
   /// construction algorithm O(N^2) rather than O(N).
-  ///
-  /// The suffix link is also used during the tree pruning process to let us
-  /// quickly throw out a bunch of potential overlaps. Say we have a sequence
-  /// S we want to outline. Then each of its suffixes contribute to at least
-  /// one overlapping case. Therefore, we can follow the suffix links
-  /// starting at the node associated with S to the root and "delete" those
-  /// nodes, save for the root. For each candidate, this removes
-  /// O(|candidate|) overlaps from the search space. We don't actually
-  /// completely invalidate these nodes though; doing that is far too
-  /// aggressive. Consider the following pathological string:
-  ///
-  /// 1 2 3 1 2 3 2 3 2 3 2 3 2 3 2 3 2 3
-  ///
-  /// If we, for the sake of example, outlined 1 2 3, then we would throw
-  /// out all instances of 2 3. This isn't desirable. To get around this,
-  /// when we visit a link node, we decrement its occurrence count by the
-  /// number of sequences we outlined in the current step. In the pathological
-  /// example, the 2 3 node would have an occurrence count of 8, while the
-  /// 1 2 3 node would have an occurrence count of 2. Thus, the 2 3 node
-  /// would survive to the next round allowing us to outline the extra
-  /// instances of 2 3.
   SuffixTreeNode *Link = nullptr;
 
   /// The parent of this node. Every node except for the root has a parent.
@@ -813,11 +791,13 @@ struct MachineOutliner : public ModulePass {
   ///
   /// \param[in,out] CandidateList A list of outlining candidates.
   /// \param[in,out] FunctionList A list of functions to be outlined.
+  /// \param Mapper Contains instruction mapping info for outlining.
   /// \param MaxCandidateLen The length of the longest candidate.
   /// \param TII TargetInstrInfo for the module.
   void pruneOverlaps(std::vector<Candidate> &CandidateList,
                      std::vector<OutlinedFunction> &FunctionList,
-                     unsigned MaxCandidateLen, const TargetInstrInfo &TII);
+                     InstructionMapper &Mapper, unsigned MaxCandidateLen,
+                     const TargetInstrInfo &TII);
 
   /// Construct a suffix tree on the instructions in \p M and outline repeated
   /// strings from that tree.
@@ -859,22 +839,39 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     if (Parent.OccurrenceCount < 2 || Parent.isRoot() || !Parent.IsInTree)
       continue;
 
-    // How many instructions would outlining this string save?
+    // Figure out if this candidate is beneficial.
     size_t StringLen = Leaf->ConcatLen - Leaf->size();
-    unsigned EndVal = ST.Str[Leaf->SuffixIdx + StringLen - 1];
+    size_t CallOverhead = 0;
+    size_t FrameOverhead = 0;
+    size_t SequenceOverhead = StringLen;
 
-    // Determine if this is going to be tail called.
-    // FIXME: The target should decide this. The outlining pass shouldn't care
-    // about things like tail calling. It should be representation-agnostic.
-    MachineInstr *LastInstr = Mapper.IntegerInstructionMap[EndVal];
-    assert(LastInstr && "Last instruction in sequence was unmapped!");
-    bool IsTailCall = LastInstr->isTerminator();
-    unsigned Benefit =
-        TII.getOutliningBenefit(StringLen, Parent.OccurrenceCount, IsTailCall);
+    // Figure out the call overhead for each instance of the sequence.
+    for (auto &ChildPair : Parent.Children) {
+      SuffixTreeNode *M = ChildPair.second;
 
-    // If it's not beneficial, skip it.
-    if (Benefit < 1)
+      if (M && M->IsInTree && M->isLeaf()) {
+        // Each sequence is over [StartIt, EndIt].
+        MachineBasicBlock::iterator StartIt = Mapper.InstrList[M->SuffixIdx];
+        MachineBasicBlock::iterator EndIt =
+            Mapper.InstrList[M->SuffixIdx + StringLen - 1];
+        CallOverhead += TII.getOutliningCallOverhead(StartIt, EndIt);
+      }
+    }
+
+    // Figure out how many instructions it'll take to construct an outlined
+    // function frame for this sequence.
+    MachineBasicBlock::iterator StartIt = Mapper.InstrList[Leaf->SuffixIdx];
+    MachineBasicBlock::iterator EndIt =
+        Mapper.InstrList[Leaf->SuffixIdx + StringLen - 1];
+    FrameOverhead = TII.getOutliningFrameOverhead(StartIt, EndIt);
+
+    size_t OutliningCost = CallOverhead + FrameOverhead + SequenceOverhead;
+    size_t NotOutliningCost = SequenceOverhead * Parent.OccurrenceCount;
+
+    if (NotOutliningCost <= OutliningCost)
       continue;
+
+    size_t Benefit = NotOutliningCost - OutliningCost;
 
     if (StringLen > MaxLen)
       MaxLen = StringLen;
@@ -910,6 +907,7 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
 
 void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
                                     std::vector<OutlinedFunction> &FunctionList,
+                                    InstructionMapper &Mapper,
                                     unsigned MaxCandidateLen,
                                     const TargetInstrInfo &TII) {
   // TODO: Experiment with interval trees or other interval-checking structures
@@ -993,8 +991,18 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         assert(F2.OccurrenceCount > 0 &&
                "Can't remove OutlinedFunction with no occurrences!");
         F2.OccurrenceCount--;
-        F2.Benefit = TII.getOutliningBenefit(F2.Sequence.size(),
-                                             F2.OccurrenceCount, F2.IsTailCall);
+
+        // Remove the call overhead from the removed sequence.
+        MachineBasicBlock::iterator StartIt = Mapper.InstrList[C2.StartIdx];
+        MachineBasicBlock::iterator EndIt =
+            Mapper.InstrList[C2.StartIdx + C2.Len - 1];
+        F2.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt);
+        // Add back one instance of the sequence.
+
+        if (F2.Sequence.size() > F2.Benefit)
+          F2.Benefit = 0;
+        else
+          F2.Benefit -= F2.Sequence.size();
 
         C2.InCandidateList = false;
 
@@ -1009,8 +1017,19 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         assert(F1.OccurrenceCount > 0 &&
                "Can't remove OutlinedFunction with no occurrences!");
         F1.OccurrenceCount--;
-        F1.Benefit = TII.getOutliningBenefit(F1.Sequence.size(),
-                                             F1.OccurrenceCount, F1.IsTailCall);
+
+        // Remove the call overhead from the removed sequence.
+        MachineBasicBlock::iterator StartIt = Mapper.InstrList[C1.StartIdx];
+        MachineBasicBlock::iterator EndIt =
+            Mapper.InstrList[C1.StartIdx + C1.Len - 1];
+        F2.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt);
+
+        // Add back one instance of the sequence.
+        if (F1.Sequence.size() > F1.Benefit)
+          F1.Benefit = 0;
+        else
+          F1.Benefit -= F1.Sequence.size();
+
         C1.InCandidateList = false;
 
         DEBUG(dbgs() << "- Removed C1. \n";
@@ -1206,7 +1225,7 @@ bool MachineOutliner::runOnModule(Module &M) {
       buildCandidateList(CandidateList, FunctionList, ST, Mapper, *TII);
 
   // Remove candidates that overlap with other candidates.
-  pruneOverlaps(CandidateList, FunctionList, MaxCandidateLen, *TII);
+  pruneOverlaps(CandidateList, FunctionList, Mapper, MaxCandidateLen, *TII);
 
   // Outline each of the candidates and return true if something was outlined.
   return outline(M, CandidateList, FunctionList, Mapper);

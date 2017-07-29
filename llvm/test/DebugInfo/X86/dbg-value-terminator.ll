@@ -88,7 +88,7 @@ VEC_edge_base_index.exit7.i:                      ; preds = %"3.i5.i"
 "44.i":                                           ; preds = %"42.i"
   %2 = load %a*, %a** undef, align 8, !dbg !12
   %3 = bitcast %a* %2 to %a*, !dbg !12
-  call void @llvm.dbg.value(metadata %a* %3, i64 0, metadata !6, metadata !DIExpression(DW_OP_deref)), !dbg !12
+  call void @llvm.dbg.value(metadata %a* %3, metadata !6, metadata !DIExpression(DW_OP_deref)), !dbg !12
   br label %may_unswitch_on.exit, !dbg !12
 
 "45.i":                                           ; preds = %"38.i"
@@ -109,7 +109,7 @@ may_unswitch_on.exit:                             ; preds = %"44.i", %"42.i", %"
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind uwtable }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!22}

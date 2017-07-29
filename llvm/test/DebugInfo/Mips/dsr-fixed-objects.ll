@@ -35,22 +35,22 @@ declare void @foo(i32*)
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
 entry:
   %x = alloca i32, align 4
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !9,  metadata !DIExpression()), !dbg !27
-  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !10, metadata !DIExpression()), !dbg !28
-  tail call void @llvm.dbg.value(metadata i32 %c, i64 0, metadata !11, metadata !DIExpression()), !dbg !29
-  tail call void @llvm.dbg.value(metadata i32 %d, i64 0, metadata !12, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata i32 %e, i64 0, metadata !13, metadata !DIExpression()), !dbg !31
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !9,  metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i32 %b, metadata !10, metadata !DIExpression()), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32 %c, metadata !11, metadata !DIExpression()), !dbg !29
+  tail call void @llvm.dbg.value(metadata i32 %d, metadata !12, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i32 %e, metadata !13, metadata !DIExpression()), !dbg !31
   %0 = bitcast i32* %x to i8*, !dbg !32
   call void @llvm.lifetime.start(i64 4, i8* %0) #4, !dbg !32
   %add = add nsw i32 %b, %a, !dbg !33
   %add1 = add nsw i32 %add, %c, !dbg !34
   %add2 = add nsw i32 %add1, %d, !dbg !35
   %add3 = add nsw i32 %add2, %e, !dbg !36
-  tail call void @llvm.dbg.value(metadata i32 %add3, i64 0, metadata !14, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %add3, metadata !14, metadata !DIExpression()), !dbg !37
   store i32 %add3, i32* %x, align 4, !dbg !37, !tbaa !38
-  tail call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !14, metadata !26), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32* %x, metadata !14, metadata !26), !dbg !37
   call void @foo(i32* nonnull %x) #4, !dbg !42
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !14, metadata !26), !dbg !37
+  call void @llvm.dbg.value(metadata i32* %x, metadata !14, metadata !26), !dbg !37
   %1 = load i32, i32* %x, align 4, !dbg !43, !tbaa !38
   call void @llvm.lifetime.end(i64 4, i8* %0) #4, !dbg !44
   ret i32 %1, !dbg !45
@@ -71,28 +71,28 @@ entry:
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {
 entry:
   %x = alloca i32, align 16
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !17, metadata !DIExpression()), !dbg !46
-  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !18, metadata !DIExpression()), !dbg !47
-  tail call void @llvm.dbg.value(metadata i32 %c, i64 0, metadata !19, metadata !DIExpression()), !dbg !48
-  tail call void @llvm.dbg.value(metadata i32 %d, i64 0, metadata !20, metadata !DIExpression()), !dbg !49
-  tail call void @llvm.dbg.value(metadata i32 %e, i64 0, metadata !21, metadata !DIExpression()), !dbg !50
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !17, metadata !DIExpression()), !dbg !46
+  tail call void @llvm.dbg.value(metadata i32 %b, metadata !18, metadata !DIExpression()), !dbg !47
+  tail call void @llvm.dbg.value(metadata i32 %c, metadata !19, metadata !DIExpression()), !dbg !48
+  tail call void @llvm.dbg.value(metadata i32 %d, metadata !20, metadata !DIExpression()), !dbg !49
+  tail call void @llvm.dbg.value(metadata i32 %e, metadata !21, metadata !DIExpression()), !dbg !50
   %0 = bitcast i32* %x to i8*, !dbg !51
   call void @llvm.lifetime.start(i64 4, i8* %0) #4, !dbg !51
   %add = add nsw i32 %b, %a, !dbg !52
   %add1 = add nsw i32 %add, %c, !dbg !53
   %add2 = add nsw i32 %add1, %d, !dbg !54
   %add3 = add nsw i32 %add2, %e, !dbg !55
-  tail call void @llvm.dbg.value(metadata i32 %add3, i64 0, metadata !22, metadata !DIExpression()), !dbg !56
+  tail call void @llvm.dbg.value(metadata i32 %add3, metadata !22, metadata !DIExpression()), !dbg !56
   store i32 %add3, i32* %x, align 16, !dbg !56, !tbaa !38
-  tail call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !22, metadata !26), !dbg !56
+  tail call void @llvm.dbg.value(metadata i32* %x, metadata !22, metadata !26), !dbg !56
   call void @foo(i32* nonnull %x) #4, !dbg !57
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !22, metadata !26), !dbg !56
+  call void @llvm.dbg.value(metadata i32* %x, metadata !22, metadata !26), !dbg !56
   %1 = load i32, i32* %x, align 16, !dbg !58, !tbaa !38
   call void @llvm.lifetime.end(i64 4, i8* %0) #4, !dbg !59
   ret i32 %1, !dbg !60
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23, !24}

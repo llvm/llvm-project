@@ -43,8 +43,8 @@ target triple = "x86_64-apple-macosx10.11.0"
 define void @foo() #0 !dbg !4 {
 entry:
   tail call void (...) @barrier() #3, !dbg !16
-  tail call void @llvm.dbg.value(metadata float 0x40091EB860000000, i64 0, metadata !8, metadata !17), !dbg !18
-  tail call void @llvm.dbg.value(metadata x86_fp80 0xK4000C8F5C28F5C28F800, i64 0, metadata !10, metadata !17), !dbg !19
+  tail call void @llvm.dbg.value(metadata float 0x40091EB860000000, metadata !8, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata x86_fp80 0xK4000C8F5C28F5C28F800, metadata !10, metadata !17), !dbg !19
   tail call void (...) @barrier() #3, !dbg !20
   ret void, !dbg !21
 }
@@ -52,7 +52,7 @@ entry:
 declare void @barrier(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #2 = { nounwind readnone }

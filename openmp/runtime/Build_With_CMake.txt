@@ -127,9 +127,10 @@ Intel(R) MIC Architecture, can be knf or knc.
 Should the Fortran modules be created (requires Fortran compiler)
 
 -DLIBOMP_USE_ADAPTIVE_LOCKS=on|off
-Should adaptive (TSX-based) locks be included?
-These are x86 specific.  This feature is turned on by default
-for i386 and x86_64.  Otherwise, it is turned off.
+Should adaptive (Intel(R) Transactional Synchronization Extensions
+(Intel(R) TSX) based) locks be included?  These are x86 specific.
+This feature is turned on by default for IA-32 architecture and
+Intel(R) 64 architecture.  Otherwise, it is turned off.
 
 -DLIBOMP_USE_INTERNODE_ALIGNMENT=off|on
 Should 4096-byte alignment be used for certain data structures?

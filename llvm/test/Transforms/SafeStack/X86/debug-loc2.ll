@@ -17,24 +17,24 @@ entry:
   %1 = bitcast i32* %x2 to i8*, !dbg !14
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: call void @llvm.dbg.value(metadata ![[EMPTY:.*]], i64 0, metadata !{{.*}}, metadata !{{.*}})
-  tail call void @llvm.dbg.value(metadata i32* %x1, i64 0, metadata !10, metadata !23), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata ![[EMPTY:.*]], metadata !{{.*}}, metadata !{{.*}})
+  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !23), !dbg !16
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: call void @llvm.dbg.value(metadata ![[EMPTY]], i64 0, metadata !{{.*}}, metadata !{{.*}})
-  tail call void @llvm.dbg.value(metadata i32* %x1, i64 0, metadata !10, metadata !24), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata ![[EMPTY]], metadata !{{.*}}, metadata !{{.*}})
+  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !24), !dbg !16
 
 ; Supported dbg.value: rewritted based on the [[USP]] value.
-; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], i64 0, metadata ![[X1:.*]], metadata ![[X1_EXPR:.*]])
-  tail call void @llvm.dbg.value(metadata i32* %x1, i64 0, metadata !10, metadata !15), !dbg !16
+; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], metadata ![[X1:.*]], metadata ![[X1_EXPR:.*]])
+  tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !15), !dbg !16
   call void @capture(i32* nonnull %x1), !dbg !17
 
 ; An extra non-dbg.value metadata use of %x2. Replaced with an empty metadata.
 ; CHECK: call void @llvm.random.metadata.use(metadata ![[EMPTY]])
   call void @llvm.random.metadata.use(metadata i32* %x2)
 
-; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], i64 0, metadata ![[X2:.*]], metadata ![[X2_EXPR:.*]])
-  call void @llvm.dbg.value(metadata i32* %x2, i64 0, metadata !12, metadata !15), !dbg !18
+; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], metadata ![[X2:.*]], metadata ![[X2_EXPR:.*]])
+  call void @llvm.dbg.value(metadata i32* %x2, metadata !12, metadata !15), !dbg !18
   call void @capture(i32* nonnull %x2), !dbg !19
   ret void, !dbg !20
 }
@@ -48,7 +48,7 @@ declare void @capture(i32*) #2
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 declare void @llvm.random.metadata.use(metadata)
 

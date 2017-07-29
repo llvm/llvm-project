@@ -6,7 +6,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 define double @f(double %p1) !dbg !4 {
 entry:
   %sub = fsub double -0.000000e+00, %p1, !dbg !16
-  tail call void @llvm.dbg.value(metadata double %sub, i64 0, metadata !10, metadata !14), !dbg !15
+  tail call void @llvm.dbg.value(metadata double %sub, metadata !10, metadata !14), !dbg !15
   ret double %sub
 }
 
@@ -22,7 +22,7 @@ entry:
 ; OBJ:    }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12}

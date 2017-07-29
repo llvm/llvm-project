@@ -309,6 +309,14 @@ static size_t InternalStrnlen2(const char *S1, const char *S2) {
   return Len;
 }
 
+void TracePC::ClearInlineCounters() {
+  for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
+    uint8_t *Beg = ModuleCounters[i].Start;
+    size_t Size = ModuleCounters[i].Stop - Beg;
+    memset(Beg, 0, Size);
+  }
+}
+
 } // namespace fuzzer
 
 extern "C" {
@@ -342,6 +350,10 @@ void __sanitizer_cov_trace_pc_guard_init(uint32_t *Start, uint32_t *Stop) {
 ATTRIBUTE_INTERFACE
 void __sanitizer_cov_8bit_counters_init(uint8_t *Start, uint8_t *Stop) {
   fuzzer::TPC.HandleInline8bitCountersInit(Start, Stop);
+}
+
+ATTRIBUTE_INTERFACE
+void __sanitizer_cov_pcs_init(const uint8_t *pcs_beg, const uint8_t *pcs_end) {
 }
 
 ATTRIBUTE_INTERFACE

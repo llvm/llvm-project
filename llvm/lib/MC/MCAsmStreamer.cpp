@@ -265,6 +265,7 @@ public:
   void EmitCFIUndefined(int64_t Register) override;
   void EmitCFIRegister(int64_t Register1, int64_t Register2) override;
   void EmitCFIWindowSave() override;
+  void EmitCFIReturnColumn(int64_t Register) override;
 
   void EmitWinCFIStartProc(const MCSymbol *Symbol) override;
   void EmitWinCFIEndProc() override;
@@ -1395,6 +1396,12 @@ void MCAsmStreamer::EmitCFIRegister(int64_t Register1, int64_t Register2) {
 void MCAsmStreamer::EmitCFIWindowSave() {
   MCStreamer::EmitCFIWindowSave();
   OS << "\t.cfi_window_save";
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCFIReturnColumn(int64_t Register) {
+  MCStreamer::EmitCFIReturnColumn(Register);
+  OS << "\t.cfi_return_column " << Register;
   EmitEOL();
 }
 

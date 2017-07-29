@@ -16,13 +16,13 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; Function Attrs: nounwind readnone ssp uwtable
 define i32 @bar(i32 %x) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !9, metadata !17), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !19, metadata !17), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 %x, metadata !9, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %x, metadata !19, metadata !17), !dbg !21
   ret i32 %x, !dbg !22
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

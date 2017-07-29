@@ -95,7 +95,7 @@ define void @_Z3fn6v() #0 !dbg !20 {
 entry:
   tail call void @_Z3fn8v() #3, !dbg !23
   %0 = load %struct.C*, %struct.C** @x, align 8, !dbg !24, !tbaa !25
-  tail call void @llvm.dbg.value(metadata %struct.C* %0, i64 0, metadata !29, metadata !32) #3, !dbg !33
+  tail call void @llvm.dbg.value(metadata %struct.C* %0, metadata !29, metadata !32) #3, !dbg !33
   tail call void @_Z3fn8v() #3, !dbg !34
   %b.i = getelementptr inbounds %struct.C, %struct.C* %0, i64 0, i32 0, !dbg !35
   %1 = load i32, i32* %b.i, align 4, !dbg !35, !tbaa !37
@@ -117,7 +117,7 @@ declare void @_Z3fn8v() #1
 
 define linkonce_odr void @_ZN1C5m_fn2Ev(%struct.C* nocapture readonly %this) #0 align 2 !dbg !30 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.C* %this, i64 0, metadata !29, metadata !32), !dbg !44
+  tail call void @llvm.dbg.value(metadata %struct.C* %this, metadata !29, metadata !32), !dbg !44
   tail call void @_Z3fn8v() #3, !dbg !45
   %b = getelementptr inbounds %struct.C, %struct.C* %this, i64 0, i32 0, !dbg !46
   %0 = load i32, i32* %b, align 4, !dbg !46, !tbaa !37
@@ -131,7 +131,7 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %if.then, %entry
   tail call void @_Z3fn8v() #3, !dbg !48
   %1 = load %struct.C*, %struct.C** @x, align 8, !dbg !52, !tbaa !25
-  tail call void @llvm.dbg.value(metadata %struct.C* %1, i64 0, metadata !29, metadata !32) #3, !dbg !53
+  tail call void @llvm.dbg.value(metadata %struct.C* %1, metadata !29, metadata !32) #3, !dbg !53
   tail call void @_Z3fn8v() #3, !dbg !54
   %b.i.i = getelementptr inbounds %struct.C, %struct.C* %1, i64 0, i32 0, !dbg !55
   %2 = load i32, i32* %b.i.i, align 4, !dbg !55, !tbaa !37
@@ -156,7 +156,7 @@ entry:
 tailrecurse:                                      ; preds = %tailrecurse.backedge, %entry
   tail call void @_Z3fn8v() #3, !dbg !59
   %0 = load %struct.C*, %struct.C** @x, align 8, !dbg !61, !tbaa !25
-  tail call void @llvm.dbg.value(metadata %struct.C* %0, i64 0, metadata !29, metadata !32) #3, !dbg !62
+  tail call void @llvm.dbg.value(metadata %struct.C* %0, metadata !29, metadata !32) #3, !dbg !62
   tail call void @_Z3fn8v() #3, !dbg !63
   %b.i.i = getelementptr inbounds %struct.C, %struct.C* %0, i64 0, i32 0, !dbg !64
   %1 = load i32, i32* %b.i.i, align 4, !dbg !64, !tbaa !37
@@ -190,7 +190,7 @@ entry:
 declare void @_Z3fn2iiii(i32, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

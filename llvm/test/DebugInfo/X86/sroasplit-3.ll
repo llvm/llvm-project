@@ -3,7 +3,7 @@
 ; Test that SROA updates the debug info correctly if an alloca was rewritten but
 ; not partitioned into multiple allocas.
 ;
-; CHECK: call void @llvm.dbg.value(metadata float %s.coerce, i64 0, metadata ![[VAR:[0-9]+]], metadata ![[EXPR:[0-9]+]])
+; CHECK: call void @llvm.dbg.value(metadata float %s.coerce, metadata ![[VAR:[0-9]+]], metadata ![[EXPR:[0-9]+]])
 ; CHECK: ![[VAR]] = !DILocalVariable(name: "s",{{.*}} line: 3,
 ; CHECK: ![[EXPR]] = !DIExpression(
 ; CHECK-NOT:                       DW_OP_LLVM_fragment
