@@ -1999,6 +1999,18 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
       return V.getOperand(0);
     break;
   }
+  case ISD::ANY_EXTEND: {
+    SDValue Src = V.getOperand(0);
+    unsigned SrcBitWidth = Src.getScalarValueSizeInBits();
+    // Being conservative here - only peek through if we only demand bits in the
+    // non-extended source (even though the extended bits are technically undef).
+    if (Mask.getActiveBits() > SrcBitWidth)
+      break;
+    APInt SrcMask = Mask.trunc(SrcBitWidth);
+    if (SDValue DemandedSrc = GetDemandedBits(Src, SrcMask))
+      return getNode(ISD::ANY_EXTEND, SDLoc(V), V.getValueType(), DemandedSrc);
+    break;
+  }
   }
   return SDValue();
 }

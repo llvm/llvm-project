@@ -118,11 +118,13 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     // Fuse AES crypto operations.
     switch(SecondOpcode) {
     // AES encode.
-    case AArch64::AESMCrr :
+    case AArch64::AESMCrr:
+    case AArch64::AESMCrrTied:
       return FirstOpcode == AArch64::AESErr ||
              FirstOpcode == AArch64::INSTRUCTION_LIST_END;
     // AES decode.
     case AArch64::AESIMCrr:
+    case AArch64::AESIMCrrTied:
       return FirstOpcode == AArch64::AESDrr ||
              FirstOpcode == AArch64::INSTRUCTION_LIST_END;
     }
