@@ -60,6 +60,7 @@ SANITIZER("leak", Leak)
 SANITIZER("alignment", Alignment)
 SANITIZER("array-bounds", ArrayBounds)
 SANITIZER("bool", Bool)
+SANITIZER("builtin", Builtin)
 SANITIZER("enum", Enum)
 SANITIZER("float-cast-overflow", FloatCastOverflow)
 SANITIZER("float-divide-by-zero", FloatDivideByZero)
@@ -107,11 +108,12 @@ SANITIZER("safe-stack", SafeStack)
 // -fsanitize=undefined includes all the sanitizers which have low overhead, no
 // ABI or address space layout implications, and only catch undefined behavior.
 SANITIZER_GROUP("undefined", Undefined,
-                Alignment | Bool | ArrayBounds | Enum | FloatCastOverflow |
-                    FloatDivideByZero | IntegerDivideByZero | NonnullAttribute |
-                    Null | ObjectSize | PointerOverflow | Return |
-                    ReturnsNonnullAttribute | Shift | SignedIntegerOverflow |
-                    Unreachable | VLABound | Function | Vptr)
+                Alignment | Bool | Builtin | ArrayBounds | Enum |
+                    FloatCastOverflow | FloatDivideByZero |
+                    IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
+                    PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
+                    SignedIntegerOverflow | Unreachable | VLABound | Function |
+                    Vptr)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)

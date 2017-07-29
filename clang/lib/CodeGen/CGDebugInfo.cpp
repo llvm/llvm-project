@@ -3799,7 +3799,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
   if (LocalAddr) {
     // Insert an llvm.dbg.value into the current block.
     DBuilder.insertDbgValueIntrinsic(
-        LocalAddr, 0, debugVar, DBuilder.createExpression(),
+        LocalAddr, debugVar, DBuilder.createExpression(),
         llvm::DebugLoc::get(line, column, scope, CurInlinedAt),
         Builder.GetInsertBlock());
   }
