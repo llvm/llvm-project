@@ -16,6 +16,7 @@
 #include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
@@ -34,6 +35,7 @@ STATISTIC(PairUnequalAccRels, "Number of Load-Store pairs NOT removed because "
 STATISTIC(InBetweenStore, "Number of Load-Store pairs NOT removed because "
                           "there is another store between them");
 STATISTIC(TotalOverwritesRemoved, "Number of removed overwritten writes");
+STATISTIC(TotalWritesCoalesced, "Number of writes coalesced with another");
 STATISTIC(TotalRedundantWritesRemoved,
           "Number of writes of same value removed in any SCoP");
 STATISTIC(TotalEmptyPartialAccessesRemoved,
@@ -96,6 +98,9 @@ private:
   /// Number of writes that are overwritten anyway.
   int OverwritesRemoved = 0;
 
+  /// Number of combined writes.
+  int WritesCoalesced = 0;
+
   /// Number of redundant writes removed from this SCoP.
   int RedundantWritesRemoved = 0;
 
@@ -113,9 +118,10 @@ private:
 
   /// Return whether at least one simplification has been applied.
   bool isModified() const {
-    return OverwritesRemoved > 0 || RedundantWritesRemoved > 0 ||
-           EmptyPartialAccessesRemoved > 0 || DeadAccessesRemoved > 0 ||
-           DeadInstructionsRemoved > 0 || StmtsRemoved > 0;
+    return OverwritesRemoved > 0 || WritesCoalesced > 0 ||
+           RedundantWritesRemoved > 0 || EmptyPartialAccessesRemoved > 0 ||
+           DeadAccessesRemoved > 0 || DeadInstructionsRemoved > 0 ||
+           StmtsRemoved > 0;
   }
 
   MemoryAccess *getReadAccessForValue(ScopStmt *Stmt, llvm::Value *Val) {
@@ -235,6 +241,173 @@ private:
         // Unconditional writes overwrite other values.
         if (MA->isMustWrite())
           WillBeOverwritten = WillBeOverwritten.add_map(AccRel);
+      }
+    }
+  }
+
+  /// Combine writes that write the same value if possible.
+  ///
+  /// This function is able to combine:
+  /// - Partial writes with disjoint domain.
+  /// - Writes that write to the same array element.
+  ///
+  /// In all cases, both writes must write the same values.
+  void coalesceWrites() {
+    for (auto &Stmt : *S) {
+      isl::set Domain =
+          give(Stmt.getDomain()).intersect_params(give(S->getContext()));
+
+      // We let isl do the lookup for the same-value condition. For this, we
+      // wrap llvm::Value into an isl::set such that isl can do the lookup in
+      // its hashtable implementation. llvm::Values are only compared within a
+      // ScopStmt, so the map can be local to this scope. TODO: Refactor with
+      // ZoneAlgorithm::makeValueSet()
+      SmallDenseMap<Value *, isl::set> ValueSets;
+      auto makeValueSet = [&ValueSets, this](Value *V) -> isl::set {
+        assert(V);
+        isl::set &Result = ValueSets[V];
+        if (Result.is_null()) {
+          isl_ctx *Ctx = S->getIslCtx();
+          std::string Name =
+              getIslCompatibleName("Val", V, ValueSets.size() - 1,
+                                   std::string(), UseInstructionNames);
+          isl::id Id = give(isl_id_alloc(Ctx, Name.c_str(), V));
+          Result = isl::set::universe(
+              isl::space(Ctx, 0, 0).set_tuple_id(isl::dim::set, Id));
+        }
+        return Result;
+      };
+
+      // List of all eligible (for coalescing) writes of the future.
+      // { [Domain[] -> Element[]] -> [Value[] -> MemoryAccess[]] }
+      isl::union_map FutureWrites =
+          isl::union_map::empty(give(S->getParamSpace()));
+
+      // Iterate over accesses from the last to the first.
+      SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
+      for (MemoryAccess *MA : reverse(Accesses)) {
+        // In region statements, the explicit accesses can be in blocks that can
+        // be executed in any order. We therefore process only the implicit
+        // writes and stop after that.
+        if (Stmt.isRegionStmt() && isExplicitAccess(MA))
+          break;
+
+        // { Domain[] -> Element[] }
+        isl::map AccRel =
+            MA->getLatestAccessRelation().intersect_domain(Domain);
+
+        // { [Domain[] -> Element[]] }
+        isl::set AccRelWrapped = AccRel.wrap();
+
+        // { Value[] }
+        isl::set ValSet;
+
+        if (MA->isMustWrite() && (MA->isOriginalScalarKind() ||
+                                  isa<StoreInst>(MA->getAccessInstruction()))) {
+          // Normally, tryGetValueStored() should be used to determine which
+          // element is written, but it can return nullptr; For PHI accesses,
+          // getAccessValue() returns the PHI instead of the PHI's incoming
+          // value. In this case, where we only compare values of a single
+          // statement, this is fine, because within a statement, a PHI in a
+          // successor block has always the same value as the incoming write. We
+          // still preferably use the incoming value directly so we also catch
+          // direct uses of that.
+          Value *StoredVal = MA->tryGetValueStored();
+          if (!StoredVal)
+            StoredVal = MA->getAccessValue();
+          ValSet = makeValueSet(StoredVal);
+
+          // { Domain[] }
+          isl::set AccDomain = AccRel.domain();
+
+          // Parts of the statement's domain that is not written by this access.
+          isl::set UndefDomain = Domain.subtract(AccDomain);
+
+          // { Element[] }
+          isl::set ElementUniverse =
+              isl::set::universe(AccRel.get_space().range());
+
+          // { Domain[] -> Element[] }
+          isl::map UndefAnything =
+              isl::map::from_domain_and_range(UndefDomain, ElementUniverse);
+
+          // We are looking a compatible write access. The other write can
+          // access these elements...
+          isl::map AllowedAccesses = AccRel.unite(UndefAnything);
+
+          // ... and must write the same value.
+          // { [Domain[] -> Element[]] -> Value[] }
+          isl::map Filter =
+              isl::map::from_domain_and_range(AllowedAccesses.wrap(), ValSet);
+
+          // Lookup future write that fulfills these conditions.
+          // { [[Domain[] -> Element[]] -> Value[]] -> MemoryAccess[] }
+          isl::union_map Filtered =
+              FutureWrites.uncurry().intersect_domain(Filter.wrap());
+
+          // Iterate through the candidates.
+          Filtered.foreach_map([&, this](isl::map Map) -> isl::stat {
+            MemoryAccess *OtherMA = (MemoryAccess *)Map.get_space()
+                                        .get_tuple_id(isl::dim::out)
+                                        .get_user();
+
+            isl::map OtherAccRel =
+                OtherMA->getLatestAccessRelation().intersect_domain(Domain);
+
+            // The filter only guaranteed that some of OtherMA's accessed
+            // elements are allowed. Verify that it only accesses allowed
+            // elements. Otherwise, continue with the next candidate.
+            if (!OtherAccRel.is_subset(AllowedAccesses).is_true())
+              return isl::stat::ok;
+
+            // The combined access relation.
+            // { Domain[] -> Element[] }
+            isl::map NewAccRel = AccRel.unite(OtherAccRel);
+            simplify(NewAccRel);
+
+            // Carry out the coalescing.
+            Stmt.removeSingleMemoryAccess(MA);
+            OtherMA->setNewAccessRelation(NewAccRel.copy());
+
+            // We removed MA, OtherMA takes its role.
+            MA = OtherMA;
+
+            TotalWritesCoalesced++;
+            WritesCoalesced++;
+
+            // Don't look for more candidates.
+            return isl::stat::error;
+          });
+        }
+
+        // Two writes cannot be coalesced if there is another access (to some of
+        // the written elements) between them. Remove all visited write accesses
+        // from the list of eligible writes. Don't just remove the accessed
+        // elements, but any MemoryAccess that touches any of the invalidated
+        // elements.
+        // { MemoryAccess[] }
+        isl::union_set TouchedAccesses =
+            FutureWrites.intersect_domain(AccRelWrapped)
+                .range()
+                .unwrap()
+                .range();
+        FutureWrites =
+            FutureWrites.uncurry().subtract_range(TouchedAccesses).curry();
+
+        if (MA->isMustWrite() && !ValSet.is_null()) {
+          // { MemoryAccess[] }
+          auto AccSet =
+              isl::set::universe(isl::space(S->getIslCtx(), 0, 0)
+                                     .set_tuple_id(isl::dim::set, MA->getId()));
+
+          // { Val[] -> MemoryAccess[] }
+          isl::map ValAccSet = isl::map::from_domain_and_range(ValSet, AccSet);
+
+          // { [Domain[] -> Element[]] -> [Value[] -> MemoryAccess[]] }
+          isl::map AccRelValAcc =
+              isl::map::from_domain_and_range(AccRelWrapped, ValAccSet.wrap());
+          FutureWrites = FutureWrites.add_map(AccRelValAcc);
+        }
       }
     }
   }
@@ -413,6 +586,8 @@ private:
     OS.indent(Indent) << "Statistics {\n";
     OS.indent(Indent + 4) << "Overwrites removed: " << OverwritesRemoved
                           << '\n';
+    OS.indent(Indent + 4) << "Partial writes coalesced: " << WritesCoalesced
+                          << "\n";
     OS.indent(Indent + 4) << "Redundant writes removed: "
                           << RedundantWritesRemoved << "\n";
     OS.indent(Indent + 4) << "Accesses with empty domains removed: "
@@ -461,6 +636,9 @@ public:
     DEBUG(dbgs() << "Removing overwrites...\n");
     removeOverwrites();
 
+    DEBUG(dbgs() << "Coalesce partial writes...\n");
+    coalesceWrites();
+
     DEBUG(dbgs() << "Removing redundant writes...\n");
     removeRedundantWrites();
 
@@ -495,6 +673,7 @@ public:
     S = nullptr;
 
     OverwritesRemoved = 0;
+    WritesCoalesced = 0;
     RedundantWritesRemoved = 0;
     EmptyPartialAccessesRemoved = 0;
     DeadAccessesRemoved = 0;

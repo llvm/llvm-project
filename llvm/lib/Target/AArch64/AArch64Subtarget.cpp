@@ -130,7 +130,9 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case CortexA35: break;
-  case CortexA53: break;
+  case CortexA53:
+    PrefFunctionAlignment = 3;
+    break;
   case CortexA72:
     PrefFunctionAlignment = 4;
     break;
