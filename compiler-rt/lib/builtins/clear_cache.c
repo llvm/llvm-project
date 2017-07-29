@@ -165,6 +165,21 @@ void __clear_cache(void *start, void *end) {
   for (addr = xstart; addr < xend; addr += icache_line_size)
     __asm __volatile("ic ivau, %0" :: "r"(addr));
   __asm __volatile("isb sy");
+#elif defined (__powerpc64__) && defined(__LITTLE_ENDIAN__)
+  const size_t line_size = 32;
+  const size_t len = (uintptr_t)end - (uintptr_t)start;
+
+  const uintptr_t mask = ~(line_size - 1);
+  const uintptr_t start_line = ((uintptr_t)start) & mask;
+  const uintptr_t end_line = ((uintptr_t)start + len + line_size - 1) & mask;
+
+  for (uintptr_t line = start_line; line < end_line; line += line_size)
+    __asm__ volatile("dcbf 0, %0" : : "r"(line));
+  __asm__ volatile("sync");
+
+  for (uintptr_t line = start_line; line < end_line; line += line_size)
+    __asm__ volatile("icbi 0, %0" : : "r"(line));
+  __asm__ volatile("isync");
 #else
     #if __APPLE__
         /* On Darwin, sys_icache_invalidate() provides this functionality */
@@ -174,4 +189,3 @@ void __clear_cache(void *start, void *end) {
     #endif
 #endif
 }
-

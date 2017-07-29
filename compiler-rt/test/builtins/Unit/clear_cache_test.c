@@ -52,7 +52,7 @@ memcpy_f(void *dst, const void *src, size_t n) {
 #endif
 }
 
-unsigned char execution_buffer[128];
+unsigned char execution_buffer[128] __attribute__((aligned(8)));
 
 int main()
 {

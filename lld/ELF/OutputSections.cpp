@@ -291,7 +291,7 @@ bool OutputSection::classof(const BaseCommand *C) {
 }
 
 void OutputSection::sort(std::function<int(InputSectionBase *S)> Order) {
-  typedef std::pair<unsigned, InputSection *> Pair;
+  typedef std::pair<int, InputSection *> Pair;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
 
   std::vector<Pair> V;

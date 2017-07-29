@@ -834,7 +834,8 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #define KMP_USE_DYNAMIC_LOCK 1
 #endif
 
-// Enable TSX if dynamic user lock is turned on
+// Enable Intel(R) Transactional Synchronization Extensions (Intel(R) TSX) if
+// dynamic user lock is turned on
 #if KMP_USE_DYNAMIC_LOCK
 // Visual studio can't handle the asm sections in this code
 #define KMP_USE_TSX (KMP_ARCH_X86 || KMP_ARCH_X86_64) && !KMP_COMPILER_MSVC

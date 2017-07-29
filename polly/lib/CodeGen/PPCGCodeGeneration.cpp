@@ -3197,7 +3197,10 @@ public:
 
     // preload invariant loads. Note: This should happen before the RTC
     // because the RTC may depend on values that are invariant load hoisted.
-    NodeBuilder.preloadInvariantLoads();
+    if (!NodeBuilder.preloadInvariantLoads())
+      report_fatal_error("preloading invariant loads failed in function: " +
+                         S->getFunction().getName() +
+                         " | Scop Region: " + S->getNameStr());
 
     Value *RTC = NodeBuilder.createRTC(Condition);
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);

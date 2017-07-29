@@ -24,6 +24,10 @@ if (LLDB_DISABLE_LIBEDIT)
   add_definitions( -DLLDB_DISABLE_LIBEDIT )
 endif()
 
+if(APPLE)
+  add_definitions(-DLLDB_USE_OS_LOG)
+endif()
+
 # add_subdirectory(include)
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
