@@ -48,8 +48,8 @@ source_filename = "test/DebugInfo/X86/dbg-value-inlined-parameter.ll"
 ; Function Attrs: nounwind optsize ssp
 define i32 @foo(%struct.S1* nocapture %sp, i32 %nums) #0 !dbg !15 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.S1* %sp, i64 0, metadata !19, metadata !22), !dbg !23
-  tail call void @llvm.dbg.value(metadata i32 %nums, i64 0, metadata !21, metadata !22), !dbg !24
+  tail call void @llvm.dbg.value(metadata %struct.S1* %sp, metadata !19, metadata !22), !dbg !23
+  tail call void @llvm.dbg.value(metadata i32 %nums, metadata !21, metadata !22), !dbg !24
   %tmp2 = getelementptr inbounds %struct.S1, %struct.S1* %sp, i64 0, i32 1, !dbg !25
   store i32 %nums, i32* %tmp2, align 4, !dbg !25
   %call = tail call float* @bar(i32 %nums) #3, !dbg !27
@@ -66,8 +66,8 @@ declare float* @bar(i32) #1
 ; Function Attrs: nounwind optsize ssp
 define void @foobar() #0 !dbg !29 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.S1* @p, i64 0, metadata !19, metadata !22) #4, !dbg !32
-  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !21, metadata !22) #4, !dbg !35
+  tail call void @llvm.dbg.value(metadata %struct.S1* @p, metadata !19, metadata !22) #4, !dbg !32
+  tail call void @llvm.dbg.value(metadata i32 1, metadata !21, metadata !22) #4, !dbg !35
   store i32 1, i32* getelementptr inbounds (%struct.S1, %struct.S1* @p, i64 0, i32 1), align 8, !dbg !36
   %call.i = tail call float* @bar(i32 1) #3, !dbg !37
   store float* %call.i, float** getelementptr inbounds (%struct.S1, %struct.S1* @p, i64 0, i32 0), align 8, !dbg !37
@@ -76,7 +76,7 @@ entry:
 
 ; Function Attrs: nounwind readnone
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind optsize ssp }
 attributes #1 = { optsize }

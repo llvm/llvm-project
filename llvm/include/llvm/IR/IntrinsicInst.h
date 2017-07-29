@@ -122,11 +122,6 @@ namespace llvm {
       return getVariableLocation(/* AllowNullOp = */ false);
     }
 
-    uint64_t getOffset() const {
-      return cast<ConstantInt>(
-                          const_cast<Value*>(getArgOperand(1)))->getZExtValue();
-    }
-
     DILocalVariable *getVariable() const {
       return cast<DILocalVariable>(getRawVariable());
     }
@@ -136,11 +131,11 @@ namespace llvm {
     }
 
     Metadata *getRawVariable() const {
-      return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
+      return cast<MetadataAsValue>(getArgOperand(1))->getMetadata();
     }
 
     Metadata *getRawExpression() const {
-      return cast<MetadataAsValue>(getArgOperand(3))->getMetadata();
+      return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
     }
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:

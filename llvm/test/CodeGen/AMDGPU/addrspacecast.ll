@@ -147,7 +147,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32 addrspace(4)* %
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0
-; HSA: flat_store_dword v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}, [[K]]
+; HSA: {{flat|global}}_store_dword v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}, [[K]]
 define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32 addrspace(4)* %ptr) #0 {
   %ftos = addrspacecast i32 addrspace(4)* %ptr to i32 addrspace(1)*
   store volatile i32 0, i32 addrspace(1)* %ftos
@@ -176,7 +176,7 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32 addrspace(4)* 
 
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
+; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define amdgpu_kernel void @cast_0_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(3)* null to i32 addrspace(4)*
   store volatile i32 7, i32 addrspace(4)* %cast
@@ -197,7 +197,7 @@ define amdgpu_kernel void @cast_0_flat_to_group_addrspacecast() #0 {
 ; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
-; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
+; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define amdgpu_kernel void @cast_neg1_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32 addrspace(4)*
   store volatile i32 7, i32 addrspace(4)* %cast
@@ -222,7 +222,7 @@ define amdgpu_kernel void @cast_neg1_flat_to_group_addrspacecast() #0 {
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
-; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
+; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32* null to i32 addrspace(4)*
   store volatile i32 7, i32 addrspace(4)* %cast
@@ -242,7 +242,7 @@ define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
 ; specialize away generic pointer accesses.
 
 ; HSA-LABEL: {{^}}branch_use_flat_i32:
-; HSA: flat_store_dword {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}
+; HSA: {{flat|global}}_store_dword {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}
 ; HSA: s_endpgm
 define amdgpu_kernel void @branch_use_flat_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* %gptr, i32 addrspace(3)* %lptr, i32 %x, i32 %c) #0 {
 entry:
@@ -274,9 +274,9 @@ end:
 ; GFX9: s_add_u32 flat_scratch_lo, s6, s9
 ; GFX9: s_addc_u32 flat_scratch_hi, s7, 0
 
-; HSA: flat_store_dword
+; HSA: {{flat|global}}_store_dword
 ; HSA: s_barrier
-; HSA: flat_load_dword
+; HSA: {{flat|global}}_load_dword
 define amdgpu_kernel void @store_flat_scratch(i32 addrspace(1)* noalias %out, i32) #0 {
   %alloca = alloca i32, i32 9, align 4
   %x = call i32 @llvm.amdgcn.workitem.id.x() #2

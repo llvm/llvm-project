@@ -19,12 +19,12 @@ target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S3
 target triple = "armv7-apple-ios7.0"
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 define <3 x float> @_TFV4simd8float2x3g9subscriptFSiVS_6float3(i32, <3 x float>, <3 x float>) !dbg !5 {
 entry:
-  tail call void @llvm.dbg.value(metadata <3 x float> %1, i64 0, metadata !8, metadata !9), !dbg !10
-  tail call void @llvm.dbg.value(metadata <3 x float> %2, i64 0, metadata !8, metadata !11), !dbg !10
+  tail call void @llvm.dbg.value(metadata <3 x float> %1, metadata !8, metadata !9), !dbg !10
+  tail call void @llvm.dbg.value(metadata <3 x float> %2, metadata !8, metadata !11), !dbg !10
   %3 = icmp eq i32 %0, 0, !dbg !12
   br i1 %3, label %7, label %4, !dbg !12
 

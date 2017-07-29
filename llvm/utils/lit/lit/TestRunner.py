@@ -711,6 +711,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
       mode += 'b'  # Avoid CRLFs when writing bash scripts.
     f = open(script, mode)
     if isWin32CMDEXE:
+        f.write('@echo off\n')
         f.write('\nif %ERRORLEVEL% NEQ 0 EXIT\n'.join(commands))
     else:
         if test.config.pipefail:

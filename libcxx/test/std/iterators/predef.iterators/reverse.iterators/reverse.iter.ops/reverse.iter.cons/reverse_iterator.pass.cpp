@@ -15,7 +15,7 @@
 //   requires HasConstructor<Iter, const U&>
 //   constexpr reverse_iterator(const reverse_iterator<U> &u);
 //
-// constexpr in c++17
+// constexpr in C++17
 
 #include <iterator>
 #include <cassert>

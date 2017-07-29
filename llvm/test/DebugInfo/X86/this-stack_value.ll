@@ -32,10 +32,10 @@ define noalias nonnull %struct.B* @_Z4getBv() local_unnamed_addr #0 !dbg !7 {
 entry:
   %call = tail call i8* @_Znwm(i64 12) #3, !dbg !20
   %0 = bitcast i8* %call to %struct.B*, !dbg !20
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, i64 0, metadata !21, metadata !28), !dbg !29
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, i64 0, metadata !31, metadata !28), !dbg !34
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, i64 0, metadata !36, metadata !44), !dbg !45
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, i64 0, metadata !47, metadata !44), !dbg !50
+  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !21, metadata !28), !dbg !29
+  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !31, metadata !28), !dbg !34
+  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !36, metadata !44), !dbg !45
+  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !47, metadata !44), !dbg !50
   %a1.i.i.i.i = bitcast i8* %call to i32*, !dbg !52
   store i32 23, i32* %a1.i.i.i.i, align 4, !dbg !52, !tbaa !53
   %a2.i.i.i.i = getelementptr inbounds i8, i8* %call, i64 4, !dbg !58
@@ -48,7 +48,7 @@ entry:
 }
 
 declare noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #1
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { ssp uwtable }
 attributes #1 = { nobuiltin }

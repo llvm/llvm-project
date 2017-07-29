@@ -823,7 +823,7 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return withDebugLoc(CallInst::Create(DeclareFn, Args, "", InsertAtEnd), DL);
 }
 
-Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V, uint64_t Offset,
+Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
                                                 DILocalVariable *VarInfo,
                                                 DIExpression *Expr,
                                                 const DILocation *DL,
@@ -840,13 +840,12 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V, uint64_t Offset,
   trackIfUnresolved(VarInfo);
   trackIfUnresolved(Expr);
   Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, V),
-                   ConstantInt::get(Type::getInt64Ty(VMContext), Offset),
                    MetadataAsValue::get(VMContext, VarInfo),
                    MetadataAsValue::get(VMContext, Expr)};
   return withDebugLoc(CallInst::Create(ValueFn, Args, "", InsertBefore), DL);
 }
 
-Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V, uint64_t Offset,
+Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
                                                 DILocalVariable *VarInfo,
                                                 DIExpression *Expr,
                                                 const DILocation *DL,
@@ -863,7 +862,6 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V, uint64_t Offset,
   trackIfUnresolved(VarInfo);
   trackIfUnresolved(Expr);
   Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, V),
-                   ConstantInt::get(Type::getInt64Ty(VMContext), Offset),
                    MetadataAsValue::get(VMContext, VarInfo),
                    MetadataAsValue::get(VMContext, Expr)};
 

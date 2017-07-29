@@ -1227,8 +1227,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         HFlags & MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO) {
       unsigned ExportsAdded = 0;
       Error Err = Error::success();
-      for (const llvm::object::ExportEntry &Entry : MachO->exports(Err,
-                                                                   MachO)) {
+      for (const llvm::object::ExportEntry &Entry : MachO->exports(Err)) {
         bool found = false;
         bool ReExport = false;
         if (!DyldInfoOnly) {

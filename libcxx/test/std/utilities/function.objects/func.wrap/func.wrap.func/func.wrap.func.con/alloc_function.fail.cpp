@@ -24,7 +24,7 @@
 
 int main()
 {
-	typedef std::function<void(int)> F;
-	F f1;
-	F f2(std::allocator_arg, std::allocator<int>(), f1);
+    typedef std::function<void(int)> F;
+    F f1;
+    F f2(std::allocator_arg, std::allocator<int>(), f1);
 }

@@ -45,7 +45,6 @@ private:
   } u;
   MDNode *Var;
   MDNode *Expr;
-  uint64_t Offset;
   DebugLoc DL;
   unsigned Order;
   enum DbgValueKind kind;
@@ -55,28 +54,23 @@ private:
 public:
   // Constructor for non-constants.
   SDDbgValue(MDNode *Var, MDNode *Expr, SDNode *N, unsigned R, bool indir,
-             uint64_t off, DebugLoc dl, unsigned O)
-      : Var(Var), Expr(Expr), Offset(off), DL(std::move(dl)), Order(O),
-        IsIndirect(indir) {
+             DebugLoc dl, unsigned O)
+      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(indir) {
     kind = SDNODE;
     u.s.Node = N;
     u.s.ResNo = R;
   }
 
   // Constructor for constants.
-  SDDbgValue(MDNode *Var, MDNode *Expr, const Value *C, uint64_t off,
-             DebugLoc dl, unsigned O)
-      : Var(Var), Expr(Expr), Offset(off), DL(std::move(dl)), Order(O),
-        IsIndirect(false) {
+  SDDbgValue(MDNode *Var, MDNode *Expr, const Value *C, DebugLoc dl, unsigned O)
+      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(false) {
     kind = CONST;
     u.Const = C;
   }
 
   // Constructor for frame indices.
-  SDDbgValue(MDNode *Var, MDNode *Expr, unsigned FI, uint64_t off, DebugLoc dl,
-             unsigned O)
-      : Var(Var), Expr(Expr), Offset(off), DL(std::move(dl)), Order(O),
-        IsIndirect(false) {
+  SDDbgValue(MDNode *Var, MDNode *Expr, unsigned FI, DebugLoc dl, unsigned O)
+      : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(false) {
     kind = FRAMEIX;
     u.FrameIx = FI;
   }
@@ -104,9 +98,6 @@ public:
 
   // Returns whether this is an indirect value.
   bool isIndirect() const { return IsIndirect; }
-
-  // Returns the offset.
-  uint64_t getOffset() const { return Offset; }
 
   // Returns the DebugLoc.
   DebugLoc getDebugLoc() const { return DL; }

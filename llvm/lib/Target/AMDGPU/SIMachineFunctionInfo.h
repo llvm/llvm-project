@@ -186,6 +186,10 @@ private:
   // Other shaders indirect 64-bits at sgpr[0:1]
   bool ImplicitBufferPtr : 1;
 
+  // Pointer to where the ABI inserts special kernel arguments separate from the
+  // user arguments. This is an offset from the KernargSegmentPtr.
+  bool ImplicitArgPtr : 1;
+
   MCPhysReg getNextUserSGPR() const {
     assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
     return AMDGPU::SGPR0 + NumUserSGPRs;
@@ -344,6 +348,10 @@ public:
 
   bool hasWorkItemIDZ() const {
     return WorkItemIDZ;
+  }
+
+  bool hasImplicitArgPtr() const {
+    return ImplicitArgPtr;
   }
 
   bool hasImplicitBufferPtr() const {

@@ -20,9 +20,9 @@
 ;
 
 ; Verify that SROA creates a variable piece when splitting i1.
-; CHECK:  call void @llvm.dbg.value(metadata i64 %outer.coerce0, i64 0, metadata ![[O:[0-9]+]], metadata ![[PIECE1:[0-9]+]]),
-; CHECK:  call void @llvm.dbg.value(metadata i64 %outer.coerce1, i64 0, metadata ![[O]], metadata ![[PIECE2:[0-9]+]]),
-; CHECK:  call void @llvm.dbg.value({{.*}}, i64 0, metadata ![[I1:[0-9]+]], metadata ![[PIECE3:[0-9]+]]),
+; CHECK:  call void @llvm.dbg.value(metadata i64 %outer.coerce0, metadata ![[O:[0-9]+]], metadata ![[PIECE1:[0-9]+]]),
+; CHECK:  call void @llvm.dbg.value(metadata i64 %outer.coerce1, metadata ![[O]], metadata ![[PIECE2:[0-9]+]]),
+; CHECK:  call void @llvm.dbg.value({{.*}}, metadata ![[I1:[0-9]+]], metadata ![[PIECE3:[0-9]+]]),
 ; CHECK-DAG: ![[O]] = !DILocalVariable(name: "outer",{{.*}} line: 10
 ; CHECK-DAG: ![[PIECE1]] = !DIExpression(DW_OP_LLVM_fragment, 0, 64)
 ; CHECK-DAG: ![[PIECE2]] = !DIExpression(DW_OP_LLVM_fragment, 64, 64)

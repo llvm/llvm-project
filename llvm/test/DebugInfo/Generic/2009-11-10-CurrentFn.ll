@@ -8,7 +8,7 @@ entry:
 
 declare void @foo(...)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18}

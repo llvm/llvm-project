@@ -535,8 +535,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Create an early function pass manager to cleanup the output of the
   // frontend.
   FunctionPassManager EarlyFPM(DebugLogging);
-  if (PGOOpt && PGOOpt->SamplePGOSupport)
-    EarlyFPM.addPass(AddDiscriminatorsPass());
   EarlyFPM.addPass(SimplifyCFGPass());
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
@@ -574,18 +572,19 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Add all the requested passes for PGO, if requested.
   if (PGOOpt) {
-    assert(PGOOpt->RunProfileGen || !PGOOpt->SampleProfileFile.empty() ||
-           !PGOOpt->ProfileUseFile.empty() || PGOOpt->SamplePGOSupport);
-    if (PGOOpt->SampleProfileFile.empty())
+    if (!PGOOpt->ProfileGenFile.empty() || !PGOOpt->ProfileUseFile.empty())
+      // Instrumentation based PGO (gen and use)
       addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
                         PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
-    else
+    else if (!PGOOpt->SampleProfileFile.empty())
+      // SamplePGO use
       MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
 
     // Indirect call promotion that promotes intra-module targes only.
     // Do not enable it in PrepareForThinLTO phase during sample PGO because
     // it changes IR to makes profile annotation in back compile inaccurate.
-    if (!PrepareForThinLTO || PGOOpt->SampleProfileFile.empty())
+    if ((!PrepareForThinLTO && !PGOOpt->SampleProfileFile.empty())
+        || !PGOOpt->ProfileUseFile.empty())
       MPM.addPass(PGOIndirectCallPromotion(
           false, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
   }
@@ -779,6 +778,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
+  if (PGOOpt && PGOOpt->SamplePGOSupport)
+    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
+
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging,
                                                 /*PrepareForThinLTO=*/false));
@@ -798,6 +800,9 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
+
+  if (PGOOpt && PGOOpt->SamplePGOSupport)
+    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
   // If we are planning to perform ThinLTO later, we don't bloat the code with
   // unrolling/vectorization/... now. Just simplify the module as much as we

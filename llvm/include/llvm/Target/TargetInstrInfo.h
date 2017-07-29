@@ -1556,7 +1556,11 @@ public:
   /// \brief Returns the number of instructions that will be taken to call a
   /// function defined by the sequence on the closed interval [ \p StartIt, \p
   /// EndIt].
-  virtual size_t
+  ///
+  /// \returns The number of instructions for the call in the first member,
+  /// and a target-defined unsigned describing what type of call to emit in the
+  /// second member.
+  virtual std::pair<size_t, unsigned>
   getOutliningCallOverhead(MachineBasicBlock::iterator &StartIt,
                            MachineBasicBlock::iterator &EndIt) const {
     llvm_unreachable(
@@ -1566,11 +1570,16 @@ public:
   /// \brief Returns the number of instructions that will be taken to construct
   /// an outlined function frame for a function defined on the closed interval
   /// [ \p StartIt, \p EndIt].
-  virtual size_t
-  getOutliningFrameOverhead(MachineBasicBlock::iterator &StartIt,
-                            MachineBasicBlock::iterator &EndIt) const {
+  ///
+  /// \returns The number of instructions for the frame in the first member
+  /// and a target-defined unsigned describing what type of frame to construct
+  /// in the second member.
+  virtual std::pair<size_t, unsigned> getOutliningFrameOverhead(
+      std::vector<
+          std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+          &CandidateClass) const {
     llvm_unreachable(
-        "Target didn't implement TargetInstrInfo::getOutliningCallOverhead!");
+        "Target didn't implement TargetInstrInfo::getOutliningFrameOverhead!");
   }
 
   /// Represents how an instruction should be mapped by the outliner.
@@ -1591,7 +1600,7 @@ public:
   /// emitted.
   virtual void insertOutlinerEpilogue(MachineBasicBlock &MBB,
                                       MachineFunction &MF,
-                                      bool IsTailCall) const {
+                                      unsigned FrameClass) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::insertOutlinerEpilogue!");
   }
@@ -1602,7 +1611,7 @@ public:
   virtual MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     bool IsTailCall) const {
+                     unsigned CallClass) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
   }
@@ -1611,7 +1620,7 @@ public:
   /// This may be empty, in which case no prologue will be emitted.
   virtual void insertOutlinerPrologue(MachineBasicBlock &MBB,
                                       MachineFunction &MF,
-                                      bool IsTailCall) const {
+                                      unsigned FrameClass) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::insertOutlinerPrologue!");
   }

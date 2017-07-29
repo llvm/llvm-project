@@ -5151,8 +5151,11 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
-  // Only build lookup table when we have a target that supports it.
-  if (!TTI.shouldBuildLookupTables())
+  Function *Fn = SI->getParent()->getParent();
+  // Only build lookup table when we have a target that supports it or the
+  // attribute is not set.
+  if (!TTI.shouldBuildLookupTables() ||
+      (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true"))
     return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
@@ -5333,7 +5336,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
     // If using a bitmask, use any value to fill the lookup table holes.
     Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
-    StringRef FuncName = SI->getParent()->getParent()->getName();
+    StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, MinCaseVal, ResultList, DV, DL,
                             FuncName);
 

@@ -34,7 +34,12 @@ struct PGOOptions {
              bool SamplePGOSupport = false)
       : ProfileGenFile(ProfileGenFile), ProfileUseFile(ProfileUseFile),
         SampleProfileFile(SampleProfileFile), RunProfileGen(RunProfileGen),
-        SamplePGOSupport(SamplePGOSupport || !SampleProfileFile.empty()) {}
+        SamplePGOSupport(SamplePGOSupport || !SampleProfileFile.empty()) {
+    assert((RunProfileGen ||
+            !SampleProfileFile.empty() ||
+            !ProfileUseFile.empty() ||
+            SamplePGOSupport) && "Illegal PGOOptions.");
+  }
   std::string ProfileGenFile;
   std::string ProfileUseFile;
   std::string SampleProfileFile;

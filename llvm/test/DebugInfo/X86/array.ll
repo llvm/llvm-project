@@ -31,7 +31,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 ; Function Attrs: nounwind ssp uwtable
 define void @f(i32* nocapture %p) local_unnamed_addr #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !14, metadata !15), !dbg !16
+  tail call void @llvm.dbg.value(metadata i32* %p, metadata !14, metadata !15), !dbg !16
   store i32 42, i32* %p, align 4, !dbg !17, !tbaa !18
   ret void, !dbg !22
 }
@@ -43,8 +43,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 !dbg !23 {
 entry:
   %array = alloca [4 x i32], align 16
-  tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !30, metadata !15), !dbg !36
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !31, metadata !15), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %argc, metadata !30, metadata !15), !dbg !36
+  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !31, metadata !15), !dbg !37
   %0 = bitcast [4 x i32]* %array to i8*, !dbg !38
   call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %0) #3, !dbg !38
   tail call void @llvm.dbg.declare(metadata [4 x i32]* %array, metadata !32, metadata !15), !dbg !39
@@ -66,7 +66,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone speculatable }

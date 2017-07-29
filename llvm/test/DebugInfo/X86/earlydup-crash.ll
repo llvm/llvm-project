@@ -4,7 +4,7 @@
 
 %struct.cpp_dir = type { %struct.cpp_dir*, i8*, i32, i8, i8**, i8*, i8* (i8*, %struct.cpp_dir*)*, i64, i32, i8 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 define internal i8* @framework_construct_pathname(i8* %fname, %struct.cpp_dir* %dir) nounwind ssp !dbg !2 {
 entry:
@@ -13,7 +13,7 @@ entry:
 bb:                                               ; preds = %entry
   %tmp = icmp eq i32 undef, 0
   %tmp1 = add i32 0, 11
-  call void @llvm.dbg.value(metadata i32 %tmp1, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i32 %tmp1, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   br i1 undef, label %bb18, label %bb31.preheader
 
 bb31.preheader:                                   ; preds = %bb19, %bb

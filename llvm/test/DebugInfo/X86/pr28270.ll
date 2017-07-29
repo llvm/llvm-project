@@ -21,18 +21,18 @@ entry:
   br label %for.cond, !dbg !65
 
 for.cond:                                         ; preds = %for.cond, %entry
-  call void @llvm.dbg.value(metadata %class.B* %v, i64 0, metadata !29, metadata !66), !dbg !67
+  call void @llvm.dbg.value(metadata %class.B* %v, metadata !29, metadata !66), !dbg !67
   %call = call double @_ZN1BixEj(%class.B* nonnull %v, i32 undef), !dbg !68
-  call void @llvm.dbg.value(metadata double %call, i64 0, metadata !49, metadata !69), !dbg !70
-  call void @llvm.dbg.value(metadata i32* null, i64 0, metadata !52, metadata !69), !dbg !71
-  call void @llvm.dbg.value(metadata %class.A* undef, i64 0, metadata !54, metadata !69), !dbg !72
+  call void @llvm.dbg.value(metadata double %call, metadata !49, metadata !69), !dbg !70
+  call void @llvm.dbg.value(metadata i32* null, metadata !52, metadata !69), !dbg !71
+  call void @llvm.dbg.value(metadata %class.A* undef, metadata !54, metadata !69), !dbg !72
   call void @llvm.lifetime.start(i64 1, i8* %1) #4, !dbg !41
   %tobool.i = fcmp une double %call, 0.000000e+00, !dbg !73
   %cond.i = select i1 %tobool.i, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.1, i64 0, i64 0), !dbg !73
-  call void @llvm.dbg.value(metadata %class.A* %text.i, i64 0, metadata !55, metadata !66), !dbg !74
+  call void @llvm.dbg.value(metadata %class.A* %text.i, metadata !55, metadata !66), !dbg !74
   call void @llvm.lifetime.start(i64 1, i8* %2), !dbg !59
-  call void @llvm.dbg.value(metadata %class.A* %text.i, i64 0, metadata !62, metadata !69), !dbg !59
-  call void @llvm.dbg.value(metadata i8* %cond.i, i64 0, metadata !63, metadata !69), !dbg !75
+  call void @llvm.dbg.value(metadata %class.A* %text.i, metadata !62, metadata !69), !dbg !59
+  call void @llvm.dbg.value(metadata i8* %cond.i, metadata !63, metadata !69), !dbg !75
   call void @_ZN1AC1EPKc(%class.A* nonnull %agg.tmp.i.i, i8* %cond.i), !dbg !76
   call void @_ZN1A5m_fn1ES_(%class.A* nonnull %text.i), !dbg !77
   call void @llvm.lifetime.end(i64 1, i8* %2), !dbg !79
@@ -53,7 +53,7 @@ declare void @_ZN1A5m_fn1ES_(%class.A*) local_unnamed_addr #2
 declare void @_ZN1AC1EPKc(%class.A*, i8*) unnamed_addr #2
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 attributes #0 = { noreturn uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

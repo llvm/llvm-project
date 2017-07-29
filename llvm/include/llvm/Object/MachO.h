@@ -365,8 +365,7 @@ public:
   iterator_range<load_command_iterator> load_commands() const;
 
   /// For use iterating over all exported symbols.
-  iterator_range<export_iterator> exports(Error &Err,
-                                          const MachOObjectFile *O) const;
+  iterator_range<export_iterator> exports(Error &Err) const;
 
   /// For use examining a trie not in a MachOObjectFile.
   static iterator_range<export_iterator> exports(Error &Err,

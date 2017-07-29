@@ -93,11 +93,17 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     // FIXME: Not really a system SGPR.
     PrivateSegmentWaveByteOffsetSystemSGPR = ScratchWaveOffsetReg;
+    if (F->hasFnAttribute("amdgpu-implicitarg-ptr"))
+      ImplicitArgPtr = true;
+  } else {
+    if (F->hasFnAttribute("amdgpu-implicitarg-ptr"))
+      KernargSegmentPtr = true;
   }
 
   CallingConv::ID CC = F->getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    KernargSegmentPtr = !F->arg_empty();
+    if (!F->arg_empty())
+      KernargSegmentPtr = true;
     WorkGroupIDX = true;
     WorkItemIDX = true;
   } else if (CC == CallingConv::AMDGPU_PS) {
