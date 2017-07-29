@@ -348,8 +348,8 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 ; SI: buffer_load_ubyte
 ; SI: v_min_u32_e32
 
-; GFX89: flat_load_ubyte
-; GFX89: flat_load_ubyte
+; GFX89: {{flat|global}}_load_ubyte
+; GFX89: {{flat|global}}_load_ubyte
 ; GFX89: v_min_u16_e32
 
 ; EG: MIN_UINT

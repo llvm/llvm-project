@@ -80,17 +80,17 @@ int main()
         assert(false);
     }
     catch (...) {
-	    gCopyConstructorShouldThow = false;
+        gCopyConstructorShouldThow = false;
         assert(vec==vec2);
     }
-	}
+    }
 
-	{
-	typedef std::deque<CMyClass, test_allocator<CMyClass> > C;
+    {
+    typedef std::deque<CMyClass, test_allocator<CMyClass> > C;
     C vec;
     C vec2(vec);
 
-	C::allocator_type::throw_after = 1;
+    C::allocator_type::throw_after = 1;
     try {
         vec.push_back(instance);
         assert(false);

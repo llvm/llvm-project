@@ -41,7 +41,7 @@ struct identity<void>
 template <class _Tp = void>
 struct twice
 {
-  	constexpr const _Tp operator()(const _Tp& __x) const noexcept { return 2 * __x; }
+    constexpr const _Tp operator()(const _Tp& __x) const noexcept { return 2 * __x; }
 };
 
 template <>
@@ -115,10 +115,10 @@ int main()
     test<const int*>();
     test<      int*>();
 
-//	Make sure the math is done using the correct type
+//  Make sure the math is done using the correct type
     {
     auto v = {1, 2, 3, 4, 5, 6};
     unsigned res = std::transform_reduce(v.begin(), v.end(), 1U, std::multiplies<>(), twice<>());
-    assert(res == 46080);		// 6! * 64 will not fit into a char
+    assert(res == 46080);       // 6! * 64 will not fit into a char
     }
 }

@@ -6,9 +6,9 @@
 ;
 ; GEN: Running pass: PGOInstrumentationGen
 ; USE: Running pass: PGOInstrumentationUse
-; SAMPLE_USE: Running pass: AddDiscriminators
+; SAMPLE_USE: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
 ; SAMPLE_USE: Running pass: SampleProfileLoaderPass
-; SAMPLE_GEN: Running pass: AddDiscriminators
+; SAMPLE_GEN: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
 
 define void @foo() {
   ret void

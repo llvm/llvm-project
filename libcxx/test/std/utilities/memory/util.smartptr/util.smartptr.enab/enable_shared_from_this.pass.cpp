@@ -41,7 +41,7 @@ void nullDeleter(void*) {}
 
 struct Foo : virtual public std::enable_shared_from_this<Foo>
 {
-	virtual ~Foo() {}
+    virtual ~Foo() {}
 };
 
 struct Bar : public Foo {

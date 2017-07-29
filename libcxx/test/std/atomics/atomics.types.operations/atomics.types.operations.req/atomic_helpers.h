@@ -43,14 +43,14 @@ struct TestEachIntegralType {
         TestFunctor<char16_t>()();
         TestFunctor<char32_t>()();
 #endif
-		TestFunctor<  int8_t>()();
-		TestFunctor< uint8_t>()();
-		TestFunctor< int16_t>()();
-		TestFunctor<uint16_t>()();
-		TestFunctor< int32_t>()();
-		TestFunctor<uint32_t>()();
-		TestFunctor< int64_t>()();
-		TestFunctor<uint64_t>()();
+        TestFunctor<  int8_t>()();
+        TestFunctor< uint8_t>()();
+        TestFunctor< int16_t>()();
+        TestFunctor<uint16_t>()();
+        TestFunctor< int32_t>()();
+        TestFunctor<uint32_t>()();
+        TestFunctor< int64_t>()();
+        TestFunctor<uint64_t>()();
     }
 };
 

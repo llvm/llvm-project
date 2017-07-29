@@ -586,6 +586,26 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
   return isUInt<12>(AM.BaseOffs) && AM.Scale == 0;
 }
 
+bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
+  if (Subtarget->hasFlatGlobalInsts())
+    return isInt<13>(AM.BaseOffs) && AM.Scale == 0;
+
+  if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
+      // Assume the we will use FLAT for all global memory accesses
+      // on VI.
+      // FIXME: This assumption is currently wrong.  On VI we still use
+      // MUBUF instructions for the r + i addressing mode.  As currently
+      // implemented, the MUBUF instructions only work on buffer < 4GB.
+      // It may be possible to support > 4GB buffers with MUBUF instructions,
+      // by setting the stride value in the resource descriptor which would
+      // increase the size limit to (stride * 4GB).  However, this is risky,
+      // because it has never been validated.
+    return isLegalFlatAddressingMode(AM);
+  }
+
+  return isLegalMUBUFAddressingMode(AM);
+}
+
 bool SITargetLowering::isLegalMUBUFAddressingMode(const AddrMode &AM) const {
   // MUBUF / MTBUF instructions have a 12-bit unsigned byte offset, and
   // additionally can do r + r + i with addr64. 32-bit has more addressing
@@ -628,22 +648,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
-  if (AS == AMDGPUASI.GLOBAL_ADDRESS) {
-    if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
-      // Assume the we will use FLAT for all global memory accesses
-      // on VI.
-      // FIXME: This assumption is currently wrong.  On VI we still use
-      // MUBUF instructions for the r + i addressing mode.  As currently
-      // implemented, the MUBUF instructions only work on buffer < 4GB.
-      // It may be possible to support > 4GB buffers with MUBUF instructions,
-      // by setting the stride value in the resource descriptor which would
-      // increase the size limit to (stride * 4GB).  However, this is risky,
-      // because it has never been validated.
-      return isLegalFlatAddressingMode(AM);
-    }
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS)
+    return isLegalGlobalAddressingMode(AM);
 
-    return isLegalMUBUFAddressingMode(AM);
-  } else if (AS == AMDGPUASI.CONSTANT_ADDRESS) {
+  if (AS == AMDGPUASI.CONSTANT_ADDRESS) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -655,7 +663,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // FIXME?: We also need to do this if unaligned, but we don't know the
     // alignment here.
     if (DL.getTypeStoreSize(Ty) < 4)
-      return isLegalMUBUFAddressingMode(AM);
+      return isLegalGlobalAddressingMode(AM);
 
     if (Subtarget->getGeneration() == SISubtarget::SOUTHERN_ISLANDS) {
       // SMRD instructions have an 8-bit, dword offset on SI.

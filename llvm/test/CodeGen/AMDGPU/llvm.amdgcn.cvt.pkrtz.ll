@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX89 -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}s_cvt_pkrtz_v2f16_f32:
 ; GCN-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x{{b|2c}}
@@ -36,8 +36,8 @@ define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(<2 x half> addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
 ; SI: v_cvt_pkrtz_f16_f32_e32 v{{[0-9]+}}, [[A]], [[B]]
 ; GFX89: v_cvt_pkrtz_f16_f32 v{{[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
@@ -54,7 +54,7 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32_reg_imm:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_cvt_pkrtz_f16_f32{{(_e64)*}} v{{[0-9]+}}, [[A]], 1.0
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_reg_imm(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -68,7 +68,7 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_reg_imm(<2 x half> addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32_imm_reg:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; SI: v_cvt_pkrtz_f16_f32_e32 v{{[0-9]+}}, 1.0, [[A]]
 ; GFX89: v_cvt_pkrtz_f16_f32 v{{[0-9]+}}, 1.0, [[A]]
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_imm_reg(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
@@ -83,8 +83,8 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_imm_reg(<2 x half> addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32_fneg_lo:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_cvt_pkrtz_f16_f32{{(_e64)*}} v{{[0-9]+}}, -[[A]], [[B]]
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -101,8 +101,8 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo(<2 x half> addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32_fneg_hi:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_cvt_pkrtz_f16_f32{{(_e64)*}} v{{[0-9]+}}, [[A]], -[[B]]
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_hi(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -119,8 +119,8 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_hi(<2 x half> addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_cvt_pkrtz_f16_f32{{(_e64)*}} v{{[0-9]+}}, -[[A]], -[[B]]
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -138,8 +138,8 @@ define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(<2 x half> addrspace
 }
 
 ; GCN-LABEL: {{^}}v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
-; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_cvt_pkrtz_f16_f32{{(_e64)*}} v{{[0-9]+}}, -|[[A]]|, -[[B]]
 define amdgpu_kernel void @v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi(<2 x half> addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

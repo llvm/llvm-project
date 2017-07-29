@@ -152,14 +152,14 @@ define amdgpu_kernel void @sext_in_reg_i32_to_i64(i64 addrspace(1)* %out, i64 %a
 ; SI: buffer_load_dwordx2
 ; SI: v_lshl_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
-; GFX89: flat_load_dwordx2
+; GFX89: {{flat|global}}_load_dwordx2
 ; GFX89: v_lshlrev_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
 ; GCN: v_bfe_i32 v[[LO:[0-9]+]], v[[VAL_LO]], 0, 1
 ; GCN: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GFX89: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i1_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
@@ -179,14 +179,14 @@ define amdgpu_kernel void @v_sext_in_reg_i1_to_i64(i64 addrspace(1)* %out, i64 a
 ; SI: buffer_load_dwordx2
 ; SI: v_lshl_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
-; GFX89: flat_load_dwordx2
+; GFX89: {{flat|global}}_load_dwordx2
 ; GFX89: v_lshlrev_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
 ; GCN: v_bfe_i32 v[[LO:[0-9]+]], v[[VAL_LO]], 0, 8
 ; GCN: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GFX89: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i8_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
@@ -206,14 +206,14 @@ define amdgpu_kernel void @v_sext_in_reg_i8_to_i64(i64 addrspace(1)* %out, i64 a
 ; SI: buffer_load_dwordx2
 ; SI: v_lshl_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
-; GFX89: flat_load_dwordx2
+; GFX89: {{flat|global}}_load_dwordx2
 ; GFX89: v_lshlrev_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
 ; GCN: v_bfe_i32 v[[LO:[0-9]+]], v[[VAL_LO]], 0, 16
 ; GCN: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-; GFX89: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i16_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
@@ -233,11 +233,11 @@ define amdgpu_kernel void @v_sext_in_reg_i16_to_i64(i64 addrspace(1)* %out, i64 
 ; SI: buffer_load_dwordx2
 ; SI: v_lshl_b64 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}},
 
-; GFX89: flat_load_dwordx2
+; GFX89: {{flat|global}}_load_dwordx2
 ; GFX89: v_lshlrev_b64 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}},
 
 ; GCN: v_ashrrev_i32_e32 v[[SHR:[0-9]+]], 31, v[[LO]]
-; GFX89: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[SHR]]{{\]}}
+; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[SHR]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i32_to_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
@@ -463,7 +463,7 @@ define amdgpu_kernel void @sext_in_reg_to_illegal_type(i16 addrspace(1)* nocaptu
 ; SI: buffer_load_dwordx2
 ; SI: v_lshl_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
-; GFX89: flat_load_dwordx2
+; GFX89: {{flat|global}}_load_dwordx2
 ; GFX89: v_lshlrev_b64 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 
 ; GCN-DAG: v_bfe_i32 v[[LO:[0-9]+]], v[[VAL_LO]], 0, 1
@@ -471,7 +471,7 @@ define amdgpu_kernel void @sext_in_reg_to_illegal_type(i16 addrspace(1)* nocaptu
 ; GCN-DAG: v_and_b32_e32 v[[RESULT_LO:[0-9]+]], s{{[0-9]+}}, v[[LO]]
 ; GCN-DAG: v_and_b32_e32 v[[RESULT_HI:[0-9]+]], s{{[0-9]+}}, v[[HI]]
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
-; GFX89: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
+; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i1_to_i64_move_use(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i64 %s.val) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
@@ -493,7 +493,7 @@ define amdgpu_kernel void @v_sext_in_reg_i1_to_i64_move_use(i64 addrspace(1)* %o
 ; SI: buffer_load_dwordx2
 ; SI: v_lshl_b64 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}},
 
-; GFX89: flat_load_dwordx2
+; GFX89: {{flat|global}}_load_dwordx2
 ; GFX89: v_lshlrev_b64 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}},
 
 ; GCN-DAG: v_ashrrev_i32_e32 v[[SHR:[0-9]+]], 31, v[[LO]]
@@ -501,7 +501,7 @@ define amdgpu_kernel void @v_sext_in_reg_i1_to_i64_move_use(i64 addrspace(1)* %o
 ; GCN-DAG: v_and_b32_e32 v[[RESULT_HI:[0-9]+]], s{{[0-9]+}}, v[[SHR]]
 
 ; SI: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
-; GFX89: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
+; GFX89: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 define amdgpu_kernel void @v_sext_in_reg_i32_to_i64_move_use(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i64 %s.val) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %a.gep = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
@@ -557,7 +557,7 @@ define amdgpu_kernel void @s_sext_in_reg_i2_i16(i16 addrspace(1)* %out, i32 addr
 }
 
 ; FUNC-LABEL: {{^}}v_sext_in_reg_i1_i16:
-; GCN: {{buffer|flat}}_load_ushort [[VAL:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_ushort [[VAL:v[0-9]+]]
 ; GCN: v_bfe_i32 [[BFE:v[0-9]+]], [[VAL]], 0, 1{{$}}
 
 ; GCN: ds_write_b16 v{{[0-9]+}}, [[BFE]]
@@ -574,8 +574,8 @@ define amdgpu_kernel void @v_sext_in_reg_i1_i16(i16 addrspace(3)* %out, i16 addr
 }
 
 ; FUNC-LABEL: {{^}}v_sext_in_reg_i1_i16_nonload:
-; GCN: {{buffer|flat}}_load_ushort [[VAL0:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_ushort [[VAL1:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_ushort [[VAL0:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_ushort [[VAL1:v[0-9]+]]
 
 ; SI: v_lshlrev_b32_e32 [[REG:v[0-9]+]], [[VAL1]], [[VAL0]]
 ; GFX89: v_lshlrev_b16_e32 [[REG:v[0-9]+]], [[VAL1]], [[VAL0]]

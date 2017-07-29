@@ -148,7 +148,6 @@ unsigned SIRegisterInfo::reservedStackPtrOffsetReg(
 
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
-  Reserved.set(AMDGPU::INDIRECT_BASE_ADDR);
 
   // EXEC_LO and EXEC_HI could be allocated and used as regular register, but
   // this seems likely to result in bugs, so I'm marking them as reserved.

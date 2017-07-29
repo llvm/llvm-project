@@ -26,7 +26,7 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, 
 ; GFX89-NOT: _and
 ; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{v[0-9]+}}, -|{{v[0-9]+}}|
 ; GFX89-NOT: [[MUL]]
-; GFX89: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
+; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
 define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
@@ -101,7 +101,7 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 
-; GCN: flat_store_dwordx2
+; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   %fsub = fsub <4 x half> <half -0.0, half -0.0, half -0.0, half -0.0>, %fabs

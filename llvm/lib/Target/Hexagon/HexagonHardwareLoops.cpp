@@ -1,4 +1,4 @@
-//===-- HexagonHardwareLoops.cpp - Identify and generate hardware loops ---===//
+//===- HexagonHardwareLoops.cpp - Identify and generate hardware loops ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -27,6 +27,8 @@
 
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -55,6 +57,7 @@
 #include <iterator>
 #include <map>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -123,7 +126,7 @@ namespace {
     }
 
   private:
-    typedef std::map<unsigned, MachineInstr *> LoopFeederMap;
+    using LoopFeederMap = std::map<unsigned, MachineInstr *>;
 
     /// Kinds of comparisons in the compare instructions.
     struct Comparison {
@@ -344,10 +347,12 @@ namespace {
       assert(isReg() && "Wrong CountValue accessor");
       return Contents.R.Reg;
     }
+
     unsigned getSubReg() const {
       assert(isReg() && "Wrong CountValue accessor");
       return Contents.R.Sub;
     }
+
     unsigned getImm() const {
       assert(isImm() && "Wrong CountValue accessor");
       return Contents.ImmVal;
@@ -410,17 +415,18 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
 
   // This pair represents an induction register together with an immediate
   // value that will be added to it in each loop iteration.
-  typedef std::pair<unsigned,int64_t> RegisterBump;
+  using RegisterBump = std::pair<unsigned, int64_t>;
 
   // Mapping:  R.next -> (R, bump), where R, R.next and bump are derived
   // from an induction operation
   //   R.next = R + bump
   // where bump is an immediate value.
-  typedef std::map<unsigned,RegisterBump> InductionMap;
+  using InductionMap = std::map<unsigned, RegisterBump>;
 
   InductionMap IndMap;
 
-  typedef MachineBasicBlock::instr_iterator instr_iterator;
+  using instr_iterator = MachineBasicBlock::instr_iterator;
+
   for (instr_iterator I = Header->instr_begin(), E = Header->instr_end();
        I != E && I->isPHI(); ++I) {
     MachineInstr *Phi = &*I;
@@ -970,6 +976,7 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   // Check if the instruction defines a hardware loop register.
   using namespace Hexagon;
+
   static const unsigned Regs01[] = { LC0, SA0, LC1, SA1 };
   static const unsigned Regs1[]  = { LC1, SA1 };
   auto CheckRegs = IsInnerHWLoop ? makeArrayRef(Regs01, array_lengthof(Regs01))
@@ -1017,7 +1024,7 @@ bool HexagonHardwareLoops::isDead(const MachineInstr *MI,
     if (MRI->use_nodbg_empty(Reg))
       continue;
 
-    typedef MachineRegisterInfo::use_nodbg_iterator use_nodbg_iterator;
+    using use_nodbg_iterator = MachineRegisterInfo::use_nodbg_iterator;
 
     // This instruction has users, but if the only user is the phi node for the
     // parent block, and the only use of that phi node is this instruction, then
@@ -1300,7 +1307,8 @@ bool HexagonHardwareLoops::orderBumpCompare(MachineInstr *BumpI,
   if (CmpI->getParent() != BB)
     return false;
 
-  typedef MachineBasicBlock::instr_iterator instr_iterator;
+  using instr_iterator = MachineBasicBlock::instr_iterator;
+
   // Check if things are in order to begin with.
   for (instr_iterator I(BumpI), E = BB->instr_end(); I != E; ++I)
     if (&*I == CmpI)
@@ -1493,14 +1501,13 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
     case Hexagon::A2_tfrsi:
     case Hexagon::A2_tfrpi:
     case Hexagon::CONST32:
-    case Hexagon::CONST64: {
+    case Hexagon::CONST64:
       // Call recursively to avoid an extra check whether operand(1) is
       // indeed an immediate (it could be a global address, for example),
       // plus we can handle COPY at the same time.
       if (!checkForImmediate(DI->getOperand(1), TV))
         return false;
       break;
-    }
     case Hexagon::A2_combineii:
     case Hexagon::A4_combineir:
     case Hexagon::A4_combineii:
@@ -1589,9 +1596,9 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 
   // These data structures follow the same concept as the corresponding
   // ones in findInductionRegister (where some comments are).
-  typedef std::pair<unsigned,int64_t> RegisterBump;
-  typedef std::pair<unsigned,RegisterBump> RegisterInduction;
-  typedef std::set<RegisterInduction> RegisterInductionSet;
+  using RegisterBump = std::pair<unsigned, int64_t>;
+  using RegisterInduction = std::pair<unsigned, RegisterBump>;
+  using RegisterInductionSet = std::set<RegisterInduction>;
 
   // Register candidates for induction variables, with their associated bumps.
   RegisterInductionSet IndRegs;
@@ -1599,7 +1606,8 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
   // Look for induction patterns:
   //   vreg1 = PHI ..., [ latch, vreg2 ]
   //   vreg2 = ADD vreg1, imm
-  typedef MachineBasicBlock::instr_iterator instr_iterator;
+  using instr_iterator = MachineBasicBlock::instr_iterator;
+
   for (instr_iterator I = Header->instr_begin(), E = Header->instr_end();
        I != E && I->isPHI(); ++I) {
     MachineInstr *Phi = &*I;
@@ -1834,18 +1842,19 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   DebugLoc DL;
 
 #ifndef NDEBUG
-  if ((PHFn != "") && (PHFn != MF->getName()))
+  if ((!PHFn.empty()) && (PHFn != MF->getName()))
     return nullptr;
 #endif
 
   if (!Latch || !ExitingBlock || Header->hasAddressTaken())
     return nullptr;
 
-  typedef MachineBasicBlock::instr_iterator instr_iterator;
+  using instr_iterator = MachineBasicBlock::instr_iterator;
 
   // Verify that all existing predecessors have analyzable branches
   // (or no branches at all).
-  typedef std::vector<MachineBasicBlock*> MBBVector;
+  using MBBVector = std::vector<MachineBasicBlock *>;
+
   MBBVector Preds(Header->pred_begin(), Header->pred_end());
   SmallVector<MachineOperand,2> Tmp1;
   MachineBasicBlock *TB = nullptr, *FB = nullptr;

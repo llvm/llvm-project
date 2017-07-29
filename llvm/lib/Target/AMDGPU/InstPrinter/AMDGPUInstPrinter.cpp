@@ -1065,30 +1065,6 @@ void AMDGPUInstPrinter::printWrite(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printSel(const MCInst *MI, unsigned OpNo,
-                                 raw_ostream &O) {
-  const char * chans = "XYZW";
-  int sel = MI->getOperand(OpNo).getImm();
-
-  int chan = sel & 3;
-  sel >>= 2;
-
-  if (sel >= 512) {
-    sel -= 512;
-    int cb = sel >> 12;
-    sel &= 4095;
-    O << cb << '[' << sel << ']';
-  } else if (sel >= 448) {
-    sel -= 448;
-    O << sel;
-  } else if (sel >= 0){
-    O << sel;
-  }
-
-  if (sel >= 0)
-    O << '.' << chans[chan];
-}
-
 void AMDGPUInstPrinter::printBankSwizzle(const MCInst *MI, unsigned OpNo,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {

@@ -56,8 +56,8 @@ define amdgpu_kernel void @s_pack_v2f16_imm_hi(i32 addrspace(2)* %in0) #0 {
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16:
-; GFX9: flat_load_dword [[VAL0:v[0-9]+]]
-; GFX9: flat_load_dword [[VAL1:v[0-9]+]]
+; GFX9: global_load_dword [[VAL0:v[0-9]+]]
+; GFX9: global_load_dword [[VAL1:v[0-9]+]]
 
 ; GFX9: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VAL0]]
 ; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[VAL1]], 16, [[ELT0]]
@@ -81,8 +81,8 @@ define amdgpu_kernel void @v_pack_v2f16(i32 addrspace(1)* %in0, i32 addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16_user:
-; GFX9: flat_load_dword [[VAL0:v[0-9]+]]
-; GFX9: flat_load_dword [[VAL1:v[0-9]+]]
+; GFX9: global_load_dword [[VAL0:v[0-9]+]]
+; GFX9: global_load_dword [[VAL1:v[0-9]+]]
 
 ; GFX9: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VAL0]]
 ; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[VAL1]], 16, [[ELT0]]
@@ -108,7 +108,7 @@ define amdgpu_kernel void @v_pack_v2f16_user(i32 addrspace(1)* %in0, i32 addrspa
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16_imm_lo:
-; GFX9-DAG: flat_load_dword [[VAL1:v[0-9]+]]
+; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]]
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1234{{$}}
 ; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[VAL1]], 16, [[K]]
@@ -128,7 +128,7 @@ define amdgpu_kernel void @v_pack_v2f16_imm_lo(i32 addrspace(1)* %in1) #0 {
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16_inline_imm_lo:
-; GFX9-DAG: flat_load_dword [[VAL1:v[0-9]+]]
+; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]]
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x4400{{$}}
 ; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[VAL1]], 16, [[K]]
@@ -149,7 +149,7 @@ define amdgpu_kernel void @v_pack_v2f16_inline_imm_lo(i32 addrspace(1)* %in1) #0
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16_imm_hi:
-; GFX9-DAG: flat_load_dword [[VAL0:v[0-9]+]]
+; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]]
 
 ; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x1234
 ; GFX9: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xffff, [[VAL0]]
@@ -171,7 +171,7 @@ define amdgpu_kernel void @v_pack_v2f16_imm_hi(i32 addrspace(1)* %in0) #0 {
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16_inline_f16imm_hi:
-; GFX9-DAG: flat_load_dword [[VAL:v[0-9]+]]
+; GFX9-DAG: global_load_dword [[VAL:v[0-9]+]]
 
 ; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x3c00
 ; GFX9: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xffff, [[VAL]]
@@ -193,7 +193,7 @@ define amdgpu_kernel void @v_pack_v2f16_inline_f16imm_hi(i32 addrspace(1)* %in0)
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2f16_inline_imm_hi:
-; GFX9: flat_load_dword [[VAL:v[0-9]+]]
+; GFX9: global_load_dword [[VAL:v[0-9]+]]
 
 ; GFX9: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xffff, [[VAL]]
 ; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], 64, 16, [[MASKED]]

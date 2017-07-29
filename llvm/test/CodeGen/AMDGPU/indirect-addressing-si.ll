@@ -317,7 +317,7 @@ entry:
 
 ; FIXME: Why is vector copied in between?
 
-; GCN-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword [[IDX0:v[0-9]+]]
 ; GCN-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
 ; GCN-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
@@ -396,7 +396,7 @@ bb2:
 
 ; GCN-LABEL: {{^}}insert_vgpr_offset_multiple_in_block:
 ; GCN-DAG: s_load_dwordx4 s{{\[}}[[S_ELT0:[0-9]+]]:[[S_ELT3:[0-9]+]]{{\]}}
-; GCN-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword [[IDX0:v[0-9]+]]
 ; GCN-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
 
 ; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT3:[0-9]+]], s[[S_ELT3]]

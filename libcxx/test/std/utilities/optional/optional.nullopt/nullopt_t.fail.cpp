@@ -23,5 +23,5 @@
 
 int main()
 {
-	std::nullopt_t n = {};
+    std::nullopt_t n = {};
 }
