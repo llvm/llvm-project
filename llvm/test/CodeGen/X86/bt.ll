@@ -1101,8 +1101,6 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
 ; X86-NEXT:    movl (%edx,%eax,4), %esi
 ; X86-NEXT:    movl $1, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    andb $31, %cl
-; X86-NEXT:    movzbl %cl, %ecx
 ; X86-NEXT:    btl %ecx, %esi
 ; X86-NEXT:    jae .LBB30_2
 ; X86-NEXT:  # BB#1:
@@ -1120,9 +1118,7 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
 ; X64-NEXT:    movl $1, %edi
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shll %cl, %edi
-; X64-NEXT:    andb $31, %dl
-; X64-NEXT:    movzbl %dl, %ecx
-; X64-NEXT:    btl %ecx, %r8d
+; X64-NEXT:    btl %edx, %r8d
 ; X64-NEXT:    jae .LBB30_2
 ; X64-NEXT:  # BB#1:
 ; X64-NEXT:    orl %edi, (%rsi,%rax,4)
