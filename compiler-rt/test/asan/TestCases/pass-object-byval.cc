@@ -3,6 +3,10 @@
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s --implicit-check-not \
 // RUN:     Assertion{{.*}}failed
+
+// ASan instrumentation can't insert red-zones around inalloca parameters.
+// XFAIL: win32 && asan-32-bits
+
 #include <cassert>
 
 class A {

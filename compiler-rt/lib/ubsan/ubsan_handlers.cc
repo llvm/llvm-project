@@ -437,6 +437,30 @@ void __ubsan::__ubsan_handle_load_invalid_value_abort(InvalidValueData *Data,
   Die();
 }
 
+static void handleInvalidBuiltin(InvalidBuiltinData *Data, ReportOptions Opts) {
+  SourceLocation Loc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::InvalidBuiltin;
+
+  if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  Diag(Loc, DL_Error,
+       "passing zero to %0, which is not a valid argument")
+    << ((Data->Kind == BCK_CTZPassedZero) ? "ctz()" : "clz()");
+}
+
+void __ubsan::__ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
+  GET_REPORT_OPTIONS(true);
+  handleInvalidBuiltin(Data, Opts);
+}
+void __ubsan::__ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
+  GET_REPORT_OPTIONS(true);
+  handleInvalidBuiltin(Data, Opts);
+  Die();
+}
+
 static void handleFunctionTypeMismatch(FunctionTypeMismatchData *Data,
                                        ValueHandle Function,
                                        ReportOptions Opts) {
