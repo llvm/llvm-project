@@ -51,7 +51,7 @@
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
-; CHECK-DIS-NEXT: Running pass: ModuleToFunctionPassAdaptor<llvm::AddDiscriminatorsPass>
+; CHECK-DIS-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
 ; CHECK-DIS-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-POSTLINK-O-NEXT: Running pass: PGOIndirectCallPromotion
 ; CHECK-POSTLINK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Function

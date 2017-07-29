@@ -643,8 +643,8 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 
 Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
                                                  BuiltinCheckKind Kind) {
-  assert(Kind == BCK_CLZPassedZero ||
-         Kind == BCK_CTZPassedZero && "Unsupported builtin check kind");
+  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero)
+          && "Unsupported builtin check kind");
 
   Value *ArgValue = EmitScalarExpr(E);
   if (!SanOpts.has(SanitizerKind::Builtin) || !getTarget().isCLZForZeroUndef())

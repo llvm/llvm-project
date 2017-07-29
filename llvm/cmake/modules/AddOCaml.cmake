@@ -87,6 +87,11 @@ function(add_ocaml_library name)
   foreach( include_dir ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR} )
     set(c_flags "${c_flags} -I${include_dir}")
   endforeach()
+  # include -D/-UNDEBUG to match dump function visibility
+  # regex from HandleLLVMOptions.cmake
+  string(REGEX MATCH "(^| )[/-][UD] *NDEBUG($| )" flag_matches
+         "${CMAKE_C_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_C_FLAGS}")
+  set(c_flags "${c_flags} ${flag_matches}")
 
   foreach( ocaml_file ${ARG_OCAML} )
     list(APPEND sources "${ocaml_file}.mli" "${ocaml_file}.ml")
@@ -199,7 +204,7 @@ function(add_ocaml_library name)
           PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                       GROUP_READ GROUP_EXECUTE
                       WORLD_READ WORLD_EXECUTE
-          DESTINATION "${LLVM_OCAML_INSTALL_PATH}/llvm")
+          DESTINATION "${LLVM_OCAML_INSTALL_PATH}/stublibs")
 
   foreach( install_file ${install_files} ${install_shlibs} )
     get_filename_component(filename "${install_file}" NAME)
