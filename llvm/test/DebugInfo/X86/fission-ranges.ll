@@ -91,8 +91,8 @@ entry:
 ; Function Attrs: nounwind uwtable
 define internal fastcc void @foo() #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !13, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !14, metadata !DIExpression()), !dbg !31
+  tail call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !14, metadata !DIExpression()), !dbg !31
   %c.promoted9 = load i32, i32* @c, align 4, !dbg !32, !tbaa !33
   br label %for.cond1.preheader, !dbg !31
 
@@ -114,28 +114,28 @@ for.cond7.preheader:                              ; preds = %for.inc10, %for.con
 for.body9:                                        ; preds = %for.body9, %for.cond7.preheader
   %and2 = phi i32 [ %and.lcssa5, %for.cond7.preheader ], [ %and, %for.body9 ], !dbg !40
   %e.01 = phi i32 [ 0, %for.cond7.preheader ], [ %inc, %for.body9 ]
-  tail call void @llvm.dbg.value(metadata i32* @c, i64 0, metadata !19, metadata !DIExpression()), !dbg !40
+  tail call void @llvm.dbg.value(metadata i32* @c, metadata !19, metadata !DIExpression()), !dbg !40
   %and = and i32 %and2, 1, !dbg !32
   %inc = add i32 %e.01, 1, !dbg !39
-  tail call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !18, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !18, metadata !DIExpression()), !dbg !39
   %exitcond = icmp eq i32 %inc, 30, !dbg !39
   br i1 %exitcond, label %for.inc10, label %for.body9, !dbg !39
 
 for.inc10:                                        ; preds = %for.body9
   %inc11 = add nsw i32 %b.03, 1, !dbg !38
-  tail call void @llvm.dbg.value(metadata i32 %inc11, i64 0, metadata !15, metadata !DIExpression()), !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 %inc11, metadata !15, metadata !DIExpression()), !dbg !38
   %exitcond11 = icmp eq i32 %inc11, 30, !dbg !38
   br i1 %exitcond11, label %for.inc13, label %for.cond7.preheader, !dbg !38
 
 for.inc13:                                        ; preds = %for.inc10
   %inc14 = add i32 %d.06, 1, !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %inc14, i64 0, metadata !16, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %inc14, metadata !16, metadata !DIExpression()), !dbg !37
   %exitcond12 = icmp eq i32 %inc14, 30, !dbg !37
   br i1 %exitcond12, label %for.inc16, label %for.cond4.preheader, !dbg !37
 
 for.inc16:                                        ; preds = %for.inc13
   %inc17 = add nsw i32 %a.08, 1, !dbg !31
-  tail call void @llvm.dbg.value(metadata i32 %inc17, i64 0, metadata !14, metadata !DIExpression()), !dbg !31
+  tail call void @llvm.dbg.value(metadata i32 %inc17, metadata !14, metadata !DIExpression()), !dbg !31
   %exitcond13 = icmp eq i32 %inc17, 30, !dbg !31
   br i1 %exitcond13, label %for.end18, label %for.cond1.preheader, !dbg !31
 
@@ -145,7 +145,7 @@ for.end18:                                        ; preds = %for.inc16
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

@@ -17,12 +17,12 @@ entry:
   %1 = tail call i64 @llvm.coro.size.i64(), !dbg !26
   %call = tail call i8* @malloc(i64 %1), !dbg !26
   %2 = tail call i8* @llvm.coro.begin(token %0, i8* %call) #9, !dbg !26
-  tail call void @llvm.dbg.value(metadata i8* %2, i64 0, metadata !21, metadata !12), !dbg !26
+  tail call void @llvm.dbg.value(metadata i8* %2, metadata !21, metadata !12), !dbg !26
   br label %for.cond, !dbg !27
 
 for.cond:                                         ; preds = %for.cond, %entry
-  tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !22, metadata !12), !dbg !28
-  tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !11, metadata !12) #7, !dbg !29
+  tail call void @llvm.dbg.value(metadata i32 undef, metadata !22, metadata !12), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32 undef, metadata !11, metadata !12) #7, !dbg !29
   tail call void (...) @bar() #7, !dbg !33
   %3 = tail call token @llvm.coro.save(i8* null), !dbg !34
   %4 = tail call i8 @llvm.coro.suspend(token %3, i1 false), !dbg !34
@@ -60,7 +60,7 @@ declare void @free(i8* nocapture) local_unnamed_addr #6
 declare i1 @llvm.coro.end(i8*, i1) #7
 declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #5
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

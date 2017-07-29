@@ -198,25 +198,25 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; Function Attrs: nounwind uwtable
 define void @f(i32 %p) #0 !dbg !12 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %p, i64 0, metadata !16, metadata !23), !dbg !24
+  tail call void @llvm.dbg.value(metadata i32 %p, metadata !16, metadata !23), !dbg !24
   %tobool = icmp eq i32 %p, 0, !dbg !25
   %call2 = tail call i32 @getint() #3, !dbg !26
   br i1 %tobool, label %if.else, label %if.then, !dbg !27
 
 if.then:                                          ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !17, metadata !23), !dbg !28
-  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !29, metadata !23), !dbg !35
+  tail call void @llvm.dbg.value(metadata i32 %call2, metadata !17, metadata !23), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32 %call2, metadata !29, metadata !23), !dbg !35
   %add.i = add nsw i32 %call2, 1, !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %add.i, i64 0, metadata !34, metadata !23), !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 %add.i, metadata !34, metadata !23), !dbg !38
   %0 = load volatile i32, i32* @x, align 4, !dbg !39, !tbaa !40
   %inc.i = add nsw i32 %0, 1, !dbg !39
   store volatile i32 %inc.i, i32* @x, align 4, !dbg !39, !tbaa !40
-  tail call void @llvm.dbg.value(metadata i32 %add.i, i64 0, metadata !20, metadata !23), !dbg !44
+  tail call void @llvm.dbg.value(metadata i32 %add.i, metadata !20, metadata !23), !dbg !44
   tail call void @putint(i32 %add.i) #3, !dbg !45
   br label %if.end, !dbg !46
 
 if.else:                                          ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !21, metadata !23), !dbg !47
+  tail call void @llvm.dbg.value(metadata i32 %call2, metadata !21, metadata !23), !dbg !47
   tail call void @putint(i32 %call2) #3, !dbg !48
   br label %if.end
 
@@ -229,7 +229,7 @@ declare i32 @getint() #1
 declare void @putint(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -29,7 +29,7 @@ define void @f() #0 !dbg !4 {
 entry:
   tail call void @h(i32 0) #2, !dbg !14
   %call = tail call i32 (...) @g() #2, !dbg !15
-  tail call void @llvm.dbg.value(metadata i32 %call, i64 0, metadata !8, metadata !16), !dbg !17
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !8, metadata !16), !dbg !17
   tail call void @h(i32 %call) #2, !dbg !18
   ret void, !dbg !19
 }
@@ -39,7 +39,7 @@ declare void @h(i32)
 declare i32 @g(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable "no-frame-pointer-elim"="true" }
 attributes #1 = { nounwind readnone }

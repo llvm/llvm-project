@@ -27,7 +27,7 @@ entry:
 
 declare %"class.std::basic_ostream"* @test(%"class.std::basic_ostream"*, i8*, i64)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!1803}

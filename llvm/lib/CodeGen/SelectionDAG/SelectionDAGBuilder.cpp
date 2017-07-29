@@ -1004,12 +1004,10 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     DIExpression *Expr = DI->getExpression();
     assert(Variable->isValidLocationForIntrinsic(dl) &&
            "Expected inlined-at fields to agree");
-    uint64_t Offset = DI->getOffset();
     SDDbgValue *SDV;
     if (Val.getNode()) {
-      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, Offset, false,
-                                    Val)) {
-        SDV = getDbgValue(Val, Variable, Expr, Offset, dl, DbgSDNodeOrder);
+      if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
+        SDV = getDbgValue(Val, Variable, Expr, dl, DbgSDNodeOrder);
         DAG.AddDbgValue(SDV, Val.getNode(), false);
       }
     } else
@@ -4753,12 +4751,12 @@ static unsigned getUnderlyingArgReg(const SDValue &N) {
   }
 }
 
-/// EmitFuncArgumentDbgValue - If the DbgValueInst is a dbg_value of a function
-/// argument, create the corresponding DBG_VALUE machine instruction for it now.
-/// At the end of instruction selection, they will be inserted to the entry BB.
+/// If the DbgValueInst is a dbg_value of a function argument, create the
+/// corresponding DBG_VALUE machine instruction for it now.  At the end of
+/// instruction selection, they will be inserted to the entry BB.
 bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
-    DILocation *DL, int64_t Offset, bool IsDbgDeclare, const SDValue &N) {
+    DILocation *DL, bool IsDbgDeclare, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
   if (!Arg)
     return false;
@@ -4817,12 +4815,12 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (Op->isReg())
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsIndirect,
-                Op->getReg(), Offset, Variable, Expr));
+                Op->getReg(), Variable, Expr));
   else
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE))
             .add(*Op)
-            .addImm(Offset)
+            .addImm(0)
             .addMetadata(Variable)
             .addMetadata(Expr));
 
@@ -4832,18 +4830,18 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 /// Return the appropriate SDDbgValue based on N.
 SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              DILocalVariable *Variable,
-                                             DIExpression *Expr, int64_t Offset,
+                                             DIExpression *Expr,
                                              const DebugLoc &dl,
                                              unsigned DbgSDNodeOrder) {
   if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
     // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
     // stack slot locations as such instead of as indirectly addressed
     // locations.
-    return DAG.getFrameIndexDbgValue(Variable, Expr, FISDN->getIndex(), 0, dl,
+    return DAG.getFrameIndexDbgValue(Variable, Expr, FISDN->getIndex(), dl,
                                      DbgSDNodeOrder);
   }
-  return DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false,
-                         Offset, dl, DbgSDNodeOrder);
+  return DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false, dl,
+                         DbgSDNodeOrder);
 }
 
 // VisualStudio defines setjmp as _setjmp
@@ -5112,21 +5110,21 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       if (isParameter && FINode) {
         // Byval parameter. We have a frame index at this point.
         SDV = DAG.getFrameIndexDbgValue(Variable, Expression,
-                                        FINode->getIndex(), 0, dl, SDNodeOrder);
+                                        FINode->getIndex(), dl, SDNodeOrder);
       } else if (isa<Argument>(Address)) {
         // Address is an argument, so try to emit its dbg value using
         // virtual register info from the FuncInfo.ValueMap.
-        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true, N);
+        EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true, N);
         return nullptr;
       } else {
         SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
-                              true, 0, dl, SDNodeOrder);
+                              true, dl, SDNodeOrder);
       }
       DAG.AddDbgValue(SDV, N.getNode(), isParameter);
     } else {
       // If Address is an argument then try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
-      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true,
+      if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true,
                                     N)) {
         DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       }
@@ -5139,15 +5137,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
 
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
-    uint64_t Offset = DI.getOffset();
     const Value *V = DI.getValue();
     if (!V)
       return nullptr;
 
     SDDbgValue *SDV;
     if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V)) {
-      SDV = DAG.getConstantDbgValue(Variable, Expression, V, Offset, dl,
-                                    SDNodeOrder);
+      SDV = DAG.getConstantDbgValue(Variable, Expression, V, dl, SDNodeOrder);
       DAG.AddDbgValue(SDV, nullptr, false);
       return nullptr;
     }
@@ -5158,10 +5154,9 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
       N = UnusedArgNodeMap[V];
     if (N.getNode()) {
-      if (EmitFuncArgumentDbgValue(V, Variable, Expression, dl, Offset, false,
-                                   N))
+      if (EmitFuncArgumentDbgValue(V, Variable, Expression, dl, false, N))
         return nullptr;
-      SDV = getDbgValue(N, Variable, Expression, Offset, dl, SDNodeOrder);
+      SDV = getDbgValue(N, Variable, Expression, dl, SDNodeOrder);
       DAG.AddDbgValue(SDV, N.getNode(), false);
       return nullptr;
     }

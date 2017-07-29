@@ -20,8 +20,8 @@ define amdgpu_kernel void @s_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 }
 
 ; GCN-LABEL: {{^}}v_lshr_v2i16:
-; GCN: {{buffer|flat}}_load_dword [[LHS:v[0-9]+]]
-; GCN: {{buffer|flat}}_load_dword [[RHS:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[LHS:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[RHS:v[0-9]+]]
 ; GFX9: v_pk_lshrrev_b16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
 
 ; VI: v_lshrrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -52,7 +52,7 @@ define amdgpu_kernel void @v_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 
 ; GCN-LABEL: {{^}}lshr_v_s_v2i16:
 ; GFX9: s_load_dword [[RHS:s[0-9]+]]
-; GFX9: {{buffer|flat}}_load_dword [[LHS:v[0-9]+]]
+; GFX9: {{buffer|flat|global}}_load_dword [[LHS:v[0-9]+]]
 ; GFX9: v_pk_lshrrev_b16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
 define amdgpu_kernel void @lshr_v_s_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, <2 x i16> %sgpr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -67,7 +67,7 @@ define amdgpu_kernel void @lshr_v_s_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 
 ; GCN-LABEL: {{^}}lshr_s_v_v2i16:
 ; GFX9: s_load_dword [[LHS:s[0-9]+]]
-; GFX9: {{buffer|flat}}_load_dword [[RHS:v[0-9]+]]
+; GFX9: {{buffer|flat|global}}_load_dword [[RHS:v[0-9]+]]
 ; GFX9: v_pk_lshrrev_b16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
 define amdgpu_kernel void @lshr_s_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, <2 x i16> %sgpr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -81,7 +81,7 @@ define amdgpu_kernel void @lshr_s_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 }
 
 ; GCN-LABEL: {{^}}lshr_imm_v_v2i16:
-; GCN: {{buffer|flat}}_load_dword [[RHS:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[RHS:v[0-9]+]]
 ; GFX9: v_pk_lshrrev_b16 [[RESULT:v[0-9]+]], [[RHS]], 8
 define amdgpu_kernel void @lshr_imm_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -95,7 +95,7 @@ define amdgpu_kernel void @lshr_imm_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 }
 
 ; GCN-LABEL: {{^}}lshr_v_imm_v2i16:
-; GCN: {{buffer|flat}}_load_dword [[LHS:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[LHS:v[0-9]+]]
 ; GFX9: v_pk_lshrrev_b16 [[RESULT:v[0-9]+]], 8, [[LHS]]
 define amdgpu_kernel void @lshr_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -109,11 +109,11 @@ define amdgpu_kernel void @lshr_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 }
 
 ; GCN-LABEL: {{^}}v_lshr_v4i16:
-; GCN: {{buffer|flat}}_load_dwordx2
-; GCN: {{buffer|flat}}_load_dwordx2
+; GCN: {{buffer|flat|global}}_load_dwordx2
+; GCN: {{buffer|flat|global}}_load_dwordx2
 ; GFX9: v_pk_lshrrev_b16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_pk_lshrrev_b16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN: {{buffer|flat}}_store_dwordx2
+; GCN: {{buffer|flat|global}}_store_dwordx2
 define amdgpu_kernel void @v_lshr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -128,10 +128,10 @@ define amdgpu_kernel void @v_lshr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> 
 }
 
 ; GCN-LABEL: {{^}}lshr_v_imm_v4i16:
-; GCN: {{buffer|flat}}_load_dwordx2
+; GCN: {{buffer|flat|global}}_load_dwordx2
 ; GFX9: v_pk_lshrrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; GFX9: v_pk_lshrrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
-; GCN: {{buffer|flat}}_store_dwordx2
+; GCN: {{buffer|flat|global}}_store_dwordx2
 define amdgpu_kernel void @lshr_v_imm_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64

@@ -68,6 +68,21 @@ public:
   class ValueTable {
     DenseMap<Value *, uint32_t> valueNumbering;
     DenseMap<Expression, uint32_t> expressionNumbering;
+
+    // Expressions is the vector of Expression. ExprIdx is the mapping from
+    // value number to the index of Expression in Expressions. We use it
+    // instead of a DenseMap because filling such mapping is faster than
+    // filling a DenseMap and the compile time is a little better.
+    uint32_t nextExprNumber;
+    std::vector<Expression> Expressions;
+    std::vector<uint32_t> ExprIdx;
+    // Value number to PHINode mapping. Used for phi-translate in scalarpre.
+    DenseMap<uint32_t, PHINode *> NumberingPhi;
+    // Cache for phi-translate in scalarpre.
+    typedef DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>
+        PhiTranslateMap;
+    PhiTranslateMap PhiTranslateTable;
+
     AliasAnalysis *AA;
     MemoryDependenceResults *MD;
     DominatorTree *DT;
@@ -79,6 +94,10 @@ public:
                              Value *LHS, Value *RHS);
     Expression createExtractvalueExpr(ExtractValueInst *EI);
     uint32_t lookupOrAddCall(CallInst *C);
+    uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
+                              uint32_t Num, GVN &Gvn);
+    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &exp);
+    bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVN &Gvn);
 
   public:
     ValueTable();
@@ -87,9 +106,11 @@ public:
     ~ValueTable();
 
     uint32_t lookupOrAdd(Value *V);
-    uint32_t lookup(Value *V) const;
+    uint32_t lookup(Value *V, bool Verify = true) const;
     uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                             Value *LHS, Value *RHS);
+    uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
+                          uint32_t Num, GVN &Gvn);
     bool exists(Value *V) const;
     void add(Value *V, uint32_t num);
     void clear();
@@ -130,6 +151,10 @@ private:
   // to the remaining instructions in the block.
   SmallMapVector<llvm::Value *, llvm::Constant *, 4> ReplaceWithConstMap;
   SmallVector<Instruction *, 8> InstrsToErase;
+
+  // Map the block to reversed postorder traversal number. It is used to
+  // find back edge easily.
+  DenseMap<const BasicBlock *, uint32_t> BlockRPONumber;
 
   typedef SmallVector<NonLocalDepResult, 64> LoadDepVect;
   typedef SmallVector<gvn::AvailableValueInBlock, 64> AvailValInBlkVect;
@@ -214,7 +239,7 @@ private:
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);
   bool performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
-                                 unsigned int ValNo);
+                                 BasicBlock *Curr, unsigned int ValNo);
   Value *findLeader(const BasicBlock *BB, uint32_t num);
   void cleanupGlobalSets();
   void verifyRemoved(const Instruction *I) const;
@@ -226,6 +251,7 @@ private:
   bool processFoldableCondBr(BranchInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
+  void assignBlockRPONumber(Function &F);
 };
 
 /// Create a legacy GVN pass. This also allows parameterizing whether or not

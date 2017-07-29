@@ -19,7 +19,7 @@ entry:
   %size = alloca i32, align 4
   %0 = bitcast i32* %size to i8*, !dbg !15
   %call = call i8* @_Z3fooPv(i8* %0) #3, !dbg !15
-  call void @llvm.dbg.value(metadata i32* %size, i64 0, metadata !10, metadata !16), !dbg !17
+  call void @llvm.dbg.value(metadata i32* %size, metadata !10, metadata !16), !dbg !17
   ; CHECK: .debug_info contents:
   ; CHECK: DW_TAG_variable
   ; CHECK-NEXT: DW_AT_location
@@ -34,7 +34,7 @@ entry:
 declare i8* @_Z3fooPv(i8*) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind optsize }
 attributes #1 = { optsize }

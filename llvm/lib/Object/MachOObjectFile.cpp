@@ -2908,9 +2908,8 @@ MachOObjectFile::exports(Error &E, ArrayRef<uint8_t> Trie,
   return make_range(export_iterator(Start), export_iterator(Finish));
 }
 
-iterator_range<export_iterator> MachOObjectFile::exports(Error &Err,
-                                  const MachOObjectFile *O) const {
-  return exports(Err, getDyldInfoExportsTrie(), O);
+iterator_range<export_iterator> MachOObjectFile::exports(Error &Err) const {
+  return exports(Err, getDyldInfoExportsTrie(), this);
 }
 
 MachORebaseEntry::MachORebaseEntry(Error *E, const MachOObjectFile *O,

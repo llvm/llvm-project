@@ -140,6 +140,10 @@ private:
 
   bool SelectFlatAtomic(SDValue Addr, SDValue &VAddr,
                         SDValue &Offset, SDValue &SLC) const;
+  bool SelectFlatAtomicSigned(SDValue Addr, SDValue &VAddr,
+                              SDValue &Offset, SDValue &SLC) const;
+
+  template <bool IsSigned>
   bool SelectFlatOffset(SDValue Addr, SDValue &VAddr,
                         SDValue &Offset, SDValue &SLC) const;
 
@@ -1324,6 +1328,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
   return true;
 }
 
+template <bool IsSigned>
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDValue Addr,
                                           SDValue &VAddr,
                                           SDValue &Offset,
@@ -1334,8 +1339,10 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDValue Addr,
       CurDAG->isBaseWithConstantOffset(Addr)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
-    uint64_t COffsetVal = cast<ConstantSDNode>(N1)->getZExtValue();
-    if (isUInt<12>(COffsetVal)) {
+    int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
+
+    if ((IsSigned && isInt<13>(COffsetVal)) ||
+        (!IsSigned && isUInt<12>(COffsetVal))) {
       Addr = N0;
       OffsetVal = COffsetVal;
     }
@@ -1352,7 +1359,14 @@ bool AMDGPUDAGToDAGISel::SelectFlatAtomic(SDValue Addr,
                                           SDValue &VAddr,
                                           SDValue &Offset,
                                           SDValue &SLC) const {
-  return SelectFlatOffset(Addr, VAddr, Offset, SLC);
+  return SelectFlatOffset<false>(Addr, VAddr, Offset, SLC);
+}
+
+bool AMDGPUDAGToDAGISel::SelectFlatAtomicSigned(SDValue Addr,
+                                          SDValue &VAddr,
+                                          SDValue &Offset,
+                                          SDValue &SLC) const {
+  return SelectFlatOffset<true>(Addr, VAddr, Offset, SLC);
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,

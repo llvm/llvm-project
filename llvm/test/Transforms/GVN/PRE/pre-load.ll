@@ -72,7 +72,7 @@ block4:
   %PRE = load i32, i32* %P3
   ret i32 %PRE
 ; CHECK: block4:
-; CHECK-NEXT: phi i32 [
+; CHECK: phi i32 [
 ; CHECK-NOT: load
 ; CHECK: ret i32
 }
@@ -104,7 +104,7 @@ block4:
   %PRE = load i32, i32* %P3
   ret i32 %PRE
 ; CHECK: block4:
-; CHECK-NEXT: phi i32 [
+; CHECK: phi i32 [
 ; CHECK-NOT: load
 ; CHECK: ret i32
 }
@@ -263,7 +263,7 @@ block4:
   %PRE = load i32, i32* %P3
   ret i32 %PRE
 ; CHECK: block4:
-; CHECK-NEXT: phi i32 [
+; CHECK: phi i32 [
 ; CHECK-NOT: load
 ; CHECK: ret i32
 }

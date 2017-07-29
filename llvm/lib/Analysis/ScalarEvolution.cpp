@@ -7337,8 +7337,8 @@ ScalarEvolution::getConstantEvolutionLoopExitValue(PHINode *PN,
   Value *BEValue = PN->getIncomingValueForBlock(Latch);
 
   // Execute the loop symbolically to determine the exit value.
-  if (BEs.getActiveBits() >= 32)
-    return RetVal = nullptr; // More than 2^32-1 iterations?? Not doing it!
+  assert(BEs.getActiveBits() < CHAR_BIT * sizeof(unsigned) &&
+         "BEs is <= MaxBruteForceIterations which is an 'unsigned'!");
 
   unsigned NumIterations = BEs.getZExtValue(); // must be in range
   unsigned IterationNum = 0;

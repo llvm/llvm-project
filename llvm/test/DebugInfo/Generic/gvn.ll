@@ -27,7 +27,7 @@ entry:
   ; CHECK: %call = tail call i32 @f2(i32 1) #{{[0-9]}}, !dbg
   %call = tail call i32 @f2(i32 1) #0, !dbg !15
   store i32 %call, i32* @a, align 4, !dbg !15, !tbaa !24
-  tail call void @llvm.dbg.value(metadata i32* @a, i64 0, metadata !22, metadata !28) #0, !dbg !29
+  tail call void @llvm.dbg.value(metadata i32* @a, metadata !22, metadata !28) #0, !dbg !29
   %0 = load i32, i32* @b, align 4, !dbg !29, !tbaa !24
   %tobool.i = icmp eq i32 %0, 0, !dbg !29
   br i1 %tobool.i, label %if.end.i, label %land.lhs.true.i.thread, !dbg !30
@@ -58,7 +58,7 @@ declare i32 @f2(i32)
 declare i32 @f4(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

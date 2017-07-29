@@ -4432,27 +4432,34 @@ AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-size_t AArch64InstrInfo::getOutliningCallOverhead(
+// Constants defining how certain sequences should be outlined.
+const unsigned MachineOutlinerDefaultFn = 0;
+const unsigned MachineOutlinerTailCallFn = 1;
+
+std::pair<size_t, unsigned> AArch64InstrInfo::getOutliningCallOverhead(
     MachineBasicBlock::iterator &StartIt,
     MachineBasicBlock::iterator &EndIt) const {
   // Is this a tail-call?
-  if (EndIt->isTerminator())
-    return 1; // Yes, so we don't need to save/restore LR.
+  if (EndIt->isTerminator()) {
+    // Yes, so we only have to emit a call. Return a cost of 1 + signify that
+    // this candidate should be tail-called.
+    return std::make_pair(1, MachineOutlinerTailCallFn);
+  }
 
   // No, so save + restore LR.
-  return 3;
+  return std::make_pair(3, MachineOutlinerDefaultFn);
 }
 
-size_t AArch64InstrInfo::getOutliningFrameOverhead(
-    MachineBasicBlock::iterator &StartIt,
-    MachineBasicBlock::iterator &EndIt) const {
+std::pair<size_t, unsigned> AArch64InstrInfo::getOutliningFrameOverhead(
+    std::vector<std::pair<MachineBasicBlock::iterator,
+                          MachineBasicBlock::iterator>> &CandidateClass) const {
 
-  // Is this a tail-call?
-  if (EndIt->isTerminator())
-    return 0; // Yes, so we already have a return.
+  // Is the last instruction in this class a terminator?
+  if (CandidateClass[0].second->isTerminator())
+    return std::make_pair(0, MachineOutlinerTailCallFn);
 
   // No, so we have to add a return to the end.
-  return 1;
+  return std::make_pair(1, MachineOutlinerDefaultFn);
 }
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
@@ -4568,10 +4575,10 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 
 void AArch64InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
                                               MachineFunction &MF,
-                                              bool IsTailCall) const {
+                                              unsigned FrameClass) const {
 
   // If this is a tail call outlined function, then there's already a return.
-  if (IsTailCall)
+  if (FrameClass == MachineOutlinerTailCallFn)
     return;
 
   // It's not a tail call, so we have to insert the return ourselves.
@@ -4585,18 +4592,17 @@ void AArch64InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::insertOutlinerPrologue(MachineBasicBlock &MBB,
                                               MachineFunction &MF,
-                                              bool IsTailCall) const {}
+                                              unsigned FrameClass) const {}
 
 MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
-    MachineFunction &MF, bool IsTailCall) const {
+    MachineFunction &MF, unsigned CallClass) const {
 
   // Are we tail calling?
-  if (IsTailCall) {
+  if (CallClass == MachineOutlinerTailCallFn) {
     // If yes, then we can just branch to the label.
-    It = MBB.insert(It,
-                    BuildMI(MF, DebugLoc(), get(AArch64::B))
-                        .addGlobalAddress(M.getNamedValue(MF.getName())));
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::B))
+                            .addGlobalAddress(M.getNamedValue(MF.getName())));
     return It;
   }
 
@@ -4611,9 +4617,8 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   It++;
 
   // Insert the call.
-  It = MBB.insert(It,
-                  BuildMI(MF, DebugLoc(), get(AArch64::BL))
-                      .addGlobalAddress(M.getNamedValue(MF.getName())));
+  It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
+                          .addGlobalAddress(M.getNamedValue(MF.getName())));
 
   It++;
 

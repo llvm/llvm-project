@@ -94,12 +94,12 @@ entry:
   tail call void @llvm.dbg.declare(metadata [7 x i8]* %agg.tmp.sroa.4, metadata !56, metadata !77), !dbg !75
   tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !72, metadata !37), !dbg !78
   %0 = load i64, i64* @a, align 8, !dbg !79, !tbaa !40
-  tail call void @llvm.dbg.value(metadata %struct.B* %d, i64 0, metadata !73, metadata !37), !dbg !80
+  tail call void @llvm.dbg.value(metadata %struct.B* %d, metadata !73, metadata !37), !dbg !80
   %call = call %struct.B* @_ZN1BC1El(%struct.B* %d, i64 %0), !dbg !80
-  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !72, metadata !81), !dbg !78
-  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !72, metadata !82), !dbg !78
-  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !56, metadata !81), !dbg !75
-  call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !56, metadata !82), !dbg !75
+  call void @llvm.dbg.value(metadata i8 1, metadata !72, metadata !81), !dbg !78
+  call void @llvm.dbg.value(metadata i8 1, metadata !72, metadata !82), !dbg !78
+  call void @llvm.dbg.value(metadata i8 1, metadata !56, metadata !81), !dbg !75
+  call void @llvm.dbg.value(metadata i8 1, metadata !56, metadata !82), !dbg !75
   call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !56, metadata !37), !dbg !75
   %1 = getelementptr inbounds %struct.A, %struct.A* %agg.tmp.i.i, i64 0, i32 0, !dbg !83
   call void @llvm.lifetime.start(i64 24, i8* %1), !dbg !83
@@ -123,14 +123,14 @@ call.i.i.noexc:                                   ; preds = %entry
 
 invoke.cont:                                      ; preds = %call.i.i.noexc
   call void @llvm.lifetime.end(i64 24, i8* %1), !dbg !91
-  call void @llvm.dbg.value(metadata %struct.B* %d, i64 0, metadata !73, metadata !37), !dbg !80
+  call void @llvm.dbg.value(metadata %struct.B* %d, metadata !73, metadata !37), !dbg !80
   %call1 = call %struct.B* @_ZN1BD1Ev(%struct.B* %d) #3, !dbg !92
   ret void, !dbg !92
 
 lpad:                                             ; preds = %call.i.i.noexc, %entry
   %3 = landingpad { i8*, i32 }
           cleanup, !dbg !92
-  call void @llvm.dbg.value(metadata %struct.B* %d, i64 0, metadata !73, metadata !37), !dbg !80
+  call void @llvm.dbg.value(metadata %struct.B* %d, metadata !73, metadata !37), !dbg !80
   %call2 = call %struct.B* @_ZN1BD1Ev(%struct.B* %d) #3, !dbg !92
   resume { i8*, i32 } %3, !dbg !92
 }
@@ -143,7 +143,7 @@ declare i32 @__gxx_personality_v0(...)
 declare %struct.B* @_ZN1BD1Ev(%struct.B*) #3
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start(i64, i8* nocapture) #2

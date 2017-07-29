@@ -331,6 +331,9 @@ protected:
   /// If true, VFP/NEON VMLA/VMLS have special RAW hazards.
   bool HasVMLxHazards = false;
 
+  // If true, read thread pointer from coprocessor register.
+  bool ReadTPHard = false;
+
   /// If true, VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
   bool UseNEONForFPMovs = false;
 
@@ -657,6 +660,7 @@ public:
   bool isMClass() const { return ARMProcClass == MClass; }
   bool isRClass() const { return ARMProcClass == RClass; }
   bool isAClass() const { return ARMProcClass == AClass; }
+  bool isReadTPHard() const { return ReadTPHard; }
 
   bool isR9Reserved() const {
     return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;

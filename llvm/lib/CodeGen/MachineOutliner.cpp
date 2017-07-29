@@ -87,6 +87,9 @@ struct Candidate {
   /// \p OutlinedFunctions.
   size_t FunctionIdx;
 
+  /// Target-defined unsigned defining how to emit a call for this candidate.
+  unsigned CallClass = 0;
+
   /// \brief The number of instructions that would be saved by outlining every
   /// candidate of this type.
   ///
@@ -96,8 +99,9 @@ struct Candidate {
   /// for some given candidate.
   unsigned Benefit = 0;
 
-  Candidate(size_t StartIdx, size_t Len, size_t FunctionIdx)
-      : StartIdx(StartIdx), Len(Len), FunctionIdx(FunctionIdx) {}
+  Candidate(size_t StartIdx, size_t Len, size_t FunctionIdx, unsigned CallClass)
+      : StartIdx(StartIdx), Len(Len), FunctionIdx(FunctionIdx),
+        CallClass(CallClass) {}
 
   Candidate() {}
 
@@ -127,15 +131,14 @@ struct OutlinedFunction {
   /// The number of instructions this function would save.
   unsigned Benefit = 0;
 
-  /// \brief Set to true if candidates for this outlined function should be
-  /// replaced with tail calls to this OutlinedFunction.
-  bool IsTailCall = false;
+  /// Target-defined unsigned defining how to emit the frame for this function.
+  unsigned FrameClass = 0;
 
   OutlinedFunction(size_t Name, size_t OccurrenceCount,
                    const std::vector<unsigned> &Sequence, unsigned Benefit,
-                   bool IsTailCall)
+                   unsigned FrameClass)
       : Name(Name), OccurrenceCount(OccurrenceCount), Sequence(Sequence),
-        Benefit(Benefit), IsTailCall(IsTailCall) {}
+        Benefit(Benefit), FrameClass(FrameClass) {}
 };
 
 /// Represents an undefined index in the suffix tree.
@@ -842,8 +845,17 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     // Figure out if this candidate is beneficial.
     size_t StringLen = Leaf->ConcatLen - Leaf->size();
     size_t CallOverhead = 0;
-    size_t FrameOverhead = 0;
     size_t SequenceOverhead = StringLen;
+
+    // If this is a beneficial class of candidate, then every one is stored in
+    // this vector.
+    std::vector<Candidate> CandidatesForRepeatedSeq;
+
+    // Used for getOutliningFrameOverhead.
+    // FIXME: CandidatesForRepeatedSeq and this should be combined.
+    std::vector<
+        std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
+        CandidateClass;
 
     // Figure out the call overhead for each instance of the sequence.
     for (auto &ChildPair : Parent.Children) {
@@ -854,16 +866,24 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
         MachineBasicBlock::iterator StartIt = Mapper.InstrList[M->SuffixIdx];
         MachineBasicBlock::iterator EndIt =
             Mapper.InstrList[M->SuffixIdx + StringLen - 1];
-        CallOverhead += TII.getOutliningCallOverhead(StartIt, EndIt);
+
+        // Get the overhead for calling a function for this sequence and any
+        // target-specified data for how to construct the call.
+        std::pair<size_t, unsigned> CallOverheadPair =
+            TII.getOutliningCallOverhead(StartIt, EndIt);
+        CallOverhead += CallOverheadPair.first;
+        CandidatesForRepeatedSeq.emplace_back(M->SuffixIdx, StringLen, FnIdx,
+                                              CallOverheadPair.second);
+        CandidateClass.emplace_back(std::make_pair(StartIt, EndIt));
+
+        // Never visit this leaf again.
+        M->IsInTree = false;
       }
     }
 
-    // Figure out how many instructions it'll take to construct an outlined
-    // function frame for this sequence.
-    MachineBasicBlock::iterator StartIt = Mapper.InstrList[Leaf->SuffixIdx];
-    MachineBasicBlock::iterator EndIt =
-        Mapper.InstrList[Leaf->SuffixIdx + StringLen - 1];
-    FrameOverhead = TII.getOutliningFrameOverhead(StartIt, EndIt);
+    std::pair<size_t, unsigned> FrameOverheadPair =
+        TII.getOutliningFrameOverhead(CandidateClass);
+    size_t FrameOverhead = FrameOverheadPair.first;
 
     size_t OutliningCost = CallOverhead + FrameOverhead + SequenceOverhead;
     size_t NotOutliningCost = SequenceOverhead * Parent.OccurrenceCount;
@@ -876,17 +896,11 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     if (StringLen > MaxLen)
       MaxLen = StringLen;
 
-    unsigned OccurrenceCount = 0;
-    for (auto &ChildPair : Parent.Children) {
-      SuffixTreeNode *M = ChildPair.second;
-
-      // Is it a leaf? If so, we have an occurrence of this candidate.
-      if (M && M->IsInTree && M->isLeaf()) {
-        OccurrenceCount++;
-        CandidateList.emplace_back(M->SuffixIdx, StringLen, FnIdx);
-        CandidateList.back().Benefit = Benefit;
-        M->IsInTree = false;
-      }
+    // At this point, the candidate class is seen as beneficial. Set their
+    // benefit values and save them in the candidate list.
+    for (Candidate &C : CandidatesForRepeatedSeq) {
+      C.Benefit = Benefit;
+      CandidateList.push_back(C);
     }
 
     // Save the function for the new candidate sequence.
@@ -894,8 +908,9 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
       CandidateSequence.push_back(ST.Str[i]);
 
-    FunctionList.emplace_back(FnIdx, OccurrenceCount, CandidateSequence,
-                              Benefit, false);
+    FunctionList.emplace_back(FnIdx, CandidatesForRepeatedSeq.size(),
+                              CandidateSequence, Benefit,
+                              FrameOverheadPair.second);
 
     // Move to the next function.
     FnIdx++;
@@ -996,7 +1011,8 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         MachineBasicBlock::iterator StartIt = Mapper.InstrList[C2.StartIdx];
         MachineBasicBlock::iterator EndIt =
             Mapper.InstrList[C2.StartIdx + C2.Len - 1];
-        F2.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt);
+
+        F2.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt).first;
         // Add back one instance of the sequence.
 
         if (F2.Sequence.size() > F2.Benefit)
@@ -1022,7 +1038,8 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         MachineBasicBlock::iterator StartIt = Mapper.InstrList[C1.StartIdx];
         MachineBasicBlock::iterator EndIt =
             Mapper.InstrList[C1.StartIdx + C1.Len - 1];
-        F2.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt);
+
+        F1.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt).first;
 
         // Add back one instance of the sequence.
         if (F1.Sequence.size() > F1.Benefit)
@@ -1055,10 +1072,6 @@ MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
 
   MaxCandidateLen =
       findCandidates(ST, TII, Mapper, CandidateList, FunctionList);
-
-  for (auto &OF : FunctionList)
-    OF.IsTailCall =
-        Mapper.IntegerInstructionMap[OF.Sequence.back()]->isTerminator();
 
   // Sort the candidates in decending order. This will simplify the outlining
   // process when we have to remove the candidates from the mapping by
@@ -1102,7 +1115,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
-  TII.insertOutlinerPrologue(MBB, MF, OF.IsTailCall);
+  TII.insertOutlinerPrologue(MBB, MF, OF.FrameClass);
 
   // Copy over the instructions for the function using the integer mappings in
   // its sequence.
@@ -1117,7 +1130,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.insertOutlinerEpilogue(MBB, MF, OF.IsTailCall);
+  TII.insertOutlinerEpilogue(MBB, MF, OF.FrameClass);
 
   return &MF;
 }
@@ -1166,7 +1179,7 @@ bool MachineOutliner::outline(Module &M,
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
     // Insert a call to the new function and erase the old sequence.
-    TII.insertOutlinedCall(M, *MBB, StartIt, *MF, OF.IsTailCall);
+    TII.insertOutlinedCall(M, *MBB, StartIt, *MF, C.CallClass);
     StartIt = Mapper.InstrList[C.StartIdx];
     MBB->erase(StartIt, EndIt);
 

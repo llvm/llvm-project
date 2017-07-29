@@ -10,13 +10,13 @@
 
 define i16 @f(i16 signext %zzz) nounwind !dbg !1 {
 entry:
-  call void @llvm.dbg.value(metadata i16 %zzz, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i16 %zzz, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   %conv = sext i16 %zzz to i32, !dbg !7
   %conv1 = trunc i32 %conv to i16
   ret i16 %conv1
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!11}

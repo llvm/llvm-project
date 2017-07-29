@@ -16,7 +16,7 @@ define amdgpu_kernel void @test_no_fold_canonicalize_loaded_value_f32(float addr
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_fmul_value_f32:
 ; GCN: v_mul_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fmul_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -30,7 +30,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fmul_value_f32(float addrspace
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_sub_value_f32:
 ; GCN: v_sub_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_sub_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -44,7 +44,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sub_value_f32(float addrspace(
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_add_value_f32:
 ; GCN: v_add_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_add_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -58,7 +58,7 @@ define amdgpu_kernel void @test_fold_canonicalize_add_value_f32(float addrspace(
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_sqrt_value_f32:
 ; GCN: v_sqrt_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_sqrt_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -72,7 +72,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sqrt_value_f32(float addrspace
 
 ; GCN-LABEL: test_fold_canonicalize_fceil_value_f32:
 ; GCN: v_ceil_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fceil_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -86,7 +86,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fceil_value_f32(float addrspac
 
 ; GCN-LABEL: test_fold_canonicalize_floor_value_f32:
 ; GCN: v_floor_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_floor_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -100,7 +100,7 @@ define amdgpu_kernel void @test_fold_canonicalize_floor_value_f32(float addrspac
 
 ; GCN-LABEL: test_fold_canonicalize_fma_value_f32:
 ; GCN: v_fma_f32 [[V:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fma_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -115,7 +115,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fma_value_f32(float addrspace(
 ; GCN-LABEL: test_fold_canonicalize_fmuladd_value_f32:
 ; GCN-FLUSH: v_mac_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9-DENORM: v_fma_f32 [[V:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fmuladd_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -128,9 +128,9 @@ define amdgpu_kernel void @test_fold_canonicalize_fmuladd_value_f32(float addrsp
 }
 
 ; GCN-LABEL: test_fold_canonicalize_canonicalize_value_f32:
-; GCN: flat_load_dword [[LOAD:v[0-9]+]],
+; GCN: {{flat|global}}_load_dword [[LOAD:v[0-9]+]],
 ; GCN: v_mul_f32_e32 [[V:v[0-9]+]], 1.0, [[LOAD]]
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_canonicalize_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -144,7 +144,7 @@ define amdgpu_kernel void @test_fold_canonicalize_canonicalize_value_f32(float a
 
 ; GCN-LABEL: test_fold_canonicalize_fpextend_value_f64_f32:
 ; GCN: v_cvt_f64_f32_e32 [[V:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}
-; GCN: flat_store_dwordx2 v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dwordx2 v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f64_f32(float addrspace(1)* %arg, double addrspace(1)* %out) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -159,7 +159,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f64_f32(float a
 
 ; GCN-LABEL: test_fold_canonicalize_fpextend_value_f32_f16:
 ; GCN: v_cvt_f32_f16_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f32_f16(half addrspace(1)* %arg, float addrspace(1)* %out) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -174,7 +174,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpextend_value_f32_f16(half ad
 
 ; GCN-LABEL: test_fold_canonicalize_fpround_value_f32_f64:
 ; GCN: v_cvt_f32_f64_e32 [[V:v[0-9]+]], v[{{[0-9:]+}}]
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f32_f64(double addrspace(1)* %arg, float addrspace(1)* %out) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -189,7 +189,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f32_f64(double a
 
 ; GCN-LABEL: test_fold_canonicalize_fpround_value_f16_f32:
 ; GCN: v_cvt_f16_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_short v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32(float addrspace(1)* %arg, half addrspace(1)* %out) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -209,7 +209,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32(float ad
 ; GFX9: v_cvt_f16_f32_e32 [[V1:v[0-9]+]], v{{[0-9]+}}
 ; GFX9: v_and_b32_e32 [[V0_16:v[0-9]+]], 0xffff, [[V0]]
 ; GFX9: v_lshl_or_b32 [[V:v[0-9]+]], [[V1]], 16, [[V0_16]]
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fpround_value_v2f16_v2f32(<2 x float> addrspace(1)* %arg, <2 x half> addrspace(1)* %out) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -236,7 +236,7 @@ define amdgpu_kernel void @test_no_fold_canonicalize_fneg_value_f32(float addrsp
 
 ; GCN-LABEL: test_fold_canonicalize_fneg_value_f32:
 ; GCN: v_xor_b32_e32 [[V:v[0-9]+]], 0x80000000, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fneg_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -263,7 +263,7 @@ define amdgpu_kernel void @test_no_fold_canonicalize_fabs_value_f32(float addrsp
 
 ; GCN-LABEL: test_fold_canonicalize_fabs_value_f32:
 ; GCN: v_and_b32_e32 [[V:v[0-9]+]], 0x7fffffff, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_fabs_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -278,7 +278,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fabs_value_f32(float addrspace
 
 ; GCN-LABEL: test_fold_canonicalize_sin_value_f32:
 ; GCN: v_sin_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_sin_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -292,7 +292,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sin_value_f32(float addrspace(
 
 ; GCN-LABEL: test_fold_canonicalize_cos_value_f32:
 ; GCN: v_cos_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_cos_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -307,7 +307,7 @@ define amdgpu_kernel void @test_fold_canonicalize_cos_value_f32(float addrspace(
 ; GCN-LABEL: test_fold_canonicalize_sin_value_f16:
 ; GCN: v_sin_f32_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
 ; GCN: v_cvt_f16_f32_e32 [[V:v[0-9]+]], [[V0]]
-; GCN: flat_store_short v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_sin_value_f16(half addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -322,7 +322,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sin_value_f16(half addrspace(1
 ; GCN-LABEL: test_fold_canonicalize_cos_value_f16:
 ; GCN: v_cos_f32_e32 [[V0:v[0-9]+]], v{{[0-9]+}}
 ; GCN: v_cvt_f16_f32_e32 [[V:v[0-9]+]], [[V0]]
-; GCN: flat_store_short v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_cos_value_f16(half addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -336,7 +336,7 @@ define amdgpu_kernel void @test_fold_canonicalize_cos_value_f16(half addrspace(1
 
 ; GCN-LABEL: test_fold_canonicalize_qNaN_value_f32:
 ; GCN: v_mov_b32_e32 [[V:v[0-9]+]], 0x7fc00000
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_qNaN_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -349,7 +349,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qNaN_value_f32(float addrspace
 ; GCN-LABEL: test_fold_canonicalize_minnum_value_from_load_f32:
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 ; GFX9: v_min_f32_e32 [[V:v[0-9]+]], 0, v{{[0-9]+}}
-; GFX9: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GFX9: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 define amdgpu_kernel void @test_fold_canonicalize_minnum_value_from_load_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
@@ -362,7 +362,7 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_from_load_f32(flo
 
 ; GCN-LABEL: test_fold_canonicalize_minnum_value_f32:
 ; GCN: v_min_f32_e32 [[V:v[0-9]+]], 0, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -378,7 +378,7 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(float addrspa
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
 ; GCN:  v_min_f32_e32 [[V0:v[0-9]+]], 0x7f800001, v{{[0-9]+}}
 ; GCN:  v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
-; GCN:  flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:  {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
@@ -393,7 +393,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(float addrspace
 ; GFX9:  v_min_f32_e32 [[V:v[0-9]+]], 0x7fffff, v{{[0-9]+}}
 ; VI:    v_min_f32_e32 [[V0:v[0-9]+]], 0x7fffff, v{{[0-9]+}}
 ; VI:    v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
-; GCN:   flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:   {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GFX9-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_denorm_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -409,7 +409,7 @@ define amdgpu_kernel void @test_fold_canonicalize_denorm_value_f32(float addrspa
 ; GFX9:  v_max_f32_e32 [[V:v[0-9]+]], 0, v{{[0-9]+}}
 ; VI:    v_max_f32_e32 [[V0:v[0-9]+]], 0, v{{[0-9]+}}
 ; VI:    v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
-; GCN:  flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:  {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GFX9-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_from_load_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -423,7 +423,7 @@ define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_from_load_f32(flo
 
 ; GCN-LABEL: test_fold_canonicalize_maxnum_value_f32:
 ; GCN: v_max_f32_e32 [[V:v[0-9]+]], 0, v{{[0-9]+}}
-; GCN: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -438,7 +438,7 @@ define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_f32(float addrspa
 
 ; GCN-LABEL: test_fold_canonicalize_maxnum_value_f64:
 ; GCN: v_max_f64 [[V:v\[[0-9]+:[0-9]+\]]], v[{{[0-9:]+}}], 0
-; GCN: flat_store_dwordx2 v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_store_dwordx2 v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_f64(double addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -472,8 +472,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_load_nnan_value_f32
-; GFX9-DENORM: flat_load_dword [[V:v[0-9]+]],
-; GFX9-DENORM: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GFX9-DENORM: global_load_dword [[V:v[0-9]+]],
+; GFX9-DENORM: global_store_dword v[{{[0-9:]+}}], [[V]]
 ; GFX9-DENORM-NOT: 1.0
 ; GCN-FLUSH: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f32(float addrspace(1)* %arg, float addrspace(1)* %out) #1 {
@@ -487,8 +487,8 @@ define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f32(float addr
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_load_nnan_value_f64
-; GCN: flat_load_dwordx2 [[V:v\[[0-9:]+\]]],
-; GCN: flat_store_dwordx2 v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_load_dwordx2 [[V:v\[[0-9:]+\]]],
+; GCN: {{flat|global}}_store_dwordx2 v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f64(double addrspace(1)* %arg, double addrspace(1)* %out) #1 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -501,8 +501,8 @@ define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f64(double add
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_load_nnan_value_f16
-; GCN: flat_load_ushort [[V:v[0-9]+]],
-; GCN: flat_store_short v[{{[0-9:]+}}], [[V]]
+; GCN: {{flat|global}}_load_ushort [[V:v[0-9]+]],
+; GCN: {{flat|global}}_store_short v[{{[0-9:]+}}], [[V]]
 ; GCN-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f16(half addrspace(1)* %arg, half addrspace(1)* %out) #1 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

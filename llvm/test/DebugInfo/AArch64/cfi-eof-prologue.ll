@@ -28,7 +28,7 @@ target triple = "aarch64-apple-ios"
 ; Function Attrs: nounwind
 define %struct.B* @_ZN1BC2Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !28 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.B* %this, i64 0, metadata !30, metadata !38), !dbg !39
+  tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !30, metadata !38), !dbg !39
   %0 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, !dbg !40
   %call = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #3, !dbg !40
   %1 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, i32 0, !dbg !40
@@ -41,8 +41,8 @@ declare %struct.A* @_ZN1AC2Ev(%struct.A*)
 ; Function Attrs: nounwind
 define %struct.B* @_ZN1BC1Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !32 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.B* %this, i64 0, metadata !34, metadata !38), !dbg !44
-  tail call void @llvm.dbg.value(metadata %struct.B* %this, i64 0, metadata !45, metadata !38) #3, !dbg !47
+  tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !34, metadata !38), !dbg !44
+  tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !45, metadata !38) #3, !dbg !47
   %0 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, !dbg !48
   %call.i = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #3, !dbg !48
   %1 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, i32 0, !dbg !48
@@ -51,7 +51,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind }
 attributes #2 = { nounwind readnone }

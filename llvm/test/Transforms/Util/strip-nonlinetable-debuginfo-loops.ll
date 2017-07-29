@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 define void @f(i32* %i) local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %i, i64 0, metadata !14, metadata !15), !dbg !16
+  tail call void @llvm.dbg.value(metadata i32* %i, metadata !14, metadata !15), !dbg !16
   br label %while.cond, !dbg !17
 
 while.cond:                                       ; preds = %while.cond, %entry
@@ -26,7 +26,7 @@ while.end:                                        ; preds = %while.cond
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

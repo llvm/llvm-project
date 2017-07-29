@@ -38,7 +38,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: uwtable
 define void @_Z3fooi(i32 %param) local_unnamed_addr #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %param, i64 0, metadata !13, metadata !14), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %param, metadata !13, metadata !14), !dbg !15
   %tobool = icmp eq i32 %param, 0, !dbg !16
   br i1 %tobool, label %if.end, label %if.then, !dbg !18
 
@@ -51,14 +51,14 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 declare void @_Z1fv() local_unnamed_addr #2
 
 ; Function Attrs: nounwind readnone uwtable
 define void @_Z3barv() local_unnamed_addr #3 !dbg !22 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !13, metadata !14), !dbg !24
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !13, metadata !14), !dbg !24
   ret void, !dbg !26
 }
 

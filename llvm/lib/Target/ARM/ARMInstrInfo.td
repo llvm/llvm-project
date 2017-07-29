@@ -313,6 +313,8 @@ def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
 def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
 def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
+def IsReadTPHard     : Predicate<"Subtarget->isReadTPHard()">;
+def IsReadTPSoft     : Predicate<"!Subtarget->isReadTPHard()">;
 def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
                                  AssemblerPredicate<"FeatureNaClTrap", "NaCl">;
 def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
@@ -5519,8 +5521,13 @@ let usesCustomInserter = 1, Defs = [CPSR] in
 let isCall = 1,
   Defs = [R0, R12, LR, CPSR], Uses = [SP] in {
   def TPsoft : ARMPseudoInst<(outs), (ins), 4, IIC_Br,
-               [(set R0, ARMthread_pointer)]>, Sched<[WriteBr]>;
+               [(set R0, ARMthread_pointer)]>, Sched<[WriteBr]>,
+               Requires<[IsARM, IsReadTPSoft]>;
 }
+
+// Reading thread pointer from coprocessor register
+def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 3)>,
+      Requires<[IsARM, IsReadTPHard]>;
 
 //===----------------------------------------------------------------------===//
 // SJLJ Exception handling intrinsics

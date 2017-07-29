@@ -1,6 +1,9 @@
 # Check the various features of the GoogleTest format.
 #
 # RUN: not %{lit} -j 1 -v %{inputs}/googletest-format > %t.out
+# FIXME: Temporarily dump test output so we can debug failing tests on
+# buildbots.
+# RUN: cat %t.out
 # RUN: FileCheck < %t.out %s
 #
 # END.

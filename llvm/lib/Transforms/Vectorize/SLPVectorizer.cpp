@@ -4776,7 +4776,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
   if (!Root)
     return false;
 
-  if (Root->getParent() != BB)
+  if (Root->getParent() != BB || isa<PHINode>(Root))
     return false;
   // Start analysis starting from Root instruction. If horizontal reduction is
   // found, try to vectorize it. If it is not a horizontal reduction or
@@ -4797,7 +4797,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     if (!V)
       continue;
     auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst || isa<PHINode>(Inst))
+    if (!Inst)
       continue;
     if (auto *BI = dyn_cast<BinaryOperator>(Inst)) {
       HorizontalReduction HorRdx;
@@ -4831,9 +4831,14 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     }
 
     // Try to vectorize operands.
+    // Continue analysis for the instruction from the same basic block only to
+    // save compile time.
     if (++Level < RecursionMaxDepth)
       for (auto *Op : Inst->operand_values())
-        Stack.emplace_back(Op, Level);
+        if (VisitedInstrs.insert(Op).second)
+          if (auto *I = dyn_cast<Instruction>(Op))
+            if (!isa<PHINode>(Inst) && I->getParent() == BB)
+              Stack.emplace_back(Op, Level);
   }
   return Res;
 }

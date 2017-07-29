@@ -8,7 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 def FLATAtomic : ComplexPattern<i64, 3, "SelectFlatAtomic", [], [], -10>;
-def FLATOffset : ComplexPattern<i64, 3, "SelectFlat", [], [], -10>;
+def FLATOffset : ComplexPattern<i64, 3, "SelectFlatOffset<false>", [], [], -10>;
+
+def FLATOffsetSigned : ComplexPattern<i64, 3, "SelectFlatOffset<true>", [], [], -10>;
+def FLATSignedAtomic : ComplexPattern<i64, 3, "SelectFlatAtomicSigned", [], [], -10>;
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -289,7 +292,7 @@ multiclass FLAT_Global_Atomic_Pseudo<
       (ins VReg_64:$vaddr, data_rc:$vdata, offset_s13:$offset, slc:$slc),
     " $vdst, $vaddr, $vdata, off$offset glc$slc",
     [(set vt:$vdst,
-      (atomic (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
+      (atomic (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
       AtomicNoRet <opName, 1> {
     let has_saddr = 1;
   }
@@ -614,7 +617,7 @@ def flat_truncstorei16 : flat_st <truncstorei16>;
 
 // Patterns for global loads with no offset.
 class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
-  (vt (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc))),
+  (vt (node (FLATOffset i64:$vaddr, i16:$offset, i1:$slc))),
   (inst $vaddr, $offset, 0, $slc)
 >;
 
@@ -623,8 +626,18 @@ class FlatLoadAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
   (inst $vaddr, $offset, 0, $slc)
 >;
 
+class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+  (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc))),
+  (inst $vaddr, $offset, 0, $slc)
+>;
+
 class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
-  (node vt:$data, (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc)),
+  (node vt:$data, (FLATOffset i64:$vaddr, i16:$offset, i1:$slc)),
+  (inst $vaddr, $data, $offset, 0, $slc)
+>;
+
+class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+  (node vt:$data, (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc)),
   (inst $vaddr, $data, $offset, 0, $slc)
 >;
 
@@ -635,9 +648,22 @@ class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
   (inst $vaddr, $data, $offset, 0, $slc)
 >;
 
+class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+  // atomic store follows atomic binop convention so the address comes
+  // first.
+  (node (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), vt:$data),
+  (inst $vaddr, $data, $offset, 0, $slc)
+>;
+
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                      ValueType data_vt = vt> : Pat <
   (vt (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$data)),
+  (inst $vaddr, $data, $offset, $slc)
+>;
+
+class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
+                     ValueType data_vt = vt> : Pat <
+  (vt (node (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$data)),
   (inst $vaddr, $data, $offset, $slc)
 >;
 
@@ -699,6 +725,65 @@ let Predicates = [isVI] in {
   def : FlatStorePat <FLAT_STORE_BYTE, flat_truncstorei8, i16>;
   def : FlatStorePat <FLAT_STORE_SHORT, flat_store, i16>;
 }
+
+
+let Predicates = [HasFlatGlobalInsts], AddedComplexity = 10 in {
+
+def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i16>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, az_extloadi16_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_SSHORT, sextloadi16_global, i32>;
+
+
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORD, global_load, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX2, global_load, v2i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX4, global_load, v4i32>;
+
+def : FlatLoadAtomicPat <GLOBAL_LOAD_DWORD, global_atomic_load, i32>;
+def : FlatLoadAtomicPat <GLOBAL_LOAD_DWORDX2, global_atomic_load, i64>;
+
+def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i16>;
+def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, global_store, i16>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORD, global_store, i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, global_store, v2i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, global_store, v4i32>;
+
+def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORD, global_store_atomic, i32>;
+def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORDX2, global_store_atomic, i64>;
+
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_ADD_RTN, atomic_add_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SUB_RTN, atomic_sub_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_INC_RTN, atomic_inc_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_DEC_RTN, atomic_dec_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_AND_RTN, atomic_and_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SMAX_RTN, atomic_max_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_UMAX_RTN, atomic_umax_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SMIN_RTN, atomic_min_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_UMIN_RTN, atomic_umin_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_OR_RTN, atomic_or_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_RTN, atomic_swap_global, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_RTN, AMDGPUatomic_cmp_swap_global, i32, v2i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_RTN, atomic_xor_global, i32>;
+
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_ADD_X2_RTN, atomic_add_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SUB_X2_RTN, atomic_sub_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_INC_X2_RTN, atomic_inc_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_DEC_X2_RTN, atomic_dec_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_AND_X2_RTN, atomic_and_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SMAX_X2_RTN, atomic_max_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_UMAX_X2_RTN, atomic_umax_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SMIN_X2_RTN, atomic_min_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_UMIN_X2_RTN, atomic_umin_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_OR_X2_RTN, atomic_or_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_X2_RTN, atomic_swap_global, i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_X2_RTN, AMDGPUatomic_cmp_swap_global, i64, v2i64>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
+
+} // End Predicates = [HasFlatGlobalInsts]
 
 
 //===----------------------------------------------------------------------===//
