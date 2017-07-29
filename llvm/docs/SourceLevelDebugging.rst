@@ -207,14 +207,13 @@ description of the variable.  The third argument is a `complex expression
 
 .. code-block:: llvm
 
-  void @llvm.dbg.value(metadata, i64, metadata, metadata)
+  void @llvm.dbg.value(metadata, metadata, metadata)
 
 This intrinsic provides information when a user source variable is set to a new
-value.  The first argument is the new value (wrapped as metadata).  The second
-argument is the offset in the user source variable where the new value is
-written.  The third argument is a `local variable
-<LangRef.html#dilocalvariable>`_ containing a description of the variable.  The
-fourth argument is a `complex expression <LangRef.html#diexpression>`_.
+value.  The first argument is the new value (wrapped as metadata).  The third
+argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
+description of the variable.  The fourth argument is a `complex expression
+<LangRef.html#diexpression>`_.
 
 Object lifetimes and scoping
 ============================

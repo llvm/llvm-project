@@ -18,8 +18,8 @@ bb2:
   store i32 -1, i32* @b, align 1
   %_tmp1.pre = load i16, i16* @a, align 1, !dbg !20
   %_tmp2.pre = load i16*, i16** @c, align 1
-  tail call void @llvm.dbg.value(metadata i16 6, i64 0, metadata !22, metadata !23), !dbg !24
-  tail call void @llvm.dbg.value(metadata i16 %_tmp1.pre, i64 0, metadata !25, metadata !23), !dbg !20
+  tail call void @llvm.dbg.value(metadata i16 6, metadata !22, metadata !23), !dbg !24
+  tail call void @llvm.dbg.value(metadata i16 %_tmp1.pre, metadata !25, metadata !23), !dbg !20
   %_tmp3 = load i16, i16* %_tmp2.pre, align 1
   %_tmp4 = icmp ne i16 %_tmp3, 0
   %_tmp6 = icmp ne i16 %_tmp1.pre, 0
@@ -35,7 +35,7 @@ bb5:                                              ; preds = %bb1, %bb2
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 attributes #0 = { nounwind readnone }
 

@@ -47,14 +47,14 @@ target triple = "i386-pc-windows-msvc19.0.23918"
 ; Function Attrs: nounwind readnone
 define x86_fastcallcc i32 @"\01?f@@YIHHH@Z"(i32 inreg %a, i32 inreg %b) #0 !dbg !13 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !15, metadata !17), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !16, metadata !17), !dbg !19
+  tail call void @llvm.dbg.value(metadata i32 %b, metadata !15, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !17), !dbg !19
   %add = add nsw i32 %b, %a, !dbg !20
   ret i32 %add, !dbg !21
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

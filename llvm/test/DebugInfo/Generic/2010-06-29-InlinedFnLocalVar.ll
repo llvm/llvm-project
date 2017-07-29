@@ -13,13 +13,13 @@ source_filename = "test/DebugInfo/Generic/2010-06-29-InlinedFnLocalVar.ll"
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 ; Function Attrs: nounwind ssp
 define i32 @bar() #1 !dbg !8 {
 entry:
   %0 = load i32, i32* @i, align 4, !dbg !11
-  tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !13, metadata !24), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !24), !dbg !25
   tail call void @llvm.dbg.declare(metadata !5, metadata !18, metadata !24), !dbg !26
   %1 = mul nsw i32 %0, %0, !dbg !27
   store i32 %1, i32* @i, align 4, !dbg !11

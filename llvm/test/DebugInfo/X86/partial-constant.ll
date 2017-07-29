@@ -32,7 +32,7 @@ entry:
 
 if.end:                                           ; preds = %entry
   tail call void @_Z1fv() #3, !dbg !17
-  tail call void @llvm.dbg.value(metadata i8 1, i64 0, metadata !12, metadata !18), !dbg !19
+  tail call void @llvm.dbg.value(metadata i8 1, metadata !12, metadata !18), !dbg !19
   br label %exit, !dbg !20
 
 exit:                                             ; preds = %entry, %if.end
@@ -47,7 +47,7 @@ declare zeroext i1 @_Z1cv() local_unnamed_addr #1
 declare void @_Z1fv() local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { noimplicitfloat noredzone nounwind optsize }
 attributes #1 = { noimplicitfloat noredzone optsize }

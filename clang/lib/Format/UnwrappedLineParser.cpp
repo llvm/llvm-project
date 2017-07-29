@@ -452,6 +452,21 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   FormatTok = Tokens->setPosition(StoredPosition);
 }
 
+template <class T>
+static inline void hash_combine(std::size_t &seed, const T &v) {
+  std::hash<T> hasher;
+  seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+size_t UnwrappedLineParser::computePPHash() const {
+  size_t h = 0;
+  for (const auto &i : PPStack) {
+    hash_combine(h, size_t(i.Kind));
+    hash_combine(h, i.Line);
+  }
+  return h;
+}
+
 void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
                                      bool MunchSemi) {
   assert(FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) &&
@@ -459,16 +474,21 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   const bool MacroBlock = FormatTok->is(TT_MacroBlockBegin);
   FormatTok->BlockKind = BK_Block;
 
+  size_t PPStartHash = computePPHash();
+
   unsigned InitialLevel = Line->Level;
   nextToken(/*LevelDifference=*/AddLevel ? 1 : 0);
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
 
+  size_t NbPreprocessorDirectives =
+      CurrentLines == &Lines ? PreprocessorDirectives.size() : 0;
   addUnwrappedLine();
-  size_t OpeningLineIndex = CurrentLines->empty()
-                                ? (UnwrappedLine::kInvalidIndex)
-                                : (CurrentLines->size() - 1);
+  size_t OpeningLineIndex =
+      CurrentLines->empty()
+          ? (UnwrappedLine::kInvalidIndex)
+          : (CurrentLines->size() - 1 - NbPreprocessorDirectives);
 
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
@@ -486,6 +506,8 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
     return;
   }
 
+  size_t PPEndHash = computePPHash();
+
   // Munch the closing brace.
   nextToken(/*LevelDifference=*/AddLevel ? -1 : 0);
 
@@ -495,11 +517,14 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   if (MunchSemi && FormatTok->Tok.is(tok::semi))
     nextToken();
   Line->Level = InitialLevel;
-  Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
-  if (OpeningLineIndex != UnwrappedLine::kInvalidIndex) {
-    // Update the opening line to add the forward reference as well
-    (*CurrentLines)[OpeningLineIndex].MatchingOpeningBlockLineIndex =
-            CurrentLines->size() - 1;
+
+  if (PPStartHash == PPEndHash) {
+    Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
+    if (OpeningLineIndex != UnwrappedLine::kInvalidIndex) {
+      // Update the opening line to add the forward reference as well
+      (*CurrentLines)[OpeningLineIndex].MatchingOpeningBlockLineIndex =
+          CurrentLines->size() - 1;
+    }
   }
 }
 
@@ -607,10 +632,15 @@ void UnwrappedLineParser::parsePPDirective() {
 }
 
 void UnwrappedLineParser::conditionalCompilationCondition(bool Unreachable) {
-  if (Unreachable || (!PPStack.empty() && PPStack.back() == PP_Unreachable))
-    PPStack.push_back(PP_Unreachable);
+  size_t Line = CurrentLines->size();
+  if (CurrentLines == &PreprocessorDirectives)
+    Line += Lines.size();
+
+  if (Unreachable ||
+      (!PPStack.empty() && PPStack.back().Kind == PP_Unreachable))
+    PPStack.push_back({PP_Unreachable, Line});
   else
-    PPStack.push_back(PP_Conditional);
+    PPStack.push_back({PP_Conditional, Line});
 }
 
 void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
@@ -2400,7 +2430,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       FormatTok->MustBreakBefore = true;
     }
 
-    if (!PPStack.empty() && (PPStack.back() == PP_Unreachable) &&
+    if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
         !Line->InPPDirective) {
       continue;
     }

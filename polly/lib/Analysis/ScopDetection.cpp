@@ -99,6 +99,14 @@ static cl::list<std::string> OnlyFunctions(
              "ANY of the regexes provided."),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
 
+static cl::list<std::string> IgnoredFunctions(
+    "polly-ignore-func",
+    cl::desc("Ignore functions that match a regex. "
+             "Multiple regexes can be comma separated. "
+             "Scop detection will ignore all functions that match "
+             "ANY of the regexes provided."),
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+
 static cl::opt<bool>
     AllowFullFunction("polly-detect-full-functions",
                       cl::desc("Allow the detection of full functions"),
@@ -274,16 +282,19 @@ void DiagnosticScopFound::print(DiagnosticPrinter &DP) const {
   DP << FileName << ":" << ExitLine << ": End of scop";
 }
 
-static bool IsFnNameListedInOnlyFunctions(StringRef FnName) {
-  for (auto RegexStr : OnlyFunctions) {
+/// Check if a string matches any regex in a list of regexes.
+/// @param Str the input string to match against.
+/// @param RegexList a list of strings that are regular expressions.
+static bool doesStringMatchAnyRegex(StringRef Str,
+                                    const cl::list<std::string> &RegexList) {
+  for (auto RegexStr : RegexList) {
     Regex R(RegexStr);
 
     std::string Err;
     if (!R.isValid(Err))
-      report_fatal_error(
-          "invalid regex given as input to -polly-only-func. " + Err, true);
+      report_fatal_error("invalid regex given as input to polly: " + Err, true);
 
-    if (R.match(FnName))
+    if (R.match(Str))
       return true;
   }
   return false;
@@ -301,7 +312,11 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 
   Region *TopRegion = RI.getTopLevelRegion();
 
-  if (OnlyFunctions.size() > 0 && !IsFnNameListedInOnlyFunctions(F.getName()))
+  if (OnlyFunctions.size() > 0 &&
+      !doesStringMatchAnyRegex(F.getName(), OnlyFunctions))
+    return;
+
+  if (doesStringMatchAnyRegex(F.getName(), IgnoredFunctions))
     return;
 
   if (!isValidFunction(F))

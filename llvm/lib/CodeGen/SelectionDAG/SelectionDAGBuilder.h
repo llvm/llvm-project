@@ -923,13 +923,12 @@ private:
 
   void emitInlineAsmError(ImmutableCallSite CS, const Twine &Message);
 
-  /// EmitFuncArgumentDbgValue - If V is an function argument then create
-  /// corresponding DBG_VALUE machine instruction for it now. At the end of
-  /// instruction selection, they will be inserted to the entry BB.
+  /// If V is an function argument then create corresponding DBG_VALUE machine
+  /// instruction for it now. At the end of instruction selection, they will be
+  /// inserted to the entry BB.
   bool EmitFuncArgumentDbgValue(const Value *V, DILocalVariable *Variable,
                                 DIExpression *Expr, DILocation *DL,
-                                int64_t Offset, bool IsDbgDeclare,
-                                const SDValue &N);
+                                bool IsDbgDeclare, const SDValue &N);
 
   /// Return the next block after MBB, or nullptr if there is none.
   MachineBasicBlock *NextBlock(MachineBasicBlock *MBB);
@@ -940,8 +939,8 @@ private:
 
   /// Return the appropriate SDDbgValue based on N.
   SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
-                          DIExpression *Expr, int64_t Offset,
-                          const DebugLoc &dl, unsigned DbgSDNodeOrder);
+                          DIExpression *Expr, const DebugLoc &dl,
+                          unsigned DbgSDNodeOrder);
 };
 
 /// RegsForValue - This struct represents the registers (physical or virtual)

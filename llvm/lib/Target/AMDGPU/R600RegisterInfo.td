@@ -147,6 +147,7 @@ def PRED_SEL_OFF: R600Reg<"Pred_sel_off", 0>;
 def PRED_SEL_ZERO : R600Reg<"Pred_sel_zero", 2>;
 def PRED_SEL_ONE : R600Reg<"Pred_sel_one", 3>;
 def AR_X : R600Reg<"AR.x", 0>;
+def INDIRECT_BASE_ADDR : R600Reg <"INDIRECT_BASE_ADDR", 0>;
 
 def R600_ArrayBase : RegisterClass <"AMDGPU", [f32, i32], 32,
                           (add (sequence "ArrayBase%u", 448, 480))>;

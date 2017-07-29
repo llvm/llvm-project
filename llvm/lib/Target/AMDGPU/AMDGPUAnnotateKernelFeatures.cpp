@@ -156,8 +156,9 @@ static StringRef intrinsicToAttrName(Intrinsic::ID ID,
   case Intrinsic::amdgcn_dispatch_id:
     return "amdgpu-dispatch-id";
   case Intrinsic::amdgcn_kernarg_segment_ptr:
-  case Intrinsic::amdgcn_implicitarg_ptr:
     return "amdgpu-kernarg-segment-ptr";
+  case Intrinsic::amdgcn_implicitarg_ptr:
+    return "amdgpu-implicitarg-ptr";
   case Intrinsic::amdgcn_queue_ptr:
   case Intrinsic::trap:
   case Intrinsic::debugtrap:
@@ -190,7 +191,8 @@ static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
     { "amdgpu-work-group-id-z" },
     { "amdgpu-dispatch-ptr" },
     { "amdgpu-dispatch-id" },
-    { "amdgpu-kernarg-segment-ptr" }
+    { "amdgpu-kernarg-segment-ptr" },
+    { "amdgpu-implicitarg-ptr" }
   };
 
   if (handleAttr(Parent, Callee, "amdgpu-queue-ptr"))

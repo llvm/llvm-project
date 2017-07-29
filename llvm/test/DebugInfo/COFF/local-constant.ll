@@ -32,7 +32,7 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; Function Attrs: nounwind uwtable
 define void @"\01?constant_var@@YAXXZ"() #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 42, i64 0, metadata !8, metadata !14), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 42, metadata !8, metadata !14), !dbg !15
   tail call void @"\01?useint@@YAXH@Z"(i32 42) #3, !dbg !16
   tail call void @"\01?useint@@YAXH@Z"(i32 42) #3, !dbg !17
   ret void, !dbg !18
@@ -41,7 +41,7 @@ entry:
 declare void @"\01?useint@@YAXH@Z"(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -1,4 +1,4 @@
-//===--- HexagonOptAddrMode.cpp -------------------------------------------===//
+//===- HexagonOptAddrMode.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,8 @@
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "RDFGraph.h"
 #include "RDFLiveness.h"
+#include "RDFRegisters.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -31,21 +33,24 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cstdint>
 
 #define DEBUG_TYPE "opt-addr-mode"
 
+using namespace llvm;
+using namespace rdf;
+
 static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   cl::Hidden, cl::init(0), cl::desc("Code growth limit for address mode "
   "optimization"));
 
-using namespace llvm;
-using namespace rdf;
-
 namespace llvm {
+
   FunctionPass *createHexagonOptAddrMode();
   void initializeHexagonOptAddrModePass(PassRegistry&);
+
 } // end namespace llvm
 
 namespace {
@@ -54,9 +59,7 @@ class HexagonOptAddrMode : public MachineFunctionPass {
 public:
   static char ID;
 
-  HexagonOptAddrMode()
-      : MachineFunctionPass(ID), HII(nullptr), MDT(nullptr), DFG(nullptr),
-        LV(nullptr) {}
+  HexagonOptAddrMode() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Optimize addressing mode of load/store";
@@ -72,13 +75,14 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  typedef DenseSet<MachineInstr *> MISetType;
-  typedef DenseMap<MachineInstr *, bool> InstrEvalMap;
-  const HexagonInstrInfo *HII;
-  MachineDominatorTree *MDT;
-  DataFlowGraph *DFG;
+  using MISetType = DenseSet<MachineInstr *>;
+  using InstrEvalMap = DenseMap<MachineInstr *, bool>;
+
+  const HexagonInstrInfo *HII = nullptr;
+  MachineDominatorTree *MDT = nullptr;
+  DataFlowGraph *DFG = nullptr;
   DataFlowGraph::DefStackMap DefM;
-  Liveness *LV;
+  Liveness *LV = nullptr;
   MISetType Deleted;
 
   bool processBlock(NodeAddr<BlockNode *> BA);

@@ -6843,31 +6843,30 @@ SDNode *SelectionDAG::getNodeIfExists(unsigned Opcode, SDVTList VTList,
 ///
 /// SDNode
 SDDbgValue *SelectionDAG::getDbgValue(MDNode *Var, MDNode *Expr, SDNode *N,
-                                      unsigned R, bool IsIndirect, uint64_t Off,
+                                      unsigned R, bool IsIndirect,
                                       const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, N, R, IsIndirect, Off, DL, O);
+      SDDbgValue(Var, Expr, N, R, IsIndirect, DL, O);
 }
 
 /// Constant
 SDDbgValue *SelectionDAG::getConstantDbgValue(MDNode *Var, MDNode *Expr,
-                                              const Value *C, uint64_t Off,
+                                              const Value *C,
                                               const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, C, Off, DL, O);
+  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, C, DL, O);
 }
 
 /// FrameIndex
 SDDbgValue *SelectionDAG::getFrameIndexDbgValue(MDNode *Var, MDNode *Expr,
-                                                unsigned FI, uint64_t Off,
-                                                const DebugLoc &DL,
+                                                unsigned FI, const DebugLoc &DL,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, Off, DL, O);
+  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
 }
 
 namespace {
@@ -7301,10 +7300,9 @@ void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
         Dbg->getResNo() == From.getResNo() && !Dbg->isInvalidated()) {
       assert(FromNode != ToNode &&
              "Should not transfer Debug Values intranode");
-      SDDbgValue *Clone =
-          getDbgValue(Dbg->getVariable(), Dbg->getExpression(), ToNode,
-                      To.getResNo(), Dbg->isIndirect(), Dbg->getOffset(),
-                      Dbg->getDebugLoc(), Dbg->getOrder());
+      SDDbgValue *Clone = getDbgValue(Dbg->getVariable(), Dbg->getExpression(),
+                                      ToNode, To.getResNo(), Dbg->isIndirect(),
+                                      Dbg->getDebugLoc(), Dbg->getOrder());
       ClonedDVs.push_back(Clone);
       Dbg->setIsInvalidated();
     }

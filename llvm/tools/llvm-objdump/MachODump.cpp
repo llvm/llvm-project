@@ -9403,7 +9403,7 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
     }
   }
   Error Err = Error::success();
-  for (const llvm::object::ExportEntry &Entry : Obj->exports(Err, Obj)) {
+  for (const llvm::object::ExportEntry &Entry : Obj->exports(Err)) {
     uint64_t Flags = Entry.flags();
     bool ReExport = (Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT);
     bool WeakDef = (Flags & MachO::EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION);

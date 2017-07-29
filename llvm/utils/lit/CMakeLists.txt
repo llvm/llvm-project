@@ -10,6 +10,7 @@ configure_file("tests/lit.site.cfg.in" "lit.site.cfg" @ONLY)
 # configure time (i.e. `file(COPY ...)`) because this could lead to stale
 # tests being run.
 add_custom_target(prepare-check-lit
+  COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/tests"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/tests" "${CMAKE_CURRENT_BINARY_DIR}/tests"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg" "${CMAKE_CURRENT_BINARY_DIR}/tests"
   COMMENT "Preparing lit tests"

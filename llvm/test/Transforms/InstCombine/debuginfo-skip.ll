@@ -13,13 +13,13 @@ entry:
   %j.addr = alloca i32, align 4
   store i32 %j, i32* %j.addr, align 4
   call void @llvm.dbg.declare(metadata i32* %j.addr, metadata !11, metadata !12), !dbg !13
-  call void @llvm.dbg.value(metadata i32 10, i64 0, metadata !16, metadata !12), !dbg !15
+  call void @llvm.dbg.value(metadata i32 10, metadata !16, metadata !12), !dbg !15
   %0 = load i32, i32* %j.addr, align 4, !dbg !14
   ret i32 %0, !dbg !15
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

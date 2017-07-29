@@ -30,12 +30,6 @@ define <4 x float> @combine_vpermilvar_4f32_identity(<4 x float> %a0) {
 ; X64-LABEL: combine_vpermilvar_4f32_identity:
 ; X64:       # BB#0:
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_identity:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_identity:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>  %1, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   ret <4 x float> %2
@@ -51,14 +45,6 @@ define <4 x float> @combine_vpermilvar_4f32_movddup(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_movddup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_movddup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
   ret <4 x float> %1
 }
@@ -73,15 +59,6 @@ define <4 x float> @combine_vpermilvar_4f32_movddup_load(<4 x float> *%a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_movddup_load:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_movddup_load:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X64AVX512F-NEXT:    retq
   %1 = load <4 x float>, <4 x float> *%a0
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %1, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
   ret <4 x float> %2
@@ -97,14 +74,6 @@ define <4 x float> @combine_vpermilvar_4f32_movshdup(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_movshdup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_movshdup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 undef, i32 1, i32 3, i32 3>)
   ret <4 x float> %1
 }
@@ -119,14 +88,6 @@ define <4 x float> @combine_vpermilvar_4f32_movsldup(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_movsldup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_movsldup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 2, i32 undef>)
   ret <4 x float> %1
 }
@@ -141,14 +102,6 @@ define <4 x float> @combine_vpermilvar_4f32_unpckh(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_unpckh:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_unpckh:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 2, i32 2, i32 3, i32 3>)
   ret <4 x float> %1
 }
@@ -163,14 +116,6 @@ define <4 x float> @combine_vpermilvar_4f32_unpckl(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_unpckl:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_unpckl:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 1, i32 1>)
   ret <4 x float> %1
 }
@@ -183,12 +128,6 @@ define <8 x float> @combine_vpermilvar_8f32_identity(<8 x float> %a0) {
 ; X64-LABEL: combine_vpermilvar_8f32_identity:
 ; X64:       # BB#0:
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_identity:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_identity:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 undef>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1>)
   ret <8 x float> %2
@@ -204,14 +143,6 @@ define <8 x float> @combine_vpermilvar_8f32_10326u4u(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,6,u,4,u]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_10326u4u:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,6,u,4,u]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_10326u4u:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,6,u,4,u]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 0, i32 1, i32 2, i32 undef>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 undef>)
   ret <8 x float> %2
@@ -227,14 +158,6 @@ define <8 x float> @combine_vpermilvar_vperm2f128_8f32(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_vperm2f128_8f32:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_vperm2f128_8f32:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <8 x float> %1, <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   %3 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %2, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
@@ -251,14 +174,6 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_vperm2f128_zero_8f32:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_vperm2f128_zero_8f32:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <8 x float> %1, <8 x float> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 8, i32 8, i32 0, i32 1, i32 2, i32 3>
   %3 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %2, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
@@ -277,16 +192,6 @@ define <4 x double> @combine_vperm2f128_vpermilvar_as_vpblendpd(<4 x double> %a0
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X32AVX512F-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X64AVX512F-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   %2 = shufflevector <4 x double> %1, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %3 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %2, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
@@ -303,14 +208,6 @@ define <8 x float> @combine_vpermilvar_8f32_movddup(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_movddup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_movddup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
   ret <8 x float> %1
 }
@@ -325,15 +222,6 @@ define <8 x float> @combine_vpermilvar_8f32_movddup_load(<8 x float> *%a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_movddup_load:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32AVX512F-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_movddup_load:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
-; X64AVX512F-NEXT:    retq
   %1 = load <8 x float>, <8 x float> *%a0
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %1, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
   ret <8 x float> %2
@@ -349,14 +237,6 @@ define <8 x float> @combine_vpermilvar_8f32_movshdup(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_movshdup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_movshdup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 undef, i32 5, i32 7, i32 7>)
   ret <8 x float> %1
 }
@@ -371,14 +251,6 @@ define <8 x float> @combine_vpermilvar_8f32_movsldup(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_movsldup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_movsldup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>)
   ret <8 x float> %1
 }
@@ -391,12 +263,6 @@ define <2 x double> @combine_vpermilvar_2f64_identity(<2 x double> %a0) {
 ; X64-LABEL: combine_vpermilvar_2f64_identity:
 ; X64:       # BB#0:
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_2f64_identity:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_2f64_identity:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    retq
   %1 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> <i64 2, i64 0>)
   %2 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double>  %1, <2 x i64> <i64 2, i64 0>)
   ret <2 x double> %2
@@ -412,14 +278,6 @@ define <2 x double> @combine_vpermilvar_2f64_movddup(<2 x double> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_2f64_movddup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_2f64_movddup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> <i64 0, i64 0>)
   ret <2 x double> %1
 }
@@ -432,12 +290,6 @@ define <4 x double> @combine_vpermilvar_4f64_identity(<4 x double> %a0) {
 ; X64-LABEL: combine_vpermilvar_4f64_identity:
 ; X64:       # BB#0:
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f64_identity:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f64_identity:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   %2 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>  %1, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   ret <4 x double> %2
@@ -453,14 +305,6 @@ define <4 x double> @combine_vpermilvar_4f64_movddup(<4 x double> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f64_movddup:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f64_movddup:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 0, i64 0, i64 4, i64 4>)
   ret <4 x double> %1
 }
@@ -475,14 +319,6 @@ define <4 x float> @combine_vpermilvar_4f32_4stage(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_4stage:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_4stage:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>  %1, <4 x i32> <i32 2, i32 3, i32 0, i32 1>)
   %3 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>  %2, <4 x i32> <i32 0, i32 2, i32 1, i32 3>)
@@ -500,14 +336,6 @@ define <8 x float> @combine_vpermilvar_8f32_4stage(<8 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_8f32_4stage:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_8f32_4stage:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
-; X64AVX512F-NEXT:    retq
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>)
   %3 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %2, <8 x i32> <i32 0, i32 2, i32 1, i32 3, i32 0, i32 2, i32 1, i32 3>)
@@ -525,14 +353,6 @@ define <4 x float> @combine_vpermilvar_4f32_as_insertps(<4 x float> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],zero,xmm0[2],zero
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: combine_vpermilvar_4f32_as_insertps:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],zero,xmm0[2],zero
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: combine_vpermilvar_4f32_as_insertps:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],zero,xmm0[2],zero
-; X64AVX512F-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <4 x float> %1, <4 x float> zeroinitializer, <4 x i32> <i32 2, i32 4, i32 1, i32 4>
   ret <4 x float> %2
@@ -548,14 +368,6 @@ define <2 x double> @constant_fold_vpermilvar_pd() {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [2.000000e+00,1.000000e+00]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: constant_fold_vpermilvar_pd:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovaps {{.*#+}} xmm0 = [2.000000e+00,1.000000e+00]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: constant_fold_vpermilvar_pd:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovaps {{.*#+}} xmm0 = [2.000000e+00,1.000000e+00]
-; X64AVX512F-NEXT:    retq
   %1 = call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> <double 1.0, double 2.0>, <2 x i64> <i64 2, i64 0>)
   ret <2 x double> %1
 }
@@ -570,14 +382,6 @@ define <4 x double> @constant_fold_vpermilvar_pd_256() {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [2.000000e+00,1.000000e+00,3.000000e+00,4.000000e+00]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: constant_fold_vpermilvar_pd_256:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [2.000000e+00,1.000000e+00,3.000000e+00,4.000000e+00]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: constant_fold_vpermilvar_pd_256:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [2.000000e+00,1.000000e+00,3.000000e+00,4.000000e+00]
-; X64AVX512F-NEXT:    retq
   %1 = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, <4 x i64> <i64 2, i64 0, i64 0, i64 2>)
   ret <4 x double> %1
 }
@@ -592,14 +396,6 @@ define <4 x float> @constant_fold_vpermilvar_ps() {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [4.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: constant_fold_vpermilvar_ps:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovaps {{.*#+}} xmm0 = [4.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: constant_fold_vpermilvar_ps:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovaps {{.*#+}} xmm0 = [4.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00]
-; X64AVX512F-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, <4 x i32> <i32 3, i32 0, i32 2, i32 1>)
   ret <4 x float> %1
 }
@@ -614,14 +410,6 @@ define <8 x float> @constant_fold_vpermilvar_ps_256() {
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00,5.000000e+00,6.000000e+00,6.000000e+00,6.000000e+00]
 ; X64-NEXT:    retq
-; X32AVX512F-LABEL: constant_fold_vpermilvar_ps_256:
-; X32AVX512F:       # BB#0:
-; X32AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00,5.000000e+00,6.000000e+00,6.000000e+00,6.000000e+00]
-; X32AVX512F-NEXT:    retl
-; X64AVX512F-LABEL: constant_fold_vpermilvar_ps_256:
-; X64AVX512F:       # BB#0:
-; X64AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00,5.000000e+00,6.000000e+00,6.000000e+00,6.000000e+00]
-; X64AVX512F-NEXT:    retq
   %1 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, <8 x i32> <i32 4, i32 0, i32 2, i32 1, i32 0, i32 1, i32 1, i32 1>)
   ret <8 x float> %1
 }

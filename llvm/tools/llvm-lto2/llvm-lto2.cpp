@@ -100,6 +100,10 @@ static cl::opt<bool> OptRemarksWithHotness(
     cl::desc("Whether to include hotness informations in the remarks.\n"
              "Has effect only if -pass-remarks-output is specified."));
 
+static cl::opt<std::string>
+    SamplePGOFile("lto-sample-profile-file",
+                  cl::desc("Specify a SamplePGO profile file"));
+
 static cl::opt<bool>
     UseNewPM("use-new-pm",
              cl::desc("Run LTO passes using the new pass manager"),
@@ -198,6 +202,8 @@ static int run(int argc, char **argv) {
   // Optimization remarks.
   Conf.RemarksFilename = OptRemarksOutput;
   Conf.RemarksWithHotness = OptRemarksWithHotness;
+
+  Conf.SampleProfile = SamplePGOFile;
 
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;

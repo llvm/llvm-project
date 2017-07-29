@@ -18,11 +18,11 @@ target triple = "armv7--none-eabi"
 
 define float @foo(float %p) !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata float %p, i64 0, metadata !9, metadata !15), !dbg !16
+  tail call void @llvm.dbg.value(metadata float %p, metadata !9, metadata !15), !dbg !16
   ret float %p, !dbg !18
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}
