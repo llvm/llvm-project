@@ -61,7 +61,7 @@ static cl::opt<float> ImportHotInstrFactor(
              "before processing newly imported functions"));
 
 static cl::opt<float> ImportHotMultiplier(
-    "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
+    "import-hot-multiplier", cl::init(10.0), cl::Hidden, cl::value_desc("x"),
     cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
 
 static cl::opt<float> ImportCriticalMultiplier(

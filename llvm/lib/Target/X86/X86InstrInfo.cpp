@@ -10537,25 +10537,22 @@ char LDTLSCleanup::ID = 0;
 FunctionPass*
 llvm::createCleanupLocalDynamicTLSPass() { return new LDTLSCleanup(); }
 
-unsigned X86InstrInfo::getOutliningBenefit(size_t SequenceSize,
-                                           size_t Occurrences,
-                                           bool CanBeTailCall) const {
-  unsigned NotOutlinedSize = SequenceSize * Occurrences;
-  unsigned OutlinedSize;
+size_t X86InstrInfo::getOutliningCallOverhead(
+MachineBasicBlock::iterator &StartIt,
+MachineBasicBlock::iterator &EndIt) const {
+  // We just have to emit a call, so return 1.
+  return 1;
+}
 
-  // Is it a tail call?
-  if (CanBeTailCall) {
-    // If yes, we don't have to include a return instruction-- it's already in
-    // our sequence. So we have one occurrence of the sequence + #Occurrences
-    // calls.
-    OutlinedSize = SequenceSize + Occurrences;
-  } else {
-    // If not, add one for the return instruction.
-    OutlinedSize = (SequenceSize + 1) + Occurrences;
-  }
+size_t X86InstrInfo::getOutliningFrameOverhead(
+MachineBasicBlock::iterator &StartIt,
+MachineBasicBlock::iterator &EndIt) const {
+  // Is this a tail-call?
+  if (EndIt->isTerminator())
+    return 0; // Yes, so we already have a return.
 
-  // Return the number of instructions saved by outlining this sequence.
-  return NotOutlinedSize > OutlinedSize ? NotOutlinedSize - OutlinedSize : 0;
+  // No, so we have to add a return to the end.
+  return 1;
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {

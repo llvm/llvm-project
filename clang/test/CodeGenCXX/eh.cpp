@@ -461,7 +461,7 @@ class DerivedException: public BaseException {
 
 int foo() {
   throw DerivedException();
-  // The alignment passed to memset is 8, not 16, on Darwin.
+  // The alignment passed to memset is 16 on Darwin.
 
   // CHECK: [[T0:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
   // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to %"class.test17::DerivedException"*

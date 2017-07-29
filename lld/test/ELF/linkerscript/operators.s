@@ -25,6 +25,7 @@
 # RUN:  commonpagesize = CONSTANT (COMMONPAGESIZE); \
 # RUN:  . = 0xfff0; \
 # RUN:  datasegmentalign = DATA_SEGMENT_ALIGN (0xffff, 0); \
+# RUN:  datasegmentalign2 = DATA_SEGMENT_ALIGN (0, 0); \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-objdump -t %t2 | FileCheck %s
@@ -51,6 +52,7 @@
 # CHECK: 00000000001000 *ABS* 00000000 maxpagesize
 # CHECK: 00000000001000 *ABS* 00000000 commonpagesize
 # CHECK: 0000000000ffff *ABS* 00000000 datasegmentalign
+# CHECK: 0000000000fff0 *ABS* 00000000 datasegmentalign2
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script

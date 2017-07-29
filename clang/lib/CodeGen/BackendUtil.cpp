@@ -189,6 +189,7 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
   Opts.TracePCGuard = CGOpts.SanitizeCoverageTracePCGuard;
   Opts.NoPrune = CGOpts.SanitizeCoverageNoPrune;
   Opts.Inline8bitCounters = CGOpts.SanitizeCoverageInline8bitCounters;
+  Opts.PCTable = CGOpts.SanitizeCoveragePCTable;
   PM.add(createSanitizerCoverageModulePass(Opts));
 }
 

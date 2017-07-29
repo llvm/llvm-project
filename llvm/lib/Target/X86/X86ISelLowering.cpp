@@ -3983,6 +3983,13 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   if (Offset != MFI.getObjectOffset(FI))
     return false;
 
+  // If this is not byval, check that the argument stack object is immutable.
+  // inalloca and argument copy elision can create mutable argument stack
+  // objects. Byval objects can be mutated, but a byval call intends to pass the
+  // mutated memory.
+  if (!Flags.isByVal() && !MFI.isImmutableObjectIndex(FI))
+    return false;
+
   if (VA.getLocVT().getSizeInBits() > Arg.getValueSizeInBits()) {
     // If the argument location is wider than the argument type, check that any
     // extension flags match.

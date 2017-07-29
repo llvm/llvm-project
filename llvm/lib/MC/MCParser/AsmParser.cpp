@@ -387,37 +387,155 @@ private:
   // Generic (target and platform independent) directive parsing.
   enum DirectiveKind {
     DK_NO_DIRECTIVE, // Placeholder
-    DK_SET, DK_EQU, DK_EQUIV, DK_ASCII, DK_ASCIZ, DK_STRING, DK_BYTE, DK_SHORT,
+    DK_SET,
+    DK_EQU,
+    DK_EQUIV,
+    DK_ASCII,
+    DK_ASCIZ,
+    DK_STRING,
+    DK_BYTE,
+    DK_SHORT,
     DK_RELOC,
-    DK_VALUE, DK_2BYTE, DK_LONG, DK_INT, DK_4BYTE, DK_QUAD, DK_8BYTE, DK_OCTA,
-    DK_DC, DK_DC_A, DK_DC_B, DK_DC_D, DK_DC_L, DK_DC_S, DK_DC_W, DK_DC_X,
-    DK_DCB, DK_DCB_B, DK_DCB_D, DK_DCB_L, DK_DCB_S, DK_DCB_W, DK_DCB_X,
-    DK_DS, DK_DS_B, DK_DS_D, DK_DS_L, DK_DS_P, DK_DS_S, DK_DS_W, DK_DS_X,
-    DK_SINGLE, DK_FLOAT, DK_DOUBLE, DK_ALIGN, DK_ALIGN32, DK_BALIGN, DK_BALIGNW,
-    DK_BALIGNL, DK_P2ALIGN, DK_P2ALIGNW, DK_P2ALIGNL, DK_ORG, DK_FILL, DK_ENDR,
-    DK_BUNDLE_ALIGN_MODE, DK_BUNDLE_LOCK, DK_BUNDLE_UNLOCK,
-    DK_ZERO, DK_EXTERN, DK_GLOBL, DK_GLOBAL,
-    DK_LAZY_REFERENCE, DK_NO_DEAD_STRIP, DK_SYMBOL_RESOLVER,
-    DK_PRIVATE_EXTERN, DK_REFERENCE, DK_WEAK_DEFINITION, DK_WEAK_REFERENCE,
-    DK_WEAK_DEF_CAN_BE_HIDDEN, DK_COMM, DK_COMMON, DK_LCOMM, DK_ABORT,
-    DK_INCLUDE, DK_INCBIN, DK_CODE16, DK_CODE16GCC, DK_REPT, DK_IRP, DK_IRPC,
-    DK_IF, DK_IFEQ, DK_IFGE, DK_IFGT, DK_IFLE, DK_IFLT, DK_IFNE, DK_IFB,
-    DK_IFNB, DK_IFC, DK_IFEQS, DK_IFNC, DK_IFNES, DK_IFDEF, DK_IFNDEF,
-    DK_IFNOTDEF, DK_ELSEIF, DK_ELSE, DK_ENDIF,
-    DK_SPACE, DK_SKIP, DK_FILE, DK_LINE, DK_LOC, DK_STABS,
-    DK_CV_FILE, DK_CV_FUNC_ID, DK_CV_INLINE_SITE_ID, DK_CV_LOC, DK_CV_LINETABLE,
-    DK_CV_INLINE_LINETABLE, DK_CV_DEF_RANGE, DK_CV_STRINGTABLE,
+    DK_VALUE,
+    DK_2BYTE,
+    DK_LONG,
+    DK_INT,
+    DK_4BYTE,
+    DK_QUAD,
+    DK_8BYTE,
+    DK_OCTA,
+    DK_DC,
+    DK_DC_A,
+    DK_DC_B,
+    DK_DC_D,
+    DK_DC_L,
+    DK_DC_S,
+    DK_DC_W,
+    DK_DC_X,
+    DK_DCB,
+    DK_DCB_B,
+    DK_DCB_D,
+    DK_DCB_L,
+    DK_DCB_S,
+    DK_DCB_W,
+    DK_DCB_X,
+    DK_DS,
+    DK_DS_B,
+    DK_DS_D,
+    DK_DS_L,
+    DK_DS_P,
+    DK_DS_S,
+    DK_DS_W,
+    DK_DS_X,
+    DK_SINGLE,
+    DK_FLOAT,
+    DK_DOUBLE,
+    DK_ALIGN,
+    DK_ALIGN32,
+    DK_BALIGN,
+    DK_BALIGNW,
+    DK_BALIGNL,
+    DK_P2ALIGN,
+    DK_P2ALIGNW,
+    DK_P2ALIGNL,
+    DK_ORG,
+    DK_FILL,
+    DK_ENDR,
+    DK_BUNDLE_ALIGN_MODE,
+    DK_BUNDLE_LOCK,
+    DK_BUNDLE_UNLOCK,
+    DK_ZERO,
+    DK_EXTERN,
+    DK_GLOBL,
+    DK_GLOBAL,
+    DK_LAZY_REFERENCE,
+    DK_NO_DEAD_STRIP,
+    DK_SYMBOL_RESOLVER,
+    DK_PRIVATE_EXTERN,
+    DK_REFERENCE,
+    DK_WEAK_DEFINITION,
+    DK_WEAK_REFERENCE,
+    DK_WEAK_DEF_CAN_BE_HIDDEN,
+    DK_COMM,
+    DK_COMMON,
+    DK_LCOMM,
+    DK_ABORT,
+    DK_INCLUDE,
+    DK_INCBIN,
+    DK_CODE16,
+    DK_CODE16GCC,
+    DK_REPT,
+    DK_IRP,
+    DK_IRPC,
+    DK_IF,
+    DK_IFEQ,
+    DK_IFGE,
+    DK_IFGT,
+    DK_IFLE,
+    DK_IFLT,
+    DK_IFNE,
+    DK_IFB,
+    DK_IFNB,
+    DK_IFC,
+    DK_IFEQS,
+    DK_IFNC,
+    DK_IFNES,
+    DK_IFDEF,
+    DK_IFNDEF,
+    DK_IFNOTDEF,
+    DK_ELSEIF,
+    DK_ELSE,
+    DK_ENDIF,
+    DK_SPACE,
+    DK_SKIP,
+    DK_FILE,
+    DK_LINE,
+    DK_LOC,
+    DK_STABS,
+    DK_CV_FILE,
+    DK_CV_FUNC_ID,
+    DK_CV_INLINE_SITE_ID,
+    DK_CV_LOC,
+    DK_CV_LINETABLE,
+    DK_CV_INLINE_LINETABLE,
+    DK_CV_DEF_RANGE,
+    DK_CV_STRINGTABLE,
     DK_CV_FILECHECKSUMS,
-    DK_CFI_SECTIONS, DK_CFI_STARTPROC, DK_CFI_ENDPROC, DK_CFI_DEF_CFA,
-    DK_CFI_DEF_CFA_OFFSET, DK_CFI_ADJUST_CFA_OFFSET, DK_CFI_DEF_CFA_REGISTER,
-    DK_CFI_OFFSET, DK_CFI_REL_OFFSET, DK_CFI_PERSONALITY, DK_CFI_LSDA,
-    DK_CFI_REMEMBER_STATE, DK_CFI_RESTORE_STATE, DK_CFI_SAME_VALUE,
-    DK_CFI_RESTORE, DK_CFI_ESCAPE, DK_CFI_SIGNAL_FRAME, DK_CFI_UNDEFINED,
-    DK_CFI_REGISTER, DK_CFI_WINDOW_SAVE,
-    DK_MACROS_ON, DK_MACROS_OFF, DK_ALTMACRO, DK_NOALTMACRO,
-    DK_MACRO, DK_EXITM, DK_ENDM, DK_ENDMACRO, DK_PURGEM,
-    DK_SLEB128, DK_ULEB128,
-    DK_ERR, DK_ERROR, DK_WARNING,
+    DK_CFI_SECTIONS,
+    DK_CFI_STARTPROC,
+    DK_CFI_ENDPROC,
+    DK_CFI_DEF_CFA,
+    DK_CFI_DEF_CFA_OFFSET,
+    DK_CFI_ADJUST_CFA_OFFSET,
+    DK_CFI_DEF_CFA_REGISTER,
+    DK_CFI_OFFSET,
+    DK_CFI_REL_OFFSET,
+    DK_CFI_PERSONALITY,
+    DK_CFI_LSDA,
+    DK_CFI_REMEMBER_STATE,
+    DK_CFI_RESTORE_STATE,
+    DK_CFI_SAME_VALUE,
+    DK_CFI_RESTORE,
+    DK_CFI_ESCAPE,
+    DK_CFI_RETURN_COLUMN,
+    DK_CFI_SIGNAL_FRAME,
+    DK_CFI_UNDEFINED,
+    DK_CFI_REGISTER,
+    DK_CFI_WINDOW_SAVE,
+    DK_MACROS_ON,
+    DK_MACROS_OFF,
+    DK_ALTMACRO,
+    DK_NOALTMACRO,
+    DK_MACRO,
+    DK_EXITM,
+    DK_ENDM,
+    DK_ENDMACRO,
+    DK_PURGEM,
+    DK_SLEB128,
+    DK_ULEB128,
+    DK_ERR,
+    DK_ERROR,
+    DK_WARNING,
     DK_END
   };
 
@@ -477,6 +595,7 @@ private:
   bool parseDirectiveCFISameValue(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRestore(SMLoc DirectiveLoc);
   bool parseDirectiveCFIEscape();
+  bool parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc);
   bool parseDirectiveCFISignalFrame();
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
 
@@ -1948,6 +2067,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIRestore(IDLoc);
     case DK_CFI_ESCAPE:
       return parseDirectiveCFIEscape();
+    case DK_CFI_RETURN_COLUMN:
+      return parseDirectiveCFIReturnColumn(IDLoc);
     case DK_CFI_SIGNAL_FRAME:
       return parseDirectiveCFISignalFrame();
     case DK_CFI_UNDEFINED:
@@ -3902,6 +4023,16 @@ bool AsmParser::parseDirectiveCFIEscape() {
   return false;
 }
 
+/// parseDirectiveCFIReturnColumn
+/// ::= .cfi_return_column register
+bool AsmParser::parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc) {
+  int64_t Register = 0;
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
+    return true;
+  getStreamer().EmitCFIReturnColumn(Register);
+  return false;
+}
+
 /// parseDirectiveCFISignalFrame
 /// ::= .cfi_signal_frame
 bool AsmParser::parseDirectiveCFISignalFrame() {
@@ -5021,6 +5152,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_same_value"] = DK_CFI_SAME_VALUE;
   DirectiveKindMap[".cfi_restore"] = DK_CFI_RESTORE;
   DirectiveKindMap[".cfi_escape"] = DK_CFI_ESCAPE;
+  DirectiveKindMap[".cfi_return_column"] = DK_CFI_RETURN_COLUMN;
   DirectiveKindMap[".cfi_signal_frame"] = DK_CFI_SIGNAL_FRAME;
   DirectiveKindMap[".cfi_undefined"] = DK_CFI_UNDEFINED;
   DirectiveKindMap[".cfi_register"] = DK_CFI_REGISTER;

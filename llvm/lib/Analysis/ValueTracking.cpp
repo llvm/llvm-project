@@ -4244,11 +4244,9 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.
-static bool isTruePredicate(CmpInst::Predicate Pred,
-                            const Value *LHS, const Value *RHS,
-                            const DataLayout &DL, unsigned Depth,
-                            AssumptionCache *AC, const Instruction *CxtI,
-                            const DominatorTree *DT) {
+static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
+                            const Value *RHS, const DataLayout &DL,
+                            unsigned Depth) {
   assert(!LHS->getType()->isVectorTy() && "TODO: extend to handle vectors!");
   if (ICmpInst::isTrueWhenEqual(Pred) && LHS == RHS)
     return true;
@@ -4285,8 +4283,8 @@ static bool isTruePredicate(CmpInst::Predicate Pred,
       if (match(A, m_Or(m_Value(X), m_APInt(CA))) &&
           match(B, m_Or(m_Specific(X), m_APInt(CB)))) {
         KnownBits Known(CA->getBitWidth());
-        computeKnownBits(X, Known, DL, Depth + 1, AC, CxtI, DT);
-
+        computeKnownBits(X, Known, DL, Depth + 1, /*AC*/ nullptr,
+                         /*CxtI*/ nullptr, /*DT*/ nullptr);
         if (CA->isSubsetOf(Known.Zero) && CB->isSubsetOf(Known.Zero))
           return true;
       }
@@ -4308,27 +4306,23 @@ static bool isTruePredicate(CmpInst::Predicate Pred,
 /// ALHS ARHS" is true.  Otherwise, return None.
 static Optional<bool>
 isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
-                      const Value *ARHS, const Value *BLHS,
-                      const Value *BRHS, const DataLayout &DL,
-                      unsigned Depth, AssumptionCache *AC,
-                      const Instruction *CxtI, const DominatorTree *DT) {
+                      const Value *ARHS, const Value *BLHS, const Value *BRHS,
+                      const DataLayout &DL, unsigned Depth) {
   switch (Pred) {
   default:
     return None;
 
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE:
-    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL, Depth, AC, CxtI,
-                        DT) &&
-        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL, Depth, AC, CxtI, DT))
+    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL, Depth) &&
+        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL, Depth))
       return true;
     return None;
 
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth, AC, CxtI,
-                        DT) &&
-        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth, AC, CxtI, DT))
+    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth) &&
+        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth))
       return true;
     return None;
   }
@@ -4392,9 +4386,7 @@ isImpliedCondMatchingImmOperands(CmpInst::Predicate APred, const Value *ALHS,
 
 Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
                                         const DataLayout &DL, bool LHSIsFalse,
-                                        unsigned Depth, AssumptionCache *AC,
-                                        const Instruction *CxtI,
-                                        const DominatorTree *DT) {
+                                        unsigned Depth) {
   // A mismatch occurs when we compare a scalar cmp to a vector cmp, for example.
   if (LHS->getType() != RHS->getType())
     return None;
@@ -4429,11 +4421,11 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     // legs of the 'and' are true.
     if ((LHSIsFalse && match(LHS, m_Or(m_Value(ALHS), m_Value(ARHS)))) ||
         (!LHSIsFalse && match(LHS, m_And(m_Value(ALHS), m_Value(ARHS))))) {
-      if (Optional<bool> Implication = isImpliedCondition(
-              ALHS, RHS, DL, LHSIsFalse, Depth + 1, AC, CxtI, DT))
+      if (Optional<bool> Implication =
+              isImpliedCondition(ALHS, RHS, DL, LHSIsFalse, Depth + 1))
         return Implication;
-      if (Optional<bool> Implication = isImpliedCondition(
-              ARHS, RHS, DL, LHSIsFalse, Depth + 1, AC, CxtI, DT))
+      if (Optional<bool> Implication =
+              isImpliedCondition(ARHS, RHS, DL, LHSIsFalse, Depth + 1))
         return Implication;
       return None;
     }
@@ -4471,8 +4463,7 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   }
 
   if (APred == BPred)
-    return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth, AC,
-                                 CxtI, DT);
+    return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth);
 
   return None;
 }

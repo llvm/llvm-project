@@ -201,6 +201,8 @@ void GSIHashTableBuilder::addSymbols(ArrayRef<CVSymbol> Symbols) {
   // Compute the three tables: the hash records in bucket and chain order, the
   // bucket presence bitmap, and the bucket chain start offsets.
   HashRecords.reserve(Symbols.size());
+  for (ulittle32_t &Word : HashBitmap)
+    Word = 0;
   for (size_t BucketIdx = 0; BucketIdx < IPHR_HASH + 1; ++BucketIdx) {
     auto &Bucket = TmpBuckets[BucketIdx];
     if (Bucket.empty())

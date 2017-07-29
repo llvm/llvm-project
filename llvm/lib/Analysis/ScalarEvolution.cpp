@@ -2676,20 +2676,23 @@ static uint64_t Choose(uint64_t n, uint64_t k, bool &Overflow) {
 
 /// Determine if any of the operands in this SCEV are a constant or if
 /// any of the add or multiply expressions in this SCEV contain a constant.
-static bool containsConstantSomewhere(const SCEV *StartExpr) {
-  SmallVector<const SCEV *, 4> Ops;
-  Ops.push_back(StartExpr);
-  while (!Ops.empty()) {
-    const SCEV *CurrentExpr = Ops.pop_back_val();
-    if (isa<SCEVConstant>(*CurrentExpr))
-      return true;
+static bool containsConstantInAddMulChain(const SCEV *StartExpr) {
+  struct FindConstantInAddMulChain {
+    bool FoundConstant = false;
 
-    if (isa<SCEVAddExpr>(*CurrentExpr) || isa<SCEVMulExpr>(*CurrentExpr)) {
-      const auto *CurrentNAry = cast<SCEVNAryExpr>(CurrentExpr);
-      Ops.append(CurrentNAry->op_begin(), CurrentNAry->op_end());
+    bool follow(const SCEV *S) {
+      FoundConstant |= isa<SCEVConstant>(S);
+      return isa<SCEVAddExpr>(S) || isa<SCEVMulExpr>(S);
     }
-  }
-  return false;
+    bool isDone() const {
+      return FoundConstant;
+    }
+  };
+
+  FindConstantInAddMulChain F;
+  SCEVTraversal<FindConstantInAddMulChain> ST(F);
+  ST.visitAll(StartExpr);
+  return F.FoundConstant;
 }
 
 /// Get a canonical multiply expression, or something simpler if possible.
@@ -2726,7 +2729,11 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           // If any of Add's ops are Adds or Muls with a constant,
           // apply this transformation as well.
           if (Add->getNumOperands() == 2)
-            if (containsConstantSomewhere(Add))
+            // TODO: There are some cases where this transformation is not
+            // profitable, for example:
+            // Add = (C0 + X) * Y + Z.
+            // Maybe the scope of this transformation should be narrowed down.
+            if (containsConstantInAddMulChain(Add))
               return getAddExpr(getMulExpr(LHSC, Add->getOperand(0),
                                            SCEV::FlagAnyWrap, Depth + 1),
                                 getMulExpr(LHSC, Add->getOperand(1),
@@ -6257,14 +6264,6 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     PushDefUseChildren(I, Worklist);
   }
 
-  for (auto I = ExitLimits.begin(); I != ExitLimits.end();) {
-    auto &Query = I->first;
-    if (Query.L == L)
-      ExitLimits.erase(I++);
-    else
-      ++I;
-  }
-
   // Forget all contained loops too, to avoid dangling entries in the
   // ValuesAtScopes map.
   for (Loop *I : *L)
@@ -6527,18 +6526,6 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                   bool AllowPredicates) {
-  ExitLimitQuery Query(L, ExitingBlock, AllowPredicates);
-  auto MaybeEL = ExitLimits.find(Query);
-  if (MaybeEL != ExitLimits.end())
-    return MaybeEL->second;
-  ExitLimit EL = computeExitLimitImpl(L, ExitingBlock, AllowPredicates);
-  ExitLimits.insert({Query, EL});
-  return EL;
-}
-
-ScalarEvolution::ExitLimit
-ScalarEvolution::computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
-                                      bool AllowPredicates) {
 
   // Okay, we've chosen an exiting block.  See what condition causes us to exit
   // at this block and remember the exit block and whether all other targets
@@ -10402,7 +10389,6 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
-      ExitLimits(std::move(Arg.ExitLimits)),
       ConstantEvolutionLoopExitValue(
           std::move(Arg.ConstantEvolutionLoopExitValue)),
       ValuesAtScopes(std::move(Arg.ValuesAtScopes)),

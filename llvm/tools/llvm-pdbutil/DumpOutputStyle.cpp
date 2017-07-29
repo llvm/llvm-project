@@ -167,7 +167,7 @@ static void printHeader(LinePrinter &P, const Twine &S) {
 Error DumpOutputStyle::dumpFileSummary() {
   printHeader(P, "Summary");
 
-  ExitOnError Err("Invalid PDB Format");
+  ExitOnError Err("Invalid PDB Format: ");
 
   AutoIndent Indent(P);
   P.formatLine("Block Size: {0}", File.getBlockSize());
@@ -222,7 +222,7 @@ Error DumpOutputStyle::dumpStreamSummary() {
 
 static Expected<ModuleDebugStreamRef> getModuleDebugStream(PDBFile &File,
                                                            uint32_t Index) {
-  ExitOnError Err("Unexpected error");
+  ExitOnError Err("Unexpected error: ");
 
   auto &Dbi = Err(File.getPDBDbiStream());
   const auto &Modules = Dbi.modules();
@@ -258,7 +258,7 @@ static std::string formatChecksumKind(FileChecksumKind Kind) {
 namespace {
 class StringsAndChecksumsPrinter {
   const DebugStringTableSubsectionRef &extractStringTable(PDBFile &File) {
-    ExitOnError Err("Unexpected error processing modules");
+    ExitOnError Err("Unexpected error processing modules: ");
     return Err(File.getStringTable()).getStringTable();
   }
 
@@ -352,7 +352,7 @@ static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
     return;
   }
 
-  ExitOnError Err("Unexpected error processing modules");
+  ExitOnError Err("Unexpected error processing modules: ");
 
   auto &Stream = Err(File.getPDBDbiStream());
 
@@ -409,7 +409,7 @@ Error DumpOutputStyle::dumpModules() {
     return Error::success();
   }
 
-  ExitOnError Err("Unexpected error processing modules");
+  ExitOnError Err("Unexpected error processing modules: ");
 
   auto &Stream = Err(File.getPDBDbiStream());
 
@@ -438,7 +438,7 @@ Error DumpOutputStyle::dumpModules() {
 Error DumpOutputStyle::dumpModuleFiles() {
   printHeader(P, "Files");
 
-  ExitOnError Err("Unexpected error processing modules");
+  ExitOnError Err("Unexpected error processing modules: ");
 
   iterateModules(
       File, P, 11,
@@ -738,7 +738,7 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     return Error::success();
   }
 
-  ExitOnError Err("Unexpected error processing types");
+  ExitOnError Err("Unexpected error processing types: ");
 
   auto &Stream = Err((StreamIdx == StreamTPI) ? File.getPDBTpiStream()
                                               : File.getPDBIpiStream());
@@ -811,7 +811,7 @@ Error DumpOutputStyle::dumpModuleSyms() {
     return Error::success();
   }
 
-  ExitOnError Err("Unexpected error processing symbols");
+  ExitOnError Err("Unexpected error processing symbols: ");
 
   auto &Stream = Err(File.getPDBDbiStream());
 
@@ -864,7 +864,7 @@ Error DumpOutputStyle::dumpGlobals() {
     P.formatLine("Globals stream not present");
     return Error::success();
   }
-  ExitOnError Err("Error dumping globals stream");
+  ExitOnError Err("Error dumping globals stream: ");
   auto &Globals = Err(File.getPDBGlobalsStream());
 
   const GSIHashTable &Table = Globals.getGlobalsTable();
@@ -879,7 +879,7 @@ Error DumpOutputStyle::dumpPublics() {
     P.formatLine("Publics stream not present");
     return Error::success();
   }
-  ExitOnError Err("Error dumping publics stream");
+  ExitOnError Err("Error dumping publics stream: ");
   auto &Publics = Err(File.getPDBPublicsStream());
 
   const GSIHashTable &PublicsTable = Publics.getPublicsTable();
@@ -1051,7 +1051,7 @@ static std::string formatSegMapDescriptorFlag(uint32_t IndentLevel,
 
 Error DumpOutputStyle::dumpSectionContribs() {
   printHeader(P, "Section Contributions");
-  ExitOnError Err("Error dumping publics stream");
+  ExitOnError Err("Error dumping publics stream: ");
 
   AutoIndent Indent(P);
   if (!File.hasPDBDbiStream()) {
@@ -1097,7 +1097,7 @@ Error DumpOutputStyle::dumpSectionContribs() {
 
 Error DumpOutputStyle::dumpSectionMap() {
   printHeader(P, "Section Map");
-  ExitOnError Err("Error dumping section map");
+  ExitOnError Err("Error dumping section map: ");
 
   AutoIndent Indent(P);
   if (!File.hasPDBDbiStream()) {

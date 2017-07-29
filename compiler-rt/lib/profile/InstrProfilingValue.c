@@ -22,7 +22,7 @@ static int hasStaticCounters = 1;
 static int OutOfNodesWarnings = 0;
 static int hasNonDefaultValsPerSite = 0;
 #define INSTR_PROF_MAX_VP_WARNS 10
-#define INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE 8
+#define INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE 16
 #define INSTR_PROF_VNODE_POOL_SIZE 1024
 
 #ifndef _MSC_VER
