@@ -118,7 +118,7 @@ entry:
 
   ; Insert a meaningless dbg.value intrinsic; it should have no
   ; effect on the working of DSE in any way.
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !4)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !4)
 
   ; CHECK:  store i32 -1, i32* @x, align 4
   store i32 -1, i32* @x, align 4
@@ -240,7 +240,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !13}

@@ -14,7 +14,7 @@ define void @f() !dbg !6 {
 entry:
   tail call void (...) @h(), !dbg !9
   %call = tail call i32 (...) @g(), !dbg !10
-  tail call void @llvm.dbg.value(metadata i32 %call, i64 0, metadata !11, metadata !13), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !11, metadata !13), !dbg !14
   %patatino = xor i32 %call, %call
   tail call void (...) @h(), !dbg !15
   ret void, !dbg !16
@@ -22,7 +22,7 @@ entry:
 
 declare void @h(...)
 declare i32 @g(...)
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

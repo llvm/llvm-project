@@ -41,7 +41,7 @@ test()
     assert(h(&i) != h(&j));
 }
 
-// can't hash nullptr_t until c++17
+// can't hash nullptr_t until C++17
 void test_nullptr()
 {
 #if TEST_STD_VER > 14

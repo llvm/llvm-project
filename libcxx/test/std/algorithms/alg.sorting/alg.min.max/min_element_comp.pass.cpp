@@ -87,8 +87,8 @@ struct less { constexpr bool operator ()( const int &x, const int &y) const { re
 void constexpr_test()
 {
 #if TEST_STD_VER >= 14
-	constexpr auto p = std::min_element(il, il+8, less());
-	static_assert(*p == 1, "");
+    constexpr auto p = std::min_element(il, il+8, less());
+    static_assert(*p == 1, "");
 #endif
 }
 

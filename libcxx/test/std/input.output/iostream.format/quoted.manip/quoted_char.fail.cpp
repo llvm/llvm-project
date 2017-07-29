@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-//	Test that mismatches between strings and wide streams are diagnosed
+//  Test that mismatches between strings and wide streams are diagnosed
 
 #if TEST_STD_VER > 11
 

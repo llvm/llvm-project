@@ -13,7 +13,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 define void @__OpenCL_nbt02_kernel(i32 addrspace(1)* %ip) nounwind !dbg !0 {
 entry:
-  call void @llvm.dbg.value(metadata i32 addrspace(1)* %ip, i64 0, metadata !8, metadata !DIExpression()), !dbg !9
+  call void @llvm.dbg.value(metadata i32 addrspace(1)* %ip, metadata !8, metadata !DIExpression()), !dbg !9
   %0 = call <4 x i32> @__amdil_get_local_id_int() nounwind
   %1 = extractelement <4 x i32> %0, i32 0
   br label %2
@@ -28,7 +28,7 @@ entry:
 
 get_local_id.exit:                                ; preds = %4
   %6 = phi i32 [ %5, %4 ]
-  call void @llvm.dbg.value(metadata i32 %6, i64 0, metadata !10, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.value(metadata i32 %6, metadata !10, metadata !DIExpression()), !dbg !12
   %7 = call <4 x i32> @__amdil_get_global_id_int() nounwind, !dbg !12
   %8 = extractelement <4 x i32> %7, i32 0, !dbg !12
   br label %9
@@ -43,7 +43,7 @@ get_local_id.exit:                                ; preds = %4
 
 get_global_id.exit:                               ; preds = %11
   %13 = phi i32 [ %12, %11 ]
-  call void @llvm.dbg.value(metadata i32 %13, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata i32 %13, metadata !13, metadata !DIExpression()), !dbg !14
   %14 = call <4 x i32> @__amdil_get_local_size_int() nounwind
   %15 = extractelement <4 x i32> %14, i32 0
   br label %16
@@ -58,7 +58,7 @@ get_global_id.exit:                               ; preds = %11
 
 get_local_size.exit:                              ; preds = %18
   %20 = phi i32 [ %19, %18 ]
-  call void @llvm.dbg.value(metadata i32 %20, i64 0, metadata !15, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.value(metadata i32 %20, metadata !15, metadata !DIExpression()), !dbg !16
   %tmp5 = add i32 %6, %13, !dbg !17
   %tmp7 = add i32 %tmp5, %20, !dbg !17
   store i32 %tmp7, i32 addrspace(1)* %ip, align 4, !dbg !17
@@ -76,7 +76,7 @@ declare <4 x i32> @__amdil_get_local_id_int() nounwind
 
 declare <4 x i32> @__amdil_get_global_id_int() nounwind
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!22}

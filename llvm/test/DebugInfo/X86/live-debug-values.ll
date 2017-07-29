@@ -46,8 +46,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @main(i32 %argc, i8** nocapture readonly %argv) #0 !dbg !10 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !17, metadata !20), !dbg !21
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !18, metadata !20), !dbg !22
+  tail call void @llvm.dbg.value(metadata i32 %argc, metadata !17, metadata !20), !dbg !21
+  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !18, metadata !20), !dbg !22
   %cmp = icmp eq i32 %argc, 2, !dbg !24
   br i1 %cmp, label %if.else, label %if.end, !dbg !26
 
@@ -55,13 +55,13 @@ if.else:                                          ; preds = %entry
   %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 1, !dbg !27
   %0 = load i8*, i8** %arrayidx, align 8, !dbg !27, !tbaa !28
   %call = tail call i32 (i8*, ...) bitcast (i32 (...)* @atoi to i32 (i8*, ...)*)(i8* %0) #1, !dbg !32
-  tail call void @llvm.dbg.value(metadata i32 %call, i64 0, metadata !19, metadata !20), !dbg !33
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !19, metadata !20), !dbg !33
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %entry
   %n.0 = phi i32 [ %call, %if.else ], [ 2, %entry ]
   %call1 = tail call i32 @change(i32 %n.0) #1, !dbg !34
-  tail call void @llvm.dbg.value(metadata i32 %call1, i64 0, metadata !19, metadata !20), !dbg !33
+  tail call void @llvm.dbg.value(metadata i32 %call1, metadata !19, metadata !20), !dbg !33
   %cmp2 = icmp sgt i32 %call1, 10, !dbg !35
   br i1 %cmp2, label %if.then.3, label %if.else.5, !dbg !37
 
@@ -97,7 +97,7 @@ declare i32 @inc(i32) #1
 declare i32 @printf(i8* nocapture readonly, ...) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }

@@ -20,9 +20,9 @@ entry:
 
 for.body9:                                        ; preds = %for.body9, %entry
   %add19 = fadd <4 x float> undef, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
-  tail call void @llvm.dbg.value(metadata <4 x float> %add19, i64 0, metadata !27, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata <4 x float> %add19, metadata !27, metadata !DIExpression()), !dbg !39
   %add20 = fadd <4 x float> undef, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
-  tail call void @llvm.dbg.value(metadata <4 x float> %add20, i64 0, metadata !28, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata <4 x float> %add20, metadata !28, metadata !DIExpression()), !dbg !39
   br i1 %cond, label %for.end54, label %for.body9, !dbg !44
 
 for.end54:                                        ; preds = %for.body9
@@ -37,7 +37,7 @@ for.end54:                                        ; preds = %for.body9
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.module.flags = !{!56}
 !llvm.dbg.cu = !{!2}

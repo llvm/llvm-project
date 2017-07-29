@@ -110,7 +110,7 @@ entry:
 
 ; <label>:30                                      ; preds = %24, %5
   store i32 0, i32* %i.i, align 4, !dbg !39, !tbaa !41
-  tail call void @llvm.dbg.value(metadata %struct.C* %8, i64 0, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !46
+  tail call void @llvm.dbg.value(metadata %struct.C* %8, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !46
   call void @_ZN1C5m_fn3Ev(%struct.C* %8), !dbg !47
   unreachable, !dbg !47
 }
@@ -145,7 +145,7 @@ entry:
   %16 = add i64 %15, 0, !dbg !48
   %17 = inttoptr i64 %16 to i64*, !dbg !48
   store i64 -868083113472691727, i64* %17, !dbg !48
-  tail call void @llvm.dbg.value(metadata %struct.C* %this, i64 0, metadata !30, metadata !DIExpression()), !dbg !48
+  tail call void @llvm.dbg.value(metadata %struct.C* %this, metadata !30, metadata !DIExpression()), !dbg !48
   %call = call i32 @_ZN1A5m_fn1Ev(%struct.A* %8), !dbg !49
   %i.i = getelementptr inbounds %struct.C, %struct.C* %this, i64 0, i32 1, i32 0, !dbg !50
   %18 = ptrtoint i32* %i.i to i64, !dbg !50
@@ -198,7 +198,7 @@ entry:
 declare i32 @_ZN1A5m_fn1Ev(%struct.A*) #2
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 define internal void @asan.module_ctor() {
   tail call void @__asan_init_v3()

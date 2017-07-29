@@ -129,6 +129,10 @@ def FeatureFPAO           : SubtargetFeature<"fpao", "HasFPAO", "true",
 def FeatureFuseAES        : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
                                              "CPU fuses AES crypto operations">;
 
+// The way of reading thread pointer                                             
+def FeatureReadTp :  SubtargetFeature<"read-tp-hard", "ReadTPHard", "true",
+                                      "Reading thread pointer from register">;
+
 // Cyclone can zero VFP registers in 0 cycles.
 def FeatureZCZeroing      : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                              "Has zero-cycle zeroing instructions">;

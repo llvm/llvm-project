@@ -10,14 +10,14 @@
 ; Function Attrs: uwtable
 define void @main() #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 42, i64 0, metadata !10, metadata !DIExpression()), !dbg !21
-  tail call void @llvm.dbg.value(metadata i32 117, i64 0, metadata !12, metadata !DIExpression()), !dbg !24
-  tail call void @llvm.dbg.value(metadata i16 7, i64 0, metadata !15, metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i32 42, metadata !10, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 117, metadata !12, metadata !DIExpression()), !dbg !24
+  tail call void @llvm.dbg.value(metadata i16 7, metadata !15, metadata !DIExpression()), !dbg !27
   ret void, !dbg !29
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { uwtable }
 attributes #2 = { nounwind readnone }

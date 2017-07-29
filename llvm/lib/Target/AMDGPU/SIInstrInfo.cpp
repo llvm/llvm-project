@@ -1997,7 +1997,7 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
     if (isDS(MIb))
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
 
-    return !isFLAT(MIb);
+    return !isFLAT(MIb) || isSegmentSpecificFLAT(MIb);
   }
 
   if (isMUBUF(MIa) || isMTBUF(MIa)) {

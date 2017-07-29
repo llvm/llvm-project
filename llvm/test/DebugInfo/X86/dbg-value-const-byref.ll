@@ -51,13 +51,13 @@ target triple = "x86_64-apple-macosx10.9.0"
 define i32 @foo() #0 !dbg !4 {
 entry:
   %i = alloca i32, align 4
-  call void @llvm.dbg.value(metadata i32 3, i64 0, metadata !10, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.value(metadata i32 3, metadata !10, metadata !DIExpression()), !dbg !15
   %call = call i32 @f3(i32 3) #3, !dbg !16
-  call void @llvm.dbg.value(metadata i32 7, i64 0, metadata !10, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata i32 7, metadata !10, metadata !DIExpression()), !dbg !18
   %call1 = call i32 (...) @f1() #3, !dbg !19
-  call void @llvm.dbg.value(metadata i32 %call1, i64 0, metadata !10, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.value(metadata i32 %call1, metadata !10, metadata !DIExpression()), !dbg !19
   store i32 %call1, i32* %i, align 4, !dbg !19, !tbaa !20
-  call void @llvm.dbg.value(metadata i32* %i, i64 0, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !24
+  call void @llvm.dbg.value(metadata i32* %i, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !24
   call void @f2(i32* %i) #3, !dbg !24
   ret i32 0, !dbg !25
 }
@@ -69,7 +69,7 @@ declare i32 @f1(...)
 declare void @f2(i32*)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #2 = { nounwind readnone }

@@ -66,6 +66,21 @@
 # SYMBOLS-NEXT: 0000000000011000         .bbb            00000000 __start_bbb
 # SYMBOLS-NEXT: 0000000000012000         .bbb            00000000 __end_bbb
 
+## Check that ALIGN zero do nothing and does not crash #1.
+# RUN: echo "SECTIONS { . = ALIGN(0x123, 0); .aaa : { *(.aaa) } }" > %t.script
+# RUN: ld.lld -o %t4 --script %t.script %t
+# RUN: llvm-objdump -section-headers %t4 | FileCheck %s -check-prefix=ZERO
+
+# ZERO:      Sections:
+# ZERO-NEXT: Idx Name          Size      Address         Type
+# ZERO-NEXT:   0               00000000 0000000000000000
+# ZERO-NEXT:   1 .aaa          00000008 0000000000000123 DATA
+
+## Check that ALIGN zero do nothing and does not crash #2.
+# RUN: echo "SECTIONS { . = 0x123; . = ALIGN(0); .aaa : { *(.aaa) } }" > %t.script
+# RUN: ld.lld -o %t5 --script %t.script %t
+# RUN: llvm-objdump -section-headers %t5 | FileCheck %s -check-prefix=ZERO
+
 .global _start
 _start:
  nop

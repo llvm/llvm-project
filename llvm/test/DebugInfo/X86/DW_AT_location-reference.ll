@@ -64,7 +64,7 @@ define void @f() nounwind !dbg !0 {
 entry:
   %call = tail call i32 @g(i32 0, i32 0) nounwind, !dbg !8
   store i32 %call, i32* @a, align 4, !dbg !8
-  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !5, metadata !DIExpression()), !dbg !13
+  tail call void @llvm.dbg.value(metadata i32 1, metadata !5, metadata !DIExpression()), !dbg !13
   br label %while.body
 
 while.body:                                       ; preds = %entry, %while.body
@@ -75,10 +75,10 @@ while.body:                                       ; preds = %entry, %while.body
   br i1 %tobool, label %while.end, label %while.body, !dbg !14
 
 while.end:                                        ; preds = %while.body
-  tail call void @llvm.dbg.value(metadata i32 %mul, i64 0, metadata !5, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 %mul, metadata !5, metadata !DIExpression()), !dbg !14
   %call4 = tail call i32 @g(i32 %mul, i32 0) nounwind, !dbg !15
   store i32 %call4, i32* @a, align 4, !dbg !15
-  tail call void @llvm.dbg.value(metadata i32 2, i64 0, metadata !5, metadata !DIExpression()), !dbg !17
+  tail call void @llvm.dbg.value(metadata i32 2, metadata !5, metadata !DIExpression()), !dbg !17
   br label %while.body9
 
 while.body9:                                      ; preds = %while.end, %while.body9
@@ -89,7 +89,7 @@ while.body9:                                      ; preds = %while.end, %while.b
   br i1 %tobool8, label %while.end13, label %while.body9, !dbg !18
 
 while.end13:                                      ; preds = %while.body9
-  tail call void @llvm.dbg.value(metadata i32 %mul12, i64 0, metadata !5, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %mul12, metadata !5, metadata !DIExpression()), !dbg !18
   %call15 = tail call i32 @g(i32 0, i32 %mul12) nounwind, !dbg !19
   store i32 %call15, i32* @a, align 4, !dbg !19
   ret void, !dbg !20
@@ -97,7 +97,7 @@ while.end13:                                      ; preds = %while.body9
 
 declare i32 @g(i32, i32)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!24}

@@ -10,21 +10,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @f(i32 %n) safestack !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !11, metadata !14), !dbg !15
+  tail call void @llvm.dbg.value(metadata i32 %n, metadata !11, metadata !14), !dbg !15
   %0 = zext i32 %n to i64, !dbg !16
 
 ; CHECK:  store i8* %[[VLA:.*]], i8** @__safestack_unsafe_stack_ptr
-; CHECK:  tail call void @llvm.dbg.value(metadata i8* %[[VLA]], i64 0, metadata ![[TYPE:.*]], metadata ![[EXPR:.*]])
+; CHECK:  tail call void @llvm.dbg.value(metadata i8* %[[VLA]], metadata ![[TYPE:.*]], metadata ![[EXPR:.*]])
 ; CHECK:  call void @capture({{.*}} %[[VLA]])
 
   %vla = alloca i8, i64 %0, align 16, !dbg !16
-  tail call void @llvm.dbg.value(metadata i8* %vla, i64 0, metadata !12, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata i8* %vla, metadata !12, metadata !17), !dbg !18
   call void @capture(i8* nonnull %vla), !dbg !19
   ret void, !dbg !20
 }
 
 declare void @capture(i8*)
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

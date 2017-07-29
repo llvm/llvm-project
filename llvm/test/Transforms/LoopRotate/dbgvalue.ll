@@ -1,7 +1,7 @@
 ; RUN: opt -S -loop-rotate < %s | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 define i32 @tak(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !0 {
 ; CHECK-LABEL: define i32 @tak(
@@ -16,9 +16,9 @@ tailrecurse:                                      ; preds = %if.then, %entry
   %x.tr = phi i32 [ %x, %entry ], [ %call, %if.then ]
   %y.tr = phi i32 [ %y, %entry ], [ %call9, %if.then ]
   %z.tr = phi i32 [ %z, %entry ], [ %call14, %if.then ]
-  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !6, metadata !DIExpression()), !dbg !7
-  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !8, metadata !DIExpression()), !dbg !9
-  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !10, metadata !DIExpression()), !dbg !11
+  tail call void @llvm.dbg.value(metadata i32 %x.tr, metadata !6, metadata !DIExpression()), !dbg !7
+  tail call void @llvm.dbg.value(metadata i32 %y.tr, metadata !8, metadata !DIExpression()), !dbg !9
+  tail call void @llvm.dbg.value(metadata i32 %z.tr, metadata !10, metadata !DIExpression()), !dbg !11
   %cmp = icmp slt i32 %y.tr, %x.tr, !dbg !12
   br i1 %cmp, label %if.then, label %if.end, !dbg !12
 
@@ -55,9 +55,9 @@ tailrecurse:                                      ; preds = %if.then, %entry
   br i1 %cmp, label %if.then, label %if.end, !dbg !22
 
 if.then:                                          ; preds = %tailrecurse
-  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !36, metadata !DIExpression()), !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !38, metadata !DIExpression()), !dbg !39
-  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !40, metadata !DIExpression()), !dbg !41
+  tail call void @llvm.dbg.value(metadata i32 %x.tr, metadata !36, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %y.tr, metadata !38, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %z.tr, metadata !40, metadata !DIExpression()), !dbg !41
   %sub = sub nsw i32 %x.tr, 1, !dbg !24
   %call = tail call i32 @tak(i32 %sub, i32 %y.tr, i32 %z.tr), !dbg !24
   %sub6 = sub nsw i32 %y.tr, 1, !dbg !24
@@ -67,9 +67,9 @@ if.then:                                          ; preds = %tailrecurse
   br label %tailrecurse
 
 if.end:                                           ; preds = %tailrecurse
-  tail call void @llvm.dbg.value(metadata i32 %x.tr, i64 0, metadata !36, metadata !DIExpression()), !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %y.tr, i64 0, metadata !38, metadata !DIExpression()), !dbg !39
-  tail call void @llvm.dbg.value(metadata i32 %z.tr, i64 0, metadata !40, metadata !DIExpression()), !dbg !41
+  tail call void @llvm.dbg.value(metadata i32 %x.tr, metadata !36, metadata !DIExpression()), !dbg !37
+  tail call void @llvm.dbg.value(metadata i32 %y.tr, metadata !38, metadata !DIExpression()), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %z.tr, metadata !40, metadata !DIExpression()), !dbg !41
   br label %return, !dbg !26
 
 return:                                           ; preds = %if.end
@@ -111,7 +111,7 @@ for.body:
 
 for.inc:
   %dec = add i64 %i.0, -1
-  tail call void @llvm.dbg.value(metadata i64 %dec, i64 0, metadata !DILocalVariable(scope: !0), metadata !DIExpression()), !dbg !DILocation(scope: !0)
+  tail call void @llvm.dbg.value(metadata i64 %dec, metadata !DILocalVariable(scope: !0), metadata !DIExpression()), !dbg !DILocation(scope: !0)
   br label %for.cond
 
 for.end:

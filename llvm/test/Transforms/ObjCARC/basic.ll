@@ -23,7 +23,7 @@ declare void @invokee()
 declare i8* @returner()
 declare void @bar(i32 ()*)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 declare i8* @objc_msgSend(i8*, i8*, ...)
 
@@ -2706,8 +2706,8 @@ define {<2 x float>, <2 x float>} @"\01-[A z]"({}* %self, i8* nocapture %_cmd) n
 invoke.cont:
   %0 = bitcast {}* %self to i8*
   %1 = tail call i8* @objc_retain(i8* %0) nounwind
-  tail call void @llvm.dbg.value(metadata {}* %self, i64 0, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
-  tail call void @llvm.dbg.value(metadata {}* %self, i64 0, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
+  tail call void @llvm.dbg.value(metadata {}* %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
+  tail call void @llvm.dbg.value(metadata {}* %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
   %ivar = load i64, i64* @"OBJC_IVAR_$_A.myZ", align 8
   %add.ptr = getelementptr i8, i8* %0, i64 %ivar
   %tmp1 = bitcast i8* %add.ptr to float*

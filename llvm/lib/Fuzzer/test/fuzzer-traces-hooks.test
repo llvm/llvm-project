@@ -3,7 +3,7 @@
 UNSUPPORTED: windows
 CHECK: BINGO
 
-RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=10000000   2>&1 | FileCheck %s
 RUN: not LLVMFuzzer-StrncmpTest              -seed=1 -runs=2000000   2>&1 | FileCheck %s
 RUN: not LLVMFuzzer-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
 RUN: not LLVMFuzzer-StrstrTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s

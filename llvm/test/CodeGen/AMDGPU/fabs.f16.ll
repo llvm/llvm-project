@@ -9,7 +9,7 @@
 ; GCN-LABEL: {{^}}s_fabs_free_f16:
 ; GCN: flat_load_ushort [[VAL:v[0-9]+]],
 ; GCN: v_and_b32_e32 [[RESULT:v[0-9]+]], 0x7fff, [[VAL]]
-; GCN: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
 define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc= bitcast i16 %in to half
@@ -67,7 +67,7 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:     v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
-; GCN: flat_store_dwordx2
+; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   store <4 x half> %fabs, <4 x half> addrspace(1)* %out
@@ -95,7 +95,7 @@ define amdgpu_kernel void @fabs_fold_f16(half addrspace(1)* %out, half %in0, hal
 }
 
 ; GCN-LABEL: {{^}}v_fabs_v2f16:
-; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7fff7fff, [[VAL]]
 define amdgpu_kernel void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -118,7 +118,7 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 }
 
 ; GCN-LABEL: {{^}}v_fabs_fold_v2f16:
-; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 
 ; CI: v_cvt_f32_f16_e32
 ; CI: v_cvt_f32_f16_e32

@@ -28,8 +28,8 @@ test()
 }
 
 class A {
-	A();
-	operator std::error_code () const { return std::error_code(); }
+    A();
+    operator std::error_code () const { return std::error_code(); }
 };
 
 // Specialize the template for my class

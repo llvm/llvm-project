@@ -75,6 +75,7 @@ Available checks are:
      of a misaligned reference.
   -  ``-fsanitize=bool``: Load of a ``bool`` value which is neither
      ``true`` nor ``false``.
+  -  ``-fsanitize=builtin``: Passing invalid values to compiler builtins.
   -  ``-fsanitize=bounds``: Out of bounds array indexing, in cases
      where the array bound can be statically determined.
   -  ``-fsanitize=enum``: Load of a value of an enumerated type which
