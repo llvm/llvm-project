@@ -122,6 +122,21 @@ struct InvalidValueData {
 /// \brief Handle a load of an invalid value for the type.
 RECOVERABLE(load_invalid_value, InvalidValueData *Data, ValueHandle Val)
 
+/// Known builtin check kinds.
+/// Keep in sync with the enum of the same name in CodeGenFunction.h
+enum BuiltinCheckKind : unsigned char {
+  BCK_CTZPassedZero,
+  BCK_CLZPassedZero,
+};
+
+struct InvalidBuiltinData {
+  SourceLocation Loc;
+  unsigned char Kind;
+};
+
+/// Handle a builtin called in an invalid way.
+RECOVERABLE(invalid_builtin, InvalidBuiltinData *Data)
+
 struct FunctionTypeMismatchData {
   SourceLocation Loc;
   const TypeDescriptor &Type;
