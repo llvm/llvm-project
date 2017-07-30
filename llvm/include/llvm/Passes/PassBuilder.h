@@ -71,6 +71,18 @@ public:
     std::vector<PipelineElement> InnerPipeline;
   };
 
+  /// \brief ThinLTO phase.
+  ///
+  /// This enumerates the LLVM ThinLTO optimization phases.
+  enum class ThinLTOPhase {
+    /// No ThinLTO behavior needed.
+    None,
+    // ThinLTO prelink (summary) phase.
+    PreLink,
+    // ThinLTO postlink (backend compile) phase.
+    PostLink
+  };
+
   /// \brief LLVM-provided high-level optimization levels.
   ///
   /// This enumerates the LLVM-provided high-level optimization levels. Each
@@ -214,13 +226,11 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ///
-  /// \p PrepareForThinLTO indicates whether this is invoked in
-  /// PrepareForThinLTO phase. Special handling is needed for sample PGO to
-  /// ensure profile accurate in the backend profile annotation phase.
+  /// \p Phase indicates the current ThinLTO phase.
   FunctionPassManager
   buildFunctionSimplificationPipeline(OptimizationLevel Level,
-                                      bool DebugLogging = false,
-                                      bool PrepareForThinLTO = false);
+                                      ThinLTOPhase Phase,
+                                      bool DebugLogging = false);
 
   /// Construct the core LLVM module canonicalization and simplification
   /// pipeline.
@@ -236,13 +246,11 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ///
-  /// \p PrepareForThinLTO indicates whether this is invoked in
-  /// PrepareForThinLTO phase. Special handling is needed for sample PGO to
-  /// ensure profile accurate in the backend profile annotation phase.
+  /// \p Phase indicates the current ThinLTO phase.
   ModulePassManager
   buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                    bool DebugLogging = false,
-                                    bool PrepareForThinLTO = false);
+                                    ThinLTOPhase Phase,
+                                    bool DebugLogging = false);
 
   /// Construct the core LLVM module optimization pipeline.
   ///

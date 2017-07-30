@@ -58,9 +58,11 @@ public:
   }
 
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
-                                     uint64_t ModuleOffset);
+                                     uint64_t ModuleOffset,
+                                     StringRef DWPName = "");
   Expected<DIInliningInfo> symbolizeInlinedCode(const std::string &ModuleName,
-                                                uint64_t ModuleOffset);
+                                                uint64_t ModuleOffset,
+                                                StringRef DWPName = "");
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
                                    uint64_t ModuleOffset);
   void flush();
@@ -79,7 +81,7 @@ private:
   /// only reported once. Subsequent calls to get module info for a module that
   /// failed to load will return nullptr.
   Expected<SymbolizableModule *>
-  getOrCreateModuleInfo(const std::string &ModuleName);
+  getOrCreateModuleInfo(const std::string &ModuleName, StringRef DWPName = "");
 
   ObjectFile *lookUpDsymFile(const std::string &Path,
                              const MachOObjectFile *ExeObj,
