@@ -1,15 +1,3 @@
-// REQUIRES: x86_64-linux
-// RUN: %host_cc -O0 -g %s -o %t 2>&1
-// RUN: %t 2>&1 | llvm-symbolizer -print-source-context-lines=5 -obj=%t | FileCheck %s
-
-// CHECK: inc
-// CHECK: print_context.c:[[@LINE+9]]
-// CHECK: [[@LINE+6]]  : #include
-// CHECK: [[@LINE+6]]  :
-// CHECK: [[@LINE+6]] >: int inc
-// CHECK: [[@LINE+6]]  :   return
-// CHECK: [[@LINE+6]]  : }
-
 #include <stdio.h>
 
 int inc(int a) {
@@ -21,3 +9,14 @@ int main() {
   return 0;
 }
 
+// RUN: echo "%p/Inputs/print_context.o 0x0" | llvm-symbolizer -print-source-context-lines=5 | FileCheck %s
+
+// Inputs/print_context.o built with plain -g -c from this source file
+
+// CHECK: inc
+// CHECK: print_context.c:3
+// CHECK: 1  : #include
+// CHECK: 2  :
+// CHECK: 3 >: int inc
+// CHECK: 4  :   return
+// CHECK: 5  : }
