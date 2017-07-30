@@ -712,9 +712,9 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
     }
   }
 
-  StringRef &FoundStr = MangledDeclNames[CanonicalGD];
-  if (!FoundStr.empty())
-    return FoundStr;
+  auto FoundName = MangledDeclNames.find(CanonicalGD);
+  if (FoundName != MangledDeclNames.end())
+    return FoundName->second;
 
   const auto *ND = cast<NamedDecl>(GD.getDecl());
   SmallString<256> Buffer;
@@ -745,7 +745,7 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   // Keep the first result in the case of a mangling collision.
   auto Result = Manglings.insert(std::make_pair(Str, GD));
-  return FoundStr = Result.first->first();
+  return MangledDeclNames[CanonicalGD] = Result.first->first();
 }
 
 StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
