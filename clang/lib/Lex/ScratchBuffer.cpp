@@ -35,6 +35,14 @@ SourceLocation ScratchBuffer::getToken(const char *Buf, unsigned Len,
                                        const char *&DestPtr) {
   if (BytesUsed+Len+2 > ScratchBufSize)
     AllocScratchBuffer(Len+2);
+  else {
+    // Clear out the source line cache if it's already been computed.
+    // FIXME: Allow this to be incrementally extended.
+    auto *ContentCache = const_cast<SrcMgr::ContentCache *>(
+        SourceMgr.getSLocEntry(SourceMgr.getFileID(BufferStartLoc))
+                 .getFile().getContentCache());
+    ContentCache->SourceLineCache = nullptr;
+  }
 
   // Prefix the token with a \n, so that it looks like it is the first thing on
   // its own virtual line in caret diagnostics.
