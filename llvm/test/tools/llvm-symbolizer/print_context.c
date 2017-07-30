@@ -2,6 +2,14 @@
 // RUN: %host_cc -O0 -g %s -o %t 2>&1
 // RUN: %t 2>&1 | llvm-symbolizer -print-source-context-lines=5 -obj=%t | FileCheck %s
 
+// CHECK: inc
+// CHECK: print_context.c:[[@LINE+9]]
+// CHECK: [[@LINE+6]]  : #include
+// CHECK: [[@LINE+6]]  :
+// CHECK: [[@LINE+6]] >: int inc
+// CHECK: [[@LINE+6]]  :   return
+// CHECK: [[@LINE+6]]  : }
+
 #include <stdio.h>
 
 int inc(int a) {
@@ -13,10 +21,3 @@ int main() {
   return 0;
 }
 
-// CHECK: inc
-// CHECK: print_context.c:7
-// CHECK: 5  : #include
-// CHECK: 6  :
-// CHECK: 7 >: int inc
-// CHECK: 8  :   return
-// CHECK: 9  : }
