@@ -9035,25 +9035,29 @@ _mm512_kxor (__mmask16 __A, __mmask16 __B)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm512_stream_si512 (__m512i * __P, __m512i __A)
 {
-  __builtin_nontemporal_store((__v8di)__A, (__v8di*)__P);
+  typedef __v8di __v8di_aligned __attribute__((aligned(64)));
+  __builtin_nontemporal_store((__v8di_aligned)__A, (__v8di_aligned*)__P);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_stream_load_si512 (void *__P)
 {
-  return (__m512i) __builtin_nontemporal_load((const __v8di *)__P);
+  typedef __v8di __v8di_aligned __attribute__((aligned(64)));
+  return (__m512i) __builtin_nontemporal_load((const __v8di_aligned *)__P);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm512_stream_pd (double *__P, __m512d __A)
 {
-  __builtin_nontemporal_store((__v8df)__A, (__v8df*)__P);
+  typedef __v8df __v8df_aligned __attribute__((aligned(64)));
+  __builtin_nontemporal_store((__v8df_aligned)__A, (__v8df_aligned*)__P);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm512_stream_ps (float *__P, __m512 __A)
 {
-  __builtin_nontemporal_store((__v16sf)__A, (__v16sf*)__P);
+  typedef __v16sf __v16sf_aligned __attribute__((aligned(64)));
+  __builtin_nontemporal_store((__v16sf_aligned)__A, (__v16sf_aligned*)__P);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
