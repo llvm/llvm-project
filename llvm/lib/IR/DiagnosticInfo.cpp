@@ -218,6 +218,9 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
   OS << *T;
 }
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
+    : Key(Key), Val(S.str()) {}
+
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
     : Key(Key), Val(itostr(N)) {}
 

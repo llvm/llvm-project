@@ -102,10 +102,13 @@ class DWARFContext : public DIContext {
 
 protected:
   std::unique_ptr<const DWARFObject> DObj;
+  std::string DWPName;
 
 public:
-  DWARFContext(std::unique_ptr<const DWARFObject> DObj)
-      : DIContext(CK_DWARF), DObj(std::move(DObj)) {}
+  DWARFContext(std::unique_ptr<const DWARFObject> DObj,
+               std::string DWPName = "")
+      : DIContext(CK_DWARF), DObj(std::move(DObj)),
+        DWPName(std::move(DWPName)) {}
   DWARFContext(DWARFContext &) = delete;
   DWARFContext &operator=(DWARFContext &) = delete;
 
@@ -245,7 +248,8 @@ public:
   static ErrorPolicy defaultErrorHandler(Error E);
   static std::unique_ptr<DWARFContext>
   create(const object::ObjectFile &Obj, const LoadedObjectInfo *L = nullptr,
-         function_ref<ErrorPolicy(Error)> HandleError = defaultErrorHandler);
+         function_ref<ErrorPolicy(Error)> HandleError = defaultErrorHandler,
+         std::string DWPName = "");
 
   static std::unique_ptr<DWARFContext>
   create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,

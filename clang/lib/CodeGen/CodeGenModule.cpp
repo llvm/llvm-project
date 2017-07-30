@@ -745,6 +745,8 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   // Keep the first result in the case of a mangling collision.
   auto Result = Manglings.insert(std::make_pair(Str, GD));
+  assert(&FoundStr == &MangledDeclNames[CanonicalGD] && "FoundStr is invalidated!");
+  assert(FoundStr.empty() && "FoundStr is not empty!");
   return FoundStr = Result.first->first();
 }
 
