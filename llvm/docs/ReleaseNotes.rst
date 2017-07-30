@@ -125,7 +125,22 @@ Changes to the AMDGPU Target
 Changes to the AVR Target
 -----------------------------
 
- During this release ...
+This release consists mainly of bugfixes and implementations of features
+required for compiling basic Rust programs.
+
+* Enable the branch relaxation pass so that we don't crash on large
+  stack load/stores
+
+* Add support for lowering bit-rotations to the native `ror` and `rol`
+  instructions
+
+* Fix bug where function pointers were treated as pointers to RAM and not
+  pointers to program memory
+
+* Fix broken code generaton for shift-by-variable expressions
+
+* Support zero-sized types in argument lists; this is impossible in C,
+  but possible in Rust
 
 Changes to the OCaml bindings
 -----------------------------
