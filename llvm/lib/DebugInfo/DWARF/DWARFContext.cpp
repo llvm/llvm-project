@@ -400,10 +400,12 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
+  parseDWOCompileUnits();
+
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
       if (auto CUOff = R->getOffset(DW_SECT_INFO))
-        return CUs.getUnitForOffset(CUOff->Offset);
+        return DWOCUs.getUnitForOffset(CUOff->Offset);
     return nullptr;
   }
 
