@@ -792,11 +792,13 @@ DWARFContext::getDWOContext(StringRef AbsolutePath) {
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
   }
 
-  SmallString<128> DWPName;
   Expected<OwningBinary<ObjectFile>> Obj = [&] {
     if (!CheckedForDWP) {
-      (DObj->getFileName() + ".dwp").toVector(DWPName);
-      auto Obj = object::ObjectFile::createObjectFile(DWPName);
+      SmallString<128> DWPName;
+      auto Obj = object::ObjectFile::createObjectFile(
+          this->DWPName.empty()
+              ? (DObj->getFileName() + ".dwp").toStringRef(DWPName)
+              : StringRef(this->DWPName));
       if (Obj) {
         Entry = &DWP;
         return Obj;
@@ -1252,9 +1254,10 @@ public:
 
 std::unique_ptr<DWARFContext>
 DWARFContext::create(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
-                     function_ref<ErrorPolicy(Error)> HandleError) {
+                     function_ref<ErrorPolicy(Error)> HandleError,
+                     std::string DWPName) {
   auto DObj = llvm::make_unique<DWARFObjInMemory>(Obj, L, HandleError);
-  return llvm::make_unique<DWARFContext>(std::move(DObj));
+  return llvm::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName));
 }
 
 std::unique_ptr<DWARFContext>
@@ -1262,5 +1265,5 @@ DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
                      uint8_t AddrSize, bool isLittleEndian) {
   auto DObj =
       llvm::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
-  return llvm::make_unique<DWARFContext>(std::move(DObj));
+  return llvm::make_unique<DWARFContext>(std::move(DObj), "");
 }
