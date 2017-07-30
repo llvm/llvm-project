@@ -123,7 +123,7 @@ StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
 }
 
 void DWARFUnitIndex::dump(raw_ostream &OS) const {
-  if (!Header.NumBuckets)
+  if (!*this)
     return;
 
   Header.dump(OS);
@@ -169,4 +169,18 @@ DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
       if (Contribs[InfoColumn].Offset == Offset)
         return &Rows[i];
   return nullptr;
+}
+
+const DWARFUnitIndex::Entry *DWARFUnitIndex::getFromHash(uint64_t S) const {
+  uint64_t Mask = Header.NumBuckets - 1;
+
+  auto H = S & Mask;
+  auto HP = ((S >> 32) & Mask) | 1;
+  while (Rows[H].getSignature() != S && Rows[H].getSignature() != 0)
+    H = (H + HP) & Mask;
+
+  if (Rows[H].getSignature() != S)
+    return nullptr;
+
+  return &Rows[H];
 }

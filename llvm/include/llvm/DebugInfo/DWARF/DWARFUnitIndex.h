@@ -83,9 +83,12 @@ public:
   DWARFUnitIndex(DWARFSectionKind InfoColumnKind)
       : InfoColumnKind(InfoColumnKind) {}
 
+  explicit operator bool() const { return Header.NumBuckets; }
+
   bool parse(DataExtractor IndexData);
   void dump(raw_ostream &OS) const;
   const Entry *getFromOffset(uint32_t Offset) const;
+  const Entry *getFromHash(uint64_t Offset) const;
 
   ArrayRef<DWARFSectionKind> getColumnKinds() const {
     return makeArrayRef(ColumnKinds.get(), Header.NumColumns);
