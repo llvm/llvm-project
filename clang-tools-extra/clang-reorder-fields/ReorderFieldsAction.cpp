@@ -22,21 +22,23 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Refactoring.h"
+#include "llvm/ADT/SetVector.h"
 #include <algorithm>
 #include <string>
 
 namespace clang {
 namespace reorder_fields {
 using namespace clang::ast_matchers;
+using llvm::SmallSetVector;
 
 /// \brief Finds the definition of a record by name.
 ///
 /// \returns nullptr if the name is ambiguous or not found.
 static const RecordDecl *findDefinition(StringRef RecordName,
                                         ASTContext &Context) {
-  auto Results = match(
-      recordDecl(hasName(RecordName), isDefinition()).bind("recordDecl"),
-      Context);
+  auto Results =
+      match(recordDecl(hasName(RecordName), isDefinition()).bind("recordDecl"),
+            Context);
   if (Results.empty()) {
     llvm::errs() << "Definition of " << RecordName << "  not found\n";
     return nullptr;
@@ -91,6 +93,28 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
   consumeError(Replacements[R.getFilePath()].add(R));
 }
 
+/// \brief Find all member fields used in the given init-list initializer expr
+/// that belong to the same record
+///
+/// \returns a set of field declarations, empty if none were present
+static SmallSetVector<FieldDecl *, 1>
+findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
+                          ASTContext &Context) {
+  SmallSetVector<FieldDecl *, 1> Results;
+  // Note that this does not pick up member fields of base classes since
+  // for those accesses Sema::PerformObjectMemberConversion always inserts an
+  // UncheckedDerivedToBase ImplicitCastExpr between the this expr and the
+  // object expression
+  auto FoundExprs =
+      match(findAll(memberExpr(hasObjectExpression(cxxThisExpr())).bind("ME")),
+            *Initializer->getInit(), Context);
+  for (BoundNodes &BN : FoundExprs)
+    if (auto *MemExpr = BN.getNodeAs<MemberExpr>("ME"))
+      if (auto *FD = dyn_cast<FieldDecl>(MemExpr->getMemberDecl()))
+        Results.insert(FD);
+  return Results;
+}
+
 /// \brief Reorders fields in the definition of a struct/class.
 ///
 /// At the moment reodering of fields with
@@ -129,11 +153,12 @@ static bool reorderFieldsInDefinition(
 
 /// \brief Reorders initializers in a C++ struct/class constructor.
 ///
-/// A constructor can have initializers for an arbitrary subset of the class's fields.
-/// Thus, we need to ensure that we reorder just the initializers that are present.
+/// A constructor can have initializers for an arbitrary subset of the class's
+/// fields. Thus, we need to ensure that we reorder just the initializers that
+/// are present.
 static void reorderFieldsInConstructor(
     const CXXConstructorDecl *CtorDecl, ArrayRef<unsigned> NewFieldsOrder,
-    const ASTContext &Context,
+    ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(CtorDecl && "Constructor declaration is null");
   if (CtorDecl->isImplicit() || CtorDecl->getNumCtorInitializers() <= 1)
@@ -151,8 +176,26 @@ static void reorderFieldsInConstructor(
   SmallVector<const CXXCtorInitializer *, 10> OldWrittenInitializersOrder;
   SmallVector<const CXXCtorInitializer *, 10> NewWrittenInitializersOrder;
   for (const auto *Initializer : CtorDecl->inits()) {
-    if (!Initializer->isWritten())
+    if (!Initializer->isMemberInitializer() || !Initializer->isWritten())
       continue;
+
+    // Warn if this reordering violates initialization expr dependencies.
+    const FieldDecl *ThisM = Initializer->getMember();
+    const auto UsedMembers = findMembersUsedInInitExpr(Initializer, Context);
+    for (const FieldDecl *UM : UsedMembers) {
+      if (NewFieldsPositions[UM->getFieldIndex()] >
+          NewFieldsPositions[ThisM->getFieldIndex()]) {
+        DiagnosticsEngine &DiagEngine = Context.getDiagnostics();
+        auto Description = ("reordering field " + UM->getName() + " after " +
+                            ThisM->getName() + " makes " + UM->getName() +
+                            " uninitialized when used in init expression")
+                               .str();
+        unsigned ID = DiagEngine.getDiagnosticIDs()->getCustomDiagID(
+            DiagnosticIDs::Warning, Description);
+        DiagEngine.Report(Initializer->getSourceLocation(), ID);
+      }
+    }
+
     OldWrittenInitializersOrder.push_back(Initializer);
     NewWrittenInitializersOrder.push_back(Initializer);
   }
@@ -182,12 +225,12 @@ static bool reorderFieldsInInitListExpr(
     const ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(InitListEx && "Init list expression is null");
-  // We care only about InitListExprs which originate from source code. 
+  // We care only about InitListExprs which originate from source code.
   // Implicit InitListExprs are created by the semantic analyzer.
   if (!InitListEx->isExplicit())
     return true;
-  // The method InitListExpr::getSyntacticForm may return nullptr indicating that
-  // the current initializer list also serves as its syntactic form.
+  // The method InitListExpr::getSyntacticForm may return nullptr indicating
+  // that the current initializer list also serves as its syntactic form.
   if (const auto *SyntacticForm = InitListEx->getSyntacticForm())
     InitListEx = SyntacticForm;
   // If there are no initializers we do not need to change anything.
@@ -199,10 +242,9 @@ static bool reorderFieldsInInitListExpr(
   }
   for (unsigned i = 0, e = InitListEx->getNumInits(); i < e; ++i)
     if (i != NewFieldsOrder[i])
-      addReplacement(
-          InitListEx->getInit(i)->getSourceRange(),
-          InitListEx->getInit(NewFieldsOrder[i])->getSourceRange(), Context,
-          Replacements);
+      addReplacement(InitListEx->getInit(i)->getSourceRange(),
+                     InitListEx->getInit(NewFieldsOrder[i])->getSourceRange(),
+                     Context, Replacements);
   return true;
 }
 
@@ -239,9 +281,9 @@ public:
       for (const auto *C : CXXRD->ctors())
         if (const auto *D = dyn_cast<CXXConstructorDecl>(C->getDefinition()))
           reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D),
-                                      NewFieldsOrder, Context, Replacements);
+                                     NewFieldsOrder, Context, Replacements);
 
-    // We only need to reorder init list expressions for 
+    // We only need to reorder init list expressions for
     // plain C structs or C++ aggregate types.
     // For other types the order of constructor parameters is used,
     // which we don't change at the moment.
