@@ -400,8 +400,17 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  // FIXME: Improve this for the case where this DWO file is really a DWP file
-  // with an index - use the index for lookup instead of a linear search.
+  if (const auto &CUI = getCUIndex()) {
+    if (const auto *R = CUI.getFromHash(Hash))
+      if (auto CUOff = R->getOffset(DW_SECT_INFO))
+        return CUs.getUnitForOffset(CUOff->Offset);
+    return nullptr;
+  }
+
+  // If there's no index, just search through the CUs in the DWO - there's
+  // probably only one unless this is something like LTO - though an in-process
+  // built/cached lookup table could be used in that case to improve repeated
+  // lookups of different CUs in the DWO.
   for (const auto &DWOCU : dwo_compile_units())
     if (DWOCU->getDWOId() == Hash)
       return DWOCU.get();
