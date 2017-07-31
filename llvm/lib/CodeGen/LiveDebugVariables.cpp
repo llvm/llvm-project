@@ -329,6 +329,7 @@ public:
 };
 } // namespace
 
+#ifndef NDEBUG
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
