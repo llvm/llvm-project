@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 #### UTILITIES ####
 
@@ -22,7 +23,11 @@ def LLVM_BUILD_DIRS():
 
 
 def lldb_source_path():
-    return os.environ.get('SRCROOT')
+    path = os.environ.get('SRCROOT')
+    if path:
+         return path
+    else:
+         return "./"
 
 
 def expected_llvm_build_path():
