@@ -1862,6 +1862,7 @@ void DwarfDebug::emitDebugRanges() {
       }
 
       auto *CUBase = TheCU->getBaseAddress();
+      bool BaseIsSet = false;
       for (const auto &P : MV) {
         // Don't bother with a base address entry if there's only one range in
         // this section in this range list - for example ranges for a CU will
@@ -1871,11 +1872,16 @@ void DwarfDebug::emitDebugRanges() {
         // contrubutions.
         auto *Base = CUBase;
         if (!Base && P.second.size() > 1) {
+          BaseIsSet = true;
           // FIXME/use care: This may not be a useful base address if it's not
           // the lowest address/range in this object.
           Base = P.second.front()->getStart();
           Asm->OutStreamer->EmitIntValue(-1, Size);
           Asm->OutStreamer->EmitSymbolValue(Base, Size);
+        } else if (BaseIsSet) {
+          BaseIsSet = false;
+          Asm->OutStreamer->EmitIntValue(-1, Size);
+          Asm->OutStreamer->EmitIntValue(0, Size);
         }
 
         for (const auto *RS : P.second) {
