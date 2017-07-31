@@ -26,6 +26,8 @@
 
 // RUN: %clang -target armv7-apple-ios11.1 -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS7 %s
+// RUN: %clang -arch armv7 -isysroot SDKs/iPhoneOS11.0.sdk -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS7 %s
 // CHECK-VERSION-IOS7: thumbv7-apple-ios10.99.99
 
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=11.0 \
