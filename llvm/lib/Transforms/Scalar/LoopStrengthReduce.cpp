@@ -562,6 +562,7 @@ bool Formula::hasRegsUsedByUsesOtherThan(size_t LUIdx,
   return false;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Formula::print(raw_ostream &OS) const {
   bool First = true;
   if (BaseGV) {
@@ -598,7 +599,6 @@ void Formula::print(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Formula::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -1387,6 +1387,7 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   return !L->contains(UserInst);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRFixup::print(raw_ostream &OS) const {
   OS << "UserInst=";
   // Store is common and interesting enough to be worth special-casing.
@@ -1410,7 +1411,6 @@ void LSRFixup::print(raw_ostream &OS) const {
     OS << ", Offset=" << Offset;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LSRFixup::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -1493,6 +1493,7 @@ void LSRUse::RecomputeRegs(size_t LUIdx, RegUseTracker &RegUses) {
       RegUses.dropRegister(S, LUIdx);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRUse::print(raw_ostream &OS) const {
   OS << "LSR Use: Kind=";
   switch (Kind) {
@@ -1526,7 +1527,6 @@ void LSRUse::print(raw_ostream &OS) const {
     OS << ", widest fixup type: " << *WidestFixupType;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LSRUse::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -5302,6 +5302,7 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   ImplementSolution(Solution);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRInstance::print_factors_and_types(raw_ostream &OS) const {
   if (Factors.empty() && Types.empty()) return;
 
@@ -5346,7 +5347,6 @@ void LSRInstance::print_uses(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRInstance::print(raw_ostream &OS) const {
   print_factors_and_types(OS);
   print_fixups(OS);
