@@ -357,8 +357,9 @@ uint8_t Symbol::computeBinding() const {
 bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
-  return ExportDynamic || body()->isShared() ||
-         (body()->isUndefined() && Config->Shared);
+  if (body()->isUndefined())
+    return Config->Shared;
+  return ExportDynamic || body()->isShared();
 }
 
 // Print out a log message for --trace-symbol.

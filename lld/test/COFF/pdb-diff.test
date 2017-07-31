@@ -25,7 +25,7 @@ CHECK-NEXT:   |         Stream Directory         |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   |                         File |   |
 CHECK-NEXT:   |------------------------------+---|
-CHECK-NEXT:   |                 Stream Count | D |
+CHECK-NEXT:   |                 Stream Count | I |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   |            Old MSF Directory | I |
 CHECK-NEXT:   |------------------------------+---|
@@ -57,7 +57,7 @@ CHECK-NEXT:   |           Public Symbol Hash | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   |        Public Symbol Records | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
-CHECK-NEXT:   |           Global Symbol Hash | D |
+CHECK-NEXT:   |           Global Symbol Hash | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   ------------------------------------
 CHECK-NEXT:   |           String Table           |
@@ -152,7 +152,7 @@ CHECK-NEXT:   |                           DBG (NewFPO) | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |                   DBG (SectionHdrOrig) | I |
 CHECK-NEXT:   |----------------------------------------+---|
-CHECK-NEXT:   |                         Globals Stream | D |
+CHECK-NEXT:   |                         Globals Stream | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |                         Publics Stream | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
@@ -186,7 +186,7 @@ CHECK-NEXT:   |                  - Pdb File Path Index | I |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |               - Source File Name Index | I |
 CHECK-NEXT:   |----------------------------------------+---|
-CHECK-NEXT:   |                     - Symbol Byte Size | D |
+CHECK-NEXT:   |                     - Symbol Byte Size |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |            Module "* Linker *"             |
 CHECK-NEXT:   |----------------------------------------+---|

@@ -13,7 +13,6 @@ from lldbbuild import *
 
 #### SETTINGS ####
 
-
 def LLVM_HASH_INCLUDES_DIFFS():
     return False
 
@@ -52,13 +51,20 @@ def fallback_repo(name):
         'ref': None
     }
 
+def dirs_exist(names):
+    for name in names:
+        if not os.path.isdir(process_root(name)):
+            return False
+    return True
+
 def XCODE_REPOSITORIES():
+    names = ["llvm", "clang", "swift", "cmark", "ninja"]
+    if dirs_exist(names):
+        return [fallback_repo(n) for n in names]
     override = repo.get_override()
     if override:
         return [process_repo(r) for r in override]
     identifier = repo.identifier()
-    if identifier == None:
-        return [fallback_repo(n) for n in ["llvm", "clang", "swift", "cmark", "ninja"]]
     set = repo.find(identifier)
     return [process_repo(r) for r in set]
 
@@ -127,14 +133,6 @@ def with_devices_preset_suffix():
         return "_with_devices"
     else:
         return ""
-
-def XCODE_REPOSITORIES():
-    identifier = repo.identifier()
-    if identifier == None:
-        identifier = "<invalid>" # repo.find will just use the fallback file
-    set = repo.find(identifier)
-    return [process_repo(r) for r in set]
-
 
 def BUILD_SCRIPT_FLAGS():
     return {
@@ -422,8 +420,8 @@ def build_llvm_if_needed():
 
 #### MAIN LOGIC ####
 
-all_check_out_if_needed()
-build_llvm_if_needed()
-write_archives_txt()
-
-sys.exit(0)
+if __name__ == "__main__":
+    all_check_out_if_needed()
+    build_llvm_if_needed()
+    write_archives_txt()
+    sys.exit(0)
