@@ -13,7 +13,6 @@ from lldbbuild import *
 
 #### SETTINGS ####
 
-
 def LLVM_HASH_INCLUDES_DIFFS():
     return False
 
@@ -52,7 +51,16 @@ def fallback_repo(name):
         'ref': None
     }
 
+def dirs_exist(names):
+    for name in names:
+        if not os.path.isdir(process_root(name)):
+            return False
+    return True
+
 def XCODE_REPOSITORIES():
+    names = ["llvm", "clang", "ninja"]
+    if dirs_exist(names):
+        return [fallback_repo(n) for n in names]
     override = repo.get_override()
     if override:
         return [process_repo(r) for r in override]
@@ -422,8 +430,8 @@ def build_llvm_if_needed():
 
 #### MAIN LOGIC ####
 
-all_check_out_if_needed()
-build_llvm_if_needed()
-write_archives_txt()
-
-sys.exit(0)
+if __name__ == "__main__":
+    all_check_out_if_needed()
+    build_llvm_if_needed()
+    write_archives_txt()
+    sys.exit(0)
