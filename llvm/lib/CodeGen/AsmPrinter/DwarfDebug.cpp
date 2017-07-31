@@ -1865,17 +1865,48 @@ void DwarfDebug::emitDebugRanges() {
       // Emit our symbol so we can find the beginning of the range.
       Asm->OutStreamer->EmitLabel(List.getSym());
 
+      // Gather all the ranges that apply to the same section so they can share
+      // a base address entry.
+      MapVector<const MCSection *, std::vector<const RangeSpan *>> MV;
       for (const RangeSpan &Range : List.getRanges()) {
-        const MCSymbol *Begin = Range.getStart();
-        const MCSymbol *End = Range.getEnd();
-        assert(Begin && "Range without a begin symbol?");
-        assert(End && "Range without an end symbol?");
-        if (auto *Base = TheCU->getBaseAddress()) {
-          Asm->EmitLabelDifference(Begin, Base, Size);
-          Asm->EmitLabelDifference(End, Base, Size);
-        } else {
-          Asm->OutStreamer->EmitSymbolValue(Begin, Size);
-          Asm->OutStreamer->EmitSymbolValue(End, Size);
+        MV[&Range.getStart()->getSection()].push_back(&Range);
+      }
+
+      auto *CUBase = TheCU->getBaseAddress();
+      bool BaseIsSet = false;
+      for (const auto &P : MV) {
+        // Don't bother with a base address entry if there's only one range in
+        // this section in this range list - for example ranges for a CU will
+        // usually consist of single regions from each of many sections
+        // (-ffunction-sections, or just C++ inline functions) except under LTO
+        // or optnone where there may be holes in a single CU's section
+        // contrubutions.
+        auto *Base = CUBase;
+        if (!Base && P.second.size() > 1) {
+          BaseIsSet = true;
+          // FIXME/use care: This may not be a useful base address if it's not
+          // the lowest address/range in this object.
+          Base = P.second.front()->getStart();
+          Asm->OutStreamer->EmitIntValue(-1, Size);
+          Asm->OutStreamer->EmitSymbolValue(Base, Size);
+        } else if (BaseIsSet) {
+          BaseIsSet = false;
+          Asm->OutStreamer->EmitIntValue(-1, Size);
+          Asm->OutStreamer->EmitIntValue(0, Size);
+        }
+
+        for (const auto *RS : P.second) {
+          const MCSymbol *Begin = RS->getStart();
+          const MCSymbol *End = RS->getEnd();
+          assert(Begin && "Range without a begin symbol?");
+          assert(End && "Range without an end symbol?");
+          if (Base) {
+            Asm->EmitLabelDifference(Begin, Base, Size);
+            Asm->EmitLabelDifference(End, Base, Size);
+          } else {
+            Asm->OutStreamer->EmitSymbolValue(Begin, Size);
+            Asm->OutStreamer->EmitSymbolValue(End, Size);
+          }
         }
       }
 

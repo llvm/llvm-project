@@ -21,8 +21,8 @@
 /// faster than the almost-linear O(n*alpha(n)) version, even for large CFGs.
 ///
 /// The file uses the Depth Based Search algorithm to perform incremental
-/// upates (insertion and deletions). The implemented algorithm is based on this
-/// publication:
+/// updates (insertion and deletions). The implemented algorithm is based on
+/// this publication:
 ///
 ///   An Experimental Study of Dynamic Dominators
 ///   Loukas Georgiadis, et al., April 12 2016, pp. 5-7, 9-10:
