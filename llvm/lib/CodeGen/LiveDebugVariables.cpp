@@ -372,6 +372,7 @@ static void printExtendedName(raw_ostream &OS, const DILocalVariable *V,
   }
 }
 
+#ifndef NDEBUG
 void UserValue::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   auto *DV = cast<DILocalVariable>(Variable);
   OS << "!\"";
@@ -397,6 +398,7 @@ void LDVImpl::print(raw_ostream &OS) {
   for (unsigned i = 0, e = userValues.size(); i != e; ++i)
     userValues[i]->print(OS, TRI);
 }
+#endif
 
 void UserValue::coalesceLocation(unsigned LocNo) {
   unsigned KeepLoc = 0;
