@@ -14,6 +14,7 @@
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -107,6 +108,18 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Set relaxed math attributes. This does not mean a library module was built
+  // with those relaxations, but marks it compatible with the relaxations which
+  // may be used for the kernel module. Setting them prevents removal of them
+  // for a caller function, thus retaining original caller attributes.
+  AttrBuilder B;
+  B.addAttribute("less-precise-fpmad", "true");
+  B.addAttribute("no-infs-fp-math", "true");
+  B.addAttribute("no-nans-fp-math", "true");
+  B.addAttribute("unsafe-fp-math", "true");
+  for (Function &F : M->functions()) {
+    F.addAttributes(AttributeList::FunctionIndex, B);
+  }
 
   if (OutputFilename.empty()) {
     errs() << "no output file\n";
