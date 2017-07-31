@@ -1,5 +1,10 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
+; RUN: llc -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+;
 ; CHECK: @DEBUG_VALUE: h:x <- [%R{{.*}}+{{.*}}]
+; DWARF: Location description: {{7[0-9] [0-9]+ $}}
+;                              DW_OP_breg. +..
 ; generated from:
 ; clang -cc1 -triple  thumbv7 -S -O1 arm.cpp  -g
 ;
