@@ -45,6 +45,10 @@
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS11 %s
 // CHECK-VERSION-IOS11: arm64-apple-ios11.1.0
 
+// RUN: %clang -target armv7-apple-ios9.0 -miphoneos-version-min=11.0 -c -Wno-invalid-ios-deployment-target -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS12 %s
+// CHECK-VERSION-IOS12: thumbv7-apple-ios11.0.0
+
 // RUN: %clang -target i686-apple-darwin8 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX4 %s
 // RUN: %clang -target i686-apple-darwin9 -mmacosx-version-min=10.4 -c %s -### 2>&1 | \

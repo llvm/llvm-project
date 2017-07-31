@@ -601,7 +601,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       Driver::GetReleaseVersion(iOSVersion->getValue(), Major, Minor, Micro,
                                 HadExtra) &&
       Major > 10)
-    getDriver().Diag(diag::err_invalid_ios_deployment_target)
+    getDriver().Diag(diag::warn_invalid_ios_deployment_target)
         << iOSVersion->getAsString(Args);
 
   // Add a macro to differentiate between m(iphone|tv|watch)os-version-min=X.Y and
@@ -650,7 +650,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         Driver::GetReleaseVersion(iOSTarget.c_str(), Major, Minor, Micro,
                                   HadExtra) &&
         Major > 10)
-      getDriver().Diag(diag::err_invalid_ios_deployment_target)
+      getDriver().Diag(diag::warn_invalid_ios_deployment_target)
           << std::string("IPHONEOS_DEPLOYMENT_TARGET=") + iOSTarget;
 
     // If there is no command-line argument to specify the Target version and
