@@ -2871,7 +2871,7 @@ parse_new_expr(const char* first, const char* last, Db& db)
                     return first;
                 t = t1;
             }
-            if (first_expr_in_list < db.names.size())
+            if (first_expr_in_list > db.names.size())
                 return first;
             ExprList = db.popTrailingNodeArray(first_expr_in_list);
             ++t;
@@ -2892,7 +2892,7 @@ parse_new_expr(const char* first, const char* last, Db& db)
                         return first;
                     t = t1;
                 }
-                if (init_list_begin < db.names.size())
+                if (init_list_begin > db.names.size())
                     return first;
                 init_list = db.popTrailingNodeArray(init_list_begin);
             }
@@ -2924,7 +2924,7 @@ parse_conversion_expr(const char* first, const char* last, Db& db)
         db.try_to_parse_template_args = try_to_parse_template_args;
         if (t != first+2 && t != last)
         {
-            size_t ExprList_begin = db.names.size();
+            size_t expr_list_begin = db.names.size();
             if (*t != '_')
             {
                 const char* t1 = parse_expression(t, last, db);
@@ -2949,13 +2949,14 @@ parse_conversion_expr(const char* first, const char* last, Db& db)
                 }
                 ++t;
             }
-            if (db.names.size() < ExprList_begin)
+            if (db.names.size() < expr_list_begin ||
+                type_begin > expr_list_begin)
                 return first;
             NodeArray expressions = db.makeNodeArray(
-                db.names.begin() + (long)ExprList_begin, db.names.end());
+                db.names.begin() + (long)expr_list_begin, db.names.end());
             NodeArray types = db.makeNodeArray(
                 db.names.begin() + (long)type_begin,
-                db.names.begin() + (long)ExprList_begin);
+                db.names.begin() + (long)expr_list_begin);
             auto* conv_expr = db.make<ConversionExpr>(
                 types, expressions);
             db.names.erase(
@@ -3057,7 +3058,7 @@ parse_function_type(const char* first, const char* last, Db& db)
                         return first;
                     t = t1;
                 }
-                if (db.names.empty())
+                if (db.names.empty() || params_begin > db.names.size())
                     return first;
                 Node* fty = db.make<FunctionType>(
                     ret_type, db.popTrailingNodeArray(params_begin));
@@ -5140,6 +5141,8 @@ parse_template_args(const char* first, const char* last, Db& db)
             }
             t = t1;
         }
+        if (begin_idx > db.names.size())
+            return first;
         first = t + 1;
         TemplateParams* tp = db.make<TemplateParams>(
             db.popTrailingNodeArray(begin_idx));
@@ -5207,6 +5210,8 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_substitution(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
+                    if (db.names.size() < 2)
+                        return first;
                     auto name = db.names.back();
                     db.names.pop_back();
                     if (db.names.back()->K != Node::KEmptyName)
@@ -5229,6 +5234,8 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_template_param(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
+                    if (db.names.size() < 2)
+                        return first;
                     auto name = db.names.back();
                     db.names.pop_back();
                     if (db.names.back()->K != Node::KEmptyName)
@@ -5249,6 +5256,8 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_decltype(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
+                    if (db.names.size() < 2)
+                        return first;
                     auto name = db.names.back();
                     db.names.pop_back();
                     if (db.names.back()->K != Node::KEmptyName)
@@ -5267,6 +5276,8 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_template_args(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
+                    if (db.names.size() < 2)
+                        return first;
                     auto name = db.names.back();
                     db.names.pop_back();
                     db.names.back() = db.make<NameWithTemplateArgs>(
@@ -5288,6 +5299,8 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_unqualified_name(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
+                    if (db.names.size() < 2)
+                        return first;
                     auto name = db.names.back();
                     db.names.pop_back();
                     if (db.names.back()->K != Node::KEmptyName)
