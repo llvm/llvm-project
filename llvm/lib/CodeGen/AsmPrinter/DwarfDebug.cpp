@@ -61,10 +61,14 @@ static cl::opt<bool>
 DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
                          cl::desc("Disable debug info printing"));
 
+static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
+    "use-dwarf-ranges-base-address-specifier", cl::Hidden,
+    cl::desc("Disable debug info printing"), cl::init(false));
+
 static cl::opt<bool>
-GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
-                       cl::desc("Generate GNU-style pubnames and pubtypes"),
-                       cl::init(false));
+    GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
+                           cl::desc("Generate GNU-style pubnames and pubtypes"),
+                           cl::init(false));
 
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
@@ -1871,7 +1875,8 @@ void DwarfDebug::emitDebugRanges() {
         // or optnone where there may be holes in a single CU's section
         // contrubutions.
         auto *Base = CUBase;
-        if (!Base && P.second.size() > 1) {
+        if (!Base && P.second.size() > 1 &&
+            UseDwarfRangesBaseAddressSpecifier) {
           BaseIsSet = true;
           // FIXME/use care: This may not be a useful base address if it's not
           // the lowest address/range in this object.
