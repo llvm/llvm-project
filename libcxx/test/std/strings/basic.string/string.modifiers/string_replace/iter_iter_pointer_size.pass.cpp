@@ -973,19 +973,19 @@ int main()
     }
 #endif
 
-	{ // test replacing into self
+    { // test replacing into self
     typedef std::string S;
-	S s_short = "123/";
-	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+    S s_short = "123/";
+    S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
 
-	s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
-	assert(s_short == "123/123/");
-	s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
-	assert(s_short == "123/123/123/123/");
-	s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
-	assert(s_short == "123/123/123/123/123/123/123/123/");
+    s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
+    assert(s_short == "123/123/");
+    s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
+    assert(s_short == "123/123/123/123/");
+    s_short.replace(s_short.begin(), s_short.begin(), s_short.data(), s_short.size());
+    assert(s_short == "123/123/123/123/123/123/123/123/");
 
-	s_long.replace(s_long.begin(), s_long.begin(), s_long.data(), s_long.size());
-	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-	}
+    s_long.replace(s_long.begin(), s_long.begin(), s_long.data(), s_long.size());
+    assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+    }
 }

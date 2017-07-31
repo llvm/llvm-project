@@ -13,7 +13,7 @@
 
 // constexpr reverse_iterator();
 //
-// constexpr in c++17
+// constexpr in C++17
 
 #include <iterator>
 

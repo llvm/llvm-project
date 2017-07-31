@@ -74,14 +74,14 @@ int main()
     assert(!cs(p2, p1));
     assert(cs(p1 ,p3) || cs(p3, p1));
     assert(cs(p3, p1) == cs(p3, p2));
-	ASSERT_NOEXCEPT(cs(p1, p1));
+    ASSERT_NOEXCEPT(cs(p1, p1));
 
     assert(!cs(p1, w2));
     assert(!cs(p2, w1));
     assert(cs(p1, w3) || cs(p3, w1));
     assert(cs(p3, w1) == cs(p3, w2));
-	ASSERT_NOEXCEPT(cs(p1, w1));
-	ASSERT_NOEXCEPT(cs(w1, p1));
+    ASSERT_NOEXCEPT(cs(p1, w1));
+    ASSERT_NOEXCEPT(cs(w1, p1));
     }
     {
     typedef std::owner_less<std::weak_ptr<int> > CS;
@@ -95,14 +95,14 @@ int main()
     assert(!cs(w2, w1));
     assert(cs(w1, w3) || cs(w3, w1));
     assert(cs(w3, w1) == cs(w3, w2));
-	ASSERT_NOEXCEPT(cs(w1, w1));
+    ASSERT_NOEXCEPT(cs(w1, w1));
 
     assert(!cs(w1, p2));
     assert(!cs(w2, p1));
     assert(cs(w1, p3) || cs(w3, p1));
     assert(cs(w3, p1) == cs(w3, p2));
-	ASSERT_NOEXCEPT(cs(w1, p1));
-	ASSERT_NOEXCEPT(cs(p1, w1));
+    ASSERT_NOEXCEPT(cs(w1, p1));
+    ASSERT_NOEXCEPT(cs(p1, w1));
     }
 #if TEST_STD_VER > 14
     {
@@ -117,10 +117,10 @@ int main()
     cmp(sp1, sp3);
     cmp(wp1, sp1);
     cmp(wp1, wp1);
-	ASSERT_NOEXCEPT(cmp(sp1, sp1));
-	ASSERT_NOEXCEPT(cmp(sp1, wp1));
-	ASSERT_NOEXCEPT(cmp(wp1, sp1));
-	ASSERT_NOEXCEPT(cmp(wp1, wp1));
+    ASSERT_NOEXCEPT(cmp(sp1, sp1));
+    ASSERT_NOEXCEPT(cmp(sp1, wp1));
+    ASSERT_NOEXCEPT(cmp(wp1, sp1));
+    ASSERT_NOEXCEPT(cmp(wp1, wp1));
     }
     {
     // test heterogeneous lookups

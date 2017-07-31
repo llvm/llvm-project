@@ -91,11 +91,11 @@ int main()
     test_is_fundamental<unsigned char>();
     test_is_fundamental<wchar_t>();
     test_is_fundamental<double>();
-	test_is_fundamental<float>();
-	test_is_fundamental<double>();
-	test_is_fundamental<long double>();
-	test_is_fundamental<char16_t>();
-	test_is_fundamental<char32_t>();
+    test_is_fundamental<float>();
+    test_is_fundamental<double>();
+    test_is_fundamental<long double>();
+    test_is_fundamental<char16_t>();
+    test_is_fundamental<char32_t>();
 
     test_is_not_fundamental<char[3]>();
     test_is_not_fundamental<char[]>();

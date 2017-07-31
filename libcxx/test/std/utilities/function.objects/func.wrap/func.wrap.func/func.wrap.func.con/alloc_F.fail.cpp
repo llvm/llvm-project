@@ -25,5 +25,5 @@ void foo(int) {}
 
 int main()
 {
-	std::function<void(int)> f(std::allocator_arg, std::allocator<int>(), foo);
+    std::function<void(int)> f(std::allocator_arg, std::allocator<int>(), foo);
 }

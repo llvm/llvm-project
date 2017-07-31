@@ -86,7 +86,7 @@ void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
           "documentRangeFormattingProvider": true,
           "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
           "codeActionProvider": true,
-          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]},
+          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
           "definitionProvider": true
         }}})");
 }
