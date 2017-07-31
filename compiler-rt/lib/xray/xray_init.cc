@@ -49,7 +49,8 @@ XRaySledMap XRayInstrMap;
 void __xray_init() XRAY_NEVER_INSTRUMENT {
   initializeFlags();
   if (__start_xray_instr_map == nullptr) {
-    Report("XRay instrumentation map missing. Not initializing XRay.\n");
+    if (Verbosity())
+      Report("XRay instrumentation map missing. Not initializing XRay.\n");
     return;
   }
 

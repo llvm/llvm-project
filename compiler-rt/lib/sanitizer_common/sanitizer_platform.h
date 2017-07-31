@@ -14,7 +14,7 @@
 #define SANITIZER_PLATFORM_H
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
-  !defined(__APPLE__) && !defined(_WIN32)
+  !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__)
 # error "This operating system is not supported"
 #endif
 
@@ -83,6 +83,12 @@
 # define SANITIZER_ANDROID 1
 #else
 # define SANITIZER_ANDROID 0
+#endif
+
+#if defined(__Fuchsia__)
+# define SANITIZER_FUCHSIA 1
+#else
+# define SANITIZER_FUCHSIA 0
 #endif
 
 #define SANITIZER_POSIX \

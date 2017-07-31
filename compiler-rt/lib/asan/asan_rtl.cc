@@ -84,26 +84,6 @@ void ShowStatsAndAbort() {
   Die();
 }
 
-// ---------------------- mmap -------------------- {{{1
-// Reserve memory range [beg, end].
-// We need to use inclusive range because end+1 may not be representable.
-void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
-  CHECK_EQ((beg % GetMmapGranularity()), 0);
-  CHECK_EQ(((end + 1) % GetMmapGranularity()), 0);
-  uptr size = end - beg + 1;
-  DecreaseTotalMmap(size);  // Don't count the shadow against mmap_limit_mb.
-  void *res = MmapFixedNoReserve(beg, size, name);
-  if (res != (void*)beg) {
-    Report("ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
-           "Perhaps you're using ulimit -v\n", size);
-    Abort();
-  }
-  if (common_flags()->no_huge_pages_for_shadow)
-    NoHugePagesInRegion(beg, size);
-  if (common_flags()->use_madv_dontdump)
-    DontDumpShadowMemory(beg, size);
-}
-
 // --------------- LowLevelAllocateCallbac ---------- {{{1
 static void OnLowLevelAllocate(uptr ptr, uptr size) {
   PoisonShadow(ptr, size, kAsanInternalHeapMagic);
@@ -335,46 +315,7 @@ static void InitializeHighMemEnd() {
   CHECK_EQ((kHighMemBeg % GetMmapGranularity()), 0);
 }
 
-static void ProtectGap(uptr addr, uptr size) {
-  if (!flags()->protect_shadow_gap) {
-    // The shadow gap is unprotected, so there is a chance that someone
-    // is actually using this memory. Which means it needs a shadow...
-    uptr GapShadowBeg = RoundDownTo(MEM_TO_SHADOW(addr), GetPageSizeCached());
-    uptr GapShadowEnd =
-        RoundUpTo(MEM_TO_SHADOW(addr + size), GetPageSizeCached()) - 1;
-    if (Verbosity())
-      Printf("protect_shadow_gap=0:"
-             " not protecting shadow gap, allocating gap's shadow\n"
-             "|| `[%p, %p]` || ShadowGap's shadow ||\n", GapShadowBeg,
-             GapShadowEnd);
-    ReserveShadowMemoryRange(GapShadowBeg, GapShadowEnd,
-                             "unprotected gap shadow");
-    return;
-  }
-  void *res = MmapFixedNoAccess(addr, size, "shadow gap");
-  if (addr == (uptr)res)
-    return;
-  // A few pages at the start of the address space can not be protected.
-  // But we really want to protect as much as possible, to prevent this memory
-  // being returned as a result of a non-FIXED mmap().
-  if (addr == kZeroBaseShadowStart) {
-    uptr step = GetMmapGranularity();
-    while (size > step && addr < kZeroBaseMaxShadowStart) {
-      addr += step;
-      size -= step;
-      void *res = MmapFixedNoAccess(addr, size, "shadow gap");
-      if (addr == (uptr)res)
-        return;
-    }
-  }
-
-  Report("ERROR: Failed to protect the shadow gap. "
-         "ASan cannot proceed correctly. ABORTING.\n");
-  DumpProcessMap();
-  Die();
-}
-
-static void PrintAddressSpaceLayout() {
+void PrintAddressSpaceLayout() {
   Printf("|| `[%p, %p]` || HighMem    ||\n",
          (void*)kHighMemBeg, (void*)kHighMemEnd);
   Printf("|| `[%p, %p]` || HighShadow ||\n",
@@ -424,71 +365,6 @@ static void PrintAddressSpaceLayout() {
     CHECK(kMidShadowBeg > kLowShadowEnd &&
           kMidMemBeg > kMidShadowEnd &&
           kHighShadowBeg > kMidMemEnd);
-}
-
-static void InitializeShadowMemory() {
-  // Set the shadow memory address to uninitialized.
-  __asan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
-
-  uptr shadow_start = kLowShadowBeg;
-  // Detect if a dynamic shadow address must used and find a available location
-  // when necessary. When dynamic address is used, the macro |kLowShadowBeg|
-  // expands to |__asan_shadow_memory_dynamic_address| which is
-  // |kDefaultShadowSentinel|.
-  if (shadow_start == kDefaultShadowSentinel) {
-    __asan_shadow_memory_dynamic_address = 0;
-    CHECK_EQ(0, kLowShadowBeg);
-    shadow_start = FindDynamicShadowStart();
-  }
-  // Update the shadow memory address (potentially) used by instrumentation.
-  __asan_shadow_memory_dynamic_address = shadow_start;
-
-  if (kLowShadowBeg)
-    shadow_start -= GetMmapGranularity();
-  bool full_shadow_is_available =
-      MemoryRangeIsAvailable(shadow_start, kHighShadowEnd);
-
-#if SANITIZER_LINUX && defined(__x86_64__) && defined(_LP64) &&                \
-    !ASAN_FIXED_MAPPING
-  if (!full_shadow_is_available) {
-    kMidMemBeg = kLowMemEnd < 0x3000000000ULL ? 0x3000000000ULL : 0;
-    kMidMemEnd = kLowMemEnd < 0x3000000000ULL ? 0x4fffffffffULL : 0;
-  }
-#endif
-
-  if (Verbosity()) PrintAddressSpaceLayout();
-
-  if (full_shadow_is_available) {
-    // mmap the low shadow plus at least one page at the left.
-    if (kLowShadowBeg)
-      ReserveShadowMemoryRange(shadow_start, kLowShadowEnd, "low shadow");
-    // mmap the high shadow.
-    ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
-    // protect the gap.
-    ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
-    CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
-  } else if (kMidMemBeg &&
-      MemoryRangeIsAvailable(shadow_start, kMidMemBeg - 1) &&
-      MemoryRangeIsAvailable(kMidMemEnd + 1, kHighShadowEnd)) {
-    CHECK(kLowShadowBeg != kLowShadowEnd);
-    // mmap the low shadow plus at least one page at the left.
-    ReserveShadowMemoryRange(shadow_start, kLowShadowEnd, "low shadow");
-    // mmap the mid shadow.
-    ReserveShadowMemoryRange(kMidShadowBeg, kMidShadowEnd, "mid shadow");
-    // mmap the high shadow.
-    ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
-    // protect the gaps.
-    ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
-    ProtectGap(kShadowGap2Beg, kShadowGap2End - kShadowGap2Beg + 1);
-    ProtectGap(kShadowGap3Beg, kShadowGap3End - kShadowGap3Beg + 1);
-  } else {
-    Report("Shadow memory range interleaves with an existing memory mapping. "
-           "ASan cannot proceed correctly. ABORTING.\n");
-    Report("ASan shadow was supposed to be located in the [%p-%p] range.\n",
-           shadow_start, kHighShadowEnd);
-    DumpProcessMap();
-    Die();
-  }
 }
 
 static void AsanInitInternal() {

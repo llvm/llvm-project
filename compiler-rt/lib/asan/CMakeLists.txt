@@ -22,6 +22,7 @@ set(ASAN_SOURCES
   asan_posix.cc
   asan_report.cc
   asan_rtl.cc
+  asan_shadow_setup.cc
   asan_stack.cc
   asan_stats.cc
   asan_suppressions.cc
