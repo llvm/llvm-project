@@ -357,7 +357,6 @@ static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
   CommentOS << " ]";
 }
 
-#ifndef NDEBUG
 static void printExtendedName(raw_ostream &OS, const DILocalVariable *V,
                               const DILocation *DL) {
   const LLVMContext &Ctx = V->getContext();
