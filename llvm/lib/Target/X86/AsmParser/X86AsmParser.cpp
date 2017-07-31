@@ -2309,7 +2309,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   InstInfo = &Info;
   StringRef PatchedName = Name;
 
-  if (Name == "jmp" && isParsingIntelSyntax() && isParsingInlineAsm()) {
+  if ((Name.equals("jmp") || Name.equals("jc") || Name.equals("jz")) &&
+      isParsingIntelSyntax() && isParsingInlineAsm()) {
     StringRef NextTok = Parser.getTok().getString();
     if (NextTok == "short") {
       SMLoc NameEndLoc =

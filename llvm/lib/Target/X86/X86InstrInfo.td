@@ -2361,6 +2361,10 @@ let Predicates = [HasBMI2] in {
             (BZHI64rr GR64:$src,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
                              (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
+  def : Pat<(and (loadi64 addr:$src), BZHIMask:$mask),
+            (BZHI64rm addr:$src,
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                             (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
 
   def : Pat<(and GR32:$src, (add (shl 1, GR8:$lz), -1)),
             (BZHI32rr GR32:$src,

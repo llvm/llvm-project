@@ -289,7 +289,6 @@ define double @pr30561_f64(double %b, double %a, i1 %c) {
 ;
 ; X64-LABEL: pr30561_f64:
 ; X64:       # BB#0:
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; X64-NEXT:    retq
@@ -309,7 +308,6 @@ define float @pr30561_f32(float %b, float %a, i1 %c) {
 ;
 ; X64-LABEL: pr30561_f32:
 ; X64:       # BB#0:
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; X64-NEXT:    retq

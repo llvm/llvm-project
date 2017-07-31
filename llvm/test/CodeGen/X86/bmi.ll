@@ -555,6 +555,18 @@ entry:
   ret i64 %and
 }
 
+define i64 @bzhi64_constant_mask_load(i64* %x) {
+; CHECK-LABEL: bzhi64_constant_mask_load:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movb $62, %al
+; CHECK-NEXT:    bzhiq %rax, (%rdi), %rax
+; CHECK-NEXT:    retq
+entry:
+  %x1 = load i64, i64* %x
+  %and = and i64 %x1, 4611686018427387903
+  ret i64 %and
+}
+
 define i64 @bzhi64_small_constant_mask(i64 %x) {
 ; CHECK-LABEL: bzhi64_small_constant_mask:
 ; CHECK:       # BB#0: # %entry
