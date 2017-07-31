@@ -204,7 +204,7 @@ function(add_ocaml_library name)
           PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                       GROUP_READ GROUP_EXECUTE
                       WORLD_READ WORLD_EXECUTE
-          DESTINATION "${LLVM_OCAML_INSTALL_PATH}/llvm")
+          DESTINATION "${LLVM_OCAML_INSTALL_PATH}/stublibs")
 
   foreach( install_file ${install_files} ${install_shlibs} )
     get_filename_component(filename "${install_file}" NAME)
