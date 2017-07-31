@@ -1,7 +1,4 @@
-set(LLVM_LINK_COMPONENTS
-  Option
-  Support
-  )
+set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangToolingRefactoring
   AtomicChange.cpp
@@ -14,6 +11,7 @@ add_clang_library(clangToolingRefactoring
   clangAST
   clangASTMatchers
   clangBasic
+  clangFormat
   clangIndex
   clangLex
   clangToolingCore
