@@ -146,6 +146,9 @@ def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
+
+def InvalidIOSDeploymentTarget : DiagGroup<"invalid-ios-deployment-target">;
+
 def CXX1zCompatMangling : DiagGroup<"c++1z-compat-mangling">;
 
 // Warnings for C++1y code which is not compatible with prior C++ standards.
