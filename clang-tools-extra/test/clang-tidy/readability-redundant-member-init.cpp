@@ -105,6 +105,17 @@ struct F8 : Foo::Template<N_THINGS> {
   // CHECK-FIXES: F8()  {}
 };
 
+// Anonymous struct
+struct F9 {
+  F9() : s1() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: initializer for member 's1' is redundant
+  // CHECK-FIXES: F9()  {}
+  struct {
+    S s1;
+    S s2;
+  };
+};
+
 // Initializer not written
 struct NF1 {
   NF1() {}
@@ -196,4 +207,13 @@ struct NF13 {
 struct NF14 {
   NF14() : f() {}
   V f;
+};
+
+// Anonymous union member
+struct NF15 {
+  NF15() : s1() {}
+  union {
+    S s1;
+    S s2;
+  };
 };
