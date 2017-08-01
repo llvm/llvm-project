@@ -2,7 +2,7 @@
 ; RUN: llc -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 ;
-; CHECK: @DEBUG_VALUE: h:x <- [%R{{.*}}+{{.*}}]
+; CHECK: @DEBUG_VALUE: h:x <- [DW_OP_plus_uconst {{.*}}] [%R{{.*}}+0]
 ; DWARF: Location description: {{7[0-9] [0-9]+ $}}
 ;                              DW_OP_breg. +..
 ; generated from:

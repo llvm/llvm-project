@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeViewDebug.h"
+#include "DwarfExpression.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -982,17 +983,29 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       const MachineInstr *DVInst = Range.first;
       assert(DVInst->isDebugValue() && "Invalid History entry");
       const DIExpression *DIExpr = DVInst->getDebugExpression();
+      bool InMemory = DVInst->getOperand(1).isImm();
       bool IsSubfield = false;
       unsigned StructOffset = 0;
+      // Recognize a +Offset expression.
+      int Offset = 0;
+      DIExpressionCursor Ops(DIExpr);
+      auto Op = Ops.peek();
+      if (Op && Op->getOp() == dwarf::DW_OP_plus_uconst) {
+        Offset = Op->getArg(0);
+        Ops.take();
+      }
 
       // Handle fragments.
-      auto Fragment = DIExpr->getFragmentInfo();
+      auto Fragment = Ops.getFragmentInfo();
       if (Fragment) {
         IsSubfield = true;
         StructOffset = Fragment->OffsetInBits / 8;
-      } else if (DIExpr->getNumElements() > 0) {
-        continue; // Ignore unrecognized exprs.
       }
+      // Ignore unrecognized exprs.
+      if (Ops.peek() && Ops.peek()->getOp() != dwarf::DW_OP_LLVM_fragment)
+        continue;
+      if (!InMemory && Offset)
+        continue;
 
       // Bail if operand 0 is not a valid register. This means the variable is a
       // simple constant, or is described by a complex expression.
@@ -1005,8 +1018,6 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 
       // Handle the two cases we can handle: indirect in memory and in register.
       unsigned CVReg = TRI->getCodeViewRegNum(Reg);
-      bool InMemory = DVInst->getOperand(1).isImm();
-      int Offset = InMemory ? DVInst->getOperand(1).getImm() : 0;
       {
         LocalVarDefRange DR;
         DR.CVRegister = CVReg;
