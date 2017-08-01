@@ -58,6 +58,7 @@ add_lldb_library(liblldb SHARED
   SBModuleSpec.cpp
   SBPlatform.cpp
   SBProcess.cpp
+  SBProcessInfo.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBSection.cpp
