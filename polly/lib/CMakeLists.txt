@@ -107,6 +107,8 @@ else ()
     LLVMipo
     LLVMMC
     LLVMPasses
+    LLVMLinker
+    LLVMIRReader
     ${nvptx_libs}
     # The libraries below are required for darwin: http://PR26392
     LLVMBitReader

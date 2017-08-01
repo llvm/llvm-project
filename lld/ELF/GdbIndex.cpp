@@ -79,11 +79,13 @@ template <class RelTy>
 Optional<RelocAddrEntry>
 LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
                            ArrayRef<RelTy> Rels) const {
-  auto I = llvm::find_if(Rels,
-                         [=](const RelTy &Rel) { return Rel.r_offset == Pos; });
-  if (I == Rels.end())
+  auto It = std::lower_bound(
+      Rels.begin(), Rels.end(), Pos,
+      [](const RelTy &A, uint64_t B) { return A.r_offset < B; });
+  if (It == Rels.end() || It->r_offset != Pos)
     return None;
-  const RelTy &Rel = *I;
+  const RelTy &Rel = *It;
+
   const ObjFile<ELFT> *File = Sec.getFile<ELFT>();
   uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
   const typename ELFT::Sym &Sym = File->getELFSymbols()[SymIndex];
@@ -97,8 +99,7 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   if (DR.Section->Flags & ELF::SHF_ALLOC)
     Val += cast<InputSection>(DR.Section)->getOffsetInFile();
 
-  RelocAddrEntry Ret{SecIndex, Val};
-  return Ret;
+  return RelocAddrEntry{SecIndex, Val};
 }
 
 template <class ELFT>
