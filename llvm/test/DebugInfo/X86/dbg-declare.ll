@@ -1,5 +1,17 @@
-; RUN: llc < %s -O0 -mtriple x86_64-apple-darwin
+; RUN: llc < %s -O0 -mtriple x86_64-apple-darwin | FileCheck %s
+; RUN: llc < %s -O0 -mtriple x86_64-apple-darwin -filetype=obj \
+; RUN:     | llvm-dwarfdump - -debug-dump=info | FileCheck %s --check-prefix=DWARF
 ; <rdar://problem/11134152>
+
+; CHECK-LABEL: _foo:
+; CHECK-NOT: #DEBUG_VALUE
+
+; "[DW_FORM_exprloc] <0x2> 91 XX" means fbreg uleb(XX)
+; DWARF-LABEL: DW_TAG_formal_parameter
+; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 70 )
+; DWARF-NEXT:              DW_AT_name [DW_FORM_strp]     ( {{.*}} = "x")
+
+; FIXME: There is no debug info to describe "a".
 
 define i32 @foo(i32* %x) nounwind uwtable ssp !dbg !5 {
 entry:
