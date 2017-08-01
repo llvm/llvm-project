@@ -192,7 +192,8 @@ void ClangdServer::forceReparse(PathRef File) {
 
 Tagged<std::vector<CompletionItem>>
 ClangdServer::codeComplete(PathRef File, Position Pos,
-                           llvm::Optional<StringRef> OverridenContents) {
+                           llvm::Optional<StringRef> OverridenContents,
+                           IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   std::string DraftStorage;
   if (!OverridenContents) {
     auto FileContents = DraftMgr.getDraft(File);
@@ -203,8 +204,11 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
     OverridenContents = DraftStorage;
   }
 
-  std::vector<CompletionItem> Result;
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  if (UsedFS)
+    *UsedFS = TaggedFS.Value;
+
+  std::vector<CompletionItem> Result;
   Units.runOnUnitWithoutReparse(File, *OverridenContents, ResourceDir, CDB,
                                 PCHs, TaggedFS.Value, [&](ClangdUnit &Unit) {
                                   Result = Unit.codeComplete(

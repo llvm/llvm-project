@@ -424,7 +424,8 @@ private:
           continue;
         if (!WA->isLatestArrayKind())
           continue;
-        if (!isa<StoreInst>(WA->getAccessInstruction()) && !WA->isPHIKind())
+        if (!isa<StoreInst>(WA->getAccessInstruction()) &&
+            !WA->isOriginalScalarKind())
           continue;
 
         llvm::Value *ReadingValue = WA->tryGetValueStored();

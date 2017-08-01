@@ -175,10 +175,14 @@ public:
   /// will be scheduled and a draft for \p File will not be updated.
   /// If \p OverridenContents is None, contents of the current draft for \p File
   /// will be used.
-  /// This method should only be called for currently tracked files.
+  /// If \p UsedFS is non-null, it will be overwritten by vfs::FileSystem used
+  /// for completion.
+  /// This method should only be called for currently tracked
+  /// files.
   Tagged<std::vector<CompletionItem>>
   codeComplete(PathRef File, Position Pos,
-               llvm::Optional<StringRef> OverridenContents = llvm::None);
+               llvm::Optional<StringRef> OverridenContents = llvm::None,
+               IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
   Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
 

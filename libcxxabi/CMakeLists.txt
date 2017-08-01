@@ -345,6 +345,12 @@ if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
   endif()
 endif()
 
+if (LLVM_ENABLE_MODULES)
+  # Ignore that the rest of the modules flags are now unused.
+  add_compile_flags_if_supported(-Wno-unused-command-line-argument)
+  add_compile_flags(-fno-modules)
+endif()
+
 set(LIBCXXABI_HAS_UNDEFINED_SYMBOLS OFF)
 if ((NOT LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
     OR (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXXABI_ENABLE_SHARED)

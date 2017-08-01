@@ -256,7 +256,7 @@ void *msan_valloc(uptr size, StackTrace *stack) {
 void *msan_pvalloc(uptr size, StackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
   // pvalloc(0) should allocate one page.
-  size = size == 0 ? PageSize : RoundUpTo(size, PageSize);
+  size = size ? RoundUpTo(size, PageSize) : PageSize;
   return SetErrnoOnNull(MsanAllocate(stack, size, PageSize, false));
 }
 
