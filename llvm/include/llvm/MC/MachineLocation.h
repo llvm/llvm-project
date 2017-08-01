@@ -54,7 +54,6 @@ public:
   int getOffset()        const { return Offset; }
   void setIsRegister(bool Is)  { IsRegister = Is; }
   void setRegister(unsigned R) { Register = R; }
-  void setOffset(int O)        { Offset = O; }
 
   /// Make this location a direct register location.
   void set(unsigned R) {
