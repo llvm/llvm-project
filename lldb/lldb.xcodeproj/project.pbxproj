@@ -129,7 +129,6 @@
 		239D380B1D70FBAC00D8E937 /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 239D38091D70FB9900D8E937 /* FileSpec.cpp */; };
 		23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */; };
 		23A452081DBFF6A500E44395 /* ArchSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452041DBFF69800E44395 /* ArchSpecTest.cpp */; };
-		23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452051DBFF69800E44395 /* StructuredDataTest.cpp */; };
 		23A4520F1DBFF77700E44395 /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */; };
 		23A4522E1DC00D5D00E44395 /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452211DC00D2F00E44395 /* MinidumpParser.cpp */; };
 		23A4522F1DC00D5D00E44395 /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */; };
@@ -1447,7 +1446,6 @@
 		23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BreakpointIDTest.cpp; sourceTree = "<group>"; };
 		23A452001DBFF67000E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23A452041DBFF69800E44395 /* ArchSpecTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ArchSpecTest.cpp; sourceTree = "<group>"; };
-		23A452051DBFF69800E44395 /* StructuredDataTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StructuredDataTest.cpp; sourceTree = "<group>"; };
 		23A4520B1DBFF77400E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpParserTest.cpp; sourceTree = "<group>"; };
 		23A452111DBFF78E00E44395 /* fizzbuzz_no_heap.dmp */ = {isa = PBXFileReference; lastKnownFileType = file; path = fizzbuzz_no_heap.dmp; sourceTree = "<group>"; };
@@ -3735,7 +3733,6 @@
 				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */,
 				23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */,
-				23A452051DBFF69800E44395 /* StructuredDataTest.cpp */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -7544,7 +7541,6 @@
 				23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */,
 				9A1542FA1F0EE48600DEA1D8 /* TestUtilities.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
-				23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */,
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */,
