@@ -52,7 +52,19 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  ...
+- ``-Wpragma-pack`` is a new warning that warns in the following cases:
+
+  - When a translation unit is missing terminating ``#pragma pack (pop)``
+    directives.
+
+  - When leaving an included file that changes the current alignment value,
+    i.e. when the alignment before ``#include`` is different to the alignment
+    after ``#include``.
+
+  - ``-Wpragma-pack-suspicious-include`` (disabled by default) warns on an
+    ``#include`` when the included file contains structures or unions affected by
+    a non-default alignment that has been specified using a ``#pragma pack``
+    directive prior to the ``#include``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

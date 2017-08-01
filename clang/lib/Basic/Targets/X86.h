@@ -691,30 +691,6 @@ public:
   }
 };
 
-static void addCygMingDefines(const LangOptions &Opts, MacroBuilder &Builder) {
-  // Mingw and cygwin define __declspec(a) to __attribute__((a)).  Clang
-  // supports __declspec natively under -fms-extensions, but we define a no-op
-  // __declspec macro anyway for pre-processor compatibility.
-  if (Opts.MicrosoftExt)
-    Builder.defineMacro("__declspec", "__declspec");
-  else
-    Builder.defineMacro("__declspec(a)", "__attribute__((a))");
-
-  if (!Opts.MicrosoftExt) {
-    // Provide macros for all the calling convention keywords.  Provide both
-    // single and double underscore prefixed variants.  These are available on
-    // x64 as well as x86, even though they have no effect.
-    const char *CCs[] = {"cdecl", "stdcall", "fastcall", "thiscall", "pascal"};
-    for (const char *CC : CCs) {
-      std::string GCCSpelling = "__attribute__((__";
-      GCCSpelling += CC;
-      GCCSpelling += "__))";
-      Builder.defineMacro(Twine("_") + CC, GCCSpelling);
-      Builder.defineMacro(Twine("__") + CC, GCCSpelling);
-    }
-  }
-}
-
 // x86-32 MinGW target
 class LLVM_LIBRARY_VISIBILITY MinGWX86_32TargetInfo
     : public WindowsX86_32TargetInfo {
@@ -795,40 +771,6 @@ public:
   }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
-};
-
-// RTEMS Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY RTEMSTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    // RTEMS defines; list based off of gcc output
-
-    Builder.defineMacro("__rtems__");
-    Builder.defineMacro("__ELF__");
-  }
-
-public:
-  RTEMSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    switch (Triple.getArch()) {
-    default:
-    case llvm::Triple::x86:
-      // this->MCountName = ".mcount";
-      break;
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
-      // this->MCountName = "_mcount";
-      break;
-    case llvm::Triple::arm:
-      // this->MCountName = "__mcount";
-      break;
-    }
-  }
 };
 
 // x86-32 RTEMS target

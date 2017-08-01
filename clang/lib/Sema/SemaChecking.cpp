@@ -299,6 +299,15 @@ static bool checkOpenCLBlockArgs(Sema &S, Expr *BlockArg) {
   return IllegalParams;
 }
 
+static bool checkOpenCLSubgroupExt(Sema &S, CallExpr *Call) {
+  if (!S.getOpenCLOptions().isEnabled("cl_khr_subgroups")) {
+    S.Diag(Call->getLocStart(), diag::err_opencl_requires_extension)
+          << 1 << Call->getDirectCallee() << "cl_khr_subgroups";
+    return true;
+  }
+  return false;
+}
+
 /// OpenCL C v2.0, s6.13.17.6 - Check the argument to the
 /// get_kernel_work_group_size
 /// and get_kernel_preferred_work_group_size_multiple builtin functions.
@@ -1048,9 +1057,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIreserve_write_pipe:
   case Builtin::BIwork_group_reserve_read_pipe:
   case Builtin::BIwork_group_reserve_write_pipe:
+    if (SemaBuiltinReserveRWPipe(*this, TheCall))
+      return ExprError();
+    // Since return type of reserve_read/write_pipe built-in function is
+    // reserve_id_t, which is not defined in the builtin def file , we used int
+    // as return type and need to override the return type of these functions.
+    TheCall->setType(Context.OCLReserveIDTy);
+    break;
   case Builtin::BIsub_group_reserve_read_pipe:
   case Builtin::BIsub_group_reserve_write_pipe:
-    if (SemaBuiltinReserveRWPipe(*this, TheCall))
+    if (checkOpenCLSubgroupExt(*this, TheCall) ||
+        SemaBuiltinReserveRWPipe(*this, TheCall))
       return ExprError();
     // Since return type of reserve_read/write_pipe built-in function is
     // reserve_id_t, which is not defined in the builtin def file , we used int
@@ -1061,9 +1078,13 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIcommit_write_pipe:
   case Builtin::BIwork_group_commit_read_pipe:
   case Builtin::BIwork_group_commit_write_pipe:
+    if (SemaBuiltinCommitRWPipe(*this, TheCall))
+      return ExprError();
+    break;
   case Builtin::BIsub_group_commit_read_pipe:
   case Builtin::BIsub_group_commit_write_pipe:
-    if (SemaBuiltinCommitRWPipe(*this, TheCall))
+    if (checkOpenCLSubgroupExt(*this, TheCall) ||
+        SemaBuiltinCommitRWPipe(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BIget_pipe_num_packets:
