@@ -1616,6 +1616,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       bool read_options_from_ast = false;
       ModuleSP exe_module_sp(target->GetExecutableModule());
 
+#ifdef __APPLE__
       // If we're debugging a testsuite, then treat the main test bundle as the
       // executable.
       if (exe_module_sp &&
@@ -1627,6 +1628,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           exe_module_sp = unit_test_module;
         }
       }
+#endif
 
       if (exe_module_sp) {
         SymbolVendor *sym_vendor = exe_module_sp->GetSymbolVendor();
