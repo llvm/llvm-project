@@ -449,14 +449,16 @@ public:
   CoverageMapping(const CoverageMapping &) = delete;
   CoverageMapping &operator=(const CoverageMapping &) = delete;
 
-  /// \brief Load the coverage mapping using the given readers.
+  /// Load the coverage mapping using the given readers.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
        IndexedInstrProfReader &ProfileReader);
 
+  /// Load the coverage mapping from the given object files and profile. If
+  /// \p Arches is non-empty, it must specify an architecture for each object.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       StringRef Arch = StringRef());
+       ArrayRef<StringRef> Arches = None);
 
   /// \brief The number of functions that couldn't have their profiles mapped.
   ///
