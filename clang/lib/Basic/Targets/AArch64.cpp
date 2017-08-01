@@ -119,8 +119,10 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ELF__");
 
   // Target properties.
-  Builder.defineMacro("_LP64");
-  Builder.defineMacro("__LP64__");
+  if (!getTriple().isOSWindows()) {
+    Builder.defineMacro("_LP64");
+    Builder.defineMacro("__LP64__");
+  }
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");

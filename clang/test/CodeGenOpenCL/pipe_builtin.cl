@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -cl-ext=+cl_khr_subgroups -O0 -cl-std=CL2.0 -o - %s | FileCheck %s
 
 // CHECK: %opencl.pipe_t = type opaque
 // CHECK: %opencl.reserve_id_t = type opaque
+
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
 
 void test1(read_only pipe int p, global int *ptr) {
   // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}}, i32 4, i32 4)

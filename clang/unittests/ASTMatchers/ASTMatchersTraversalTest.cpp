@@ -785,14 +785,18 @@ TEST(HasAnyConstructorInitializer, ForField) {
   static const char Code[] =
     "class Baz { };"
       "class Foo {"
-      "  Foo() : foo_() { }"
+      "  Foo() : foo_(), bar_() { }"
       "  Baz foo_;"
-      "  Baz bar_;"
+      "  struct {"
+      "    Baz bar_;"
+      "  };"
       "};";
   EXPECT_TRUE(matches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
     forField(hasType(recordDecl(hasName("Baz"))))))));
   EXPECT_TRUE(matches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
     forField(hasName("foo_"))))));
+  EXPECT_TRUE(matches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
+    forField(hasName("bar_"))))));
   EXPECT_TRUE(notMatches(Code, cxxConstructorDecl(hasAnyConstructorInitializer(
     forField(hasType(recordDecl(hasName("Bar"))))))));
 }

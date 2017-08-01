@@ -3237,7 +3237,7 @@ AST_MATCHER_P(CXXConstructorDecl, hasAnyConstructorInitializer,
 /// with forField matching foo_
 AST_MATCHER_P(CXXCtorInitializer, forField,
               internal::Matcher<FieldDecl>, InnerMatcher) {
-  const FieldDecl *NodeAsDecl = Node.getMember();
+  const FieldDecl *NodeAsDecl = Node.getAnyMember();
   return (NodeAsDecl != nullptr &&
       InnerMatcher.matches(*NodeAsDecl, Finder, Builder));
 }

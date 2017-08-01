@@ -42,6 +42,10 @@ void defineCPUMacros(clang::MacroBuilder &Builder, llvm::StringRef CPUName,
 LLVM_LIBRARY_VISIBILITY
 void addMinGWDefines(const clang::LangOptions &Opts,
                      clang::MacroBuilder &Builder);
+
+LLVM_LIBRARY_VISIBILITY
+void addCygMingDefines(const clang::LangOptions &Opts,
+                       clang::MacroBuilder &Builder);
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_H
