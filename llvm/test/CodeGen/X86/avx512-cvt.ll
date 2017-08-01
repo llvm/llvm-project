@@ -879,7 +879,7 @@ define <16 x double> @uitof64(<16 x i32> %a) nounwind {
 ; NODQ-LABEL: uitof64:
 ; NODQ:       # BB#0:
 ; NODQ-NEXT:    vcvtudq2pd %ymm0, %zmm2
-; NODQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; NODQ-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; NODQ-NEXT:    vcvtudq2pd %ymm0, %zmm1
 ; NODQ-NEXT:    vmovaps %zmm2, %zmm0
 ; NODQ-NEXT:    retq
@@ -887,7 +887,7 @@ define <16 x double> @uitof64(<16 x i32> %a) nounwind {
 ; DQ-LABEL: uitof64:
 ; DQ:       # BB#0:
 ; DQ-NEXT:    vcvtudq2pd %ymm0, %zmm2
-; DQ-NEXT:    vextracti32x8 $1, %zmm0, %ymm0
+; DQ-NEXT:    vextractf32x8 $1, %zmm0, %ymm0
 ; DQ-NEXT:    vcvtudq2pd %ymm0, %zmm1
 ; DQ-NEXT:    vmovaps %zmm2, %zmm0
 ; DQ-NEXT:    retq

@@ -170,10 +170,12 @@ namespace {
     bool convertToProperty();
   };
 
+#ifndef NDEBUG
   raw_ostream &operator<< (raw_ostream &os, const LatticeCell &L) {
     L.print(os);
     return os;
   }
+#endif
 
   class MachineConstEvaluator;
 
@@ -463,6 +465,7 @@ bool LatticeCell::convertToProperty() {
   return true;
 }
 
+#ifndef NDEBUG
 void LatticeCell::print(raw_ostream &os) const {
   if (isProperty()) {
     os << "{ ";
@@ -500,6 +503,7 @@ void LatticeCell::print(raw_ostream &os) const {
   }
   os << " }";
 }
+#endif
 
 // "Meet" operation on two cells. This is the key of the propagation
 // algorithm.
@@ -602,11 +606,13 @@ uint32_t LatticeCell::properties() const {
   return Ps;
 }
 
+#ifndef NDEBUG
 void MachineConstPropagator::CellMap::print(raw_ostream &os,
       const TargetRegisterInfo &TRI) const {
   for (auto &I : Map)
     dbgs() << "  " << PrintReg(I.first, &TRI) << " -> " << I.second << '\n';
 }
+#endif
 
 void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
   const MachineBasicBlock *MB = PN.getParent();

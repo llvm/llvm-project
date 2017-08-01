@@ -3960,6 +3960,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   DEBUG(dump(););
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Print the schedule information to the given output.
 void SMSchedule::print(raw_ostream &os) const {
   // Iterate over each cycle.
@@ -3975,7 +3976,6 @@ void SMSchedule::print(raw_ostream &os) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Utility function used for debugging to print the schedule.
 LLVM_DUMP_METHOD void SMSchedule::dump() const { print(dbgs()); }
 #endif

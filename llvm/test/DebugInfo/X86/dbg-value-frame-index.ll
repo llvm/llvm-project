@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 define i1 @test() !dbg !4 {
 entry:
@@ -19,6 +21,8 @@ while.end:
 
 ; CHECK-LABEL: test
 ; CHECK:       #DEBUG_VALUE: test:w <- [%RSP+8]
+; DWARF:       Location description: 77 08
+;                                    DW_OP_breg7 +8
 
 declare i1 @fn(i64*, i64*, i64*, i8*, i64, i64*, i32*, i8*)
 declare void @llvm.dbg.value(metadata, metadata, metadata)

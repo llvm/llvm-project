@@ -18,9 +18,9 @@ define <4 x float> @test_addps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_addps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    addps %xmm1, %xmm0
-; ATOM-NEXT:    addps (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    addps (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_addps:
 ; SLM:       # BB#0:
@@ -66,9 +66,9 @@ define float @test_addss(float %a0, float %a1, float *%a2) {
 ;
 ; ATOM-LABEL: test_addss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    addss %xmm1, %xmm0
-; ATOM-NEXT:    addss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    addss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    addss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_addss:
 ; SLM:       # BB#0:
@@ -116,15 +116,15 @@ define <4 x float> @test_andps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    andps %xmm1, %xmm0
 ; ATOM-NEXT:    andps (%rdi), %xmm0
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_andps:
 ; SLM:       # BB#0:
@@ -176,15 +176,15 @@ define <4 x float> @test_andnotps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    andnps %xmm1, %xmm0
 ; ATOM-NEXT:    andnps (%rdi), %xmm0
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_andnotps:
 ; SLM:       # BB#0:
@@ -237,10 +237,10 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_cmpps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cmpeqps %xmm0, %xmm1
-; ATOM-NEXT:    cmpeqps (%rdi), %xmm0
+; ATOM-NEXT:    cmpeqps %xmm0, %xmm1 # sched: [5:5.00]
+; ATOM-NEXT:    cmpeqps (%rdi), %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    orps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cmpps:
 ; SLM:       # BB#0:
@@ -294,9 +294,9 @@ define float @test_cmpss(float %a0, float %a1, float *%a2) {
 ;
 ; ATOM-LABEL: test_cmpss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cmpeqss %xmm1, %xmm0
-; ATOM-NEXT:    cmpeqss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cmpeqss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    cmpeqss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cmpss:
 ; SLM:       # BB#0:
@@ -355,17 +355,17 @@ define i32 @test_comiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ;
 ; ATOM-LABEL: test_comiss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    comiss %xmm1, %xmm0
-; ATOM-NEXT:    setnp %al
-; ATOM-NEXT:    sete %cl
-; ATOM-NEXT:    andb %al, %cl
-; ATOM-NEXT:    comiss (%rdi), %xmm0
-; ATOM-NEXT:    setnp %al
-; ATOM-NEXT:    sete %dl
-; ATOM-NEXT:    andb %al, %dl
-; ATOM-NEXT:    orb %cl, %dl
-; ATOM-NEXT:    movzbl %dl, %eax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    comiss %xmm1, %xmm0 # sched: [9:4.50]
+; ATOM-NEXT:    setnp %al # sched: [1:0.50]
+; ATOM-NEXT:    sete %cl # sched: [1:0.50]
+; ATOM-NEXT:    andb %al, %cl # sched: [1:0.50]
+; ATOM-NEXT:    comiss (%rdi), %xmm0 # sched: [10:5.00]
+; ATOM-NEXT:    setnp %al # sched: [1:0.50]
+; ATOM-NEXT:    sete %dl # sched: [1:0.50]
+; ATOM-NEXT:    andb %al, %dl # sched: [1:0.50]
+; ATOM-NEXT:    orb %cl, %dl # sched: [1:0.50]
+; ATOM-NEXT:    movzbl %dl, %eax # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_comiss:
 ; SLM:       # BB#0:
@@ -454,10 +454,10 @@ define float @test_cvtsi2ss(i32 %a0, i32 *%a1) {
 ;
 ; ATOM-LABEL: test_cvtsi2ss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cvtsi2ssl (%rsi), %xmm0
-; ATOM-NEXT:    cvtsi2ssl %edi, %xmm1
-; ATOM-NEXT:    addss %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cvtsi2ssl (%rsi), %xmm0 # sched: [7:3.50]
+; ATOM-NEXT:    cvtsi2ssl %edi, %xmm1 # sched: [6:3.00]
+; ATOM-NEXT:    addss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvtsi2ss:
 ; SLM:       # BB#0:
@@ -510,10 +510,10 @@ define float @test_cvtsi2ssq(i64 %a0, i64 *%a1) {
 ;
 ; ATOM-LABEL: test_cvtsi2ssq:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cvtsi2ssq (%rsi), %xmm0
-; ATOM-NEXT:    cvtsi2ssq %rdi, %xmm1
-; ATOM-NEXT:    addss %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cvtsi2ssq (%rsi), %xmm0 # sched: [7:3.50]
+; ATOM-NEXT:    cvtsi2ssq %rdi, %xmm1 # sched: [6:3.00]
+; ATOM-NEXT:    addss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvtsi2ssq:
 ; SLM:       # BB#0:
@@ -566,10 +566,10 @@ define i32 @test_cvtss2si(float %a0, float *%a1) {
 ;
 ; ATOM-LABEL: test_cvtss2si:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cvtss2si (%rdi), %eax
-; ATOM-NEXT:    cvtss2si %xmm0, %ecx
-; ATOM-NEXT:    addl %ecx, %eax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cvtss2si (%rdi), %eax # sched: [9:4.50]
+; ATOM-NEXT:    cvtss2si %xmm0, %ecx # sched: [8:4.00]
+; ATOM-NEXT:    addl %ecx, %eax # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvtss2si:
 ; SLM:       # BB#0:
@@ -625,10 +625,10 @@ define i64 @test_cvtss2siq(float %a0, float *%a1) {
 ;
 ; ATOM-LABEL: test_cvtss2siq:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cvtss2si (%rdi), %rax
-; ATOM-NEXT:    cvtss2si %xmm0, %rcx
-; ATOM-NEXT:    addq %rcx, %rax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cvtss2si (%rdi), %rax # sched: [10:5.00]
+; ATOM-NEXT:    cvtss2si %xmm0, %rcx # sched: [9:4.50]
+; ATOM-NEXT:    addq %rcx, %rax # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvtss2siq:
 ; SLM:       # BB#0:
@@ -684,10 +684,10 @@ define i32 @test_cvttss2si(float %a0, float *%a1) {
 ;
 ; ATOM-LABEL: test_cvttss2si:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cvttss2si (%rdi), %eax
-; ATOM-NEXT:    cvttss2si %xmm0, %ecx
-; ATOM-NEXT:    addl %ecx, %eax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cvttss2si (%rdi), %eax # sched: [9:4.50]
+; ATOM-NEXT:    cvttss2si %xmm0, %ecx # sched: [8:4.00]
+; ATOM-NEXT:    addl %ecx, %eax # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvttss2si:
 ; SLM:       # BB#0:
@@ -740,10 +740,10 @@ define i64 @test_cvttss2siq(float %a0, float *%a1) {
 ;
 ; ATOM-LABEL: test_cvttss2siq:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    cvttss2si (%rdi), %rax
-; ATOM-NEXT:    cvttss2si %xmm0, %rcx
-; ATOM-NEXT:    addq %rcx, %rax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    cvttss2si (%rdi), %rax # sched: [10:5.00]
+; ATOM-NEXT:    cvttss2si %xmm0, %rcx # sched: [9:4.50]
+; ATOM-NEXT:    addq %rcx, %rax # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_cvttss2siq:
 ; SLM:       # BB#0:
@@ -795,9 +795,9 @@ define <4 x float> @test_divps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_divps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    divps %xmm1, %xmm0
-; ATOM-NEXT:    divps (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    divps %xmm1, %xmm0 # sched: [70:35.00]
+; ATOM-NEXT:    divps (%rdi), %xmm0 # sched: [125:62.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_divps:
 ; SLM:       # BB#0:
@@ -843,9 +843,9 @@ define float @test_divss(float %a0, float %a1, float *%a2) {
 ;
 ; ATOM-LABEL: test_divss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    divss %xmm1, %xmm0
-; ATOM-NEXT:    divss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    divss %xmm1, %xmm0 # sched: [34:17.00]
+; ATOM-NEXT:    divss (%rdi), %xmm0 # sched: [62:31.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_divss:
 ; SLM:       # BB#0:
@@ -891,9 +891,9 @@ define void @test_ldmxcsr(i32 %a0) {
 ;
 ; ATOM-LABEL: test_ldmxcsr:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; ATOM-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp)
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
+; ATOM-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:2.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_ldmxcsr:
 ; SLM:       # BB#0:
@@ -941,9 +941,9 @@ define <4 x float> @test_maxps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_maxps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    maxps %xmm1, %xmm0
-; ATOM-NEXT:    maxps (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    maxps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    maxps (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_maxps:
 ; SLM:       # BB#0:
@@ -990,9 +990,9 @@ define <4 x float> @test_maxss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_maxss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    maxss %xmm1, %xmm0
-; ATOM-NEXT:    maxss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    maxss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    maxss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_maxss:
 ; SLM:       # BB#0:
@@ -1039,9 +1039,9 @@ define <4 x float> @test_minps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_minps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    minps %xmm1, %xmm0
-; ATOM-NEXT:    minps (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    minps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    minps (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_minps:
 ; SLM:       # BB#0:
@@ -1088,9 +1088,9 @@ define <4 x float> @test_minss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_minss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    minss %xmm1, %xmm0
-; ATOM-NEXT:    minss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    minss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    minss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_minss:
 ; SLM:       # BB#0:
@@ -1138,10 +1138,10 @@ define void @test_movaps(<4 x float> *%a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_movaps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movaps (%rdi), %xmm0
-; ATOM-NEXT:    addps %xmm0, %xmm0
-; ATOM-NEXT:    movaps %xmm0, (%rsi)
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movaps (%rdi), %xmm0 # sched: [1:1.00]
+; ATOM-NEXT:    addps %xmm0, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    movaps %xmm0, (%rsi) # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movaps:
 ; SLM:       # BB#0:
@@ -1193,14 +1193,14 @@ define <4 x float> @test_movhlps(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; ATOM-LABEL: test_movhlps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1] sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movhlps:
 ; SLM:       # BB#0:
@@ -1243,11 +1243,11 @@ define void @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ;
 ; ATOM-LABEL: test_movhps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; ATOM-NEXT:    addps %xmm0, %xmm1
-; ATOM-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; ATOM-NEXT:    movlps %xmm1, (%rdi)
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [1:1.00]
+; ATOM-NEXT:    addps %xmm0, %xmm1 # sched: [5:5.00]
+; ATOM-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1] sched: [1:1.00]
+; ATOM-NEXT:    movlps %xmm1, (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movhps:
 ; SLM:       # BB#0:
@@ -1304,9 +1304,9 @@ define <4 x float> @test_movlhps(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; ATOM-LABEL: test_movlhps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; ATOM-NEXT:    addps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movlhps:
 ; SLM:       # BB#0:
@@ -1352,10 +1352,10 @@ define void @test_movlps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ;
 ; ATOM-LABEL: test_movlps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
-; ATOM-NEXT:    addps %xmm0, %xmm1
-; ATOM-NEXT:    movlps %xmm1, (%rdi)
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [1:1.00]
+; ATOM-NEXT:    addps %xmm0, %xmm1 # sched: [5:5.00]
+; ATOM-NEXT:    movlps %xmm1, (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movlps:
 ; SLM:       # BB#0:
@@ -1409,10 +1409,10 @@ define i32 @test_movmskps(<4 x float> %a0) {
 ;
 ; ATOM-LABEL: test_movmskps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movmskps %xmm0, %eax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movmskps %xmm0, %eax # sched: [3:3.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movmskps:
 ; SLM:       # BB#0:
@@ -1451,14 +1451,14 @@ define void @test_movntps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_movntps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movntps %xmm0, (%rdi)
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movntps %xmm0, (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movntps:
 ; SLM:       # BB#0:
@@ -1498,10 +1498,10 @@ define void @test_movss_mem(float* %a0, float* %a1) {
 ;
 ; ATOM-LABEL: test_movss_mem:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ATOM-NEXT:    addss %xmm0, %xmm0
-; ATOM-NEXT:    movss %xmm0, (%rsi)
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [1:1.00]
+; ATOM-NEXT:    addss %xmm0, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    movss %xmm0, (%rsi) # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movss_mem:
 ; SLM:       # BB#0:
@@ -1551,14 +1551,14 @@ define <4 x float> @test_movss_reg(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; ATOM-LABEL: test_movss_reg:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3] sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movss_reg:
 ; SLM:       # BB#0:
@@ -1598,10 +1598,10 @@ define void @test_movups(<4 x float> *%a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_movups:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movups (%rdi), %xmm0
-; ATOM-NEXT:    addps %xmm0, %xmm0
-; ATOM-NEXT:    movups %xmm0, (%rsi)
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    movups (%rdi), %xmm0 # sched: [3:1.50]
+; ATOM-NEXT:    addps %xmm0, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    movups %xmm0, (%rsi) # sched: [2:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movups:
 ; SLM:       # BB#0:
@@ -1652,9 +1652,9 @@ define <4 x float> @test_mulps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_mulps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    mulps %xmm1, %xmm0
-; ATOM-NEXT:    mulps (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    mulps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    mulps (%rdi), %xmm0 # sched: [10:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_mulps:
 ; SLM:       # BB#0:
@@ -1700,9 +1700,9 @@ define float @test_mulss(float %a0, float %a1, float *%a2) {
 ;
 ; ATOM-LABEL: test_mulss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    mulss %xmm1, %xmm0
-; ATOM-NEXT:    mulss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    mulss %xmm1, %xmm0 # sched: [4:4.00]
+; ATOM-NEXT:    mulss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_mulss:
 ; SLM:       # BB#0:
@@ -1750,15 +1750,15 @@ define <4 x float> @test_orps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    orps %xmm1, %xmm0
 ; ATOM-NEXT:    orps (%rdi), %xmm0
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_orps:
 ; SLM:       # BB#0:
@@ -1807,14 +1807,14 @@ define void @test_prefetchnta(i8* %a0) {
 ;
 ; ATOM-LABEL: test_prefetchnta:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    prefetchnta (%rdi)
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    prefetchnta (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_prefetchnta:
 ; SLM:       # BB#0:
@@ -1855,11 +1855,11 @@ define <4 x float> @test_rcpps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_rcpps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    rcpps (%rdi), %xmm1
-; ATOM-NEXT:    rcpps %xmm0, %xmm0
-; ATOM-NEXT:    addps %xmm0, %xmm1
-; ATOM-NEXT:    movaps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    rcpps (%rdi), %xmm1 # sched: [10:5.00]
+; ATOM-NEXT:    rcpps %xmm0, %xmm0 # sched: [9:4.50]
+; ATOM-NEXT:    addps %xmm0, %xmm1 # sched: [5:5.00]
+; ATOM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_rcpps:
 ; SLM:       # BB#0:
@@ -1917,11 +1917,11 @@ define <4 x float> @test_rcpss(float %a0, float *%a1) {
 ;
 ; ATOM-LABEL: test_rcpss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [1:1.00]
 ; ATOM-NEXT:    rcpss %xmm0, %xmm0
 ; ATOM-NEXT:    rcpss %xmm1, %xmm1
-; ATOM-NEXT:    addps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_rcpss:
 ; SLM:       # BB#0:
@@ -1982,11 +1982,11 @@ define <4 x float> @test_rsqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_rsqrtps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    rsqrtps (%rdi), %xmm1
-; ATOM-NEXT:    rsqrtps %xmm0, %xmm0
-; ATOM-NEXT:    addps %xmm0, %xmm1
-; ATOM-NEXT:    movaps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    rsqrtps (%rdi), %xmm1 # sched: [10:5.00]
+; ATOM-NEXT:    rsqrtps %xmm0, %xmm0 # sched: [9:4.50]
+; ATOM-NEXT:    addps %xmm0, %xmm1 # sched: [5:5.00]
+; ATOM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_rsqrtps:
 ; SLM:       # BB#0:
@@ -2044,11 +2044,11 @@ define <4 x float> @test_rsqrtss(float %a0, float *%a1) {
 ;
 ; ATOM-LABEL: test_rsqrtss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ATOM-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [1:1.00]
 ; ATOM-NEXT:    rsqrtss %xmm0, %xmm0
 ; ATOM-NEXT:    rsqrtss %xmm1, %xmm1
-; ATOM-NEXT:    addps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_rsqrtss:
 ; SLM:       # BB#0:
@@ -2107,14 +2107,14 @@ define void @test_sfence() {
 ;
 ; ATOM-LABEL: test_sfence:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    sfence
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    sfence # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_sfence:
 ; SLM:       # BB#0:
@@ -2154,13 +2154,13 @@ define <4 x float> @test_shufps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; ATOM-LABEL: test_shufps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0]
-; ATOM-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],mem[0,0]
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0] sched: [1:1.00]
+; ATOM-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],mem[0,0] sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_shufps:
 ; SLM:       # BB#0:
@@ -2207,10 +2207,10 @@ define <4 x float> @test_sqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_sqrtps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    sqrtps %xmm0, %xmm1
-; ATOM-NEXT:    sqrtps (%rdi), %xmm0
-; ATOM-NEXT:    addps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    sqrtps %xmm0, %xmm1 # sched: [70:35.00]
+; ATOM-NEXT:    sqrtps (%rdi), %xmm0 # sched: [70:35.00]
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_sqrtps:
 ; SLM:       # BB#0:
@@ -2268,11 +2268,11 @@ define <4 x float> @test_sqrtss(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ATOM-LABEL: test_sqrtss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    movaps (%rdi), %xmm1
+; ATOM-NEXT:    movaps (%rdi), %xmm1 # sched: [1:1.00]
 ; ATOM-NEXT:    sqrtss %xmm0, %xmm0
 ; ATOM-NEXT:    sqrtss %xmm1, %xmm1
-; ATOM-NEXT:    addps %xmm1, %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_sqrtss:
 ; SLM:       # BB#0:
@@ -2330,9 +2330,9 @@ define i32 @test_stmxcsr() {
 ;
 ; ATOM-LABEL: test_stmxcsr:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    stmxcsr -{{[0-9]+}}(%rsp)
-; ATOM-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # sched: [15:7.50]
+; ATOM-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_stmxcsr:
 ; SLM:       # BB#0:
@@ -2380,9 +2380,9 @@ define <4 x float> @test_subps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ATOM-LABEL: test_subps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    subps %xmm1, %xmm0
-; ATOM-NEXT:    subps (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    subps %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    subps (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_subps:
 ; SLM:       # BB#0:
@@ -2428,9 +2428,9 @@ define float @test_subss(float %a0, float %a1, float *%a2) {
 ;
 ; ATOM-LABEL: test_subss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    subss %xmm1, %xmm0
-; ATOM-NEXT:    subss (%rdi), %xmm0
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    subss %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    subss (%rdi), %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_subss:
 ; SLM:       # BB#0:
@@ -2484,17 +2484,17 @@ define i32 @test_ucomiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ;
 ; ATOM-LABEL: test_ucomiss:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    ucomiss %xmm1, %xmm0
-; ATOM-NEXT:    setnp %al
-; ATOM-NEXT:    sete %cl
-; ATOM-NEXT:    andb %al, %cl
-; ATOM-NEXT:    ucomiss (%rdi), %xmm0
-; ATOM-NEXT:    setnp %al
-; ATOM-NEXT:    sete %dl
-; ATOM-NEXT:    andb %al, %dl
-; ATOM-NEXT:    orb %cl, %dl
-; ATOM-NEXT:    movzbl %dl, %eax
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    ucomiss %xmm1, %xmm0 # sched: [9:4.50]
+; ATOM-NEXT:    setnp %al # sched: [1:0.50]
+; ATOM-NEXT:    sete %cl # sched: [1:0.50]
+; ATOM-NEXT:    andb %al, %cl # sched: [1:0.50]
+; ATOM-NEXT:    ucomiss (%rdi), %xmm0 # sched: [10:5.00]
+; ATOM-NEXT:    setnp %al # sched: [1:0.50]
+; ATOM-NEXT:    sete %dl # sched: [1:0.50]
+; ATOM-NEXT:    andb %al, %dl # sched: [1:0.50]
+; ATOM-NEXT:    orb %cl, %dl # sched: [1:0.50]
+; ATOM-NEXT:    movzbl %dl, %eax # sched: [1:1.00]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_ucomiss:
 ; SLM:       # BB#0:
@@ -2582,13 +2582,13 @@ define <4 x float> @test_unpckhps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ;
 ; ATOM-LABEL: test_unpckhps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; ATOM-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
+; ATOM-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3] sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_unpckhps:
 ; SLM:       # BB#0:
@@ -2634,13 +2634,13 @@ define <4 x float> @test_unpcklps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ;
 ; ATOM-LABEL: test_unpcklps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; ATOM-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
+; ATOM-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1] sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_unpcklps:
 ; SLM:       # BB#0:
@@ -2688,15 +2688,15 @@ define <4 x float> @test_xorps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    xorps %xmm1, %xmm0
 ; ATOM-NEXT:    xorps (%rdi), %xmm0
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_xorps:
 ; SLM:       # BB#0:

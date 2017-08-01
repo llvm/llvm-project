@@ -1,4 +1,5 @@
-; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck --check-prefix=COMMON --check-prefix=BASE %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=COMMON --check-prefix=NOBASE %s
 
 ; Group ranges in a range list that apply to the same section and use a base
 ; address selection entry to reduce the number of relocations to one reloc per
@@ -13,23 +14,27 @@
 ; in the linked executable. Without compression in the objects, the win would be
 ; smaller (the growth of debug_ranges itself would be more significant).
 
-; CHECK: {{^.Ldebug_ranges0}}
-; CHECK-NEXT:   .quad   .Lfunc_begin0
-; CHECK-NEXT:   .quad   .Lfunc_end0
-; CHECK-NEXT:   .quad   -1
-; CHECK-NEXT:   .quad   .Lfunc_begin1
-; CHECK-NEXT:   .quad   .Lfunc_begin1-.Lfunc_begin1
-; CHECK-NEXT:   .quad   .Lfunc_end1-.Lfunc_begin1
-; CHECK-NEXT:   .quad   .Lfunc_begin3-.Lfunc_begin1
-; CHECK-NEXT:   .quad   .Lfunc_end3-.Lfunc_begin1
-; CHECK-NEXT:   .quad   -1
-; CHECK-NEXT:   .quad   0
-; CHECK-NEXT:   .quad   .Lfunc_begin4
-; CHECK-NEXT:   .quad   .Lfunc_end4
-; CHECK-NEXT:   .quad   .Lfunc_begin5
-; CHECK-NEXT:   .quad   .Lfunc_end5
-; CHECK-NEXT:   .quad   0
-; CHECK-NEXT:   .quad   0
+; COMMON: {{^.Ldebug_ranges0}}
+; COMMON-NEXT:   .quad   .Lfunc_begin0
+; COMMON-NEXT:   .quad   .Lfunc_end0
+; BASE-NEXT:   .quad   -1
+; BASE-NEXT:   .quad   .Lfunc_begin1
+; BASE-NEXT:   .quad   .Lfunc_begin1-.Lfunc_begin1
+; BASE-NEXT:   .quad   .Lfunc_end1-.Lfunc_begin1
+; BASE-NEXT:   .quad   .Lfunc_begin3-.Lfunc_begin1
+; BASE-NEXT:   .quad   .Lfunc_end3-.Lfunc_begin1
+; BASE-NEXT:   .quad   -1
+; BASE-NEXT:   .quad   0
+; NOBASE-NEXT:   .quad   .Lfunc_begin1
+; NOBASE-NEXT:   .quad   .Lfunc_end1
+; NOBASE-NEXT:   .quad   .Lfunc_begin3
+; NOBASE-NEXT:   .quad   .Lfunc_end3
+; COMMON-NEXT:   .quad   .Lfunc_begin4
+; COMMON-NEXT:   .quad   .Lfunc_end4
+; COMMON-NEXT:   .quad   .Lfunc_begin5
+; COMMON-NEXT:   .quad   .Lfunc_end5
+; COMMON-NEXT:   .quad   0
+; COMMON-NEXT:   .quad   0
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @_Z2f1v() #0 section "a" !dbg !7 {

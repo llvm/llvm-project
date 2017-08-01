@@ -1858,7 +1858,7 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; KNL_32-NEXT:    vmovapd 8(%ebp), %zmm1
 ; KNL_32-NEXT:    kshiftrw $8, %k1, %k2
 ; KNL_32-NEXT:    vgatherdpd (,%ymm0), %zmm2 {%k1}
-; KNL_32-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; KNL_32-NEXT:    vgatherdpd (,%ymm0), %zmm1 {%k2}
 ; KNL_32-NEXT:    vmovapd %zmm2, %zmm0
 ; KNL_32-NEXT:    movl %ebp, %esp
@@ -1895,7 +1895,7 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; SKX_32-NEXT:    vmovapd 8(%ebp), %zmm1
 ; SKX_32-NEXT:    kshiftrw $8, %k1, %k2
 ; SKX_32-NEXT:    vgatherdpd (,%ymm0), %zmm2 {%k1}
-; SKX_32-NEXT:    vextracti32x8 $1, %zmm0, %ymm0
+; SKX_32-NEXT:    vextractf32x8 $1, %zmm0, %ymm0
 ; SKX_32-NEXT:    vgatherdpd (,%ymm0), %zmm1 {%k2}
 ; SKX_32-NEXT:    vmovapd %zmm2, %zmm0
 ; SKX_32-NEXT:    movl %ebp, %esp
@@ -2102,7 +2102,7 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; KNL_32-NEXT:    vmovapd 8(%ebp), %zmm1
 ; KNL_32-NEXT:    kshiftrw $8, %k1, %k2
 ; KNL_32-NEXT:    vscatterdpd %zmm2, (,%ymm0) {%k1}
-; KNL_32-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; KNL_32-NEXT:    vscatterdpd %zmm1, (,%ymm0) {%k2}
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
@@ -2138,7 +2138,7 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; SKX_32-NEXT:    vmovapd 8(%ebp), %zmm1
 ; SKX_32-NEXT:    kshiftrw $8, %k1, %k2
 ; SKX_32-NEXT:    vscatterdpd %zmm2, (,%ymm0) {%k1}
-; SKX_32-NEXT:    vextracti32x8 $1, %zmm0, %ymm0
+; SKX_32-NEXT:    vextractf32x8 $1, %zmm0, %ymm0
 ; SKX_32-NEXT:    vscatterdpd %zmm1, (,%ymm0) {%k2}
 ; SKX_32-NEXT:    movl %ebp, %esp
 ; SKX_32-NEXT:    popl %ebp

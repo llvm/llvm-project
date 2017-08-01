@@ -59,6 +59,12 @@ configure_file(${BUILDVARIABLES_SRCPATH} ${BUILDVARIABLES_OBJPATH} @ONLY)
 # Set build-time environment(s).
 add_definitions(-DCMAKE_CFG_INTDIR="${CMAKE_CFG_INTDIR}")
 
+if(LLVM_ENABLE_MODULES)
+  target_compile_options(llvm-config PUBLIC
+    "-fmodules-ignore-macro=CMAKE_CFG_INTDIR"
+    )
+endif()
+
 # Add the dependency on the generation step.
 add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
 

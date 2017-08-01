@@ -2157,6 +2157,8 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
   if (!DL && MI->getParent() != PrevInstBB) {
     for (const auto &NextMI : *MI->getParent()) {
+      if (NextMI.isDebugValue())
+        continue;
       DL = NextMI.getDebugLoc();
       if (DL)
         break;

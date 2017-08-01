@@ -13,11 +13,8 @@ entry:
 ; VEC:   %[[v0:.+]] = add i64 %index, 0
 ; VEC:   %[[v2:.+]] = getelementptr inbounds i32, i32* %f, i64 %[[v0]]
 ; VEC:   %[[v8:.+]] = icmp sgt <2 x i32> %{{.*}}, <i32 100, i32 100>
-; VEC:   %[[v10:.+]] = and <2 x i1> %[[v8]], <i1 true, i1 true>
-; VEC:   %[[o1:.+]] = or <2 x i1> zeroinitializer, %[[v10]]
-; VEC:   %[[v11:.+]] = extractelement <2 x i1> %[[o1]], i32 0
-; VEC:   %[[v12:.+]] = icmp eq i1 %[[v11]], true
-; VEC:   br i1 %[[v12]], label %[[cond:.+]], label %[[else:.+]]
+; VEC:   %[[v11:.+]] = extractelement <2 x i1> %[[v8]], i32 0
+; VEC:   br i1 %[[v11]], label %[[cond:.+]], label %[[else:.+]]
 ;
 ; VEC: [[cond]]:
 ; VEC:   %[[v13:.+]] = extractelement <2 x i32> %wide.load, i32 0
@@ -26,9 +23,8 @@ entry:
 ; VEC:   br label %[[else:.+]]
 ;
 ; VEC: [[else]]:
-; VEC:   %[[v15:.+]] = extractelement <2 x i1> %[[o1]], i32 1
-; VEC:   %[[v16:.+]] = icmp eq i1 %[[v15]], true
-; VEC:   br i1 %[[v16]], label %[[cond2:.+]], label %[[else2:.+]]
+; VEC:   %[[v15:.+]] = extractelement <2 x i1> %[[v8]], i32 1
+; VEC:   br i1 %[[v15]], label %[[cond2:.+]], label %[[else2:.+]]
 ;
 ; VEC: [[cond2]]:
 ; VEC:   %[[v17:.+]] = extractelement <2 x i32> %wide.load, i32 1
@@ -50,10 +46,7 @@ entry:
 ; UNROLL:   %[[v3:[a-zA-Z0-9]+]] = load i32, i32* %[[v1]], align 4
 ; UNROLL:   %[[v4:[a-zA-Z0-9]+]] = icmp sgt i32 %[[v2]], 100
 ; UNROLL:   %[[v5:[a-zA-Z0-9]+]] = icmp sgt i32 %[[v3]], 100
-; UNROLL:   %[[o1:[a-zA-Z0-9]+]] = or i1 false, %[[v4]]
-; UNROLL:   %[[o2:[a-zA-Z0-9]+]] = or i1 false, %[[v5]]
-; UNROLL:   %[[v8:[a-zA-Z0-9]+]] = icmp eq i1 %[[o1]], true
-; UNROLL:   br i1 %[[v8]], label %[[cond:[a-zA-Z0-9.]+]], label %[[else:[a-zA-Z0-9.]+]]
+; UNROLL:   br i1 %[[v4]], label %[[cond:[a-zA-Z0-9.]+]], label %[[else:[a-zA-Z0-9.]+]]
 ;
 ; UNROLL: [[cond]]:
 ; UNROLL:   %[[v6:[a-zA-Z0-9]+]] = add nsw i32 %[[v2]], 20
@@ -61,8 +54,7 @@ entry:
 ; UNROLL:   br label %[[else]]
 ;
 ; UNROLL: [[else]]:
-; UNROLL:   %[[v9:[a-zA-Z0-9]+]] = icmp eq i1 %[[o2]], true
-; UNROLL:   br i1 %[[v9]], label %[[cond2:[a-zA-Z0-9.]+]], label %[[else2:[a-zA-Z0-9.]+]]
+; UNROLL:   br i1 %[[v5]], label %[[cond2:[a-zA-Z0-9.]+]], label %[[else2:[a-zA-Z0-9.]+]]
 ;
 ; UNROLL: [[cond2]]:
 ; UNROLL:   %[[v7:[a-zA-Z0-9]+]] = add nsw i32 %[[v3]], 20

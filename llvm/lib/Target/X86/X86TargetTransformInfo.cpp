@@ -144,9 +144,9 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FSUB, MVT::v2f64, 2  }, // subpd
     // v2i64/v4i64 mul is custom lowered as a series of long:
     // multiplies(3), shifts(3) and adds(2)
-    // slm muldq version throughput is 2 and addq throughput 4 
+    // slm muldq version throughput is 2 and addq throughput 4
     // thus: 3X2 (muldq throughput) + 3X1 (shift throuput) +
-    //       3X4 (addq throughput) = 17 
+    //       3X4 (addq throughput) = 17
     { ISD::MUL,  MVT::v2i64, 17 },
     // slm addq\subq throughput is 4
     { ISD::ADD,  MVT::v2i64, 4  },
@@ -1805,8 +1805,8 @@ int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
-int X86TTIImpl::getReductionCost(unsigned Opcode, Type *ValTy,
-                                 bool IsPairwise) {
+int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
+                                           bool IsPairwise) {
 
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
 
@@ -1874,7 +1874,7 @@ int X86TTIImpl::getReductionCost(unsigned Opcode, Type *ValTy,
         return LT.first * Entry->Cost;
   }
 
-  return BaseT::getReductionCost(Opcode, ValTy, IsPairwise);
+  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise);
 }
 
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
@@ -2288,7 +2288,7 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
 
   unsigned VF = VecTy->getVectorNumElements() / Factor;
   Type *ScalarTy = VecTy->getVectorElementType();
-  
+
   // Calculate the number of memory operations (NumOfMemOps), required
   // for load/store the VecTy.
   unsigned VecTySize = DL.getTypeStoreSize(VecTy);
@@ -2300,7 +2300,7 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
                                         LegalVT.getVectorNumElements());
   unsigned MemOpCost =
       getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace);
-  
+
   VectorType *VT = VectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
   if (!ETy.isSimple())
@@ -2320,7 +2320,7 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
     { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
     { 3, MVT::v16i8, 18},  //(load 48i8 and) deinterleave into 3 x 16i8
     { 3, MVT::v32i8, 42 }, //(load 96i8 and) deinterleave into 3 x 32i8
-    
+
     { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
     { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
     { 4, MVT::v8i8,  20 }, //(load 32i8 and)  deinterleave into 4 x 8i8
@@ -2349,7 +2349,7 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   } else {
     assert(Opcode == Instruction::Store &&
            "Expected Store Instruction at this  point");
-    if (const auto *Entry = 
+    if (const auto *Entry =
             CostTableLookup(AVX2InterleavedStoreTbl, Factor, ETy.getSimpleVT()))
       return NumOfMemOps * MemOpCost + Entry->Cost;
   }
@@ -2469,7 +2469,7 @@ int X86TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   if (ST->hasAVX2())
     return getInterleavedMemoryOpCostAVX2(Opcode, VecTy, Factor, Indices,
                                           Alignment, AddressSpace);
-  
+
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace);
 }

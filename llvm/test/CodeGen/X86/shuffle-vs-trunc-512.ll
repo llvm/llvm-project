@@ -33,14 +33,14 @@ define void @shuffle_v64i8_to_v32i8(<64 x i8>* %L, <32 x i8>* %S) nounwind {
 ;
 ; AVX512BW-LABEL: shuffle_v64i8_to_v32i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: shuffle_v64i8_to_v32i8:
 ; AVX512BWVL:       # BB#0:
-; AVX512BWVL-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BWVL-NEXT:    vpmovwb %zmm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
@@ -75,14 +75,14 @@ define void @trunc_v32i16_to_v32i8(<64 x i8>* %L, <32 x i8>* %S) nounwind {
 ;
 ; AVX512BW-LABEL: trunc_v32i16_to_v32i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: trunc_v32i16_to_v32i8:
 ; AVX512BWVL:       # BB#0:
-; AVX512BWVL-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BWVL-NEXT:    vpmovwb %zmm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq

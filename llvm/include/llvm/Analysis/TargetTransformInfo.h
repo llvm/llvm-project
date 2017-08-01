@@ -711,7 +711,8 @@ public:
   /// Split:
   ///  (v0, v1, v2, v3)
   ///  ((v0+v2), (v1+v3), undef, undef)
-  int getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwiseForm) const;
+  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                 bool IsPairwiseForm) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
@@ -975,8 +976,8 @@ public:
                                          ArrayRef<unsigned> Indices,
                                          unsigned Alignment,
                                          unsigned AddressSpace) = 0;
-  virtual int getReductionCost(unsigned Opcode, Type *Ty,
-                               bool IsPairwiseForm) = 0;
+  virtual int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                         bool IsPairwiseForm) = 0;
   virtual int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                       ArrayRef<Type *> Tys, FastMathFlags FMF,
                       unsigned ScalarizationCostPassed) = 0;
@@ -1281,9 +1282,9 @@ public:
     return Impl.getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace);
   }
-  int getReductionCost(unsigned Opcode, Type *Ty,
-                       bool IsPairwiseForm) override {
-    return Impl.getReductionCost(Opcode, Ty, IsPairwiseForm);
+  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                 bool IsPairwiseForm) override {
+    return Impl.getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm);
   }
   int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy, ArrayRef<Type *> Tys,
                FastMathFlags FMF, unsigned ScalarizationCostPassed) override {

@@ -4,7 +4,7 @@
 define <32 x i8> @test_256_1(i8 * %addr) {
 ; CHECK-LABEL: test_256_1:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu (%rdi), %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfe,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <32 x i8>*
   %res = load <32 x i8>, <32 x i8>* %vaddr, align 1
@@ -52,7 +52,7 @@ define <32 x i8> @test_256_4(i8 * %addr, <32 x i8> %mask1) {
 define <16 x i16> @test_256_5(i8 * %addr) {
 ; CHECK-LABEL: test_256_5:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu (%rdi), %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfe,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <16 x i16>*
   %res = load <16 x i16>, <16 x i16>* %vaddr, align 1
@@ -100,7 +100,7 @@ define <16 x i16> @test_256_8(i8 * %addr, <16 x i16> %mask1) {
 define <16 x i8> @test_128_1(i8 * %addr) {
 ; CHECK-LABEL: test_128_1:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <16 x i8>*
   %res = load <16 x i8>, <16 x i8>* %vaddr, align 1
@@ -148,7 +148,7 @@ define <16 x i8> @test_128_4(i8 * %addr, <16 x i8> %mask1) {
 define <8 x i16> @test_128_5(i8 * %addr) {
 ; CHECK-LABEL: test_128_5:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <8 x i16>*
   %res = load <8 x i16>, <8 x i16>* %vaddr, align 1

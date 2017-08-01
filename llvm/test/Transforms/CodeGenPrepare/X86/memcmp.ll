@@ -12,11 +12,10 @@ define i32 @cmp2(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; ALL-NEXT:    [[TMP4:%.*]] = load i16, i16* [[TMP2]]
 ; ALL-NEXT:    [[TMP5:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP3]])
 ; ALL-NEXT:    [[TMP6:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP4]])
-; ALL-NEXT:    [[TMP7:%.*]] = icmp ne i16 [[TMP5]], [[TMP6]]
-; ALL-NEXT:    [[TMP8:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
-; ALL-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 -1, i32 1
-; ALL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP7]], i32 [[TMP9]], i32 0
-; ALL-NEXT:    ret i32 [[TMP10]]
+; ALL-NEXT:    [[TMP7:%.*]] = zext i16 [[TMP5]] to i32
+; ALL-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP6]] to i32
+; ALL-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP7]], [[TMP8]]
+; ALL-NEXT:    ret i32 [[TMP9]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 2)
   ret i32 %call
@@ -93,11 +92,12 @@ define i32 @cmp4(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; ALL-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP2]]
 ; ALL-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
 ; ALL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
-; ALL-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP5]], [[TMP6]]
+; ALL-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP5]], [[TMP6]]
 ; ALL-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP5]], [[TMP6]]
-; ALL-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 -1, i32 1
-; ALL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP7]], i32 [[TMP9]], i32 0
-; ALL-NEXT:    ret i32 [[TMP10]]
+; ALL-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP7]] to i32
+; ALL-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP8]] to i32
+; ALL-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[TMP10]]
+; ALL-NEXT:    ret i32 [[TMP11]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 4)
   ret i32 %call
@@ -285,11 +285,12 @@ define i32 @cmp8(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; X64-NEXT:    [[TMP4:%.*]] = load i64, i64* [[TMP2]]
 ; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
 ; X64-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
-; X64-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP5]], [[TMP6]]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP5]], [[TMP6]]
 ; X64-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP5]], [[TMP6]]
-; X64-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 -1, i32 1
-; X64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP7]], i32 [[TMP9]], i32 0
-; X64-NEXT:    ret i32 [[TMP10]]
+; X64-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP7]] to i32
+; X64-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP8]] to i32
+; X64-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[TMP10]]
+; X64-NEXT:    ret i32 [[TMP11]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 8)
   ret i32 %call

@@ -245,8 +245,12 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     auto BaseAddr = toAddress(UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc}));
     if (BaseAddr)
       setBaseAddress(*BaseAddr);
-    AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
-    RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
+    Optional<DWARFFormValue> AddrBase = UnitDie.find(DW_AT_GNU_addr_base);
+    if (AddrBase)
+      AddrOffsetSectionBase = *toSectionOffset(AddrBase);
+    Optional<DWARFFormValue> RngListsBase = UnitDie.find(DW_AT_rnglists_base);
+    if (RngListsBase)
+      RangeSectionBase = *toSectionOffset(RngListsBase);
 
     // In general, we derive the offset of the unit's contibution to the
     // debug_str_offsets{.dwo} section from the unit DIE's

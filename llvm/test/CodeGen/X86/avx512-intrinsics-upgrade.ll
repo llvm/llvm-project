@@ -2910,7 +2910,7 @@ declare <4 x float> @llvm.x86.avx512.mask.vextractf32x4.512(<16 x float>, i32, <
 define <4 x i64> @test_mask_vextracti64x4(<4 x i64> %b, <8 x i64> %a, i8 %mask) {
 ; CHECK-LABEL: test_mask_vextracti64x4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftlw $12, %k0, %k1
 ; CHECK-NEXT:    kshiftrw $15, %k1, %k1

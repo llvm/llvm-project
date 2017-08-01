@@ -8,7 +8,7 @@
 define <8 x double> @merge_8f64_2f64_12u4(<2 x double>* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_2f64_12u4:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovupd 16(%rdi), %ymm0
+; ALL-NEXT:    vmovups 16(%rdi), %ymm0
 ; ALL-NEXT:    vinsertf128 $1, 64(%rdi), %ymm0, %ymm1
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
@@ -16,7 +16,7 @@ define <8 x double> @merge_8f64_2f64_12u4(<2 x double>* %ptr) nounwind uwtable n
 ; X32-AVX512F-LABEL: merge_8f64_2f64_12u4:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vmovupd 16(%eax), %ymm0
+; X32-AVX512F-NEXT:    vmovups 16(%eax), %ymm0
 ; X32-AVX512F-NEXT:    vinsertf128 $1, 64(%eax), %ymm0, %ymm1
 ; X32-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl
@@ -35,8 +35,8 @@ define <8 x double> @merge_8f64_2f64_12u4(<2 x double>* %ptr) nounwind uwtable n
 define <8 x double> @merge_8f64_2f64_23z5(<2 x double>* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_2f64_23z5:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovupd 32(%rdi), %ymm0
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vmovups 32(%rdi), %ymm0
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vinsertf128 $1, 80(%rdi), %ymm1, %ymm1
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
@@ -44,8 +44,8 @@ define <8 x double> @merge_8f64_2f64_23z5(<2 x double>* %ptr) nounwind uwtable n
 ; X32-AVX512F-LABEL: merge_8f64_2f64_23z5:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vmovupd 32(%eax), %ymm0
-; X32-AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X32-AVX512F-NEXT:    vmovups 32(%eax), %ymm0
+; X32-AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX512F-NEXT:    vinsertf128 $1, 80(%eax), %ymm1, %ymm1
 ; X32-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl
@@ -64,14 +64,14 @@ define <8 x double> @merge_8f64_2f64_23z5(<2 x double>* %ptr) nounwind uwtable n
 define <8 x double> @merge_8f64_4f64_z2(<4 x double>* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_4f64_z2:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; ALL-NEXT:    vinsertf64x4 $1, 64(%rdi), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8f64_4f64_z2:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
+; X32-AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-AVX512F-NEXT:    vinsertf64x4 $1, 64(%eax), %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl
   %ptr1 = getelementptr inbounds <4 x double>, <4 x double>* %ptr, i64 2
@@ -106,20 +106,20 @@ define <8 x double> @merge_8f64_f64_23uuuuu9(double* %ptr) nounwind uwtable noin
 define <8 x double> @merge_8f64_f64_12zzuuzz(double* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_f64_12zzuuzz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovupd 8(%rdi), %xmm0
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vmovups 8(%rdi), %xmm0
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8f64_f64_12zzuuzz:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vmovupd 8(%eax), %xmm0
-; X32-AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X32-AVX512F-NEXT:    vmovups 8(%eax), %xmm0
+; X32-AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X32-AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X32-AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds double, double* %ptr, i64 1
@@ -179,15 +179,15 @@ define <8 x double> @merge_8f64_f64_1u3u5zu8(double* %ptr) nounwind uwtable noin
 define <8 x i64> @merge_8i64_4i64_z3(<4 x i64>* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8i64_4i64_z3:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vinserti64x4 $1, 96(%rdi), %zmm0, %zmm0
+; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vinsertf64x4 $1, 96(%rdi), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8i64_4i64_z3:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X32-AVX512F-NEXT:    vinserti64x4 $1, 96(%eax), %zmm0, %zmm0
+; X32-AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-AVX512F-NEXT:    vinsertf64x4 $1, 96(%eax), %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl
   %ptr1 = getelementptr inbounds <4 x i64>, <4 x i64>* %ptr, i64 3
   %val1 = load <4 x i64>, <4 x i64>* %ptr1
@@ -198,21 +198,21 @@ define <8 x i64> @merge_8i64_4i64_z3(<4 x i64>* %ptr) nounwind uwtable noinline 
 define <8 x i64> @merge_8i64_i64_56zz9uzz(i64* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8i64_i64_56zz9uzz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqu 40(%rdi), %xmm0
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; ALL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    vmovups 40(%rdi), %xmm0
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8i64_i64_56zz9uzz:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vmovdqu 40(%eax), %xmm0
-; X32-AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X32-AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X32-AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; X32-AVX512F-NEXT:    vmovups 40(%eax), %xmm0
+; X32-AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X32-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds i64, i64* %ptr, i64 5
   %ptr1 = getelementptr inbounds i64, i64* %ptr, i64 6

@@ -53,7 +53,7 @@ declare <32 x i16> @llvm.x86.avx512.mask.loadu.w.512(i8*, <32 x i16>, i32)
 define <32 x i16>@test_int_x86_avx512_mask_loadu_w_512(i8* %ptr, i8* %ptr2, <32 x i16> %x1, i32 %mask) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_loadu_w_512:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    kmovd %edx, %k1
 ; AVX512BW-NEXT:    vmovdqu16 (%rsi), %zmm0 {%k1}
 ; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm1 {%k1} {z}
@@ -64,7 +64,7 @@ define <32 x i16>@test_int_x86_avx512_mask_loadu_w_512(i8* %ptr, i8* %ptr2, <32 
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512F-32-NEXT:    vmovdqu16 (%ecx), %zmm0
+; AVX512F-32-NEXT:    vmovdqu64 (%ecx), %zmm0
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vmovdqu16 (%eax), %zmm0 {%k1}
 ; AVX512F-32-NEXT:    vmovdqu16 (%ecx), %zmm1 {%k1} {z}
@@ -82,7 +82,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.loadu.b.512(i8*, <64 x i8>, i64)
 define <64 x i8>@test_int_x86_avx512_mask_loadu_b_512(i8* %ptr, i8* %ptr2, <64 x i8> %x1, i64 %mask) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_loadu_b_512:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vmovdqu8 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    kmovq %rdx, %k1
 ; AVX512BW-NEXT:    vmovdqu8 (%rsi), %zmm0 {%k1}
 ; AVX512BW-NEXT:    vmovdqu8 (%rdi), %zmm1 {%k1} {z}
@@ -93,7 +93,7 @@ define <64 x i8>@test_int_x86_avx512_mask_loadu_b_512(i8* %ptr, i8* %ptr2, <64 x
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512F-32-NEXT:    vmovdqu8 (%ecx), %zmm0
+; AVX512F-32-NEXT:    vmovdqu64 (%ecx), %zmm0
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vmovdqu8 (%eax), %zmm0 {%k1}
 ; AVX512F-32-NEXT:    vmovdqu8 (%ecx), %zmm1 {%k1} {z}

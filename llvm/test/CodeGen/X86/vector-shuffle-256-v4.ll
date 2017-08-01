@@ -857,20 +857,10 @@ define <4 x i64> @shuffle_v4i64_4012(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x i64> @shuffle_v4i64_0145(<4 x i64> %a, <4 x i64> %b) {
-; AVX1-LABEL: shuffle_v4i64_0145:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v4i64_0145:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v4i64_0145:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v4i64_0145:
+; ALL:       # BB#0:
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x i64> %shuffle
 }
@@ -901,20 +891,10 @@ define <4 x i64> @shuffle_v4i64_0451(<4 x i64> %a, <4 x i64> %b) {
 }
 
 define <4 x i64> @shuffle_v4i64_4501(<4 x i64> %a, <4 x i64> %b) {
-; AVX1-LABEL: shuffle_v4i64_4501:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v4i64_4501:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v4i64_4501:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v4i64_4501:
+; ALL:       # BB#0:
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
   ret <4 x i64> %shuffle
 }
@@ -1487,20 +1467,10 @@ define <4 x i64> @concat_v4i64_0167(<4 x i64> %a0, <4 x i64> %a1) {
 }
 
 define <4 x i64> @concat_v4i64_0145_bc(<4 x i64> %a0, <4 x i64> %a1) {
-; AVX1-LABEL: concat_v4i64_0145_bc:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: concat_v4i64_0145_bc:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: concat_v4i64_0145_bc:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: concat_v4i64_0145_bc:
+; ALL:       # BB#0:
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %a0lo = shufflevector <4 x i64> %a0, <4 x i64> %a1, <2 x i32> <i32 0, i32 1>
   %a1lo = shufflevector <4 x i64> %a0, <4 x i64> %a1, <2 x i32> <i32 4, i32 5>
   %bc0lo = bitcast <2 x i64> %a0lo to <4 x i32>

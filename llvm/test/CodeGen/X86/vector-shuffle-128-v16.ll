@@ -1384,21 +1384,13 @@ define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: PR12412:
-; AVX1OR2:       # BB#0: # %entry
-; AVX1OR2-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX1OR2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1OR2-NEXT:    retq
-;
-; AVX512VL-LABEL: PR12412:
-; AVX512VL:       # BB#0: # %entry
-; AVX512VL-NEXT:    vmovdqu {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: PR12412:
+; AVX:       # BB#0: # %entry
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
 entry:
   %0 = shufflevector <16 x i8> %inval1, <16 x i8> %inval2, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   ret <16 x i8> %0

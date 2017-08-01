@@ -4,7 +4,7 @@
 define <64 x i8> @test1(i8 * %addr) {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm0
+; CHECK-NEXT:    vmovups (%rdi), %zmm0
 ; CHECK-NEXT:    retq
   %vaddr = bitcast i8* %addr to <64 x i8>*
   %res = load <64 x i8>, <64 x i8>* %vaddr, align 1
@@ -52,7 +52,7 @@ define <64 x i8> @test4(i8 * %addr, <64 x i8> %mask1) {
 define <32 x i16> @test5(i8 * %addr) {
 ; CHECK-LABEL: test5:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu16 (%rdi), %zmm0
+; CHECK-NEXT:    vmovups (%rdi), %zmm0
 ; CHECK-NEXT:    retq
   %vaddr = bitcast i8* %addr to <32 x i16>*
   %res = load <32 x i16>, <32 x i16>* %vaddr, align 1

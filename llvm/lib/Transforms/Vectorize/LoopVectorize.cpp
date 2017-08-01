@@ -3045,13 +3045,14 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
               Builder.CreateGEP(nullptr, Ptr, Builder.getInt32(-Part * VF));
           PartPtr =
               Builder.CreateGEP(nullptr, PartPtr, Builder.getInt32(1 - VF));
-          Mask[Part] = reverseVector(Mask[Part]);
+          if (Mask[Part]) // The reverse of a null all-one mask is a null mask.
+            Mask[Part] = reverseVector(Mask[Part]);
         }
 
         Value *VecPtr =
             Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
 
-        if (Legal->isMaskRequired(SI))
+        if (Legal->isMaskRequired(SI) && Mask[Part])
           NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                             Mask[Part]);
         else
@@ -3083,12 +3084,13 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
         // wide load needs to start at the last vector element.
         PartPtr = Builder.CreateGEP(nullptr, Ptr, Builder.getInt32(-Part * VF));
         PartPtr = Builder.CreateGEP(nullptr, PartPtr, Builder.getInt32(1 - VF));
-        Mask[Part] = reverseVector(Mask[Part]);
+        if (Mask[Part]) // The reverse of a null all-one mask is a null mask.
+          Mask[Part] = reverseVector(Mask[Part]);
       }
 
       Value *VecPtr =
           Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
-      if (Legal->isMaskRequired(LI))
+      if (Legal->isMaskRequired(LI) && Mask[Part])
         NewLI = Builder.CreateMaskedLoad(VecPtr, Alignment, Mask[Part],
                                          UndefValue::get(DataTy),
                                          "wide.masked.load");
@@ -3136,10 +3138,10 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       Value *Cmp = nullptr;
       if (IfPredicateInstr) {
         Cmp = Cond[Part];
-        if (Cmp->getType()->isVectorTy())
+        if (!Cmp) // Block in mask is all-one.
+          Cmp = Builder.getTrue();
+        else if (Cmp->getType()->isVectorTy())
           Cmp = Builder.CreateExtractElement(Cmp, Builder.getInt32(Lane));
-        Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Cmp,
-                                 ConstantInt::get(Cmp->getType(), 1));
       }
 
       Instruction *Cloned = Instr->clone();
@@ -4518,24 +4520,22 @@ InnerLoopVectorizer::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
   BranchInst *BI = dyn_cast<BranchInst>(Src->getTerminator());
   assert(BI && "Unexpected terminator found");
 
-  if (BI->isConditional()) {
+  if (!BI->isConditional())
+    return EdgeMaskCache[Edge] = SrcMask;
 
-    VectorParts EdgeMask(UF);
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      auto *EdgeMaskPart = getOrCreateVectorValue(BI->getCondition(), Part);
-      if (BI->getSuccessor(0) != Dst)
-        EdgeMaskPart = Builder.CreateNot(EdgeMaskPart);
+  VectorParts EdgeMask(UF);
+  for (unsigned Part = 0; Part < UF; ++Part) {
+    auto *EdgeMaskPart = getOrCreateVectorValue(BI->getCondition(), Part);
+    if (BI->getSuccessor(0) != Dst)
+      EdgeMaskPart = Builder.CreateNot(EdgeMaskPart);
 
+    if (SrcMask[Part]) // Otherwise block in-mask is all-one, no need to AND.
       EdgeMaskPart = Builder.CreateAnd(EdgeMaskPart, SrcMask[Part]);
-      EdgeMask[Part] = EdgeMaskPart;
-    }
 
-    EdgeMaskCache[Edge] = EdgeMask;
-    return EdgeMask;
+    EdgeMask[Part] = EdgeMaskPart;
   }
 
-  EdgeMaskCache[Edge] = SrcMask;
-  return SrcMask;
+  return EdgeMaskCache[Edge] = EdgeMask;
 }
 
 InnerLoopVectorizer::VectorParts
@@ -4547,31 +4547,32 @@ InnerLoopVectorizer::createBlockInMask(BasicBlock *BB) {
   if (BCEntryIt != BlockMaskCache.end())
     return BCEntryIt->second;
 
+  // All-one mask is modelled as no-mask following the convention for masked
+  // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VectorParts BlockMask(UF);
+  for (unsigned Part = 0; Part < UF; ++Part)
+    BlockMask[Part] = nullptr;
 
   // Loop incoming mask is all-one.
-  if (OrigLoop->getHeader() == BB) {
-    Value *C = ConstantInt::get(IntegerType::getInt1Ty(BB->getContext()), 1);
+  if (OrigLoop->getHeader() == BB)
+    return BlockMaskCache[BB] = BlockMask;
+
+  // This is the block mask. We OR all incoming edges.
+  for (auto *Predecessor : predecessors(BB)) {
+    VectorParts EdgeMask = createEdgeMask(Predecessor, BB);
+    if (!EdgeMask[0]) // Mask of predecessor is all-one so mask of block is too.
+      return BlockMaskCache[BB] = EdgeMask;
+
+    if (!BlockMask[0]) { // BlockMask has its initialized nullptr value.
+      BlockMask = EdgeMask;
+      continue;
+    }
+
     for (unsigned Part = 0; Part < UF; ++Part)
-      BlockMask[Part] = getOrCreateVectorValue(C, Part);
-    BlockMaskCache[BB] = BlockMask;
-    return BlockMask;
+      BlockMask[Part] = Builder.CreateOr(BlockMask[Part], EdgeMask[Part]);
   }
 
-  // This is the block mask. We OR all incoming edges, and with zero.
-  Value *Zero = ConstantInt::get(IntegerType::getInt1Ty(BB->getContext()), 0);
-  for (unsigned Part = 0; Part < UF; ++Part)
-    BlockMask[Part] = getOrCreateVectorValue(Zero, Part);
-
-  // For each pred:
-  for (pred_iterator It = pred_begin(BB), E = pred_end(BB); It != E; ++It) {
-    VectorParts EM = createEdgeMask(*It, BB);
-    for (unsigned Part = 0; Part < UF; ++Part)
-      BlockMask[Part] = Builder.CreateOr(BlockMask[Part], EM[Part]);
-  }
-
-  BlockMaskCache[BB] = BlockMask;
-  return BlockMask;
+  return BlockMaskCache[BB] = BlockMask;
 }
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,

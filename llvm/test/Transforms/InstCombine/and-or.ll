@@ -53,3 +53,80 @@ define i32 @func4(i32 %a, i32 %b) {
   ret i32 %tmp3
 }
 
+; Check variants of:
+; and ({x}or X, Y), C --> {x}or X, (and Y, C)
+; ...in the following 5 tests.
+
+define i8 @and_or_hoist_mask(i8 %a, i8 %b) {
+; CHECK-LABEL: @and_or_hoist_mask(
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 %a, 6
+; CHECK-NEXT:    [[B_MASKED:%.*]] = and i8 %b, 3
+; CHECK-NEXT:    [[AND:%.*]] = or i8 [[SH]], [[B_MASKED]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %sh = lshr i8 %a, 6
+  %or = or i8 %sh, %b
+  %and = and i8 %or, 3
+  ret i8 %and
+}
+
+define <2 x i8> @and_xor_hoist_mask_vec_splat(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @and_xor_hoist_mask_vec_splat(
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> %a, <i8 6, i8 6>
+; CHECK-NEXT:    [[B_MASKED:%.*]] = and <2 x i8> %b, <i8 3, i8 3>
+; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i8> [[SH]], [[B_MASKED]]
+; CHECK-NEXT:    ret <2 x i8> [[AND]]
+;
+  %sh = lshr <2 x i8> %a, <i8 6, i8 6>
+  %xor = xor <2 x i8> %sh, %b
+  %and = and <2 x i8> %xor, <i8 3, i8 3>
+  ret <2 x i8> %and
+}
+
+define i8 @and_xor_hoist_mask_commute(i8 %a, i8 %b) {
+; CHECK-LABEL: @and_xor_hoist_mask_commute(
+; CHECK-NEXT:    [[C:%.*]] = mul i8 %b, 43
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 %a, 6
+; CHECK-NEXT:    [[C_MASKED:%.*]] = and i8 [[C]], 3
+; CHECK-NEXT:    [[AND:%.*]] = xor i8 [[C_MASKED]], [[SH]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %c = mul i8 %b, 43 ; thwart complexity-based ordering
+  %sh = lshr i8 %a, 6
+  %xor = xor i8 %c, %sh
+  %and = and i8 %xor, 3
+  ret i8 %and
+}
+
+define <2 x i8> @and_or_hoist_mask_commute_vec_splat(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @and_or_hoist_mask_commute_vec_splat(
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i8> %b, <i8 43, i8 43>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> %a, <i8 6, i8 6>
+; CHECK-NEXT:    [[C_MASKED:%.*]] = and <2 x i8> [[C]], <i8 3, i8 3>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[C_MASKED]], [[SH]]
+; CHECK-NEXT:    ret <2 x i8> [[AND]]
+;
+  %c = mul <2 x i8> %b, <i8 43, i8 43> ; thwart complexity-based ordering
+  %sh = lshr <2 x i8> %a, <i8 6, i8 6>
+  %or = or <2 x i8> %c, %sh
+  %and = and <2 x i8> %or, <i8 3, i8 3>
+  ret <2 x i8> %and
+}
+
+; Don't transform if the 'or' has multiple uses because that would increase instruction count.
+
+define i8 @and_or_do_not_hoist_mask(i8 %a, i8 %b) {
+; CHECK-LABEL: @and_or_do_not_hoist_mask(
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 %a, 6
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SH]], %b
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[OR]], 3
+; CHECK-NEXT:    [[EXTRA_USE_OF_OR:%.*]] = mul i8 [[OR]], [[AND]]
+; CHECK-NEXT:    ret i8 [[EXTRA_USE_OF_OR]]
+;
+  %sh = lshr i8 %a, 6
+  %or = or i8 %sh, %b
+  %and = and i8 %or, 3
+  %extra_use_of_or = mul i8 %or, %and
+  ret i8 %extra_use_of_or
+}
+
