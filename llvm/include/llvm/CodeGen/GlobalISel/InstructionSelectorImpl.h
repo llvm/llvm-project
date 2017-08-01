@@ -29,7 +29,7 @@ bool InstructionSelector::executeMatchTable(
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 8> OnFailResumeAt;
 
-  typedef enum { RejectAndGiveUp, RejectAndResume } RejectAction;
+  enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
     DEBUG(dbgs() << CurrentIdx << ": Rejected\n");
     if (OnFailResumeAt.empty())
