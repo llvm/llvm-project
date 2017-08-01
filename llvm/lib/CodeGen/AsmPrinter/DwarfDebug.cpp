@@ -63,7 +63,7 @@ DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
 
 static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
     "use-dwarf-ranges-base-address-specifier", cl::Hidden,
-    cl::desc("Disable debug info printing"), cl::init(false));
+    cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
 
 static cl::opt<bool>
     GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
