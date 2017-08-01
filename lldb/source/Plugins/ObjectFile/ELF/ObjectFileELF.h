@@ -152,7 +152,7 @@ public:
   // Returns segment data for the given index.
   lldb_private::DataExtractor GetSegmentDataByIndex(lldb::user_id_t id);
 
-  std::string
+  llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
 
 private:
