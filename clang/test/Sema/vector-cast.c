@@ -48,6 +48,9 @@ typedef float float2 __attribute__ ((vector_size (8)));
 typedef __attribute__((vector_size(8))) double float64x1_t;
 typedef __attribute__((vector_size(16))) double float64x2_t;
 float64x1_t vget_low_f64(float64x2_t __p0);
+typedef float float16 __attribute__((__vector_size__(16)));
+typedef signed int vSInt32 __attribute__((__vector_size__(16)));
+typedef unsigned int vUInt32 __attribute__((__vector_size__(16)));
 
 void f4() {
   float2 f2;
@@ -72,4 +75,9 @@ void f5() {
   void *ptr;
   v = ptr; // expected-error-re {{assigning to 'short_sizeof_pointer' (vector of {{[0-9]+}} 'short' values) from incompatible type 'void *'}}
   ptr = v; // expected-error {{assigning to 'void *' from incompatible type 'short_sizeof_pointer'}}
+}
+
+void f6(vSInt32 a0) {
+  vUInt32 counter = (float16){0.0f, 0.0f, 0.0f, 0.0f}; // expected-warning {{incompatible vector types initializing 'vUInt32' (vector of 4 'unsigned int' values) with an expression of type 'float16' (vector of 4 'float' values)}}
+  counter -= a0;
 }
