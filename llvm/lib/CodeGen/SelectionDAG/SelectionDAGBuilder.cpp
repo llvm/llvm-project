@@ -99,6 +99,27 @@ LimitFPPrecision("limit-float-precision",
 // store [4096 x i8] %data, [4096 x i8]* %buffer
 static const unsigned MaxParallelChains = 64;
 
+// True if the Value passed requires ABI mangling as it is a parameter to a
+// function or a return value from a function which is not an intrinsic.
+static bool isABIRegCopy(const Value * V) {
+  const bool IsRetInst = V && isa<ReturnInst>(V);
+  const bool IsCallInst = V && isa<CallInst>(V);
+  const bool IsInLineAsm =
+      IsCallInst && static_cast<const CallInst *>(V)->isInlineAsm();
+  const bool IsIndirectFunctionCall =
+      IsCallInst && !IsInLineAsm &&
+      !static_cast<const CallInst *>(V)->getCalledFunction();
+  // It is possible that the call instruction is an inline asm statement or an
+  // indirect function call in which case the return value of
+  // getCalledFunction() would be nullptr.
+  const bool IsInstrinsicCall =
+      IsCallInst && !IsInLineAsm && !IsIndirectFunctionCall &&
+      static_cast<const CallInst *>(V)->getCalledFunction()->getIntrinsicID() !=
+          Intrinsic::not_intrinsic;
+
+  return IsRetInst || (IsCallInst && (!IsInLineAsm && !IsInstrinsicCall));
+}
+
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V,
@@ -1026,13 +1047,9 @@ SDValue SelectionDAGBuilder::getCopyFromRegs(const Value *V, Type *Ty) {
 
   if (It != FuncInfo.ValueMap.end()) {
     unsigned InReg = It->second;
-    bool IsABIRegCopy =
-        V && ((isa<CallInst>(V) &&
-               !(static_cast<const CallInst *>(V))->isInlineAsm()) ||
-              isa<ReturnInst>(V));
 
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                     DAG.getDataLayout(), InReg, Ty, IsABIRegCopy);
+                     DAG.getDataLayout(), InReg, Ty, isABIRegCopy(V));
     SDValue Chain = DAG.getEntryNode();
     Result = RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr,
                                  V);
@@ -1221,13 +1238,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   // If this is an instruction which fast-isel has deferred, select it now.
   if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
     unsigned InReg = FuncInfo.InitializeRegForValue(Inst);
-    bool IsABIRegCopy =
-        V && ((isa<CallInst>(V) &&
-               !(static_cast<const CallInst *>(V))->isInlineAsm()) ||
-              isa<ReturnInst>(V));
 
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), IsABIRegCopy);
+                     Inst->getType(), isABIRegCopy(V));
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
@@ -8281,13 +8294,9 @@ SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V, unsigned Reg) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
   // notional registers required by the type.
-  bool IsABIRegCopy =
-    V && ((isa<CallInst>(V) &&
-           !(static_cast<const CallInst *>(V))->isInlineAsm()) ||
-          isa<ReturnInst>(V));
 
   RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
-                   V->getType(), IsABIRegCopy);
+                   V->getType(), isABIRegCopy(V));
   SDValue Chain = DAG.getEntryNode();
 
   ISD::NodeType ExtendType = (FuncInfo.PreferredExtendType.find(V) ==
