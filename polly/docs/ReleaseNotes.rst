@@ -88,3 +88,10 @@ Polly now uses the LLVM OptimizationDiagnosticInfo API for emitting diagnostic r
 This allows Polly remarks to appear in the yaml optimization record when compiling
 with the flag -fsave-optimization-record. This also allow Polly remarks to appear in the opt-viewer
 tool, allowing for remarks to be viewed next to the source code, and sorted by hotness.
+
+--------------------------
+Polly-ACC works with Julia
+--------------------------
+
+Polly can now offload Julia to GPUs. This feature is enabled by setting the 
+USE_POLLY_ACC variable to 1, i.e. USE_POLLY_ACC:=1.
