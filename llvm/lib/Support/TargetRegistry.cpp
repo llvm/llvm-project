@@ -114,7 +114,7 @@ static int TargetArraySortFn(const std::pair<StringRef, const Target *> *LHS,
   return LHS->first.compare(RHS->first);
 }
 
-void TargetRegistry::printRegisteredTargetsForVersion(raw_ostream &OS) {
+void TargetRegistry::printRegisteredTargetsForVersion() {
   std::vector<std::pair<StringRef, const Target*> > Targets;
   size_t Width = 0;
   for (const auto &T : TargetRegistry::targets()) {
@@ -123,6 +123,7 @@ void TargetRegistry::printRegisteredTargetsForVersion(raw_ostream &OS) {
   }
   array_pod_sort(Targets.begin(), Targets.end(), TargetArraySortFn);
 
+  raw_ostream &OS = outs();
   OS << "  Registered Targets:\n";
   for (unsigned i = 0, e = Targets.size(); i != e; ++i) {
     OS << "    " << Targets[i].first;

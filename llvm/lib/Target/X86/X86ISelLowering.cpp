@@ -1672,8 +1672,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // TODO: These control memcmp expansion in CGP and could be raised higher, but
   // that needs to benchmarked and balanced with the potential use of vector
-  // load/store types (PR33329).
-  MaxLoadsPerMemcmp = 4;
+  // load/store types (PR33329, PR33914).
+  MaxLoadsPerMemcmp = 2;
   MaxLoadsPerMemcmpOptSize = 2;
 
   // Set loop alignment to 2^ExperimentalPrefLoopAlignment bytes (default: 2^4).
@@ -3982,6 +3982,13 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
     return false;
 
   if (Offset != MFI.getObjectOffset(FI))
+    return false;
+
+  // If this is not byval, check that the argument stack object is immutable.
+  // inalloca and argument copy elision can create mutable argument stack
+  // objects. Byval objects can be mutated, but a byval call intends to pass the
+  // mutated memory.
+  if (!Flags.isByVal() && !MFI.isImmutableObjectIndex(FI))
     return false;
 
   if (VA.getLocVT().getSizeInBits() > Arg.getValueSizeInBits()) {
@@ -30605,8 +30612,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask(APInt::getSignMask(BitWidth));
     KnownBits Known;
-    TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
-                                          DCI.isBeforeLegalizeOps());
+    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                          !DCI.isBeforeLegalizeOps());
     if (TLI.ShrinkDemandedConstant(Cond, DemandedMask, TLO) ||
         TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO)) {
       // If we changed the computation somewhere in the DAG, this change will

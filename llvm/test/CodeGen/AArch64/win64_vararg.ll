@@ -59,10 +59,12 @@ entry:
 }
 
 ; CHECK-LABEL: f7:
-; CHECK: sub     sp, sp, #16
-; CHECK: add     x8, sp, #8
-; CHECK: add     x0, sp, #8
-; CHECK: stp     x8, x7, [sp], #16
+; CHECK: sub     sp, sp, #32
+; CHECK: add     x8, sp, #24
+; CHECK: str     x7, [sp, #24]
+; CHECK: add     x0, sp, #24
+; CHECK: str     x8, [sp, #8]
+; CHECK: add     sp, sp, #32
 ; CHECK: ret
 define i8* @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, ...) nounwind {
 entry:
@@ -79,9 +81,8 @@ entry:
 ; CHECK: stp     x6, x7, [sp, #64]
 ; CHECK: stp     x4, x5, [sp, #48]
 ; CHECK: stp     x2, x3, [sp, #32]
-; CHECK: stp     x8, x1, [sp, #16]
-; CHECK: str     x8, [sp, #8]
-; CHECK: add     sp, sp, #80
+; CHECK: str     x1, [sp, #24]
+; CHECK: stp     x8, x8, [sp], #80
 ; CHECK: ret
 define void @copy1(i64 %a0, ...) nounwind {
 entry:
@@ -92,4 +93,55 @@ entry:
   call void @llvm.va_start(i8* %ap1)
   call void @llvm.va_copy(i8* %cp1, i8* %ap1)
   ret void
+}
+
+declare void @llvm.va_end(i8*)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+declare i32 @__stdio_common_vsprintf(i64, i8*, i64, i8*, i8*, i8*) local_unnamed_addr #3
+declare i64* @__local_stdio_printf_options() local_unnamed_addr #4
+
+; CHECK-LABEL: snprintf
+; CHECK: sub     sp,  sp, #96
+; CHECK: stp     x21, x20, [sp, #16]
+; CHECK: stp     x19, x30, [sp, #32]
+; CHECK: add     x8, sp, #56
+; CHECK: mov     x19, x2
+; CHECK: mov     x20, x1
+; CHECK: mov     x21, x0
+; CHECK: stp     x6, x7, [sp, #80]
+; CHECK: stp     x4, x5, [sp, #64]
+; CHECK: str     x3, [sp, #56]
+; CHECK: str     x8, [sp, #8]
+; CHECK: bl      __local_stdio_printf_options
+; CHECK: ldr     x8, [x0]
+; CHECK: add     x5, sp, #56
+; CHECK: mov     x1, x21
+; CHECK: mov     x2, x20
+; CHECK: orr     x0, x8, #0x2
+; CHECK: mov     x3, x19
+; CHECK: mov     x4, xzr
+; CHECK: bl      __stdio_common_vsprintf
+; CHECK: ldp     x19, x30, [sp, #32]
+; CHECK: ldp     x21, x20, [sp, #16]
+; CHECK: cmp     w0, #0
+; CHECK: csinv   w0, w0, wzr, ge
+; CHECK: add     sp, sp, #96
+; CHECK: ret
+define i32 @snprintf(i8*, i64, i8*, ...) local_unnamed_addr #5 {
+  %4 = alloca i8*, align 8
+  %5 = bitcast i8** %4 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %5) #2
+  call void @llvm.va_start(i8* nonnull %5)
+  %6 = load i8*, i8** %4, align 8
+  %7 = call i64* @__local_stdio_printf_options() #2
+  %8 = load i64, i64* %7, align 8
+  %9 = or i64 %8, 2
+  %10 = call i32 @__stdio_common_vsprintf(i64 %9, i8* %0, i64 %1, i8* %2, i8* null, i8* %6) #2
+  %11 = icmp sgt i32 %10, -1
+  %12 = select i1 %11, i32 %10, i32 -1
+  call void @llvm.va_end(i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %5) #2
+  ret i32 %12
 }

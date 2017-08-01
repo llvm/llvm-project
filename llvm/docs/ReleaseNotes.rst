@@ -71,6 +71,12 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* The datalayout string may now indicate an address space to use for
+  the pointer type of alloca rather than the default of 0.
+
+* Added speculatable attribute indicating a function which does has no
+  side-effects which could inhibit hoisting of calls.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -91,17 +97,50 @@ Changes to the PowerPC Target
 Changes to the X86 Target
 -------------------------
 
- During this release ...
+* Added initial AMD Ryzen (znver1) scheduler support.
+
+* Added support for Intel Goldmont CPUs.
+
+* Add support for avx512vpopcntdq instructions.
+
+* Added heuristics to convert CMOV into branches when it may be profitable.
+
+* More aggressive inlining of memcmp calls.
+
+* Improve vXi64 shuffles on 32-bit targets.
+
+* Improved use of PMOVMSKB for any_of/all_of comparision reductions.
+
+* Improved Silvermont, Sandybridge, and Jaguar (btver2) schedulers.
+
+* Improved support for AVX512 vector rotations.
+
+* Added support for AMD Lightweight Profiling (LWP) instructions.
 
 Changes to the AMDGPU Target
 -----------------------------
 
- During this release ...
+* Initial gfx9 support
 
 Changes to the AVR Target
 -----------------------------
 
- During this release ...
+This release consists mainly of bugfixes and implementations of features
+required for compiling basic Rust programs.
+
+* Enable the branch relaxation pass so that we don't crash on large
+  stack load/stores
+
+* Add support for lowering bit-rotations to the native `ror` and `rol`
+  instructions
+
+* Fix bug where function pointers were treated as pointers to RAM and not
+  pointers to program memory
+
+* Fix broken code generaton for shift-by-variable expressions
+
+* Support zero-sized types in argument lists; this is impossible in C,
+  but possible in Rust
 
 Changes to the OCaml bindings
 -----------------------------
