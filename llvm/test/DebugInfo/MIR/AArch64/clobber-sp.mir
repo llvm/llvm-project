@@ -109,6 +109,7 @@
   !33 = !DILocation(line: 9, column: 7, scope: !7)
   !34 = !DILocation(line: 10, column: 5, scope: !32)
   !35 = !DILocation(line: 12, column: 3, scope: !7)
+  !36 = !DIExpression(DW_OP_constu, 8, DW_OP_plus)
 
 ...
 ---
@@ -157,7 +158,7 @@ body:             |
     STURWi killed %w0, %fp, -4 :: (store 4 into %stack.0.x.addr)
     DBG_VALUE debug-use %w1, debug-use _, !20, !22, debug-location !28
     STRWui killed %w1, %sp, 2, debug-location !30 :: (store 4 into %stack.1)
-    DBG_VALUE %sp, 8, !20, !22, debug-location !28
+    DBG_VALUE %sp, 0, !20, !36, debug-location !28
     BL @g, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit killed %d0, implicit killed %d1, implicit killed %d2, implicit killed %d3, implicit-def %sp, debug-location !30
     %w0 = LDRWui %sp, 2, debug-location !33 :: (load 4 from %stack.1)
     CBZW killed %w0, %bb.2.if.end, debug-location !33
@@ -165,13 +166,13 @@ body:             |
   bb.1.if.then:
     successors: %bb.2.if.end(0x80000000)
   
-    DBG_VALUE debug-use %sp, 8, !20, !22, debug-location !28
+    DBG_VALUE debug-use %sp, 0, !20, !36, debug-location !28
     %x0 = SUBXri %fp, 4, 0
     DBG_VALUE debug-use %x0, debug-use _, !19, !22, debug-location !23
     BL @h, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit killed %x0, debug-location !34
   
   bb.2.if.end:
-    DBG_VALUE debug-use %sp, 8, !20, !22, debug-location !28
+    DBG_VALUE debug-use %sp, 0, !20, !36, debug-location !28
     %w8 = MOVZWi 0, 0
     %x0 = ORRXrs %xzr, undef %x8, 0, implicit killed %w8, debug-location !35
     %fp, %lr = LDPXi %sp, 2, debug-location !35 :: (load 8 from %stack.3), (load 8 from %stack.2)
