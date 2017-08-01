@@ -424,7 +424,7 @@ constexpr inline bool isPowerOf2_32(uint32_t Value) {
 
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
-  return Value && !(Value & (Value - int64_t(1L)));
+  return Value && !(Value & (Value - 1));
 }
 
 /// Return a byte-swapped representation of the 16-bit argument.

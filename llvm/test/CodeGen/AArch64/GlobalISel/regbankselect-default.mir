@@ -524,13 +524,16 @@ legalized:       true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
+  - { id: 2, class: _ }
 body: |
   bb.0:
     liveins: %w0
     ; CHECK:      %0(s32) = COPY %w0
-    ; CHECK:      %1(s1) = G_ICMP intpred(ne), %0(s32), %0
+    ; CHECK:      %1(s32) = G_ICMP intpred(ne), %0(s32), %0
+    ; CHECK:      %2(s1) = G_TRUNC %1(s32)
     %0(s32) = COPY %w0
-    %1(s1) = G_ICMP intpred(ne), %0, %0
+    %1(s32) = G_ICMP intpred(ne), %0, %0
+    %2(s1) = G_TRUNC %1(s32)
 ...
 
 ---
@@ -543,13 +546,16 @@ legalized:       true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
+  - { id: 2, class: _ }
 body: |
   bb.0:
     liveins: %x0
     ; CHECK:      %0(p0) = COPY %x0
-    ; CHECK:      %1(s1) = G_ICMP intpred(ne), %0(p0), %0
+    ; CHECK:      %1(s32) = G_ICMP intpred(ne), %0(p0), %0
+    ; CHECK:      %2(s1) = G_TRUNC %1(s32)
     %0(p0) = COPY %x0
-    %1(s1) = G_ICMP intpred(ne), %0, %0
+    %1(s32) = G_ICMP intpred(ne), %0, %0
+    %2(s1) = G_TRUNC %1(s32)
 ...
 
 ---
@@ -784,13 +790,16 @@ legalized:       true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
+  - { id: 2, class: _ }
 body: |
   bb.0:
     liveins: %s0
     ; CHECK:      %0(s32) = COPY %s0
-    ; CHECK:      %1(s1) = G_FCMP floatpred(olt), %0(s32), %0
+    ; CHECK:      [[FCMP:%[0-9]+]](s32) = G_FCMP floatpred(olt), %0(s32), %0
+    ; CHECK:      [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[FCMP]]
     %0(s32) = COPY %s0
-    %1(s1) = G_FCMP floatpred(olt), %0, %0
+    %1(s32) = G_FCMP floatpred(olt), %0, %0
+    %2(s1) = G_TRUNC %1(s32)
 ...
 
 ---

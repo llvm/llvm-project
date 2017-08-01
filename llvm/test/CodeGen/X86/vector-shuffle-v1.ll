@@ -144,7 +144,7 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; VL_BW_DQ-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; VL_BW_DQ-NEXT:    vpmovb2m %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
-; VL_BW_DQ-NEXT:    vmovdqu16 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovw2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2b %k0, %ymm0

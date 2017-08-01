@@ -763,7 +763,7 @@ define <16 x i16> @test_x86_avx2_pmadd_ub_sw_load_op0(<32 x i8>* %ptr, <32 x i8>
 ; AVX512VL-LABEL: test_x86_avx2_pmadd_ub_sw_load_op0:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmovdqu (%eax), %ymm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfe,0x6f,0x08]
+; AVX512VL-NEXT:    vmovdqa (%eax), %ymm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x08]
 ; AVX512VL-NEXT:    vpmaddubsw %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x04,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a0 = load <32 x i8>, <32 x i8>* %ptr

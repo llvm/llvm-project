@@ -2117,13 +2117,25 @@ Value *MemCmpExpansion::getMemCmpOneBlock(unsigned Size) {
     LoadSrc2 = Builder.CreateCall(Bswap, LoadSrc2);
   }
 
-  // TODO: Instead of comparing ULT, just subtract and return the difference?
-  Value *CmpNE = Builder.CreateICmpNE(LoadSrc1, LoadSrc2);
+  if (Size < 4) {
+    // The i8 and i16 cases don't need compares. We zext the loaded values and
+    // subtract them to get the suitable negative, zero, or positive i32 result.
+    LoadSrc1 = Builder.CreateZExt(LoadSrc1, Builder.getInt32Ty());
+    LoadSrc2 = Builder.CreateZExt(LoadSrc2, Builder.getInt32Ty());
+    return Builder.CreateSub(LoadSrc1, LoadSrc2);
+  }
+
+  // The result of memcmp is negative, zero, or positive, so produce that by
+  // subtracting 2 extended compare bits: sub (ugt, ult).
+  // If a target prefers to use selects to get -1/0/1, they should be able
+  // to transform this later. The inverse transform (going from selects to math)
+  // may not be possible in the DAG because the selects got converted into
+  // branches before we got there.
+  Value *CmpUGT = Builder.CreateICmpUGT(LoadSrc1, LoadSrc2);
   Value *CmpULT = Builder.CreateICmpULT(LoadSrc1, LoadSrc2);
-  Type *I32 = Builder.getInt32Ty();
-  Value *Sel1 = Builder.CreateSelect(CmpULT, ConstantInt::get(I32, -1),
-                                             ConstantInt::get(I32, 1));
-  return Builder.CreateSelect(CmpNE, Sel1, ConstantInt::get(I32, 0));
+  Value *ZextUGT = Builder.CreateZExt(CmpUGT, Builder.getInt32Ty());
+  Value *ZextULT = Builder.CreateZExt(CmpULT, Builder.getInt32Ty());
+  return Builder.CreateSub(ZextUGT, ZextULT);
 }
 
 // This function expands the memcmp call into an inline expansion and returns
@@ -2619,6 +2631,7 @@ static inline raw_ostream &operator<<(raw_ostream &OS, const ExtAddrMode &AM) {
 }
 #endif
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ExtAddrMode::print(raw_ostream &OS) const {
   bool NeedPlus = false;
   OS << "[";
@@ -2650,7 +2663,6 @@ void ExtAddrMode::print(raw_ostream &OS) const {
   OS << ']';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ExtAddrMode::dump() const {
   print(dbgs());
   dbgs() << '\n';

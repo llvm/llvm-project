@@ -921,7 +921,7 @@ define <64 x i8> @mul_v64i8c(<64 x i8> %i) nounwind  {
 ; AVX512BW-LABEL: mul_v64i8c:
 ; AVX512BW:       # BB#0: # %entry
 ; AVX512BW-NEXT:    vpmovsxbw %ymm0, %zmm1
-; AVX512BW-NEXT:    vmovdqu16 {{.*#+}} zmm2 = [117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117]
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117,117]
 ; AVX512BW-NEXT:    vpmullw %zmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm0

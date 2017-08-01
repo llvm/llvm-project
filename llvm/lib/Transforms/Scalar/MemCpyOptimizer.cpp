@@ -535,7 +535,7 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
   for (auto I = --SI->getIterator(), E = P->getIterator(); I != E; --I) {
     auto *C = &*I;
 
-    bool MayAlias = AA.getModRefInfo(C) != MRI_NoModRef;
+    bool MayAlias = AA.getModRefInfo(C, None) != MRI_NoModRef;
 
     bool NeedLift = false;
     if (Args.erase(C))

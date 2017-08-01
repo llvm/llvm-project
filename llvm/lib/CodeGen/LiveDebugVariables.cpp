@@ -329,6 +329,7 @@ public:
 };
 } // namespace
 
+#ifndef NDEBUG
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
@@ -390,6 +391,7 @@ void LDVImpl::print(raw_ostream &OS) {
   for (unsigned i = 0, e = userValues.size(); i != e; ++i)
     userValues[i]->print(OS, TRI);
 }
+#endif
 
 void UserValue::coalesceLocation(unsigned LocNo) {
   unsigned KeepLoc = 0;

@@ -418,6 +418,9 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
     return false; // Should not instrument sanitizer init functions.
   if (F.getName().startswith("__sanitizer_"))
     return false;  // Don't instrument __sanitizer_* callbacks.
+  // Don't touch available_externally functions, their actual body is elewhere.
+  if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
+    return false;
   // Don't instrument MSVC CRT configuration helpers. They may run before normal
   // initialization.
   if (F.getName() == "__local_stdio_printf_options" ||
@@ -487,6 +490,8 @@ GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
   if (auto Comdat = F.getComdat())
     Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
+  Array->setAlignment(Ty->isPointerTy() ? DL->getPointerSize()
+                                        : Ty->getPrimitiveSizeInBits() / 8);
   return Array;
 }
 
@@ -494,18 +499,18 @@ void SanitizerCoverageModule::CreatePCArray(Function &F,
                                             ArrayRef<BasicBlock *> AllBlocks) {
   size_t N = AllBlocks.size();
   assert(N);
-  assert(&F.getEntryBlock() == AllBlocks[0]);
   SmallVector<Constant *, 16> PCs;
   IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
-  PCs.push_back((Constant *)IRB.CreatePointerCast(&F, Int8PtrTy));
-  for (size_t i = 1; i < N; i++)
-    PCs.push_back(BlockAddress::get(AllBlocks[i]));
+  for (size_t i = 0; i < N; i++)
+    if (&F.getEntryBlock() == AllBlocks[i])
+      PCs.push_back((Constant *)IRB.CreatePointerCast(&F, Int8PtrTy));
+    else
+      PCs.push_back(BlockAddress::get(AllBlocks[i]));
   FunctionPCsArray =
       CreateFunctionLocalArrayInSection(N, F, Int8PtrTy, SanCovPCsSectionName);
   FunctionPCsArray->setInitializer(
       ConstantArray::get(ArrayType::get(Int8PtrTy, N), PCs));
   FunctionPCsArray->setConstant(true);
-  FunctionPCsArray->setAlignment(DL->getPointerSize());
 }
 
 void SanitizerCoverageModule::CreateFunctionLocalArrays(

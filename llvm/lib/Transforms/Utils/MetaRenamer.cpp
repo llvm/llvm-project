@@ -123,7 +123,11 @@ namespace {
             TLI.getLibFunc(F, Tmp))
           continue;
 
-        F.setName(renamer.newName());
+        // Leave @main alone. The output of -metarenamer might be passed to
+        // lli for execution and the latter needs a main entry point.
+        if (Name != "main")
+          F.setName(renamer.newName());
+
         runOnFunction(F);
       }
       return true;

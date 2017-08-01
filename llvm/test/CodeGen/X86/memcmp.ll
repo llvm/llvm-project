@@ -17,15 +17,12 @@ define i32 @length2(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    movzwl (%eax), %edx
 ; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpw %ax, %cx
-; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovbl %ecx, %eax
-; X86-NEXT:    cmovel %edx, %eax
+; X86-NEXT:    rolw $8, %dx
+; X86-NEXT:    movzwl %cx, %eax
+; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: length2:
@@ -34,12 +31,9 @@ define i32 @length2(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    cmpw %cx, %ax
-; X64-NEXT:    movl $-1, %ecx
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
-; X64-NEXT:    cmovel %edx, %eax
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    movzwl %cx, %ecx
+; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 2) nounwind
   ret i32 %m
@@ -211,29 +205,25 @@ define i32 @length4(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpl %eax, %ecx
-; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovbl %ecx, %eax
-; X86-NEXT:    cmovel %edx, %eax
+; X86-NEXT:    bswapl %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    seta %al
+; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: length4:
 ; X64:       # BB#0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    movl (%rsi), %ecx
-; X64-NEXT:    bswapl %eax
+; X64-NEXT:    movl (%rdi), %ecx
+; X64-NEXT:    movl (%rsi), %edx
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    movl $-1, %ecx
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
-; X64-NEXT:    cmovel %edx, %eax
+; X64-NEXT:    bswapl %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl %edx, %ecx
+; X64-NEXT:    seta %al
+; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 4) nounwind
   ret i32 %m
@@ -399,16 +389,14 @@ define i32 @length8(i8* %X, i8* %Y) nounwind {
 ;
 ; X64-LABEL: length8:
 ; X64:       # BB#0:
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    movq (%rsi), %rcx
-; X64-NEXT:    bswapq %rax
+; X64-NEXT:    movq (%rdi), %rcx
+; X64-NEXT:    movq (%rsi), %rdx
 ; X64-NEXT:    bswapq %rcx
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    cmpq %rcx, %rax
-; X64-NEXT:    movl $-1, %ecx
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
-; X64-NEXT:    cmovel %edx, %eax
+; X64-NEXT:    bswapq %rdx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpq %rdx, %rcx
+; X64-NEXT:    seta %al
+; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 8) nounwind
   ret i32 %m

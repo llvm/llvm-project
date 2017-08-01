@@ -1750,7 +1750,7 @@ define <32 x i16> @test_unaligned_v32i16(<32 x i16>* %src) {
 ;
 ; AVX512BW-LABEL: test_unaligned_v32i16:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_unaligned_v32i16:
@@ -1785,7 +1785,7 @@ define <64 x i8> @test_unaligned_v64i8(<64 x i8>* %src) {
 ;
 ; AVX512BW-LABEL: test_unaligned_v64i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovdqu8 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_unaligned_v64i8:

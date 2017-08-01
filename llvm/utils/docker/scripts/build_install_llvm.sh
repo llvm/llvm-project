@@ -11,7 +11,7 @@
 set -e
 
 function show_usage() {
-  usage=$(cat << EOF
+  cat << EOF
 Usage: build_install_llvm.sh [options] -- [cmake-args]
 
 Checkout svn sources and run cmake with the specified arguments. Used
@@ -37,8 +37,6 @@ Required options: At least one --install-target.
 
 All options after '--' are passed to CMake invocation.
 EOF
-)
-  echo "$usage"
 }
 
 LLVM_SVN_REV=""

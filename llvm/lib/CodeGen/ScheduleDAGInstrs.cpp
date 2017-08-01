@@ -121,63 +121,6 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   SchedModel.init(ST.getSchedModel(), &ST, TII);
 }
 
-/// This is the function that does the work of looking through basic
-/// ptrtoint+arithmetic+inttoptr sequences.
-static const Value *getUnderlyingObjectFromInt(const Value *V) {
-  do {
-    if (const Operator *U = dyn_cast<Operator>(V)) {
-      // If we find a ptrtoint, we can transfer control back to the
-      // regular getUnderlyingObjectFromInt.
-      if (U->getOpcode() == Instruction::PtrToInt)
-        return U->getOperand(0);
-      // If we find an add of a constant, a multiplied value, or a phi, it's
-      // likely that the other operand will lead us to the base
-      // object. We don't have to worry about the case where the
-      // object address is somehow being computed by the multiply,
-      // because our callers only care when the result is an
-      // identifiable object.
-      if (U->getOpcode() != Instruction::Add ||
-          (!isa<ConstantInt>(U->getOperand(1)) &&
-           Operator::getOpcode(U->getOperand(1)) != Instruction::Mul &&
-           !isa<PHINode>(U->getOperand(1))))
-        return V;
-      V = U->getOperand(0);
-    } else {
-      return V;
-    }
-    assert(V->getType()->isIntegerTy() && "Unexpected operand type!");
-  } while (true);
-}
-
-/// This is a wrapper around GetUnderlyingObjects and adds support for basic
-/// ptrtoint+arithmetic+inttoptr sequences.
-static void getUnderlyingObjects(const Value *V,
-                                 SmallVectorImpl<Value *> &Objects,
-                                 const DataLayout &DL) {
-  SmallPtrSet<const Value *, 16> Visited;
-  SmallVector<const Value *, 4> Working(1, V);
-  do {
-    V = Working.pop_back_val();
-
-    SmallVector<Value *, 4> Objs;
-    GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
-
-    for (Value *V : Objs) {
-      if (!Visited.insert(V).second)
-        continue;
-      if (Operator::getOpcode(V) == Instruction::IntToPtr) {
-        const Value *O =
-          getUnderlyingObjectFromInt(cast<User>(V)->getOperand(0));
-        if (O->getType()->isPointerTy()) {
-          Working.push_back(O);
-          continue;
-        }
-      }
-      Objects.push_back(const_cast<Value *>(V));
-    }
-  } while (!Working.empty());
-}
-
 /// If this machine instr has memory reference information and it can be tracked
 /// to a normal reference to a known object, return the Value for that object.
 static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
@@ -208,12 +151,10 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
         Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
-        getUnderlyingObjects(V, Objs, DL);
+        getUnderlyingObjectsForCodeGen(V, Objs, DL);
 
         for (Value *V : Objs) {
-          if (!isIdentifiedObject(V))
-            return false;
-
+          assert(isIdentifiedObject(V));
           Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
         }
       } else

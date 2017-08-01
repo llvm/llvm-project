@@ -479,7 +479,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 ;
 ; KNL64-LABEL: expand13:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; KNL64-NEXT:    retq
 ;
@@ -491,7 +491,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 ;
 ; KNL32-LABEL: expand13:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; KNL32-NEXT:    retl
    %res = shufflevector <8 x float> zeroinitializer, <8 x float> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

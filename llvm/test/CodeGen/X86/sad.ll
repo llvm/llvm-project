@@ -814,7 +814,7 @@ define i32 @sad_avx64i8() nounwind {
 ; AVX512BW-NEXT:    .p2align 4, 0x90
 ; AVX512BW-NEXT:  .LBB2_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512BW-NEXT:    vmovdqu8 a+1024(%rax), %zmm2
+; AVX512BW-NEXT:    vmovdqa64 a+1024(%rax), %zmm2
 ; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $4, %rax

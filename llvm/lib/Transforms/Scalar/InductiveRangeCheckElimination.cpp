@@ -779,6 +779,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
     if (const SCEVConstant *StepExpr =
             dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE))) {
       ConstantInt *StepCI = StepExpr->getValue();
+      assert(!StepCI->isZero() && "Zero step?");
       if (StepCI->isOne() || StepCI->isMinusOne()) {
         IsIncreasing = StepCI->isOne();
         return true;
@@ -1499,6 +1500,7 @@ InductiveRangeCheck::computeSafeIterationSpace(
   const SCEVConstant *B = dyn_cast<SCEVConstant>(IndVar->getStepRecurrence(SE));
   if (!B)
     return None;
+  assert(!B->isZero() && "Recurrence with zero step?");
 
   const SCEV *C = getOffset();
   const SCEVConstant *D = dyn_cast<SCEVConstant>(getScale());

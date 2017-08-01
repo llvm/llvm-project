@@ -30,3 +30,137 @@ entry:
   ret i32 %mul5
 }
 
+define i32 @foo1(i32 %a, i32 %b) local_unnamed_addr #0 {
+; X64-LABEL: foo1:
+; X64:       # BB#0: # %entry
+; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    leal 4(%rdi,%rsi,4), %ecx
+; X64-NEXT:    leal 4(%rdi,%rsi,8), %eax
+; X64-NEXT:    imull %ecx, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: foo1:
+; X86:       # BB#0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal 4(%ecx,%eax,4), %edx
+; X86-NEXT:    leal 4(%ecx,%eax,8), %eax
+; X86-NEXT:    imull %edx, %eax
+; X86-NEXT:    retl
+entry:
+  %mul = shl i32 %b, 2
+  %add = add i32 %a, 4
+  %add1 = add i32 %add, %mul
+  %mul2 = shl i32 %b, 3
+  %add4 = add i32 %add, %mul2
+  %mul5 = mul nsw i32 %add1, %add4
+  ret i32 %mul5
+}
+
+define i32 @foo1_mult_basic_blocks(i32 %a, i32 %b) local_unnamed_addr #0 {
+; X64-LABEL: foo1_mult_basic_blocks:
+; X64:       # BB#0: # %entry
+; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    leal 4(%rdi,%rsi,4), %ecx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $10, %ecx
+; X64-NEXT:    je .LBB2_2
+; X64-NEXT:  # BB#1: # %mid
+; X64-NEXT:    leal 4(%rdi,%rsi,8), %eax
+; X64-NEXT:    imull %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:  .LBB2_2: # %exit
+; X64-NEXT:    retq
+;
+; X86-LABEL: foo1_mult_basic_blocks:
+; X86:       # BB#0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:  .Lcfi0:
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .Lcfi1:
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    leal 4(%esi,%edx,4), %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl $10, %ecx
+; X86-NEXT:    je .LBB2_2
+; X86-NEXT:  # BB#1: # %mid
+; X86-NEXT:    leal 4(%esi,%edx,8), %eax
+; X86-NEXT:    imull %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB2_2: # %exit
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+entry:
+  %mul = shl i32 %b, 2
+  %add = add i32 %a, 4
+  %add1 = add i32 %add, %mul
+  %cmp = icmp ne i32 %add1 , 10
+  br i1 %cmp , label %mid , label %exit
+mid:
+  %addn = add i32 %a , 4
+  %mul2 = shl i32 %b, 3
+  %add4 = add i32 %addn, %mul2
+  %mul5 = mul nsw i32 %add1, %add4
+  br label %exit
+
+exit:
+  %retmul = phi i32 [%mul5 , %mid] , [0 , %entry]
+  ret i32 %retmul
+}
+
+define i32 @foo1_mult_basic_blocks_illegal_scale(i32 %a, i32 %b) local_unnamed_addr #0 {
+; X64-LABEL: foo1_mult_basic_blocks_illegal_scale:
+; X64:       # BB#0: # %entry
+; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    leal 4(%rdi,%rsi,2), %ecx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $10, %ecx
+; X64-NEXT:    je .LBB3_2
+; X64-NEXT:  # BB#1: # %mid
+; X64-NEXT:    leal 4(%rdi,%rsi,8), %eax
+; X64-NEXT:    imull %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:  .LBB3_2: # %exit
+; X64-NEXT:    retq
+;
+; X86-LABEL: foo1_mult_basic_blocks_illegal_scale:
+; X86:       # BB#0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:  .Lcfi2:
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:  .Lcfi3:
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    leal 4(%esi,%edx,2), %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl $10, %ecx
+; X86-NEXT:    je .LBB3_2
+; X86-NEXT:  # BB#1: # %mid
+; X86-NEXT:    leal 4(%esi,%edx,8), %eax
+; X86-NEXT:    imull %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB3_2: # %exit
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+entry:
+  %mul = shl i32 %b, 1
+  %add = add i32 %a, 4
+  %add1 = add i32 %add, %mul
+  %cmp = icmp ne i32 %add1 , 10
+  br i1 %cmp, label %mid , label %exit
+mid:
+  %addn = add i32 %a , 4
+  %mul2 = shl i32 %b, 3
+  %add4 = add i32 %addn, %mul2
+  %mul5 = mul nsw i32 %add1, %add4
+  br label %exit
+exit:
+  %retmul = phi i32 [%mul5 , %mid] , [0 , %entry]
+  ret i32 %retmul
+}

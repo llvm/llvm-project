@@ -1,19 +1,11 @@
 ; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
-; RUN: llvm-readobj -coff-exports %t.a | FileCheck %s
+; RUN: llvm-nm %t.a | FileCheck %s
 
 LIBRARY test.dll
 EXPORTS
 TestFunction==AltTestFunction
 
-; CHECK: File: test.dll
-; CHECK: Format: COFF-x86-64
-; CHECK: Arch: x86_64
-; CHECK: AddressSize: 64bit
-; CHECK: File: test.dll
-; CHECK: Format: COFF-x86-64
-; CHECK: Arch: x86_64
-; CHECK: AddressSize: 64bit
-; CHECK: File: test.dll
-; CHECK: Format: COFF-x86-64
-; CHECK: Arch: x86_64
-; CHECK: AddressSize: 64bit
+; CHECK:      U AltTestFunction
+; CHECK-NEXT: w TestFunction
+; CHECK:      U __imp_AltTestFunction
+; CHECK-NEXT: w __imp_TestFunction

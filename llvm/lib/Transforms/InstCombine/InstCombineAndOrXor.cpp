@@ -1284,13 +1284,34 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
-  if (match(Op1, m_One())) {
-    // (1 << x) & 1 --> zext(x == 0)
-    // (1 >> x) & 1 --> zext(x == 0)
-    Value *X;
-    if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X))))) {
+  const APInt *C;
+  if (match(Op1, m_APInt(C))) {
+    Value *X, *Y;
+    if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
+        C->isOneValue()) {
+      // (1 << X) & 1 --> zext(X == 0)
+      // (1 >> X) & 1 --> zext(X == 0)
       Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(I.getType(), 0));
       return new ZExtInst(IsZero, I.getType());
+    }
+
+    // If the mask is only needed on one incoming arm, push the 'and' op up.
+    if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_Value(Y)))) ||
+        match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
+      APInt NotAndMask(~(*C));
+      BinaryOperator::BinaryOps BinOp = cast<BinaryOperator>(Op0)->getOpcode();
+      if (MaskedValueIsZero(X, NotAndMask, 0, &I)) {
+        // Not masking anything out for the LHS, move mask to RHS.
+        // and ({x}or X, Y), C --> {x}or X, (and Y, C)
+        Value *NewRHS = Builder.CreateAnd(Y, Op1, Y->getName() + ".masked");
+        return BinaryOperator::Create(BinOp, X, NewRHS);
+      }
+      if (!isa<Constant>(Y) && MaskedValueIsZero(Y, NotAndMask, 0, &I)) {
+        // Not masking anything out for the RHS, move mask to LHS.
+        // and ({x}or X, Y), C --> {x}or (and X, C), Y
+        Value *NewLHS = Builder.CreateAnd(X, Op1, X->getName() + ".masked");
+        return BinaryOperator::Create(BinOp, NewLHS, Y);
+      }
     }
   }
 
@@ -1299,34 +1320,6 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
 
     // Optimize a variety of ((val OP C1) & C2) combinations...
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
-      Value *Op0LHS = Op0I->getOperand(0);
-      Value *Op0RHS = Op0I->getOperand(1);
-      switch (Op0I->getOpcode()) {
-      default: break;
-      case Instruction::Xor:
-      case Instruction::Or: {
-        // If the mask is only needed on one incoming arm, push it up.
-        if (!Op0I->hasOneUse()) break;
-
-        APInt NotAndRHS(~AndRHSMask);
-        if (MaskedValueIsZero(Op0LHS, NotAndRHS, 0, &I)) {
-          // Not masking anything out for the LHS, move to RHS.
-          Value *NewRHS = Builder.CreateAnd(Op0RHS, AndRHS,
-                                            Op0RHS->getName()+".masked");
-          return BinaryOperator::Create(Op0I->getOpcode(), Op0LHS, NewRHS);
-        }
-        if (!isa<Constant>(Op0RHS) &&
-            MaskedValueIsZero(Op0RHS, NotAndRHS, 0, &I)) {
-          // Not masking anything out for the RHS, move to LHS.
-          Value *NewLHS = Builder.CreateAnd(Op0LHS, AndRHS,
-                                            Op0LHS->getName()+".masked");
-          return BinaryOperator::Create(Op0I->getOpcode(), NewLHS, Op0RHS);
-        }
-
-        break;
-      }
-      }
-
       // ((C1 OP zext(X)) & C2) -> zext((C1-X) & C2) if C2 fits in the bitwidth
       // of X and OP behaves well when given trunc(C1) and X.
       switch (Op0I->getOpcode()) {
@@ -1343,6 +1336,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
           if (AndRHSMask.isIntN(X->getType()->getScalarSizeInBits())) {
             auto *TruncC1 = ConstantExpr::getTrunc(C1, X->getType());
             Value *BinOp;
+            Value *Op0LHS = Op0I->getOperand(0);
             if (isa<ZExtInst>(Op0LHS))
               BinOp = Builder.CreateBinOp(Op0I->getOpcode(), X, TruncC1);
             else

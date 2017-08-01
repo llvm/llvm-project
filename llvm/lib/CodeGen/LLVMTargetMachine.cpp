@@ -92,24 +92,25 @@ TargetIRAnalysis LLVMTargetMachine::getTargetIRAnalysis() {
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.
 static MCContext *
 addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
-                        bool DisableVerify, AnalysisID StartBefore,
-                        AnalysisID StartAfter, AnalysisID StopBefore,
-                        AnalysisID StopAfter) {
+                        bool DisableVerify, bool &WillCompleteCodeGenPipeline,
+                        raw_pwrite_stream &Out, MachineModuleInfo *MMI) {
   // Targets may override createPassConfig to provide a target-specific
   // subclass.
   TargetPassConfig *PassConfig = TM->createPassConfig(PM);
-  PassConfig->setStartStopPasses(StartBefore, StartAfter, StopBefore,
-                                 StopAfter);
   // Set PassConfig options provided by TargetMachine.
   PassConfig->setDisableVerify(DisableVerify);
+  WillCompleteCodeGenPipeline = PassConfig->willCompleteCodeGenPipeline();
   PM.add(PassConfig);
-  MachineModuleInfo *MMI = new MachineModuleInfo(TM);
+  if (!MMI)
+    MMI = new MachineModuleInfo(TM);
   PM.add(MMI);
 
   if (PassConfig->addISelPasses())
     return nullptr;
   PassConfig->addMachinePasses();
   PassConfig->setInitialized();
+  if (!WillCompleteCodeGenPipeline)
+    PM.add(createPrintMIRPass(Out));
 
   return &MMI->getContext();
 }
@@ -185,23 +186,20 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
   return false;
 }
 
-bool LLVMTargetMachine::addPassesToEmitFile(
-    PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
-    bool DisableVerify, AnalysisID StartBefore, AnalysisID StartAfter,
-    AnalysisID StopBefore, AnalysisID StopAfter) {
+bool LLVMTargetMachine::addPassesToEmitFile(PassManagerBase &PM,
+                                            raw_pwrite_stream &Out,
+                                            CodeGenFileType FileType,
+                                            bool DisableVerify,
+                                            MachineModuleInfo *MMI) {
   // Add common CodeGen passes.
-  MCContext *Context =
-      addPassesToGenerateCode(this, PM, DisableVerify, StartBefore, StartAfter,
-                              StopBefore, StopAfter);
+  bool WillCompleteCodeGenPipeline = true;
+  MCContext *Context = addPassesToGenerateCode(
+      this, PM, DisableVerify, WillCompleteCodeGenPipeline, Out, MMI);
   if (!Context)
     return true;
 
-  if (StopBefore || StopAfter) {
-    PM.add(createPrintMIRPass(Out));
-  } else {
-    if (addAsmPrinter(PM, Out, FileType, *Context))
-      return true;
-  }
+  if (WillCompleteCodeGenPipeline && addAsmPrinter(PM, Out, FileType, *Context))
+    return true;
 
   PM.add(createFreeMachineFunctionPass());
   return false;
@@ -216,10 +214,13 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
                                           raw_pwrite_stream &Out,
                                           bool DisableVerify) {
   // Add common CodeGen passes.
-  Ctx = addPassesToGenerateCode(this, PM, DisableVerify, nullptr, nullptr,
-                                nullptr, nullptr);
+  bool WillCompleteCodeGenPipeline = true;
+  Ctx = addPassesToGenerateCode(this, PM, DisableVerify,
+                                WillCompleteCodeGenPipeline, Out,
+                                /*MachineModuleInfo*/ nullptr);
   if (!Ctx)
     return true;
+  assert(WillCompleteCodeGenPipeline && "CodeGen pipeline has been altered");
 
   if (Options.MCOptions.MCSaveTempLabels)
     Ctx->setAllowTemporaryLabels(false);

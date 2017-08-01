@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/GlobalsStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
@@ -80,6 +81,12 @@ PublicsStreamBuilder &PDBFileBuilder::getPublicsBuilder() {
   return *Publics;
 }
 
+GlobalsStreamBuilder &PDBFileBuilder::getGlobalsBuilder() {
+  if (!Globals)
+    Globals = llvm::make_unique<GlobalsStreamBuilder>(*Msf);
+  return *Globals;
+}
+
 Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
   auto ExpectedStream = Msf->addStream(Size);
   if (!ExpectedStream)
@@ -129,6 +136,13 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
       Dbi->setPublicsStreamIndex(Publics->getStreamIndex());
       Dbi->setSymbolRecordStreamIndex(Publics->getRecordStreamIdx());
     }
+  }
+
+  if (Globals) {
+    if (auto EC = Globals->finalizeMsfLayout())
+      return std::move(EC);
+    if (Dbi)
+      Dbi->setGlobalsStreamIndex(Globals->getStreamIndex());
   }
 
   return Msf->build();
@@ -217,6 +231,14 @@ Error PDBFileBuilder::commit(StringRef Filename) {
     BinaryStreamWriter PSWriter(*PS);
     BinaryStreamWriter RecWriter(*PRS);
     if (auto EC = Publics->commit(PSWriter, RecWriter))
+      return EC;
+  }
+
+  if (Globals) {
+    auto GS = WritableMappedBlockStream::createIndexedStream(
+        Layout, Buffer, Globals->getStreamIndex(), Allocator);
+    BinaryStreamWriter GSWriter(*GS);
+    if (auto EC = Globals->commit(GSWriter))
       return EC;
   }
 

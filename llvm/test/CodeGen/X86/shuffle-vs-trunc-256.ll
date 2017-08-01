@@ -61,7 +61,7 @@ define void @shuffle_v32i8_to_v16i8(<32 x i8>* %L, <16 x i8>* %S) nounwind {
 ;
 ; AVX512BWVL-LABEL: shuffle_v32i8_to_v16i8:
 ; AVX512BWVL:       # BB#0:
-; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BWVL-NEXT:    vpmovwb %ymm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
@@ -122,7 +122,7 @@ define void @trunc_v16i16_to_v16i8(<32 x i8>* %L, <16 x i8>* %S) nounwind {
 ;
 ; AVX512BWVL-LABEL: trunc_v16i16_to_v16i8:
 ; AVX512BWVL:       # BB#0:
-; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BWVL-NEXT:    vpmovwb %ymm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq

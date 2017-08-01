@@ -419,6 +419,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SELECT, VT, Custom);
     setOperationAction(ISD::SETCC,  VT, Custom);
   }
+
+  // Custom action for SELECT MMX and expand action for SELECT_CC MMX
+  setOperationAction(ISD::SELECT, MVT::x86mmx, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::x86mmx, Expand);
+
   setOperationAction(ISD::EH_RETURN       , MVT::Other, Custom);
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -30631,6 +30636,14 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
   }
 
+  // Custom action for SELECT MMX
+  if (VT == MVT::x86mmx) {
+    LHS = DAG.getBitcast(MVT::i64, LHS);
+    RHS = DAG.getBitcast(MVT::i64, RHS);
+    SDValue newSelect = DAG.getNode(ISD::SELECT, DL, MVT::i64, Cond, LHS, RHS);
+    return DAG.getBitcast(VT, newSelect);
+  }
+
   return SDValue();
 }
 
@@ -34517,6 +34530,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   // Negative multiplication when NegA xor NegB
   bool NegMul = (NegA != NegB);
+  bool HasNeg = NegA || NegB || NegC;
 
   unsigned NewOpcode;
   if (!NegMul)
@@ -34524,6 +34538,14 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   else
     NewOpcode = (!NegC) ? X86ISD::FNMADD : X86ISD::FNMSUB;
 
+  // For FMA and FMADD, we risk reconstructing the node we started with.
+  // In order to avoid this, we check for negation or opcode change. If
+  // one of the two happened, then it is a new node and we return it.
+  if (N->getOpcode() == X86ISD::FMADD || N->getOpcode() == ISD::FMA) {
+    if (HasNeg || NewOpcode != N->getOpcode())
+      return DAG.getNode(NewOpcode, dl, VT, A, B, C);
+    return SDValue();
+  }
 
   if (N->getOpcode() == X86ISD::FMADD_RND) {
     switch (NewOpcode) {
@@ -34547,12 +34569,15 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS3_RND; break;
     }
   } else {
-    assert((N->getOpcode() == X86ISD::FMADD || N->getOpcode() == ISD::FMA) &&
-           "Unexpected opcode!");
-    return DAG.getNode(NewOpcode, dl, VT, A, B, C);
+    llvm_unreachable("Unexpected opcode!");
   }
 
-  return DAG.getNode(NewOpcode, dl, VT, A, B, C, N->getOperand(3));
+  // Only return the node is the opcode was changed or one of the
+  // operand was negated. If not, we'll just recreate the same node.
+  if (HasNeg || NewOpcode != N->getOpcode())
+    return DAG.getNode(NewOpcode, dl, VT, A, B, C, N->getOperand(3));
+
+  return SDValue();
 }
 
 static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
