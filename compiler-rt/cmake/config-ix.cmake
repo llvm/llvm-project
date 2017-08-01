@@ -14,7 +14,11 @@ endfunction()
 
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
 if (NOT SANITIZER_USE_COMPILER_RT)
-  check_library_exists(gcc_s __gcc_personality_v0 "" COMPILER_RT_HAS_GCC_S_LIB)
+  if (ANDROID)
+    check_library_exists(gcc __gcc_personality_v0 "" COMPILER_RT_HAS_GCC_LIB)
+  else()
+    check_library_exists(gcc_s __gcc_personality_v0 "" COMPILER_RT_HAS_GCC_S_LIB)
+  endif()
 endif()
 
 check_c_compiler_flag(-nodefaultlibs COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
@@ -29,6 +33,8 @@ if (COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
   elseif (COMPILER_RT_HAS_GCC_S_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
+  elseif (COMPILER_RT_HAS_GCC_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES gcc)
   endif ()
 endif ()
 
@@ -98,6 +104,10 @@ check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
+if (ANDROID AND COMPILER_RT_HAS_LIBDL)
+  # Android's libstdc++ has a dependency on libdl.
+  list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
+endif()
 check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 
 # Linker flags.
