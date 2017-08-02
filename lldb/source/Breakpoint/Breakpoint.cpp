@@ -53,7 +53,7 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        bool resolve_indirect_symbols)
     : m_being_created(true), m_hardware(hardware), m_target(target),
       m_filter_sp(filter_sp), m_resolver_sp(resolver_sp),
-      m_options_up(new BreakpointOptions()), m_locations(*this),
+      m_options_up(new BreakpointOptions(true)), m_locations(*this),
       m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_count(0) {
   m_being_created = false;
 }

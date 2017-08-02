@@ -96,6 +96,10 @@ public:
     SBError
     SetScriptCallbackBody (const char *script_body_text);
     
+    void SetCommandLineCommands(SBStringList &commands);
+
+    bool GetCommandLineCommands(SBStringList &commands);
+
     void
     SetThreadID (lldb::tid_t sb_thread_id);
 
