@@ -59,6 +59,7 @@ static const char *const GCCRegNames[] = {
     "zmm26", "zmm27", "zmm28", "zmm29", "zmm30",   "zmm31", "k0",    "k1",
     "k2",    "k3",    "k4",    "k5",    "k6",      "k7",
     "cr0",   "cr2",   "cr3",   "cr4",   "cr8",
+    "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {

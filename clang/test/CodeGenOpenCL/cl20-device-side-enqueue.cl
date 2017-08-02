@@ -140,4 +140,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   size = get_kernel_preferred_work_group_size_multiple(block_A);
   // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* [[BL_GLOBAL]] to i8 addrspace(1)*) to i8 addrspace(4)*))
   size = get_kernel_preferred_work_group_size_multiple(block_G);
+
+  // COMMON: call i32 @__get_kernel_max_sub_group_size_for_ndrange_impl(%struct.ndrange_t* {{.*}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* {{.*}} to i8 addrspace(1)*) to i8 addrspace(4)*))
+  size = get_kernel_max_sub_group_size_for_ndrange(ndrange, ^(){});
+  // COMMON: call i32 @__get_kernel_sub_group_count_for_ndrange_impl(%struct.ndrange_t* {{.*}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* {{.*}} to i8 addrspace(1)*) to i8 addrspace(4)*))
+  size = get_kernel_sub_group_count_for_ndrange(ndrange, ^(){});
 }

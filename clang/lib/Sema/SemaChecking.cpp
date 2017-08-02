@@ -308,6 +308,32 @@ static bool checkOpenCLSubgroupExt(Sema &S, CallExpr *Call) {
   return false;
 }
 
+static bool SemaOpenCLBuiltinNDRangeAndBlock(Sema &S, CallExpr *TheCall) {
+  if (checkArgCount(S, TheCall, 2))
+    return true;
+
+  if (checkOpenCLSubgroupExt(S, TheCall))
+    return true;
+
+  // First argument is an ndrange_t type.
+  Expr *NDRangeArg = TheCall->getArg(0);
+  if (NDRangeArg->getType().getAsString() != "ndrange_t") {
+    S.Diag(NDRangeArg->getLocStart(),
+           diag::err_opencl_builtin_expected_type)
+        << TheCall->getDirectCallee() << "'ndrange_t'";
+    return true;
+  }
+
+  Expr *BlockArg = TheCall->getArg(1);
+  if (!isBlockPointer(BlockArg)) {
+    S.Diag(BlockArg->getLocStart(),
+           diag::err_opencl_builtin_expected_type)
+        << TheCall->getDirectCallee() << "block";
+    return true;
+  }
+  return checkOpenCLBlockArgs(S, BlockArg);
+}
+
 /// OpenCL C v2.0, s6.13.17.6 - Check the argument to the
 /// get_kernel_work_group_size
 /// and get_kernel_preferred_work_group_size_multiple builtin functions.
@@ -1107,6 +1133,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIget_kernel_work_group_size:
   case Builtin::BIget_kernel_preferred_work_group_size_multiple:
     if (SemaOpenCLBuiltinKernelWorkGroupSize(*this, TheCall))
+      return ExprError();
+    break;
+    break;
+  case Builtin::BIget_kernel_max_sub_group_size_for_ndrange:
+  case Builtin::BIget_kernel_sub_group_count_for_ndrange:
+    if (SemaOpenCLBuiltinNDRangeAndBlock(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BI__builtin_os_log_format:

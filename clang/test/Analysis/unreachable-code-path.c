@@ -213,3 +213,13 @@ void macro(void) {
   RETURN(1); // no-warning
 }
 
+// Avoid FP when macro argument is known
+void writeSomething(int *x);
+#define MACRO(C)        \
+  if (!C) {             \
+    static int x;       \
+    writeSomething(&x); \
+  }
+void macro2(void) {
+  MACRO(1);
+}
