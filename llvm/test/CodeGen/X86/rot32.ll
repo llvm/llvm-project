@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7 | FileCheck %s
-; RUN: llc < %s -march=x86 -mcpu=corei7-avx | FileCheck %s --check-prefix=SHLD
-; RUN: llc < %s -march=x86 -mcpu=core-avx2 | FileCheck %s --check-prefix=BMI2
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7-avx | FileCheck %s --check-prefix=SHLD
+; RUN: llc < %s -mtriple=i686-- -mcpu=core-avx2 | FileCheck %s --check-prefix=BMI2
 
 define i32 @foo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 entry:

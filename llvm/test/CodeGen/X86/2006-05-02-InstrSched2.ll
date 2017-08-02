@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -stats  2>&1 | \
+; RUN: llc < %s -mtriple=i686-- -stats  2>&1 | \
 ; RUN:   grep asm-printer | grep 13
 
 define void @_ZN9__gnu_cxx9hashtableISt4pairIKPKciES3_NS_4hashIS3_EESt10_Select1stIS5_E5eqstrSaIiEE14find_or_insertERKS5__cond_true456.i(i8* %tmp435.i, i32* %tmp449.i.out) nounwind {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -O0 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -O0 | FileCheck %s
 ; Make sure fast-isel doesn't reset the materialised constant map
 ; across an intrinsic call.
 

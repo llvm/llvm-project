@@ -1212,11 +1212,8 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     if (!V) {
       // Currently the optimizer can produce this; insert an undef to
       // help debugging.  Probably the optimizer should not do this.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
-          .addReg(0U)
-          .addImm(0U)
-          .addMetadata(DI->getVariable())
-          .addMetadata(DI->getExpression());
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, false, 0U,
+              DI->getVariable(), DI->getExpression());
     } else if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getBitWidth() > 64)
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)

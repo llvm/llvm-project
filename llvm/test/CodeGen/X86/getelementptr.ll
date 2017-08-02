@@ -1,7 +1,7 @@
-; RUN: llc < %s -O0 -march=x86
-; RUN: llc < %s -O0 -march=x86-64
-; RUN: llc < %s -O2 -march=x86
-; RUN: llc < %s -O2 -march=x86-64
+; RUN: llc < %s -O0 -mtriple=i686--
+; RUN: llc < %s -O0 -mtriple=x86_64--
+; RUN: llc < %s -O2 -mtriple=i686--
+; RUN: llc < %s -O2 -mtriple=x86_64--
 
 
 ; Test big index trunc to pointer size:

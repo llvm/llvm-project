@@ -151,7 +151,7 @@ struct SemiNCAInfo {
       for (const NodePtr Succ : ChildrenGetter<NodePtr, IsPostDom>::Get(BB)) {
         const auto SIT = NodeToInfo.find(Succ);
         // Don't visit nodes more than once but remember to collect
-        // RerverseChildren.
+        // ReverseChildren.
         if (SIT != NodeToInfo.end() && SIT->second.DFSNum != 0) {
           if (Succ != BB) SIT->second.ReverseChildren.push_back(BB);
           continue;

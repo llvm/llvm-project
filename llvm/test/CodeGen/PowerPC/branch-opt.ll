@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 target datalayout = "E-p:32:32"
 target triple = "powerpc-apple-darwin8.7.0"

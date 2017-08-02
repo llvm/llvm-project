@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2,+mmx | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2,+mmx | FileCheck %s
 ; originally from PR2687, but things don't work that way any more.
 ; there are no MMX instructions here; we use XMM.
 

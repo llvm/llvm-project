@@ -1,4 +1,4 @@
-; RUN: llc -O1 -march=arm -mattr=+vfp2 -mtriple=arm-linux-gnueabi < %s | FileCheck %s
+; RUN: llc -O1 -mattr=+vfp2 -mtriple=arm-linux-gnueabi < %s | FileCheck %s
 ; pr4939
 
 define void @test(double* %x, double* %y) nounwind {

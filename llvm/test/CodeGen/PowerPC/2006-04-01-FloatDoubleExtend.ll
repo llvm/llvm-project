@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 
 
 define double @CalcSpeed(float %tmp127) {

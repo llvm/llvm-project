@@ -1531,9 +1531,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (PBI && PBI->isConditional() &&
         PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
         (PBI->getSuccessor(0) == Parent || PBI->getSuccessor(1) == Parent)) {
-      bool CondIsFalse = PBI->getSuccessor(1) == Parent;
+      bool CondIsTrue = PBI->getSuccessor(0) == Parent;
       Optional<bool> Implication = isImpliedCondition(
-        PBI->getCondition(), SI.getCondition(), DL, CondIsFalse);
+          PBI->getCondition(), SI.getCondition(), DL, CondIsTrue);
       if (Implication) {
         Value *V = *Implication ? TrueVal : FalseVal;
         return replaceInstUsesWith(SI, V);

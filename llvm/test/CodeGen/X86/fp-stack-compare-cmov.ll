@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=pentiumpro | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=pentiumpro | FileCheck %s
 ; PR1012
 
 define float @foo(float* %col.2.0) {

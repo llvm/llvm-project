@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7-avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7-avx | FileCheck %s
 
 ; testb should be scheduled right before je to enable macro-fusion.
 

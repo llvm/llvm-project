@@ -123,6 +123,12 @@ static cl::opt<bool> LateCFGStructurize(
   cl::init(false),
   cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUFunctionCalls(
+  "amdgpu-function-calls",
+  cl::Hidden,
+  cl::desc("Enable AMDGPU function call support"),
+  cl::init(false));
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -136,6 +142,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
+  initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
@@ -268,6 +275,11 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 }
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
+
+bool AMDGPUTargetMachine::enableFunctionCalls() const {
+  return EnableAMDGPUFunctionCalls &&
+         getTargetTriple().getArch() == Triple::amdgcn;
+}
 
 StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
   Attribute GPUAttr = F.getFnAttribute("target-cpu");
@@ -474,7 +486,10 @@ public:
 class GCNPassConfig final : public AMDGPUPassConfig {
 public:
   GCNPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
-    : AMDGPUPassConfig(TM, PM) {}
+    : AMDGPUPassConfig(TM, PM) {
+    // It is necessary to know the register usage of the entire call graph.
+    setRequiresCodeGenSCCOrder(EnableAMDGPUFunctionCalls);
+  }
 
   GCNTargetMachine &getGCNTargetMachine() const {
     return getTM<GCNTargetMachine>();
@@ -770,6 +785,9 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
+  if (getOptLevel() > CodeGenOpt::None)
+    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+
   // This needs to be run directly before register allocation because earlier
   // passes might recompute live intervals.
   insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);

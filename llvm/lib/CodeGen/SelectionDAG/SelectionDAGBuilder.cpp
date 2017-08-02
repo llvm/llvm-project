@@ -5102,6 +5102,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
+    // Static allocas are handled more efficiently in the variable frame index
+    // side table.
+    const auto *AI =
+        dyn_cast<AllocaInst>(Address->stripInBoundsConstantOffsets());
+    if (AI && AI->isStaticAlloca() && FuncInfo.StaticAllocaMap.count(AI))
+      return nullptr;
+
     // Byval arguments with frame indices were already handled after argument
     // lowering and before isel.
     const auto *Arg =

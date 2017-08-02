@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 
 define <4 x double> @foo0(<4 x double> %t) {
   %r = insertelement <4 x double> %t, double 2.3, i32 0

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=generic | FileCheck %s
 
 define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind readnone {
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 define i32 @t1(i8* %X, i32 %i) {
 ; CHECK-LABEL: t1:

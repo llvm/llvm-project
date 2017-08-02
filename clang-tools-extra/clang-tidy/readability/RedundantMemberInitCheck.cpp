@@ -39,7 +39,8 @@ void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           forEachConstructorInitializer(
               cxxCtorInitializer(isWritten(),
                                  withInitializer(ignoringImplicit(Construct)),
-                                 unless(forField(hasType(isConstQualified()))))
+                                 unless(forField(hasType(isConstQualified()))),
+                                 unless(forField(hasParent(recordDecl(isUnion())))))
                   .bind("init"))),
       this);
 }
@@ -52,7 +53,7 @@ void RedundantMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
       Construct->getArg(0)->isDefaultArgument()) {
     if (Init->isAnyMemberInitializer()) {
       diag(Init->getSourceLocation(), "initializer for member %0 is redundant")
-          << Init->getMember()
+          << Init->getAnyMember()
           << FixItHint::CreateRemoval(Init->getSourceRange());
     } else {
       diag(Init->getSourceLocation(),

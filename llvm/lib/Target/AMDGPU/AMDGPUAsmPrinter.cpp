@@ -509,20 +509,154 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
     }
   }
 
-  MCPhysReg HighestSGPRReg = AMDGPU::NoRegister;
-  for (MCPhysReg Reg : reverse(AMDGPU::SGPR_32RegClass.getRegisters())) {
-    if (MRI.isPhysRegUsed(Reg)) {
-      HighestSGPRReg = Reg;
-      break;
+  int32_t MaxVGPR = -1;
+  int32_t MaxSGPR = -1;
+  uint32_t CalleeFrameSize = 0;
+
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      // TODO: Check regmasks? Do they occur anywhere except calls?
+      for (const MachineOperand &MO : MI.operands()) {
+        unsigned Width = 0;
+        bool IsSGPR = false;
+
+        if (!MO.isReg())
+          continue;
+
+        unsigned Reg = MO.getReg();
+        switch (Reg) {
+        case AMDGPU::EXEC:
+        case AMDGPU::EXEC_LO:
+        case AMDGPU::EXEC_HI:
+        case AMDGPU::SCC:
+        case AMDGPU::M0:
+        case AMDGPU::SRC_SHARED_BASE:
+        case AMDGPU::SRC_SHARED_LIMIT:
+        case AMDGPU::SRC_PRIVATE_BASE:
+        case AMDGPU::SRC_PRIVATE_LIMIT:
+          continue;
+
+        case AMDGPU::NoRegister:
+          assert(MI.isDebugValue());
+          continue;
+
+        case AMDGPU::VCC:
+        case AMDGPU::VCC_LO:
+        case AMDGPU::VCC_HI:
+          Info.UsesVCC = true;
+          continue;
+
+        case AMDGPU::FLAT_SCR:
+        case AMDGPU::FLAT_SCR_LO:
+        case AMDGPU::FLAT_SCR_HI:
+          continue;
+
+        case AMDGPU::TBA:
+        case AMDGPU::TBA_LO:
+        case AMDGPU::TBA_HI:
+        case AMDGPU::TMA:
+        case AMDGPU::TMA_LO:
+        case AMDGPU::TMA_HI:
+          llvm_unreachable("trap handler registers should not be used");
+
+        default:
+          break;
+        }
+
+        if (AMDGPU::SReg_32RegClass.contains(Reg)) {
+          assert(!AMDGPU::TTMP_32RegClass.contains(Reg) &&
+                 "trap handler registers should not be used");
+          IsSGPR = true;
+          Width = 1;
+        } else if (AMDGPU::VGPR_32RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 1;
+        } else if (AMDGPU::SReg_64RegClass.contains(Reg)) {
+          assert(!AMDGPU::TTMP_64RegClass.contains(Reg) &&
+                 "trap handler registers should not be used");
+          IsSGPR = true;
+          Width = 2;
+        } else if (AMDGPU::VReg_64RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 2;
+        } else if (AMDGPU::VReg_96RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 3;
+        } else if (AMDGPU::SReg_128RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 4;
+        } else if (AMDGPU::VReg_128RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 4;
+        } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 8;
+        } else if (AMDGPU::VReg_256RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 8;
+        } else if (AMDGPU::SReg_512RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 16;
+        } else if (AMDGPU::VReg_512RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 16;
+        } else {
+          llvm_unreachable("Unknown register class");
+        }
+        unsigned HWReg = TRI.getHWRegIndex(Reg);
+        int MaxUsed = HWReg + Width - 1;
+        if (IsSGPR) {
+          MaxSGPR = MaxUsed > MaxSGPR ? MaxUsed : MaxSGPR;
+        } else {
+          MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
+        }
+      }
+
+      if (MI.isCall()) {
+        assert(MI.getOpcode() == AMDGPU::SI_CALL);
+        // Pseudo used just to encode the underlying global. Is there a better
+        // way to track this?
+        const Function *Callee = cast<Function>(MI.getOperand(2).getGlobal());
+        if (Callee->isDeclaration()) {
+          // If this is a call to an external function, we can't do much. Make
+          // conservative guesses.
+
+          // 48 SGPRs - vcc, - flat_scr, -xnack
+          int MaxSGPRGuess = 47 - getNumExtraSGPRs(ST, true,
+                                                   ST.hasFlatAddressSpace());
+          MaxSGPR = std::max(MaxSGPR, MaxSGPRGuess);
+          MaxVGPR = std::max(MaxVGPR, 23);
+
+          CalleeFrameSize = std::max(CalleeFrameSize, 16384u);
+          Info.UsesVCC = true;
+          Info.UsesFlatScratch = ST.hasFlatAddressSpace();
+          Info.HasDynamicallySizedStack = true;
+        } else {
+          // We force CodeGen to run in SCC order, so the callee's register
+          // usage etc. should be the cumulative usage of all callees.
+          auto I = CallGraphResourceInfo.find(Callee);
+          assert(I != CallGraphResourceInfo.end() &&
+                 "callee should have been handled before caller");
+
+          MaxSGPR = std::max(I->second.NumExplicitSGPR - 1, MaxSGPR);
+          MaxVGPR = std::max(I->second.NumVGPR - 1, MaxVGPR);
+          CalleeFrameSize
+            = std::max(I->second.PrivateSegmentSize, CalleeFrameSize);
+          Info.UsesVCC |= I->second.UsesVCC;
+          Info.UsesFlatScratch |= I->second.UsesFlatScratch;
+          Info.HasDynamicallySizedStack |= I->second.HasDynamicallySizedStack;
+          Info.HasRecursion |= I->second.HasRecursion;
+        }
+
+        if (!Callee->doesNotRecurse())
+          Info.HasRecursion = true;
+      }
     }
   }
 
-  // We found the maximum register index. They start at 0, so add one to get the
-  // number of registers.
-  Info.NumVGPR = HighestVGPRReg == AMDGPU::NoRegister ? 0 :
-    TRI.getHWRegIndex(HighestVGPRReg) + 1;
-  Info.NumExplicitSGPR = HighestSGPRReg == AMDGPU::NoRegister ? 0 :
-    TRI.getHWRegIndex(HighestSGPRReg) + 1;
+  Info.NumExplicitSGPR = MaxSGPR + 1;
+  Info.NumVGPR = MaxVGPR + 1;
+  Info.PrivateSegmentSize += CalleeFrameSize;
 
   return Info;
 }

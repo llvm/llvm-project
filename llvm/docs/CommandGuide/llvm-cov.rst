@@ -222,12 +222,13 @@ OPTIONS
 
  Enable or disable color output. By default this is autodetected.
 
-.. option:: -arch=<name>
+.. option:: -arch=[*NAMES*]
 
- If the covered binary is a universal binary, select the architecture to use.
- It is an error to specify an architecture that is not included in the
- universal binary or to use an architecture that does not match a
- non-universal binary.
+ Specify a list of architectures such that the Nth entry in the list
+ corresponds to the Nth specified binary. If the covered object is a universal
+ binary, this specifies the architecture to use. It is an error to specify an
+ architecture that is not included in the universal binary or to use an
+ architecture that does not match a non-universal binary.
 
 .. option:: -name=<NAME>
 

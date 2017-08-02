@@ -262,6 +262,14 @@ protected:
   /// @param NewValues A map that maps certain llvm::Values to new llvm::Values.
   void updateValues(ValueMapT &NewValues);
 
+  /// Return the most up-to-date version of the llvm::Value for code generation.
+  /// @param Original The Value to check for an up to date version.
+  /// @returns A remapped `Value` from ValueMap, or `Original` if no mapping
+  ///          exists.
+  /// @see IslNodeBuilder::updateValues
+  /// @see IslNodeBuilder::ValueMap
+  Value *getLatestValue(Value *Original) const;
+
   /// Generate code for a marker now.
   ///
   /// For mark nodes with an unknown name, we just forward the code generation

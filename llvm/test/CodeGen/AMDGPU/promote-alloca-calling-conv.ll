@@ -3,9 +3,9 @@
 
 ; IR-LABEL: define amdgpu_vs void @promote_alloca_shaders(i32 addrspace(1)* inreg %out, i32 addrspace(1)* inreg %in) #0 {
 ; IR: alloca [5 x i32]
-; ASM-LABEL: {{^}}promote_alloca_shaders:
-; ASM: ; LDSByteSize: 0 bytes/workgroup (compile time only)
 
+; ASM-LABEL: {{^}}promote_alloca_shaders:
+; ASM: ; ScratchSize: 24
 define amdgpu_vs void @promote_alloca_shaders(i32 addrspace(1)* inreg %out, i32 addrspace(1)* inreg %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
@@ -29,7 +29,10 @@ entry:
 ; OPT-LABEL: @promote_to_vector_call_c(
 ; OPT-NOT: alloca
 ; OPT: extractelement <2 x i32> %{{[0-9]+}}, i32 %in
+
+; ASM-LABEL: {{^}}promote_to_vector_call_c:
 ; ASM-NOT: LDSByteSize
+; ASM: ; ScratchSize: 0
 define void @promote_to_vector_call_c(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %tmp = alloca [2 x i32]
@@ -47,8 +50,11 @@ entry:
 
 ; OPT-LABEL: @no_promote_to_lds_c(
 ; OPT: alloca
+
+; ASM-LABEL: {{^}}no_promote_to_lds_c:
 ; ASM-NOT: LDSByteSize
-define void @no_promote_to_lds(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
+; ASM: ; ScratchSize: 24
+define void @no_promote_to_lds_c(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4

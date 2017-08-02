@@ -1057,42 +1057,35 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
   if (gpu_array_is_scalar(Array))
     return nullptr;
 
-  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+  isl::ast_build Build =
+      isl::ast_build::from_context(isl::manage(S.getContext()));
 
-  isl_set *Min = isl_set_lexmin(isl_set_copy(Array->extent));
+  isl::set Min = isl::manage(isl_set_copy(Array->extent)).lexmin();
 
-  isl_set *ZeroSet = isl_set_universe(isl_set_get_space(Min));
+  isl::set ZeroSet = isl::set::universe(Min.get_space());
 
-  for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++)
-    ZeroSet = isl_set_fix_si(ZeroSet, isl_dim_set, i, 0);
+  for (long i = 0; i < Min.dim(isl::dim::set); i++)
+    ZeroSet = ZeroSet.fix_si(isl::dim::set, i, 0);
 
-  if (isl_set_is_subset(Min, ZeroSet)) {
-    isl_set_free(Min);
-    isl_set_free(ZeroSet);
-    isl_ast_build_free(Build);
+  if (Min.is_subset(ZeroSet)) {
     return nullptr;
   }
-  isl_set_free(ZeroSet);
 
-  isl_ast_expr *Result =
-      isl_ast_expr_from_val(isl_val_int_from_si(isl_set_get_ctx(Min), 0));
+  isl::ast_expr Result = isl::ast_expr::from_val(isl::val(Min.get_ctx(), 0));
 
-  for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++) {
+  for (long i = 0; i < Min.dim(isl::dim::set); i++) {
     if (i > 0) {
-      isl_pw_aff *Bound_I = isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1);
-      isl_ast_expr *BExpr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
-      Result = isl_ast_expr_mul(Result, BExpr);
+      isl::pw_aff Bound_I =
+          isl::manage(isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1));
+      isl::ast_expr BExpr = Build.expr_from(Bound_I);
+      Result = Result.mul(BExpr);
     }
-    isl_pw_aff *DimMin = isl_set_dim_min(isl_set_copy(Min), i);
-    isl_ast_expr *MExpr = isl_ast_build_expr_from_pw_aff(Build, DimMin);
-    Result = isl_ast_expr_add(Result, MExpr);
+    isl::pw_aff DimMin = Min.dim_min(i);
+    isl::ast_expr MExpr = Build.expr_from(DimMin);
+    Result = Result.add(MExpr);
   }
 
-  Value *ResultValue = ExprBuilder.create(Result);
-  isl_set_free(Min);
-  isl_ast_build_free(Build);
-
-  return ResultValue;
+  return ExprBuilder.create(Result.release());
 }
 
 Value *GPUNodeBuilder::getOrCreateManagedDeviceArray(gpu_array_info *Array,
@@ -1111,6 +1104,7 @@ Value *GPUNodeBuilder::getOrCreateManagedDeviceArray(gpu_array_info *Array,
       HostPtr = BlockGen.getOrCreateAlloca(ArrayInfo);
     else
       HostPtr = ArrayInfo->getBasePtr();
+    HostPtr = getLatestValue(HostPtr);
 
     Value *Offset = getArrayOffset(Array);
     if (Offset) {
@@ -1144,6 +1138,7 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
     HostPtr = BlockGen.getOrCreateAlloca(ScopArray);
   else
     HostPtr = ScopArray->getBasePtr();
+  HostPtr = getLatestValue(HostPtr);
 
   if (Offset) {
     HostPtr = Builder.CreatePointerCast(
@@ -1488,16 +1483,18 @@ void GPUNodeBuilder::clearLoops(Function *F) {
 
 std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
   std::vector<Value *> Sizes;
-  isl_ast_build *Context = isl_ast_build_from_context(S.getContext());
+  isl::ast_build Context =
+      isl::ast_build::from_context(isl::manage(S.getContext()));
 
+  isl::multi_pw_aff GridSizePwAffs =
+      isl::manage(isl_multi_pw_aff_copy(Kernel->grid_size));
   for (long i = 0; i < Kernel->n_grid; i++) {
-    isl_pw_aff *Size = isl_multi_pw_aff_get_pw_aff(Kernel->grid_size, i);
-    isl_ast_expr *GridSize = isl_ast_build_expr_from_pw_aff(Context, Size);
-    Value *Res = ExprBuilder.create(GridSize);
+    isl::pw_aff Size = GridSizePwAffs.get_pw_aff(i);
+    isl::ast_expr GridSize = Context.expr_from(Size);
+    Value *Res = ExprBuilder.create(GridSize.release());
     Res = Builder.CreateTrunc(Res, Builder.getInt32Ty());
     Sizes.push_back(Res);
   }
-  isl_ast_build_free(Context);
 
   for (long i = Kernel->n_grid; i < 3; i++)
     Sizes.push_back(ConstantInt::get(Builder.getInt32Ty(), 1));

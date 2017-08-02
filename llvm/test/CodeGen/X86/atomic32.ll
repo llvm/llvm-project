@@ -1,6 +1,6 @@
-; RUN: llc < %s -O0 -march=x86-64 -mcpu=corei7 -verify-machineinstrs | FileCheck %s -check-prefix=WITH-CMOV
-; RUN: llc < %s -O0 -march=x86 -mcpu=corei7 -verify-machineinstrs | FileCheck %s -check-prefix=WITH-CMOV
-; RUN: llc < %s -O0 -march=x86 -mcpu=corei7 -mattr=-cmov -verify-machineinstrs | FileCheck %s --check-prefix NOCMOV
+; RUN: llc < %s -O0 -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s -check-prefix=WITH-CMOV
+; RUN: llc < %s -O0 -mtriple=i686-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s -check-prefix=WITH-CMOV
+; RUN: llc < %s -O0 -mtriple=i686-- -mcpu=corei7 -mattr=-cmov -verify-machineinstrs | FileCheck %s --check-prefix NOCMOV
 
 @sc32 = external global i32
 

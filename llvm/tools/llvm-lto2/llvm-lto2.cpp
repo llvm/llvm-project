@@ -109,6 +109,10 @@ static cl::opt<bool>
              cl::desc("Run LTO passes using the new pass manager"),
              cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
+                     cl::desc("Print pass management debugging information"));
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -194,6 +198,8 @@ static int run(int argc, char **argv) {
   if (auto RM = getRelocModel())
     Conf.RelocModel = *RM;
   Conf.CodeModel = CMModel;
+
+  Conf.DebugPassManager = DebugPassManager;
 
   if (SaveTemps)
     check(Conf.addSaveTemps(OutputFilename + "."),

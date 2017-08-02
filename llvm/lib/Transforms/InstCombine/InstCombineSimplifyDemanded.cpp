@@ -534,7 +534,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.
-      if (BitWidth <= ShiftAmt || Known.Zero[BitWidth-ShiftAmt-1] ||
+      assert(BitWidth > ShiftAmt && "Shift amount not saturated?");
+      if (Known.Zero[BitWidth-ShiftAmt-1] ||
           !DemandedMask.intersects(HighBits)) {
         BinaryOperator *LShr = BinaryOperator::CreateLShr(I->getOperand(0),
                                                           I->getOperand(1));

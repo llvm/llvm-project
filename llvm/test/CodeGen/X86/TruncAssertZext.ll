@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 -march=x86-64 | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-- | FileCheck %s
 ; Checks that a zeroing mov is inserted for the trunc/zext pair even when
 ; the source of the zext is an AssertSext node
 ; PR20494

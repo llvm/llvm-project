@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=penryn | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=penryn | FileCheck %s
 
 define void @a(<4 x float>* %x) nounwind  {
 entry:

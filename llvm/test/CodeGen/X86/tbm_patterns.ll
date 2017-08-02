@@ -253,3 +253,23 @@ define i64 @test_x86_tbm_tzmsk_u64(i64 %a) nounwind {
   ret i64 %t2
 }
 
+define i64 @test_and_large_constant_mask(i64 %x) {
+; CHECK-LABEL: test_and_large_constant_mask:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    bextr $15872, %rdi, %rax # imm = 0x3E00
+; CHECK-NEXT:    retq
+entry:
+  %and = and i64 %x, 4611686018427387903
+  ret i64 %and
+}
+
+define i64 @test_and_large_constant_mask_load(i64* %x) {
+; CHECK-LABEL: test_and_large_constant_mask_load:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    bextr $15872, (%rdi), %rax # imm = 0x3E00
+; CHECK-NEXT:    retq
+entry:
+  %x1 = load i64, i64* %x
+  %and = and i64 %x1, 4611686018427387903
+  ret i64 %and
+}

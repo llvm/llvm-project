@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32
-; RUN: llc < %s -march=ppc64 -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC64
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-NOFP
-; RUN: llc < %s -march=ppc64 -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC64-NOFP
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32-RS
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-RS-NOFP
+; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32
+; RUN: llc < %s -mtriple=powerpc64-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC64
+; RUN: llc < %s -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-NOFP
+; RUN: llc < %s -mtriple=powerpc64-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC64-NOFP
+; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32
+; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=CHECK-PPC32-RS
+; RUN: llc < %s -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=CHECK-PPC32-RS-NOFP
 
 ; CHECK-PPC32: stw r31, -4(r1)
 ; CHECK-PPC32: lwz r1, 0(r1)

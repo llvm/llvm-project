@@ -690,12 +690,12 @@
 		3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFED2C19C257A0009756A7 /* HostProcess.cpp */; };
 		490A36C0180F0E6F00BA31F8 /* PlatformWindows.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 490A36BD180F0E6F00BA31F8 /* PlatformWindows.cpp */; };
 		490A966B1628C3BF00F0002E /* SBDeclaration.h in Headers */ = {isa = PBXBuildFile; fileRef = 9452573816262CEF00325455 /* SBDeclaration.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		492DB7E71EC662B100B9E9AF /* Status.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 492DB7E61EC662B100B9E9AF /* Status.h */; };
 		492DB7EB1EC662E200B9E9AF /* Status.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492DB7E81EC662D100B9E9AF /* Status.cpp */; };
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
+		4971D4B51F30ECFB00823171 /* SBProcessInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */; };
 		4984BA131B978C55008658D4 /* ClangExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA0E1B978C3E008658D4 /* ClangExpressionVariable.cpp */; };
 		4984BA161B979973008658D4 /* ExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA151B979973008658D4 /* ExpressionVariable.cpp */; };
 		4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 4984BA171B979C08008658D4 /* ExpressionVariable.h */; };
@@ -721,6 +721,7 @@
 		4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */; };
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
+		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CABA9DF134A8BCD00539BDD /* ValueObjectMemory.cpp */; };
@@ -1198,7 +1199,6 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				492DB7E71EC662B100B9E9AF /* Status.h in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2439,6 +2439,9 @@
 		4984BA0F1B978C3E008658D4 /* ClangExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangExpressionVariable.h; path = ExpressionParser/Clang/ClangExpressionVariable.h; sourceTree = "<group>"; };
 		4984BA151B979973008658D4 /* ExpressionVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ExpressionVariable.cpp; path = source/Expression/ExpressionVariable.cpp; sourceTree = "<group>"; };
 		4984BA171B979C08008658D4 /* ExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionVariable.h; path = include/lldb/Expression/ExpressionVariable.h; sourceTree = "<group>"; };
+		4987FB1C1F30EC6000E5C17D /* SBProcessInfo.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBProcessInfo.i; sourceTree = "<group>"; };
+		4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBProcessInfo.cpp; path = source/API/SBProcessInfo.cpp; sourceTree = "<group>"; };
+		4987FB201F30EC9900E5C17D /* SBProcessInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBProcessInfo.h; path = include/lldb/API/SBProcessInfo.h; sourceTree = "<group>"; };
 		499F381E11A5B3F300F5CE02 /* CommandObjectArgs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectArgs.h; path = source/Commands/CommandObjectArgs.h; sourceTree = "<group>"; };
 		499F381F11A5B3F300F5CE02 /* CommandObjectArgs.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectArgs.cpp; path = source/Commands/CommandObjectArgs.cpp; sourceTree = "<group>"; };
 		49A1CAC11430E21D00306AC9 /* ExpressionSourceCode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionSourceCode.h; path = include/lldb/Expression/ExpressionSourceCode.h; sourceTree = "<group>"; };
@@ -3876,6 +3879,7 @@
 				263C493B178B61CC0070F12D /* SBModuleSpec.i */,
 				262F12B8183546C900AEB384 /* SBPlatform.i */,
 				2611FF07142D83060017FEA3 /* SBProcess.i */,
+				4987FB1C1F30EC6000E5C17D /* SBProcessInfo.i */,
 				AF0EBBEE1859419F0059E52F /* SBQueue.i */,
 				AF0EBBEF1859419F0059E52F /* SBQueueItem.i */,
 				2611FF08142D83060017FEA3 /* SBSection.i */,
@@ -4001,6 +4005,8 @@
 				AF0EBBE7185940FB0059E52F /* SBQueueItem.cpp */,
 				9A9831041125FC5800A56CB0 /* SBProcess.h */,
 				9A9831031125FC5800A56CB0 /* SBProcess.cpp */,
+				4987FB201F30EC9900E5C17D /* SBProcessInfo.h */,
+				4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */,
 				26B8283C142D01E9002DBC64 /* SBSection.h */,
 				26B8283F142D020F002DBC64 /* SBSection.cpp */,
 				9A9831061125FC5800A56CB0 /* SBSourceManager.h */,
@@ -6473,6 +6479,7 @@
 				8CCB018219BA4E270009FD44 /* SBThreadCollection.h in Headers */,
 				9A36D24D1EB3BE7F00AAD9EA /* SBTrace.h in Headers */,
 				AF0EBBEC185941360059E52F /* SBQueue.h in Headers */,
+				4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */,
 				26680222115FD13D008E1FE4 /* SBError.h in Headers */,
 				26680223115FD13D008E1FE4 /* SBEvent.h in Headers */,
 				AFDCDBCB19DD0F42005EA55E /* SBExecutionContext.h in Headers */,
@@ -7068,6 +7075,7 @@
 				26680326116005DB008E1FE4 /* SBTarget.cpp in Sources */,
 				23DCBEA21D63E7190084C36B /* SBStructuredData.cpp in Sources */,
 				26680327116005DC008E1FE4 /* SBSourceManager.cpp in Sources */,
+				4971D4B51F30ECFB00823171 /* SBProcessInfo.cpp in Sources */,
 				3F81692C1ABB7A1E001DA9DF /* SystemInitializerFull.cpp in Sources */,
 				26680328116005DE008E1FE4 /* SBProcess.cpp in Sources */,
 				2668032A116005E0008E1FE4 /* SBListener.cpp in Sources */,

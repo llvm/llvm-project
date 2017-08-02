@@ -86,7 +86,9 @@ private:
   bool checkArgumentUses(Value &Arg) const;
   bool isOutArgumentCandidate(Argument &Arg) const;
 
+#ifndef NDEBUG
   bool isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const;
+#endif
 public:
   static char ID;
 
@@ -185,6 +187,7 @@ bool AMDGPURewriteOutArguments::doInitialization(Module &M) {
   return false;
 }
 
+#ifndef NDEBUG
 bool AMDGPURewriteOutArguments::isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const {
   VectorType *VT0 = dyn_cast<VectorType>(Ty0);
   VectorType *VT1 = dyn_cast<VectorType>(Ty1);
@@ -198,6 +201,7 @@ bool AMDGPURewriteOutArguments::isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const 
   return DL->getTypeSizeInBits(VT0->getElementType()) ==
          DL->getTypeSizeInBits(VT1->getElementType());
 }
+#endif
 
 bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (skipFunction(F))

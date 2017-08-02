@@ -872,6 +872,19 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           InlineHistoryIncludes(&Callee, InlineHistoryID, InlineHistory))
         continue;
 
+      // Check if this inlining may repeat breaking an SCC apart that has
+      // already been split once before. In that case, inlining here may
+      // trigger infinite inlining, much like is prevented within the inliner
+      // itself by the InlineHistory above, but spread across CGSCC iterations
+      // and thus hidden from the full inline history.
+      if (CG.lookupSCC(*CG.lookup(Callee)) == C &&
+          UR.InlinedInternalEdges.count({&N, C})) {
+        DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
+                        "previously split out of this SCC by inlining: "
+                     << F.getName() << " -> " << Callee.getName() << "\n");
+        continue;
+      }
+
       // Check whether we want to inline this callsite.
       if (!shouldInline(CS, GetInlineCost, ORE))
         continue;
@@ -949,17 +962,38 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       for (LazyCallGraph::Edge &E : *CalleeN)
         RC->insertTrivialRefEdge(N, E.getNode());
     }
-    InlinedCallees.clear();
 
     // At this point, since we have made changes we have at least removed
     // a call instruction. However, in the process we do some incremental
     // simplification of the surrounding code. This simplification can
     // essentially do all of the same things as a function pass and we can
     // re-use the exact same logic for updating the call graph to reflect the
-    // change..
+    // change.
+    LazyCallGraph::SCC *OldC = C;
     C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR);
     DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
     RC = &C->getOuterRefSCC();
+
+    // If this causes an SCC to split apart into multiple smaller SCCs, there
+    // is a subtle risk we need to prepare for. Other transformations may
+    // expose an "infinite inlining" opportunity later, and because of the SCC
+    // mutation, we will revisit this function and potentially re-inline. If we
+    // do, and that re-inlining also has the potentially to mutate the SCC
+    // structure, the infinite inlining problem can manifest through infinite
+    // SCC splits and merges. To avoid this, we capture the originating caller
+    // node and the SCC containing the call edge. This is a slight over
+    // approximation of the possible inlining decisions that must be avoided,
+    // but is relatively efficient to store.
+    // FIXME: This seems like a very heavyweight way of retaining the inline
+    // history, we should look for a more efficient way of tracking it.
+    if (C != OldC && llvm::any_of(InlinedCallees, [&](Function *Callee) {
+          return CG.lookupSCC(*CG.lookup(*Callee)) == OldC;
+        })) {
+      DEBUG(dbgs() << "Inlined an internal call edge and split an SCC, "
+                      "retaining this to avoid infinite inlining.\n");
+      UR.InlinedInternalEdges.insert({&N, OldC});
+    }
+    InlinedCallees.clear();
   }
 
   // Now that we've finished inlining all of the calls across this SCC, delete

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -mcpu=g5 | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 -mcpu=g5 | \
 ; RUN:   grep "vspltish v.*, 10"
 
 define void @test(<8 x i16>* %P) {

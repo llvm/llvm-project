@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -no-integrated-as | FileCheck %s
 
 ; If the target does not have 64-bit integer registers, emit 32-bit register
 ; names.

@@ -69,6 +69,9 @@ public:
       return -1;
     return 0;
   }
+
+  LLVM_READONLY
+  bool enableFunctionCalls() const;
 };
 
 //===----------------------------------------------------------------------===//

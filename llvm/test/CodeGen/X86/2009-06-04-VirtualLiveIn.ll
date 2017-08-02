@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 	%0 = type { %struct.GAP }		; type %0
 	%1 = type { i16, i8, i8 }		; type %1

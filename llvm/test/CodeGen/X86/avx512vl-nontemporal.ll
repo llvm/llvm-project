@@ -1,4 +1,4 @@
-; RUN: llc < %s  -march=x86-64 -mtriple=x86_64-apple-darwin -mcpu=skx --show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=skx --show-mc-encoding | FileCheck %s
 
 define void @f256(<8 x float> %A, <8 x float> %AA, i8* %B, <4 x double> %C, <4 x double> %CC, i32 %D, <4 x i64> %E, <4 x i64> %EE) {
 ; CHECK: vmovntps %ymm{{.*}} ## EVEX TO VEX Compression encoding: [0xc5

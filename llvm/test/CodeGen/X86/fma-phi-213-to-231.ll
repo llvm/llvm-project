@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin10  -mattr=+fma,-fma4  | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -mattr=+fma,-fma4 | FileCheck %s
-; RUN: llc < %s -march=x86 -mcpu=bdver2 -mattr=-fma4  | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=bdver2 -mattr=-fma4  | FileCheck %s
 
 ; Test FMA3 variant selection
 

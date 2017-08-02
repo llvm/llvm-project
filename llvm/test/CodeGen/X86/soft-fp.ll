@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=x86    -mattr=+mmx,+sse,+soft-float \
+; RUN: llc < %s -mtriple=i686--    -mattr=+mmx,+sse,+soft-float \
 ; RUN:     | FileCheck %s --check-prefix=SOFT1 --check-prefix=CHECK
-; RUN: llc < %s -march=x86-64 -mattr=+mmx,+sse2,+soft-float \
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+mmx,+sse2,+soft-float \
 ; RUN:     | FileCheck %s --check-prefix=SOFT2 --check-prefix=CHECK
-; RUN: llc < %s -march=x86-64 -mattr=+mmx,+sse \
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+mmx,+sse \
 ; RUN:     | FileCheck %s --check-prefix=SSE1 --check-prefix=CHECK
-; RUN: llc < %s -march=x86-64 -mattr=+mmx,+sse2 \
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+mmx,+sse2 \
 ; RUN:     | FileCheck %s --check-prefix=SSE2 --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=x86_64-gnux32 -mattr=+mmx,+sse2,+soft-float | FileCheck %s
 

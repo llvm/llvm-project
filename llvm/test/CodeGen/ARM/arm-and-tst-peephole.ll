@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=thumb-eabi -arm-atomic-cfg-tidy=0 -mcpu=arm1156t2-s -mattr=+thumb2 %s -o - | FileCheck -check-prefix=T2 %s
 ; RUN: llc -mtriple=thumbv8-eabi -arm-atomic-cfg-tidy=0 %s -o - | FileCheck -check-prefix=V8 %s
 
-; FIXME: The -march=thumb test doesn't change if -disable-peephole is specified.
+; FIXME: The -mtriple=thumb test doesn't change if -disable-peephole is specified.
 
 %struct.Foo = type { i8* }
 

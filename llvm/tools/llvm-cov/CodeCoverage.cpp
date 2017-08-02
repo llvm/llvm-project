@@ -133,7 +133,7 @@ private:
   StringMap<std::string> RemappedFilenames;
 
   /// The architecture the coverage mapping data targets.
-  std::string CoverageArch;
+  std::vector<StringRef> CoverageArches;
 
   /// A cache for demangled symbols.
   DemangleCache DC;
@@ -329,7 +329,7 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
       warning("profile data may be out of date - object is newer",
               ObjectFilename);
   auto CoverageOrErr =
-      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArch);
+      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches);
   if (Error E = CoverageOrErr.takeError()) {
     error("Failed to load coverage: " + toString(std::move(E)),
           join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "));
@@ -499,8 +499,8 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
 
-  cl::opt<std::string> Arch(
-      "arch", cl::desc("architecture of the coverage mapping binary"));
+  cl::list<std::string> Arches(
+      "arch", cl::desc("architectures of the coverage mapping binaries"));
 
   cl::opt<bool> DebugDump("dump", cl::Optional,
                           cl::desc("Show internal debug dump"));
@@ -632,12 +632,19 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       Filters.push_back(std::unique_ptr<CoverageFilter>(StatFilterer));
     }
 
-    if (!Arch.empty() &&
-        Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
-      error("Unknown architecture: " + Arch);
-      return 1;
+    if (!Arches.empty()) {
+      for (const std::string &Arch : Arches) {
+        if (Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
+          error("Unknown architecture: " + Arch);
+          return 1;
+        }
+        CoverageArches.emplace_back(Arch);
+      }
+      if (CoverageArches.size() != ObjectFilenames.size()) {
+        error("Number of architectures doesn't match the number of objects");
+        return 1;
+      }
     }
-    CoverageArch = Arch;
 
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);

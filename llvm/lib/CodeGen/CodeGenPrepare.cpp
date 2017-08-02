@@ -2271,8 +2271,12 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     return false;
   }
 
-  // Early exit from expansion if size greater than max bytes to load.
+  // Scale the max size down if the target can load more bytes than we need.
   uint64_t SizeVal = SizeCast->getZExtValue();
+  if (MaxLoadSize > SizeVal)
+    MaxLoadSize = 1 << SizeCast->getValue().logBase2();
+
+  // Calculate how many load pairs are needed for the constant size.
   unsigned NumLoads = 0;
   unsigned RemainingSize = SizeVal;
   unsigned LoadSize = MaxLoadSize;
@@ -2282,6 +2286,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     LoadSize = LoadSize / 2;
   }
 
+  // Don't expand if this will require more loads than desired by the target.
   if (NumLoads > TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize())) {
     NumMemCmpGreaterThanMax++;
     return false;

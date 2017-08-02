@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=x86 | FileCheck %s
+;RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 define void @foo(i32 inreg %dns) minsize {
 entry:

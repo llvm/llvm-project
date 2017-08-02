@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-linux-gnu -regalloc=fast -optimize-regalloc=0 -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -regalloc=fast -optimize-regalloc=0 -relocation-model=pic | FileCheck %s
 ; PR4004
 
 ; CHECK: {{leaq.*TLSGD}}

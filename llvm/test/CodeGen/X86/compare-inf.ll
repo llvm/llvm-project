@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 ; Convert oeq and une to ole/oge/ule/uge when comparing with infinity
 ; and negative infinity, because those are more efficient on x86.

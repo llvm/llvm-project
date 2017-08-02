@@ -1,10 +1,10 @@
 ; RUN: llc < %s -emulated-tls -mtriple=i686-linux-android -relocation-model=pic \
 ; RUN:     | FileCheck -check-prefix=X86_32 %s
-; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android -march=x86 -relocation-model=pic \
+; RUN: llc < %s -emulated-tls -mtriple=i686-linux-android -relocation-model=pic \
 ; RUN:     | FileCheck -check-prefix=X86_32 %s
 ; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android -relocation-model=pic \
 ; RUN:     | FileCheck -check-prefix=X86_64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=i386-linux-gnu -relocation-model=pic \
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-gnu -relocation-model=pic \
 ; RUN:     | FileCheck %s
 
 ; Make sure that TLS symbols are emitted in expected order.

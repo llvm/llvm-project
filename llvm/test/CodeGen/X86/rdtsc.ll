@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 -mcpu=generic | FileCheck %s
-; RUN: llc < %s -march=x86 -mcpu=generic | FileCheck %s --check-prefix=CHECK --check-prefix=X86
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=generic | FileCheck %s --check-prefix=CHECK --check-prefix=X86
 
 ; Verify that we correctly lower ISD::READCYCLECOUNTER.
 

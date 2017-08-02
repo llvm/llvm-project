@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep mov | count 1
+; RUN: llc < %s -mtriple=x86_64-- | grep mov | count 1
 
 ; Do eliminate the zero-extension instruction and rely on
 ; x86-64's implicit zero-extension!

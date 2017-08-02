@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -enable-tail-merge=0 | grep bl.*baz | count 2
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -enable-tail-merge=0 | grep bl.*quux | count 2
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep bl.*baz | count 1
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep bl.*quux | count 1
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -enable-tail-merge=0 | grep bl.*baz | count 2
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -enable-tail-merge=0 | grep bl.*quux | count 2
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep bl.*baz | count 1
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep bl.*quux | count 1
 ; Check that tail merging is the default on ppc, and that -enable-tail-merge works.
 
 ; ModuleID = 'tail.c'

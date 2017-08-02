@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -verify-machineinstrs
+; RUN: llc < %s -mtriple=ppc32-- -verify-machineinstrs
 
 ; Machine code verifier will call isRegTiedToDefOperand() on /all/ register use
 ; operands.  We must make sure that the operand flag is found correctly.

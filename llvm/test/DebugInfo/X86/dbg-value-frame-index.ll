@@ -20,7 +20,7 @@ while.end:
 }
 
 ; CHECK-LABEL: test
-; CHECK:       #DEBUG_VALUE: test:w <- [%RSP+8]
+; CHECK:       #DEBUG_VALUE: test:w <- [DW_OP_plus_uconst 8] [%RSP+0]
 ; DWARF:       Location description: 77 08
 ;                                    DW_OP_breg7 +8
 

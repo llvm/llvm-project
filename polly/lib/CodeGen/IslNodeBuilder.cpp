@@ -324,11 +324,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   //     2.  test/Isl/CodeGen/OpenMP/loop-body-references-outer-values-3.ll
   SetVector<Value *> ReplacedValues;
   for (Value *V : Values) {
-    auto It = ValueMap.find(V);
-    if (It == ValueMap.end())
-      ReplacedValues.insert(V);
-    else
-      ReplacedValues.insert(It->second);
+    ReplacedValues.insert(getLatestValue(V));
   }
   Values = ReplacedValues;
 }
@@ -347,6 +343,13 @@ void IslNodeBuilder::updateValues(ValueMapT &NewValues) {
 
     ValueMap[I.first] = I.second;
   }
+}
+
+Value *IslNodeBuilder::getLatestValue(Value *Original) const {
+  auto It = ValueMap.find(Original);
+  if (It == ValueMap.end())
+    return Original;
+  return It->second;
 }
 
 void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,

@@ -1,7 +1,7 @@
-; RUN: llc -march x86 -mcpu pentium4 < %s | FileCheck %s -check-prefix=SSE
-; RUN: llc -march x86 -mcpu pentium3 < %s | FileCheck %s -check-prefix=NOSSE2
-; RUN: llc -march x86 -mcpu pentium2 < %s | FileCheck %s -check-prefix=NOSSE1
-; RUN: llc -march x86 -mcpu pentium < %s | FileCheck %s -check-prefix=NOCMOV
+; RUN: llc -mtriple=i686-- -mcpu pentium4 < %s | FileCheck %s -check-prefix=SSE
+; RUN: llc -mtriple=i686-- -mcpu pentium3 < %s | FileCheck %s -check-prefix=NOSSE2
+; RUN: llc -mtriple=i686-- -mcpu pentium2 < %s | FileCheck %s -check-prefix=NOSSE1
+; RUN: llc -mtriple=i686-- -mcpu pentium < %s | FileCheck %s -check-prefix=NOCMOV
 ; PR14035
 
 define double @test1(i32 %a, i32 %b, double %x) nounwind {

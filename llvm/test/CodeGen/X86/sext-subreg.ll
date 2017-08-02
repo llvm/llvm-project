@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; rdar://7529457
 
 define i64 @t(i64 %A, i64 %B, i32* %P, i64 *%P2) nounwind {

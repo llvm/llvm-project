@@ -1,5 +1,10 @@
 ; RUN: llvm-as < %s > %t1.bc
 
+; Try the default pipeline and check is BasicAA is invoked.
+; RUN: llvm-lto2 run %t1.bc -o %t.o -r %t1.bc,patatino,px -debug-pass-manager \
+; RUN:  -use-new-pm 2>&1 | FileCheck %s --check-prefix=DEFAULT
+; DEFAULT: Running analysis: BasicAA on patatino
+
 ; Try a custom pipeline
 ; RUN: llvm-lto2 run %t1.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,patatino,px -opt-pipeline loweratomic \

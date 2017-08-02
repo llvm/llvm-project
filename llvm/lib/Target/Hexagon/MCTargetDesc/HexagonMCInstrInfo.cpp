@@ -11,17 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonMCInstrInfo.h"
-
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "Hexagon.h"
-#include "HexagonBaseInfo.h"
-#include "HexagonMCChecker.h"
+#include "MCTargetDesc/HexagonBaseInfo.h"
+#include "MCTargetDesc/HexagonMCChecker.h"
+#include "MCTargetDesc/HexagonMCExpr.h"
+#include "MCTargetDesc/HexagonMCShuffler.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
+#include <limits>
 
-namespace llvm {
+using namespace llvm;
 
 Hexagon::PacketIterator::PacketIterator(MCInstrInfo const &MCII,
                                         MCInst const &Inst)
@@ -231,6 +241,7 @@ MCInstrDesc const &HexagonMCInstrInfo::getDesc(MCInstrInfo const &MCII,
 
 unsigned HexagonMCInstrInfo::getDuplexRegisterNumbering(unsigned Reg) {
   using namespace Hexagon;
+
   switch (Reg) {
   default:
     llvm_unreachable("unknown duplex register");
@@ -769,11 +780,11 @@ bool HexagonMCInstrInfo::mustNotExtend(MCExpr const &Expr) {
 }
 void HexagonMCInstrInfo::setS27_2_reloc(MCExpr const &Expr, bool Val) {
   HexagonMCExpr &HExpr =
-      const_cast<HexagonMCExpr &>(*llvm::cast<HexagonMCExpr>(&Expr));
+      const_cast<HexagonMCExpr &>(*cast<HexagonMCExpr>(&Expr));
   HExpr.setS27_2_reloc(Val);
 }
 bool HexagonMCInstrInfo::s27_2_reloc(MCExpr const &Expr) {
-  HexagonMCExpr const *HExpr = llvm::dyn_cast<HexagonMCExpr>(&Expr);
+  HexagonMCExpr const *HExpr = dyn_cast<HexagonMCExpr>(&Expr);
   if (!HExpr)
     return false;
   return HExpr->s27_2_reloc();
@@ -848,4 +859,3 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
     return 0x1;
   return 0;
 }
-} // namespace llvm
