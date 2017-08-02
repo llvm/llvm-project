@@ -275,7 +275,7 @@ std::string ClangdServer::dumpAST(PathRef File) {
   assert(Resources && "dumpAST is called for non-added document");
 
   std::string Result;
-  Resources->getAST().get().runUnderLock([&Result](ParsedAST *AST) {
+  Resources->getAST().get()->runUnderLock([&Result](ParsedAST *AST) {
     llvm::raw_string_ostream ResultOS(Result);
     if (AST) {
       clangd::dumpAST(*AST, ResultOS);
@@ -299,7 +299,7 @@ Tagged<std::vector<Location>> ClangdServer::findDefinitions(PathRef File,
   assert(Resources && "Calling findDefinitions on non-added file");
 
   std::vector<Location> Result;
-  Resources->getAST().get().runUnderLock([Pos, &Result](ParsedAST *AST) {
+  Resources->getAST().get()->runUnderLock([Pos, &Result](ParsedAST *AST) {
     if (!AST)
       return;
     Result = clangd::findDefinitions(*AST, Pos);

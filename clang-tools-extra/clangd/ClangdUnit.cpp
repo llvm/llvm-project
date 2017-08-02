@@ -707,7 +707,7 @@ CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
   PreamblePromise.set_value(nullptr);
   PreambleFuture = PreamblePromise.get_future();
 
-  ASTPromise.set_value(ParsedASTWrapper(llvm::None));
+  ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
   ASTFuture = ASTPromise.get_future();
 }
 
@@ -722,7 +722,7 @@ void CppFile::cancelRebuilds() {
     PreambleFuture = PreamblePromise.get_future();
   }
   if (futureIsReady(ASTFuture)) {
-    ASTPromise = std::promise<ParsedASTWrapper>();
+    ASTPromise = std::promise<std::shared_ptr<ParsedASTWrapper>>();
     ASTFuture = ASTPromise.get_future();
   }
   // Now wait for rebuild to finish.
@@ -730,7 +730,7 @@ void CppFile::cancelRebuilds() {
 
   // Return empty results for futures.
   PreamblePromise.set_value(nullptr);
-  ASTPromise.set_value(ParsedASTWrapper(llvm::None));
+  ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
 }
 
 llvm::Optional<std::vector<DiagWithFixIts>>
@@ -763,7 +763,7 @@ CppFile::deferRebuild(StringRef NewContents,
       this->PreambleFuture = this->PreamblePromise.get_future();
     }
     if (futureIsReady(this->ASTFuture)) {
-      this->ASTPromise = std::promise<ParsedASTWrapper>();
+      this->ASTPromise = std::promise<std::shared_ptr<ParsedASTWrapper>>();
       this->ASTFuture = this->ASTPromise.get_future();
     }
   } // unlock Mutex.
@@ -878,7 +878,7 @@ CppFile::deferRebuild(StringRef NewContents,
         return Diagnostics; // Our rebuild request was cancelled, don't set
                             // ASTPromise.
 
-      That->ASTPromise.set_value(ParsedASTWrapper(std::move(NewAST)));
+      That->ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(std::move(NewAST)));
     } // unlock Mutex
 
     return Diagnostics;
@@ -898,7 +898,7 @@ std::shared_ptr<const PreambleData> CppFile::getPossiblyStalePreamble() const {
   return LatestAvailablePreamble;
 }
 
-std::shared_future<ParsedASTWrapper> CppFile::getAST() const {
+std::shared_future<std::shared_ptr<ParsedASTWrapper>> CppFile::getAST() const {
   std::lock_guard<std::mutex> Lock(Mutex);
   return ASTFuture;
 }

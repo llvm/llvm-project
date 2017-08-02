@@ -104,10 +104,6 @@ private:
 // Provides thread-safe access to ParsedAST.
 class ParsedASTWrapper {
 public:
-  // MSVC does not allow to use types without default constructor in
-  // std::promise<> template arguments.
-  ParsedASTWrapper() = default;
-
   ParsedASTWrapper(ParsedASTWrapper &&Wrapper);
   ParsedASTWrapper(llvm::Optional<ParsedAST> AST);
 
@@ -192,7 +188,10 @@ public:
 
   /// Returns a future to get the most fresh AST for a file. Returned AST is
   /// wrapped to prevent concurrent accesses.
-  std::shared_future<ParsedASTWrapper> getAST() const;
+  /// We use std::shared_ptr here because MVSC fails to compile non-copyable
+  /// classes as template arguments of promise/future. It is guaranteed to
+  /// always be non-null.
+  std::shared_future<std::shared_ptr<ParsedASTWrapper>> getAST() const;
 
   /// Get CompileCommand used to build this CppFile.
   tooling::CompileCommand const &getCompileCommand() const;
@@ -226,8 +225,10 @@ private:
   std::condition_variable RebuildCond;
 
   /// Promise and future for the latests AST. Fulfilled during rebuild.
-  std::promise<ParsedASTWrapper> ASTPromise;
-  std::shared_future<ParsedASTWrapper> ASTFuture;
+  /// We use std::shared_ptr here because MVSC fails to compile non-copyable
+  /// classes as template arguments of promise/future.
+  std::promise<std::shared_ptr<ParsedASTWrapper>> ASTPromise;
+  std::shared_future<std::shared_ptr<ParsedASTWrapper>> ASTFuture;
 
   /// Promise and future for the latests Preamble. Fulfilled during rebuild.
   std::promise<std::shared_ptr<const PreambleData>> PreamblePromise;
