@@ -531,6 +531,12 @@ public:
   /// yield a result.
   CoverageData getCoverageForFile(StringRef Filename) const;
 
+  /// Get the coverage for a particular function.
+  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
+
+  /// Get the coverage for an expansion within a coverage set.
+  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
+
   /// Gets all of the functions covered by this profile.
   iterator_range<FunctionRecordIterator> getCoveredFunctions() const {
     return make_range(FunctionRecordIterator(Functions),
@@ -550,12 +556,6 @@ public:
   /// the file in which the definition for the common function begins.
   std::vector<InstantiationGroup>
   getInstantiationGroups(StringRef Filename) const;
-
-  /// Get the coverage for a particular function.
-  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
-
-  /// Get the coverage for an expansion within a coverage set.
-  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
 };
 
 // Profile coverage map has the following layout:
