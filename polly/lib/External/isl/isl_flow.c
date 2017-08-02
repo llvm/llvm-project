@@ -366,7 +366,6 @@ static int access_sort_cmp(const void *p1, const void *p2, void *user)
 error:
 	sort_info->error = 1;
 	return 0;
-
 }
 
 /* Sort the must source accesses in their textual order.
@@ -721,30 +720,30 @@ static int can_precede_at_level(int shared_level, int target_level)
  * If temp_rel[j] is empty, then there can be no improvement and
  * we return immediately.
  *
- * This function returns 0 in case it was executed successfully and
- * -1 in case of errors during the execution of this function.
+ * This function returns isl_stat_ok in case it was executed successfully and
+ * isl_stat_error in case of errors during the execution of this function.
  */
-static int intermediate_sources(__isl_keep isl_access_info *acc,
+static isl_stat intermediate_sources(__isl_keep isl_access_info *acc,
 	struct isl_map **temp_rel, int j, int sink_level)
 {
 	int k, level;
 	int depth = 2 * isl_map_dim(acc->source[j].map, isl_dim_in) + 1;
 
 	if (isl_map_plain_is_empty(temp_rel[j]))
-		return 0;
+		return isl_stat_ok;
 
 	for (k = j - 1; k >= 0; --k) {
 		int plevel, plevel2;
 		plevel = acc->level_before(acc->source[k].data, acc->sink.data);
 		if (plevel < 0)
-			return -1;
+			return isl_stat_error;
 		if (!can_precede_at_level(plevel, sink_level))
 			continue;
 
 		plevel2 = acc->level_before(acc->source[j].data,
 						acc->source[k].data);
 		if (plevel2 < 0)
-			return -1;
+			return isl_stat_error;
 
 		for (level = sink_level; level <= depth; ++level) {
 			struct isl_map *T;
@@ -767,7 +766,7 @@ static int intermediate_sources(__isl_keep isl_access_info *acc,
 		}
 	}
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Compute all iterations of may source j that precedes the sink at the given
@@ -1180,14 +1179,14 @@ static __isl_give isl_flow *compute_val_based_dependences(
 			must_rel[j] = isl_map_union_disjoint(must_rel[j], T);
 			mustdo = rest;
 
-			if (intermediate_sources(acc, must_rel, j, level))
+			if (intermediate_sources(acc, must_rel, j, level) < 0)
 				goto error;
 
 			T = last_source(acc, maydo, j, level, &rest);
 			may_rel[j] = isl_map_union_disjoint(may_rel[j], T);
 			maydo = rest;
 
-			if (intermediate_sources(acc, may_rel, j, level))
+			if (intermediate_sources(acc, may_rel, j, level) < 0)
 				goto error;
 
 			if (isl_set_plain_is_empty(mustdo) &&
@@ -1204,9 +1203,9 @@ static __isl_give isl_flow *compute_val_based_dependences(
 			if (!can_precede_at_level(plevel, level))
 				continue;
 
-			if (intermediate_sources(acc, must_rel, j, level))
+			if (intermediate_sources(acc, must_rel, j, level) < 0)
 				goto error;
-			if (intermediate_sources(acc, may_rel, j, level))
+			if (intermediate_sources(acc, may_rel, j, level) < 0)
 				goto error;
 		}
 

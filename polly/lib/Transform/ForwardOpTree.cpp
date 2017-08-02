@@ -137,9 +137,8 @@ private:
   ///
   /// @return If DoIt==false, return whether the operand tree can be forwarded.
   ///         If DoIt==true, return FD_DidForward.
-  ForwardingDecision canForwardTree(ScopStmt *TargetStmt, Value *UseVal,
-                                    ScopStmt *UseStmt, Loop *UseLoop,
-                                    bool DoIt) {
+  ForwardingDecision forwardTree(ScopStmt *TargetStmt, Value *UseVal,
+                                 ScopStmt *UseStmt, Loop *UseLoop, bool DoIt) {
     VirtualUse VUse = VirtualUse::create(UseStmt, UseLoop, UseVal, true);
     switch (VUse.getKind()) {
     case VirtualUse::Constant:
@@ -241,7 +240,7 @@ private:
 
       for (Value *OpVal : Inst->operand_values()) {
         ForwardingDecision OpDecision =
-            canForwardTree(TargetStmt, OpVal, DefStmt, DefLoop, DoIt);
+            forwardTree(TargetStmt, OpVal, DefStmt, DefLoop, DoIt);
         switch (OpDecision) {
         case FD_CannotForward:
           assert(!DoIt);
@@ -275,14 +274,16 @@ private:
     Loop *InLoop = Stmt->getSurroundingLoop();
 
     ForwardingDecision Assessment =
-        canForwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, false);
+        forwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, false);
     assert(Assessment != FD_DidForward);
     if (Assessment != FD_CanForwardTree)
       return false;
 
     ForwardingDecision Execution =
-        canForwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, true);
-    assert(Execution == FD_DidForward);
+        forwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, true);
+    assert(Execution == FD_DidForward &&
+           "A previous positive assessment must also be executable");
+    (void)Execution;
 
     Stmt->removeSingleMemoryAccess(RA);
     return true;

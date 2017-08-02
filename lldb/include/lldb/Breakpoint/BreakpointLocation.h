@@ -17,6 +17,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Breakpoint/StoppointLocation.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Utility/UserID.h"
@@ -255,14 +256,17 @@ public:
 
   //------------------------------------------------------------------
   /// Use this to access breakpoint options from this breakpoint location.
-  /// This will point to the owning breakpoint's options unless options have
-  /// been set specifically on this location.
+  /// This will return the options that have a setting for the specified
+  /// BreakpointOptions kind.
   ///
+  /// @param[in] kind
+  ///     The particular option you are looking up.
   /// @return
   ///     A pointer to the containing breakpoint's options if this
   ///     location doesn't have its own copy.
   //------------------------------------------------------------------
-  const BreakpointOptions *GetOptionsNoCreate() const;
+  const BreakpointOptions *GetOptionsSpecifyingKind(
+      BreakpointOptions::OptionKind kind) const;
 
   bool ValidForThisThread(Thread *thread);
 
