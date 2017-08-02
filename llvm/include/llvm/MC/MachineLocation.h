@@ -67,6 +67,7 @@ public:
     IsRegister = false;
     Register = R;
     Offset = O;
+    assert(O == 0 && "offset is expected to always be zero");
   }
 };
 
