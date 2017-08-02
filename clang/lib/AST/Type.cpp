@@ -2302,6 +2302,15 @@ bool Type::isAlignValT() const {
   return false;
 }
 
+bool Type::isStdByteType() const {
+  if (auto *ET = getAs<EnumType>()) {
+    auto *II = ET->getDecl()->getIdentifier();
+    if (II && II->isStr("byte") && ET->getDecl()->isInStdNamespace())
+      return true;
+  }
+  return false;
+}
+
 bool Type::isPromotableIntegerType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>())
     switch (BT->getKind()) {
