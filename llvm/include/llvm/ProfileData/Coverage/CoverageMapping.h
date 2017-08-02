@@ -396,6 +396,63 @@ struct CoverageSegment {
   }
 };
 
+/// An instantiation group contains a \c FunctionRecord list, such that each
+/// record corresponds to a distinct instantiation of the same function.
+///
+/// Note that it's possible for a function to have more than one instantiation
+/// (consider C++ template specializations or static inline functions).
+class InstantiationGroup {
+  friend class CoverageMapping;
+
+  unsigned Line;
+  unsigned Col;
+  std::vector<const FunctionRecord *> Instantiations;
+
+  InstantiationGroup(unsigned Line, unsigned Col,
+                     std::vector<const FunctionRecord *> Instantiations)
+      : Line(Line), Col(Col), Instantiations(std::move(Instantiations)) {}
+
+public:
+  InstantiationGroup(const InstantiationGroup &) = delete;
+  InstantiationGroup(InstantiationGroup &&) = default;
+
+  /// Get the number of instantiations in this group.
+  size_t size() const { return Instantiations.size(); }
+
+  /// Get the line where the common function was defined.
+  unsigned getLine() const { return Line; }
+
+  /// Get the column where the common function was defined.
+  unsigned getColumn() const { return Col; }
+
+  /// Check if the instantiations in this group have a common mangled name.
+  bool hasName() const {
+    for (unsigned I = 1, E = Instantiations.size(); I < E; ++I)
+      if (Instantiations[I]->Name != Instantiations[0]->Name)
+        return false;
+    return true;
+  }
+
+  /// Get the common mangled name for instantiations in this group.
+  StringRef getName() const {
+    assert(hasName() && "Instantiations don't have a shared name");
+    return Instantiations[0]->Name;
+  }
+
+  /// Get the total execution count of all instantiations in this group.
+  uint64_t getTotalExecutionCount() const {
+    uint64_t Count = 0;
+    for (const FunctionRecord *F : Instantiations)
+      Count += F->ExecutionCount;
+    return Count;
+  }
+
+  /// Get the instantiations in this group.
+  ArrayRef<const FunctionRecord *> getInstantiations() const {
+    return Instantiations;
+  }
+};
+
 /// \brief Coverage information to be processed or displayed.
 ///
 /// This represents the coverage of an entire file, expansion, or function. It
@@ -490,12 +547,12 @@ public:
                       FunctionRecordIterator());
   }
 
-  /// \brief Get the list of function instantiations in the file.
+  /// Get the list of function instantiation groups in a particular file.
   ///
-  /// Functions that are instantiated more than once, such as C++ template
-  /// specializations, have distinct coverage records for each instantiation.
-  std::vector<const FunctionRecord *>
-  getInstantiations(StringRef Filename) const;
+  /// Every instantiation group in a program is attributed to exactly one file:
+  /// the file in which the definition for the common function begins.
+  std::vector<InstantiationGroup>
+  getInstantiationGroups(StringRef Filename) const;
 
   /// \brief Get the coverage for a particular function.
   CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
