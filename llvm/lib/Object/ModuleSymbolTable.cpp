@@ -175,7 +175,7 @@ void ModuleSymbolTable::CollectAsmSymbols(
 
   MCObjectFileInfo MOFI;
   MCContext MCCtx(MAI.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, CodeModel::Default, MCCtx);
+  MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, MCCtx);
   RecordStreamer Streamer(MCCtx);
   T->createNullTargetStreamer(Streamer);
 
