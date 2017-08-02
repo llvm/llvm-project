@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=arm-- -run-pass prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=arm-- -run-pass=stack-protector -run-pass=prologepilog | FileCheck %s
 --- |
   define swiftcc i8* @need_emergency_slot(i8 *swiftself %v) {
     ; Just a dummy to add a swiftself bit. The real code is in the MI below.
