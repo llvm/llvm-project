@@ -24,6 +24,11 @@
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
+// There is no general interception at all on Fuchsia.
+// Only the functions in asan_interceptors_memintrinsics.cc are
+// really defined to replace libc functions.
+#if !SANITIZER_FUCHSIA
+
 #if SANITIZER_POSIX
 #include "sanitizer_common/sanitizer_posix.h"
 #endif
@@ -654,3 +659,5 @@ void InitializeAsanInterceptors() {
 }
 
 } // namespace __asan
+
+#endif  // !SANITIZER_FUCHSIA

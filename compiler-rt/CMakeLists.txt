@@ -288,6 +288,11 @@ endif()
 
 append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
+  list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
+  list(APPEND SANITIZER_COMMON_LINK_LIBS magenta)
+endif()
+
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 

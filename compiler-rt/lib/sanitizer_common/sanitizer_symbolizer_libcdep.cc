@@ -17,6 +17,18 @@
 
 namespace __sanitizer {
 
+Symbolizer *Symbolizer::GetOrInit() {
+  SpinMutexLock l(&init_mu_);
+  if (symbolizer_)
+    return symbolizer_;
+  symbolizer_ = PlatformInit();
+  CHECK(symbolizer_);
+  return symbolizer_;
+}
+
+// See sanitizer_symbolizer_fuchsia.cc.
+#if !SANITIZER_FUCHSIA
+
 const char *ExtractToken(const char *str, const char *delims, char **result) {
   uptr prefix_len = internal_strcspn(str, delims);
   *result = (char*)InternalAlloc(prefix_len + 1);
@@ -173,15 +185,6 @@ const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
     return FindModuleForAddress(address);
   }
   return 0;
-}
-
-Symbolizer *Symbolizer::GetOrInit() {
-  SpinMutexLock l(&init_mu_);
-  if (symbolizer_)
-    return symbolizer_;
-  symbolizer_ = PlatformInit();
-  CHECK(symbolizer_);
-  return symbolizer_;
 }
 
 // For now we assume the following protocol:
@@ -471,5 +474,7 @@ bool SymbolizerProcess::WriteToSymbolizer(const char *buffer, uptr length) {
   }
   return true;
 }
+
+#endif  // !SANITIZER_FUCHSIA
 
 }  // namespace __sanitizer

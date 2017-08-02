@@ -169,8 +169,9 @@ public:
 // Make sure a thread that's ever called handleArg0 has a thread-local
 // live reference to the buffer queue for this particular instance of
 // FDRLogging, and that we're going to clean it up when the thread exits.
-thread_local std::shared_ptr<BufferQueue> LocalBQ = nullptr;
-thread_local ThreadExitBufferCleanup Cleanup(LocalBQ, Buffer);
+thread_local std::shared_ptr<BufferQueue>* LocalBQ =
+    new std::shared_ptr<BufferQueue>();
+thread_local ThreadExitBufferCleanup Cleanup(*LocalBQ, Buffer);
 
 class RecursionGuard {
   bool &Running;
@@ -451,8 +452,8 @@ static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
   }
 }
 
-inline bool releaseThreadLocalBuffer(BufferQueue *BQ) {
-  auto EC = BQ->releaseBuffer(Buffer);
+inline bool releaseThreadLocalBuffer(BufferQueue &BQArg) {
+  auto EC = BQArg.releaseBuffer(Buffer);
   if (EC != BufferQueue::ErrorCode::Ok) {
     Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
            BufferQueue::getErrorString(EC));
@@ -467,9 +468,9 @@ inline bool prepareBuffer(int (*wall_clock_reader)(clockid_t,
   char *BufferStart = static_cast<char *>(Buffer.Buffer);
   if ((RecordPtr + MaxSize) > (BufferStart + Buffer.Size - MetadataRecSize)) {
     writeEOBMetadata();
-    if (!releaseThreadLocalBuffer(LocalBQ.get()))
+    if (!releaseThreadLocalBuffer(**LocalBQ))
       return false;
-    auto EC = LocalBQ->getBuffer(Buffer);
+    auto EC = (*LocalBQ)->getBuffer(Buffer);
     if (EC != BufferQueue::ErrorCode::Ok) {
       Report("Failed to acquire a buffer; error=%s\n",
              BufferQueue::getErrorString(EC));
@@ -481,7 +482,7 @@ inline bool prepareBuffer(int (*wall_clock_reader)(clockid_t,
 }
 
 inline bool isLogInitializedAndReady(
-    std::shared_ptr<BufferQueue> &LocalBQ, uint64_t TSC, unsigned char CPU,
+    std::shared_ptr<BufferQueue> &LBQ, uint64_t TSC, unsigned char CPU,
     int (*wall_clock_reader)(clockid_t,
                              struct timespec *)) XRAY_NEVER_INSTRUMENT {
   // Bail out right away if logging is not initialized yet.
@@ -493,24 +494,24 @@ inline bool isLogInitializedAndReady(
         (Status == XRayLogInitStatus::XRAY_LOG_FINALIZING ||
          Status == XRayLogInitStatus::XRAY_LOG_FINALIZED)) {
       writeEOBMetadata();
-      if (!releaseThreadLocalBuffer(LocalBQ.get()))
+      if (!releaseThreadLocalBuffer(*LBQ))
         return false;
       RecordPtr = nullptr;
-      LocalBQ = nullptr;
+      LBQ = nullptr;
       return false;
     }
     return false;
   }
 
-  if (!loggingInitialized(LoggingStatus) || LocalBQ->finalizing()) {
+  if (!loggingInitialized(LoggingStatus) || LBQ->finalizing()) {
     writeEOBMetadata();
-    if (!releaseThreadLocalBuffer(LocalBQ.get()))
+    if (!releaseThreadLocalBuffer(*LBQ))
       return false;
     RecordPtr = nullptr;
   }
 
   if (Buffer.Buffer == nullptr) {
-    auto EC = LocalBQ->getBuffer(Buffer);
+    auto EC = LBQ->getBuffer(Buffer);
     if (EC != BufferQueue::ErrorCode::Ok) {
       auto LS = __sanitizer::atomic_load(&LoggingStatus,
                                          __sanitizer::memory_order_acquire);
@@ -538,7 +539,7 @@ inline void endBufferIfFull() XRAY_NEVER_INSTRUMENT {
   auto BufferStart = static_cast<char *>(Buffer.Buffer);
   if ((RecordPtr + MetadataRecSize) - BufferStart == MetadataRecSize) {
     writeEOBMetadata();
-    if (!releaseThreadLocalBuffer(LocalBQ.get()))
+    if (!releaseThreadLocalBuffer(**LocalBQ))
       return;
     RecordPtr = nullptr;
   }
@@ -563,10 +564,10 @@ inline void processFunctionHook(
 
   // In case the reference has been cleaned up before, we make sure we
   // initialize it to the provided BufferQueue.
-  if (LocalBQ == nullptr)
-    LocalBQ = BQ;
+  if ((*LocalBQ) == nullptr)
+    *LocalBQ = BQ;
 
-  if (!isLogInitializedAndReady(LocalBQ, TSC, CPU, wall_clock_reader))
+  if (!isLogInitializedAndReady(*LocalBQ, TSC, CPU, wall_clock_reader))
     return;
 
   // Before we go setting up writing new function entries, we need to be really
@@ -606,7 +607,7 @@ inline void processFunctionHook(
   // Buffer, set it up properly before doing any further writing.
   //
   if (!prepareBuffer(wall_clock_reader, FunctionRecSize + MetadataRecSize)) {
-    LocalBQ = nullptr;
+    *LocalBQ = nullptr;
     return;
   }
 
