@@ -819,12 +819,14 @@ void DwarfDebug::collectVariableInfoFromMFTable(
 // Get .debug_loc entry for the instruction range starting at MI.
 static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
-
   assert(MI->getNumOperands() == 4);
   if (MI->getOperand(0).isReg()) {
+    auto RegOp = MI->getOperand(0);
+    auto Op1 = MI->getOperand(1);
     // If the second operand is an immediate, this is a
     // register-indirect address.
-    MachineLocation MLoc(MI->getOperand(0).getReg(), MI->getOperand(1).isImm());
+    assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
+    MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
     return DebugLocEntry::Value(Expr, MLoc);
   }
   if (MI->getOperand(0).isImm())

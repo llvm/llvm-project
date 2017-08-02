@@ -489,9 +489,11 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   if (const MachineInstr *DVInsn = DV.getMInsn()) {
     assert(DVInsn->getNumOperands() == 4);
     if (DVInsn->getOperand(0).isReg()) {
-      const MachineOperand RegOp = DVInsn->getOperand(0);
+      auto RegOp = DVInsn->getOperand(0);
+      auto Op1 = DVInsn->getOperand(1);
       // If the second operand is an immediate, this is an indirect value.
-      MachineLocation Location(RegOp.getReg(), DVInsn->getOperand(1).isImm());
+      assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
+      MachineLocation Location(RegOp.getReg(), Op1.isImm());
       addVariableAddress(DV, *VariableDie, Location);
     } else if (DVInsn->getOperand(0).isImm()) {
       // This variable is described by a single constant.
