@@ -10,6 +10,8 @@
 //
 // -----------------------------------------------------------------------------
 
+#include <stdint.h>
+
 // From swift's include/swift/Runtime/Debug.h file.
 struct RuntimeErrorDetails {
   uintptr_t version;
