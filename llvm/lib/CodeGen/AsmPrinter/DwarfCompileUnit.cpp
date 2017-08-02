@@ -491,12 +491,8 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     if (DVInsn->getOperand(0).isReg()) {
       const MachineOperand RegOp = DVInsn->getOperand(0);
       // If the second operand is an immediate, this is an indirect value.
-      if (DVInsn->getOperand(1).isImm()) {
-        MachineLocation Location(RegOp.getReg(),
-                                 DVInsn->getOperand(1).getImm());
-        addVariableAddress(DV, *VariableDie, Location);
-      } else if (RegOp.getReg())
-        addVariableAddress(DV, *VariableDie, MachineLocation(RegOp.getReg()));
+      MachineLocation Location(RegOp.getReg(), DVInsn->getOperand(1).isImm());
+      addVariableAddress(DV, *VariableDie, Location);
     } else if (DVInsn->getOperand(0).isImm()) {
       // This variable is described by a single constant.
       // Check whether it has a DIExpression.

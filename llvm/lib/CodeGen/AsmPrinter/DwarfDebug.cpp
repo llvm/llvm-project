@@ -822,13 +822,9 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
 
   assert(MI->getNumOperands() == 4);
   if (MI->getOperand(0).isReg()) {
-    MachineLocation MLoc;
     // If the second operand is an immediate, this is a
     // register-indirect address.
-    if (!MI->getOperand(1).isImm())
-      MLoc.set(MI->getOperand(0).getReg());
-    else
-      MLoc.set(MI->getOperand(0).getReg(), MI->getOperand(1).getImm());
+    MachineLocation MLoc(MI->getOperand(0).getReg(), MI->getOperand(1).isImm());
     return DebugLocEntry::Value(Expr, MLoc);
   }
   if (MI->getOperand(0).isImm())
