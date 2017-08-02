@@ -542,15 +542,12 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
   SymbolTable[2].Name.Offset.Offset = sizeof(uint32_t);
 
   //__imp_ String Table
-  if (Imp) {
-    SymbolTable[3].Name.Offset.Offset = sizeof(uint32_t) + Sym.size() + 7;
-    writeStringTable(Buffer, {std::string("__imp_").append(Sym),
-                              std::string("__imp_").append(Weak)});
-  } else {
-    SymbolTable[3].Name.Offset.Offset = sizeof(uint32_t) + Sym.size() + 1;
-    writeStringTable(Buffer, {Sym, Weak});
-  }
+  StringRef Prefix = Imp ? "__imp_" : "";
+  SymbolTable[3].Name.Offset.Offset =
+      sizeof(uint32_t) + Sym.size() + Prefix.size() + 1;
   append(Buffer, SymbolTable);
+  writeStringTable(Buffer, {(Prefix + Sym).str(),
+                            (Prefix + Weak).str()});
 
   // Copied here so we can still use writeStringTable
   char *Buf = Alloc.Allocate<char>(Buffer.size());
