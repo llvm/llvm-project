@@ -1569,13 +1569,7 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     MachineLocation Location = Value.getLoc();
     if (Location.isIndirect())
       DwarfExpr.setMemoryLocationKind();
-    SmallVector<uint64_t, 8> Ops;
-    if (Location.isIndirect() && Location.getOffset()) {
-      Ops.push_back(dwarf::DW_OP_plus_uconst);
-      Ops.push_back(Location.getOffset());
-    }
-    Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
-    DIExpressionCursor Cursor(Ops);
+    DIExpressionCursor Cursor(DIExpr);
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
       return;
