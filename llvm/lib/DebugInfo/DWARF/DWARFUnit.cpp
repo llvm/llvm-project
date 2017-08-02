@@ -307,18 +307,8 @@ bool DWARFUnit::parseDWO() {
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
   if (DieArray.size() > (unsigned)KeepCUDie) {
-    // std::vectors never get any smaller when resized to a smaller size,
-    // or when clear() or erase() are called, the size will report that it
-    // is smaller, but the memory allocated remains intact (call capacity()
-    // to see this). So we need to create a temporary vector and swap the
-    // contents which will cause just the internal pointers to be swapped
-    // so that when temporary vector goes out of scope, it will destroy the
-    // contents.
-    std::vector<DWARFDebugInfoEntry> TmpArray;
-    DieArray.swap(TmpArray);
-    // Save at least the compile unit DIE
-    if (KeepCUDie)
-      DieArray.push_back(TmpArray.front());
+    DieArray.resize((unsigned)KeepCUDie);
+    DieArray.shrink_to_fit();
   }
 }
 

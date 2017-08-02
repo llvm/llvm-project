@@ -107,8 +107,8 @@ void DWARFDebugAranges::construct() {
   assert(ValidCUs.empty());
 
   // Endpoints are not needed now.
-  std::vector<RangeEndpoint> EmptyEndpoints;
-  EmptyEndpoints.swap(Endpoints);
+  Endpoints.clear();
+  Endpoints.shrink_to_fit();
 }
 
 uint32_t DWARFDebugAranges::findAddress(uint64_t Address) const {

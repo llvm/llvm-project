@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 
 	%struct.DrawHelper = type { void (i32, %struct.QT_FT_Span*, i8*)*, void (i32, %struct.QT_FT_Span*, i8*)*, void (%struct.QRasterBuffer*, i32, i32, i32, i8*, i32, i32, i32)*, void (%struct.QRasterBuffer*, i32, i32, i32, i8*, i32, i32, i32)*, void (%struct.QRasterBuffer*, i32, i32, i32, i32, i32)* }
 	%struct.QBasicAtomic = type { i32 }

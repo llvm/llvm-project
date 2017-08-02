@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- < %s | FileCheck %s
 
 ; CHECK-LABEL: @bar
 ; CHECK-DAG: movl $1074339512,

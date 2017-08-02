@@ -1,7 +1,7 @@
 ; bswap should be constant folded when it is passed a constant argument
 
-; RUN: llc < %s -march=x86 -mcpu=i686 | FileCheck %s
-; RUN: llc < %s -march=x86-64 | FileCheck %s --check-prefix=CHECK64
+; RUN: llc < %s -mtriple=i686-- -mcpu=i686 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=CHECK64
 
 declare i16 @llvm.bswap.i16(i16)
 

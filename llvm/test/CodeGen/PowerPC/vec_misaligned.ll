@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=g5 | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-vector | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-vector | FileCheck %s -check-prefix=CHECK-LE
 

@@ -1,4 +1,4 @@
-//===--- RDFGraph.cpp -----------------------------------------------------===//
+//===- RDFGraph.cpp -------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,6 +10,8 @@
 // Target-independent, SSA-based data flow graph for register data flow (RDF).
 //
 #include "RDFGraph.h"
+#include "RDFRegisters.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -23,16 +25,19 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -201,7 +206,7 @@ namespace {
   struct PrintListV {
     PrintListV(const NodeList &L, const DataFlowGraph &G) : List(L), G(G) {}
 
-    typedef T Type;
+    using Type = T;
     const NodeList &List;
     const DataFlowGraph &G;
   };

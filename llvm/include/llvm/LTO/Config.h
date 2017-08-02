@@ -79,6 +79,9 @@ struct Config {
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;
 
+  /// Whether to emit the pass manager debuggging informations.
+  bool DebugPassManager = false;
+
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;
 

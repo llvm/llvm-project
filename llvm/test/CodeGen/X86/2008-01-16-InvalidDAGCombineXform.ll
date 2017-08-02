@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep IMPLICIT_DEF
+; RUN: llc < %s -mtriple=i686-- | not grep IMPLICIT_DEF
 
 	%struct.node_t = type { double*, %struct.node_t*, %struct.node_t**, double**, double*, i32, i32 }
 

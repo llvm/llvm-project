@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 | FileCheck %s
 
 ; rdar://11897677
 

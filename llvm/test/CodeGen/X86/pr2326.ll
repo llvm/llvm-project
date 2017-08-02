@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep sete
+; RUN: llc < %s -mtriple=i686-- | grep sete
 ; PR2326
 
 define i32 @func_59(i32 %p_60) nounwind  {

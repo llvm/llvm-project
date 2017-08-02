@@ -75,6 +75,43 @@ define <2 x i64> @test5(<4 x float> %a, <4 x float> %b) {
   ret <2 x i64> %conv
 }
 
+define <2 x i64> @test6(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <4 x float> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp ult <4 x float> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NARROW:%.*]] = or <4 x i1> [[CMP]], [[CMP4]]
+; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[NARROW]] to <4 x i32>
+; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[CONV]]
+;
+  %cmp = fcmp ult <4 x float> %a, zeroinitializer
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %cmp4 = fcmp ult <4 x float> %b, zeroinitializer
+  %sext5 = sext <4 x i1> %cmp4 to <4 x i32>
+  %and = or <4 x i32> %sext, %sext5
+  %conv = bitcast <4 x i32> %and to <2 x i64>
+  ret <2 x i64> %conv
+}
+
+define <2 x i64> @test7(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <4 x float> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp ult <4 x float> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEXT5:%.*]] = sext <4 x i1> [[CMP4]] to <4 x i32>
+; CHECK-NEXT:    [[AND:%.*]] = xor <4 x i32> [[SEXT]], [[SEXT5]]
+; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[CONV]]
+;
+  %cmp = fcmp ult <4 x float> %a, zeroinitializer
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %cmp4 = fcmp ult <4 x float> %b, zeroinitializer
+  %sext5 = sext <4 x i1> %cmp4 to <4 x i32>
+  %and = xor <4 x i32> %sext, %sext5
+  %conv = bitcast <4 x i32> %and to <2 x i64>
+  ret <2 x i64> %conv
+}
+
 define void @convert(<2 x i32>* %dst.addr, <2 x i64> %src) {
 ; CHECK-LABEL: @convert(
 ; CHECK-NEXT:    [[VAL:%.*]] = trunc <2 x i64> %src to <2 x i32>

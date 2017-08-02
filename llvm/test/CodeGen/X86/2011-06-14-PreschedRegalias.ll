@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -stress-sched | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -stress-sched | FileCheck %s
 ; REQUIRES: asserts
 ; Test interference between physreg aliases during preRAsched.
 ; mul wants an operand in AL, but call clobbers it.

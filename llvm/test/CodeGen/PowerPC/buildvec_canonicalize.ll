@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -march=ppc32 -mattr=+altivec --enable-unsafe-fp-math | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=+altivec --enable-unsafe-fp-math | FileCheck %s
 
 define void @VXOR(<4 x float>* %P1, <4 x i32>* %P2, <4 x float>* %P3) {
         %tmp = load <4 x float>, <4 x float>* %P3            ; <<4 x float>> [#uses=1]

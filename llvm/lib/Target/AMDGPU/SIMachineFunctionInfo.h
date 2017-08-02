@@ -211,6 +211,19 @@ public:
     bool hasReg() { return VGPR != AMDGPU::NoRegister;}
   };
 
+  struct SGPRSpillVGPRCSR {
+    // VGPR used for SGPR spills
+    unsigned VGPR;
+
+    // If the VGPR is a CSR, the stack slot used to save/restore it in the
+    // prolog/epilog.
+    Optional<int> FI;
+
+    SGPRSpillVGPRCSR(unsigned V, Optional<int> F) :
+      VGPR(V),
+      FI(F) {}
+  };
+
 private:
   // SGPR->VGPR spilling support.
   typedef std::pair<unsigned, unsigned> SpillRegMask;
@@ -219,7 +232,7 @@ private:
   // frameindex key.
   DenseMap<int, std::vector<SpilledReg>> SGPRToVGPRSpills;
   unsigned NumVGPRSpillLanes = 0;
-  SmallVector<unsigned, 2> SpillVGPRs;
+  SmallVector<SGPRSpillVGPRCSR, 2> SpillVGPRs;
 
 public:
 
@@ -229,6 +242,10 @@ public:
     auto I = SGPRToVGPRSpills.find(FrameIndex);
     return (I == SGPRToVGPRSpills.end()) ?
       ArrayRef<SpilledReg>() : makeArrayRef(I->second);
+  }
+
+  ArrayRef<SGPRSpillVGPRCSR> getSGPRSpillVGPRs() const {
+    return SpillVGPRs;
   }
 
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);

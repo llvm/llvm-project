@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=penryn > %t
+; RUN: llc < %s -mtriple=i686-- -mcpu=penryn > %t
 ; RUN: not grep movd %t
 ; RUN: grep "movss	%xmm" %t | count 1
 ; RUN: grep "extractps	\$1, %xmm0, " %t | count 1

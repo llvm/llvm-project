@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -asm-verbose=false < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -asm-verbose=false < %s | FileCheck %s
 
 ; Check that merging switch cases that differ in one bit works.
 ; CHECK-LABEL: test1

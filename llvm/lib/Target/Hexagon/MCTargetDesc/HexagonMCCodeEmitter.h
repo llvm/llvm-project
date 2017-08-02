@@ -1,4 +1,4 @@
-//===-- HexagonMCCodeEmitter.h - Hexagon Target Descriptions ----*- C++ -*-===//
+//===- HexagonMCCodeEmitter.h - Hexagon Target Descriptions -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,19 +12,25 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef HEXAGONMCCODEEMITTER_H
-#define HEXAGONMCCODEEMITTER_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCODEEMITTER_H
+#define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCODEEMITTER_H
 
 #include "MCTargetDesc/HexagonFixupKinds.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
+
+class MCContext;
+class MCInst;
+class MCInstrInfo;
+class MCOperand;
+class MCSubtargetInfo;
+class raw_ostream;
 
 class HexagonMCCodeEmitter : public MCCodeEmitter {
   MCContext &MCT;
@@ -73,8 +79,8 @@ private:
   uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
   void verifyInstructionPredicates(const MCInst &MI,
                                    uint64_t AvailableFeatures) const;
-}; // class HexagonMCCodeEmitter
+};
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif /* HEXAGONMCCODEEMITTER_H */
+#endif // LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCODEEMITTER_H

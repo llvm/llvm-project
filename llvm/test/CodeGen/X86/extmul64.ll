@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep mul | count 2
+; RUN: llc < %s -mtriple=i686-- | grep mul | count 2
 
 define i64 @i32_sext_i64(i32 %a, i32 %b) {
   %aa = sext i32 %a to i64

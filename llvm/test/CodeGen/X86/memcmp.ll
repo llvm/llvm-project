@@ -117,9 +117,7 @@ define i32 @length3(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    movzwl (%ecx), %esi
 ; X86-NEXT:    rolw $8, %dx
 ; X86-NEXT:    rolw $8, %si
-; X86-NEXT:    movzwl %dx, %edx
-; X86-NEXT:    movzwl %si, %esi
-; X86-NEXT:    cmpl %esi, %edx
+; X86-NEXT:    cmpw %si, %dx
 ; X86-NEXT:    jne .LBB4_1
 ; X86-NEXT:  # BB#2: # %loadbb1
 ; X86-NEXT:    movzbl 2(%eax), %eax
@@ -140,9 +138,7 @@ define i32 @length3(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
-; X64-NEXT:    cmpq %rcx, %rax
+; X64-NEXT:    cmpw %cx, %ax
 ; X64-NEXT:    jne .LBB4_1
 ; X64-NEXT:  # BB#2: # %loadbb1
 ; X64-NEXT:    movzbl 2(%rdi), %eax
@@ -299,7 +295,7 @@ define i32 @length5(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    cmpq %rcx, %rax
+; X64-NEXT:    cmpl %ecx, %eax
 ; X64-NEXT:    jne .LBB9_1
 ; X64-NEXT:  # BB#2: # %loadbb1
 ; X64-NEXT:    movzbl 4(%rdi), %eax

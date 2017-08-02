@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=x86 -regalloc=fast -optimize-regalloc=0 -no-integrated-as | FileCheck %s
-; RUN: llc < %s -march=x86 -regalloc=basic -no-integrated-as      | FileCheck %s
-; RUN: llc < %s -march=x86 -regalloc=greedy -no-integrated-as     | FileCheck %s
+; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 -no-integrated-as | FileCheck %s
+; RUN: llc < %s -regalloc=basic -no-integrated-as      | FileCheck %s
+; RUN: llc < %s -regalloc=greedy -no-integrated-as     | FileCheck %s
 
 ; The 1st, 2nd, 3rd and 5th registers must all be different.  The registers
 ; referenced in the 4th and 6th operands must not be the same as the 1st or 5th

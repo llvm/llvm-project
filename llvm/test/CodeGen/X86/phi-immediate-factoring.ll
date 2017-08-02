@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -disable-preheader-prot=true  -march=x86 -stats 2>&1 | grep "Number of blocks eliminated" | grep 3
-; RUN: llc < %s -disable-preheader-prot=true  -march=x86 -stats -cgp-freq-ratio-to-skip-merge=10 2>&1 | grep "Number of blocks eliminated" | grep 6
-; RUN: llc < %s -disable-preheader-prot=false -march=x86 -stats 2>&1 | grep "Number of blocks eliminated" | grep 3
+; RUN: llc < %s -disable-preheader-prot=true  -stats 2>&1 | grep "Number of blocks eliminated" | grep 3
+; RUN: llc < %s -disable-preheader-prot=true  -stats -cgp-freq-ratio-to-skip-merge=10 2>&1 | grep "Number of blocks eliminated" | grep 6
+; RUN: llc < %s -disable-preheader-prot=false -stats 2>&1 | grep "Number of blocks eliminated" | grep 3
 ; PR1296
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"

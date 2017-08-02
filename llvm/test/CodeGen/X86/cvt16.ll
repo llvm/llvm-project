@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c | FileCheck %s -check-prefix=CHECK -check-prefix=LIBCALL
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c | FileCheck %s -check-prefix=CHECK -check-prefix=F16C
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c,+soft-float | FileCheck %s -check-prefix=CHECK -check-prefix=SOFTFLOAT
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c,+soft-float | FileCheck %s -check-prefix=CHECK -check-prefix=SOFTFLOAT
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c | FileCheck %s -check-prefix=CHECK -check-prefix=LIBCALL
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c | FileCheck %s -check-prefix=CHECK -check-prefix=F16C
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c,+soft-float | FileCheck %s -check-prefix=CHECK -check-prefix=SOFTFLOAT
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c,+soft-float | FileCheck %s -check-prefix=CHECK -check-prefix=SOFTFLOAT
 
 ; This is a test for float to half float conversions on x86-64.
 ;

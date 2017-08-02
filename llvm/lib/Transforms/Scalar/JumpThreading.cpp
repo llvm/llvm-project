@@ -1036,9 +1036,9 @@ bool JumpThreadingPass::ProcessImpliedCondition(BasicBlock *BB) {
     if (PBI->getSuccessor(0) != CurrentBB && PBI->getSuccessor(1) != CurrentBB)
       return false;
 
-    bool FalseDest = PBI->getSuccessor(1) == CurrentBB;
+    bool CondIsTrue = PBI->getSuccessor(0) == CurrentBB;
     Optional<bool> Implication =
-      isImpliedCondition(PBI->getCondition(), Cond, DL, FalseDest);
+        isImpliedCondition(PBI->getCondition(), Cond, DL, CondIsTrue);
     if (Implication) {
       BI->getSuccessor(*Implication ? 1 : 0)->removePredecessor(BB);
       BranchInst::Create(BI->getSuccessor(*Implication ? 0 : 1), BI);
@@ -2331,8 +2331,7 @@ bool JumpThreadingPass::ThreadGuard(BasicBlock *BB, IntrinsicInst *Guard,
     TrueDestIsSafe = true;
   else {
     // False dest is safe if !BranchCond => GuardCond.
-    Impl =
-        isImpliedCondition(BranchCond, GuardCond, DL, /* InvertAPred */ true);
+    Impl = isImpliedCondition(BranchCond, GuardCond, DL, /* LHSIsTrue */ false);
     if (Impl && *Impl)
       FalseDestIsSafe = true;
   }

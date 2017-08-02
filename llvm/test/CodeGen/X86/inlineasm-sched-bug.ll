@@ -1,5 +1,5 @@
 ; PR13504
-; RUN: llc -march=x86 -mcpu=atom <%s | FileCheck %s
+; RUN: llc -mtriple=i686-- -mcpu=atom <%s | FileCheck %s
 ; CHECK: bsfl
 ; CHECK-NOT: movl
 

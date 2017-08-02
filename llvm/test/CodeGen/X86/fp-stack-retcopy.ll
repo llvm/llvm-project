@@ -1,5 +1,5 @@
 ; This should not copy the result of foo into an xmm register.
-; RUN: llc < %s -march=x86 -mcpu=yonah -mtriple=i686-apple-darwin9 | not grep xmm
+; RUN: llc < %s -mcpu=yonah -mtriple=i686-apple-darwin9 | not grep xmm
 ; rdar://5689903
 
 declare double @foo()

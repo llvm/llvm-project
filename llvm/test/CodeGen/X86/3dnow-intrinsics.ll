@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+3dnow | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+3dnow | FileCheck %s
 
 define <8 x i8> @test_pavgusb(x86_mmx %a.coerce, x86_mmx %b.coerce) nounwind readnone {
 ; CHECK: pavgusb

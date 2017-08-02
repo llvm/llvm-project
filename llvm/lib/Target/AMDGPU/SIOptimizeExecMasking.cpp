@@ -87,6 +87,30 @@ static unsigned isCopyToExec(const MachineInstr &MI) {
   return AMDGPU::NoRegister;
 }
 
+/// If \p MI is a logical operation on an exec value,
+/// return the register copied to.
+static unsigned isLogicalOpOnExec(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_AND_B64:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_XOR_B64:
+  case AMDGPU::S_ANDN2_B64:
+  case AMDGPU::S_ORN2_B64:
+  case AMDGPU::S_NAND_B64:
+  case AMDGPU::S_NOR_B64:
+  case AMDGPU::S_XNOR_B64: {
+    const MachineOperand &Src1 = MI.getOperand(1);
+    if (Src1.isReg() && Src1.getReg() == AMDGPU::EXEC)
+      return MI.getOperand(0).getReg();
+    const MachineOperand &Src2 = MI.getOperand(2);
+    if (Src2.isReg() && Src2.getReg() == AMDGPU::EXEC)
+      return MI.getOperand(0).getReg();
+  }
+  }
+
+  return AMDGPU::NoRegister;
+}
+
 static unsigned getSaveExecOp(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::S_AND_B64:
@@ -209,8 +233,24 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     // Scan backwards to find the def.
     auto CopyToExecInst = &*I;
     auto CopyFromExecInst = findExecCopy(*TII, MBB, I, CopyToExec);
-    if (CopyFromExecInst == E)
+    if (CopyFromExecInst == E) {
+      auto PrepareExecInst = std::next(I);
+      if (PrepareExecInst == E)
+        continue;
+      // Fold exec = COPY (S_AND_B64 reg, exec) -> exec = S_AND_B64 reg, exec
+      if (CopyToExecInst->getOperand(1).isKill() &&
+          isLogicalOpOnExec(*PrepareExecInst) == CopyToExec) {
+        DEBUG(dbgs() << "Fold exec copy: " << *PrepareExecInst);
+
+        PrepareExecInst->getOperand(0).setReg(AMDGPU::EXEC);
+
+        DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
+
+        CopyToExecInst->eraseFromParent();
+      }
+
       continue;
+    }
 
     if (isLiveOut(MBB, CopyToExec)) {
       // The copied register is live out and has a second use in another block.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 define i32 @test1(i64 %a) nounwind {
         %tmp29 = lshr i64 %a, 24                ; <i64> [#uses=1]

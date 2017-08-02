@@ -1,4 +1,4 @@
-; RUN: llc < %s -emulated-tls -march=x86 -relocation-model=pic -mtriple=i686-unknown-linux-gnu -fast-isel | FileCheck %s
+; RUN: llc < %s -emulated-tls -relocation-model=pic -mtriple=i686-unknown-linux-gnu -fast-isel | FileCheck %s
 ; PR3654
 
 @v = thread_local global i32 0

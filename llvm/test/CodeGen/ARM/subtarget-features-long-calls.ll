@@ -1,9 +1,9 @@
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - | FileCheck -check-prefix=NO-OPTION %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=+long-calls | FileCheck -check-prefix=LONGCALL %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=-long-calls | FileCheck -check-prefix=NO-LONGCALL %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 | FileCheck -check-prefix=NO-OPTION %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=+long-calls | FileCheck -check-prefix=LONGCALL %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=-long-calls | FileCheck -check-prefix=NO-LONGCALL %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - | FileCheck -check-prefix=NO-OPTION %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=+long-calls | FileCheck -check-prefix=LONGCALL %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=-long-calls | FileCheck -check-prefix=NO-LONGCALL %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 | FileCheck -check-prefix=NO-OPTION %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=+long-calls | FileCheck -check-prefix=LONGCALL %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=-long-calls | FileCheck -check-prefix=NO-LONGCALL %s
 
 ; NO-OPTION-LABEL: {{_?}}caller0
 ; NO-OPTION: ldr [[R0:r[0-9]+]], [[L0:.*]] 

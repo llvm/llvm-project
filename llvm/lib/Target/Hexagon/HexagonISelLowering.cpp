@@ -1364,10 +1364,44 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+static Constant *convert_i1_to_i8(const Constant *ConstVal) {
+  SmallVector<Constant *, 128> NewConst;
+  const ConstantVector *CV = dyn_cast<ConstantVector>(ConstVal);
+  if (!CV)
+    return nullptr;
+
+  LLVMContext &Ctx = ConstVal->getContext();
+  IRBuilder<> IRB(Ctx);
+  unsigned NumVectorElements = CV->getNumOperands();
+  assert(isPowerOf2_32(NumVectorElements) &&
+         "conversion only supported for pow2 VectorSize!");
+
+  for (unsigned i = 0; i < NumVectorElements / 8; ++i) {
+    uint8_t x = 0;
+    for (unsigned j = 0; j < 8; ++j) {
+      uint8_t y = CV->getOperand(i * 8 + j)->getUniqueInteger().getZExtValue();
+      x |= y << (7 - j);
+    }
+    assert((x == 0 || x == 255) && "Either all 0's or all 1's expected!");
+    NewConst.push_back(IRB.getInt8(x));
+  }
+  return ConstantVector::get(NewConst);
+}
+
 SDValue
 HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   EVT ValTy = Op.getValueType();
   ConstantPoolSDNode *CPN = cast<ConstantPoolSDNode>(Op);
+  Constant *CVal = nullptr;
+  bool isVTi1Type = false;
+  if (const Constant *ConstVal = dyn_cast<Constant>(CPN->getConstVal())) {
+    Type *CValTy = ConstVal->getType();
+    if (CValTy->isVectorTy() &&
+        CValTy->getVectorElementType()->isIntegerTy(1)) {
+      CVal = convert_i1_to_i8(ConstVal);
+      isVTi1Type = (CVal != nullptr);
+    }
+  }
   unsigned Align = CPN->getAlignment();
   bool IsPositionIndependent = isPositionIndependent();
   unsigned char TF = IsPositionIndependent ? HexagonII::MO_PCREL : 0;
@@ -1377,6 +1411,8 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   if (CPN->isMachineConstantPoolEntry())
     T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, Offset,
                                   TF);
+  else if (isVTi1Type)
+    T = DAG.getTargetConstantPool(CVal, ValTy, Align, Offset, TF);
   else
     T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset,
                                   TF);

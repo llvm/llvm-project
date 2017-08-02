@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -no-integrated-as | grep " 37"
+; RUN: llc < %s -mtriple=i686-- -no-integrated-as | grep " 37"
 ; rdar://7008959
 
 define void @bork() nounwind {

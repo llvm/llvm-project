@@ -2,14 +2,14 @@
 
 define win64cc void @pass_va(i32 %count, ...) nounwind {
 entry:
-; CHECK: sub     sp, sp, #80
+; CHECK: str     x30, [sp, #-80]!
 ; CHECK: add     x8, sp, #24
 ; CHECK: add     x0, sp, #24
 ; CHECK: stp     x6, x7, [sp, #64]
 ; CHECK: stp     x4, x5, [sp, #48]
 ; CHECK: stp     x2, x3, [sp, #32]
 ; CHECK: str     x1, [sp, #24]
-; CHECK: stp     x30, x8, [sp]
+; CHECK: str     x8, [sp, #8]
 ; CHECK: bl      other_func
 ; CHECK: ldr     x30, [sp], #80
 ; CHECK: ret

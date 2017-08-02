@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -fixup-byte-word-insts=0 | FileCheck %s -check-prefix=CHECK -check-prefix=BWOFF
-; RUN: llc < %s -march=x86 -fixup-byte-word-insts=1 | FileCheck %s -check-prefix=CHECK -check-prefix=BWON
+; RUN: llc < %s -mtriple=i686-- -fixup-byte-word-insts=0 | FileCheck %s -check-prefix=CHECK -check-prefix=BWOFF
+; RUN: llc < %s -mtriple=i686-- -fixup-byte-word-insts=1 | FileCheck %s -check-prefix=CHECK -check-prefix=BWON
 ; These transforms are turned off for load volatiles and stores.
 ; Check that they weren't turned off for all loads and stores!
 ; CHECK-LABEL: f:

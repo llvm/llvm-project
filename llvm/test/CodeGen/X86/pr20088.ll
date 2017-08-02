@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx | FileCheck %s
 
 declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>)
 

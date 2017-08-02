@@ -1,6 +1,6 @@
 ; All of these ands and shifts should be folded into rlwimi's
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep and
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rlwimi | count 8
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep and
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rlwimi | count 8
 
 define i32 @test1(i32 %x, i32 %y) {
 entry:

@@ -20,6 +20,7 @@
 #include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "AMDGPUTargetMachine.h"
 #include "R600MachineFunctionInfo.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"

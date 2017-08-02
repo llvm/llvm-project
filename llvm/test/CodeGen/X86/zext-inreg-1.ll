@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep and
+; RUN: llc < %s -mtriple=i686-- | not grep and
 
 ; These tests differ from the ones in zext-inreg-0.ll in that
 ; on x86-64 they do require and instructions.

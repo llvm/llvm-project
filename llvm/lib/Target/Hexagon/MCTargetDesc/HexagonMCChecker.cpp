@@ -12,17 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonMCChecker.h"
-
-#include "HexagonBaseInfo.h"
-
+#include "MCTargetDesc/HexagonMCChecker.h"
+#include "Hexagon.h"
+#include "MCTargetDesc/HexagonBaseInfo.h"
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
+#include "MCTargetDesc/HexagonMCShuffler.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -159,7 +162,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
                isPredicateRegister(*SRI))
         // Some insns produce predicates too late to be used in the same packet.
         LatePreds.insert(*SRI);
-      else if (i == 0 && llvm::HexagonMCInstrInfo::getType(MCII, MCI) ==
+      else if (i == 0 && HexagonMCInstrInfo::getType(MCII, MCI) ==
                              HexagonII::TypeCVI_VM_TMP_LD)
         // Temporary loads should be used in the same packet, but don't commit
         // results, so it should be disregarded if another insn changes the same
@@ -167,7 +170,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // TODO: relies on the impossibility of a current and a temporary loads
         // in the same packet.
         TmpDefs.insert(*SRI);
-      else if (i <= 1 && llvm::HexagonMCInstrInfo::hasNewValue2(MCII, MCI))
+      else if (i <= 1 && HexagonMCInstrInfo::hasNewValue2(MCII, MCI))
         // vshuff(Vx, Vy, Rx) <- Vx(0) and Vy(1) are both source and
         // destination registers with this instruction. same for vdeal(Vx,Vy,Rx)
         Uses.insert(*SRI);
@@ -223,7 +226,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
       // Super-registers cannot use new values.
       if (MCID.isBranch())
         NewUses[N] = NewSense::Jmp(
-            llvm::HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNCJ);
+            HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNCJ);
       else
         NewUses[N] = NewSense::Use(
             PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI));
@@ -268,10 +271,10 @@ bool HexagonMCChecker::checkEndloopBranches() {
       auto Inner = HexagonMCInstrInfo::isInnerLoop(MCB);
       if (Inner || HexagonMCInstrInfo::isOuterLoop(MCB)) {
         reportError(I.getLoc(),
-                    llvm::Twine("packet marked with `:endloop") +
-                        (Inner ? "0" : "1") + "' " +
-                        "cannot contain instructions that modify register " +
-                        "`" + llvm::Twine(RI.getName(Hexagon::PC)) + "'");
+                    Twine("packet marked with `:endloop") +
+                    (Inner ? "0" : "1") + "' " +
+                    "cannot contain instructions that modify register " + "`" +
+                    Twine(RI.getName(Hexagon::PC)) + "'");
         return false;
       }
     }
@@ -279,8 +282,7 @@ bool HexagonMCChecker::checkEndloopBranches() {
   return true;
 }
 
-namespace {
-bool isDuplexAGroup(unsigned Opcode) {
+static bool isDuplexAGroup(unsigned Opcode) {
   switch (Opcode) {
   case Hexagon::SA1_addi:
   case Hexagon::SA1_addrx:
@@ -313,7 +315,7 @@ bool isDuplexAGroup(unsigned Opcode) {
   }
 }
 
-bool isNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
+static bool isNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
   unsigned Result = 0;
   unsigned Type = HexagonMCInstrInfo::getType(MCII, ID);
   if (Type == HexagonII::TypeDUPLEX) {
@@ -329,7 +331,6 @@ bool isNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
         (Type != HexagonII::TypeALU64 || HexagonMCInstrInfo::isFloat(MCII, ID));
   return Result != 0;
 }
-} // namespace
 
 bool HexagonMCChecker::checkAXOK() {
   MCInst const *HasSoloAXInst = nullptr;
@@ -344,10 +345,10 @@ bool HexagonMCChecker::checkAXOK() {
     if (&I != HasSoloAXInst && isNeitherAnorX(MCII, I)) {
       reportError(
           HasSoloAXInst->getLoc(),
-          llvm::Twine("Instruction can only be in a packet with ALU or "
-                      "non-FPU XTYPE instructions"));
+          Twine("Instruction can only be in a packet with ALU or non-FPU XTYPE "
+                "instructions"));
       reportError(I.getLoc(),
-                  llvm::Twine("Not an ALU or non-FPU XTYPE instruction"));
+                  Twine("Not an ALU or non-FPU XTYPE instruction"));
       return false;
     }
   }
@@ -468,7 +469,7 @@ bool HexagonMCChecker::checkRegistersReadOnly() {
       unsigned Register = Operand.getReg();
       if (ReadOnly.find(Register) != ReadOnly.end()) {
         reportError(Inst.getLoc(), "Cannot write to read-only register `" +
-                                       llvm::Twine(RI.getName(Register)) + "'");
+                                       Twine(RI.getName(Register)) + "'");
         return false;
       }
     }
@@ -494,7 +495,7 @@ void HexagonMCChecker::checkRegisterCurDefs() {
         HexagonMCInstrInfo::getDesc(MCII, I).mayLoad()) {
       unsigned Register = I.getOperand(0).getReg();
       if (!registerUsed(Register))
-        reportWarning("Register `" + llvm::Twine(RI.getName(Register)) +
+        reportWarning("Register `" + Twine(RI.getName(Register)) +
                       "' used with `.cur' "
                       "but not used in the same packet");
     }
@@ -568,17 +569,16 @@ bool HexagonMCChecker::checkRegisters() {
       // special case for vhist
       bool vHistFound = false;
       for (auto const &HMI : HexagonMCInstrInfo::bundleInstructions(MCB)) {
-        if (llvm::HexagonMCInstrInfo::getType(MCII, *HMI.getInst()) ==
+        if (HexagonMCInstrInfo::getType(MCII, *HMI.getInst()) ==
             HexagonII::TypeCVI_HIST) {
           vHistFound = true; // vhist() implicitly uses ALL REGxx.tmp
           break;
         }
       }
       // Warn on an unused temporary definition.
-      if (vHistFound == false) {
-        reportWarning("register `" + llvm::Twine(RI.getName(R)) +
-                      "' used with `.tmp' "
-                      "but not used in the same packet");
+      if (!vHistFound) {
+        reportWarning("register `" + Twine(RI.getName(R)) +
+                      "' used with `.tmp' but not used in the same packet");
         return true;
       }
     }
@@ -591,7 +591,7 @@ bool HexagonMCChecker::checkRegisters() {
 bool HexagonMCChecker::checkSolo() {
   if (HexagonMCInstrInfo::bundleSize(MCB) > 1)
     for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
-      if (llvm::HexagonMCInstrInfo::isSolo(MCII, I)) {
+      if (HexagonMCInstrInfo::isSolo(MCII, I)) {
         reportError(I.getLoc(), "Instruction is marked `isSolo' and "
                                 "cannot have other instructions in "
                                 "the same packet");
@@ -668,26 +668,26 @@ bool HexagonMCChecker::hasValidNewValueDef(const NewSense &Use,
 }
 
 void HexagonMCChecker::reportErrorRegisters(unsigned Register) {
-  reportError("register `" + llvm::Twine(RI.getName(Register)) +
+  reportError("register `" + Twine(RI.getName(Register)) +
               "' modified more than once");
 }
 
 void HexagonMCChecker::reportErrorNewValue(unsigned Register) {
-  reportError("register `" + llvm::Twine(RI.getName(Register)) +
+  reportError("register `" + Twine(RI.getName(Register)) +
               "' used with `.new' "
               "but not validly modified in the same packet");
 }
 
-void HexagonMCChecker::reportError(llvm::Twine const &Msg) {
+void HexagonMCChecker::reportError(Twine const &Msg) {
   reportError(MCB.getLoc(), Msg);
 }
 
-void HexagonMCChecker::reportError(SMLoc Loc, llvm::Twine const &Msg) {
+void HexagonMCChecker::reportError(SMLoc Loc, Twine const &Msg) {
   if (ReportErrors)
     Context.reportError(Loc, Msg);
 }
 
-void HexagonMCChecker::reportWarning(llvm::Twine const &Msg) {
+void HexagonMCChecker::reportWarning(Twine const &Msg) {
   if (ReportErrors) {
     auto SM = Context.getSourceManager();
     if (SM)

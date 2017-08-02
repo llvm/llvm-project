@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah -no-integrated-as
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah -no-integrated-as
 
 define void @test1() {
         tail call void asm sideeffect "ucomiss $0", "x"( float 0x41E0000000000000)

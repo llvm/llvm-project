@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7 -mattr=+avx | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 -mattr=+avx | FileCheck %s
 
 ; CHECK: ocl
 define void @ocl() {

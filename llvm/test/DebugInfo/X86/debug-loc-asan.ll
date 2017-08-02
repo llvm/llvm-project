@@ -17,7 +17,7 @@
 ; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%RDI+0]
 ; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
-; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_deref, DW_OP_deref]
+; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]
 ; This location should be valid until the end of the function.
 
 ; CHECK:        movq    %rbp, %rsp

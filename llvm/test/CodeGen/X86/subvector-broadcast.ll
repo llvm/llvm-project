@@ -894,69 +894,21 @@ define <8 x i32> @test_broadcast_4i32_8i32_reuse(<4 x i32>* %p0, <4 x i32>* %p1)
 }
 
 define <16 x i16> @test_broadcast_8i16_16i16_reuse(<8 x i16> *%p0, <8 x i16> *%p1) nounwind {
-; X32-AVX-LABEL: test_broadcast_8i16_16i16_reuse:
-; X32-AVX:       ## BB#0:
-; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX-NEXT:    vmovaps (%ecx), %xmm0
-; X32-AVX-NEXT:    vmovaps %xmm0, (%eax)
-; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X32-LABEL: test_broadcast_8i16_16i16_reuse:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovaps (%ecx), %xmm0
+; X32-NEXT:    vmovaps %xmm0, (%eax)
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
 ;
-; X32-AVX512F-LABEL: test_broadcast_8i16_16i16_reuse:
-; X32-AVX512F:       ## BB#0:
-; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX512F-NEXT:    vmovaps (%ecx), %xmm0
-; X32-AVX512F-NEXT:    vmovaps %xmm0, (%eax)
-; X32-AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX512F-NEXT:    retl
-;
-; X32-AVX512BW-LABEL: test_broadcast_8i16_16i16_reuse:
-; X32-AVX512BW:       ## BB#0:
-; X32-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX512BW-NEXT:    vmovdqa (%ecx), %xmm0
-; X32-AVX512BW-NEXT:    vmovdqu %xmm0, (%eax)
-; X32-AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX512BW-NEXT:    retl
-;
-; X32-AVX512DQ-LABEL: test_broadcast_8i16_16i16_reuse:
-; X32-AVX512DQ:       ## BB#0:
-; X32-AVX512DQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512DQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX512DQ-NEXT:    vmovaps (%ecx), %xmm0
-; X32-AVX512DQ-NEXT:    vmovaps %xmm0, (%eax)
-; X32-AVX512DQ-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX512DQ-NEXT:    retl
-;
-; X64-AVX-LABEL: test_broadcast_8i16_16i16_reuse:
-; X64-AVX:       ## BB#0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovaps %xmm0, (%rsi)
-; X64-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX-NEXT:    retq
-;
-; X64-AVX512F-LABEL: test_broadcast_8i16_16i16_reuse:
-; X64-AVX512F:       ## BB#0:
-; X64-AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512F-NEXT:    vmovaps %xmm0, (%rsi)
-; X64-AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512F-NEXT:    retq
-;
-; X64-AVX512BW-LABEL: test_broadcast_8i16_16i16_reuse:
-; X64-AVX512BW:       ## BB#0:
-; X64-AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512BW-NEXT:    vmovdqu %xmm0, (%rsi)
-; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512BW-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: test_broadcast_8i16_16i16_reuse:
-; X64-AVX512DQ:       ## BB#0:
-; X64-AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512DQ-NEXT:    vmovaps %xmm0, (%rsi)
-; X64-AVX512DQ-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-LABEL: test_broadcast_8i16_16i16_reuse:
+; X64:       ## BB#0:
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    vmovaps %xmm0, (%rsi)
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
  %1 = load <8 x i16>, <8 x i16> *%p0
  store <8 x i16> %1, <8 x i16>* %p1
  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -964,69 +916,21 @@ define <16 x i16> @test_broadcast_8i16_16i16_reuse(<8 x i16> *%p0, <8 x i16> *%p
 }
 
 define <32 x i8> @test_broadcast_16i8_32i8_reuse(<16 x i8> *%p0, <16 x i8> *%p1) nounwind {
-; X32-AVX-LABEL: test_broadcast_16i8_32i8_reuse:
-; X32-AVX:       ## BB#0:
-; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX-NEXT:    vmovaps (%ecx), %xmm0
-; X32-AVX-NEXT:    vmovaps %xmm0, (%eax)
-; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX-NEXT:    retl
+; X32-LABEL: test_broadcast_16i8_32i8_reuse:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovaps (%ecx), %xmm0
+; X32-NEXT:    vmovaps %xmm0, (%eax)
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
 ;
-; X32-AVX512F-LABEL: test_broadcast_16i8_32i8_reuse:
-; X32-AVX512F:       ## BB#0:
-; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX512F-NEXT:    vmovaps (%ecx), %xmm0
-; X32-AVX512F-NEXT:    vmovaps %xmm0, (%eax)
-; X32-AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX512F-NEXT:    retl
-;
-; X32-AVX512BW-LABEL: test_broadcast_16i8_32i8_reuse:
-; X32-AVX512BW:       ## BB#0:
-; X32-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX512BW-NEXT:    vmovdqa (%ecx), %xmm0
-; X32-AVX512BW-NEXT:    vmovdqu %xmm0, (%eax)
-; X32-AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX512BW-NEXT:    retl
-;
-; X32-AVX512DQ-LABEL: test_broadcast_16i8_32i8_reuse:
-; X32-AVX512DQ:       ## BB#0:
-; X32-AVX512DQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512DQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-AVX512DQ-NEXT:    vmovaps (%ecx), %xmm0
-; X32-AVX512DQ-NEXT:    vmovaps %xmm0, (%eax)
-; X32-AVX512DQ-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32-AVX512DQ-NEXT:    retl
-;
-; X64-AVX-LABEL: test_broadcast_16i8_32i8_reuse:
-; X64-AVX:       ## BB#0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovaps %xmm0, (%rsi)
-; X64-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX-NEXT:    retq
-;
-; X64-AVX512F-LABEL: test_broadcast_16i8_32i8_reuse:
-; X64-AVX512F:       ## BB#0:
-; X64-AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512F-NEXT:    vmovaps %xmm0, (%rsi)
-; X64-AVX512F-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512F-NEXT:    retq
-;
-; X64-AVX512BW-LABEL: test_broadcast_16i8_32i8_reuse:
-; X64-AVX512BW:       ## BB#0:
-; X64-AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512BW-NEXT:    vmovdqu %xmm0, (%rsi)
-; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512BW-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: test_broadcast_16i8_32i8_reuse:
-; X64-AVX512DQ:       ## BB#0:
-; X64-AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512DQ-NEXT:    vmovaps %xmm0, (%rsi)
-; X64-AVX512DQ-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-LABEL: test_broadcast_16i8_32i8_reuse:
+; X64:       ## BB#0:
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    vmovaps %xmm0, (%rsi)
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
  %1 = load <16 x i8>, <16 x i8> *%p0
  store <16 x i8> %1, <16 x i8>* %p1
  %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

@@ -13,14 +13,18 @@
 ; }
 ;
 ; RUN: llc -filetype=asm %s -o - | FileCheck %s
-; Test that we only emit register-indirect locations for the array array.
-; rdar://problem/14874886
-;
-; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
+; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump - --debug-dump=info | FileCheck %s --check-prefix=DWARF
+
+; CHECK-LABEL: _main:
+; CHECK: movaps {{.*}}, (%rsp)
 ; CHECK: movq    %rsp, %rdi
-; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
-; CHECK:     ##DEBUG_VALUE: main:array <- [%RDI+0]
-; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
+; CHECK: callq _f
+
+; DWARF: DW_TAG_variable
+; 	"<0x2> 91 00" means fbreg 0, i.e. offset RSP+0.
+; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 00 )
+; DWARF-NEXT:              DW_AT_name [DW_FORM_strp]     ( {{.*}} = "array")
+
 ; ModuleID = '/tmp/array.c'
 source_filename = "/tmp/array.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

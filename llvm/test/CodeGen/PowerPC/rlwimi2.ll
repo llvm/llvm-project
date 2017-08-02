@@ -1,5 +1,5 @@
 ; All of these ands and shifts should be folded into rlwimi's
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -o %t
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -o %t
 ; RUN: grep rlwimi %t | count 4
 ; RUN: not grep srwi %t
 ; RUN: not grep slwi %t

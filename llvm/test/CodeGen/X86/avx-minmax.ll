@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+avx -asm-verbose=false -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck -check-prefix=UNSAFE %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -asm-verbose=false -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck -check-prefix=UNSAFE %s
 
 ; UNSAFE-LABEL: maxpd:
 ; UNSAFE: vmaxpd {{.+}}, %xmm

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 	%struct.stp_sequence = type { double, double }
 
 define i32 @stp_sequence_set_short_data(%struct.stp_sequence* %sequence, i32 %count, i16* %data) {

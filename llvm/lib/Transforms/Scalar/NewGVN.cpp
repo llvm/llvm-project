@@ -781,11 +781,9 @@ bool StoreExpression::equals(const Expression &Other) const {
 
 // Determine if the edge From->To is a backedge
 bool NewGVN::isBackedge(BasicBlock *From, BasicBlock *To) const {
-  if (From == To)
-    return true;
-  auto *FromDTN = DT->getNode(From);
-  auto *ToDTN = DT->getNode(To);
-  return RPOOrdering.lookup(FromDTN) >= RPOOrdering.lookup(ToDTN);
+  return From == To ||
+         RPOOrdering.lookup(DT->getNode(From)) >=
+             RPOOrdering.lookup(DT->getNode(To));
 }
 
 #ifndef NDEBUG
@@ -1824,7 +1822,6 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
 // Return true if V is a value that will always be available (IE can
 // be placed anywhere) in the function.  We don't do globals here
 // because they are often worse to put in place.
-// TODO: Separate cost from availability
 static bool alwaysAvailable(Value *V) {
   return isa<Constant>(V) || isa<Argument>(V);
 }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7 -mattr=+avx
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 -mattr=+avx
 ; PR13352
 
 declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>, <8 x float>) nounwind readnone

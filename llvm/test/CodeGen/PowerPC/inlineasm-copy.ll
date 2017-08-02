@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -no-integrated-as -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=ppc32-- -no-integrated-as -verify-machineinstrs | FileCheck %s
 
 ; CHECK-NOT: mr
 define i32 @test(i32 %Y, i32 %X) {

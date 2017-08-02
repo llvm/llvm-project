@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86    | FileCheck %s
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=i686--    | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 declare void @llvm.x86.int(i8) nounwind
 

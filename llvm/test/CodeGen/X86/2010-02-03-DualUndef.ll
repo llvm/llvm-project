@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 ; PR6086
 define fastcc void @prepOutput() nounwind {
 bb:                                               ; preds = %output.exit

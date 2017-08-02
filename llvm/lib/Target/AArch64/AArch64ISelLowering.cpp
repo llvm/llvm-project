@@ -7421,7 +7421,7 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
   if (isa<FPExtInst>(Ext))
     return false;
 
-  // Vector types are next free.
+  // Vector types are not free.
   if (Ext->getType()->isVectorTy())
     return false;
 

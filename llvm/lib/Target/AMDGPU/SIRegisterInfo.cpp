@@ -236,8 +236,15 @@ bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const
   return true;
 }
 
-bool SIRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
-  return MF.getFrameInfo().hasStackObjects();
+bool SIRegisterInfo::requiresFrameIndexScavenging(
+  const MachineFunction &MF) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (MFI.hasStackObjects())
+    return true;
+
+  // May need to deal with callee saved registers.
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  return !Info->isEntryFunction();
 }
 
 bool SIRegisterInfo::requiresFrameIndexReplacementScavenging(

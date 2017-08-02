@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc -march=x86-64 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck -check-prefix=X86 %s
-; RUN: llc -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -debug-only=isel < %s 2>&1 | FileCheck -check-prefix=DBGDAG %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck -check-prefix=X86 %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -debug-only=isel < %s 2>&1 | FileCheck -check-prefix=DBGDAG %s
 
 ; It's OK to merge the load / store of the first 2 components, but
 ; they must not be placed on the same chain after merging.

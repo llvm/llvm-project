@@ -1,5 +1,6 @@
 ; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon | FileCheck %s -check-prefixes=ALL,OCTEON
 ; RUN: llc -O1 < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefixes=ALL,MIPS64
+; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon -relocation-model=pic | FileCheck %s -check-prefixes=ALL,OCTEON-PIC
 
 define i64 @addi64(i64 %a, i64 %b) nounwind {
 entry:
@@ -88,10 +89,12 @@ entry:
   ret i64 %res2
 }
 
-define i64 @bbit0(i64 %a) nounwind {
+define i64 @bbit1(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit0:
-; OCTEON: bbit0   $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit1:
+; OCTEON: bbit1   $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: andi  $[[T0:[0-9]+]], $4, 8
 ; MIPS64: bnez  $[[T0]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 8
@@ -104,10 +107,12 @@ endif:
   ret i64 12
 }
 
-define i64 @bbit032(i64 %a) nounwind {
+define i64 @bbit132(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit032:
-; OCTEON: bbit032 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit132:
+; OCTEON: bbit132 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: daddiu  $[[T0:[0-9]+]], $zero, 1
 ; MIPS64: dsll    $[[T1:[0-9]+]], $[[T0]], 35
 ; MIPS64: and     $[[T2:[0-9]+]], $4, $[[T1]]
@@ -122,10 +127,12 @@ endif:
   ret i64 12
 }
 
-define i64 @bbit1(i64 %a) nounwind {
+define i64 @bbit0(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit1:
-; OCTEON: bbit1 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit0:
+; OCTEON: bbit0 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: andi  $[[T0:[0-9]+]], $4, 8
 ; MIPS64: beqz  $[[T0]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 8
@@ -138,10 +145,12 @@ endif:
   ret i64 12
 }
 
-define i64 @bbit132(i64 %a) nounwind {
+define i64 @bbit032(i64 %a) nounwind {
 entry:
-; ALL-LABEL: bbit132:
-; OCTEON: bbit132 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; ALL-LABEL: bbit032:
+; OCTEON: bbit032 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
 ; MIPS64: daddiu  $[[T0:[0-9]+]], $zero, 1
 ; MIPS64: dsll    $[[T1:[0-9]+]], $[[T0]], 35
 ; MIPS64: and     $[[T2:[0-9]+]], $4, $[[T1]]

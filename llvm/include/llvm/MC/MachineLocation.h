@@ -16,6 +16,7 @@
 #define LLVM_MC_MACHINELOCATION_H
 
 #include <cstdint>
+#include <cassert>
 
 namespace llvm {
 
@@ -36,7 +37,9 @@ public:
   /// Create a direct register location.
   explicit MachineLocation(unsigned R) : IsRegister(true), Register(R) {}
   /// Create a register-indirect location with an offset.
-  MachineLocation(unsigned R, int O) : Register(R), Offset(O) {}
+  MachineLocation(unsigned R, int O) : Register(R), Offset(O) {
+    assert(O == 0 && "offset is expected to always be zero");
+  }
 
   bool operator==(const MachineLocation &Other) const {
       return IsRegister == Other.IsRegister && Register == Other.Register &&
@@ -51,7 +54,6 @@ public:
   int getOffset()        const { return Offset; }
   void setIsRegister(bool Is)  { IsRegister = Is; }
   void setRegister(unsigned R) { Register = R; }
-  void setOffset(int O)        { Offset = O; }
 
   /// Make this location a direct register location.
   void set(unsigned R) {

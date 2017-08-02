@@ -1,4 +1,5 @@
-; RUN: llc < %s
+; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc < %s -mtriple=i686--
 
 ; This test verifies that SelectionDAG can handle landingPad of token type and not crash LLVM.
 

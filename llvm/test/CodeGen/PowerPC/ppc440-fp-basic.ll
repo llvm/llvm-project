@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=440 -fp-contract=fast | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=440 -fp-contract=fast | FileCheck %s
 
 %0 = type { double, double }
 

@@ -44,6 +44,7 @@ FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
+FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIDebuggerInsertNopsPass();
@@ -120,6 +121,9 @@ extern char &AMDGPUUnifyMetadataID;
 
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
+
+void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
+extern char &SIOptimizeExecMaskingPreRAID;
 
 void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
 extern char &AMDGPUAnnotateUniformValuesPassID;

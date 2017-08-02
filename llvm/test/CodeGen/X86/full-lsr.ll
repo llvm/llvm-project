@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -mcpu=generic | FileCheck %s
-; RUN: llc < %s -march=x86 -mcpu=atom | FileCheck -check-prefix=ATOM %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=atom | FileCheck -check-prefix=ATOM %s
 
 define void @foo(float* nocapture %A, float* nocapture %B, float* nocapture %C, i32 %N) nounwind {
 ; ATOM: foo

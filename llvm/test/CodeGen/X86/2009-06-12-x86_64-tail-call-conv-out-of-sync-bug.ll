@@ -1,5 +1,5 @@
-; RUN: llc < %s -tailcallopt -march=x86-64 -mattr=+sse2 -mtriple=x86_64-apple-darwin | grep fstpt
-; RUN: llc < %s -tailcallopt -march=x86-64 -mattr=+sse2 -mtriple=x86_64-apple-darwin | grep xmm
+; RUN: llc < %s -tailcallopt -mattr=+sse2 -mtriple=x86_64-apple-darwin | grep fstpt
+; RUN: llc < %s -tailcallopt -mattr=+sse2 -mtriple=x86_64-apple-darwin | grep xmm
 
 ; Check that x86-64 tail calls support x86_fp80 and v2f32 types. (Tail call
 ; calling convention out of sync with standard c calling convention on x86_64)

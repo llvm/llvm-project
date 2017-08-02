@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -relocation-model=pic | FileCheck %s -check-prefix=PIC
-; RUN: llc < %s -march=x86 -relocation-model=static | FileCheck %s -check-prefix=STATIC
+; RUN: llc < %s -mtriple=i686-- -relocation-model=pic | FileCheck %s -check-prefix=PIC
+; RUN: llc < %s -mtriple=i686-- -relocation-model=static | FileCheck %s -check-prefix=STATIC
 ;
 ; Make sure the common loop invariant A is hoisted up to preheader,
 ; since too many registers are needed to subsume it into the addressing modes.

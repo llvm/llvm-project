@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -march=x86-64 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
 ; CHECK-LABEL: fmul2_f32:
 ; CHECK: addss %xmm0, %xmm0

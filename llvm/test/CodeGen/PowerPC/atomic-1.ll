@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -march=ppc32 |  FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin |  FileCheck %s
 
 define i32 @exchange_and_add(i32* %mem, i32 %val) nounwind {
 ; CHECK-LABEL: exchange_and_add:

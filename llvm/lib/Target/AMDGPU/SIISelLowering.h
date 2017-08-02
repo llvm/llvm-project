@@ -183,6 +183,12 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool supportSplitCSR(MachineFunction *MF) const override;
+  void initializeSplitCSR(MachineBasicBlock *Entry) const override;
+  void insertCopiesSplitCSR(
+    MachineBasicBlock *Entry,
+    const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
+
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -198,6 +204,15 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+
+  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+                          CallingConv::ID CallConv, bool isVarArg,
+                          const SmallVectorImpl<ISD::InputArg> &Ins,
+                          const SDLoc &DL, SelectionDAG &DAG,
+                          SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
+                          SDValue ThisVal) const;
+  SDValue LowerCall(CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
 
   unsigned getRegisterByName(const char* RegName, EVT VT,
                              SelectionDAG &DAG) const override;
