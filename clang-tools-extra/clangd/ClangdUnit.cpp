@@ -878,7 +878,8 @@ CppFile::deferRebuild(StringRef NewContents,
         return Diagnostics; // Our rebuild request was cancelled, don't set
                             // ASTPromise.
 
-      That->ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(std::move(NewAST)));
+      That->ASTPromise.set_value(
+          std::make_shared<ParsedASTWrapper>(std::move(NewAST)));
     } // unlock Mutex
 
     return Diagnostics;

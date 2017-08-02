@@ -973,6 +973,9 @@ static CuDeviceGetCountFcnTy *CuDeviceGetCountFcnPtr;
 typedef CUresult CUDAAPI CuCtxCreateFcnTy(CUcontext *, unsigned int, CUdevice);
 static CuCtxCreateFcnTy *CuCtxCreateFcnPtr;
 
+typedef CUresult CUDAAPI CuCtxGetCurrentFcnTy(CUcontext *);
+static CuCtxGetCurrentFcnTy *CuCtxGetCurrentFcnPtr;
+
 typedef CUresult CUDAAPI CuDeviceGetFcnTy(CUdevice *, int);
 static CuDeviceGetFcnTy *CuDeviceGetFcnPtr;
 
@@ -1105,6 +1108,9 @@ static int initialDeviceAPIsCUDA() {
   CuCtxCreateFcnPtr =
       (CuCtxCreateFcnTy *)getAPIHandleCUDA(HandleCuda, "cuCtxCreate_v2");
 
+  CuCtxGetCurrentFcnPtr =
+      (CuCtxGetCurrentFcnTy *)getAPIHandleCUDA(HandleCuda, "cuCtxGetCurrent");
+
   CuModuleLoadDataExFcnPtr = (CuModuleLoadDataExFcnTy *)getAPIHandleCUDA(
       HandleCuda, "cuModuleLoadDataEx");
 
@@ -1194,7 +1200,33 @@ static PollyGPUContext *initContextCUDA() {
     fprintf(stderr, "Allocate memory for Polly CUDA context failed.\n");
     exit(-1);
   }
-  CuCtxCreateFcnPtr(&(((CUDAContext *)Context->Context)->Cuda), 0, Device);
+
+  // In cases where managed memory is used, it is quite likely that
+  // `cudaMallocManaged` / `polly_mallocManaged` was called before
+  // `polly_initContext` was called.
+  //
+  // If `polly_initContext` calls `CuCtxCreate` when there already was a
+  // pre-existing context created by the runtime API, this causes code running
+  // on P100 to hang. So, we query for a pre-existing context to try and use.
+  // If there is no pre-existing context, we create a new context
+
+  // The possible pre-existing context from previous runtime API calls.
+  CUcontext MaybeRuntimeAPIContext;
+  if (CuCtxGetCurrentFcnPtr(&MaybeRuntimeAPIContext) != CUDA_SUCCESS) {
+    fprintf(stderr, "cuCtxGetCurrent failed.\n");
+    exit(-1);
+  }
+
+  // There was no previous context, initialise it.
+  if (MaybeRuntimeAPIContext == NULL) {
+    if (CuCtxCreateFcnPtr(&(((CUDAContext *)Context->Context)->Cuda), 0,
+                          Device) != CUDA_SUCCESS) {
+      fprintf(stderr, "cuCtxCreateFcnPtr failed.\n");
+      exit(-1);
+    }
+  } else {
+    ((CUDAContext *)Context->Context)->Cuda = MaybeRuntimeAPIContext;
+  }
 
   if (CacheMode)
     CurrentContext = Context;
