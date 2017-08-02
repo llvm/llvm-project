@@ -638,6 +638,19 @@ void t44() {
   // CHECK: call void asm sideeffect inteldialect "mov cr0, eax\0A\09mov cr2, ebx\0A\09mov cr3, ecx\0A\09mov cr4, edx", "~{cr0},~{cr2},~{cr3},~{cr4},~{dirflag},~{fpsr},~{flags}"()
 }
 
+void t45() {
+  // CHECK-LABEL: define void @t45
+  __asm {
+    mov dr0, eax
+    mov dr1, ebx
+    mov dr2, ebx
+    mov dr3, ecx
+    mov dr6, edx
+    mov dr7, ecx
+  }
+  // CHECK: call void asm sideeffect inteldialect "mov dr0, eax\0A\09mov dr1, ebx\0A\09mov dr2, ebx\0A\09mov dr3, ecx\0A\09mov dr6, edx\0A\09mov dr7, ecx", "~{dr0},~{dr1},~{dr2},~{dr3},~{dr6},~{dr7},~{dirflag},~{fpsr},~{flags}"()
+}
+
 void dot_operator(){
 // CHECK-LABEL: define void @dot_operator
 	__asm { mov eax, 3[ebx]A.b}

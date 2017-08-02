@@ -31,6 +31,7 @@ foreach(target x86_64;aarch64)
   set(BUILTINS_${target}-fuchsia_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
   set(BUILTINS_${target}-fuchsia_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
 endforeach()
+
 if(NOT APPLE)
   list(APPEND LLVM_BUILTIN_TARGETS "default")
 endif()
@@ -45,8 +46,10 @@ foreach(target x86_64;aarch64)
   set(RUNTIMES_${target}-fuchsia_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
   set(RUNTIMES_${target}-fuchsia_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
   set(RUNTIMES_${target}-fuchsia_LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
+  set(RUNTIMES_${target}-fuchsia_LIBCXXABI_ENABLE_STATIC OFF CACHE BOOL "")
   set(RUNTIMES_${target}-fuchsia_LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
   set(RUNTIMES_${target}-fuchsia_LIBCXX_ABI_VERSION 2 CACHE STRING "")
+  set(RUNTIMES_${target}-fuchsia_LIBCXX_ENABLE_STATIC OFF CACHE BOOL "")
 endforeach()
 
 # Setup toolchain.
@@ -60,6 +63,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-dsymutil
   llvm-lib
   llvm-nm
+  llvm-objcopy
   llvm-objdump
   llvm-profdata
   llvm-ranlib
@@ -68,6 +72,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-size
   llvm-symbolizer
   opt
+  sancov
   CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS

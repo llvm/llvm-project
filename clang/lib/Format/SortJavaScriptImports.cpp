@@ -413,7 +413,7 @@ private:
       nextToken();
       if (Current->is(tok::r_brace))
         break;
-      if (Current->isNot(tok::identifier))
+      if (!Current->isOneOf(tok::identifier, tok::kw_default))
         return false;
 
       JsImportedSymbol Symbol;
@@ -425,7 +425,7 @@ private:
 
       if (Current->is(Keywords.kw_as)) {
         nextToken();
-        if (Current->isNot(tok::identifier))
+        if (!Current->isOneOf(tok::identifier, tok::kw_default))
           return false;
         Symbol.Alias = Current->TokenText;
         nextToken();

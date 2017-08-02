@@ -25,11 +25,46 @@
 namespace clang {
 namespace diff {
 
-class SyntaxTree;
+/// This represents a match between two nodes in the source and destination
+/// trees, meaning that they are likely to be related.
+struct Match {
+  NodeId Src, Dst;
+};
+
+enum ChangeKind {
+  Delete, // (Src): delete node Src.
+  Update, // (Src, Dst): update the value of node Src to match Dst.
+  Insert, // (Src, Dst, Pos): insert Src as child of Dst at offset Pos.
+  Move    // (Src, Dst, Pos): move Src to be a child of Dst at offset Pos.
+};
+
+struct Change {
+  ChangeKind Kind;
+  NodeId Src, Dst;
+  size_t Position;
+
+  Change(ChangeKind Kind, NodeId Src, NodeId Dst, size_t Position)
+      : Kind(Kind), Src(Src), Dst(Dst), Position(Position) {}
+  Change(ChangeKind Kind, NodeId Src) : Kind(Kind), Src(Src) {}
+  Change(ChangeKind Kind, NodeId Src, NodeId Dst)
+      : Kind(Kind), Src(Src), Dst(Dst) {}
+};
+
+/// Represents a Clang AST node, alongside some additional information.
+struct Node {
+  NodeId Parent, LeftMostDescendant, RightMostDescendant;
+  int Depth, Height;
+  ast_type_traits::DynTypedNode ASTNode;
+  SmallVector<NodeId, 4> Children;
+
+  ast_type_traits::ASTNodeKind getType() const { return ASTNode.getNodeKind(); }
+  const StringRef getTypeLabel() const { return getType().asStringRef(); }
+  bool isLeaf() const { return Children.empty(); }
+};
 
 class ASTDiff {
 public:
-  ASTDiff(SyntaxTree &T1, SyntaxTree &T2, const ComparisonOptions &Options);
+  ASTDiff(SyntaxTree &Src, SyntaxTree &Dst, const ComparisonOptions &Options);
   ~ASTDiff();
 
   // Returns a list of matches.
@@ -57,7 +92,10 @@ public:
   /// Constructs a tree from any AST node.
   template <class T>
   SyntaxTree(T *Node, const ASTContext &AST)
-      : TreeImpl(llvm::make_unique<SyntaxTreeImpl>(this, Node, AST)) {}
+      : TreeImpl(llvm::make_unique<Impl>(this, Node, AST)) {}
+  ~SyntaxTree();
+
+  const Node &getNode(NodeId Id) const;
 
   /// Serialize the node attributes to a string representation. This should
   /// uniquely distinguish nodes of the same kind. Note that this function just
@@ -66,7 +104,8 @@ public:
 
   void printAsJson(raw_ostream &OS);
 
-  std::unique_ptr<SyntaxTreeImpl> TreeImpl;
+  class Impl;
+  std::unique_ptr<Impl> TreeImpl;
 };
 
 struct ComparisonOptions {
@@ -88,17 +127,6 @@ struct ComparisonOptions {
   /// Returns false if the nodes should never be matched.
   bool isMatchingAllowed(const DynTypedNode &N1, const DynTypedNode &N2) const {
     return N1.getNodeKind().isSame(N2.getNodeKind());
-  }
-
-  /// Returns zero if the nodes are considered to be equal.  Returns a value
-  /// indicating the editing distance between the nodes otherwise.
-  /// There is no need to consider nodes that cannot be matched as input for
-  /// this function (see isMatchingAllowed).
-  double getNodeDistance(const SyntaxTree &T1, const DynTypedNode &N1,
-                         const SyntaxTree &T2, const DynTypedNode &N2) const {
-    if (T1.getNodeValue(N1) == T2.getNodeValue(N2))
-      return 0;
-    return 1;
   }
 };
 
