@@ -8,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 // Sanitizer Coverage Controller for Trace PC Guard.
 
+#include "sanitizer_platform.h"
+
+#if !SANITIZER_FUCHSIA
 #include "sancov_flags.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
@@ -204,3 +207,5 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
 }  // extern "C"
+
+#endif  // !SANITIZER_FUCHSIA

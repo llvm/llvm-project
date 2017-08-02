@@ -165,7 +165,7 @@ void __clear_cache(void *start, void *end) {
   for (addr = xstart; addr < xend; addr += icache_line_size)
     __asm __volatile("ic ivau, %0" :: "r"(addr));
   __asm __volatile("isb sy");
-#elif defined (__powerpc64__)
+#elif defined (__powerpc64__) && defined(__LITTLE_ENDIAN__)
   const size_t line_size = 32;
   const size_t len = (uintptr_t)end - (uintptr_t)start;
 

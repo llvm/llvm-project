@@ -256,7 +256,9 @@ static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
         RAW_CHECK_MSG(needed_length < kLen, \
                       "Buffer in Report is too short!\n"); \
       }
-    if (append_pid) {
+    // Fuchsia's logging infrastructure always keeps track of the logging
+    // process, thread, and timestamp, so never prepend such information.
+    if (!SANITIZER_FUCHSIA && append_pid) {
       int pid = internal_getpid();
       const char *exe_name = GetProcessName();
       if (common_flags()->log_exe_name && exe_name) {

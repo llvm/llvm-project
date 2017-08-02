@@ -19,6 +19,26 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
+namespace __asan {
+
+void InitializeAsanInterceptors();
+void InitializePlatformInterceptors();
+
+#define ENSURE_ASAN_INITED()      \
+  do {                            \
+    CHECK(!asan_init_is_running); \
+    if (UNLIKELY(!asan_inited)) { \
+      AsanInitFromRtl();          \
+    }                             \
+  } while (0)
+
+}  // namespace __asan
+
+// There is no general interception at all on Fuchsia.
+// Only the functions in asan_interceptors_memintrinsics.h are
+// really defined to replace libc functions.
+#if !SANITIZER_FUCHSIA
+
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #if !SANITIZER_WINDOWS
@@ -112,18 +132,6 @@ DECLARE_REAL(int, sigaction, int signum, const struct sigaction *act,
 #define ASAN_INTERCEPT_FUNC(name)
 #endif  // SANITIZER_MAC
 
-namespace __asan {
-
-void InitializeAsanInterceptors();
-void InitializePlatformInterceptors();
-
-#define ENSURE_ASAN_INITED() do { \
-  CHECK(!asan_init_is_running); \
-  if (UNLIKELY(!asan_inited)) { \
-    AsanInitFromRtl(); \
-  } \
-} while (0)
-
-}  // namespace __asan
+#endif  // !SANITIZER_FUCHSIA
 
 #endif  // ASAN_INTERCEPTORS_H

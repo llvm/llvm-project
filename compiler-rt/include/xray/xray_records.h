@@ -17,6 +17,8 @@
 #ifndef XRAY_XRAY_RECORDS_H
 #define XRAY_XRAY_RECORDS_H
 
+#include <cstdint>
+
 namespace __xray {
 
 enum FileTypes {

@@ -19,7 +19,7 @@
      defined(__aarch64__) || defined(__mips__) || defined(__powerpc64__) || \
      defined(__s390__))
 # define CAN_SANITIZE_UB 1
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__Fuchsia__)
 # define CAN_SANITIZE_UB 1
 #else
 # define CAN_SANITIZE_UB 0

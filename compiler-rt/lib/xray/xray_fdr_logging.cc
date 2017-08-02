@@ -39,7 +39,10 @@
 namespace __xray {
 
 // Global BufferQueue.
-std::shared_ptr<BufferQueue> BQ;
+// NOTE: This is a pointer to avoid having to do atomic operations at
+// initialization time. This is OK to leak as there will only be one bufferqueue
+// for the runtime, initialized once through the fdrInit(...) sequence.
+std::shared_ptr<BufferQueue>* BQ = nullptr;
 
 __sanitizer::atomic_sint32_t LogFlushStatus = {
     XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
@@ -64,7 +67,7 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   // Make a copy of the BufferQueue pointer to prevent other threads that may be
   // resetting it from blowing away the queue prematurely while we're dealing
   // with it.
-  auto LocalBQ = BQ;
+  auto LocalBQ = *BQ;
 
   // We write out the file in the following format:
   //
@@ -129,7 +132,7 @@ XRayLogInitStatus fdrLoggingFinalize() XRAY_NEVER_INSTRUMENT {
 
   // Do special things to make the log finalize itself, and not allow any more
   // operations to be performed until re-initialized.
-  BQ->finalize();
+  (*BQ)->finalize();
 
   __sanitizer::atomic_store(&LoggingStatus,
                             XRayLogInitStatus::XRAY_LOG_FINALIZED,
@@ -146,7 +149,7 @@ XRayLogInitStatus fdrLoggingReset() XRAY_NEVER_INSTRUMENT {
     return static_cast<XRayLogInitStatus>(CurrentStatus);
 
   // Release the in-memory buffer queue.
-  BQ.reset();
+  BQ->reset();
 
   // Spin until the flushing status is flushed.
   s32 CurrentFlushingStatus = XRayLogFlushStatus::XRAY_LOG_FLUSHED;
@@ -195,7 +198,7 @@ void fdrLoggingHandleArg0(int32_t FuncId,
   auto TSC_CPU = getTimestamp();
   __xray_fdr_internal::processFunctionHook(FuncId, Entry, std::get<0>(TSC_CPU),
                                            std::get<1>(TSC_CPU), clock_gettime,
-                                           LoggingStatus, BQ);
+                                           LoggingStatus, *BQ);
 }
 
 void fdrLoggingHandleCustomEvent(void *Event,
@@ -220,7 +223,7 @@ void fdrLoggingHandleCustomEvent(void *Event,
     (void)Once;
   }
   int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
-  if (!isLogInitializedAndReady(LocalBQ, TSC, CPU, clock_gettime))
+  if (!isLogInitializedAndReady(*LocalBQ, TSC, CPU, clock_gettime))
     return;
 
   // Here we need to prepare the log to handle:
@@ -268,7 +271,10 @@ XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
   }
 
   bool Success = false;
-  BQ = std::make_shared<BufferQueue>(BufferSize, BufferMax, Success);
+  if (BQ == nullptr)
+    BQ = new std::shared_ptr<BufferQueue>();
+
+  *BQ = std::make_shared<BufferQueue>(BufferSize, BufferMax, Success);
   if (!Success) {
     Report("BufferQueue init failed.\n");
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
