@@ -28,9 +28,10 @@ ANALYSIS_CONSTRAINTS(Z3Constraints, "z3", "Use Z3 contraint solver", CreateZ3Con
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)
 #endif
 
-ANALYSIS_DIAGNOSTICS(HTML,  "html",  "Output analysis results using HTML",   createHTMLDiagnosticConsumer)
+ANALYSIS_DIAGNOSTICS(HTML, "html", "Output analysis results using HTML", createHTMLDiagnosticConsumer)
+ANALYSIS_DIAGNOSTICS(HTML_SINGLE_FILE, "html-single-file", "Output analysis results using HTML (not allowing for multi-file bugs)", createHTMLSingleFileDiagnosticConsumer)
 ANALYSIS_DIAGNOSTICS(PLIST, "plist", "Output analysis results using Plists", createPlistDiagnosticConsumer)
-ANALYSIS_DIAGNOSTICS(PLIST_MULTI_FILE, "plist-multi-file", "Output analysis results using Plists (allowing for mult-file bugs)", createPlistMultiFileDiagnosticConsumer)
+ANALYSIS_DIAGNOSTICS(PLIST_MULTI_FILE, "plist-multi-file", "Output analysis results using Plists (allowing for multi-file bugs)", createPlistMultiFileDiagnosticConsumer)
 ANALYSIS_DIAGNOSTICS(PLIST_HTML, "plist-html", "Output analysis results using HTML wrapped with Plists", createPlistHTMLDiagnosticConsumer)
 ANALYSIS_DIAGNOSTICS(TEXT, "text", "Text output of analysis results", createTextPathDiagnosticConsumer)
 
