@@ -40,7 +40,7 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
-  CodeModel::Model CodeModel = CodeModel::Default;
+  Optional<CodeModel::Model> CodeModel = None;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   TargetMachine::CodeGenFileType CGFileType = TargetMachine::CGFT_ObjectFile;
   unsigned OptLevel = 2;

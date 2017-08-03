@@ -930,5 +930,163 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExprNonIntegral) {
   EXPECT_FALSE(verifyFunction(*F, &errs()));
 }
 
+// Make sure that SCEV invalidates exit limits after invalidating the values it
+// depends on when we forget a loop.
+TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
+  /*
+   * Create the following code:
+   * func(i64 addrspace(10)* %arg)
+   * top:
+   *  br label %L.ph
+   * L.ph:
+   *  br label %L
+   * L:
+   *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
+   *  %add = add i64 %phi2, 1
+   *  %cond = icmp slt i64 %add, 1000; then becomes 2000.
+   *  br i1 %cond, label %post, label %L2
+   * post:
+   *  ret void
+   *
+   */
+
+  // Create a module with non-integral pointers in it's datalayout
+  Module NIM("nonintegral", Context);
+  std::string DataLayout = M.getDataLayoutStr();
+  if (!DataLayout.empty())
+    DataLayout += "-";
+  DataLayout += "ni:10";
+  NIM.setDataLayout(DataLayout);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+  Type *T_pint64 = T_int64->getPointerTo(10);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
+  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+
+  BasicBlock *Top = BasicBlock::Create(Context, "top", F);
+  BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
+  BasicBlock *L = BasicBlock::Create(Context, "L", F);
+  BasicBlock *Post = BasicBlock::Create(Context, "post", F);
+
+  IRBuilder<> Builder(Top);
+  Builder.CreateBr(LPh);
+
+  Builder.SetInsertPoint(LPh);
+  Builder.CreateBr(L);
+
+  Builder.SetInsertPoint(L);
+  PHINode *Phi = Builder.CreatePHI(T_int64, 2);
+  auto *Add = cast<Instruction>(
+      Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add"));
+  auto *Limit = ConstantInt::get(T_int64, 1000);
+  auto *Cond = cast<Instruction>(
+      Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, Limit, "cond"));
+  auto *Br = cast<Instruction>(Builder.CreateCondBr(Cond, L, Post));
+  Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
+  Phi->addIncoming(Add, L);
+
+  Builder.SetInsertPoint(Post);
+  Builder.CreateRetVoid();
+
+  ScalarEvolution SE = buildSE(*F);
+  auto *Loop = LI->getLoopFor(L);
+  const SCEV *EC = SE.getBackedgeTakenCount(Loop);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
+
+  SE.forgetLoop(Loop);
+  Br->eraseFromParent();
+  Cond->eraseFromParent();
+
+  Builder.SetInsertPoint(L);
+  Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000),
+                     "new.cond");
+  Builder.CreateCondBr(Cond, L, Post);
+  const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
+  EXPECT_NE(EC, NewEC);
+}
+
+// Make sure that SCEV invalidates exit limits after invalidating the values it
+// depends on when we forget a value.
+TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
+  /*
+   * Create the following code:
+   * func(i64 addrspace(10)* %arg)
+   * top:
+   *  br label %L.ph
+   * L.ph:
+   *  %load = load i64 addrspace(10)* %arg
+   *  br label %L
+   * L:
+   *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
+   *  %add = add i64 %phi2, 1
+   *  %cond = icmp slt i64 %add, %load ; then becomes 2000.
+   *  br i1 %cond, label %post, label %L2
+   * post:
+   *  ret void
+   *
+   */
+
+  // Create a module with non-integral pointers in it's datalayout
+  Module NIM("nonintegral", Context);
+  std::string DataLayout = M.getDataLayoutStr();
+  if (!DataLayout.empty())
+    DataLayout += "-";
+  DataLayout += "ni:10";
+  NIM.setDataLayout(DataLayout);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+  Type *T_pint64 = T_int64->getPointerTo(10);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
+  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+
+  Argument *Arg = &*F->arg_begin();
+
+  BasicBlock *Top = BasicBlock::Create(Context, "top", F);
+  BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
+  BasicBlock *L = BasicBlock::Create(Context, "L", F);
+  BasicBlock *Post = BasicBlock::Create(Context, "post", F);
+
+  IRBuilder<> Builder(Top);
+  Builder.CreateBr(LPh);
+
+  Builder.SetInsertPoint(LPh);
+  auto *Load = cast<Instruction>(Builder.CreateLoad(T_int64, Arg, "load"));
+  Builder.CreateBr(L);
+
+  Builder.SetInsertPoint(L);
+  PHINode *Phi = Builder.CreatePHI(T_int64, 2);
+  auto *Add = cast<Instruction>(
+      Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add"));
+  auto *Cond = cast<Instruction>(
+      Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, Load, "cond"));
+  auto *Br = cast<Instruction>(Builder.CreateCondBr(Cond, L, Post));
+  Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
+  Phi->addIncoming(Add, L);
+
+  Builder.SetInsertPoint(Post);
+  Builder.CreateRetVoid();
+
+  ScalarEvolution SE = buildSE(*F);
+  auto *Loop = LI->getLoopFor(L);
+  const SCEV *EC = SE.getBackedgeTakenCount(Loop);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
+
+  SE.forgetValue(Load);
+  Br->eraseFromParent();
+  Cond->eraseFromParent();
+  Load->eraseFromParent();
+
+  Builder.SetInsertPoint(L);
+  Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000),
+                     "new.cond");
+  Builder.CreateCondBr(Cond, L, Post);
+  const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
+  EXPECT_NE(EC, NewEC);
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

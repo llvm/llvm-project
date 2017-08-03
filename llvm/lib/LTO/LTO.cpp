@@ -118,7 +118,10 @@ static void computeCacheKey(
     AddUnsigned(*Conf.RelocModel);
   else
     AddUnsigned(-1);
-  AddUnsigned(Conf.CodeModel);
+  if (Conf.CodeModel)
+    AddUnsigned(*Conf.CodeModel);
+  else
+    AddUnsigned(-1);
   AddUnsigned(Conf.CGOptLevel);
   AddUnsigned(Conf.CGFileType);
   AddUnsigned(Conf.OptLevel);

@@ -155,6 +155,31 @@ Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
   return SN;
 }
 
+void PDBFileBuilder::commitFpm(WritableBinaryStream &MsfBuffer,
+                               const MSFLayout &Layout) {
+  auto FpmStream =
+      WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator);
+
+  // We only need to create the alt fpm stream so that it gets initialized.
+  WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator,
+                                             true);
+
+  uint32_t BI = 0;
+  BinaryStreamWriter FpmWriter(*FpmStream);
+  while (BI < Layout.SB->NumBlocks) {
+    uint8_t ThisByte = 0;
+    for (uint32_t I = 0; I < 8; ++I) {
+      bool IsFree =
+          (BI < Layout.SB->NumBlocks) ? Layout.FreePageMap.test(BI) : true;
+      uint8_t Mask = uint8_t(IsFree) << I;
+      ThisByte |= Mask;
+      ++BI;
+    }
+    cantFail(FpmWriter.writeObject(ThisByte));
+  }
+  assert(FpmWriter.bytesRemaining() == 0);
+}
+
 Error PDBFileBuilder::commit(StringRef Filename) {
   assert(!Filename.empty());
   auto ExpectedLayout = finalizeMsfLayout();
@@ -173,6 +198,9 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   if (auto EC = Writer.writeObject(*Layout.SB))
     return EC;
+
+  commitFpm(Buffer, Layout);
+
   uint32_t BlockMapOffset =
       msf::blockToOffset(Layout.SB->BlockMapAddr, Layout.SB->BlockSize);
   Writer.setOffset(BlockMapOffset);

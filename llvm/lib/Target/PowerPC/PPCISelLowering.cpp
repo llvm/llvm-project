@@ -226,6 +226,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::UREM, MVT::i64, Expand);
   }
 
+  if (Subtarget.hasP9Vector()) {
+    setOperationAction(ISD::ABS, MVT::v4i32, Legal);
+    setOperationAction(ISD::ABS, MVT::v8i16, Legal);
+    setOperationAction(ISD::ABS, MVT::v16i8, Legal);
+  }
+
   // Don't use SMUL_LOHI/UMUL_LOHI or SDIVREM/UDIVREM to lower SREM/UREM.
   setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
@@ -2470,7 +2476,6 @@ SDValue PPCTargetLowering::getPICJumpTableRelocBase(SDValue Table,
     return TargetLowering::getPICJumpTableRelocBase(Table, DAG);
 
   switch (getTargetMachine().getCodeModel()) {
-  case CodeModel::Default:
   case CodeModel::Small:
   case CodeModel::Medium:
     return TargetLowering::getPICJumpTableRelocBase(Table, DAG);
@@ -2488,7 +2493,6 @@ PPCTargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
     return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);
 
   switch (getTargetMachine().getCodeModel()) {
-  case CodeModel::Default:
   case CodeModel::Small:
   case CodeModel::Medium:
     return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);
@@ -8390,6 +8394,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntrinsicID =
     cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
 
+  SDLoc dl(Op);
+
   if (IntrinsicID == Intrinsic::thread_pointer) {
     // Reads the thread pointer register, used for __builtin_thread_pointer.
     if (Subtarget.isPPC64())
@@ -8397,9 +8403,37 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(PPC::R2, MVT::i32);
   }
 
+  // We are looking for absolute values here.
+  // The idea is to try to fit one of two patterns:
+  //  max (a, (0-a))  OR  max ((0-a), a)
+  if (Subtarget.hasP9Vector() &&
+      (IntrinsicID == Intrinsic::ppc_altivec_vmaxsw ||
+       IntrinsicID == Intrinsic::ppc_altivec_vmaxsh ||
+       IntrinsicID == Intrinsic::ppc_altivec_vmaxsb)) {
+    SDValue V1 = Op.getOperand(1);
+    SDValue V2 = Op.getOperand(2);
+    if (V1.getSimpleValueType() == V2.getSimpleValueType() &&
+        (V1.getSimpleValueType() == MVT::v4i32 ||
+         V1.getSimpleValueType() == MVT::v8i16 ||
+         V1.getSimpleValueType() == MVT::v16i8)) {
+      if ( V1.getOpcode() == ISD::SUB &&
+           ISD::isBuildVectorAllZeros(V1.getOperand(0).getNode()) &&
+           V1.getOperand(1) == V2 ) {
+        // Generate the abs instruction with the operands
+        return DAG.getNode(ISD::ABS, dl, V2.getValueType(),V2);
+      }
+
+      if ( V2.getOpcode() == ISD::SUB &&
+           ISD::isBuildVectorAllZeros(V2.getOperand(0).getNode()) &&
+           V2.getOperand(1) == V1 ) {
+        // Generate the abs instruction with the operands
+        return DAG.getNode(ISD::ABS, dl, V1.getValueType(),V1);
+      }
+    }
+  }
+
   // If this is a lowered altivec predicate compare, CompareOpc is set to the
   // opcode number of the comparison.
-  SDLoc dl(Op);
   int CompareOpc;
   bool isDot;
   if (!getVectorCompareInfo(Op, CompareOpc, isDot, Subtarget))

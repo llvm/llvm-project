@@ -51,7 +51,7 @@ RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
 RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=SPLIT --check-prefix=NODWO %s
 
 RUN: cp %p/Inputs/split-dwarf-dwp.o %T/split-dwarf-dwp-different-name.o
-RUN: echo "%T/split-dwarf-dwp-different-name.o 0x4" > %t.input
+RUN: echo "%T/split-dwarf-dwp-different-name.o 0x54" > %t.input
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
 RUN:    --default-arch=i386 --dwp=%p/Inputs/split-dwarf-dwp.o.dwp < %t.input | FileCheck --check-prefix=DWP %s
 
@@ -158,8 +158,8 @@ CHECK-NEXT: split-dwarf-addr-object-relocation.cpp:6:0
 
 DWP:      f2
 DWP-NEXT: split-dwarf-dwp.cpp:3:3
-DWP-NEXT: f3
-DWP-NEXT: split-dwarf-dwp.cpp:6:0
+DWP-NEXT: main
+DWP-NEXT: split-dwarf-dwp.cpp:10:0
 
 RUN: echo "unexisting-file 0x1234" > %t.input2
 RUN: llvm-symbolizer < %t.input2 2>&1 | FileCheck %s --check-prefix=MISSING-FILE

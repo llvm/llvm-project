@@ -500,13 +500,31 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
 
   // If there are no calls, MachineRegisterInfo can tell us the used register
   // count easily.
-
-  MCPhysReg HighestVGPRReg = AMDGPU::NoRegister;
-  for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
-    if (MRI.isPhysRegUsed(Reg)) {
-      HighestVGPRReg = Reg;
-      break;
+  if (!FrameInfo.hasCalls()) {
+    MCPhysReg HighestVGPRReg = AMDGPU::NoRegister;
+    for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
+      if (MRI.isPhysRegUsed(Reg)) {
+        HighestVGPRReg = Reg;
+        break;
+      }
     }
+
+    MCPhysReg HighestSGPRReg = AMDGPU::NoRegister;
+    for (MCPhysReg Reg : reverse(AMDGPU::SGPR_32RegClass.getRegisters())) {
+      if (MRI.isPhysRegUsed(Reg)) {
+        HighestSGPRReg = Reg;
+        break;
+      }
+    }
+
+    // We found the maximum register index. They start at 0, so add one to get the
+    // number of registers.
+    Info.NumVGPR = HighestVGPRReg == AMDGPU::NoRegister ? 0 :
+      TRI.getHWRegIndex(HighestVGPRReg) + 1;
+    Info.NumExplicitSGPR = HighestSGPRReg == AMDGPU::NoRegister ? 0 :
+      TRI.getHWRegIndex(HighestSGPRReg) + 1;
+
+    return Info;
   }
 
   int32_t MaxVGPR = -1;

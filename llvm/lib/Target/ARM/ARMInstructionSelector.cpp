@@ -15,6 +15,7 @@
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -60,6 +61,7 @@ private:
   // Set \p DestReg to \p Constant.
   void putConstant(InsertInfo I, unsigned DestReg, unsigned Constant) const;
 
+  bool selectGlobal(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
   bool selectSelect(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
 
   // Check if the types match and both operands have the expected size and
@@ -488,6 +490,59 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
   return true;
 }
 
+bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
+                                          MachineRegisterInfo &MRI) const {
+  if (TII.getSubtarget().isROPI() || TII.getSubtarget().isRWPI()) {
+    DEBUG(dbgs() << "ROPI and RWPI not supported yet\n");
+    return false;
+  }
+  if (TM.isPositionIndependent()) {
+    DEBUG(dbgs() << "PIC not supported yet\n");
+    return false;
+  }
+
+  auto GV = MIB->getOperand(1).getGlobal();
+  if (GV->isThreadLocal()) {
+    DEBUG(dbgs() << "TLS variables not supported yet\n");
+    return false;
+  }
+
+  auto &MBB = *MIB->getParent();
+  auto &MF = *MBB.getParent();
+
+  auto ObjectFormat = TII.getSubtarget().getTargetTriple().getObjectFormat();
+  bool UseMovt = TII.getSubtarget().useMovt(MF);
+
+  if (ObjectFormat == Triple::ELF) {
+    if (UseMovt) {
+      MIB->setDesc(TII.get(ARM::MOVi32imm));
+    } else {
+      // Load the global's address from the constant pool.
+      MIB->setDesc(TII.get(ARM::LDRi12));
+      MIB->RemoveOperand(1);
+      unsigned Alignment = 4;
+      MIB.addConstantPoolIndex(
+             MF.getConstantPool()->getConstantPoolIndex(GV, Alignment),
+             /* Offset */ 0, /* TargetFlags */ 0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getConstantPool(MF),
+              MachineMemOperand::MOLoad, TM.getPointerSize(), Alignment))
+          .addImm(0)
+          .add(predOps(ARMCC::AL));
+    }
+  } else if (ObjectFormat == Triple::MachO) {
+    if (UseMovt)
+      MIB->setDesc(TII.get(ARM::MOVi32imm));
+    else
+      MIB->setDesc(TII.get(ARM::LDRLIT_ga_abs));
+  } else {
+    DEBUG(dbgs() << "Object format not supported yet\n");
+    return false;
+  }
+
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
 bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
                                           MachineRegisterInfo &MRI) const {
   auto &MBB = *MIB->getParent();
@@ -683,6 +738,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
 
     break;
   }
+  case G_GLOBAL_VALUE:
+    return selectGlobal(MIB, MRI);
   case G_STORE:
   case G_LOAD: {
     const auto &MemOp = **I.memoperands_begin();

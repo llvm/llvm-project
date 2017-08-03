@@ -4131,7 +4131,7 @@ define <8 x double>@test_int_x86_avx512_mask_fixupimm_pd_512(<8 x double> %x0, <
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfixupimmpd $4, %zmm2, %zmm1, %zmm3 {%k1}
-; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vfixupimmpd $5, %zmm2, %zmm1, %zmm4 {%k1} {z}
 ; CHECK-NEXT:    vaddpd %zmm4, %zmm3, %zmm3
 ; CHECK-NEXT:    vfixupimmpd $3, {sae}, %zmm2, %zmm1, %zmm0
@@ -4153,7 +4153,7 @@ define <8 x double>@test_int_x86_avx512_maskz_fixupimm_pd_512(<8 x double> %x0, 
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfixupimmpd $3, %zmm2, %zmm1, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vmovapd %zmm0, %zmm5
 ; CHECK-NEXT:    vfixupimmpd $5, %zmm4, %zmm1, %zmm5 {%k1} {z}
 ; CHECK-NEXT:    vaddpd %zmm5, %zmm3, %zmm3
@@ -4222,7 +4222,7 @@ define <16 x float>@test_int_x86_avx512_mask_fixupimm_ps_512(<16 x float> %x0, <
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm3
 ; CHECK-NEXT:    vfixupimmps $5, %zmm2, %zmm1, %zmm3 {%k1}
-; CHECK-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm5
 ; CHECK-NEXT:    vfixupimmps $5, %zmm4, %zmm1, %zmm5 {%k1}
 ; CHECK-NEXT:    vaddps %zmm5, %zmm3, %zmm3
@@ -4247,7 +4247,7 @@ define <16 x float>@test_int_x86_avx512_maskz_fixupimm_ps_512(<16 x float> %x0, 
 ; CHECK-NEXT:    vfixupimmps $5, %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm4
 ; CHECK-NEXT:    vfixupimmps $5, %zmm2, %zmm1, %zmm4 {%k1} {z}
-; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vfixupimmps $5, {sae}, %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vaddps %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vaddps %zmm3, %zmm0, %zmm0

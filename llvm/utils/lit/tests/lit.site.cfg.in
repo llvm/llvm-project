@@ -5,6 +5,4 @@ config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLVM_SOURCE_DIR@/utils/lit/tests/lit.cfg")
-config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@"
-config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
+lit_config.load_config(config, "@LLVM_BINARY_DIR@/utils/lit/tests/lit.cfg")

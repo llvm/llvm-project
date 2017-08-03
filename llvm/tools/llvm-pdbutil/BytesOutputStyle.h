@@ -35,6 +35,7 @@ private:
   void dumpNameMap();
   void dumpBlockRanges(uint32_t Min, uint32_t Max);
   void dumpByteRanges(uint32_t Min, uint32_t Max);
+  void dumpFpm();
   void dumpStreamBytes();
 
   void dumpSectionContributions();

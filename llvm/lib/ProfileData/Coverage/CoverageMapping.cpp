@@ -510,8 +510,8 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   return FileCoverage;
 }
 
-std::vector<const FunctionRecord *>
-CoverageMapping::getInstantiations(StringRef Filename) const {
+std::vector<InstantiationGroup>
+CoverageMapping::getInstantiationGroups(StringRef Filename) const {
   FunctionInstantiationSetCollector InstantiationSetCollector;
   for (const auto &Function : Functions) {
     auto MainFileID = findMainViewFileID(Filename, Function);
@@ -520,12 +520,12 @@ CoverageMapping::getInstantiations(StringRef Filename) const {
     InstantiationSetCollector.insert(Function, *MainFileID);
   }
 
-  std::vector<const FunctionRecord *> Result;
+  std::vector<InstantiationGroup> Result;
   for (const auto &InstantiationSet : InstantiationSetCollector) {
-    if (InstantiationSet.second.size() < 2)
-      continue;
-    Result.insert(Result.end(), InstantiationSet.second.begin(),
-                  InstantiationSet.second.end());
+    InstantiationGroup IG{InstantiationSet.first.first,
+                          InstantiationSet.first.second,
+                          std::move(InstantiationSet.second)};
+    Result.emplace_back(std::move(IG));
   }
   return Result;
 }

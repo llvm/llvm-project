@@ -158,6 +158,119 @@ static bool isSplat(ArrayRef<Value *> VL) {
   return true;
 }
 
+/// Checks if the vector of instructions can be represented as a shuffle, like:
+/// %x0 = extractelement <4 x i8> %x, i32 0
+/// %x3 = extractelement <4 x i8> %x, i32 3
+/// %y1 = extractelement <4 x i8> %y, i32 1
+/// %y2 = extractelement <4 x i8> %y, i32 2
+/// %x0x0 = mul i8 %x0, %x0
+/// %x3x3 = mul i8 %x3, %x3
+/// %y1y1 = mul i8 %y1, %y1
+/// %y2y2 = mul i8 %y2, %y2
+/// %ins1 = insertelement <4 x i8> undef, i8 %x0x0, i32 0
+/// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
+/// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
+/// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
+/// ret <4 x i8> %ins4
+/// can be transformed into:
+/// %1 = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 3, i32 5,
+///                                                         i32 6>
+/// %2 = mul <4 x i8> %1, %1
+/// ret <4 x i8> %2
+/// We convert this initially to something like:
+/// %x0 = extractelement <4 x i8> %x, i32 0
+/// %x3 = extractelement <4 x i8> %x, i32 3
+/// %y1 = extractelement <4 x i8> %y, i32 1
+/// %y2 = extractelement <4 x i8> %y, i32 2
+/// %1 = insertelement <4 x i8> undef, i8 %x0, i32 0
+/// %2 = insertelement <4 x i8> %1, i8 %x3, i32 1
+/// %3 = insertelement <4 x i8> %2, i8 %y1, i32 2
+/// %4 = insertelement <4 x i8> %3, i8 %y2, i32 3
+/// %5 = mul <4 x i8> %4, %4
+/// %6 = extractelement <4 x i8> %5, i32 0
+/// %ins1 = insertelement <4 x i8> undef, i8 %6, i32 0
+/// %7 = extractelement <4 x i8> %5, i32 1
+/// %ins2 = insertelement <4 x i8> %ins1, i8 %7, i32 1
+/// %8 = extractelement <4 x i8> %5, i32 2
+/// %ins3 = insertelement <4 x i8> %ins2, i8 %8, i32 2
+/// %9 = extractelement <4 x i8> %5, i32 3
+/// %ins4 = insertelement <4 x i8> %ins3, i8 %9, i32 3
+/// ret <4 x i8> %ins4
+/// InstCombiner transforms this into a shuffle and vector mul
+static Optional<TargetTransformInfo::ShuffleKind>
+isShuffle(ArrayRef<Value *> VL) {
+  auto *EI0 = cast<ExtractElementInst>(VL[0]);
+  unsigned Size = EI0->getVectorOperandType()->getVectorNumElements();
+  Value *Vec1 = nullptr;
+  Value *Vec2 = nullptr;
+  enum ShuffleMode {Unknown, FirstAlternate, SecondAlternate, Permute};
+  ShuffleMode CommonShuffleMode = Unknown;
+  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
+    auto *EI = cast<ExtractElementInst>(VL[I]);
+    auto *Vec = EI->getVectorOperand();
+    // All vector operands must have the same number of vector elements.
+    if (Vec->getType()->getVectorNumElements() != Size)
+      return None;
+    auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
+    if (!Idx)
+      return None;
+    // Undefined behavior if Idx is negative or >= Size.
+    if (Idx->getValue().uge(Size))
+      continue;
+    unsigned IntIdx = Idx->getValue().getZExtValue();
+    // We can extractelement from undef vector.
+    if (isa<UndefValue>(Vec))
+      continue;
+    // For correct shuffling we have to have at most 2 different vector operands
+    // in all extractelement instructions.
+    if (Vec1 && Vec2 && Vec != Vec1 && Vec != Vec2)
+      return None;
+    if (CommonShuffleMode == Permute)
+      continue;
+    // If the extract index is not the same as the operation number, it is a
+    // permutation.
+    if (IntIdx != I) {
+      CommonShuffleMode = Permute;
+      continue;
+    }
+    // Check the shuffle mode for the current operation.
+    if (!Vec1)
+      Vec1 = Vec;
+    else if (Vec != Vec1)
+      Vec2 = Vec;
+    // Example: shufflevector A, B, <0,5,2,7>
+    // I is odd and IntIdx for A == I - FirstAlternate shuffle.
+    // I is even and IntIdx for B == I - FirstAlternate shuffle.
+    // Example: shufflevector A, B, <4,1,6,3>
+    // I is even and IntIdx for A == I - SecondAlternate shuffle.
+    // I is odd and IntIdx for B == I - SecondAlternate shuffle.
+    const bool IIsEven = I & 1;
+    const bool CurrVecIsA = Vec == Vec1;
+    const bool IIsOdd = !IIsEven;
+    const bool CurrVecIsB = !CurrVecIsA;
+    ShuffleMode CurrentShuffleMode =
+        ((IIsOdd && CurrVecIsA) || (IIsEven && CurrVecIsB)) ? FirstAlternate
+                                                            : SecondAlternate;
+    // Common mode is not set or the same as the shuffle mode of the current
+    // operation - alternate.
+    if (CommonShuffleMode == Unknown)
+      CommonShuffleMode = CurrentShuffleMode;
+    // Common shuffle mode is not the same as the shuffle mode of the current
+    // operation - permutation.
+    if (CommonShuffleMode != CurrentShuffleMode)
+      CommonShuffleMode = Permute;
+  }
+  // If we're not crossing lanes in different vectors, consider it as blending.
+  if ((CommonShuffleMode == FirstAlternate ||
+       CommonShuffleMode == SecondAlternate) &&
+      Vec2)
+    return TargetTransformInfo::SK_Alternate;
+  // If Vec2 was never used, we have a permutation of a single vector, otherwise
+  // we have permutation of 2 vectors.
+  return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
+              : TargetTransformInfo::SK_PermuteSingleSrc;
+}
+
 ///\returns Opcode that can be clubbed with \p Op to create an alternate
 /// sequence which can later be merged as a ShuffleVector instruction.
 static unsigned getAltOpcode(unsigned Op) {
@@ -1735,6 +1848,26 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       return 0;
     if (isSplat(VL)) {
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, 0);
+    }
+    if (getSameOpcode(VL) == Instruction::ExtractElement) {
+      Optional<TargetTransformInfo::ShuffleKind> ShuffleKind = isShuffle(VL);
+      if (ShuffleKind.hasValue()) {
+        int Cost = TTI->getShuffleCost(ShuffleKind.getValue(), VecTy);
+        for (auto *V : VL) {
+          // If all users of instruction are going to be vectorized and this
+          // instruction itself is not going to be vectorized, consider this
+          // instruction as dead and remove its cost from the final cost of the
+          // vectorized tree.
+          if (areAllUsersVectorized(cast<Instruction>(V)) &&
+              !ScalarToTreeEntry.count(V)) {
+            auto *IO = cast<ConstantInt>(
+                cast<ExtractElementInst>(V)->getIndexOperand());
+            Cost -= TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                            IO->getZExtValue());
+          }
+        }
+        return Cost;
+      }
     }
     return getGatherCost(E->Scalars);
   }
@@ -4219,15 +4352,18 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-bool SLPVectorizerPass::tryToVectorize(BinaryOperator *V, BoUpSLP &R) {
-  if (!V)
+bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
+  if (!I)
     return false;
 
-  Value *P = V->getParent();
+  if (!isa<BinaryOperator>(I))
+    return false;
+
+  Value *P = I->getParent();
 
   // Vectorize in current basic block only.
-  auto *Op0 = dyn_cast<Instruction>(V->getOperand(0));
-  auto *Op1 = dyn_cast<Instruction>(V->getOperand(1));
+  auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
+  auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
   if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P)
     return false;
 
@@ -4882,7 +5018,7 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
 static bool tryToVectorizeHorReductionOrInstOperands(
     PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
     TargetTransformInfo *TTI,
-    const function_ref<bool(BinaryOperator *, BoUpSLP &)> Vectorize) {
+    const function_ref<bool(Instruction *, BoUpSLP &)> Vectorize) {
   if (!ShouldVectorizeHor)
     return false;
 
@@ -4938,7 +5074,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     // Set P to nullptr to avoid re-analysis of phi node in
     // matchAssociativeReduction function unless this is the root node.
     P = nullptr;
-    if (Vectorize(dyn_cast<BinaryOperator>(Inst), R)) {
+    if (Vectorize(Inst, R)) {
       Res = true;
       continue;
     }
@@ -4968,10 +5104,11 @@ bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
   if (!isa<BinaryOperator>(I))
     P = nullptr;
   // Try to match and vectorize a horizontal reduction.
-  return tryToVectorizeHorReductionOrInstOperands(
-      P, I, BB, R, TTI, [this](BinaryOperator *BI, BoUpSLP &R) -> bool {
-        return tryToVectorize(BI, R);
-      });
+  auto &&ExtraVectorization = [this](Instruction *I, BoUpSLP &R) -> bool {
+    return tryToVectorize(I, R);
+  };
+  return tryToVectorizeHorReductionOrInstOperands(P, I, BB, R, TTI,
+                                                  ExtraVectorization);
 }
 
 bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {

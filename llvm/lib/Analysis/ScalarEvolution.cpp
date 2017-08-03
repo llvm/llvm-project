@@ -6200,7 +6200,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
         // own when it gets to that point.
         if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old)) {
           eraseValueFromMap(It->first);
-          forgetMemoizedResults(Old);
+          forgetMemoizedResults(Old, false);
         }
         if (PHINode *PN = dyn_cast<PHINode>(I))
           ConstantEvolutionLoopExitValue.erase(PN);
@@ -6262,6 +6262,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     PushDefUseChildren(I, Worklist);
+  }
+
+  for (auto I = ExitLimits.begin(); I != ExitLimits.end(); ++I) {
+    auto &Query = I->first;
+    if (Query.L == L)
+      ExitLimits.erase(I);
   }
 
   // Forget all contained loops too, to avoid dangling entries in the
@@ -6526,6 +6532,18 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                   bool AllowPredicates) {
+  ExitLimitQuery Query(L, ExitingBlock, AllowPredicates);
+  auto MaybeEL = ExitLimits.find(Query);
+  if (MaybeEL != ExitLimits.end())
+    return MaybeEL->second;
+  ExitLimit EL = computeExitLimitImpl(L, ExitingBlock, AllowPredicates);
+  ExitLimits.insert({Query, EL});
+  return EL;
+}
+
+ScalarEvolution::ExitLimit
+ScalarEvolution::computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
+                                      bool AllowPredicates) {
 
   // Okay, we've chosen an exiting block.  See what condition causes us to exit
   // at this block and remember the exit block and whether all other targets
@@ -10408,6 +10426,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
+      ExitLimits(std::move(Arg.ExitLimits)),
       ConstantEvolutionLoopExitValue(
           std::move(Arg.ConstantEvolutionLoopExitValue)),
       ValuesAtScopes(std::move(Arg.ValuesAtScopes)),
@@ -10810,7 +10829,16 @@ bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
   return SCEVExprContains(S, [&](const SCEV *Expr) { return Expr == Op; });
 }
 
-void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
+bool ScalarEvolution::ExitLimit::hasOperand(const SCEV *S) const {
+  auto IsS = [&](const SCEV *X) { return S == X; };
+  auto ContainsS = [&](const SCEV *X) {
+    return !isa<SCEVCouldNotCompute>(X) && SCEVExprContains(X, IsS);
+  };
+  return ContainsS(ExactNotTaken) || ContainsS(MaxNotTaken);
+}
+
+void
+ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
   ValuesAtScopes.erase(S);
   LoopDispositions.erase(S);
   BlockDispositions.erase(S);
@@ -10843,6 +10871,13 @@ void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
 
   RemoveSCEVFromBackedgeMap(BackedgeTakenCounts);
   RemoveSCEVFromBackedgeMap(PredicatedBackedgeTakenCounts);
+
+  // TODO: There is a suspicion that we only need to do it when there is a
+  // SCEVUnknown somewhere inside S. Need to check this.
+  if (EraseExitLimit)
+    for (auto I = ExitLimits.begin(), E = ExitLimits.end(); I != E; ++I)
+      if (I->second.hasOperand(S))
+        ExitLimits.erase(I);
 }
 
 void ScalarEvolution::verify() const {

@@ -1529,7 +1529,7 @@ define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) #0 {
 ;
 ; AVX512-LABEL: test_v4f64_fneg_fmul:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %m = fmul nsz <4 x double> %x, %y

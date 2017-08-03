@@ -253,7 +253,7 @@ define void @test_zero_v8f32(<8 x float>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v8f32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq
@@ -278,7 +278,7 @@ define void @test_zero_v8i32(<8 x i32>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v8i32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq
@@ -303,7 +303,7 @@ define void @test_zero_v4f64(<4 x double>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v4f64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq
@@ -328,7 +328,7 @@ define void @test_zero_v4i64(<4 x i64>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v4i64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq
@@ -353,7 +353,7 @@ define void @test_zero_v16i16(<16 x i16>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v16i16:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq
@@ -378,7 +378,7 @@ define void @test_zero_v32i8(<32 x i8>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v32i8:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    vzeroupper
 ; VLX-NEXT:    retq

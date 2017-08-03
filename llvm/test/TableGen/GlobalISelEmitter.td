@@ -117,7 +117,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -168,7 +168,7 @@ def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src3
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/2,
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -221,7 +221,7 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -262,7 +262,7 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src3
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -299,7 +299,7 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src3
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -330,7 +330,7 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -384,7 +384,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src3
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src4
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, 2, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -415,7 +415,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -444,7 +444,7 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -474,7 +474,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -505,7 +505,7 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -537,7 +537,7 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -569,7 +569,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // Wm
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -612,7 +612,7 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    // 1:i32  =>  (MOV1:i32)
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV1,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,

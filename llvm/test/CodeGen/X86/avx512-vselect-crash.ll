@@ -4,7 +4,7 @@
 define <16 x i32> @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = icmp slt <16 x i32> undef, undef

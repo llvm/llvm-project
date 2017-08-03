@@ -12803,19 +12803,20 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       unsigned LastLegalVectorType = 1;
       bool LastIntegerTrunc = false;
       bool NonZero = false;
+      unsigned FirstZeroAfterNonZero = NumConsecutiveStores;
       for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
         StoreSDNode *ST = cast<StoreSDNode>(StoreNodes[i].MemNode);
         SDValue StoredVal = ST->getValue();
-
-        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(StoredVal)) {
-          NonZero |= !C->isNullValue();
-        } else if (ConstantFPSDNode *C =
-                       dyn_cast<ConstantFPSDNode>(StoredVal)) {
-          NonZero |= !C->getConstantFPValue()->isNullValue();
-        } else {
-          // Non-constant.
-          break;
+        bool IsElementZero = false;
+        if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(StoredVal))
+          IsElementZero = C->isNullValue();
+        else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(StoredVal))
+          IsElementZero = C->getConstantFPValue()->isNullValue();
+        if (IsElementZero) {
+          if (NonZero && FirstZeroAfterNonZero == NumConsecutiveStores)
+            FirstZeroAfterNonZero = i;
         }
+        NonZero |= !IsElementZero;
 
         // Find a legal type for the constant store.
         unsigned SizeInBits = (i + 1) * ElementSizeBytes * 8;
@@ -12861,23 +12862,34 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         }
       }
 
-      // Check if we found a legal integer type that creates a meaningful merge.
-      if (LastLegalType < 2 && LastLegalVectorType < 2) {
-        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 1);
-        continue;
-      }
-
       bool UseVector = (LastLegalVectorType > LastLegalType) && !NoVectors;
       unsigned NumElem = (UseVector) ? LastLegalVectorType : LastLegalType;
 
-      bool Merged = MergeStoresOfConstantsOrVecElts(
-          StoreNodes, MemVT, NumElem, true, UseVector, LastIntegerTrunc);
-      if (!Merged) {
-        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
+      // Check if we found a legal integer type that creates a meaningful merge.
+      if (NumElem < 2) {
+        // We know that candidate stores are in order and of correct
+        // shape. While there is no mergeable sequence from the
+        // beginning one may start later in the sequence. The only
+        // reason a merge of size N could have failed where another of
+        // the same size would not have, is if the alignment has
+        // improved or we've dropped a non-zero value. Drop as many
+        // candidates as we can here.
+        unsigned NumSkip = 1;
+        while (
+            (NumSkip < NumConsecutiveStores) &&
+            (NumSkip < FirstZeroAfterNonZero) &&
+            (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign)) {
+          NumSkip++;
+        }
+        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
         continue;
       }
+
+      bool Merged = MergeStoresOfConstantsOrVecElts(
+          StoreNodes, MemVT, NumElem, true, UseVector, LastIntegerTrunc);
+      RV |= Merged;
+
       // Remove merged stores for next iteration.
-      RV = true;
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
       continue;
     }
@@ -12912,6 +12924,23 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
                                    FirstStoreAlign, &IsFast) &&
             IsFast)
           NumStoresToMerge = i + 1;
+      }
+
+      // Check if we found a legal integer type that creates a meaningful merge.
+      if (NumStoresToMerge < 2) {
+        // We know that candidate stores are in order and of correct
+        // shape. While there is no mergeable sequence from the
+        // beginning one may start later in the sequence. The only
+        // reason a merge of size N could have failed where another of
+        // the same size would not have, is if the alignment has
+        // improved. Drop as many candidates as we can here.
+        unsigned NumSkip = 1;
+        while ((NumSkip < NumConsecutiveStores) &&
+               (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
+          NumSkip++;
+
+        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
+        continue;
       }
 
       bool Merged = MergeStoresOfConstantsOrVecElts(
@@ -13081,7 +13110,19 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     NumElem = std::min(LastLegalType, NumElem);
 
     if (NumElem < 2) {
-      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 1);
+      // We know that candidate stores are in order and of correct
+      // shape. While there is no mergeable sequence from the
+      // beginning one may start later in the sequence. The only
+      // reason a merge of size N could have failed where another of
+      // the same size would not have is if the alignment or either
+      // the load or store has improved. Drop as many candidates as we
+      // can here.
+      unsigned NumSkip = 1;
+      while ((NumSkip < LoadNodes.size()) &&
+             (LoadNodes[NumSkip].MemNode->getAlignment() <= FirstLoadAlign) &&
+             (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
+        NumSkip++;
+      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
       continue;
     }
 

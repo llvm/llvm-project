@@ -1089,10 +1089,10 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   Type *DestTy = Logic.getType();
   Type *SrcTy = Cast->getSrcTy();
 
-  // Move the logic operation ahead of a zext if the constant is unchanged in
-  // the smaller source type. Performing the logic in a smaller type may provide
-  // more information to later folds, and the smaller logic instruction may be
-  // cheaper (particularly in the case of vectors).
+  // Move the logic operation ahead of a zext or sext if the constant is
+  // unchanged in the smaller source type. Performing the logic in a smaller
+  // type may provide more information to later folds, and the smaller logic
+  // instruction may be cheaper (particularly in the case of vectors).
   Value *X;
   if (match(Cast, m_OneUse(m_ZExt(m_Value(X))))) {
     Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
@@ -1101,6 +1101,16 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
       // LogicOpc (zext X), C --> zext (LogicOpc X, C)
       Value *NewOp = Builder.CreateBinOp(LogicOpc, X, TruncC);
       return new ZExtInst(NewOp, DestTy);
+    }
+  }
+
+  if (match(Cast, m_OneUse(m_SExt(m_Value(X))))) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
+    Constant *SextTruncC = ConstantExpr::getSExt(TruncC, DestTy);
+    if (SextTruncC == C) {
+      // LogicOpc (sext X), C --> sext (LogicOpc X, C)
+      Value *NewOp = Builder.CreateBinOp(LogicOpc, X, TruncC);
+      return new SExtInst(NewOp, DestTy);
     }
   }
 
@@ -2429,21 +2439,6 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   }
 
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
-    // fold (xor(zext(cmp)), 1) and (xor(sext(cmp)), -1) to ext(!cmp).
-    if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
-      if (CmpInst *CI = dyn_cast<CmpInst>(Op0C->getOperand(0))) {
-        if (CI->hasOneUse() && Op0C->hasOneUse()) {
-          Instruction::CastOps Opcode = Op0C->getOpcode();
-          if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
-              (RHSC == ConstantExpr::getCast(Opcode, Builder.getTrue(),
-                                             Op0C->getDestTy()))) {
-            CI->setPredicate(CI->getInversePredicate());
-            return CastInst::Create(Opcode, CI, Op0C->getType());
-          }
-        }
-      }
-    }
-
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       // ~(c-X) == X-c-1 == X+(-c-1)
       if (Op0I->getOpcode() == Instruction::Sub && RHSC->isMinusOne())

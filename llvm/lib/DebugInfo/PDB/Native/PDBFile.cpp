@@ -150,8 +150,7 @@ Error PDBFile::parseFileHeaders() {
       MappedBlockStream::createFpmStream(ContainerLayout, *Buffer, Allocator);
   BinaryStreamReader FpmReader(*FpmStream);
   ArrayRef<uint8_t> FpmBytes;
-  if (auto EC = FpmReader.readBytes(FpmBytes,
-                                    msf::getFullFpmByteSize(ContainerLayout)))
+  if (auto EC = FpmReader.readBytes(FpmBytes, FpmReader.bytesRemaining()))
     return EC;
   uint32_t BlocksRemaining = getBlockCount();
   uint32_t BI = 0;
@@ -236,6 +235,10 @@ MSFStreamLayout PDBFile::getStreamLayout(uint32_t StreamIdx) const {
   Result.Blocks.assign(Blocks.begin(), Blocks.end());
   Result.Length = getStreamByteSize(StreamIdx);
   return Result;
+}
+
+msf::MSFStreamLayout PDBFile::getFpmStreamLayout() const {
+  return msf::getFpmStreamLayout(ContainerLayout);
 }
 
 Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {

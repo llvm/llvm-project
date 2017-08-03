@@ -70,6 +70,21 @@ extern char &AMDGPULowerIntrinsicsID;
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
+void initializeR600ClauseMergePassPass(PassRegistry &);
+extern char &R600ClauseMergePassID;
+
+void initializeR600ControlFlowFinalizerPass(PassRegistry &);
+extern char &R600ControlFlowFinalizerID;
+
+void initializeR600ExpandSpecialInstrsPassPass(PassRegistry &);
+extern char &R600ExpandSpecialInstrsPassID;
+
+void initializeR600VectorRegMergerPass(PassRegistry &);
+extern char &R600VectorRegMergerID;
+
+void initializeR600PacketizerPass(PassRegistry &);
+extern char &R600PacketizerID;
+
 void initializeSIFoldOperandsPass(PassRegistry &);
 extern char &SIFoldOperandsID;
 

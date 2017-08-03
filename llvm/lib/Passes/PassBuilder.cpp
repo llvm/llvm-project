@@ -394,7 +394,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // inaccurate.
   if (Phase != ThinLTOPhase::PreLink ||
       !PGOOpt || PGOOpt->SampleProfileFile.empty())
-    LPM2.addPass(LoopUnrollPass::createFull(Level));
+    LPM2.addPass(LoopFullUnrollPass(Level));
 
   for (auto &C : LoopOptimizerEndEPCallbacks)
     C(LPM2, Level);
@@ -723,7 +723,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // FIXME: It would be really good to use a loop-integrated instruction
   // combiner for cleanup here so that the unrolling and LICM can be pipelined
   // across the loop nests.
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LoopUnrollPass::create(Level)));
+  OptimizePM.addPass(LoopUnrollPass(Level));
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass()));

@@ -491,7 +491,7 @@ define <64 x i8> @shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_
 ;
 ; AVX512VBMI-LABEL: shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_47_zz_45_zz_43_zz_41_zz_39_zz_37_zz_35_zz_33_zz_31_zz_29_zz_27_zz_25_zz_23_zz_21_zz_19_zz_17_zz_15_zz_13_zz_11_zz_9_zz_7_zz_5_zz_3_zz_1_zz:
 ; AVX512VBMI:       # BB#0:
-; AVX512VBMI-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; AVX512VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [63,65,61,67,59,69,57,71,55,73,53,75,51,77,49,79,47,81,45,83,43,85,41,87,39,89,37,91,35,93,33,95,31,97,29,99,27,101,25,103,23,105,21,107,19,109,17,111,15,113,13,115,11,117,9,119,7,121,5,123,3,125,1,127]
 ; AVX512VBMI-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0
 ; AVX512VBMI-NEXT:    retq

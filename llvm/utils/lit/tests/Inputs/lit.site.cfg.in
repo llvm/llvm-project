@@ -1,3 +1,0 @@
-lit_config.load_config(config, "@LIT_TEST_SRC_DIR@/lit.cfg")
-config.test_source_root = "@LIT_TEST_SRC_DIR@"
-config.test_exec_root = "@LIT_TEST_BIN_DIR@"

@@ -1077,7 +1077,7 @@ define double @uitofp03(i32 %a) nounwind {
 define <16 x float> @sitofp_16i1_float(<16 x i32> %a) {
 ; NODQ-LABEL: sitofp_16i1_float:
 ; NODQ:       # BB#0:
-; NODQ-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; NODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NODQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; NODQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; NODQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
@@ -1085,7 +1085,7 @@ define <16 x float> @sitofp_16i1_float(<16 x i32> %a) {
 ;
 ; DQ-LABEL: sitofp_16i1_float:
 ; DQ:       # BB#0:
-; DQ-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; DQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; DQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
@@ -1140,7 +1140,7 @@ define <8 x double> @sitofp_8i8_double(<8 x i8> %a) {
 define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 ; NOVLDQ-LABEL: sitofp_16i1_double:
 ; NOVLDQ:       # BB#0:
-; NOVLDQ-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; NOVLDQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; NOVLDQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
 ; NOVLDQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k2
 ; NOVLDQ-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
@@ -1153,7 +1153,7 @@ define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 ;
 ; VLDQ-LABEL: sitofp_16i1_double:
 ; VLDQ:       # BB#0:
-; VLDQ-NEXT:    vxorpd %zmm2, %zmm2, %zmm2
+; VLDQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; VLDQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k0
 ; VLDQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k1
 ; VLDQ-NEXT:    vpmovm2d %k1, %ymm0
@@ -1164,7 +1164,7 @@ define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 ;
 ; VLNODQ-LABEL: sitofp_16i1_double:
 ; VLNODQ:       # BB#0:
-; VLNODQ-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; VLNODQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; VLNODQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
 ; VLNODQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k2
 ; VLNODQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
@@ -1176,7 +1176,7 @@ define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_16i1_double:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vxorpd %zmm2, %zmm2, %zmm2
+; AVX512DQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512DQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k0
 ; AVX512DQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k1
 ; AVX512DQ-NEXT:    vpmovm2d %k1, %zmm0
@@ -1192,7 +1192,7 @@ define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ; NOVLDQ-LABEL: sitofp_8i1_double:
 ; NOVLDQ:       # BB#0:
-; NOVLDQ-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; NOVLDQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; NOVLDQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
 ; NOVLDQ-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; NOVLDQ-NEXT:    vpmovqd %zmm0, %ymm0
@@ -1201,7 +1201,7 @@ define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ;
 ; VLDQ-LABEL: sitofp_8i1_double:
 ; VLDQ:       # BB#0:
-; VLDQ-NEXT:    vxorpd %zmm1, %zmm1, %zmm1
+; VLDQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; VLDQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
 ; VLDQ-NEXT:    vpmovm2d %k0, %ymm0
 ; VLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
@@ -1209,7 +1209,7 @@ define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ;
 ; VLNODQ-LABEL: sitofp_8i1_double:
 ; VLNODQ:       # BB#0:
-; VLNODQ-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; VLNODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; VLNODQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
 ; VLNODQ-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; VLNODQ-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
@@ -1218,7 +1218,7 @@ define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_8i1_double:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vxorpd %zmm1, %zmm1, %zmm1
+; AVX512DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
 ; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
@@ -1241,7 +1241,7 @@ define <8 x float> @sitofp_8i1_float(<8 x float> %a) {
 ;
 ; VLDQ-LABEL: sitofp_8i1_float:
 ; VLDQ:       # BB#0:
-; VLDQ-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; VLDQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; VLDQ-NEXT:    vcmpltps %ymm0, %ymm1, %k0
 ; VLDQ-NEXT:    vpmovm2d %k0, %ymm0
 ; VLDQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -1249,7 +1249,7 @@ define <8 x float> @sitofp_8i1_float(<8 x float> %a) {
 ;
 ; VLNODQ-LABEL: sitofp_8i1_float:
 ; VLNODQ:       # BB#0:
-; VLNODQ-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VLNODQ-NEXT:    vcmpltps %ymm0, %ymm1, %k1
 ; VLNODQ-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; VLNODQ-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
@@ -1309,7 +1309,7 @@ define <4 x double> @sitofp_4i1_double(<4 x double> %a) {
 ;
 ; VLDQ-LABEL: sitofp_4i1_double:
 ; VLDQ:       # BB#0:
-; VLDQ-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; VLDQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; VLDQ-NEXT:    vcmpltpd %ymm0, %ymm1, %k0
 ; VLDQ-NEXT:    vpmovm2d %k0, %xmm0
 ; VLDQ-NEXT:    vcvtdq2pd %xmm0, %ymm0
@@ -1317,7 +1317,7 @@ define <4 x double> @sitofp_4i1_double(<4 x double> %a) {
 ;
 ; VLNODQ-LABEL: sitofp_4i1_double:
 ; VLNODQ:       # BB#0:
-; VLNODQ-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VLNODQ-NEXT:    vcmpltpd %ymm0, %ymm1, %k1
 ; VLNODQ-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; VLNODQ-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -1414,7 +1414,7 @@ define <16 x float> @uitofp_16i16(<16 x i16>%a) {
 define <16 x float> @uitofp_16i1_float(<16 x i32> %a) {
 ; ALL-LABEL: uitofp_16i1_float:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; ALL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; ALL-NEXT:    vcvtudq2ps %zmm0, %zmm0
@@ -1427,7 +1427,7 @@ define <16 x float> @uitofp_16i1_float(<16 x i32> %a) {
 define <16 x double> @uitofp_16i1_double(<16 x i32> %a) {
 ; NOVL-LABEL: uitofp_16i1_double:
 ; NOVL:       # BB#0:
-; NOVL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; NOVL-NEXT:    movq {{.*}}(%rip), %rax
 ; NOVL-NEXT:    vpbroadcastq %rax, %zmm0 {%k1} {z}
@@ -1441,7 +1441,7 @@ define <16 x double> @uitofp_16i1_double(<16 x i32> %a) {
 ;
 ; VL-LABEL: uitofp_16i1_double:
 ; VL:       # BB#0:
-; VL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; VL-NEXT:    movl {{.*}}(%rip), %eax
 ; VL-NEXT:    vpbroadcastd %eax, %ymm0 {%k1} {z}
@@ -1469,7 +1469,7 @@ define <8 x float> @uitofp_8i1_float(<8 x i32> %a) {
 ;
 ; VL-LABEL: uitofp_8i1_float:
 ; VL:       # BB#0:
-; VL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
 ; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
 ; VL-NEXT:    vcvtudq2ps %ymm0, %ymm0
@@ -1492,7 +1492,7 @@ define <8 x double> @uitofp_8i1_double(<8 x i32> %a) {
 ;
 ; VL-LABEL: uitofp_8i1_double:
 ; VL:       # BB#0:
-; VL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
 ; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
 ; VL-NEXT:    vcvtudq2pd %ymm0, %zmm0

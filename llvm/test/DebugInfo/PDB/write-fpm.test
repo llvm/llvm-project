@@ -1,0 +1,11 @@
+; RUN: llvm-pdbutil yaml2pdb -pdb=%t.pdb %p/Inputs/one-symbol.yaml
+; RUN: llvm-pdbutil bytes -fpm %t.pdb | FileCheck %s
+
+
+CHECK:                             Free Page Map
+CHECK-NEXT: ============================================================
+CHECK-NEXT: Block 1 (
+CHECK-NEXT:   1000: 04F8FFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................................|
+CHECK-NEXT:   1020: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................................|
+CHECK:        1FE0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................................|
+CHECK:      )
