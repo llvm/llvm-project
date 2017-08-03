@@ -317,25 +317,19 @@ CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
   for (StringRef Filename : Files) {
     FileCoverageSummary Summary(Filename.drop_front(LCP));
 
-    // Map source locations to aggregate function coverage summaries.
-    DenseMap<std::pair<unsigned, unsigned>, FunctionCoverageSummary> Summaries;
+    for (const auto &Group : Coverage.getInstantiationGroups(Filename)) {
+      std::vector<FunctionCoverageSummary> InstantiationSummaries;
+      for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
+        auto InstantiationSummary = FunctionCoverageSummary::get(*F);
+        Summary.addInstantiation(InstantiationSummary);
+        Totals.addInstantiation(InstantiationSummary);
+        InstantiationSummaries.push_back(InstantiationSummary);
+      }
 
-    for (const auto &F : Coverage.getCoveredFunctions(Filename)) {
-      FunctionCoverageSummary Function = FunctionCoverageSummary::get(F);
-      auto StartLoc = F.CountedRegions[0].startLoc();
-
-      auto UniquedSummary = Summaries.insert({StartLoc, Function});
-      if (!UniquedSummary.second)
-        UniquedSummary.first->second.update(Function);
-
-      Summary.addInstantiation(Function);
-      Totals.addInstantiation(Function);
-    }
-
-    for (const auto &UniquedSummary : Summaries) {
-      const FunctionCoverageSummary &FCS = UniquedSummary.second;
-      Summary.addFunction(FCS);
-      Totals.addFunction(FCS);
+      auto GroupSummary =
+          FunctionCoverageSummary::get(Group, InstantiationSummaries);
+      Summary.addFunction(GroupSummary);
+      Totals.addFunction(GroupSummary);
     }
 
     FileReports.push_back(Summary);

@@ -187,7 +187,7 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <8,2,10,u,3,u,2,u>
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
@@ -201,7 +201,7 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; VL_BW_DQ:       # BB#0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
-; VL_BW_DQ-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; VL_BW_DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <8,2,10,u,3,u,2,u>
 ; VL_BW_DQ-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
@@ -249,7 +249,7 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [8,6,1,0,3,7,7,0]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
@@ -263,7 +263,7 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; VL_BW_DQ:       # BB#0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
-; VL_BW_DQ-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; VL_BW_DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [8,6,1,0,3,7,7,0]
 ; VL_BW_DQ-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
@@ -283,7 +283,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [9,1,2,10,4,5,6,7]
-; AVX512F-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
@@ -297,7 +297,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [9,1,2,10,4,5,6,7]
-; VL_BW_DQ-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; VL_BW_DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; VL_BW_DQ-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax

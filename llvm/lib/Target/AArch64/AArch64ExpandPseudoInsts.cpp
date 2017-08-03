@@ -967,17 +967,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandCMP_SWAP_128(MBB, MBBI, NextMBBI);
 
   case AArch64::AESMCrrTied:
-  case AArch64::AESIMCrrTied: {
-    MachineInstrBuilder MIB =
-    BuildMI(MBB, MBBI, MI.getDebugLoc(),
-            TII->get(Opcode == AArch64::AESMCrrTied ? AArch64::AESMCrr :
-                                                      AArch64::AESIMCrr))
-      .add(MI.getOperand(0))
-      .add(MI.getOperand(1));
-    transferImpOps(MI, MIB, MIB);
-    MI.eraseFromParent();
+  case AArch64::AESIMCrrTied:
+    MI.setDesc(TII->get(Opcode == AArch64::AESMCrrTied ? AArch64::AESMCrr :
+                                                         AArch64::AESIMCrr));
     return true;
-   }
   }
   return false;
 }

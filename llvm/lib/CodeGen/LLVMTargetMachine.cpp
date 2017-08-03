@@ -77,7 +77,6 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      Reloc::Model RM, CodeModel::Model CM,
                                      CodeGenOpt::Level OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
-  T.adjustCodeGenOpts(TT, RM, CM);
   this->RM = RM;
   this->CMModel = CM;
   this->OptLevel = OL;

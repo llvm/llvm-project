@@ -288,26 +288,34 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
                                          ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
+  if (!ViewOpts.ShowFunctionInstantiations)
+    return View;
 
-  for (const auto *Function : Coverage.getInstantiations(SourceFile)) {
-    std::unique_ptr<SourceCoverageView> SubView{nullptr};
+  for (const auto &Group : Coverage.getInstantiationGroups(SourceFile)) {
+    // Skip functions which have a single instantiation.
+    if (Group.size() < 2)
+      continue;
 
-    StringRef Funcname = DC.demangle(Function->Name);
+    for (const FunctionRecord *Function : Group.getInstantiations()) {
+      std::unique_ptr<SourceCoverageView> SubView{nullptr};
 
-    if (Function->ExecutionCount > 0) {
-      auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
-      auto SubViewExpansions = SubViewCoverage.getExpansions();
-      SubView = SourceCoverageView::create(
-          Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
-      attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+      StringRef Funcname = DC.demangle(Function->Name);
+
+      if (Function->ExecutionCount > 0) {
+        auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
+        auto SubViewExpansions = SubViewCoverage.getExpansions();
+        SubView = SourceCoverageView::create(
+            Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
+        attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+      }
+
+      unsigned FileID = Function->CountedRegions.front().FileID;
+      unsigned Line = 0;
+      for (const auto &CR : Function->CountedRegions)
+        if (CR.FileID == FileID)
+          Line = std::max(CR.LineEnd, Line);
+      View->addInstantiation(Funcname, Line, std::move(SubView));
     }
-
-    unsigned FileID = Function->CountedRegions.front().FileID;
-    unsigned Line = 0;
-    for (const auto &CR : Function->CountedRegions)
-      if (CR.FileID == FileID)
-        Line = std::max(CR.LineEnd, Line);
-    View->addInstantiation(Funcname, Line, std::move(SubView));
   }
   return View;
 }
@@ -696,7 +704,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
   cl::opt<bool> ShowInstantiations("show-instantiations", cl::Optional,
                                    cl::desc("Show function instantiations"),
-                                   cl::cat(ViewCategory));
+                                   cl::init(true), cl::cat(ViewCategory));
 
   cl::opt<std::string> ShowOutputDirectory(
       "output-dir", cl::init(""),

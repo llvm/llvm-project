@@ -61,6 +61,8 @@ public:
 private:
   Expected<msf::MSFLayout> finalizeMsfLayout();
 
+  void commitFpm(WritableBinaryStream &MsfBuffer, const msf::MSFLayout &Layout);
+
   BumpPtrAllocator &Allocator;
 
   std::unique_ptr<msf::MSFBuilder> Msf;

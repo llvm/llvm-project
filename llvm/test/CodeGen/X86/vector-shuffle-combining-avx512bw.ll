@@ -1081,14 +1081,14 @@ define <32 x i16> @combine_vpermt2var_vpermi2var_32i16_as_permw(<32 x i16> %x0, 
 define <8 x double> @combine_vpermi2var_vpermvar_8f64_as_vperm2_zero(<8 x double> %x0) {
 ; X32-LABEL: combine_vpermi2var_vpermvar_8f64_as_vperm2_zero:
 ; X32:       # BB#0:
-; X32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vmovapd {{.*#+}} zmm2 = [8,0,3,0,10,0,11,0,1,0,7,0,14,0,5,0]
 ; X32-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermi2var_vpermvar_8f64_as_vperm2_zero:
 ; X64:       # BB#0:
-; X64-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vmovapd {{.*#+}} zmm2 = [8,3,10,11,1,7,14,5]
 ; X64-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
 ; X64-NEXT:    retq
@@ -1100,14 +1100,14 @@ define <8 x double> @combine_vpermi2var_vpermvar_8f64_as_vperm2_zero(<8 x double
 define <16 x float> @combine_vpermi2var_vpermvar_16f32_as_vperm2_zero(<16 x float> %x0) {
 ; X32-LABEL: combine_vpermi2var_vpermvar_16f32_as_vperm2_zero:
 ; X32:       # BB#0:
-; X32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vmovaps {{.*#+}} zmm2 = [0,13,1,12,4,9,22,12,4,25,26,9,5,29,30,8]
 ; X32-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermi2var_vpermvar_16f32_as_vperm2_zero:
 ; X64:       # BB#0:
-; X64-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vmovaps {{.*#+}} zmm2 = [0,13,1,12,4,9,22,12,4,25,26,9,5,29,30,8]
 ; X64-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
 ; X64-NEXT:    retq

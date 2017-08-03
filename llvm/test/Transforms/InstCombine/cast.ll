@@ -587,9 +587,9 @@ define i64 @test46(i64 %A) {
 
 define i64 @test47(i8 %A) {
 ; CHECK-LABEL: @test47(
-; CHECK-NEXT:    [[B:%.*]] = sext i8 %A to i64
-; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 4294967253
-; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 42
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[E:%.*]] = and i64 [[C]], 4294967295
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %B = sext i8 %A to i32
@@ -1521,4 +1521,18 @@ define i8 @pr33078_4(i3 %x) {
   %C = lshr i16 %B, 13
   %D = trunc i16 %C to i8
   ret i8 %D
+}
+
+; (sext (xor (cmp), -1)) -> (sext (!cmp))
+define i64 @test94(i32 %a) {
+; CHECK-LABEL: @test94(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = icmp eq i32 %a, -2
+  %2 = sext i1 %1 to i8
+  %3 = xor i8 %2, -1
+  %4 = sext i8 %3 to i64
+  ret i64 %4
 }

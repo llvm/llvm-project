@@ -78,7 +78,7 @@ protected: // Can only create subclasses.
   std::string TargetFS;
 
   Reloc::Model RM = Reloc::Static;
-  CodeModel::Model CMModel = CodeModel::Default;
+  CodeModel::Model CMModel = CodeModel::Small;
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 
   /// Contains target specific asm information.

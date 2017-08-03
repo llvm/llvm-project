@@ -248,7 +248,7 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ;
 ; SKX-LABEL: test11a:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
 ; SKX-NEXT:    vblendmps (%rdi), %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -420,7 +420,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ;
 ; SKX-LABEL: test12:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
 ; SKX-NEXT:    vmovdqu32 %ymm1, (%rdi) {%k1}
 ; SKX-NEXT:    vzeroupper

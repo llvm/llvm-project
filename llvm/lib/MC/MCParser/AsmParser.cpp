@@ -3199,7 +3199,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   int64_t MaxBytesToFill = 0;
 
   auto parseAlign = [&]() -> bool {
-    if (checkForValidSection() || parseAbsoluteExpression(Alignment))
+    if (parseAbsoluteExpression(Alignment))
       return true;
     if (parseOptionalToken(AsmToken::Comma)) {
       // The fill expression can be omitted while specifying a maximum number of
@@ -3218,6 +3218,13 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     return parseToken(AsmToken::EndOfStatement);
   };
 
+  if (checkForValidSection())
+    return addErrorSuffix(" in directive");
+  // Ignore empty '.p2align' directives for GNU-as compatibility
+  if (IsPow2 && (ValueSize == 1) && getTok().is(AsmToken::EndOfStatement)) {
+    Warning(AlignmentLoc, "p2align directive with no operand(s) is ignored");
+    return parseToken(AsmToken::EndOfStatement);
+  }
   if (parseAlign())
     return addErrorSuffix(" in directive");
 

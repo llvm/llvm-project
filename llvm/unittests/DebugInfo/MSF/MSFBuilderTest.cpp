@@ -11,10 +11,13 @@
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include "gmock/gmock-matchers.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace llvm::msf;
+using namespace testing;
 
 namespace {
 class MSFBuilderTest : public testing::Test {
@@ -38,7 +41,7 @@ protected:
 
   BumpPtrAllocator Allocator;
 };
-}
+} // namespace
 
 TEST_F(MSFBuilderTest, ValidateSuperBlockAccept) {
   // Test that a known good super block passes validation.
@@ -358,4 +361,37 @@ TEST_F(MSFBuilderTest, DirectoryBlockHintOverestimated) {
   MSFLayout &L = *ExpectedLayout;
   EXPECT_EQ(1U, L.DirectoryBlocks.size());
   EXPECT_EQ(B + 1, L.DirectoryBlocks[0]);
+}
+
+TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocks) {
+  Expected<MSFBuilder> ExpectedMsf = MSFBuilder::create(Allocator, 4096);
+  ASSERT_THAT_EXPECTED(ExpectedMsf, Succeeded());
+  auto &Msf = *ExpectedMsf;
+
+  // A block is 4096 bytes, and every 4096 blocks we have 2 reserved FPM blocks.
+  // By creating add a stream that spans 4096*4096*3 bytes, we ensure that we
+  // cross over a couple of reserved FPM blocks, and that none of them are
+  // allocated to the stream.
+  constexpr uint32_t StreamSize = 4096 * 4096 * 3;
+  Expected<uint32_t> SN = Msf.addStream(StreamSize);
+  ASSERT_THAT_EXPECTED(SN, Succeeded());
+
+  auto ExpectedLayout = Msf.build();
+  ASSERT_THAT_EXPECTED(ExpectedLayout, Succeeded());
+  MSFLayout &L = *ExpectedLayout;
+  auto BlocksRef = L.StreamMap[*SN];
+  std::vector<uint32_t> Blocks(BlocksRef.begin(), BlocksRef.end());
+  EXPECT_EQ(StreamSize, L.StreamSizes[*SN]);
+
+  for (uint32_t I = 0; I <= 3; ++I) {
+    // Pages from the regular FPM are allocated, while pages from the alt fpm
+    // are free.
+    EXPECT_FALSE(L.FreePageMap.test(1 + I * 4096));
+    EXPECT_TRUE(L.FreePageMap.test(2 + I * 4096));
+  }
+
+  for (uint32_t I = 1; I <= 3; ++I) {
+    EXPECT_THAT(Blocks, Not(Contains(1 + I * 4096)));
+    EXPECT_THAT(Blocks, Not(Contains(2 + I * 4096)));
+  }
 }

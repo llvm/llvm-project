@@ -1001,7 +1001,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       }
 
       // We adjust AliasAnalysis information for merged stack slots.
-      MachineSDNode::mmo_iterator MemOps =
+      MachineSDNode::mmo_iterator NewMemOps =
           MF->allocateMemRefsArray(I.getNumMemOperands());
       unsigned MemOpIdx = 0;
       bool ReplaceMemOps = false;
@@ -1030,17 +1030,17 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
           }
         }
         if (MayHaveConflictingAAMD) {
-          MemOps[MemOpIdx++] = MF->getMachineMemOperand(MMO, AAMDNodes());
+          NewMemOps[MemOpIdx++] = MF->getMachineMemOperand(MMO, AAMDNodes());
           ReplaceMemOps = true;
         }
         else
-          MemOps[MemOpIdx++] = MMO;
+          NewMemOps[MemOpIdx++] = MMO;
       }
 
       // If any memory operand is updated, set memory references of
       // this instruction.
       if (ReplaceMemOps)
-        I.setMemRefs(std::make_pair(MemOps, I.getNumMemOperands()));
+        I.setMemRefs(std::make_pair(NewMemOps, I.getNumMemOperands()));
     }
 
   // Update the location of C++ catch objects for the MSVC personality routine.

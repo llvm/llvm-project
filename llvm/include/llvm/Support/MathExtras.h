@@ -687,6 +687,11 @@ template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
   return (Value + Align - 1) / Align * Align;
 }
 
+/// Returns the integer ceil(Numerator / Denominator).
+inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
+  return alignTo(Numerator, Denominator) / Denominator;
+}
+
 /// \c alignTo for contexts where a constant expression is required.
 /// \sa alignTo
 ///

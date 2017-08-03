@@ -448,9 +448,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.MCOptions.IASSearchPaths = IncludeDirs;
   Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
 
-  std::unique_ptr<TargetMachine> Target(
-      TheTarget->createTargetMachine(TheTriple.getTriple(), CPUStr, FeaturesStr,
-                                     Options, getRelocModel(), CMModel, OLvl));
+  std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
+      TheTriple.getTriple(), CPUStr, FeaturesStr, Options, getRelocModel(),
+      getCodeModel(), OLvl));
 
   assert(Target && "Could not allocate target machine!");
 

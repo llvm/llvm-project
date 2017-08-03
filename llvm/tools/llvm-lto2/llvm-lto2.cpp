@@ -197,7 +197,7 @@ static int run(int argc, char **argv) {
   Conf.MAttrs = MAttrs;
   if (auto RM = getRelocModel())
     Conf.RelocModel = *RM;
-  Conf.CodeModel = CMModel;
+  Conf.CodeModel = getCodeModel();
 
   Conf.DebugPassManager = DebugPassManager;
 

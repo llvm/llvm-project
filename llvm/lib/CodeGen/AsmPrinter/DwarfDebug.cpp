@@ -828,16 +828,14 @@ void DwarfDebug::collectVariableInfoFromMFTable(
 // Get .debug_loc entry for the instruction range starting at MI.
 static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
-
   assert(MI->getNumOperands() == 4);
   if (MI->getOperand(0).isReg()) {
-    MachineLocation MLoc;
+    auto RegOp = MI->getOperand(0);
+    auto Op1 = MI->getOperand(1);
     // If the second operand is an immediate, this is a
     // register-indirect address.
-    if (!MI->getOperand(1).isImm())
-      MLoc.set(MI->getOperand(0).getReg());
-    else
-      MLoc.set(MI->getOperand(0).getReg(), MI->getOperand(1).getImm());
+    assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
+    MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
     return DebugLocEntry::Value(Expr, MLoc);
   }
   if (MI->getOperand(0).isImm())
@@ -1578,13 +1576,7 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     MachineLocation Location = Value.getLoc();
     if (Location.isIndirect())
       DwarfExpr.setMemoryLocationKind();
-    SmallVector<uint64_t, 8> Ops;
-    if (Location.isIndirect() && Location.getOffset()) {
-      Ops.push_back(dwarf::DW_OP_plus_uconst);
-      Ops.push_back(Location.getOffset());
-    }
-    Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
-    DIExpressionCursor Cursor(Ops);
+    DIExpressionCursor Cursor(DIExpr);
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
       return;

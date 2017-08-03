@@ -351,7 +351,7 @@ define <16 x float> @merge_16f32_f32_0uu3zzuuuuuzCuEF(float* %ptr) nounwind uwta
 ; ALL-LABEL: merge_16f32_f32_0uu3zzuuuuuzCuEF:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovups (%rdi), %zmm1
-; ALL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; ALL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vmovaps {{.*#+}} zmm0 = <0,u,u,3,20,21,u,u,u,u,u,u,12,29,14,15>
 ; ALL-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
 ; ALL-NEXT:    retq
@@ -360,7 +360,7 @@ define <16 x float> @merge_16f32_f32_0uu3zzuuuuuzCuEF(float* %ptr) nounwind uwta
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX512F-NEXT:    vmovups (%eax), %zmm1
-; X32-AVX512F-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; X32-AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = <0,u,u,3,20,21,u,u,u,u,u,u,12,29,14,15>
 ; X32-AVX512F-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
 ; X32-AVX512F-NEXT:    retl

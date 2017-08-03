@@ -984,7 +984,7 @@ define void @movnt_pd(i8* %p, <4 x double> %a1) nounwind {
 ; AVX512VL-LABEL: movnt_pd:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xf5,0x57,0xc9]
+; AVX512VL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x57,0xc9]
 ; AVX512VL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x58,0xc1]
 ; AVX512VL-NEXT:    vmovntpd %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x2b,0x00]
 ; AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]

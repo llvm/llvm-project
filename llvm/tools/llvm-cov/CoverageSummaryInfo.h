@@ -115,7 +115,7 @@ struct FunctionCoverageInfo {
 
 /// \brief A summary of function's code coverage.
 struct FunctionCoverageSummary {
-  StringRef Name;
+  std::string Name;
   uint64_t ExecutionCount;
   RegionCoverageInfo RegionCoverage;
   LineCoverageInfo LineCoverage;
@@ -134,9 +134,11 @@ struct FunctionCoverageSummary {
   static FunctionCoverageSummary
   get(const coverage::FunctionRecord &Function);
 
-  /// \brief Update the summary with information from another instantiation
-  /// of this function.
-  void update(const FunctionCoverageSummary &Summary);
+  /// Compute the code coverage summary for an instantiation group \p Group,
+  /// given a list of summaries for each instantiation in \p Summaries.
+  static FunctionCoverageSummary
+  get(const coverage::InstantiationGroup &Group,
+      ArrayRef<FunctionCoverageSummary> Summaries);
 };
 
 /// \brief A summary of file's code coverage.

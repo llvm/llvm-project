@@ -207,6 +207,7 @@ OPTIONS
 
  For source regions that are instantiated multiple times, such as templates in
  ``C++``, show each instantiation separately as well as the combined summary.
+ This option is enabled by default.
 
 .. option:: -show-regions
 

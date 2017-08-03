@@ -41,15 +41,6 @@ static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
   return new WebAssemblyMCAsmInfo(TT);
 }
 
-static void adjustCodeGenOpts(const Triple & /*TT*/, Reloc::Model /*RM*/,
-                              CodeModel::Model &CM) {
-  CodeModel::Model M = (CM == CodeModel::Default || CM == CodeModel::JITDefault)
-                           ? CodeModel::Large
-                           : CM;
-  if (M != CodeModel::Large)
-    report_fatal_error("Non-large code models are not supported yet");
-}
-
 static MCInstrInfo *createMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
   InitWebAssemblyMCInstrInfo(X);
@@ -114,9 +105,6 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createMCInstrInfo);
-
-    // Register the MC codegen info.
-    TargetRegistry::registerMCAdjustCodeGenOpts(*T, adjustCodeGenOpts);
 
     // Register the MC register info.
     TargetRegistry::RegisterMCRegInfo(*T, createMCRegisterInfo);

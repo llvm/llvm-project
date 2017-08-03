@@ -839,7 +839,7 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 ; KNL_64-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_64-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    vinserti64x4 $0, %ymm1, %zmm3, %zmm1
 ; KNL_64-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
@@ -855,7 +855,7 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 ; KNL_32-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_32-NEXT:    vinserti64x4 $0, %ymm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm0
@@ -893,7 +893,7 @@ define <2 x double> @test17(double* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x 
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
 ; KNL_64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; KNL_64-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_64-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -906,7 +906,7 @@ define <2 x double> @test17(double* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x 
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
 ; KNL_32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
@@ -999,7 +999,7 @@ define void @test19(<4 x double>%a1, double* %ptr, <4 x i1>%mask, <4 x i64> %ind
 ; KNL_64-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_64-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    vinserti64x4 $0, %ymm1, %zmm3, %zmm1
 ; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_64-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -1014,7 +1014,7 @@ define void @test19(<4 x double>%a1, double* %ptr, <4 x i1>%mask, <4 x i64> %ind
 ; KNL_32-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_32-NEXT:    vinserti64x4 $0, %ymm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
@@ -1102,7 +1102,7 @@ define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
 ; KNL_64-LABEL: test21:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
-; KNL_64-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    vinserti32x4 $0, %xmm2, %zmm3, %zmm2
 ; KNL_64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL_64-NEXT:    vpsllq $63, %zmm2, %zmm2
@@ -1114,7 +1114,7 @@ define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
 ; KNL_32-LABEL: test21:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
-; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm2, %zmm3, %zmm2
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
@@ -1272,7 +1272,7 @@ define <2 x i32> @test23(i32* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
 ; KNL_64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; KNL_64-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_64-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -1285,7 +1285,7 @@ define <2 x i32> @test23(i32* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
 ; KNL_32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
@@ -1334,7 +1334,7 @@ define <2 x i32> @test24(i32* %base, <2 x i32> %ind) {
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vinserti32x4 $0, {{\.LCPI.*}}, %zmm1, %zmm1
 ; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -1368,7 +1368,7 @@ define <2 x i64> @test25(i64* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
 ; KNL_64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; KNL_64-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_64-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -1381,7 +1381,7 @@ define <2 x i64> @test25(i64* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<def>
 ; KNL_32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
-; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
@@ -1430,7 +1430,7 @@ define <2 x i64> @test26(i64* %base, <2 x i32> %ind, <2 x i64> %src0) {
 ; KNL_32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
 ; KNL_32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; KNL_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_32-NEXT:    vinserti32x4 $0, {{\.LCPI.*}}, %zmm2, %zmm2
 ; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k1
@@ -1522,7 +1522,7 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; KNL_32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; KNL_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_32-NEXT:    vinserti32x4 $0, {{\.LCPI.*}}, %zmm2, %zmm2
 ; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k1
@@ -2156,7 +2156,7 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_64-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_64-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; KNL_64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_64-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_64-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -2181,7 +2181,7 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; KNL_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_32-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1

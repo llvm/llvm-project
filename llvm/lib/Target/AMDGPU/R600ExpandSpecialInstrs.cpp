@@ -26,17 +26,20 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "r600-expand-special-instrs"
+
 namespace {
 
 class R600ExpandSpecialInstrsPass : public MachineFunctionPass {
 private:
-  static char ID;
   const R600InstrInfo *TII;
 
   void SetFlagInNewMI(MachineInstr *NewMI, const MachineInstr *OldMI,
       unsigned Op);
 
 public:
+  static char ID;
+
   R600ExpandSpecialInstrsPass() : MachineFunctionPass(ID),
     TII(nullptr) { }
 
@@ -49,7 +52,14 @@ public:
 
 } // End anonymous namespace
 
+INITIALIZE_PASS_BEGIN(R600ExpandSpecialInstrsPass, DEBUG_TYPE,
+                     "R600 Expand Special Instrs", false, false)
+INITIALIZE_PASS_END(R600ExpandSpecialInstrsPass, DEBUG_TYPE,
+                    "R600ExpandSpecialInstrs", false, false)
+
 char R600ExpandSpecialInstrsPass::ID = 0;
+
+char &llvm::R600ExpandSpecialInstrsPassID = R600ExpandSpecialInstrsPass::ID;
 
 FunctionPass *llvm::createR600ExpandSpecialInstrsPass() {
   return new R600ExpandSpecialInstrsPass();

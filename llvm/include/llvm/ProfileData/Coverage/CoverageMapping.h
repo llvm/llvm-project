@@ -85,7 +85,7 @@ private:
   coveragemap_error Err;
 };
 
-/// \brief A Counter is an abstract value that describes how to compute the
+/// A Counter is an abstract value that describes how to compute the
 /// execution count for a region of code using the collected profile count data.
 struct Counter {
   enum CounterKind { Zero, CounterValueReference, Expression };
@@ -125,23 +125,23 @@ public:
     return std::tie(LHS.Kind, LHS.ID) < std::tie(RHS.Kind, RHS.ID);
   }
 
-  /// \brief Return the counter that represents the number zero.
+  /// Return the counter that represents the number zero.
   static Counter getZero() { return Counter(); }
 
-  /// \brief Return the counter that corresponds to a specific profile counter.
+  /// Return the counter that corresponds to a specific profile counter.
   static Counter getCounter(unsigned CounterId) {
     return Counter(CounterValueReference, CounterId);
   }
 
-  /// \brief Return the counter that corresponds to a specific
-  /// addition counter expression.
+  /// Return the counter that corresponds to a specific addition counter
+  /// expression.
   static Counter getExpression(unsigned ExpressionId) {
     return Counter(Expression, ExpressionId);
   }
 };
 
-/// \brief A Counter expression is a value that represents an arithmetic
-/// operation with two counters.
+/// A Counter expression is a value that represents an arithmetic operation
+/// with two counters.
 struct CounterExpression {
   enum ExprKind { Subtract, Add };
   ExprKind Kind;
@@ -151,17 +151,16 @@ struct CounterExpression {
       : Kind(Kind), LHS(LHS), RHS(RHS) {}
 };
 
-/// \brief A Counter expression builder is used to construct the
-/// counter expressions. It avoids unnecessary duplication
-/// and simplifies algebraic expressions.
+/// A Counter expression builder is used to construct the counter expressions.
+/// It avoids unnecessary duplication and simplifies algebraic expressions.
 class CounterExpressionBuilder {
-  /// \brief A list of all the counter expressions
+  /// A list of all the counter expressions
   std::vector<CounterExpression> Expressions;
 
-  /// \brief A lookup table for the index of a given expression.
+  /// A lookup table for the index of a given expression.
   DenseMap<CounterExpression, unsigned> ExpressionIndices;
 
-  /// \brief Return the counter which corresponds to the given expression.
+  /// Return the counter which corresponds to the given expression.
   ///
   /// If the given expression is already stored in the builder, a counter
   /// that references that expression is returned. Otherwise, the given
@@ -177,43 +176,41 @@ class CounterExpressionBuilder {
         : CounterID(CounterID), Factor(Factor) {}
   };
 
-  /// \brief Gather the terms of the expression tree for processing.
+  /// Gather the terms of the expression tree for processing.
   ///
   /// This collects each addition and subtraction referenced by the counter into
   /// a sequence that can be sorted and combined to build a simplified counter
   /// expression.
   void extractTerms(Counter C, int Sign, SmallVectorImpl<Term> &Terms);
 
-  /// \brief Simplifies the given expression tree
+  /// Simplifies the given expression tree
   /// by getting rid of algebraically redundant operations.
   Counter simplify(Counter ExpressionTree);
 
 public:
   ArrayRef<CounterExpression> getExpressions() const { return Expressions; }
 
-  /// \brief Return a counter that represents the expression
-  /// that adds LHS and RHS.
+  /// Return a counter that represents the expression that adds LHS and RHS.
   Counter add(Counter LHS, Counter RHS);
 
-  /// \brief Return a counter that represents the expression
-  /// that subtracts RHS from LHS.
+  /// Return a counter that represents the expression that subtracts RHS from
+  /// LHS.
   Counter subtract(Counter LHS, Counter RHS);
 };
 
-/// \brief A Counter mapping region associates a source range with
-/// a specific counter.
+/// A Counter mapping region associates a source range with a specific counter.
 struct CounterMappingRegion {
   enum RegionKind {
-    /// \brief A CodeRegion associates some code with a counter
+    /// A CodeRegion associates some code with a counter
     CodeRegion,
 
-    /// \brief An ExpansionRegion represents a file expansion region that
-    /// associates a source range with the expansion of a virtual source file,
-    /// such as for a macro instantiation or #include file.
+    /// An ExpansionRegion represents a file expansion region that associates 
+    /// a source range with the expansion of a virtual source file, such as
+    /// for a macro instantiation or #include file.
     ExpansionRegion,
 
-    /// \brief A SkippedRegion represents a source range with code that
-    /// was skipped by a preprocessor or similar means.
+    /// A SkippedRegion represents a source range with code that was skipped
+    /// by a preprocessor or similar means.
     SkippedRegion
   };
 
@@ -260,7 +257,7 @@ struct CounterMappingRegion {
   }
 };
 
-/// \brief Associates a source range with an execution count.
+/// Associates a source range with an execution count.
 struct CountedRegion : public CounterMappingRegion {
   uint64_t ExecutionCount;
 
@@ -268,8 +265,8 @@ struct CountedRegion : public CounterMappingRegion {
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount) {}
 };
 
-/// \brief A Counter mapping context is used to connect the counters,
-/// expressions and the obtained counter values.
+/// A Counter mapping context is used to connect the counters, expressions
+/// and the obtained counter values.
 class CounterMappingContext {
   ArrayRef<CounterExpression> Expressions;
   ArrayRef<uint64_t> CounterValues;
@@ -284,20 +281,20 @@ public:
   void dump(const Counter &C, raw_ostream &OS) const;
   void dump(const Counter &C) const { dump(C, dbgs()); }
 
-  /// \brief Return the number of times that a region of code associated with
-  /// this counter was executed.
+  /// Return the number of times that a region of code associated with this
+  /// counter was executed.
   Expected<int64_t> evaluate(const Counter &C) const;
 };
 
-/// \brief Code coverage information for a single function.
+/// Code coverage information for a single function.
 struct FunctionRecord {
-  /// \brief Raw function name.
+  /// Raw function name.
   std::string Name;
-  /// \brief Associated files.
+  /// Associated files.
   std::vector<std::string> Filenames;
-  /// \brief Regions in the function along with their counts.
+  /// Regions in the function along with their counts.
   std::vector<CountedRegion> CountedRegions;
-  /// \brief The number of times this function was executed.
+  /// The number of times this function was executed.
   uint64_t ExecutionCount;
 
   FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames)
@@ -313,7 +310,7 @@ struct FunctionRecord {
   }
 };
 
-/// \brief Iterator over Functions, optionally filtered to a single file.
+/// Iterator over Functions, optionally filtered to a single file.
 class FunctionRecordIterator
     : public iterator_facade_base<FunctionRecordIterator,
                                   std::forward_iterator_tag, FunctionRecord> {
@@ -321,7 +318,7 @@ class FunctionRecordIterator
   ArrayRef<FunctionRecord>::iterator Current;
   StringRef Filename;
 
-  /// \brief Skip records whose primary file is not \c Filename.
+  /// Skip records whose primary file is not \c Filename.
   void skipOtherFiles();
 
 public:
@@ -347,17 +344,17 @@ public:
   }
 };
 
-/// \brief Coverage information for a macro expansion or #included file.
+/// Coverage information for a macro expansion or #included file.
 ///
 /// When covered code has pieces that can be expanded for more detail, such as a
 /// preprocessor macro use and its definition, these are represented as
 /// expansions whose coverage can be looked up independently.
 struct ExpansionRecord {
-  /// \brief The abstract file this expansion covers.
+  /// The abstract file this expansion covers.
   unsigned FileID;
-  /// \brief The region that expands to this record.
+  /// The region that expands to this record.
   const CountedRegion &Region;
-  /// \brief Coverage for the expansion.
+  /// Coverage for the expansion.
   const FunctionRecord &Function;
 
   ExpansionRecord(const CountedRegion &Region,
@@ -365,20 +362,20 @@ struct ExpansionRecord {
       : FileID(Region.ExpandedFileID), Region(Region), Function(Function) {}
 };
 
-/// \brief The execution count information starting at a point in a file.
+/// The execution count information starting at a point in a file.
 ///
 /// A sequence of CoverageSegments gives execution counts for a file in format
 /// that's simple to iterate through for processing.
 struct CoverageSegment {
-  /// \brief The line where this segment begins.
+  /// The line where this segment begins.
   unsigned Line;
-  /// \brief The column where this segment begins.
+  /// The column where this segment begins.
   unsigned Col;
-  /// \brief The execution count, or zero if no count was recorded.
+  /// The execution count, or zero if no count was recorded.
   uint64_t Count;
-  /// \brief When false, the segment was uninstrumented or skipped.
+  /// When false, the segment was uninstrumented or skipped.
   bool HasCount;
-  /// \brief Whether this enters a new region or returns to a previous count.
+  /// Whether this enters a new region or returns to a previous count.
   bool IsRegionEntry;
 
   CoverageSegment(unsigned Line, unsigned Col, bool IsRegionEntry)
@@ -396,7 +393,64 @@ struct CoverageSegment {
   }
 };
 
-/// \brief Coverage information to be processed or displayed.
+/// An instantiation group contains a \c FunctionRecord list, such that each
+/// record corresponds to a distinct instantiation of the same function.
+///
+/// Note that it's possible for a function to have more than one instantiation
+/// (consider C++ template specializations or static inline functions).
+class InstantiationGroup {
+  friend class CoverageMapping;
+
+  unsigned Line;
+  unsigned Col;
+  std::vector<const FunctionRecord *> Instantiations;
+
+  InstantiationGroup(unsigned Line, unsigned Col,
+                     std::vector<const FunctionRecord *> Instantiations)
+      : Line(Line), Col(Col), Instantiations(std::move(Instantiations)) {}
+
+public:
+  InstantiationGroup(const InstantiationGroup &) = delete;
+  InstantiationGroup(InstantiationGroup &&) = default;
+
+  /// Get the number of instantiations in this group.
+  size_t size() const { return Instantiations.size(); }
+
+  /// Get the line where the common function was defined.
+  unsigned getLine() const { return Line; }
+
+  /// Get the column where the common function was defined.
+  unsigned getColumn() const { return Col; }
+
+  /// Check if the instantiations in this group have a common mangled name.
+  bool hasName() const {
+    for (unsigned I = 1, E = Instantiations.size(); I < E; ++I)
+      if (Instantiations[I]->Name != Instantiations[0]->Name)
+        return false;
+    return true;
+  }
+
+  /// Get the common mangled name for instantiations in this group.
+  StringRef getName() const {
+    assert(hasName() && "Instantiations don't have a shared name");
+    return Instantiations[0]->Name;
+  }
+
+  /// Get the total execution count of all instantiations in this group.
+  uint64_t getTotalExecutionCount() const {
+    uint64_t Count = 0;
+    for (const FunctionRecord *F : Instantiations)
+      Count += F->ExecutionCount;
+    return Count;
+  }
+
+  /// Get the instantiations in this group.
+  ArrayRef<const FunctionRecord *> getInstantiations() const {
+    return Instantiations;
+  }
+};
+
+/// Coverage information to be processed or displayed.
 ///
 /// This represents the coverage of an entire file, expansion, or function. It
 /// provides a sequence of CoverageSegments to iterate through, as well as the
@@ -413,7 +467,7 @@ public:
 
   CoverageData(StringRef Filename) : Filename(Filename) {}
 
-  /// \brief Get the name of the file this data covers.
+  /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
 
   std::vector<CoverageSegment>::const_iterator begin() const {
@@ -426,11 +480,11 @@ public:
 
   bool empty() const { return Segments.empty(); }
 
-  /// \brief Expansions that can be further processed.
+  /// Expansions that can be further processed.
   ArrayRef<ExpansionRecord> getExpansions() const { return Expansions; }
 };
 
-/// \brief The mapping of profile information to coverage data.
+/// The mapping of profile information to coverage data.
 ///
 /// This is the main interface to get coverage information, using a profile to
 /// fill out execution counts.
@@ -441,7 +495,7 @@ class CoverageMapping {
 
   CoverageMapping() = default;
 
-  /// \brief Add a function record corresponding to \p Record.
+  /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
 
@@ -460,48 +514,48 @@ public:
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
        ArrayRef<StringRef> Arches = None);
 
-  /// \brief The number of functions that couldn't have their profiles mapped.
+  /// The number of functions that couldn't have their profiles mapped.
   ///
   /// This is a count of functions whose profile is out of date or otherwise
   /// can't be associated with any coverage information.
   unsigned getMismatchedCount() { return MismatchedFunctionCount; }
 
-  /// \brief Returns a lexicographically sorted, unique list of files that are
+  /// Returns a lexicographically sorted, unique list of files that are
   /// covered.
   std::vector<StringRef> getUniqueSourceFiles() const;
 
-  /// \brief Get the coverage for a particular file.
+  /// Get the coverage for a particular file.
   ///
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
   CoverageData getCoverageForFile(StringRef Filename) const;
 
-  /// \brief Gets all of the functions covered by this profile.
+  /// Get the coverage for a particular function.
+  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
+
+  /// Get the coverage for an expansion within a coverage set.
+  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
+
+  /// Gets all of the functions covered by this profile.
   iterator_range<FunctionRecordIterator> getCoveredFunctions() const {
     return make_range(FunctionRecordIterator(Functions),
                       FunctionRecordIterator());
   }
 
-  /// \brief Gets all of the functions in a particular file.
+  /// Gets all of the functions in a particular file.
   iterator_range<FunctionRecordIterator>
   getCoveredFunctions(StringRef Filename) const {
     return make_range(FunctionRecordIterator(Functions, Filename),
                       FunctionRecordIterator());
   }
 
-  /// \brief Get the list of function instantiations in the file.
+  /// Get the list of function instantiation groups in a particular file.
   ///
-  /// Functions that are instantiated more than once, such as C++ template
-  /// specializations, have distinct coverage records for each instantiation.
-  std::vector<const FunctionRecord *>
-  getInstantiations(StringRef Filename) const;
-
-  /// \brief Get the coverage for a particular function.
-  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
-
-  /// \brief Get the coverage for an expansion within a coverage set.
-  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
+  /// Every instantiation group in a program is attributed to exactly one file:
+  /// the file in which the definition for the common function begins.
+  std::vector<InstantiationGroup>
+  getInstantiationGroups(StringRef Filename) const;
 };
 
 // Profile coverage map has the following layout:
@@ -620,7 +674,7 @@ template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
 
 } // end namespace coverage
 
-/// \brief Provide DenseMapInfo for CounterExpression
+/// Provide DenseMapInfo for CounterExpression
 template<> struct DenseMapInfo<coverage::CounterExpression> {
   static inline coverage::CounterExpression getEmptyKey() {
     using namespace coverage;

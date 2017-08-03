@@ -6278,6 +6278,18 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
     return None;
   }
 
+  if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
+    // TODO: It may by useful to do since it's still likely to be dynamically
+    // uniform if the target can skip.
+    DEBUG(dbgs() << "LV: Not inserting runtime ptr check for divergent target");
+
+    ORE->emit(
+      createMissedAnalysis("CantVersionLoopWithDivergentTarget")
+      << "runtime pointer checks needed. Not enabled for divergent target");
+
+    return None;
+  }
+
   if (!OptForSize) // Remaining checks deal with scalar loop when OptForSize.
     return computeFeasibleMaxVF(OptForSize);
 
