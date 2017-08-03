@@ -114,7 +114,8 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
 
 const char *BreakpointOptions::g_option_names[(
     size_t)BreakpointOptions::OptionNames::LastOptionName]{
-    "ConditionText", "IgnoreCount", "EnabledState", "OneShotState"};
+    "ConditionText", "IgnoreCount", 
+    "EnabledState", "OneShotState", "AutoContinue"};
 
 bool BreakpointOptions::NullCallback(void *baton,
                                      StoppointCallbackContext *context,
@@ -130,20 +131,22 @@ BreakpointOptions::BreakpointOptions(bool all_flags_set)
     : m_callback(BreakpointOptions::NullCallback), m_callback_baton_sp(),
       m_baton_is_command_baton(false), m_callback_is_synchronous(false),
       m_enabled(true), m_one_shot(false), m_ignore_count(0), m_thread_spec_ap(),
-      m_condition_text(), m_condition_text_hash(0), 
+      m_condition_text(), m_condition_text_hash(0), m_auto_continue(false),
       m_set_flags() {
         if (all_flags_set)
           m_set_flags.Set(~((Flags::ValueType) 0));
       }
 
 BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
-                                     int32_t ignore, bool one_shot)
+                                     int32_t ignore, bool one_shot, 
+                                     bool auto_continue)
     : m_callback(nullptr), m_baton_is_command_baton(false),
       m_callback_is_synchronous(false), m_enabled(enabled),
       m_one_shot(one_shot), m_ignore_count(ignore), m_condition_text(condition),
-      m_condition_text_hash(0)
+      m_condition_text_hash(0), m_auto_continue(auto_continue)
 {
-    m_set_flags.Set(eEnabled | eIgnoreCount | eOneShot | eCondition);
+    m_set_flags.Set(eEnabled | eIgnoreCount | eOneShot 
+                   | eCondition | eAutoContinue);
 }
 
 //----------------------------------------------------------------------
@@ -155,6 +158,7 @@ BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
       m_enabled(rhs.m_enabled), m_one_shot(rhs.m_one_shot),
       m_ignore_count(rhs.m_ignore_count), m_thread_spec_ap(),
+      m_auto_continue(rhs.m_auto_continue),
       m_set_flags(rhs.m_set_flags) {
   if (rhs.m_thread_spec_ap.get() != nullptr)
     m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
@@ -178,6 +182,7 @@ operator=(const BreakpointOptions &rhs) {
     m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
   m_condition_text = rhs.m_condition_text;
   m_condition_text_hash = rhs.m_condition_text_hash;
+  m_auto_continue = rhs.m_auto_continue;
   m_set_flags = rhs.m_set_flags;
   return *this;
 }
@@ -192,6 +197,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     Status &error) {
   bool enabled = true;
   bool one_shot = false;
+  bool auto_continue = false;
   int32_t ignore_count = 0;
   llvm::StringRef condition_ref("");
   Flags set_options;
@@ -217,6 +223,17 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       return nullptr;
       }
       set_options.Set(eOneShot);
+  }
+  
+  key = GetKey(OptionNames::AutoContinue);
+  if (key) {
+    success = options_dict.GetValueForKeyAsBoolean(key, auto_continue);
+    if (!success) {
+      error.SetErrorStringWithFormat("%s key is not a boolean.",
+                                     GetKey(OptionNames::AutoContinue));
+      return nullptr;
+      }
+      set_options.Set(eAutoContinue);
   }
   
   key = GetKey(OptionNames::IgnoreCount);
@@ -257,7 +274,8 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
   }
 
   auto bp_options = llvm::make_unique<BreakpointOptions>(
-      condition_ref.str().c_str(), enabled, ignore_count, one_shot);
+      condition_ref.str().c_str(), enabled, 
+      ignore_count, one_shot, auto_continue);
   if (cmd_data_up.get()) {
     if (cmd_data_up->interpreter == eScriptLanguageNone)
       bp_options->SetCommandDataCallback(cmd_data_up);
@@ -315,6 +333,9 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
   if (m_set_flags.Set(eOneShot))
     options_dict_sp->AddBooleanItem(GetKey(OptionNames::OneShotState),
                                m_one_shot);
+  if (m_set_flags.Set(eAutoContinue))
+    options_dict_sp->AddBooleanItem(GetKey(OptionNames::AutoContinue),
+                               m_auto_continue);
   if (m_set_flags.Set(eIgnoreCount))
     options_dict_sp->AddIntegerItem(GetKey(OptionNames::IgnoreCount),
                                     m_ignore_count);
@@ -471,7 +492,7 @@ void BreakpointOptions::GetDescription(Stream *s,
   // print
   // anything if there are:
 
-  if (m_ignore_count != 0 || !m_enabled || m_one_shot ||
+  if (m_ignore_count != 0 || !m_enabled || m_one_shot || m_auto_continue ||
       (GetThreadSpecNoCreate() != nullptr &&
        GetThreadSpecNoCreate()->HasSpecification())) {
     if (level == lldb::eDescriptionLevelVerbose) {
@@ -490,6 +511,9 @@ void BreakpointOptions::GetDescription(Stream *s,
 
     if (m_one_shot)
       s->Printf("one-shot ");
+
+    if (m_auto_continue)
+      s->Printf("auto-continue ");
 
     if (m_thread_spec_ap.get())
       m_thread_spec_ap->GetDescription(s, level);

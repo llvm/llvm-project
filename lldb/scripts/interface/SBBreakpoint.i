@@ -153,6 +153,10 @@ public:
     const char *
     GetCondition ();
 
+    void SetAutoContinue(bool auto_continue);
+
+    bool GetAutoContinue();
+
     void
     SetThreadID (lldb::tid_t sb_thread_id);
 

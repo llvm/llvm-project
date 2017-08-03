@@ -264,6 +264,25 @@ const char *SBBreakpoint::GetCondition() {
   return nullptr;
 }
 
+void SBBreakpoint::SetAutoContinue(bool auto_continue) {
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        bkpt_sp->GetTarget().GetAPIMutex());
+    bkpt_sp->SetAutoContinue(auto_continue);
+  }
+}
+
+bool SBBreakpoint::GetAutoContinue() {
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        bkpt_sp->GetTarget().GetAPIMutex());
+    return bkpt_sp->IsAutoContinue();
+  }
+  return nullptr;
+}
+
 uint32_t SBBreakpoint::GetHitCount() const {
   uint32_t count = 0;
   BreakpointSP bkpt_sp = GetSP();

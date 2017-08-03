@@ -73,6 +73,10 @@ public:
     const char *
     GetCondition ();
 
+    bool GetAutoContinue();
+ 
+    void SetAutoContinue(bool auto_continue);
+
     %feature("docstring", "
     //------------------------------------------------------------------
     /// Set the callback to the given Python function name.

@@ -47,6 +47,10 @@ public:
   void SetCondition(const char *condition);
 
   const char *GetCondition();
+   
+  void SetAutoContinue(bool auto_continue);
+
+  bool GetAutoContinue();
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 

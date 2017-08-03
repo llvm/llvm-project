@@ -38,12 +38,13 @@ friend class Breakpoint;
 
 public:
   enum OptionKind {
-    eCallback =    1 << 0,
-    eEnabled  =    1 << 1,
-    eOneShot  =    1 << 2,
-    eIgnoreCount = 1 << 3,
-    eThreadSpec  = 1 << 4,
-    eCondition   = 1 << 5
+    eCallback     = 1 << 0,
+    eEnabled      = 1 << 1,
+    eOneShot      = 1 << 2,
+    eIgnoreCount  = 1 << 3,
+    eThreadSpec   = 1 << 4,
+    eCondition    = 1 << 5,
+    eAutoContinue = 1 << 6
   };
   struct CommandData {
     CommandData()
@@ -112,7 +113,8 @@ public:
   ///
   //------------------------------------------------------------------
   BreakpointOptions(const char *condition, bool enabled = true,
-                    int32_t ignore = 0, bool one_shot = false);
+                    int32_t ignore = 0, bool one_shot = false,
+                    bool auto_continue = false);
 
   virtual ~BreakpointOptions();
 
@@ -296,6 +298,21 @@ public:
   }
 
   //------------------------------------------------------------------
+  /// Check the auto-continue state.
+  /// @return
+  ///     \b true if the breakpoint is set to auto-continue, \b false otherwise.
+  //------------------------------------------------------------------
+  bool IsAutoContinue() const { return m_auto_continue; }
+
+  //------------------------------------------------------------------
+  /// Set the auto-continue state.
+  //------------------------------------------------------------------
+  void SetAutoContinue(bool auto_continue) { 
+    m_auto_continue = auto_continue;
+    m_set_flags.Set(eAutoContinue);
+  }
+
+  //------------------------------------------------------------------
   /// Check the One-shot state.
   /// @return
   ///     \b true if the breakpoint is one-shot, \b false otherwise.
@@ -394,6 +411,7 @@ protected:
     IgnoreCount,
     EnabledState,
     OneShotState,
+    AutoContinue,
     LastOptionName
   };
   static const char *g_option_names[(size_t)OptionNames::LastOptionName];
@@ -424,6 +442,7 @@ private:
   std::string m_condition_text; // The condition to test.
   size_t m_condition_text_hash; // Its hash, so that locations know when the
                                 // condition is updated.
+  bool m_auto_continue;         // If set, auto-continue from breakpoint.
   Flags m_set_flags;            // Which options are set at this level.  Drawn
                                 // from BreakpointOptions::SetOptionsFlags.
 };
