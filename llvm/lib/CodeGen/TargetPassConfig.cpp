@@ -153,6 +153,34 @@ static cl::opt<CFLAAType> UseCFLAA(
                clEnumValN(CFLAAType::Both, "both", 
                           "Enable both variants of CFL-AA")));
 
+/// Option names for limiting the codegen pipeline.
+/// Those are used in error reporting and we didn't want
+/// to duplicate their names all over the place.
+const char *StartAfterOptName = "start-after";
+const char *StartBeforeOptName = "start-before";
+const char *StopAfterOptName = "stop-after";
+const char *StopBeforeOptName = "stop-before";
+
+static cl::opt<std::string>
+    StartAfterOpt(StringRef(StartAfterOptName),
+                  cl::desc("Resume compilation after a specific pass"),
+                  cl::value_desc("pass-name"), cl::init(""));
+
+static cl::opt<std::string>
+    StartBeforeOpt(StringRef(StartBeforeOptName),
+                   cl::desc("Resume compilation before a specific pass"),
+                   cl::value_desc("pass-name"), cl::init(""));
+
+static cl::opt<std::string>
+    StopAfterOpt(StringRef(StopAfterOptName),
+                 cl::desc("Stop compilation after a specific pass"),
+                 cl::value_desc("pass-name"), cl::init(""));
+
+static cl::opt<std::string>
+    StopBeforeOpt(StringRef(StopBeforeOptName),
+                  cl::desc("Stop compilation before a specific pass"),
+                  cl::value_desc("pass-name"), cl::init(""));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -282,6 +310,37 @@ TargetPassConfig::~TargetPassConfig() {
   delete Impl;
 }
 
+static const PassInfo *getPassInfo(StringRef PassName) {
+  if (PassName.empty())
+    return nullptr;
+
+  const PassRegistry &PR = *PassRegistry::getPassRegistry();
+  const PassInfo *PI = PR.getPassInfo(PassName);
+  if (!PI)
+    report_fatal_error(Twine('\"') + Twine(PassName) +
+                       Twine("\" pass is not registered."));
+  return PI;
+}
+
+static AnalysisID getPassIDFromName(StringRef PassName) {
+  const PassInfo *PI = getPassInfo(PassName);
+  return PI ? PI->getTypeInfo() : nullptr;
+}
+
+void TargetPassConfig::setStartStopPasses() {
+  StartBefore = getPassIDFromName(StartBeforeOpt);
+  StartAfter = getPassIDFromName(StartAfterOpt);
+  StopBefore = getPassIDFromName(StopBeforeOpt);
+  StopAfter = getPassIDFromName(StopAfterOpt);
+  if (StartBefore && StartAfter)
+    report_fatal_error(Twine(StartBeforeOptName) + Twine(" and ") +
+                       Twine(StartAfterOptName) + Twine(" specified!"));
+  if (StopBefore && StopAfter)
+    report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
+                       Twine(StopAfterOptName) + Twine(" specified!"));
+  Started = (StartAfter == nullptr) && (StartBefore == nullptr);
+}
+
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
 TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
@@ -305,6 +364,8 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
 
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
+
+  setStartStopPasses();
 }
 
 CodeGenOpt::Level TargetPassConfig::getOptLevel() const {
@@ -337,6 +398,30 @@ TargetPassConfig::TargetPassConfig()
   report_fatal_error("Trying to construct TargetPassConfig without a target "
                      "machine. Scheduling a CodeGen pass without a target "
                      "triple set?");
+}
+
+bool TargetPassConfig::hasLimitedCodeGenPipeline() const {
+  return StartBefore || StartAfter || StopBefore || StopAfter;
+}
+
+std::string
+TargetPassConfig::getLimitedCodeGenPipelineReason(const char *Separator) const {
+  if (!hasLimitedCodeGenPipeline())
+    return std::string();
+  std::string Res;
+  static cl::opt<std::string> *PassNames[] = {&StartAfterOpt, &StartBeforeOpt,
+                                              &StopAfterOpt, &StopBeforeOpt};
+  static const char *OptNames[] = {StartAfterOptName, StartBeforeOptName,
+                                   StopAfterOptName, StopBeforeOptName};
+  bool IsFirst = true;
+  for (int Idx = 0; Idx < 4; ++Idx)
+    if (!PassNames[Idx]->empty()) {
+      if (!IsFirst)
+        Res += Separator;
+      IsFirst = false;
+      Res += OptNames[Idx];
+    }
+  return Res;
 }
 
 // Helper to verify the analysis is really immutable.

@@ -1,4 +1,4 @@
-//===----- HexagonShuffler.cpp - Instruction bundle shuffling -------------===//
+//===- HexagonShuffler.cpp - Instruction bundle shuffling -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,32 +14,39 @@
 
 #define DEBUG_TYPE "hexagon-shuffle"
 
-#include "HexagonShuffler.h"
+#include "MCTargetDesc/HexagonShuffler.h"
 #include "Hexagon.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <utility>
+#include <vector>
 
 using namespace llvm;
 
 namespace {
+
 // Insn shuffling priority.
 class HexagonBid {
   // The priority is directly proportional to how restricted the insn is based
   // on its flexibility to run on the available slots.  So, the fewer slots it
   // may run on, the higher its priority.
   enum { MAX = 360360 }; // LCD of 1/2, 1/3, 1/4,... 1/15.
-  unsigned Bid;
+  unsigned Bid = 0;
 
 public:
-  HexagonBid() : Bid(0) {}
+  HexagonBid() = default;
   HexagonBid(unsigned B) { Bid = B ? MAX / countPopulation(B) : 0; }
 
   // Check if the insn priority is overflowed.
@@ -58,7 +65,7 @@ class HexagonUnitAuction {
   unsigned isSold : HEXAGON_PACKET_SIZE;
 
 public:
-  HexagonUnitAuction(unsigned cs = 0) : isSold(cs){};
+  HexagonUnitAuction(unsigned cs = 0) : isSold(cs) {}
 
   // Allocate slots.
   bool bid(unsigned B) {
@@ -77,6 +84,7 @@ public:
       return false;
   }
 };
+
 } // end anonymous namespace
 
 unsigned HexagonResource::setWeight(unsigned s) {
@@ -149,10 +157,9 @@ struct CVIUnits {
   unsigned Units;
   unsigned Lanes;
 };
-typedef SmallVector<struct CVIUnits, 8> HVXInstsT;
+using HVXInstsT = SmallVector<struct CVIUnits, 8>;
 
 static unsigned makeAllBits(unsigned startBit, unsigned Lanes)
-
 {
   for (unsigned i = 1; i < Lanes; ++i)
     startBit = (startBit << 1) | startBit;
@@ -160,9 +167,7 @@ static unsigned makeAllBits(unsigned startBit, unsigned Lanes)
 }
 
 static bool checkHVXPipes(const HVXInstsT &hvxInsts, unsigned startIdx,
-                          unsigned usedUnits)
-
-{
+                          unsigned usedUnits) {
   if (startIdx < hvxInsts.size()) {
     if (!hvxInsts[startIdx].Units)
       return checkHVXPipes(hvxInsts, startIdx + 1, usedUnits);
@@ -353,21 +358,21 @@ bool HexagonShuffler::check() {
   // Check if the packet is legal.
   if ((load0 > 1 || store0 > 1) ||
       (duplex > 1 || (duplex && memory))) {
-    reportError(llvm::Twine("invalid instruction packet"));
+    reportError(Twine("invalid instruction packet"));
     return false;
   }
 
   if (jump1 && jumps > 1) {
     // Error if single branch with another branch.
-    reportError(llvm::Twine("too many branches in packet"));
+    reportError(Twine("too many branches in packet"));
     return false;
   }
   if ((nvstores || memops) && stores > 1) {
-    reportError(llvm::Twine("slot 0 instruction does not allow slot 1 store"));
+    reportError(Twine("slot 0 instruction does not allow slot 1 store"));
     return false;
   }
   if (deallocs && stores) {
-    reportError(llvm::Twine("slot 0 instruction does not allow slot 1 store"));
+    reportError(Twine("slot 0 instruction does not allow slot 1 store"));
     return false;
   }
 
@@ -409,8 +414,7 @@ bool HexagonShuffler::check() {
         else if (stores > 1) {
           if (slotLoadStore < slotLastLoadStore) {
             // Error if no more slots available for stores.
-            reportError(
-                llvm::Twine("invalid instruction packet: too many stores"));
+            reportError(Twine("invalid instruction packet: too many stores"));
             return false;
           }
           // Pin the store to the highest slot available to it.
@@ -421,7 +425,7 @@ bool HexagonShuffler::check() {
       }
       if (store1 && stores > 1) {
         // Error if a single store with another store.
-        reportError(llvm::Twine("invalid instruction packet: too many stores"));
+        reportError(Twine("invalid instruction packet: too many stores"));
         return false;
       }
     }
@@ -432,7 +436,7 @@ bool HexagonShuffler::check() {
 
     if (!ISJ->Core.getUnits()) {
       // Error if insn may not be executed in any slot.
-      reportError(llvm::Twine("invalid instruction packet: out of slots"));
+      reportError(Twine("invalid instruction packet: out of slots"));
       return false;
     }
   }
@@ -441,7 +445,7 @@ bool HexagonShuffler::check() {
   bool validateSlots = true;
   if (jumps > 1) {
     if (foundBranches.size() > 2) {
-      reportError(llvm::Twine("too many branches in packet"));
+      reportError(Twine("too many branches in packet"));
       return false;
     }
 
@@ -465,7 +469,7 @@ bool HexagonShuffler::check() {
 
       // see if things ok with that instruction being pinned to slot "slotJump"
       bool bFail = false;
-      for (iterator I = begin(); I != end() && bFail != true; ++I)
+      for (iterator I = begin(); I != end() && !bFail; ++I)
         if (!AuctionCore.bid(I->Core.getUnits()))
           bFail = true;
 
@@ -477,14 +481,13 @@ bool HexagonShuffler::check() {
         // restore original values
         Packet = PacketSave;
     }
-    if (validateSlots == true) {
-      reportError(llvm::Twine("invalid instruction packet: out of slots"));
+    if (validateSlots) {
+      reportError(Twine("invalid instruction packet: out of slots"));
       return false;
     }
   }
 
-  if (jumps <= 1 && bOnlySlot3 == false && pSlot3Cnt == 1 &&
-      slot3ISJ != end()) {
+  if (jumps <= 1 && !bOnlySlot3 && pSlot3Cnt == 1 && slot3ISJ != end()) {
     validateSlots = true;
     // save off slot mask of instruction marked with A_PREFER_SLOT3
     // and then pin it to slot #3
@@ -496,7 +499,7 @@ bool HexagonShuffler::check() {
 
     // see if things ok with that instruction being pinned to slot #3
     bool bFail = false;
-    for (iterator I = begin(); I != end() && bFail != true; ++I)
+    for (iterator I = begin(); I != end() && !bFail; ++I)
       if (!AuctionCore.bid(I->Core.getUnits()))
         bFail = true;
 
@@ -520,7 +523,7 @@ bool HexagonShuffler::check() {
 
     for (iterator I = begin(); I != end(); ++I)
       if (!AuctionCore.bid(I->Core.getUnits())) {
-        reportError(llvm::Twine("invalid instruction packet: slot error"));
+        reportError(Twine("invalid instruction packet: slot error"));
         return false;
       }
   }
@@ -541,9 +544,9 @@ bool HexagonShuffler::check() {
   if (hvxInsts.size() > 0) {
     unsigned startIdx, usedUnits;
     startIdx = usedUnits = 0x0;
-    if (checkHVXPipes(hvxInsts, startIdx, usedUnits) == false) {
+    if (!checkHVXPipes(hvxInsts, startIdx, usedUnits)) {
       // too many pipes used to be valid
-      reportError(llvm::Twine("invalid instruction packet: slot error"));
+      reportError(Twine("invalid instruction packet: slot error"));
       return false;
     }
   }
@@ -555,7 +558,7 @@ bool HexagonShuffler::shuffle() {
   if (size() > HEXAGON_PACKET_SIZE) {
     // Ignore a packet with with more than what a packet can hold
     // or with compound or duplex insns for now.
-    reportError(llvm::Twine("invalid instruction packet"));
+    reportError(Twine("invalid instruction packet"));
     return false;
   }
 
@@ -600,7 +603,7 @@ bool HexagonShuffler::shuffle() {
   return Ok;
 }
 
-void HexagonShuffler::reportError(llvm::Twine const &Msg) {
+void HexagonShuffler::reportError(Twine const &Msg) {
   if (ReportErrors)
     Context.reportError(Loc, Msg);
 }

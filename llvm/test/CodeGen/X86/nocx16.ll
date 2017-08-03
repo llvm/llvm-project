@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 -mattr=-cx16 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 -mattr=-cx16 | FileCheck %s
 define void @test(i128* %a) nounwind {
 entry:
 ; CHECK: __sync_val_compare_and_swap_16

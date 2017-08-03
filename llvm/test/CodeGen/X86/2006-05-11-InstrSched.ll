@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mtriple=i386-linux-gnu -mcpu=penryn -mattr=+sse2 -stats 2>&1 | \
+; RUN: llc < %s -mtriple=i386-linux-gnu -mcpu=penryn -mattr=+sse2 -stats 2>&1 | \
 ; RUN:     grep "asm-printer" | grep 35
 
 target datalayout = "e-p:32:32"

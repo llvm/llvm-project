@@ -582,7 +582,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         // Statistics.
         ++NewAccessMapFound;
         NewAccessStrings.push_back(Accesses.asCString());
-        MA->setNewAccessRelation(NewAccessMap);
+        MA->setNewAccessRelation(isl::manage(NewAccessMap));
       } else {
         isl_map_free(NewAccessMap);
       }

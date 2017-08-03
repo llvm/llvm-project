@@ -182,20 +182,20 @@ void __copy(const path& from, const path& to, copy_options options,
     const bool sym_status2 = bool(options &
         copy_options::copy_symlinks);
 
-    std::error_code m_ec;
+    std::error_code m_ec1;
     struct ::stat f_st = {};
     const file_status f = sym_status || sym_status2
-                                     ? detail::posix_lstat(from, f_st, &m_ec)
-                                     : detail::posix_stat(from,  f_st, &m_ec);
-    if (m_ec)
-        return set_or_throw(m_ec, ec, "copy", from, to);
+                                     ? detail::posix_lstat(from, f_st, &m_ec1)
+                                     : detail::posix_stat(from,  f_st, &m_ec1);
+    if (m_ec1)
+        return set_or_throw(m_ec1, ec, "copy", from, to);
 
     struct ::stat t_st = {};
-    const file_status t = sym_status ? detail::posix_lstat(to, t_st, &m_ec)
-                                     : detail::posix_stat(to, t_st, &m_ec);
+    const file_status t = sym_status ? detail::posix_lstat(to, t_st, &m_ec1)
+                                     : detail::posix_stat(to, t_st, &m_ec1);
 
     if (not status_known(t))
-        return set_or_throw(m_ec, ec, "copy", from, to);
+        return set_or_throw(m_ec1, ec, "copy", from, to);
 
     if (!exists(f) || is_other(f) || is_other(t)
         || (is_directory(f) && is_regular_file(t))
@@ -249,9 +249,9 @@ void __copy(const path& from, const path& to, copy_options options,
         directory_iterator it = ec ? directory_iterator(from, *ec)
                                    : directory_iterator(from);
         if (ec && *ec) { return; }
-        std::error_code m_ec;
-        for (; it != directory_iterator(); it.increment(m_ec)) {
-            if (m_ec) return set_or_throw(m_ec, ec, "copy", from, to);
+        std::error_code m_ec2;
+        for (; it != directory_iterator(); it.increment(m_ec2)) {
+            if (m_ec2) return set_or_throw(m_ec2, ec, "copy", from, to);
             __copy(it->path(), to / it->path().filename(),
                    options | copy_options::__in_recursive_copy, ec);
             if (ec && *ec) { return; }

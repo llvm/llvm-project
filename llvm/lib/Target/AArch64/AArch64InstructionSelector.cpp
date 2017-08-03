@@ -513,6 +513,8 @@ bool AArch64InstructionSelector::selectCompareBranch(
   const unsigned CondReg = I.getOperand(0).getReg();
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
   MachineInstr *CCMI = MRI.getVRegDef(CondReg);
+  if (CCMI->getOpcode() == TargetOpcode::G_TRUNC)
+    CCMI = MRI.getVRegDef(CCMI->getOperand(1).getReg());
   if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
     return false;
 
@@ -1261,9 +1263,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return true;
   }
   case TargetOpcode::G_ICMP: {
-    if (Ty != LLT::scalar(1)) {
+    if (Ty != LLT::scalar(32)) {
       DEBUG(dbgs() << "G_ICMP result has type: " << Ty
-                   << ", expected: " << LLT::scalar(1) << '\n');
+                   << ", expected: " << LLT::scalar(32) << '\n');
       return false;
     }
 
@@ -1308,9 +1310,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   }
 
   case TargetOpcode::G_FCMP: {
-    if (Ty != LLT::scalar(1)) {
+    if (Ty != LLT::scalar(32)) {
       DEBUG(dbgs() << "G_FCMP result has type: " << Ty
-                   << ", expected: " << LLT::scalar(1) << '\n');
+                   << ", expected: " << LLT::scalar(32) << '\n');
       return false;
     }
 

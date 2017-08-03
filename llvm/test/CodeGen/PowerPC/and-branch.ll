@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep mfcr
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep mfcr
 
 define void @foo(i32 %X, i32 %Y, i32 %Z) {
 entry:

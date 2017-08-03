@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 | FileCheck -check-prefix=X86 %s
-; RUN: llc < %s -march=x86-64 | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck -check-prefix=X86 %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck -check-prefix=X64 %s
 
 ; X86-NOT: and
 

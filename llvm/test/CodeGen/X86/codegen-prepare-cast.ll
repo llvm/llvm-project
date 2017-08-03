@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s
 ; PR4297
 ; RUN: opt -S < %s -codegenprepare | FileCheck %s
 

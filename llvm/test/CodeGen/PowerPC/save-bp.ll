@@ -1,6 +1,6 @@
-; RUN: llc -march=ppc64 -ppc-always-use-base-pointer < %s | FileCheck %s --check-prefix CHECK --check-prefix PPC64
-; RUN: llc -march=ppc32 -ppc-always-use-base-pointer < %s | FileCheck %s --check-prefix CHECK --check-prefix PPC32
-; RUN: llc -march=ppc32 -ppc-always-use-base-pointer -relocation-model pic < %s | FileCheck %s --check-prefix CHECK --check-prefix PPC32PIC
+; RUN: llc -mtriple=ppc64-- -ppc-always-use-base-pointer < %s | FileCheck %s --check-prefix CHECK --check-prefix PPC64
+; RUN: llc -ppc-always-use-base-pointer < %s | FileCheck %s --check-prefix CHECK --check-prefix PPC32
+; RUN: llc -ppc-always-use-base-pointer -relocation-model pic < %s | FileCheck %s --check-prefix CHECK --check-prefix PPC32PIC
 
 ; CHECK-LABEL: fred:
 

@@ -42,7 +42,7 @@ protected:
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                        CodeGenOpt::Level OL, bool isLittle);
   ~ARMBaseTargetMachine() override;
 
@@ -74,8 +74,8 @@ class ARMLETargetMachine : public ARMBaseTargetMachine {
 public:
   ARMLETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
-                     CodeGenOpt::Level OL);
+                     Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                     CodeGenOpt::Level OL, bool JIT);
 };
 
 /// ARM/Thumb big endian target machine.
@@ -84,8 +84,8 @@ class ARMBETargetMachine : public ARMBaseTargetMachine {
 public:
   ARMBETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
-                     CodeGenOpt::Level OL);
+                     Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                     CodeGenOpt::Level OL, bool JIT);
 };
 
 } // end namespace llvm

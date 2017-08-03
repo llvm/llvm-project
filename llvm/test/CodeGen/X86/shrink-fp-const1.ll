@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+sse2 | not grep cvtss2sd
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2 | not grep cvtss2sd
 ; PR1264
 
 define double @foo(double %x) {

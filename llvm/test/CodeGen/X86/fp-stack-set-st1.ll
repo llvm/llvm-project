@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep fxch | count 2
+; RUN: llc < %s -mtriple=i686-- | grep fxch | count 2
 
 define i32 @main() nounwind {
 entry:

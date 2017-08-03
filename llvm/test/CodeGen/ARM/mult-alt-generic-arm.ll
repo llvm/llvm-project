@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=arm -no-integrated-as
+; RUN: llc < %s -no-integrated-as
 ; ModuleID = 'mult-alt-generic.c'
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32"
-target triple = "arm"
+target triple = "arm--"
 
 @mout0 = common global i32 0, align 4
 @min1 = common global i32 0, align 4

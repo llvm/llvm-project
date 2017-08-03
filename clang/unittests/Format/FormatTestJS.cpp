@@ -259,6 +259,16 @@ TEST_F(FormatTestJS, ReservedWordsMethods) {
       "}\n");
 }
 
+TEST_F(FormatTestJS, ReservedWordsParenthesized) {
+  // All of these are statements using the keyword, not function calls.
+  verifyFormat("throw (x + y);\n"
+               "await (await x).y;\n"
+               "typeof (x) === 'string';\n"
+               "void (0);\n"
+               "delete (x.y);\n"
+               "return (x);\n");
+}
+
 TEST_F(FormatTestJS, CppKeywords) {
   // Make sure we don't mess stuff up because of C++ keywords.
   verifyFormat("return operator && (aa);");
@@ -832,6 +842,15 @@ TEST_F(FormatTestJS, FunctionLiterals) {
 
 }
 
+TEST_F(FormatTestJS, DontWrapEmptyLiterals) {
+  verifyFormat("(aaaaaaaaaaaaaaaaaaaaa.getData as jasmine.Spy)\n"
+               "    .and.returnValue(Observable.of([]));");
+  verifyFormat("(aaaaaaaaaaaaaaaaaaaaa.getData as jasmine.Spy)\n"
+               "    .and.returnValue(Observable.of({}));");
+  verifyFormat("(aaaaaaaaaaaaaaaaaaaaa.getData as jasmine.Spy)\n"
+               "    .and.returnValue(Observable.of(()));");
+}
+
 TEST_F(FormatTestJS, InliningFunctionLiterals) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
@@ -988,6 +1007,9 @@ TEST_F(FormatTestJS, ArrowFunctions) {
                "    .doSomethingElse(\n"
                "        // break\n"
                "    );");
+  verifyFormat("const f = (x: string|null): string|null => {\n"
+               "  return x;\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReturnStatements) {
@@ -1400,6 +1422,17 @@ TEST_F(FormatTestJS, InterfaceDeclarations) {
                "}");
 }
 
+TEST_F(FormatTestJS, ObjectTypesInExtendsImplements) {
+  verifyFormat("class C extends {} {}");
+  verifyFormat("class C implements {bar: number} {}");
+  // Somewhat odd, but probably closest to reasonable formatting?
+  verifyFormat("class C implements {\n"
+               "  bar: number,\n"
+               "  baz: string,\n"
+               "} {}");
+  verifyFormat("class C<P extends {}> {}");
+}
+
 TEST_F(FormatTestJS, EnumDeclarations) {
   verifyFormat("enum Foo {\n"
                "  A = 1,\n"
@@ -1414,6 +1447,14 @@ TEST_F(FormatTestJS, EnumDeclarations) {
                "  B\n"
                "}\n"
                "var x = 1;");
+  verifyFormat("const enum Foo {\n"
+               "  A = 1,\n"
+               "  B\n"
+               "}");
+  verifyFormat("export const enum Foo {\n"
+               "  A = 1,\n"
+               "  B\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, MetadataAnnotations) {

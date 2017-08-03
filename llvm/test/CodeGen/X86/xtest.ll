@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+rtm | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+rtm | FileCheck %s
 
 declare i32 @llvm.x86.xtest() nounwind
 

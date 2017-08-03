@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64--
 
 define fastcc i8* @page_rec_get_next(i8* %rec) nounwind  {
 entry:

@@ -17,6 +17,7 @@
 #include "llvm/Support/Regex.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -130,10 +131,16 @@ IntrusiveRefCntPtr<vfs::FileSystem> getTempOnlyFS() {
 namespace clangd {
 namespace {
 
+// Don't wait for async ops in clangd test more than that to avoid blocking
+// indefinitely in case of bugs.
+static const std::chrono::seconds DefaultFutureTimeout =
+    std::chrono::seconds(10);
+
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
-  void onDiagnosticsReady(PathRef File,
-                          Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+  void
+  onDiagnosticsReady(PathRef File,
+                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
     bool HadError = false;
     for (const auto &DiagAndFixIts : Diagnostics.Value) {
       // FIXME: severities returned by clangd should have a descriptive
@@ -152,9 +159,7 @@ public:
     return HadErrorInLastDiags;
   }
 
-  VFSTag lastVFSTag() {
-    return LastVFSTag;
-  }
+  VFSTag lastVFSTag() { return LastVFSTag; }
 
 private:
   std::mutex Mutex;
@@ -276,9 +281,15 @@ protected:
     auto SourceFilename = getVirtualTestFilePath(SourceFileRelPath);
 
     FS.ExpectedFile = SourceFilename;
-    Server.addDocument(SourceFilename, SourceContents);
+
+    // Have to sync reparses because RunSynchronously is false.
+    auto AddDocFuture = Server.addDocument(SourceFilename, SourceContents);
 
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
+
+    // Wait for reparse to finish before checking for errors.
+    EXPECT_EQ(AddDocFuture.wait_for(DefaultFutureTimeout),
+              std::future_status::ready);
     EXPECT_EQ(ExpectErrors, DiagConsumer.hadErrorInLastDiags());
     return Result;
   }
@@ -338,16 +349,25 @@ int b = a;
   FS.Files[FooCpp] = SourceContents;
   FS.ExpectedFile = FooCpp;
 
-  Server.addDocument(FooCpp, SourceContents);
+  // To sync reparses before checking for errors.
+  std::future<void> ParseFuture;
+
+  ParseFuture = Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
+            std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  Server.addDocument(FooCpp, "");
+  ParseFuture = Server.addDocument(FooCpp, "");
   auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
+            std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  Server.addDocument(FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(FooCpp, SourceContents);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
+            std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
@@ -374,18 +394,27 @@ int b = a;
   FS.Files[FooCpp] = SourceContents;
   FS.ExpectedFile = FooCpp;
 
-  Server.addDocument(FooCpp, SourceContents);
+  // To sync reparses before checking for errors.
+  std::future<void> ParseFuture;
+
+  ParseFuture = Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
+            std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "";
-  Server.forceReparse(FooCpp);
+  ParseFuture = Server.forceReparse(FooCpp);
   auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
+            std::future_status::ready);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "int a;";
-  Server.forceReparse(FooCpp);
+  ParseFuture = Server.forceReparse(FooCpp);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  EXPECT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
+            std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
@@ -404,10 +433,12 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   FS.Files[FooCpp] = SourceContents;
   FS.ExpectedFile = FooCpp;
 
+  // No need to sync reparses, because RunSynchronously is set
+  // to true.
   FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
+  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
@@ -455,6 +486,8 @@ mock_string x;
 )cpp";
   FS.Files[FooCpp] = SourceContents;
 
+  // No need to sync reparses, because RunSynchronously is set
+  // to true.
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
@@ -505,6 +538,8 @@ int b =   ;
   FS.Files[FooCpp] = SourceContents;
   FS.ExpectedFile = FooCpp;
 
+  // No need to sync reparses here as there are no asserts on diagnostics (or
+  // other async operations).
   Server.addDocument(FooCpp, SourceContents);
 
   {

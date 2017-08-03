@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 #### UTILITIES ####
 
@@ -14,7 +15,11 @@ def enum(*sequential, **named):
 
 
 def lldb_source_path():
-    return os.environ.get('SRCROOT')
+    path = os.environ.get('SRCROOT')
+    if path:
+         return path
+    else:
+         return "./"
 
 
 def expected_llvm_build_path():
@@ -80,7 +85,7 @@ VCS = enum('git',
 
 
 def run_in_directory(args, path):
-    return subprocess.check_output(args, cwd=path)
+    return subprocess.check_output([str(arg) for arg in args], cwd=path)
 
 
 class Git:

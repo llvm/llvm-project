@@ -47,31 +47,34 @@
 # llc -stop-after=funclet-layout < spill1.ll > spill1.mir                
 #
 # Make sure that we generated DBG_VALUE instructions for the spills
+# GENERATE: ![[MINUS48:.*]] = !DIExpression(DW_OP_constu, 48, DW_OP_minus)
+# GENERATE: ![[MINUS52:.*]] = !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE: ![[MINUS56:.*]] = !DIExpression(DW_OP_constu, 56, DW_OP_minus)
 # GENERATE:      bb.1.if.end:
 # GENERATE:      MOV32mr %rbp, 1, _, -48, _, killed %edx :: (store 4 into %stack.5)
-# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -48, !26, !38
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, 0, !29, ![[MINUS48]]
 # GENERATE:      MOV32mr %rbp, 1, _, -52, _, killed %r8d :: (store 4 into %stack.4)
-# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -52, !32, !38
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, 0, !35, ![[MINUS52]]
 # GENERATE:      MOV32mr %rbp, 1, _, -56, _, killed %esi :: (store 4 into %stack.3)
-# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, 0, !37, ![[MINUS56]]
 #
 # Check that the spill locations that are valid at the end of bb.1.if.end are
 # propagated to subsequent BBs.
 #
 # GENERATE:      bb.2.if.then4:
 # GENERATE-NOT:  bb.3:
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, !37, ![[MINUS56]]
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, !35, ![[MINUS52]]
 #
 # GENERATE:      bb.3:
 # GENERATE-NOT:  bb.4.if.end13:
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, !37, ![[MINUS56]]
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, !35, ![[MINUS52]]
 #
 # GENERATE:      bb.4.if.end13:
 # GENERATE-NOT:  bb.5.cleanup:
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
-# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, !37, ![[MINUS56]]
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, 0, !35, ![[MINUS52]]
 # 
 # Check that the spill location rbp-48 (the variable int0) is not propagated 
 # because int0 is redefined within the same basic block.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=-bmi | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=-bmi | FileCheck %s
 
 define fastcc i32 @t() nounwind  {
 entry:

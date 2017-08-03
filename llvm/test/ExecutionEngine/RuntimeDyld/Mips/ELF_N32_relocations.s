@@ -1,8 +1,8 @@
-# RUN: llvm-mc -triple=mips64el-unknown-linux -target-abi n32 -code-model=small -filetype=obj -o %T/test_ELF_N32.o %s
+# RUN: llvm-mc -triple=mips64el-unknown-linux -target-abi n32 -filetype=obj -o %T/test_ELF_N32.o %s
 # RUN: llc -mtriple=mips64el-unknown-linux -target-abi n32 -filetype=obj -o %T/test_ELF_ExternalFunction_N32.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mips64el-unknown-linux -verify -map-section test_ELF_N32.o,.text=0x1000 -map-section test_ELF_ExternalFunction_N32.o,.text=0x10000 -check=%s %/T/test_ELF_N32.o %T/test_ELF_ExternalFunction_N32.o
 
-# RUN: llvm-mc -triple=mips64-unknown-linux -target-abi n32 -code-model=small -filetype=obj -o %T/test_ELF_N32.o %s
+# RUN: llvm-mc -triple=mips64-unknown-linux -target-abi n32 -filetype=obj -o %T/test_ELF_N32.o %s
 # RUN: llc -mtriple=mips64-unknown-linux -target-abi n32 -filetype=obj -o %T/test_ELF_ExternalFunction_N32.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mips64-unknown-linux -verify -map-section test_ELF_N32.o,.text=0x1000 -map-section test_ELF_ExternalFunction_N32.o,.text=0x10000 -check=%s %/T/test_ELF_N32.o %T/test_ELF_ExternalFunction_N32.o
 

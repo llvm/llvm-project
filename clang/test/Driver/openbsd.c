@@ -77,7 +77,9 @@
 // Check linking against correct startup code when (not) using PIE
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-PIE %s
-// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -fno-pie %s -### 2>&1 \
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -pie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-FLAG %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -fno-pie %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-PIE %s
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
@@ -93,6 +95,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
 // CHECK-PIE: "{{.*}}crt0.o"
 // CHECK-PIE-NOT: "-nopie"
+// CHECK-PIE-FLAG: "-pie"
 // CHECK-STATIC-PIE: "{{.*}}rcrt0.o"
 // CHECK-STATIC-PIE-NOT: "-nopie"
 // CHECK-NOPIE: "-nopie" "{{.*}}crt0.o"

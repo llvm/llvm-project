@@ -65,6 +65,7 @@ private:
   void fixSectionAlignments();
   void fixPredefinedSymbols();
   void openFile();
+  void writeTrapInstr();
   void writeHeader();
   void writeSections();
   void writeSectionsBinary();
@@ -232,6 +233,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
 
   if (!Config->OFormatBinary) {
+    writeTrapInstr();
     writeHeader();
     writeSections();
   } else {
@@ -1596,8 +1598,21 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   Off = setOffset(Out::ElfHeader, Off);
   Off = setOffset(Out::ProgramHeaders, Off);
 
-  for (OutputSection *Sec : OutputSections)
+  PhdrEntry *LastRX = nullptr;
+  for (PhdrEntry *P : Phdrs)
+    if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
+      LastRX = P;
+
+  for (OutputSection *Sec : OutputSections) {
     Off = setOffset(Sec, Off);
+    if (Script->Opt.HasSections)
+      continue;
+    // If this is a last section of the last executable segment and that
+    // segment is the last loadable segment, align the offset of the
+    // following section to avoid loading non-segments parts of the file.
+    if (LastRX && LastRX->Last == Sec)
+      Off = alignTo(Off, Target->PageSize);
+  }
 
   SectionHeaderOff = alignTo(Off, Config->Wordsize);
   FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);
@@ -1813,6 +1828,50 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   for (OutputSection *Sec : OutputSections)
     if (Sec->Flags & SHF_ALLOC)
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
+}
+
+static void fillTrapInstr(uint8_t *I, uint8_t *End) {
+  for (; I + 4 < End; I += 4)
+    memcpy(I, &Target->TrapInstr, 4);
+}
+
+
+// Fill the first and the last page of executable segments with trap
+// instructions instead of leaving them as zero. Even though it is not required
+// by any standard , it is in general a good thing to do for security reasons.
+template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
+  if (Script->Opt.HasSections)
+    return;
+
+  uint8_t *Buf = Buffer->getBufferStart();
+
+  for (PhdrEntry *P : Phdrs) {
+    if (P->p_type != PT_LOAD || !(P->p_flags & PF_X))
+      continue;
+
+    // We only fill the first and the last page of the segment because the
+    // middle part will be overwritten by output sections.
+    fillTrapInstr(Buf + alignDown(P->p_offset, Target->PageSize),
+                  Buf + alignTo(P->p_offset, Target->PageSize));
+    fillTrapInstr(Buf + alignDown(P->p_offset + P->p_filesz, Target->PageSize),
+                  Buf + alignTo(P->p_offset + P->p_filesz, Target->PageSize));
+  }
+
+  PhdrEntry *LastRX = nullptr;
+  for (PhdrEntry *P : Phdrs) {
+    if (P->p_type != PT_LOAD)
+      continue;
+    if (P->p_flags & PF_X)
+      LastRX = P;
+    else
+      LastRX = nullptr;
+  }
+
+  // Round up the file size of the last segment to the page boundary iff it is
+  // an executable segment to ensure that other other tools don't accidentally
+  // trim the instruction padding (e.g. when stripping the file).
+  if (LastRX)
+    LastRX->p_filesz = alignTo(LastRX->p_filesz, Target->PageSize);
 }
 
 // Write section contents to a mmap'ed file.

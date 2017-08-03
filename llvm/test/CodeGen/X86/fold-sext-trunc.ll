@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep movslq | count 1
+; RUN: llc < %s -mtriple=x86_64-- | grep movslq | count 1
 ; PR4050
 
 	%0 = type { i64 }		; type %0

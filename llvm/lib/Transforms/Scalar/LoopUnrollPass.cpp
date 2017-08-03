@@ -1129,9 +1129,9 @@ Pass *llvm::createSimpleLoopUnrollPass(int OptLevel) {
   return llvm::createLoopUnrollPass(OptLevel, -1, -1, 0, 0, 0);
 }
 
-PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
-                                      LoopStandardAnalysisResults &AR,
-                                      LPMUpdater &Updater) {
+PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
+                                          LoopStandardAnalysisResults &AR,
+                                          LPMUpdater &Updater) {
   const auto &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
   Function *F = L.getHeader()->getParent();
@@ -1139,8 +1139,9 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
   // FIXME: This should probably be optional rather than required.
   if (!ORE)
-    report_fatal_error("LoopUnrollPass: OptimizationRemarkEmitterAnalysis not "
-                       "cached at a higher level");
+    report_fatal_error(
+        "LoopFullUnrollPass: OptimizationRemarkEmitterAnalysis not "
+        "cached at a higher level");
 
   // Keep track of the previous loop structure so we can identify new loops
   // created by unrolling.
@@ -1151,17 +1152,11 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   else
     OldLoops.insert(AR.LI.begin(), AR.LI.end());
 
-  // The API here is quite complex to call, but there are only two interesting
-  // states we support: partial and full (or "simple") unrolling. However, to
-  // enable these things we actually pass "None" in for the optional to avoid
-  // providing an explicit choice.
-  Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam;
-  if (!AllowPartialUnrolling)
-    AllowPartialParam = RuntimeParam = UpperBoundParam = false;
-  bool Changed = tryToUnrollLoop(
-      &L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
-      /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
-      /*Threshold*/ None, AllowPartialParam, RuntimeParam, UpperBoundParam);
+  bool Changed =
+      tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
+                      /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
+                      /*Threshold*/ None, /*AllowPartial*/ false,
+                      /*Runtime*/ false, /*UpperBound*/ false);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1172,17 +1167,13 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
 #endif
 
   // Unrolling can do several things to introduce new loops into a loop nest:
-  // - Partial unrolling clones child loops within the current loop. If it
-  //   uses a remainder, then it can also create any number of sibling loops.
   // - Full unrolling clones child loops within the current loop but then
   //   removes the current loop making all of the children appear to be new
   //   sibling loops.
-  // - Loop peeling can directly introduce new sibling loops by peeling one
-  //   iteration.
   //
-  // When a new loop appears as a sibling loop, either from peeling an
-  // iteration or fully unrolling, its nesting structure has fundamentally
-  // changed and we want to revisit it to reflect that.
+  // When a new loop appears as a sibling loop after fully unrolling,
+  // its nesting structure has fundamentally changed and we want to revisit
+  // it to reflect that.
   //
   // When unrolling has removed the current loop, we need to tell the
   // infrastructure that it is gone.
@@ -1213,13 +1204,92 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   } else {
     // We can only walk child loops if the current loop remained valid.
     if (UnrollRevisitChildLoops) {
-      // Walk *all* of the child loops. This is a highly speculative mode
-      // anyways so look for any simplifications that arose from partial
-      // unrolling or peeling off of iterations.
+      // Walk *all* of the child loops.
       SmallVector<Loop *, 4> ChildLoops(L.begin(), L.end());
       Updater.addChildLoops(ChildLoops);
     }
   }
+
+  return getLoopPassPreservedAnalyses();
+}
+
+template <typename RangeT>
+static SmallVector<Loop *, 8> appendLoopsToWorklist(RangeT &&Loops) {
+  SmallVector<Loop *, 8> Worklist;
+  // We use an internal worklist to build up the preorder traversal without
+  // recursion.
+  SmallVector<Loop *, 4> PreOrderLoops, PreOrderWorklist;
+
+  for (Loop *RootL : Loops) {
+    assert(PreOrderLoops.empty() && "Must start with an empty preorder walk.");
+    assert(PreOrderWorklist.empty() &&
+           "Must start with an empty preorder walk worklist.");
+    PreOrderWorklist.push_back(RootL);
+    do {
+      Loop *L = PreOrderWorklist.pop_back_val();
+      PreOrderWorklist.append(L->begin(), L->end());
+      PreOrderLoops.push_back(L);
+    } while (!PreOrderWorklist.empty());
+
+    Worklist.append(PreOrderLoops.begin(), PreOrderLoops.end());
+    PreOrderLoops.clear();
+  }
+  return Worklist;
+}
+
+PreservedAnalyses LoopUnrollPass::run(Function &F,
+                                      FunctionAnalysisManager &AM) {
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+
+  bool Changed = false;
+
+  // The unroller requires loops to be in simplified form, and also needs LCSSA.
+  // Since simplification may add new inner loops, it has to run before the
+  // legality and profitability checks. This means running the loop unroller
+  // will simplify all loops, regardless of whether anything end up being
+  // unrolled.
+  for (auto &L : LI) {
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, &AC, false /* PreserveLCSSA */);
+    Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
+  }
+
+  SmallVector<Loop *, 8> Worklist = appendLoopsToWorklist(LI);
+
+  while (!Worklist.empty()) {
+    // Because the LoopInfo stores the loops in RPO, we walk the worklist
+    // from back to front so that we work forward across the CFG, which
+    // for unrolling is only needed to get optimization remarks emitted in
+    // a forward order.
+    Loop &L = *Worklist.pop_back_val();
+#ifndef NDEBUG
+    Loop *ParentL = L.getParentLoop();
+#endif
+
+    // The API here is quite complex to call, but there are only two interesting
+    // states we support: partial and full (or "simple") unrolling. However, to
+    // enable these things we actually pass "None" in for the optional to avoid
+    // providing an explicit choice.
+    Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam;
+    bool CurChanged = tryToUnrollLoop(
+        &L, DT, &LI, SE, TTI, AC, ORE,
+        /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
+        /*Threshold*/ None, AllowPartialParam, RuntimeParam, UpperBoundParam);
+    Changed |= CurChanged;
+
+    // The parent must not be damaged by unrolling!
+#ifndef NDEBUG
+    if (CurChanged && ParentL)
+      ParentL->verifyLoop();
+#endif
+  }
+
+  if (!Changed)
+    return PreservedAnalyses::all();
 
   return getLoopPassPreservedAnalyses();
 }

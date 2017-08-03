@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 @ok = internal constant [4 x i8] c"%d\0A\00"
 @no = internal constant [4 x i8] c"no\0A\00"

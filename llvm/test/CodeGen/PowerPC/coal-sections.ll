@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple powerpc-apple-darwin8 -march=ppc32 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple powerpc-apple-darwin8 | FileCheck %s
 
 ; Check that *coal* sections are emitted.
 

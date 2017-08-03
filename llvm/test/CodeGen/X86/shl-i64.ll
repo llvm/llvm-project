@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -mattr=+sse2 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -mattr=+sse2 < %s | FileCheck %s
 
 ; Make sure that we don't generate an illegal i64 extract after LegalizeType.
 ; CHECK: shll

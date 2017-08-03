@@ -51,7 +51,8 @@ body: |
     ; CHECK: %2(s64) = G_MUL %0, %1
     ; CHECK: [[HI:%[0-9]+]](s64) = G_SMULH %0, %1
     ; CHECK: [[ZERO:%[0-9]+]](s64) = G_CONSTANT i64 0
-    ; CHECK: %3(s1) = G_ICMP intpred(ne), [[HI]](s64), [[ZERO]]
+    ; CHECK: [[CMP:%[0-9]+]](s32) = G_ICMP intpred(ne), [[HI]](s64), [[ZERO]]
+    ; CHECK: [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[CMP]]
     %2:_(s64), %3:_(s1) = G_SMULO %0, %1
 
 ...

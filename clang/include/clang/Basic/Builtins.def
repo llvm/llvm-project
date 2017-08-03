@@ -1398,8 +1398,10 @@ LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCLC20_LANG)
 // OpenCL v2.0 s6.13.17 - Enqueue kernel functions.
 // Custom builtin check allows to perform special check of passed block arguments.
 LANGBUILTIN(enqueue_kernel, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_work_group_size, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_work_group_size, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_max_sub_group_size_for_ndrange, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_sub_group_count_for_ndrange, "Ui.", "tn", OCLC20_LANG)
 
 // OpenCL v2.0 s6.13.9 - Address space qualifier functions.
 LANGBUILTIN(to_global, "v*v*", "tn", OCLC20_LANG)

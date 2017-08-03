@@ -313,6 +313,11 @@ if(LIBOMP_USE_ITT_NOTIFY AND NOT LIBOMP_ENABLE_SHARED)
   set(LIBOMP_USE_ITT_NOTIFY FALSE)
 endif()
 
+if(LIBOMP_USE_VERSION_SYMBOLS AND (NOT LIBOMP_ENABLE_SHARED) )
+  message(STATUS "Version symbols not supported for static libraries - forcing Version symbols functionality off")
+  set (LIBOMP_USE_VERSION_SYMBOLS FALSE)
+endif()
+
 # OMPT-support
 set(LIBOMP_OMPT_DEBUG FALSE CACHE BOOL
   "Trace OMPT initialization?")

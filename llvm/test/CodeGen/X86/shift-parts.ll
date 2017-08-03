@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s | FileCheck %s
 ; PR4736
 
 %0 = type { i32, i8, [35 x i8] }

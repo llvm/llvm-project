@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s
 
 ; Check if the edge weight to the catchpad is calculated correctly.
 

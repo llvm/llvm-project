@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s --check-prefix=CHECK-64
 ; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s --check-prefix=CHECK-64
-; RUN: llc < %s -march=x86 | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s --check-prefix=CHECK-32
 
 ; CHECK-64-LABEL: g64xh:
 ; CHECK-64:   testb $8, {{%ah|%ch}}

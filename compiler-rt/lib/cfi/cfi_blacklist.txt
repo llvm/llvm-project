@@ -1,12 +1,3 @@
-# Standard library types.
-type:std::*
-
-# The stdext namespace contains Microsoft standard library extensions.
-type:stdext::*
-
-# Types with a uuid attribute, i.e. COM types.
-type:attr:uuid
-
 # STL allocators (T *allocator<T *>::allocate(size_type, const void*)).
 # The type signature mandates a cast from uninitialized void* to T*.
 # size_type can either be unsigned int (j) or unsigned long (m).

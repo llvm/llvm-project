@@ -549,6 +549,11 @@ public:
     Contents.OffsetedInfo.Val.Index = Idx;
   }
 
+  void setMetadata(const MDNode *MD) {
+    assert(isMetadata() && "Wrong MachineOperand mutator");
+    Contents.MD = MD;
+  }
+
   void setMBB(MachineBasicBlock *MBB) {
     assert(isMBB() && "Wrong MachineOperand mutator");
     Contents.MBB = MBB;

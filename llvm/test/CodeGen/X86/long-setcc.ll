@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 define i1 @t1(i64 %x) nounwind {
 	%B = icmp slt i64 %x, 0

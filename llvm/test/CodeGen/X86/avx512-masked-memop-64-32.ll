@@ -5,7 +5,7 @@
 define <16 x i32> @test1(<16 x i32> %trigger, <16 x i32>* %addr) {
 ; AVX512-LABEL: test1:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
 ; AVX512-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -17,7 +17,7 @@ define <16 x i32> @test1(<16 x i32> %trigger, <16 x i32>* %addr) {
 define <16 x i32> @test2(<16 x i32> %trigger, <16 x i32>* %addr) {
 ; AVX512-LABEL: test2:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
 ; AVX512-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -29,7 +29,7 @@ define <16 x i32> @test2(<16 x i32> %trigger, <16 x i32>* %addr) {
 define void @test3(<16 x i32> %trigger, <16 x i32>* %addr, <16 x i32> %val) {
 ; AVX512-LABEL: test3:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; AVX512-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
 ; AVX512-NEXT:    vzeroupper
@@ -42,7 +42,7 @@ define void @test3(<16 x i32> %trigger, <16 x i32>* %addr, <16 x i32> %val) {
 define <16 x float> @test4(<16 x i32> %trigger, <16 x float>* %addr, <16 x float> %dst) {
 ; AVX512-LABEL: test4:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; AVX512-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
@@ -54,7 +54,7 @@ define <16 x float> @test4(<16 x i32> %trigger, <16 x float>* %addr, <16 x float
 define void @test13(<16 x i32> %trigger, <16 x float>* %addr, <16 x float> %val) {
 ; AVX512-LABEL: test13:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; AVX512-NEXT:    vmovups %zmm1, (%rdi) {%k1}
 ; AVX512-NEXT:    vzeroupper
@@ -99,7 +99,7 @@ declare <16 x i32*> @llvm.masked.load.v16p0i32.p0v16p0i32(<16 x i32*>*, i32, <16
 define <16 x i32*> @test23(<16 x i32*> %trigger, <16 x i32*>* %addr) {
 ; AVX512-LABEL: test23:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1
 ; AVX512-NEXT:    vpcmpeqq %zmm2, %zmm1, %k2
 ; AVX512-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k2} {z}

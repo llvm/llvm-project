@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-- | FileCheck %s
 
 ; Optimize away zext-inreg and sext-inreg on the loop induction
 ; variable using trip-count information.

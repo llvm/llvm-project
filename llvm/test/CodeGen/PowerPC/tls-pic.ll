@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs -march=ppc64 -mcpu=pwr7 -O0 -relocation-model=pic < %s | FileCheck -check-prefix=OPT0 %s
-; RUN: llc -verify-machineinstrs -march=ppc64 -mcpu=pwr7 -O1 -relocation-model=pic < %s | FileCheck -check-prefix=OPT1 %s
-; RUN: llc -verify-machineinstrs -march=ppc32 -O0 -relocation-model=pic < %s | FileCheck -check-prefix=OPT0-32 %s
-; RUN: llc -verify-machineinstrs -march=ppc32 -O1 -relocation-model=pic < %s | FileCheck -check-prefix=OPT1-32 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -relocation-model=pic < %s | FileCheck -check-prefix=OPT0 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -relocation-model=pic < %s | FileCheck -check-prefix=OPT1 %s
+; RUN: llc -verify-machineinstrs -mtriple=ppc32-- -O0 -relocation-model=pic < %s | FileCheck -check-prefix=OPT0-32 %s
+; RUN: llc -verify-machineinstrs -mtriple=ppc32-- -O1 -relocation-model=pic < %s | FileCheck -check-prefix=OPT1-32 %s
 
 target triple = "powerpc64-unknown-linux-gnu"
 ; Test correct assembly code generation for thread-local storage using

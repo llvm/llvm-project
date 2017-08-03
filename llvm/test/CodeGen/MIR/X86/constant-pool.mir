@@ -46,9 +46,11 @@
 # CHECK-NEXT: - id: 0
 # CHECK-NEXT:   value: 'double 3.250000e+00'
 # CHECK-NEXT:   alignment: 8
+# CHECK-NEXT:   isTargetSpecific: false
 # CHECK-NEXT: - id: 1
 # CHECK-NEXT:   value: 'float 6.250000e+00'
 # CHECK-NEXT:   alignment: 4
+# CHECK-NEXT:   isTargetSpecific: false
 name:            test
 constants:
   - id:          0
@@ -74,9 +76,11 @@ body: |
 # CHECK-NEXT: - id: 0
 # CHECK-NEXT:   value: 'double 3.250000e+00'
 # CHECK-NEXT:   alignment: 8
+# CHECK-NEXT:   isTargetSpecific: false
 # CHECK-NEXT: - id: 1
 # CHECK-NEXT:   value: 'float 6.250000e+00'
 # CHECK-NEXT:   alignment: 4
+# CHECK-NEXT:   isTargetSpecific: false
 name:            test2
 constants:
   - id:          0
@@ -98,9 +102,11 @@ body: |
 # CHECK-NEXT: - id: 0
 # CHECK-NEXT:   value: 'double 3.250000e+00'
 # CHECK-NEXT:   alignment: 128
+# CHECK-NEXT:   isTargetSpecific: false
 # CHECK-NEXT: - id: 1
 # CHECK-NEXT:   value: 'float 6.250000e+00'
 # CHECK-NEXT:   alignment: 1
+# CHECK-NEXT:   isTargetSpecific: false
 name:            test3
 constants:
   - id:          0

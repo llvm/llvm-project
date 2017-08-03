@@ -315,6 +315,16 @@ void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
 ///
 void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
 
+/// Split the entry block of a function to store the newly inserted
+///        allocations outside of all Scops.
+///
+/// @param DT DominatorTree to be updated.
+/// @param LI LoopInfo to be updated.
+/// @param RI RegionInfo to be updated.
+void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock,
+                              llvm::DominatorTree *DT, llvm::LoopInfo *LI,
+                              llvm::RegionInfo *RI);
+
 /// Wrapper for SCEVExpander extended to all Polly features.
 ///
 /// This wrapper will internally call the SCEVExpander but also makes sure that

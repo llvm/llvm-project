@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rotrw: | count 1
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rotlw: | count 1
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rotlwi: | count 1
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rotrwi: | count 1
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rotrw: | count 1
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rotlw: | count 1
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rotlwi: | count 1
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rotrwi: | count 1
 
 define i32 @rotlw(i32 %x, i32 %sh) {
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -O0 -no-integrated-as | FileCheck %s
+; RUN: llc < %s -O0 -no-integrated-as | FileCheck %s
 ; PR7509
 target triple = "i386-apple-darwin10"
 %asmtype = type { i32, i8*, i32, i32 }

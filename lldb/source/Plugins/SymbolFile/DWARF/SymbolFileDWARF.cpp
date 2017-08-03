@@ -532,6 +532,20 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       if (section)
         debug_abbrev_file_size = section->GetFileSize();
 
+      DWARFDebugAbbrev *abbrev = DebugAbbrev();
+      if (abbrev) {
+        std::set<dw_form_t> invalid_forms;
+        abbrev->GetUnsupportedForms(invalid_forms);
+        if (!invalid_forms.empty()) {
+          StreamString error;
+          error.Printf("unsupported DW_FORM value%s:", invalid_forms.size() > 1 ? "s" : "");
+          for (auto form : invalid_forms)
+            error.Printf(" %#x", form);
+          m_obj_file->GetModule()->ReportWarning("%s", error.GetString().str().c_str());
+          return 0;
+        }
+      }
+
       section =
           section_list->FindSectionByType(eSectionTypeDWARFDebugLine, true)
               .get();

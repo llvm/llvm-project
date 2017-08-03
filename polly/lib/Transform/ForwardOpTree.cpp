@@ -137,16 +137,8 @@ private:
   ///
   /// @return If DoIt==false, return whether the operand tree can be forwarded.
   ///         If DoIt==true, return FD_DidForward.
-  ForwardingDecision canForwardTree(ScopStmt *TargetStmt, Value *UseVal,
-                                    ScopStmt *UseStmt, Loop *UseLoop,
-                                    bool DoIt) {
-
-    // PHis are not yet supported.
-    if (isa<PHINode>(UseVal)) {
-      DEBUG(dbgs() << "    Cannot forward PHI: " << *UseVal << "\n");
-      return FD_CannotForward;
-    }
-
+  ForwardingDecision forwardTree(ScopStmt *TargetStmt, Value *UseVal,
+                                 ScopStmt *UseStmt, Loop *UseLoop, bool DoIt) {
     VirtualUse VUse = VirtualUse::create(UseStmt, UseLoop, UseVal, true);
     switch (VUse.getKind()) {
     case VirtualUse::Constant:
@@ -157,10 +149,31 @@ private:
         return FD_DidForward;
       return FD_CanForwardLeaf;
 
-    case VirtualUse::Synthesizable:
-      // Not supported yet.
-      DEBUG(dbgs() << "    Cannot forward synthesizable: " << *UseVal << "\n");
+    case VirtualUse::Synthesizable: {
+      // ScopExpander will take care for of generating the code at the new
+      // location.
+      if (DoIt)
+        return FD_DidForward;
+
+      // Check if the value is synthesizable at the new location as well. This
+      // might be possible when leaving a loop for which ScalarEvolution is
+      // unable to derive the exit value for.
+      // TODO: If there is a LCSSA PHI at the loop exit, use that one.
+      // If the SCEV contains a SCEVAddRecExpr, we currently depend on that we
+      // do not forward past its loop header. This would require us to use a
+      // previous loop induction variable instead the current one. We currently
+      // do not allow forwarding PHI nodes, thus this should never occur (the
+      // only exception where no phi is necessary being an unreachable loop
+      // without edge from the outside).
+      VirtualUse TargetUse = VirtualUse::create(
+          S, TargetStmt, TargetStmt->getSurroundingLoop(), UseVal, true);
+      if (TargetUse.getKind() == VirtualUse::Synthesizable)
+        return FD_CanForwardLeaf;
+
+      DEBUG(dbgs() << "    Synthesizable would not be synthesizable anymore: "
+                   << *UseVal << "\n");
       return FD_CannotForward;
+    }
 
     case VirtualUse::ReadOnly:
       // Note that we cannot return FD_CanForwardTree here. With a operand tree
@@ -184,6 +197,12 @@ private:
     case VirtualUse::Intra:
     case VirtualUse::Inter:
       auto Inst = cast<Instruction>(UseVal);
+
+      // PHIs, unless synthesizable, are not yet supported.
+      if (isa<PHINode>(Inst)) {
+        DEBUG(dbgs() << "    Cannot forward PHI: " << *UseVal << "\n");
+        return FD_CannotForward;
+      }
 
       // Compatible instructions must satisfy the following conditions:
       // 1. Idempotent (instruction will be copied, not moved; although its
@@ -221,7 +240,7 @@ private:
 
       for (Value *OpVal : Inst->operand_values()) {
         ForwardingDecision OpDecision =
-            canForwardTree(TargetStmt, OpVal, DefStmt, DefLoop, DoIt);
+            forwardTree(TargetStmt, OpVal, DefStmt, DefLoop, DoIt);
         switch (OpDecision) {
         case FD_CannotForward:
           assert(!DoIt);
@@ -255,14 +274,16 @@ private:
     Loop *InLoop = Stmt->getSurroundingLoop();
 
     ForwardingDecision Assessment =
-        canForwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, false);
+        forwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, false);
     assert(Assessment != FD_DidForward);
     if (Assessment != FD_CanForwardTree)
       return false;
 
     ForwardingDecision Execution =
-        canForwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, true);
-    assert(Execution == FD_DidForward);
+        forwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, true);
+    assert(Execution == FD_DidForward &&
+           "A previous positive assessment must also be executable");
+    (void)Execution;
 
     Stmt->removeSingleMemoryAccess(RA);
     return true;

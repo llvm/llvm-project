@@ -4477,6 +4477,22 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
         *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
 
     // Instantiate the expression.
+    //
+    // FIXME: Pass in a correct Pattern argument, otherwise
+    // getTemplateInstantiationArgs uses the lexical context of FD, e.g.
+    //
+    // template<typename T>
+    // struct A {
+    //   static int FooImpl();
+    //
+    //   template<typename Tp>
+    //   // bug: default argument A<T>::FooImpl() is evaluated with 2-level
+    //   // template argument list [[T], [Tp]], should be [[Tp]].
+    //   friend A<Tp> Foo(int a);
+    // };
+    //
+    // template<typename T>
+    // A<T> Foo(int a = A<T>::FooImpl());
     MultiLevelTemplateArgumentList MutiLevelArgList
       = getTemplateInstantiationArgs(FD, nullptr, /*RelativeToPrimary=*/true);
 
@@ -8288,7 +8304,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
     // type. Note that this is already done by non-compound assignments in
     // CheckAssignmentConstraints. If it's a scalar type, only bitcast for
     // <1 x T> -> T. The result is also a vector type.
-    } else if (OtherType->isExtVectorType() ||
+    } else if (OtherType->isExtVectorType() || OtherType->isVectorType() ||
                (OtherType->isScalarType() && VT->getNumElements() == 1)) {
       ExprResult *RHSExpr = &RHS;
       *RHSExpr = ImpCastExprToType(RHSExpr->get(), LHSType, CK_BitCast);

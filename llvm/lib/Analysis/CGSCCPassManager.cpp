@@ -619,6 +619,14 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
       AM.invalidate(*C, PA);
     }
     auto NewSCCIndex = RC->find(*C) - RC->begin();
+    // If we have actually moved an SCC to be topologically "below" the current
+    // one due to merging, we will need to revisit the current SCC after
+    // visiting those moved SCCs.
+    //
+    // It is critical that we *do not* revisit the current SCC unless we
+    // actually move SCCs in the process of merging because otherwise we may
+    // form a cycle where an SCC is split apart, merged, split, merged and so
+    // on infinitely.
     if (InitialSCCIndex < NewSCCIndex) {
       // Put our current SCC back onto the worklist as we'll visit other SCCs
       // that are now definitively ordered prior to the current one in the

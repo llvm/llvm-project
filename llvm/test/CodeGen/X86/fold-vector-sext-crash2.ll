@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86    | FileCheck %s -check-prefix=X32
-; RUN: llc < %s -march=x86-64 | FileCheck %s -check-prefix=X64
+; RUN: llc < %s -mtriple=i686--    | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s -check-prefix=X64
 
 ; DAGCombiner crashes during sext folding
 

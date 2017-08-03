@@ -1,5 +1,5 @@
 ; RUN: opt < %s -loop-unroll -S | FileCheck %s
-; RUN: opt < %s -passes='require<opt-remark-emit>,loop(unroll)' -S | FileCheck %s
+; RUN: opt < %s -passes='require<opt-remark-emit>,unroll' -S | FileCheck %s
 
 
 ; This should not unroll since the address of the loop header is taken.

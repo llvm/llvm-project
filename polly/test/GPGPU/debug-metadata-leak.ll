@@ -44,7 +44,7 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
   %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %indvars.iv, !dbg !25
   %tmp1 = load i32, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
-  %add = add nsw i32 %tmp1, 1, !dbg !26    ;   <<<LeakyInst>>>  
+  %add = add nsw i32 %tmp1, 1, !dbg !26    ;   <<<LeakyInst>>>
   store i32 %add, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
   br label %for.inc, !dbg !25
 

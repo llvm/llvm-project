@@ -132,7 +132,7 @@
 ; CHECK-O-NEXT: Running pass: IndVarSimplifyPass
 ; CHECK-O-NEXT: Running pass: LoopIdiomRecognizePass
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
-; CHECK-O-NEXT: Running pass: LoopUnrollPass
+; CHECK-O-NEXT: Running pass: LoopFullUnrollPass
 ; CHECK-O-NEXT: Finished Loop pass manager run.
 ; CHECK-Os-NEXT: Running pass: MergedLoadStoreMotionPass
 ; CHECK-Os-NEXT: Running pass: GVN
@@ -184,7 +184,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: SLPVectorizerPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
-; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopUnrollPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopUnrollPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass

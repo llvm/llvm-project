@@ -1,4 +1,4 @@
-; RUN: llc < %s -fast-isel -tailcallopt -march=x86 | FileCheck %s
+; RUN: llc < %s -fast-isel -tailcallopt -mtriple=i686-- | FileCheck %s
 ; CHECK-NOT: add
 ; PR4154
 

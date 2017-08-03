@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; PR1975
 
 @nodes = external global i64		; <i64*> [#uses=2]

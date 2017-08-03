@@ -2507,7 +2507,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
   else {
     // For unconditional branch, check for a simple CFG pattern, where
     // BB has a single predecessor and BB's successor is also its predecessor's
-    // successor. If such pattern exisits, check for CSE between BB and its
+    // successor. If such pattern exists, check for CSE between BB and its
     // predecessor.
     if (BasicBlock *PB = BB->getSinglePredecessor())
       if (BranchInst *PBI = dyn_cast<BranchInst>(PB->getTerminator()))
@@ -5761,9 +5761,9 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
     if (PBI && PBI->isConditional() &&
         PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
       assert(PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB);
-      bool CondIsFalse = PBI->getSuccessor(1) == BB;
+      bool CondIsTrue = PBI->getSuccessor(0) == BB;
       Optional<bool> Implication = isImpliedCondition(
-          PBI->getCondition(), BI->getCondition(), DL, CondIsFalse);
+          PBI->getCondition(), BI->getCondition(), DL, CondIsTrue);
       if (Implication) {
         // Turn this into a branch on constant.
         auto *OldCond = BI->getCondition();

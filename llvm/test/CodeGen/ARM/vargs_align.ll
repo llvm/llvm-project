@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabihf | FileCheck %s -check-prefix=EABI
-; RUN: llc < %s -march=arm -mtriple=arm-linux-gnu | FileCheck %s -check-prefix=OABI
+; RUN: llc < %s -mtriple=arm-linux-gnu | FileCheck %s -check-prefix=OABI
 
 define i32 @f(i32 %a, ...) {
 entry:

@@ -1134,7 +1134,8 @@ public:
   ///
   /// The cost model should take into account that the actual length of the
   /// vector is reduced on each iteration.
-  unsigned getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwise) {
+  unsigned getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                      bool IsPairwise) {
     assert(Ty->isVectorTy() && "Expect a vector type");
     Type *ScalarTy = Ty->getVectorElementType();
     unsigned NumVecElts = Ty->getVectorNumElements();

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=armv6-apple-darwin9
+; RUN: llc < %s -mtriple=armv6-apple-darwin9
 
 @no_mat = external global i32		; <i32*> [#uses=1]
 @no_mis = external global i32		; <i32*> [#uses=2]

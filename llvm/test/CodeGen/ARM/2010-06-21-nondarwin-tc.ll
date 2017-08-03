@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=armv4t-unknown-linux-gnueabi  | FileCheck %s
+; RUN: llc < %s -mtriple=armv4t-unknown-linux-gnueabi  | FileCheck %s
 ; PR 7433
 ; XFAIL: *
 

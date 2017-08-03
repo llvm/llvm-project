@@ -29,7 +29,7 @@ bool InstructionSelector::executeMatchTable(
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 8> OnFailResumeAt;
 
-  typedef enum { RejectAndGiveUp, RejectAndResume } RejectAction;
+  enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
     DEBUG(dbgs() << CurrentIdx << ": Rejected\n");
     if (OnFailResumeAt.empty())
@@ -370,11 +370,17 @@ bool InstructionSelector::executeMatchTable(
     case GIR_MergeMemOperands: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      for (const auto *FromMI : State.MIs)
-        for (const auto &MMO : FromMI->memoperands())
-          OutMIs[InsnID].addMemOperand(MMO);
+
       DEBUG(dbgs() << CurrentIdx << ": GIR_MergeMemOperands(OutMIs[" << InsnID
-                   << "])\n");
+                   << "]");
+      int64_t MergeInsnID = GIU_MergeMemOperands_EndOfList;
+      while ((MergeInsnID = MatchTable[CurrentIdx++]) !=
+             GIU_MergeMemOperands_EndOfList) {
+        DEBUG(dbgs() << ", MIs[" << MergeInsnID << "]");
+        for (const auto &MMO : State.MIs[MergeInsnID]->memoperands())
+          OutMIs[InsnID].addMemOperand(MMO);
+      }
+      DEBUG(dbgs() << ")\n");
       break;
     }
     case GIR_EraseFromParent: {

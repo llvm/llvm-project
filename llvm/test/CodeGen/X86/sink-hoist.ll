@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -march=x86-64 -asm-verbose=false -mtriple=x86_64-unknown-linux-gnu -mcpu=nehalem -post-RA-scheduler=true -schedmodel=false | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -asm-verbose=false -mtriple=x86_64-unknown-linux-gnu -mcpu=nehalem -post-RA-scheduler=true -schedmodel=false | FileCheck %s
 
 ; Currently, floating-point selects are lowered to CFG triangles.
 ; This means that one side of the select is always unconditionally

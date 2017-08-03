@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7 -mtriple=i686-pc-win32
+; RUN: llc < %s -mcpu=corei7 -mtriple=i686-pc-win32
 
 ; Make sure we don't crash on this testcase.
 

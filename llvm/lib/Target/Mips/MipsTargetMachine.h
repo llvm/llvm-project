@@ -40,8 +40,8 @@ class MipsTargetMachine : public LLVMTargetMachine {
 public:
   MipsTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,
-                    Optional<Reloc::Model> RM, CodeModel::Model CM,
-                    CodeGenOpt::Level OL, bool isLittle);
+                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                    CodeGenOpt::Level OL, bool JIT, bool isLittle);
   ~MipsTargetMachine() override;
 
   TargetIRAnalysis getTargetIRAnalysis() override;
@@ -80,8 +80,8 @@ class MipsebTargetMachine : public MipsTargetMachine {
 public:
   MipsebTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, CodeModel::Model CM,
-                      CodeGenOpt::Level OL);
+                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                      CodeGenOpt::Level OL, bool JIT);
 };
 
 /// Mips32/64 little endian target machine.
@@ -92,8 +92,8 @@ class MipselTargetMachine : public MipsTargetMachine {
 public:
   MipselTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, CodeModel::Model CM,
-                      CodeGenOpt::Level OL);
+                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                      CodeGenOpt::Level OL, bool JIT);
 };
 
 } // end namespace llvm

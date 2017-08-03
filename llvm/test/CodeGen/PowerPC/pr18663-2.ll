@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mtriple=powerpc64-unknown-linux-gnu
-; RUN: llc -verify-machineinstrs < %s -march=ppc64le -mtriple=powerpc64le-unknown-linux-gnu
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu
 
 %"class.std::__1::locale::id.1580.4307.4610.8491" = type { %"struct.std::__1::once_flag.1579.4306.4609.8490", i32 }
 %"struct.std::__1::once_flag.1579.4306.4609.8490" = type { i64 }

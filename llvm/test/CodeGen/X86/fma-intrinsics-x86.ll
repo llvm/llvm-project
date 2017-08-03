@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -march=x86-64 -mcpu=corei7-avx -mattr=+fma | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -march=x86-64 -mcpu=core-avx2 -mattr=+fma,+avx2 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA
-; RUN: llc < %s -mtriple=x86_64-pc-windows -march=x86-64 -mcpu=core-avx2 -mattr=+fma,+avx2 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA-WIN
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -march=x86-64 -mcpu=corei7-avx -mattr=+fma4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA4
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=corei7-avx -mattr=+fma | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=core-avx2 -mattr=+fma,+avx2 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA
+; RUN: llc < %s -mtriple=x86_64-pc-windows -mcpu=core-avx2 -mattr=+fma,+avx2 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA-WIN
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=corei7-avx -mattr=+fma4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -mattr=+avx,-fma | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -mattr=-fma4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FMA
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -asm-verbose=false | FileCheck %s
 
 ; These tests check for loop branching structure, and that the loop align
 ; directive is placed in the expected place.

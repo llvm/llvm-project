@@ -89,7 +89,7 @@
 ; ASM:         callq   g
 ; ASM:         movl    %eax, [[offset_o_x:[0-9]+]](%rsp)          # 4-byte Spill
 ; ASM: [[spill_o_x_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_LLVM_fragment 32 32] [%RSP+[[offset_o_x]]]
+; ASM:         #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offset_o_x]], DW_OP_LLVM_fragment 32 32] [%RSP+0]
 ; ASM:         #APP
 ; ASM:         #NO_APP
 ; ASM:         movl    [[offset_o_x]](%rsp), %eax          # 4-byte Reload

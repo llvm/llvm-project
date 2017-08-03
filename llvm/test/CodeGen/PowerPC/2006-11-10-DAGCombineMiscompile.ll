@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep rlwimi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep rlwimi
 
 define void @test(i16 %div.0.i.i.i.i, i32 %L_num.0.i.i.i.i, i32 %tmp1.i.i206.i.i, i16* %P) {
         %X = shl i16 %div.0.i.i.i.i, 1          ; <i16> [#uses=1]

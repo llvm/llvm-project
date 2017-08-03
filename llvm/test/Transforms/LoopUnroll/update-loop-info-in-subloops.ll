@@ -1,5 +1,5 @@
 ; RUN: opt -S < %s -loop-unroll -block-freq | FileCheck %s
-; RUN: opt -S < %s -passes='require<opt-remark-emit>,loop(unroll),require<block-freq>' | FileCheck %s
+; RUN: opt -S < %s -passes='require<opt-remark-emit>,unroll,require<block-freq>' | FileCheck %s
 ; Crasher from PR20987.
 
 ; CHECK: define void @update_loop_info_in_subloops

@@ -597,6 +597,10 @@ void PDBLinker::addObjectsToPDB() {
     for (const PublicSym32 &Pub : Publics)
       PublicsBuilder.addPublicSymbol(Pub);
   }
+  // Add globals stream.  For now we don't actually write any thing useful to
+  // the globals stream, but the act of "getting" it also creates it lazily so
+  // that we write an empty stream.
+  (void)Builder.getGlobalsBuilder();
 }
 
 static void addLinkerModuleSymbols(StringRef Path,

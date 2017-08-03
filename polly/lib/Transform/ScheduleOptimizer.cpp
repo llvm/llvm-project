@@ -1053,7 +1053,7 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
       {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = AccRel.set_tuple_id(isl::dim::out, SAI->getBasePtrId());
   auto OldAcc = MMI.B->getLatestAccessRelation();
-  MMI.B->setNewAccessRelation(AccRel.release());
+  MMI.B->setNewAccessRelation(AccRel);
   auto ExtMap = MapOldIndVar.project_out(isl::dim::out, 2,
                                          MapOldIndVar.dim(isl::dim::out) - 2);
   ExtMap = ExtMap.reverse();
@@ -1083,7 +1083,7 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
       {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = AccRel.set_tuple_id(isl::dim::out, SAI->getBasePtrId());
   OldAcc = MMI.A->getLatestAccessRelation();
-  MMI.A->setNewAccessRelation(AccRel.release());
+  MMI.A->setNewAccessRelation(AccRel);
   ExtMap = MapOldIndVar.project_out(isl::dim::out, 3,
                                     MapOldIndVar.dim(isl::dim::out) - 3);
   ExtMap = ExtMap.reverse();

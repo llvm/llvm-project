@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 	%struct.expr = type { %struct.rtx_def*, i32, %struct.expr*, %struct.occr*, %struct.occr*, %struct.rtx_def* }
 	%struct.hash_table = type { %struct.expr**, i32, i32, i32 }
 	%struct.occr = type { %struct.occr*, %struct.rtx_def*, i8, i8 }

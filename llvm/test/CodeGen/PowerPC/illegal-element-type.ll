@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g3
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g3
 
 define void @foo() {
 entry:

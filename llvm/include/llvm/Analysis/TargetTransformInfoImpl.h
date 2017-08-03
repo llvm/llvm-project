@@ -428,7 +428,7 @@ public:
     return 0; 
   }
 
-  unsigned getReductionCost(unsigned, Type *, bool) { return 1; }
+  unsigned getArithmeticReductionCost(unsigned, Type *, bool) { return 1; }
 
   unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) { return 0; }
 

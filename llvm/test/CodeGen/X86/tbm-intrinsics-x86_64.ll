@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -march=x86-64 -mattr=+tbm < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+tbm < %s | FileCheck %s
 
 define i32 @test_x86_tbm_bextri_u32(i32 %a) nounwind readnone {
 entry:

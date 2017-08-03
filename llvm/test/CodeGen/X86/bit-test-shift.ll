@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 ; <rdar://problem/8285015>
 
 define i32 @x(i32 %t) nounwind readnone ssp {

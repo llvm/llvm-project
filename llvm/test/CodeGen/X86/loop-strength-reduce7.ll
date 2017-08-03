@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep imul
+; RUN: llc < %s | not grep imul
 
 target triple = "i386-apple-darwin9.6"
 	%struct.III_psy_xmin = type { [22 x double], [13 x [3 x double]] }

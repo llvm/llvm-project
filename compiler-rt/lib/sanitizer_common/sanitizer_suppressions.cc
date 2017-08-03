@@ -51,6 +51,7 @@ void SuppressionContext::ParseFromFile(const char *filename) {
   if (filename[0] == '\0')
     return;
 
+#if !SANITIZER_FUCHSIA
   // If we cannot find the file, check if its location is relative to
   // the location of the executable.
   InternalScopedString new_file_path(kMaxPathLength);
@@ -59,6 +60,7 @@ void SuppressionContext::ParseFromFile(const char *filename) {
                                           new_file_path.size())) {
     filename = new_file_path.data();
   }
+#endif  // !SANITIZER_FUCHSIA
 
   // Read the file.
   VPrintf(1, "%s: reading suppressions file at %s\n",

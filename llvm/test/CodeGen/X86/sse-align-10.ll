@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 define <2 x i64> @bar(<2 x i64>* %p) nounwind {
 ; CHECK-LABEL: bar:

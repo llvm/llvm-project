@@ -203,7 +203,7 @@ define <8 x i16> @test_x86_ssse3_pmadd_ub_sw_128_load_op0(<16 x i8>* %ptr, <16 x
 ; SKX-LABEL: test_x86_ssse3_pmadd_ub_sw_128_load_op0:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; SKX-NEXT:    vmovdqu (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x6f,0x08]
+; SKX-NEXT:    vmovdqa (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x08]
 ; SKX-NEXT:    vpmaddubsw %xmm0, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x04,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %a0 = load <16 x i8>, <16 x i8>* %ptr

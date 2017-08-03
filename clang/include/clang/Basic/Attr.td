@@ -268,10 +268,10 @@ def TargetMips : TargetArch<["mips", "mipsel"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
-def TargetWindows : TargetArch<["x86", "x86_64", "arm", "thumb"]> {
+def TargetWindows : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let OSes = ["Win32"];
 }
-def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb"]> {
+def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let CXXABIs = ["Microsoft"];
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin8 -mcpu=yonah -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-apple-darwin8 -mcpu=yonah | FileCheck %s
 
 ; These testcases shouldn't require loading into an XMM register then storing 
 ; to memory, then reloading into an FPStack reg.

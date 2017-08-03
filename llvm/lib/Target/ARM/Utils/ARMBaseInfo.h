@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+// System Registers
 namespace ARMSysReg {
   struct MClassSysReg {
     const char *Name;
@@ -58,6 +59,16 @@ namespace ARMSysReg {
   const MClassSysReg *lookupMClassSysRegBy8bitSYSmValue(unsigned SYSm);
 
 } // end namespace ARMSysReg
+
+// Banked Registers
+namespace ARMBankedReg {
+  struct BankedReg {
+    const char *Name;
+    uint16_t Encoding;
+  };
+  #define GET_BANKEDREG_DECL
+  #include "ARMGenSystemRegister.inc"
+} // end namespace ARMBankedReg
 
 } // end namespace llvm
 

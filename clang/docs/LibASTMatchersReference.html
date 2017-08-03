@@ -1729,6 +1729,21 @@ substTemplateTypeParmType() matches the type of 't' but not '1'
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('tagType0')"><a name="tagType0Anchor">tagType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="tagType0"><pre>Matches tag types (record and enum types).
+
+Given
+  enum E {};
+  class C {};
+
+  E e;
+  C c;
+
+tagType() matches the type of the variable declarations of both e
+and c.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('templateSpecializationType0')"><a name="templateSpecializationType0Anchor">templateSpecializationType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="templateSpecializationType0"><pre>Matches template specialization types.
 
@@ -4543,6 +4558,18 @@ classTemplateSpecializationDecl(hasAnyTemplateArgument(
 
 functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
   matches the specialization f&lt;int&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasSpecializedTemplate0')"><a name="hasSpecializedTemplate0Anchor">hasSpecializedTemplate</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateDecl.html">ClassTemplateDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasSpecializedTemplate0"><pre>Matches the specialized template of a specialization declaration.
+
+Given
+  tempalate&lt;typename T&gt; class A {};
+  typedef A&lt;int&gt; B;
+classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl()))
+  matches 'B' with classTemplateDecl() matching the class template
+  declaration of 'A'.
 </pre></td></tr>
 
 

@@ -6999,6 +6999,21 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
+
+      if (cast<VarDecl>(ShadowedDecl)->hasLocalStorage()) {
+        // A variable can't shadow a local variable in an enclosing scope, if
+        // they are separated by a non-capturing declaration context.
+        for (DeclContext *ParentDC = NewDC;
+             ParentDC && !ParentDC->Equals(OldDC);
+             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
+          // Only block literals, captured statements, and lambda expressions
+          // can capture; other scopes don't.
+          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
+              !isLambdaCallOperator(ParentDC)) {
+            return;
+          }
+        }
+      }
     }
   }
 

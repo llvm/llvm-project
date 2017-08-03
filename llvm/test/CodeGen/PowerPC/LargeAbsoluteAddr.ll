@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin | \
 ; RUN:   grep "stw r3, 32751"
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mtriple=powerpc-apple-darwin | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-apple-darwin | \
 ; RUN:   grep "stw r3, 32751"
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mtriple=powerpc-apple-darwin | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc64-apple-darwin | \
 ; RUN:   grep "std r3, 9024"
 
 define void @test() nounwind {

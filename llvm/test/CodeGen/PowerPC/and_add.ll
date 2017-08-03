@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -o %t
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -o %t
 ; RUN: grep slwi %t
 ; RUN: not grep addi %t
 ; RUN: not grep rlwinm %t

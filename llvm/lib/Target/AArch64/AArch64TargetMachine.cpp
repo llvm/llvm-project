@@ -206,18 +206,42 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
+static CodeModel::Model getEffectiveCodeModel(const Triple &TT,
+                                              Optional<CodeModel::Model> CM,
+                                              bool JIT) {
+  if (CM) {
+    if (*CM != CodeModel::Small && *CM != CodeModel::Large) {
+      if (!TT.isOSFuchsia())
+        report_fatal_error(
+            "Only small and large code models are allowed on AArch64");
+      else if (CM != CodeModel::Kernel)
+        report_fatal_error(
+            "Only small, kernel, and large code models are allowed on AArch64");
+    }
+    return *CM;
+  }
+  // The default MCJIT memory managers make no guarantees about where they can
+  // find an executable page; JITed code needs to be able to refer to globals
+  // no matter how far away they are.
+  if (JIT)
+    return CodeModel::Large;
+  return CodeModel::Small;
+}
+
 /// Create an AArch64 architecture model.
 ///
-AArch64TargetMachine::AArch64TargetMachine(
-    const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
-    const TargetOptions &Options, Optional<Reloc::Model> RM,
-    CodeModel::Model CM, CodeGenOpt::Level OL, bool LittleEndian)
-    : LLVMTargetMachine(T, computeDataLayout(TT, Options.MCOptions,
-                                             LittleEndian),
-                        TT, CPU, FS, Options,
-			getEffectiveRelocModel(TT, RM), CM, OL),
-      TLOF(createTLOF(getTargetTriple())),
-      isLittle(LittleEndian) {
+AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
+                                           StringRef CPU, StringRef FS,
+                                           const TargetOptions &Options,
+                                           Optional<Reloc::Model> RM,
+                                           Optional<CodeModel::Model> CM,
+                                           CodeGenOpt::Level OL, bool JIT,
+                                           bool LittleEndian)
+    : LLVMTargetMachine(T,
+                        computeDataLayout(TT, Options.MCOptions, LittleEndian),
+                        TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
+                        getEffectiveCodeModel(TT, CM, JIT), OL),
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 }
 
@@ -252,16 +276,16 @@ void AArch64leTargetMachine::anchor() { }
 AArch64leTargetMachine::AArch64leTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    CodeModel::Model CM, CodeGenOpt::Level OL)
-    : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
+    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
 void AArch64beTargetMachine::anchor() { }
 
 AArch64beTargetMachine::AArch64beTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    CodeModel::Model CM, CodeGenOpt::Level OL)
-    : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
+    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
 
 namespace {
 

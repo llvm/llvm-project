@@ -1,7 +1,7 @@
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=i386-linux-gnu | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=x86-linux-android | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-gnu | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-android | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
 
 ; Copied from tls.ll; emulated TLS model is not implemented
 ; for *-pc-win32 and *-pc-winows targets yet.

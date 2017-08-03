@@ -21,7 +21,9 @@
 
 #include "LiveDebugVariables.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -100,6 +102,10 @@ class UserValue {
 
   /// Map of slot indices where this value is live.
   LocMap locInts;
+
+  /// Set of interval start indexes that have been trimmed to the
+  /// lexical scope.
+  SmallSet<SlotIndex, 2> trimmedDefs;
 
   /// coalesceLocation - After LocNo was changed, check if it has become
   /// identical to another location, and coalesce them. This may cause LocNo or
@@ -229,7 +235,7 @@ public:
   /// computeIntervals - Compute the live intervals of all locations after
   /// collecting all their def points.
   void computeIntervals(MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-                        LiveIntervals &LIS);
+                        LiveIntervals &LIS, LexicalScopes &LS);
 
   /// splitRegister - Replace OldReg ranges with NewRegs ranges where NewRegs is
   /// live. Returns true if any changes were made.
@@ -329,6 +335,7 @@ public:
 };
 } // namespace
 
+#ifndef NDEBUG
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
@@ -390,6 +397,7 @@ void LDVImpl::print(raw_ostream &OS) {
   for (unsigned i = 0, e = userValues.size(); i != e; ++i)
     userValues[i]->print(OS, TRI);
 }
+#endif
 
 void UserValue::coalesceLocation(unsigned LocNo) {
   unsigned KeepLoc = 0;
@@ -625,10 +633,9 @@ UserValue::addDefsFromCopies(LiveInterval *LI, unsigned LocNo,
   }
 }
 
-void
-UserValue::computeIntervals(MachineRegisterInfo &MRI,
-                            const TargetRegisterInfo &TRI,
-                            LiveIntervals &LIS) {
+void UserValue::computeIntervals(MachineRegisterInfo &MRI,
+                                 const TargetRegisterInfo &TRI,
+                                 LiveIntervals &LIS, LexicalScopes &LS) {
   SmallVector<std::pair<SlotIndex, unsigned>, 16> Defs;
 
   // Collect all defs to be extended (Skipping undefs).
@@ -670,17 +677,88 @@ UserValue::computeIntervals(MachineRegisterInfo &MRI,
     extendDef(Idx, LocNo, LR, VNI, nullptr, LIS);
   }
 
-  // Finally, erase all the undefs.
+  // Erase all the undefs.
   for (LocMap::iterator I = locInts.begin(); I.valid();)
     if (I.value() == ~0u)
       I.erase();
     else
       ++I;
+
+  // The computed intervals may extend beyond the range of the debug
+  // location's lexical scope. In this case, splitting of an interval
+  // can result in an interval outside of the scope being created,
+  // causing extra unnecessary DBG_VALUEs to be emitted. To prevent
+  // this, trim the intervals to the lexical scope.
+
+  LexicalScope *Scope = LS.findLexicalScope(dl);
+  if (!Scope)
+    return;
+
+  SlotIndex PrevEnd;
+  LocMap::iterator I = locInts.begin();
+
+  // Iterate over the lexical scope ranges. Each time round the loop
+  // we check the intervals for overlap with the end of the previous
+  // range and the start of the next. The first range is handled as
+  // a special case where there is no PrevEnd.
+  for (const InsnRange &Range : Scope->getRanges()) {
+    SlotIndex RStart = LIS.getInstructionIndex(*Range.first);
+    SlotIndex REnd = LIS.getInstructionIndex(*Range.second);
+
+    // At the start of each iteration I has been advanced so that
+    // I.stop() >= PrevEnd. Check for overlap.
+    if (PrevEnd && I.start() < PrevEnd) {
+      SlotIndex IStop = I.stop();
+      unsigned LocNo = I.value();
+
+      // Stop overlaps previous end - trim the end of the interval to
+      // the scope range.
+      I.setStopUnchecked(PrevEnd);
+      ++I;
+
+      // If the interval also overlaps the start of the "next" (i.e.
+      // current) range create a new interval for the remainder (which
+      // may be further trimmed).
+      if (RStart < IStop)
+        I.insert(RStart, IStop, LocNo);
+    }
+
+    // Advance I so that I.stop() >= RStart, and check for overlap.
+    I.advanceTo(RStart);
+    if (!I.valid())
+      return;
+
+    if (I.start() < RStart) {
+      // Interval start overlaps range - trim to the scope range.
+      I.setStartUnchecked(RStart);
+      // Remember that this interval was trimmed.
+      trimmedDefs.insert(RStart);
+    }
+
+    // The end of a lexical scope range is the last instruction in the
+    // range. To convert to an interval we need the index of the
+    // instruction after it.
+    REnd = REnd.getNextIndex();
+
+    // Advance I to first interval outside current range.
+    I.advanceTo(REnd);
+    if (!I.valid())
+      return;
+
+    PrevEnd = REnd;
+  }
+
+  // Check for overlap with end of final range.
+  if (PrevEnd && I.start() < PrevEnd)
+    I.setStopUnchecked(PrevEnd);
 }
 
 void LDVImpl::computeIntervals() {
+  LexicalScopes LS;
+  LS.initialize(*MF);
+
   for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS);
+    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
     userValues[i]->mapVirtRegs(this);
   }
 }
@@ -955,6 +1033,13 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
     SlotIndex Start = I.start();
     SlotIndex Stop = I.stop();
     unsigned LocNo = I.value();
+
+    // If the interval start was trimmed to the lexical scope insert the
+    // DBG_VALUE at the previous index (otherwise it appears after the
+    // first instruction in the range).
+    if (trimmedDefs.count(Start))
+      Start = Start.getPrevIndex();
+
     DEBUG(dbgs() << "\t[" << Start << ';' << Stop << "):" << LocNo);
     MachineFunction::iterator MBB = LIS.getMBBFromIndex(Start)->getIterator();
     SlotIndex MBBEnd = LIS.getMBBEndIdx(&*MBB);

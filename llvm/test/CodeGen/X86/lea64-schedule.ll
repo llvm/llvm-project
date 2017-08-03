@@ -18,14 +18,14 @@ define i64 @test_lea_offset(i64) {
 ;
 ; ATOM-LABEL: test_lea_offset:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq -24(%rdi), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq -24(%rdi), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_offset:
 ; SLM:       # BB#0:
@@ -63,14 +63,14 @@ define i64 @test_lea_offset_big(i64) {
 ;
 ; ATOM-LABEL: test_lea_offset_big:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq 1024(%rdi), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq 1024(%rdi), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_offset_big:
 ; SLM:       # BB#0:
@@ -109,14 +109,14 @@ define i64 @test_lea_add(i64, i64) {
 ;
 ; ATOM-LABEL: test_lea_add:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq (%rdi,%rsi), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add:
 ; SLM:       # BB#0:
@@ -154,14 +154,14 @@ define i64 @test_lea_add_offset(i64, i64) {
 ;
 ; ATOM-LABEL: test_lea_add_offset:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq 16(%rdi,%rsi), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq 16(%rdi,%rsi), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_offset:
 ; SLM:       # BB#0:
@@ -202,14 +202,14 @@ define i64 @test_lea_add_offset_big(i64, i64) {
 ;
 ; ATOM-LABEL: test_lea_add_offset_big:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq -4096(%rdi,%rsi), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq -4096(%rdi,%rsi), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_offset_big:
 ; SLM:       # BB#0:
@@ -252,14 +252,14 @@ define i64 @test_lea_mul(i64) {
 ;
 ; ATOM-LABEL: test_lea_mul:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq (%rdi,%rdi,2), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_mul:
 ; SLM:       # BB#0:
@@ -297,14 +297,14 @@ define i64 @test_lea_mul_offset(i64) {
 ;
 ; ATOM-LABEL: test_lea_mul_offset:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq -32(%rdi,%rdi,2), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq -32(%rdi,%rdi,2), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_mul_offset:
 ; SLM:       # BB#0:
@@ -345,14 +345,14 @@ define i64 @test_lea_mul_offset_big(i64) {
 ;
 ; ATOM-LABEL: test_lea_mul_offset_big:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq 10000(%rdi,%rdi,8), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq 10000(%rdi,%rdi,8), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_mul_offset_big:
 ; SLM:       # BB#0:
@@ -395,14 +395,14 @@ define i64 @test_lea_add_scale(i64, i64) {
 ;
 ; ATOM-LABEL: test_lea_add_scale:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq (%rdi,%rsi,2), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_scale:
 ; SLM:       # BB#0:
@@ -441,14 +441,14 @@ define i64 @test_lea_add_scale_offset(i64, i64) {
 ;
 ; ATOM-LABEL: test_lea_add_scale_offset:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq 96(%rdi,%rsi,4), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq 96(%rdi,%rsi,4), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_scale_offset:
 ; SLM:       # BB#0:
@@ -490,14 +490,14 @@ define i64 @test_lea_add_scale_offset_big(i64, i64) {
 ;
 ; ATOM-LABEL: test_lea_add_scale_offset_big:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    leaq -1200(%rdi,%rsi,8), %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; ATOM-NEXT:    leaq -1200(%rdi,%rsi,8), %rax # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_scale_offset_big:
 ; SLM:       # BB#0:

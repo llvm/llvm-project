@@ -1970,6 +1970,17 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
          ((Style.Language == FormatStyle::LK_Java ||
            Style.Language == FormatStyle::LK_JavaScript) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
+    if (Style.Language == FormatStyle::LK_JavaScript &&
+        FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
+      // JavaScript/TypeScript supports inline object types in
+      // extends/implements positions:
+      //     class Foo implements {bar: number} { }
+      nextToken();
+      if (FormatTok->is(tok::l_brace)) {
+        tryToParseBracedList();
+        continue;
+      }
+    }
     bool IsNonMacroIdentifier =
         FormatTok->is(tok::identifier) &&
         FormatTok->TokenText != FormatTok->TokenText.upper();

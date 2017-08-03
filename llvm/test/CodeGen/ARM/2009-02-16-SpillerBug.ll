@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mattr=+v6,+vfp2
+; RUN: llc < %s -mattr=+v6,+vfp2
 
 target triple = "arm-apple-darwin9"
 	%struct.FILE_POS = type { i8, i8, i16, i32 }

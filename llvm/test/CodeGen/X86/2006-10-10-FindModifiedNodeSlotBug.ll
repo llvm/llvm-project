@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | grep shrl
+; RUN: llc < %s -mtriple=i686-- | grep shrl
 ; Bug in FindModifiedNodeSlot cause tmp14 load to become a zextload and shr 31
 ; is then optimized away.
 @tree_code_type = external global [0 x i32]		; <[0 x i32]*> [#uses=1]

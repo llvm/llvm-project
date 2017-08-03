@@ -460,9 +460,11 @@ class RuleMatcher {
   /// have succeeded.
   std::vector<std::unique_ptr<MatchAction>> Actions;
 
+  typedef std::map<const InstructionMatcher *, unsigned>
+      DefinedInsnVariablesMap;
   /// A map of instruction matchers to the local variables created by
   /// emitCaptureOpcodes().
-  std::map<const InstructionMatcher *, unsigned> InsnVariableIDs;
+  DefinedInsnVariablesMap InsnVariableIDs;
 
   /// ID for the next instruction variable defined with defineInsnVar()
   unsigned NextInsnVarID;
@@ -488,6 +490,16 @@ public:
   unsigned defineInsnVar(MatchTable &Table, const InstructionMatcher &Matcher,
                          unsigned InsnVarID, unsigned OpIdx);
   unsigned getInsnVarID(const InstructionMatcher &InsnMatcher) const;
+  DefinedInsnVariablesMap::const_iterator defined_insn_vars_begin() const {
+    return InsnVariableIDs.begin();
+  }
+  DefinedInsnVariablesMap::const_iterator defined_insn_vars_end() const {
+    return InsnVariableIDs.end();
+  }
+  iterator_range<typename DefinedInsnVariablesMap::const_iterator>
+  defined_insn_vars() const {
+    return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
+  }
 
   void emitCaptureOpcodes(MatchTable &Table);
 
@@ -1452,6 +1464,21 @@ public:
 
     Table << MatchTable::Opcode("GIR_MergeMemOperands")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+          << MatchTable::Comment("MergeInsnID's");
+    // Emit the ID's for all the instructions that are matched by this rule.
+    // TODO: Limit this to matched instructions that mayLoad/mayStore or have
+    //       some other means of having a memoperand. Also limit this to emitted
+    //       instructions that expect to have a memoperand too. For example,
+    //       (G_SEXT (G_LOAD x)) that results in separate load and sign-extend
+    //       instructions shouldn't put the memoperand on the sign-extend since
+    //       it has no effect there.
+    std::vector<unsigned> MergeInsnIDs;
+    for (const auto &IDMatcherPair : Rule.defined_insn_vars())
+      MergeInsnIDs.push_back(IDMatcherPair.second);
+    std::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
+    for (const auto &MergeInsnID : MergeInsnIDs)
+      Table << MatchTable::IntValue(MergeInsnID);
+    Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList")
           << MatchTable::LineBreak << MatchTable::Opcode("GIR_EraseFromParent")
           << MatchTable::Comment("InsnID")
           << MatchTable::IntValue(RecycleInsnID) << MatchTable::LineBreak;

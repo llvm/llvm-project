@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8.8.0 -no-integrated-as | grep "foo r3, r4"
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8.8.0 -no-integrated-as | grep "bari r3, 47"
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8.8.0 -no-integrated-as | grep "foo r3, r4"
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8.8.0 -no-integrated-as | grep "bari r3, 47"
 
 ; PR1351
 

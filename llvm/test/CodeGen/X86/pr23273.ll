@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-unknown-unknown -mcpu=generic -march=x86 -mattr=-sse2 -fast-isel < %s
+; RUN: llc -mtriple=i386-unknown-unknown -mcpu=generic -mattr=-sse2 -fast-isel < %s
 
 ; Verify that the backend doesn't crash during fast-isel with an assertion
 ; failure when selecting a int-to-double conversion. The fast selection routine

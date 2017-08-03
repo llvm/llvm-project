@@ -101,6 +101,8 @@ static bool getDefaultBlacklist(const Driver &D, SanitizerMask Kinds,
     BlacklistFile = "dfsan_abilist.txt";
   else if (Kinds & CFI)
     BlacklistFile = "cfi_blacklist.txt";
+  else if (Kinds & Undefined)
+    BlacklistFile = "ubsan_blacklist.txt";
 
   if (BlacklistFile) {
     clang::SmallString<64> Path(D.ResourceDir);
@@ -305,13 +307,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       (RTTIMode == ToolChain::RM_DisabledImplicitly ||
        RTTIMode == ToolChain::RM_DisabledExplicitly)) {
     Kinds &= ~Vptr;
-  }
-
-  // Disable -fsanitize=vptr if -fsanitize=null is not enabled (the vptr
-  // instrumentation is broken without run-time null checks).
-  if ((Kinds & Vptr) && !(Kinds & Null)) {
-    Kinds &= ~Vptr;
-    D.Diag(diag::warn_drv_disabling_vptr_no_null_check);
   }
 
   // Check that LTO is enabled if we need it.

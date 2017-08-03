@@ -7723,7 +7723,8 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       return Expand2AddrUndef(MIB,
                               get(HasVLX ? X86::VPXORDZ128rr : X86::VXORPSrr));
     // Extended register without VLX. Use a larger XOR.
-    SrcReg = TRI->getMatchingSuperReg(SrcReg, X86::sub_xmm, &X86::VR512RegClass);
+    SrcReg =
+        TRI->getMatchingSuperReg(SrcReg, X86::sub_xmm, &X86::VR512RegClass);
     MIB->getOperand(0).setReg(SrcReg);
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
@@ -7731,20 +7732,24 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     bool HasVLX = Subtarget.hasVLX();
     unsigned SrcReg = MIB->getOperand(0).getReg();
     const TargetRegisterInfo *TRI = &getRegisterInfo();
-    if (HasVLX)
-      return Expand2AddrUndef(MIB, get(X86::VPXORDZ256rr));
+    if (HasVLX || TRI->getEncodingValue(SrcReg) < 16) {
+      unsigned XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
+      MIB->getOperand(0).setReg(XReg);
+      return Expand2AddrUndef(MIB,
+                              get(HasVLX ? X86::VPXORDZ128rr : X86::VXORPSrr));
+    }
+    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
+  }
+  case X86::AVX512_512_SET0: {
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    unsigned SrcReg = MIB->getOperand(0).getReg();
     if (TRI->getEncodingValue(SrcReg) < 16) {
       unsigned XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
       MIB->getOperand(0).setReg(XReg);
       return Expand2AddrUndef(MIB, get(X86::VXORPSrr));
     }
-    // Extended register without VLX. Use a larger XOR.
-    SrcReg = TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
-    MIB->getOperand(0).setReg(SrcReg);
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
-  case X86::AVX512_512_SET0:
-    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   case X86::V_SETALLONES:
     return Expand2AddrUndef(MIB, get(HasAVX ? X86::VPCMPEQDrr : X86::PCMPEQDrr));
   case X86::AVX2_SETALLONES:
@@ -9356,6 +9361,30 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VBROADCASTSDZ256m, X86::VBROADCASTSDZ256m, X86::VPBROADCASTQZ256m },
   { X86::VBROADCASTSDZr,    X86::VBROADCASTSDZr,    X86::VPBROADCASTQZr },
   { X86::VBROADCASTSDZm,    X86::VBROADCASTSDZm,    X86::VPBROADCASTQZm },
+  { X86::VINSERTF32x4Zrr,   X86::VINSERTF32x4Zrr,   X86::VINSERTI32x4Zrr },
+  { X86::VINSERTF32x4Zrm,   X86::VINSERTF32x4Zrm,   X86::VINSERTI32x4Zrm },
+  { X86::VINSERTF32x8Zrr,   X86::VINSERTF32x8Zrr,   X86::VINSERTI32x8Zrr },
+  { X86::VINSERTF32x8Zrm,   X86::VINSERTF32x8Zrm,   X86::VINSERTI32x8Zrm },
+  { X86::VINSERTF64x2Zrr,   X86::VINSERTF64x2Zrr,   X86::VINSERTI64x2Zrr },
+  { X86::VINSERTF64x2Zrm,   X86::VINSERTF64x2Zrm,   X86::VINSERTI64x2Zrm },
+  { X86::VINSERTF64x4Zrr,   X86::VINSERTF64x4Zrr,   X86::VINSERTI64x4Zrr },
+  { X86::VINSERTF64x4Zrm,   X86::VINSERTF64x4Zrm,   X86::VINSERTI64x4Zrm },
+  { X86::VINSERTF32x4Z256rr,X86::VINSERTF32x4Z256rr,X86::VINSERTI32x4Z256rr },
+  { X86::VINSERTF32x4Z256rm,X86::VINSERTF32x4Z256rm,X86::VINSERTI32x4Z256rm },
+  { X86::VINSERTF64x2Z256rr,X86::VINSERTF64x2Z256rr,X86::VINSERTI64x2Z256rr },
+  { X86::VINSERTF64x2Z256rm,X86::VINSERTF64x2Z256rm,X86::VINSERTI64x2Z256rm },
+  { X86::VEXTRACTF32x4Zrr,   X86::VEXTRACTF32x4Zrr,   X86::VEXTRACTI32x4Zrr },
+  { X86::VEXTRACTF32x4Zmr,   X86::VEXTRACTF32x4Zmr,   X86::VEXTRACTI32x4Zmr },
+  { X86::VEXTRACTF32x8Zrr,   X86::VEXTRACTF32x8Zrr,   X86::VEXTRACTI32x8Zrr },
+  { X86::VEXTRACTF32x8Zmr,   X86::VEXTRACTF32x8Zmr,   X86::VEXTRACTI32x8Zmr },
+  { X86::VEXTRACTF64x2Zrr,   X86::VEXTRACTF64x2Zrr,   X86::VEXTRACTI64x2Zrr },
+  { X86::VEXTRACTF64x2Zmr,   X86::VEXTRACTF64x2Zmr,   X86::VEXTRACTI64x2Zmr },
+  { X86::VEXTRACTF64x4Zrr,   X86::VEXTRACTF64x4Zrr,   X86::VEXTRACTI64x4Zrr },
+  { X86::VEXTRACTF64x4Zmr,   X86::VEXTRACTF64x4Zmr,   X86::VEXTRACTI64x4Zmr },
+  { X86::VEXTRACTF32x4Z256rr,X86::VEXTRACTF32x4Z256rr,X86::VEXTRACTI32x4Z256rr },
+  { X86::VEXTRACTF32x4Z256mr,X86::VEXTRACTF32x4Z256mr,X86::VEXTRACTI32x4Z256mr },
+  { X86::VEXTRACTF64x2Z256rr,X86::VEXTRACTF64x2Z256rr,X86::VEXTRACTI64x2Z256rr },
+  { X86::VEXTRACTF64x2Z256mr,X86::VEXTRACTF64x2Z256mr,X86::VEXTRACTI64x2Z256mr },
 };
 
 static const uint16_t ReplaceableInstrsAVX2[][3] = {

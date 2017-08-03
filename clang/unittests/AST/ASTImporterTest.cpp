@@ -252,35 +252,19 @@ AST_MATCHER_P(TemplateDecl, hasTemplateDecl,
 
 TEST(ImportExpr, ImportParenListExpr) {
   MatchVerifier<Decl> Verifier;
-  EXPECT_TRUE(
-        testImport(
-          "template<typename T> class dummy { void f() { dummy X(*this); } };"
-          "typedef dummy<int> declToImport;"
-          "template class dummy<int>;",
-          Lang_CXX, "", Lang_CXX, Verifier,
-          typedefDecl(
-            hasType(
-              templateSpecializationType(
-                hasDeclaration(
-                  classTemplateDecl(
-                    hasTemplateDecl(
-                      cxxRecordDecl(
-                        hasMethod(
-                        allOf(
-                          hasName("f"),
-                          hasBody(
-                            compoundStmt(
-                              has(
-                                declStmt(
-                                  hasSingleDecl(
-                                    varDecl(
-                                      hasInitializer(
-                                        parenListExpr(
-                                          has(
-                                            unaryOperator(
-                                              hasOperatorName("*"),
-                                              hasUnaryOperand(cxxThisExpr())
-                                              )))))))))))))))))))));
+  EXPECT_TRUE(testImport(
+      "template<typename T> class dummy { void f() { dummy X(*this); } };"
+      "typedef dummy<int> declToImport;"
+      "template class dummy<int>;",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      typedefDecl(hasType(templateSpecializationType(
+          hasDeclaration(classTemplateSpecializationDecl(hasSpecializedTemplate(
+              classTemplateDecl(hasTemplateDecl(cxxRecordDecl(hasMethod(allOf(
+                  hasName("f"),
+                  hasBody(compoundStmt(has(declStmt(hasSingleDecl(
+                      varDecl(hasInitializer(parenListExpr(has(unaryOperator(
+                          hasOperatorName("*"),
+                          hasUnaryOperand(cxxThisExpr()))))))))))))))))))))))));
 }
 
 TEST(ImportExpr, ImportStmtExpr) {

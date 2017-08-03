@@ -152,6 +152,12 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
+static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
+  if (CM)
+    return *CM;
+  return CodeModel::Small;
+}
+
 extern "C" void LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
@@ -168,17 +174,18 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           CodeModel::Model CM,
-                                           CodeGenOpt::Level OL)
+                                           Optional<CodeModel::Model> CM,
+                                           CodeGenOpt::Level OL, bool JIT)
     // Specify the vector alignment explicitly. For v512x1, the calculated
     // alignment would be 512*alignment(i1), which is 512 bytes, instead of
     // the required minimum of 64 bytes.
     : LLVMTargetMachine(
-          T, "e-m:e-p:32:32:32-a:0-n16:32-"
-             "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
-             "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
-          TT, CPU, FS, Options, getEffectiveRelocModel(RM), CM,
-          (HexagonNoOpt ? CodeGenOpt::None : OL)),
+          T,
+          "e-m:e-p:32:32:32-a:0-n16:32-"
+          "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
+          "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
+          TT, CPU, FS, Options, getEffectiveRelocModel(RM),
+          getEffectiveCodeModel(CM), (HexagonNoOpt ? CodeGenOpt::None : OL)),
       TLOF(make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
   initAsmInfo();

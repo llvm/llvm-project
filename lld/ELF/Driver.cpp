@@ -942,8 +942,8 @@ static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
   for (InputFile *File : Files)
     if (auto *F = dyn_cast<ArchiveFile>(File))
       if (All || Libs.count(path::filename(F->getName())))
-        for (Symbol *Sym : F->getSymbols())
-          Sym->VersionId = VER_NDX_LOCAL;
+        for (SymbolBody *Sym : F->getSymbols())
+          Sym->symbol()->VersionId = VER_NDX_LOCAL;
 }
 
 // Do actual linking. Note that when this function is called,

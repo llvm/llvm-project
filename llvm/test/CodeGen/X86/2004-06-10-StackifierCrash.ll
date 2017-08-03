@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 define i1 @T(double %X) {
         %V = fcmp oeq double %X, %X             ; <i1> [#uses=1]

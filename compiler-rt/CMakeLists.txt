@@ -36,6 +36,8 @@ option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY)
+option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
+mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
 
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")
@@ -279,10 +281,19 @@ if (SANITIZER_USE_COMPILER_RT)
   find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
   list(APPEND SANITIZER_COMMON_LINK_LIBS ${COMPILER_RT_BUILTINS_LIBRARY})
 else()
-  append_list_if(COMPILER_RT_HAS_GCC_S_LIB gcc_s SANITIZER_COMMON_LINK_LIBS)
+  if (ANDROID)
+    append_list_if(COMPILER_RT_HAS_GCC_LIB gcc SANITIZER_COMMON_LINK_LIBS)
+  else()
+    append_list_if(COMPILER_RT_HAS_GCC_S_LIB gcc_s SANITIZER_COMMON_LINK_LIBS)
+  endif()
 endif()
 
 append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
+
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
+  list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
+  list(APPEND SANITIZER_COMMON_LINK_LIBS magenta)
+endif()
 
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

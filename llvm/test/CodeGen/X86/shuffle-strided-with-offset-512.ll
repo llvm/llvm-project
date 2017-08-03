@@ -95,8 +95,8 @@ define void @shuffle_v32i16_to_v16i16_1(<32 x i16>* %L, <16 x i16>* %S) nounwind
 define void @shuffle_v16i32_to_v8i32_1(<16 x i32>* %L, <8 x i32>* %S) nounwind {
 ; AVX512-LABEL: shuffle_v16i32_to_v8i32_1:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovdqa32 (%rdi), %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512-NEXT:    vmovdqa %ymm0, (%rsi)

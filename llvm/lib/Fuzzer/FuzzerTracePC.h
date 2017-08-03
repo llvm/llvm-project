@@ -75,6 +75,7 @@ class TracePC {
 
   void HandleInit(uint32_t *Start, uint32_t *Stop);
   void HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop);
+  void HandlePCsInit(const uint8_t *Start, const uint8_t *Stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
@@ -85,7 +86,8 @@ class TracePC {
 
   void ResetMaps() {
     ValueProfileMap.Reset();
-    memset(Counters(), 0, GetNumPCs());
+    if (NumModules)
+      memset(Counters(), 0, GetNumPCs());
     ClearExtraCounters();
     ClearInlineCounters();
   }
@@ -149,6 +151,10 @@ private:
   size_t NumModulesWithInline8bitCounters;  // linker-initialized.
   size_t NumInline8bitCounters;
 
+  struct { const uintptr_t *Start, *Stop; } ModulePCTable[4096];
+  size_t NumPCTables;
+  size_t NumPCsInPCTables;
+
   uint8_t *Counters() const;
   uintptr_t *PCs() const;
 
@@ -158,7 +164,8 @@ private:
   uintptr_t InitialStack, LowestStack;  // Assume stack grows down.
 };
 
-template <class Callback> // void Callback(size_t Idx, uint8_t Value);
+template <class Callback>
+// void Callback(size_t FirstFeature, size_t Idx, uint8_t Value);
 ATTRIBUTE_NO_SANITIZE_ALL
 void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
                         size_t FirstFeature, Callback Handle8bitCounter) {
@@ -169,19 +176,19 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
   // Iterate by 1 byte until either the alignment boundary or the end.
   for (; reinterpret_cast<uintptr_t>(P) & StepMask && P < End; P++)
     if (uint8_t V = *P)
-      Handle8bitCounter(FirstFeature + P - Begin, V);
+      Handle8bitCounter(FirstFeature, P - Begin, V);
 
   // Iterate by Step bytes at a time.
   for (; P < End; P += Step)
     if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P))
       for (size_t I = 0; I < Step; I++, Bundle >>= 8)
         if (uint8_t V = Bundle & 0xff)
-          Handle8bitCounter(FirstFeature + P - Begin + I, V);
+          Handle8bitCounter(FirstFeature, P - Begin + I, V);
 
   // Iterate by 1 byte until the end.
   for (; P < End; P++)
     if (uint8_t V = *P)
-      Handle8bitCounter(FirstFeature + P - Begin, V);
+      Handle8bitCounter(FirstFeature, P - Begin, V);
 }
 
 template <class Callback>  // bool Callback(size_t Feature)
@@ -190,7 +197,8 @@ __attribute__((noinline))
 void TracePC::CollectFeatures(Callback HandleFeature) const {
   uint8_t *Counters = this->Counters();
   size_t N = GetNumPCs();
-  auto Handle8bitCounter = [&](size_t Idx, uint8_t Counter) {
+  auto Handle8bitCounter = [&](size_t FirstFeature,
+                               size_t Idx, uint8_t Counter) {
     assert(Counter);
     unsigned Bit = 0;
     /**/ if (Counter >= 128) Bit = 7;
@@ -200,19 +208,22 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
     else if (Counter >= 4) Bit = 3;
     else if (Counter >= 3) Bit = 2;
     else if (Counter >= 2) Bit = 1;
-    HandleFeature(Idx * 8 + Bit);
+    HandleFeature(FirstFeature + Idx * 8 + Bit);
   };
 
   size_t FirstFeature = 0;
+
   if (!NumInline8bitCounters) {
     ForEachNonZeroByte(Counters, Counters + N, FirstFeature, Handle8bitCounter);
     FirstFeature += N * 8;
   }
 
-  for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
-    ForEachNonZeroByte(ModuleCounters[i].Start, ModuleCounters[i].Stop,
-                       FirstFeature, Handle8bitCounter);
-    FirstFeature += 8 * (ModuleCounters[i].Stop - ModuleCounters[i].Start);
+  if (NumInline8bitCounters) {
+    for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
+      ForEachNonZeroByte(ModuleCounters[i].Start, ModuleCounters[i].Stop,
+                         FirstFeature, Handle8bitCounter);
+      FirstFeature += 8 * (ModuleCounters[i].Stop - ModuleCounters[i].Start);
+    }
   }
 
   ForEachNonZeroByte(ExtraCountersBegin(), ExtraCountersEnd(), FirstFeature,

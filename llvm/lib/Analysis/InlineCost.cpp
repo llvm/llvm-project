@@ -207,6 +207,8 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool visitCastInst(CastInst &I);
   bool visitUnaryInstruction(UnaryInstruction &I);
   bool visitCmpInst(CmpInst &I);
+  bool visitAnd(BinaryOperator &I);
+  bool visitOr(BinaryOperator &I);
   bool visitSub(BinaryOperator &I);
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitLoad(LoadInst &I);
@@ -841,6 +843,34 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   }
 
   return false;
+}
+
+bool CallAnalyzer::visitOr(BinaryOperator &I) {
+  // This is necessary because the generic simplify instruction only works if
+  // both operands are constants.
+  for (unsigned i = 0; i < 2; ++i) {
+    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
+            SimplifiedValues.lookup(I.getOperand(i))))
+      if (C->isAllOnesValue()) {
+        SimplifiedValues[&I] = C;
+        return true;
+      }
+  }
+  return Base::visitOr(I);
+}
+
+bool CallAnalyzer::visitAnd(BinaryOperator &I) {
+  // This is necessary because the generic simplify instruction only works if
+  // both operands are constants.
+  for (unsigned i = 0; i < 2; ++i) {
+    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
+            SimplifiedValues.lookup(I.getOperand(i))))
+      if (C->isZero()) {
+        SimplifiedValues[&I] = C;
+        return true;
+      }
+  }
+  return Base::visitAnd(I);
 }
 
 bool CallAnalyzer::visitSub(BinaryOperator &I) {
@@ -1606,11 +1636,12 @@ InlineCost llvm::getInlineCost(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  if (!functionsHaveCompatibleAttributes(CS.getCaller(), Callee, CalleeTTI))
+  Function *Caller = CS.getCaller();
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI))
     return llvm::InlineCost::getNever();
 
   // Don't inline this call if the caller has the optnone attribute.
-  if (CS.getCaller()->hasFnAttribute(Attribute::OptimizeNone))
+  if (Caller->hasFnAttribute(Attribute::OptimizeNone))
     return llvm::InlineCost::getNever();
 
   // Don't inline functions which can be interposed at link-time.  Don't inline

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -o - | FileCheck %s
 
 ; This test verifies that we produce different code for different architectures
 ; based on target-cpu and target-features attributes.

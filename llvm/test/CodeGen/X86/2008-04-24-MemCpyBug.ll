@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep 120
+; RUN: llc < %s -mtriple=i686-- | not grep 120
 ; Don't accidentally add the offset twice for trailing bytes.
 
 	%struct.S63 = type { [63 x i8] }

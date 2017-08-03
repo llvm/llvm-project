@@ -212,6 +212,7 @@ def AtomItineraries : ProcessorItineraries<
   InstrItinData<IIC_SSE_PSHUF_RI, [InstrStage<1, [Port0]>] >,
   InstrItinData<IIC_SSE_PSHUF_MI, [InstrStage<1, [Port0]>] >,
 
+  InstrItinData<IIC_SSE_PACK, [InstrStage<1, [Port0]>] >,
   InstrItinData<IIC_SSE_UNPCK, [InstrStage<1, [Port0]>] >,
 
   InstrItinData<IIC_SSE_SQRTPS_RR, [InstrStage<70, [Port0, Port1]>] >,

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse4.1 -o %t
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse4.1 -o %t
 ; RUN: grep xorps %t | count 1
 
 ; Test that when we don't -enable-unsafe-fp-math, we don't do the optimization

@@ -958,6 +958,18 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
+  // Check if outer and inner loop contain legal instructions only.
+  for (auto *BB : OuterLoop->blocks())
+    for (Instruction &I : *BB)
+      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+        // readnone functions do not prevent interchanging.
+        if (CI->doesNotReadMemory())
+          continue;
+        DEBUG(dbgs() << "Loops with call instructions cannot be interchanged "
+                     << "safely.");
+        return false;
+      }
+
   // Create unique Preheaders if we already do not have one.
   BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
