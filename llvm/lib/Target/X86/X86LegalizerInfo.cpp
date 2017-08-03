@@ -22,10 +22,6 @@
 using namespace llvm;
 using namespace TargetOpcode;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                    const X86TargetMachine &TM)
     : Subtarget(STI), TM(TM) {

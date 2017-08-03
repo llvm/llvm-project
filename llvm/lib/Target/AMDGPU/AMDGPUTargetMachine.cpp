@@ -485,12 +485,10 @@ public:
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   bool addInstSelector() override;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-#endif
   void addFastRegAlloc(FunctionPass *RegAllocPass) override;
   void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
   void addPreRegAlloc() override;
@@ -725,7 +723,6 @@ bool GCNPassConfig::addInstSelector() {
   return false;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool GCNPassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -745,8 +742,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
-
-#endif
 
 void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {

@@ -26,10 +26,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "This shouldn't be built without GISel"
-#endif
-
 ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
     : CallLowering(&TLI) {}
 

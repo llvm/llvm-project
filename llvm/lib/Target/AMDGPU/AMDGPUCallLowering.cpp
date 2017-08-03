@@ -26,10 +26,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "This shouldn't be built without GISel"
-#endif
-
 AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI), AMDGPUASI(TLI.getAMDGPUAS()) {
 }
