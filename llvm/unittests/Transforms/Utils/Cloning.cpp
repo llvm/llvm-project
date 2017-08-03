@@ -507,6 +507,19 @@ protected:
                                 DINode::FlagZero, false);
     F->setSubprogram(Subprogram);
 
+    // Create and assign DIGlobalVariableExpression to gv
+    auto GVExpression = DBuilder.createGlobalVariableExpression(
+        Subprogram, "gv", "gv", File, 1, DBuilder.createNullPtrType(), false);
+    GV->addDebugInfo(GVExpression);
+
+    // DIGlobalVariableExpression not attached to any global variable
+    auto Expr = DBuilder.createExpression(
+        ArrayRef<uint64_t>{dwarf::DW_OP_constu, 42U, dwarf::DW_OP_stack_value});
+
+    DBuilder.createGlobalVariableExpression(
+        Subprogram, "unattached", "unattached", File, 1,
+        DBuilder.createNullPtrType(), false, Expr);
+
     auto *Entry = BasicBlock::Create(C, "", F);
     IBuilder.SetInsertPoint(Entry);
     IBuilder.CreateRetVoid();
@@ -544,6 +557,52 @@ TEST_F(CloneModule, Subprogram) {
 TEST_F(CloneModule, GlobalMetadata) {
   GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
   EXPECT_NE(nullptr, NewGV->getMetadata(LLVMContext::MD_type));
+}
+
+TEST_F(CloneModule, GlobalDebugInfo) {
+  GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
+  EXPECT_TRUE(NewGV != nullptr);
+
+  // Find debug info expression assigned to global
+  SmallVector<DIGlobalVariableExpression *, 1> GVs;
+  NewGV->getDebugInfo(GVs);
+  EXPECT_EQ(GVs.size(), 1U);
+
+  DIGlobalVariableExpression *GVExpr = GVs[0];
+  DIGlobalVariable *GV = GVExpr->getVariable();
+  EXPECT_TRUE(GV != nullptr);
+
+  EXPECT_EQ(GV->getName(), "gv");
+  EXPECT_EQ(GV->getLine(), 1U);
+
+  // Assert that the scope of the debug info attached to
+  // global variable matches the cloned function.
+  DISubprogram *SP = NewM->getFunction("f")->getSubprogram();
+  EXPECT_TRUE(SP != nullptr);
+  EXPECT_EQ(GV->getScope(), SP);
+}
+
+TEST_F(CloneModule, CompileUnit) {
+  // Find DICompileUnit listed in llvm.dbg.cu
+  auto *NMD = NewM->getNamedMetadata("llvm.dbg.cu");
+  EXPECT_TRUE(NMD != nullptr);
+  EXPECT_EQ(NMD->getNumOperands(), 1U);
+
+  DICompileUnit *CU = dyn_cast<llvm::DICompileUnit>(NMD->getOperand(0));
+  EXPECT_TRUE(CU != nullptr);
+
+  // Assert this CU is consistent with the cloned function debug info
+  DISubprogram *SP = NewM->getFunction("f")->getSubprogram();
+  EXPECT_TRUE(SP != nullptr);
+  EXPECT_EQ(SP->getUnit(), CU);
+
+  // Check globals listed in CU have the correct scope
+  DIGlobalVariableExpressionArray GlobalArray = CU->getGlobalVariables();
+  EXPECT_EQ(GlobalArray.size(), 2U);
+  for (DIGlobalVariableExpression *GVExpr : GlobalArray) {
+    DIGlobalVariable *GV = GVExpr->getVariable();
+    EXPECT_EQ(GV->getScope(), SP);
+  }
 }
 
 TEST_F(CloneModule, Comdat) {
