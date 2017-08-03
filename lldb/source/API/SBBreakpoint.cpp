@@ -280,7 +280,7 @@ bool SBBreakpoint::GetAutoContinue() {
         bkpt_sp->GetTarget().GetAPIMutex());
     return bkpt_sp->IsAutoContinue();
   }
-  return nullptr;
+  return false;
 }
 
 uint32_t SBBreakpoint::GetHitCount() const {
