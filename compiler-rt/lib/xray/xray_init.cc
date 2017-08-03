@@ -44,10 +44,28 @@ __sanitizer::atomic_uint8_t XRayInitialized{0};
 __sanitizer::SpinMutex XRayInstrMapMutex;
 XRaySledMap XRayInstrMap;
 
+// Global flag to determine whether the flags have been initialized.
+__sanitizer::atomic_uint8_t XRayFlagsInitialized{0};
+
+// A mutex to allow only one thread to initialize the XRay data structures.
+__sanitizer::SpinMutex XRayInitMutex;
+
 // __xray_init() will do the actual loading of the current process' memory map
 // and then proceed to look for the .xray_instr_map section/segment.
 void __xray_init() XRAY_NEVER_INSTRUMENT {
-  initializeFlags();
+  __sanitizer::SpinMutexLock Guard(&XRayInitMutex);
+  // Short-circuit if we've already initialized XRay before.
+  if (__sanitizer::atomic_load(&XRayInitialized,
+                               __sanitizer::memory_order_acquire))
+    return;
+
+  if (!__sanitizer::atomic_load(&XRayFlagsInitialized,
+                                __sanitizer::memory_order_acquire)) {
+    initializeFlags();
+    __sanitizer::atomic_store(&XRayFlagsInitialized, true,
+                              __sanitizer::memory_order_release);
+  }
+
   if (__start_xray_instr_map == nullptr) {
     if (Verbosity())
       Report("XRay instrumentation map missing. Not initializing XRay.\n");
@@ -64,9 +82,13 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
   __sanitizer::atomic_store(&XRayInitialized, true,
                             __sanitizer::memory_order_release);
 
+#ifndef XRAY_NO_PREINIT
   if (flags()->patch_premain)
     __xray_patch();
+#endif
 }
 
+#ifndef XRAY_NO_PREINIT
 __attribute__((section(".preinit_array"),
                used)) void (*__local_xray_preinit)(void) = __xray_init;
+#endif
