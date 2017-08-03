@@ -26,6 +26,7 @@
 #endif /* __APPLE__ */
 #endif /* HAS_LIBOPENCL */
 
+#include <assert.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -1407,6 +1408,61 @@ static void launchKernelCUDA(PollyGPUFunction *Kernel, unsigned int GridDimX,
     fprintf(stderr, "Launching CUDA kernel failed.\n");
     exit(-1);
   }
+}
+
+// Maximum number of managed memory pointers.
+#define MAX_POINTERS 4000
+// For the rationale behing a list of free pointers, see `polly_freeManaged`.
+void *g_managedptrs[MAX_POINTERS];
+int g_nmanagedptrs = 0;
+
+// Add a pointer as being allocated by cuMallocManaged
+void addManagedPtr(void *mem) {
+  assert(g_nmanagedptrs < MAX_POINTERS && "We have hit the maximum number of "
+                                          "managed pointers allowed. Increase "
+                                          "MAX_POINTERS");
+  g_managedptrs[g_nmanagedptrs++] = mem;
+}
+
+int isManagedPtr(void *mem) {
+  for (int i = 0; i < g_nmanagedptrs; i++) {
+    if (g_managedptrs[i] == mem)
+      return 1;
+  }
+  return 0;
+}
+
+void polly_freeManaged(void *mem) {
+  dump_function();
+
+  // In a real-world program this was used (COSMO), there were more `free`
+  // calls in the original source than `malloc` calls. Hence, replacing all
+  // `free`s with `cudaFree` does not work, since we would try to free
+  // 'illegal' memory.
+  // As a quick fix, we keep a free list and check if `mem` is a managed memory
+  // pointer. If it is, we call `cudaFree`.
+  // If not, we pass it along to the underlying allocator.
+  // This is a hack, and can be removed if the underlying issue is fixed.
+  if (isManagedPtr(mem)) {
+    if (cudaFree(mem) != cudaSuccess) {
+      fprintf(stderr, "cudaFree failed.\n");
+      exit(-1);
+    }
+    return;
+  } else {
+    free(mem);
+  }
+}
+
+void *polly_mallocManaged(size_t size) {
+  dump_function();
+  void *a;
+  if (cudaMallocManaged(&a, size, cudaMemAttachGlobal) != cudaSuccess) {
+    fprintf(stderr, "cudaMallocManaged failed for size: %zu\n", size);
+    exit(-1);
+  }
+  addManagedPtr(a);
+  return a;
 }
 
 static void freeDeviceMemoryCUDA(PollyGPUDevicePtr *Allocation) {

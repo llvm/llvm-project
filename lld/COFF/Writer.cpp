@@ -65,8 +65,9 @@ public:
       D->Type = COFF::IMAGE_DEBUG_TYPE_CODEVIEW;
       D->SizeOfData = Record->getSize();
       D->AddressOfRawData = Record->getRVA();
-      // TODO(compnerd) get the file offset
-      D->PointerToRawData = 0;
+      OutputSection *OS = Record->getOutputSection();
+      uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
+      D->PointerToRawData = Offs;
 
       ++D;
     }

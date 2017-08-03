@@ -97,4 +97,4 @@ def from_name(name):
     return Make()
   if name == 'ninja':
     return Ninja()
-  raise LookupError, 'unknown generator: %s; supported generators are make and ninja' % name
+  raise LookupError('unknown generator: %s; supported generators are make and ninja' % name)

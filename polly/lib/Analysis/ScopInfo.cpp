@@ -1162,41 +1162,38 @@ bool MemoryAccess::isStrideOne(isl::map Schedule) const {
   return isStrideX(Schedule, 1);
 }
 
-void MemoryAccess::setAccessRelation(__isl_take isl_map *NewAccess) {
-  AccessRelation = isl::manage(NewAccess);
+void MemoryAccess::setAccessRelation(isl::map NewAccess) {
+  AccessRelation = NewAccess;
 }
 
-void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
+void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
   assert(NewAccess);
 
 #ifndef NDEBUG
   // Check domain space compatibility.
-  auto *NewSpace = isl_map_get_space(NewAccess);
-  auto *NewDomainSpace = isl_space_domain(isl_space_copy(NewSpace));
-  auto *OriginalDomainSpace = getStatement()->getDomainSpace();
-  assert(isl_space_has_equal_tuples(OriginalDomainSpace, NewDomainSpace));
-  isl_space_free(NewDomainSpace);
-  isl_space_free(OriginalDomainSpace);
+  isl::space NewSpace = NewAccess.get_space();
+  isl::space NewDomainSpace = NewSpace.domain();
+  isl::space OriginalDomainSpace =
+      isl::manage(getStatement()->getDomainSpace());
+  assert(OriginalDomainSpace.has_equal_tuples(NewDomainSpace));
 
   // Reads must be executed unconditionally. Writes might be executed in a
   // subdomain only.
   if (isRead()) {
     // Check whether there is an access for every statement instance.
-    auto *StmtDomain = getStatement()->getDomain();
-    StmtDomain = isl_set_intersect_params(
-        StmtDomain, getStatement()->getParent()->getContext());
-    auto *NewDomain = isl_map_domain(isl_map_copy(NewAccess));
-    assert(isl_set_is_subset(StmtDomain, NewDomain) &&
+    isl::set StmtDomain = isl::manage(getStatement()->getDomain());
+    StmtDomain = StmtDomain.intersect_params(
+        isl::manage(getStatement()->getParent()->getContext()));
+    isl::set NewDomain = NewAccess.domain();
+    assert(StmtDomain.is_subset(NewDomain) &&
            "Partial READ accesses not supported");
-    isl_set_free(NewDomain);
-    isl_set_free(StmtDomain);
   }
 
-  auto *NewAccessSpace = isl_space_range(NewSpace);
-  assert(isl_space_has_tuple_id(NewAccessSpace, isl_dim_set) &&
+  isl::space NewAccessSpace = NewAccess.get_space();
+  assert(NewAccessSpace.has_tuple_id(isl::dim::set) &&
          "Must specify the array that is accessed");
-  auto *NewArrayId = isl_space_get_tuple_id(NewAccessSpace, isl_dim_set);
-  auto *SAI = static_cast<ScopArrayInfo *>(isl_id_get_user(NewArrayId));
+  isl::id NewArrayId = NewAccessSpace.get_tuple_id(isl::dim::set);
+  auto *SAI = static_cast<ScopArrayInfo *>(NewArrayId.get_user());
   assert(SAI && "Must set a ScopArrayInfo");
 
   if (SAI->isArrayKind() && SAI->getBasePtrOriginSAI()) {
@@ -1211,14 +1208,12 @@ void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
   // Check whether access dimensions correspond to number of dimensions of the
   // accesses array.
   auto Dims = SAI->getNumberOfDimensions();
-  assert(isl_space_dim(NewAccessSpace, isl_dim_set) == Dims &&
+  assert(NewAccessSpace.dim(isl::dim::set) == Dims &&
          "Access dims must match array dims");
-  isl_space_free(NewAccessSpace);
-  isl_id_free(NewArrayId);
 #endif
 
-  NewAccess = isl_map_gist_domain(NewAccess, getStatement()->getDomain());
-  NewAccessRelation = isl::manage(NewAccess);
+  NewAccess = NewAccess.gist_domain(isl::manage(getStatement()->getDomain()));
+  NewAccessRelation = NewAccess;
 }
 
 bool MemoryAccess::isLatestPartialAccess() const {
@@ -3673,8 +3668,8 @@ void Scop::foldSizeConstantsToRight() {
 
     for (auto &Access : AccessFunctions)
       if (Access->getScopArrayInfo() == Array)
-        Access->setAccessRelation(isl_map_apply_range(
-            Access->getAccessRelation().release(), isl_map_copy(Transform)));
+        Access->setAccessRelation(Access->getAccessRelation().apply_range(
+            isl::manage(isl_map_copy(Transform))));
 
     isl_map_free(Transform);
 
@@ -4188,9 +4183,9 @@ static void replaceBasePtrArrays(Scop *S, const ScopArrayInfo *Old,
       if (Access->getLatestScopArrayInfo() != Old)
         continue;
 
-      isl_id *Id = New->getBasePtrId().release();
-      isl_map *Map = Access->getAccessRelation().release();
-      Map = isl_map_set_tuple_id(Map, isl_dim_out, Id);
+      isl::id Id = New->getBasePtrId();
+      isl::map Map = Access->getAccessRelation();
+      Map = Map.set_tuple_id(isl::dim::out, Id);
       Access->setAccessRelation(Map);
     }
 }
@@ -5259,6 +5254,9 @@ ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
     std::unique_ptr<Scop> S = SB.getScop();
     if (!S)
       continue;
+    ScopDetection::LoopStats Stats =
+        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
+    updateLoopCountStatistic(Stats);
     bool Inserted = RegionToScopMap.insert({R, std::move(S)}).second;
     assert(Inserted && "Building Scop for the same region twice!");
     (void)Inserted;
