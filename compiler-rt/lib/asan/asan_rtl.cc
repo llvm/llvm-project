@@ -484,6 +484,11 @@ static void AsanInitInternal() {
   }
 
   VReport(1, "AddressSanitizer Init done\n");
+
+  if (flags()->sleep_after_init) {
+    Report("Sleeping for %d second(s)\n", flags()->sleep_after_init);
+    SleepForSeconds(flags()->sleep_after_init);
+  }
 }
 
 // Initialize as requested from some part of ASan runtime library (interceptors,

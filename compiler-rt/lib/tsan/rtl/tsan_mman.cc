@@ -256,6 +256,10 @@ void *user_valloc(ThreadState *thr, uptr pc, uptr sz) {
 
 void *user_pvalloc(ThreadState *thr, uptr pc, uptr sz) {
   uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(sz, PageSize))) {
+    errno = errno_ENOMEM;
+    return Allocator::FailureHandler::OnBadRequest();
+  }
   // pvalloc(0) should allocate one page.
   sz = sz ? RoundUpTo(sz, PageSize) : PageSize;
   return SetErrnoOnNull(user_alloc_internal(thr, pc, sz, PageSize));

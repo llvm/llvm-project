@@ -3449,6 +3449,12 @@ TEST(MemorySanitizer, pvalloc) {
   EXPECT_EQ(0U, (uintptr_t)p % PageSize);
   EXPECT_EQ(PageSize, __sanitizer_get_allocated_size(p));
   free(p);
+
+  // Overflows should be caught.
+  EXPECT_DEATH(p = pvalloc((uintptr_t)-1),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_DEATH(p = pvalloc((uintptr_t)-(PageSize - 1)),
+               "allocator is terminating the process instead of returning 0");
 }
 #endif
 

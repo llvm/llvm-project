@@ -255,6 +255,10 @@ void *msan_valloc(uptr size, StackTrace *stack) {
 
 void *msan_pvalloc(uptr size, StackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
+    errno = errno_ENOMEM;
+    return Allocator::FailureHandler::OnBadRequest();
+  }
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
   return SetErrnoOnNull(MsanAllocate(stack, size, PageSize, false));
