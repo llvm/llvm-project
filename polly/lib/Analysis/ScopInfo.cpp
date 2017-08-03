@@ -346,8 +346,7 @@ void ScopArrayInfo::applyAndSetFAD(Value *FAD) {
 
   std::string param_name = getName();
   param_name += "_fortranarr_size";
-  // TODO: see if we need to add `this` as the id user pointer
-  isl::id IdPwAff = isl::id::alloc(S.getIslCtx(), param_name.c_str(), nullptr);
+  isl::id IdPwAff = isl::id::alloc(S.getIslCtx(), param_name.c_str(), this);
 
   Space = Space.set_dim_id(isl::dim::param, 0, IdPwAff);
   isl::pw_aff PwAff =
@@ -2062,14 +2061,15 @@ namespace {
 /// Remap parameter values but keep AddRecs valid wrt. invariant loads.
 struct SCEVSensitiveParameterRewriter
     : public SCEVRewriteVisitor<SCEVSensitiveParameterRewriter> {
-  ValueToValueMap &VMap;
+  const ValueToValueMap &VMap;
 
 public:
-  SCEVSensitiveParameterRewriter(ValueToValueMap &VMap, ScalarEvolution &SE)
+  SCEVSensitiveParameterRewriter(const ValueToValueMap &VMap,
+                                 ScalarEvolution &SE)
       : SCEVRewriteVisitor(SE), VMap(VMap) {}
 
   static const SCEV *rewrite(const SCEV *E, ScalarEvolution &SE,
-                             ValueToValueMap &VMap) {
+                             const ValueToValueMap &VMap) {
     SCEVSensitiveParameterRewriter SSPR(VMap, SE);
     return SSPR.visit(E);
   }
@@ -2091,16 +2091,17 @@ public:
 
 /// Check whether we should remap a SCEV expression.
 struct SCEVFindInsideScop : public SCEVTraversal<SCEVFindInsideScop> {
-  ValueToValueMap &VMap;
+  const ValueToValueMap &VMap;
   bool FoundInside = false;
-  Scop *S;
+  const Scop *S;
 
 public:
-  SCEVFindInsideScop(ValueToValueMap &VMap, ScalarEvolution &SE, Scop *S)
+  SCEVFindInsideScop(const ValueToValueMap &VMap, ScalarEvolution &SE,
+                     const Scop *S)
       : SCEVTraversal(*this), VMap(VMap), S(S) {}
 
   static bool hasVariant(const SCEV *E, ScalarEvolution &SE,
-                         ValueToValueMap &VMap, Scop *S) {
+                         const ValueToValueMap &VMap, const Scop *S) {
     SCEVFindInsideScop SFIS(VMap, SE, S);
     SFIS.visitAll(E);
     return SFIS.FoundInside;
@@ -2119,7 +2120,7 @@ public:
 };
 } // namespace
 
-const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *E) {
+const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *E) const {
   // Check whether it makes sense to rewrite the SCEV.  (ScalarEvolution
   // doesn't like addition between an AddRec and an expression that
   // doesn't have a dominance relationship with it.)
@@ -2208,7 +2209,7 @@ void Scop::addParams(const ParameterSetTy &NewParameters) {
   }
 }
 
-__isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
+__isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) const {
   // Normalize the SCEV to get the representing element for an invariant load.
   Parameter = getRepresentingInvariantLoadSCEV(Parameter);
   return isl_id_copy(ParameterIds.lookup(Parameter));
@@ -2382,41 +2383,38 @@ void Scop::addParameterBounds() {
   }
 }
 
-// We use the outermost dimension to generate GPU transfers for Fortran arrays
-// even when the array bounds are not known statically. To do so, we need the
-// outermost dimension information. We add this into the context so that the
-// outermost dimension is available during codegen.
-// We currently do not care about dimensions other than the outermost
-// dimension since it doesn't affect transfers.
-static isl_set *addFortranArrayOutermostDimParams(__isl_give isl_set *Context,
-                                                  Scop::array_range Arrays) {
-
-  std::vector<isl_id *> OutermostSizeIds;
+static std::vector<isl::id> getFortranArrayIds(Scop::array_range Arrays) {
+  std::vector<isl::id> OutermostSizeIds;
   for (auto Array : Arrays) {
     // To check if an array is a Fortran array, we check if it has a isl_pw_aff
     // for its outermost dimension. Fortran arrays will have this since the
     // outermost dimension size can be picked up from their runtime description.
     // TODO: actually need to check if it has a FAD, but for now this works.
     if (Array->getNumberOfDimensions() > 0) {
-      isl_pw_aff *PwAff = Array->getDimensionSizePw(0).release();
+      isl::pw_aff PwAff = Array->getDimensionSizePw(0);
       if (!PwAff)
         continue;
 
-      isl_id *Id = isl_pw_aff_get_dim_id(PwAff, isl_dim_param, 0);
-      isl_pw_aff_free(PwAff);
-      assert(Id && "Invalid Id for PwAff expression in Fortran array");
+      isl::id Id =
+          isl::manage(isl_pw_aff_get_dim_id(PwAff.get(), isl_dim_param, 0));
+      assert(!Id.is_null() &&
+             "Invalid Id for PwAff expression in Fortran array");
+      Id.dump();
       OutermostSizeIds.push_back(Id);
     }
   }
+  return OutermostSizeIds;
+}
 
-  const int NumTrueParams = isl_set_dim(Context, isl_dim_param);
-  Context = isl_set_add_dims(Context, isl_dim_param, OutermostSizeIds.size());
+// The FORTRAN array size parameters are known to be non-negative.
+static isl_set *boundFortranArrayParams(__isl_give isl_set *Context,
+                                        Scop::array_range Arrays) {
+  std::vector<isl::id> OutermostSizeIds;
+  OutermostSizeIds = getFortranArrayIds(Arrays);
 
-  for (size_t i = 0; i < OutermostSizeIds.size(); i++) {
-    Context = isl_set_set_dim_id(Context, isl_dim_param, NumTrueParams + i,
-                                 OutermostSizeIds[i]);
-    Context =
-        isl_set_lower_bound_si(Context, isl_dim_param, NumTrueParams + i, 0);
+  for (isl::id Id : OutermostSizeIds) {
+    int dim = isl_set_find_dim_by_id(Context, isl_dim_param, Id.get());
+    Context = isl_set_lower_bound_si(Context, isl_dim_param, dim, 0);
   }
 
   return Context;
@@ -2427,20 +2425,13 @@ void Scop::realignParams() {
     return;
 
   // Add all parameters into a common model.
-  isl_space *Space = isl_space_params_alloc(getIslCtx(), ParameterIds.size());
-
-  unsigned PDim = 0;
-  for (const auto *Parameter : Parameters) {
-    isl_id *id = getIdForParam(Parameter);
-    Space = isl_space_set_dim_id(Space, isl_dim_param, PDim++, id);
-  }
+  isl::space Space = getFullParamSpace();
 
   // Align the parameters of all data structures to the model.
-  Context = isl_set_align_params(Context, Space);
+  Context = isl_set_align_params(Context, Space.copy());
 
-  // Add the outermost dimension of the Fortran arrays into the Context.
-  // See the description of the function for more information.
-  Context = addFortranArrayOutermostDimParams(Context, arrays());
+  // Bound the size of the fortran array dimensions.
+  Context = boundFortranArrayParams(Context, arrays());
 
   // As all parameters are known add bounds to them.
   addParameterBounds();
@@ -4310,6 +4301,25 @@ std::pair<std::string, std::string> Scop::getEntryExitStr() const {
 __isl_give isl_set *Scop::getContext() const { return isl_set_copy(Context); }
 __isl_give isl_space *Scop::getParamSpace() const {
   return isl_set_get_space(Context);
+}
+
+isl::space Scop::getFullParamSpace() const {
+  std::vector<isl::id> FortranIDs;
+  FortranIDs = getFortranArrayIds(arrays());
+
+  isl::space Space = isl::space::params_alloc(
+      getIslCtx(), ParameterIds.size() + FortranIDs.size());
+
+  unsigned PDim = 0;
+  for (const SCEV *Parameter : Parameters) {
+    isl::id Id = isl::manage(getIdForParam(Parameter));
+    Space = Space.set_dim_id(isl::dim::param, PDim++, Id);
+  }
+
+  for (isl::id Id : FortranIDs)
+    Space = Space.set_dim_id(isl::dim::param, PDim++, Id);
+
+  return Space;
 }
 
 __isl_give isl_set *Scop::getAssumedContext() const {

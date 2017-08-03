@@ -93,6 +93,19 @@ void BreakpointLocation::SetEnabled(bool enabled) {
                                              : eBreakpointEventTypeDisabled);
 }
 
+bool BreakpointLocation::IsAutoContinue() const {
+  if (m_options_ap 
+      && m_options_ap->IsOptionSet(BreakpointOptions::eAutoContinue))
+    return m_options_ap->IsAutoContinue();
+  else
+    return m_owner.IsAutoContinue();
+}
+
+void BreakpointLocation::SetAutoContinue(bool auto_continue) {
+  GetLocationOptions()->SetAutoContinue(auto_continue);
+  SendBreakpointLocationChangedEvent(eBreakpointEventTypeAutoContinueChanged);
+}
+
 void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
   if (thread_id != LLDB_INVALID_THREAD_ID)
     GetLocationOptions()->SetThreadID(thread_id);

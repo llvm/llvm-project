@@ -455,7 +455,8 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(),
                              {"-xc++", "-target", "x86_64-linux-unknown",
-                              "-m64", "--gcc-toolchain=/randomusr"});
+                              "-m64", "--gcc-toolchain=/randomusr",
+                              "-stdlib=libstdc++"});
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/true);
 

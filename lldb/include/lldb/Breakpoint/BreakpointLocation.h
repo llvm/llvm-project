@@ -107,6 +107,19 @@ public:
   bool IsEnabled() const;
 
   //------------------------------------------------------------------
+  /// If \a auto_continue is \b true, set the breakpoint to continue when hit.
+  //------------------------------------------------------------------
+  void SetAutoContinue(bool auto_continue);
+
+  //------------------------------------------------------------------
+  /// Check the AutoContinue state.
+  ///
+  /// @return
+  ///     \b true if the breakpoint is set to auto-continue, \b false if not.
+  //------------------------------------------------------------------
+  bool IsAutoContinue() const;
+
+  //------------------------------------------------------------------
   /// Return the current Ignore Count.
   ///
   /// @return

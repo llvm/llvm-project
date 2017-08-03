@@ -149,6 +149,25 @@ const char *SBBreakpointLocation::GetCondition() {
   return NULL;
 }
 
+void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
+  BreakpointLocationSP loc_sp = GetSP();
+  if (loc_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        loc_sp->GetTarget().GetAPIMutex());
+    loc_sp->SetAutoContinue(auto_continue);
+  }
+}
+
+bool SBBreakpointLocation::GetAutoContinue() {
+  BreakpointLocationSP loc_sp = GetSP();
+  if (loc_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        loc_sp->GetTarget().GetAPIMutex());
+    return loc_sp->IsAutoContinue();
+  }
+  return NULL;
+}
+
 void SBBreakpointLocation::SetScriptCallbackFunction(
     const char *callback_function_name) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));

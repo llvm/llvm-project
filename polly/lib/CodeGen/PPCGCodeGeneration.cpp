@@ -2349,6 +2349,56 @@ std::string GPUNodeBuilder::finalizeKernelFunction() {
 
   return Assembly;
 }
+/// Construct an `isl_pw_aff_list` from a vector of `isl_pw_aff`
+/// @param PwAffs The list of piecewise affine functions to create an
+///               `isl_pw_aff_list` from. We expect an rvalue ref because
+///               all the isl_pw_aff are used up by this function.
+///
+/// @returns  The `isl_pw_aff_list`.
+__isl_give isl_pw_aff_list *
+createPwAffList(isl_ctx *Context,
+                const std::vector<__isl_take isl_pw_aff *> &&PwAffs) {
+  isl_pw_aff_list *List = isl_pw_aff_list_alloc(Context, PwAffs.size());
+
+  for (unsigned i = 0; i < PwAffs.size(); i++) {
+    List = isl_pw_aff_list_insert(List, i, PwAffs[i]);
+  }
+  return List;
+}
+
+/// Align all the `PwAffs` such that they have the same parameter dimensions.
+///
+/// We loop over all `pw_aff` and align all of their spaces together to
+/// create a common space for all the `pw_aff`. This common space is the
+/// `AlignSpace`. We then align all the `pw_aff` to this space. We start
+/// with the given `SeedSpace`.
+/// @param PwAffs    The list of piecewise affine functions we want to align.
+///                  This is an rvalue reference because the entire vector is
+///                  used up by the end of the operation.
+/// @param SeedSpace The space to start the alignment process with.
+/// @returns         A std::pair, whose first element is the aligned space,
+///                  whose second element is the vector of aligned piecewise
+///                  affines.
+static std::pair<__isl_give isl_space *, std::vector<__isl_give isl_pw_aff *>>
+alignPwAffs(const std::vector<__isl_take isl_pw_aff *> &&PwAffs,
+            __isl_take isl_space *SeedSpace) {
+  assert(SeedSpace && "Invalid seed space given.");
+
+  isl_space *AlignSpace = SeedSpace;
+  for (isl_pw_aff *PwAff : PwAffs) {
+    isl_space *PwAffSpace = isl_pw_aff_get_domain_space(PwAff);
+    AlignSpace = isl_space_align_params(AlignSpace, PwAffSpace);
+  }
+  std::vector<isl_pw_aff *> AdjustedPwAffs;
+
+  for (unsigned i = 0; i < PwAffs.size(); i++) {
+    isl_pw_aff *Adjusted = PwAffs[i];
+    assert(Adjusted && "Invalid pw_aff given.");
+    Adjusted = isl_pw_aff_align_params(Adjusted, isl_space_copy(AlignSpace));
+    AdjustedPwAffs.push_back(Adjusted);
+  }
+  return std::make_pair(AlignSpace, AdjustedPwAffs);
+}
 
 namespace {
 class PPCGCodeGeneration : public ScopPass {
@@ -2732,12 +2782,7 @@ public:
   /// @param PPCGArray The array to compute bounds for.
   /// @param Array The polly array from which to take the information.
   void setArrayBounds(gpu_array_info &PPCGArray, ScopArrayInfo *Array) {
-    isl_pw_aff_list *BoundsList =
-        isl_pw_aff_list_alloc(S->getIslCtx(), PPCGArray.n_index);
-    std::vector<isl::pw_aff> PwAffs;
-
-    isl_space *AlignSpace = S->getParamSpace();
-    AlignSpace = isl_space_add_dims(AlignSpace, isl_dim_set, 1);
+    std::vector<isl_pw_aff *> Bounds;
 
     if (PPCGArray.n_index > 0) {
       if (isl_set_is_empty(PPCGArray.extent)) {
@@ -2746,9 +2791,7 @@ public:
             isl_space_params(isl_set_get_space(Dom)));
         isl_set_free(Dom);
         isl_pw_aff *Zero = isl_pw_aff_from_aff(isl_aff_zero_on_domain(LS));
-        Zero = isl_pw_aff_align_params(Zero, isl_space_copy(AlignSpace));
-        PwAffs.push_back(isl::manage(isl_pw_aff_copy(Zero)));
-        BoundsList = isl_pw_aff_list_insert(BoundsList, 0, Zero);
+        Bounds.push_back(Zero);
       } else {
         isl_set *Dom = isl_set_copy(PPCGArray.extent);
         Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
@@ -2761,9 +2804,7 @@ public:
         One = isl_aff_add_constant_si(One, 1);
         Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
         Bound = isl_pw_aff_gist(Bound, S->getContext());
-        Bound = isl_pw_aff_align_params(Bound, isl_space_copy(AlignSpace));
-        PwAffs.push_back(isl::manage(isl_pw_aff_copy(Bound)));
-        BoundsList = isl_pw_aff_list_insert(BoundsList, 0, Bound);
+        Bounds.push_back(Bound);
       }
     }
 
@@ -2772,13 +2813,31 @@ public:
       auto LS = isl_pw_aff_get_domain_space(Bound);
       auto Aff = isl_multi_aff_zero(LS);
       Bound = isl_pw_aff_pullback_multi_aff(Bound, Aff);
-      Bound = isl_pw_aff_align_params(Bound, isl_space_copy(AlignSpace));
-      PwAffs.push_back(isl::manage(isl_pw_aff_copy(Bound)));
-      BoundsList = isl_pw_aff_list_insert(BoundsList, i, Bound);
+      Bounds.push_back(Bound);
     }
 
-    isl_space_free(AlignSpace);
+    /// To construct a `isl_multi_pw_aff`, we need all the indivisual `pw_aff`
+    /// to have the same parameter dimensions. So, we need to align them to an
+    /// appropriate space.
+    /// Scop::Context is _not_ an appropriate space, because when we have
+    /// `-polly-ignore-parameter-bounds` enabled, the Scop::Context does not
+    /// contain all parameter dimensions.
+    /// So, use the helper `alignPwAffs` to align all the `isl_pw_aff` together.
+    isl_space *SeedAlignSpace = S->getParamSpace();
+    SeedAlignSpace = isl_space_add_dims(SeedAlignSpace, isl_dim_set, 1);
+
+    isl_space *AlignSpace = nullptr;
+    std::vector<isl_pw_aff *> AlignedBounds;
+    std::tie(AlignSpace, AlignedBounds) =
+        alignPwAffs(std::move(Bounds), SeedAlignSpace);
+
+    assert(AlignSpace && "alignPwAffs did not initialise AlignSpace");
+
+    isl_pw_aff_list *BoundsList =
+        createPwAffList(S->getIslCtx(), std::move(AlignedBounds));
+
     isl_space *BoundsSpace = isl_set_get_space(PPCGArray.extent);
+    BoundsSpace = isl_space_align_params(BoundsSpace, AlignSpace);
 
     assert(BoundsSpace && "Unable to access space of array.");
     assert(BoundsList && "Unable to access list of bounds.");
@@ -3028,6 +3087,9 @@ public:
     isl_schedule *Schedule = get_schedule(PPCGGen);
 
     int has_permutable = has_any_permutable_node(Schedule);
+
+    Schedule =
+        isl_schedule_align_params(Schedule, S->getFullParamSpace().release());
 
     if (!has_permutable || has_permutable < 0) {
       Schedule = isl_schedule_free(Schedule);
