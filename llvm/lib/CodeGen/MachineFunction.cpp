@@ -330,6 +330,20 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                MMO->getOrdering(), MMO->getFailureOrdering());
 }
 
+MachineMemOperand *
+MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
+                                      const AAMDNodes &AAInfo) {
+  MachinePointerInfo MPI = MMO->getValue() ?
+             MachinePointerInfo(MMO->getValue(), MMO->getOffset()) :
+             MachinePointerInfo(MMO->getPseudoValue(), MMO->getOffset());
+
+  return new (Allocator)
+             MachineMemOperand(MPI, MMO->getFlags(), MMO->getSize(),
+                               MMO->getBaseAlignment(), AAInfo,
+                               MMO->getRanges(), MMO->getSyncScopeID(),
+                               MMO->getOrdering(), MMO->getFailureOrdering());
+}
+
 MachineInstr::mmo_iterator
 MachineFunction::allocateMemRefsArray(unsigned long Num) {
   return Allocator.Allocate<MachineMemOperand *>(Num);
