@@ -1600,11 +1600,11 @@ private:
       simplify(NewAccRel);
 
       assert(isl_union_map_n_map(NewAccRel.keep()) == 1);
-      MA->setNewAccessRelation(isl_map_from_union_map(NewAccRel.take()));
+      MA->setNewAccessRelation(isl::map::from_union_map(NewAccRel));
     }
 
     auto *WA = S->getValueDef(SAI);
-    WA->setNewAccessRelation(DefTarget.copy());
+    WA->setNewAccessRelation(DefTarget);
     applyLifetime(Proposed);
 
     MappedValueScalars++;
@@ -1796,12 +1796,12 @@ private:
       simplify(NewAccRel);
 
       assert(isl_union_map_n_map(NewAccRel.keep()) == 1);
-      MA->setNewAccessRelation(isl_map_from_union_map(NewAccRel.take()));
+      MA->setNewAccessRelation(isl::map::from_union_map(NewAccRel));
     }
 
     // Redirect the PHI read.
     auto *PHIRead = S->getPHIRead(SAI);
-    PHIRead->setNewAccessRelation(ReadTarget.copy());
+    PHIRead->setNewAccessRelation(ReadTarget);
     applyLifetime(Proposed);
 
     MappedPHIScalars++;

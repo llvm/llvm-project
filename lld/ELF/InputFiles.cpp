@@ -133,13 +133,13 @@ ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {
 }
 
 template <class ELFT>
-typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalSymbols() {
-  return makeArrayRef(Symbols.begin() + FirstNonLocal, Symbols.end());
+typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalELFSyms() {
+  return makeArrayRef(ELFSyms.begin() + FirstNonLocal, ELFSyms.end());
 }
 
 template <class ELFT>
 uint32_t ELFFileBase<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
-  return check(getObj().getSectionIndex(&Sym, Symbols, SymtabSHNDX),
+  return check(getObj().getSectionIndex(&Sym, ELFSyms, SymtabSHNDX),
                toString(this));
 }
 
@@ -147,8 +147,8 @@ template <class ELFT>
 void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
                                    const Elf_Shdr *Symtab) {
   FirstNonLocal = Symtab->sh_info;
-  Symbols = check(getObj().symbols(Symtab), toString(this));
-  if (FirstNonLocal == 0 || FirstNonLocal > Symbols.size())
+  ELFSyms = check(getObj().symbols(Symtab), toString(this));
+  if (FirstNonLocal == 0 || FirstNonLocal > ELFSyms.size())
     fatal(toString(this) + ": invalid sh_info in symbol table");
 
   StringTable = check(getObj().getStringTableForSymtab(*Symtab, Sections),
@@ -188,13 +188,13 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                               const Elf_Shdr &Sec) {
   // Group signatures are stored as symbol names in object files.
   // sh_info contains a symbol index, so we fetch a symbol and read its name.
-  if (this->Symbols.empty())
+  if (this->ELFSyms.empty())
     this->initSymtab(
         Sections,
         check(object::getSection<ELFT>(Sections, Sec.sh_link), toString(this)));
 
   const Elf_Sym *Sym = check(
-      object::getSymbol<ELFT>(this->Symbols, Sec.sh_info), toString(this));
+      object::getSymbol<ELFT>(this->ELFSyms, Sec.sh_info), toString(this));
   StringRef Signature = check(Sym->getName(this->StringTable), toString(this));
 
   // As a special case, if a symbol is a section symbol and has no name,
@@ -523,8 +523,8 @@ StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
-  SymbolBodies.reserve(this->Symbols.size());
-  for (const Elf_Sym &Sym : this->Symbols)
+  SymbolBodies.reserve(this->ELFSyms.size());
+  for (const Elf_Sym &Sym : this->ELFSyms)
     SymbolBodies.push_back(createSymbolBody(&Sym));
 }
 
@@ -617,7 +617,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
 template <class ELFT> void ArchiveFile::parse() {
   Symbols.reserve(File->getNumberOfSymbols());
   for (const Archive::Symbol &Sym : File->symbols())
-    Symbols.push_back(Symtab->addLazyArchive<ELFT>(this, Sym));
+    Symbols.push_back(Symtab->addLazyArchive<ELFT>(this, Sym)->body());
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -654,7 +654,7 @@ template <class ELFT>
 const typename ELFT::Shdr *
 SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   return check(
-      this->getObj().getSection(&Sym, this->Symbols, this->SymtabSHNDX),
+      this->getObj().getSection(&Sym, this->ELFSyms, this->SymtabSHNDX),
       toString(this));
 }
 
@@ -689,7 +689,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
     }
   }
 
-  if (this->VersymSec && this->Symbols.empty())
+  if (this->VersymSec && this->ELFSyms.empty())
     error("SHT_GNU_versym should be associated with symbol table");
 
   // Search for a DT_SONAME tag to initialize this->SoName.
@@ -756,7 +756,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   const Elf_Versym *Versym = nullptr;
   std::vector<const Elf_Verdef *> Verdefs = parseVerdefs(Versym);
 
-  Elf_Sym_Range Syms = this->getGlobalSymbols();
+  Elf_Sym_Range Syms = this->getGlobalELFSyms();
   for (const Elf_Sym &Sym : Syms) {
     unsigned VersymIndex = 0;
     if (Versym) {
@@ -899,7 +899,8 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
     KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(S)).second);
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
-    Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));
+    Symbols.push_back(
+        createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this)->body());
 }
 
 static ELFKind getELFKind(MemoryBufferRef MB) {
@@ -1001,7 +1002,7 @@ InputFile *LazyObjFile::fetch() {
 }
 
 template <class ELFT> void LazyObjFile::parse() {
-  for (StringRef Sym : getSymbols())
+  for (StringRef Sym : getSymbolNames())
     Symtab->addLazyObject<ELFT>(Sym, *this);
 }
 
@@ -1041,7 +1042,7 @@ std::vector<StringRef> LazyObjFile::getBitcodeSymbols() {
 }
 
 // Returns a vector of globally-visible defined symbol names.
-std::vector<StringRef> LazyObjFile::getSymbols() {
+std::vector<StringRef> LazyObjFile::getSymbolNames() {
   if (isBitcode(this->MB))
     return getBitcodeSymbols();
 

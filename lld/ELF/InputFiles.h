@@ -126,11 +126,11 @@ public:
 
   uint32_t getSectionIndex(const Elf_Sym &Sym) const;
 
-  Elf_Sym_Range getGlobalSymbols();
-  Elf_Sym_Range getELFSymbols() const { return Symbols; }
+  Elf_Sym_Range getGlobalELFSyms();
+  Elf_Sym_Range getELFSyms() const { return ELFSyms; }
 
 protected:
-  ArrayRef<Elf_Sym> Symbols;
+  ArrayRef<Elf_Sym> ELFSyms;
   uint32_t FirstNonLocal = 0;
   ArrayRef<Elf_Word> SymtabSHNDX;
   StringRef StringTable;
@@ -244,7 +244,7 @@ public:
   InputFile *fetch();
 
 private:
-  std::vector<StringRef> getSymbols();
+  std::vector<StringRef> getSymbolNames();
   template <class ELFT> std::vector<StringRef> getElfSymbols();
   std::vector<StringRef> getBitcodeSymbols();
 
@@ -258,7 +258,7 @@ public:
   explicit ArchiveFile(std::unique_ptr<Archive> &&File);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   template <class ELFT> void parse();
-  ArrayRef<Symbol *> getSymbols() { return Symbols; }
+  ArrayRef<SymbolBody *> getSymbols() { return Symbols; }
 
   // Returns a memory buffer for a given symbol and the offset in the archive
   // for the member. An empty memory buffer and an offset of zero
@@ -269,7 +269,7 @@ public:
 private:
   std::unique_ptr<Archive> File;
   llvm::DenseSet<uint64_t> Seen;
-  std::vector<Symbol *> Symbols;
+  std::vector<SymbolBody *> Symbols;
 };
 
 class BitcodeFile : public InputFile {
@@ -279,12 +279,12 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   template <class ELFT>
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
-  ArrayRef<Symbol *> getSymbols() { return Symbols; }
+  ArrayRef<SymbolBody *> getSymbols() { return Symbols; }
   std::unique_ptr<llvm::lto::InputFile> Obj;
   static std::vector<BitcodeFile *> Instances;
 
 private:
-  std::vector<Symbol *> Symbols;
+  std::vector<SymbolBody *> Symbols;
 };
 
 // .so file.
