@@ -39,7 +39,8 @@ void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
                     anything())))
           .bind("alg");
 
-  const auto DeclInStd = decl(isInStdNamespace());
+  const auto DeclInStd = type(hasUnqualifiedDesugaredType(
+      tagType(hasDeclaration(decl(isInStdNamespace())))));
   Finder->addMatcher(
       cxxMemberCallExpr(
           on(anyOf(hasType(DeclInStd), hasType(pointsTo(DeclInStd)))),

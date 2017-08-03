@@ -26,8 +26,8 @@ class JSONOutput;
 /// dispatch and ClangdServer together.
 class ClangdLSPServer {
 public:
- ClangdLSPServer(JSONOutput &Out, bool RunSynchronously,
-                 llvm::Optional<StringRef> ResourceDir);
+  ClangdLSPServer(JSONOutput &Out, bool RunSynchronously,
+                  llvm::Optional<StringRef> ResourceDir);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to

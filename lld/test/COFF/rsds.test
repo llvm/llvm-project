@@ -13,9 +13,9 @@
 # CHECK:     MajorVersion: 0x0
 # CHECK:     MinorVersion: 0x0
 # CHECK:     Type: CodeView (0x2)
-# CHECK:     SizeOfData:
-# CHECK:     AddressOfRawData:
-# CHECK:     PointerToRawData:
+# CHECK:     SizeOfData: 0x{{[^0]}}
+# CHECK:     AddressOfRawData: 0x{{[^0]}}
+# CHECK:     PointerToRawData: 0x{{[^0]}}
 # CHECK:     PDBInfo {
 # CHECK:       PDBSignature: 0x53445352
 # CHECK:       PDBGUID:

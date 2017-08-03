@@ -70,7 +70,7 @@ public:
   void onCompletion(TextDocumentPositionParams Params, StringRef ID,
                     JSONOutput &Out) override;
   void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
-                            JSONOutput &Out) override;
+                        JSONOutput &Out) override;
 
 private:
   ClangdLSPServer &LangServer;
@@ -181,9 +181,11 @@ void ClangdLSPServer::LSPProtocolCallbacks::onCodeAction(
 void ClangdLSPServer::LSPProtocolCallbacks::onCompletion(
     TextDocumentPositionParams Params, StringRef ID, JSONOutput &Out) {
 
-  auto Items = LangServer.Server.codeComplete(
-      Params.textDocument.uri.file,
-      Position{Params.position.line, Params.position.character}).Value;
+  auto Items = LangServer.Server
+                   .codeComplete(Params.textDocument.uri.file,
+                                 Position{Params.position.line,
+                                          Params.position.character})
+                   .Value;
 
   std::string Completions;
   for (const auto &Item : Items) {
@@ -200,9 +202,11 @@ void ClangdLSPServer::LSPProtocolCallbacks::onCompletion(
 void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
     TextDocumentPositionParams Params, StringRef ID, JSONOutput &Out) {
 
-  auto Items = LangServer.Server.findDefinitions(
-      Params.textDocument.uri.file,
-      Position{Params.position.line, Params.position.character}).Value;
+  auto Items = LangServer.Server
+                   .findDefinitions(Params.textDocument.uri.file,
+                                    Position{Params.position.line,
+                                             Params.position.character})
+                   .Value;
 
   std::string Locations;
   for (const auto &Item : Items) {

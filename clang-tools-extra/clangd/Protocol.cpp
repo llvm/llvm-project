@@ -16,10 +16,9 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace clang::clangd;
-
 
 URI URI::fromUri(llvm::StringRef uri) {
   URI Result;
@@ -53,9 +52,7 @@ URI URI::parse(llvm::yaml::ScalarNode *Param) {
   return URI::fromUri(Param->getValue(Storage));
 }
 
-std::string URI::unparse(const URI &U) {
-  return "\"" + U.uri + "\"";
-}
+std::string URI::unparse(const URI &U) { return "\"" + U.uri + "\""; }
 
 llvm::Optional<TextDocumentIdentifier>
 TextDocumentIdentifier::parse(llvm::yaml::MappingNode *Params) {

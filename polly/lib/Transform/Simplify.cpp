@@ -345,7 +345,7 @@ private:
 
             // Carry out the coalescing.
             Stmt.removeSingleMemoryAccess(MA);
-            OtherMA->setNewAccessRelation(NewAccRel.copy());
+            OtherMA->setNewAccessRelation(NewAccRel);
 
             // We removed MA, OtherMA takes its role.
             MA = OtherMA;

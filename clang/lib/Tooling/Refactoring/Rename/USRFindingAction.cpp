@@ -39,6 +39,21 @@ using namespace llvm;
 namespace clang {
 namespace tooling {
 
+const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl) {
+  // If FoundDecl is a constructor or destructor, we want to instead take
+  // the Decl of the corresponding class.
+  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
+    FoundDecl = CtorDecl->getParent();
+  else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl))
+    FoundDecl = DtorDecl->getParent();
+  // FIXME: (Alex L): Canonicalize implicit template instantions, just like
+  // the indexer does it.
+
+  // Note: please update the declaration's doc comment every time the
+  // canonicalization rules are changed.
+  return FoundDecl;
+}
+
 namespace {
 // \brief NamedDeclFindingConsumer should delegate finding USRs of given Decl to
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
@@ -193,13 +208,7 @@ private:
       return false;
     }
 
-    // If FoundDecl is a constructor or destructor, we want to instead take
-    // the Decl of the corresponding class.
-    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
-      FoundDecl = CtorDecl->getParent();
-    else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl))
-      FoundDecl = DtorDecl->getParent();
-
+    FoundDecl = getCanonicalSymbolDeclaration(FoundDecl);
     SpellingNames.push_back(FoundDecl->getNameAsString());
     AdditionalUSRFinder Finder(FoundDecl, Context);
     USRList.push_back(Finder.Find());

@@ -457,7 +457,7 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
   uint64_t Value = SS->getValue<ELFT>();
 
   std::vector<SharedSymbol *> Ret;
-  for (const Elf_Sym &S : File->getGlobalSymbols()) {
+  for (const Elf_Sym &S : File->getGlobalELFSyms()) {
     if (S.st_shndx != Shndx || S.st_value != Value)
       continue;
     StringRef Name = check(S.getName(File->getStringTable()));

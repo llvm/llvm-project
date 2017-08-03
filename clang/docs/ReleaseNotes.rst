@@ -151,8 +151,33 @@ this section should help get you past the largest hurdles of upgrading.
 AST Matchers
 ------------
 
-...
+The hasDeclaration matcher now works the same for Type and QualType and only
+ever looks through one level of sugaring in a limited number of cases.
 
+There are two main patterns affected by this:
+
+-  qualType(hasDeclaration(recordDecl(...))): previously, we would look through
+   sugar like TypedefType to get at the underlying recordDecl; now, we need
+   to explicitly remove the sugaring:
+   qualType(hasUnqualifiedDesugaredType(hasDeclaration(recordDecl(...))))
+
+-  hasType(recordDecl(...)): hasType internally uses hasDeclaration; previously,
+   this matcher used to match for example TypedefTypes of the RecordType, but
+   after the change they don't; to fix, use:
+
+::
+   hasType(hasUnqualifiedDesugaredType(
+       recordType(hasDeclaration(recordDecl(...)))))
+
+-  templateSpecializationType(hasDeclaration(classTemplateDecl(...))):
+   previously, we would directly match the underlying ClassTemplateDecl;
+   now, we can explicitly match the ClassTemplateSpecializationDecl, but that
+   requires to explicitly get the ClassTemplateDecl:
+
+::
+   templateSpecializationType(hasDeclaration(
+       classTemplateSpecializationDecl(
+           hasSpecializedTemplate(classTemplateDecl(...)))))
 
 clang-format
 ------------
@@ -173,9 +198,7 @@ Static Analyzer
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-The C++ dynamic type check now requires run-time null checking (i.e,
-`-fsanitize=vptr` cannot be used without `-fsanitize=null`). This change does
-not impact users who rely on UBSan check groups (e.g `-fsanitize=undefined`).
+...
 
 Core Analysis Improvements
 ==========================

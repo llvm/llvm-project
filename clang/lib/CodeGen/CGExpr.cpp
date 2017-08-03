@@ -694,17 +694,17 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   //    -- the [pointer or glvalue] is used to access a non-static data member
   //       or call a non-static member function
   CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-  bool HasNullCheck = IsGuaranteedNonNull || IsNonNull;
   if (SanOpts.has(SanitizerKind::Vptr) &&
-      !SkippedChecks.has(SanitizerKind::Vptr) && HasNullCheck &&
+      !SkippedChecks.has(SanitizerKind::Vptr) &&
       (TCK == TCK_MemberAccess || TCK == TCK_MemberCall ||
        TCK == TCK_DowncastPointer || TCK == TCK_DowncastReference ||
        TCK == TCK_UpcastToVirtualBase) &&
       RD && RD->hasDefinition() && RD->isDynamicClass()) {
     // Ensure that the pointer is non-null before loading it. If there is no
-    // compile-time guarantee, reuse the run-time null check.
+    // compile-time guarantee, reuse the run-time null check or emit a new one.
     if (!IsGuaranteedNonNull) {
-      assert(IsNonNull && "Missing run-time null check");
+      if (!IsNonNull)
+        IsNonNull = Builder.CreateIsNotNull(Ptr);
       if (!Done)
         Done = createBasicBlock("vptr.null");
       llvm::BasicBlock *VptrNotNull = createBasicBlock("vptr.not.null");
