@@ -286,7 +286,7 @@ void ASTStmtWriter::VisitMSAsmStmt(MSAsmStmt *S) {
   }
 
   // Outputs
-  for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {      
+  for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     Record.AddStmt(S->getOutputExpr(I));
     Record.AddString(S->getOutputConstraint(I));
   }
@@ -300,29 +300,48 @@ void ASTStmtWriter::VisitMSAsmStmt(MSAsmStmt *S) {
   Code = serialization::STMT_MSASM;
 }
 
-void ASTStmtWriter::VisitCoroutineBodyStmt(CoroutineBodyStmt *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtWriter::VisitCoroutineBodyStmt(CoroutineBodyStmt *CoroStmt) {
+  VisitStmt(CoroStmt);
+  Record.push_back(CoroStmt->getParamMoves().size());
+  for (Stmt *S : CoroStmt->children())
+    Record.AddStmt(S);
+  Code = serialization::STMT_COROUTINE_BODY;
 }
 
 void ASTStmtWriter::VisitCoreturnStmt(CoreturnStmt *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getKeywordLoc());
+  Record.AddStmt(S->getOperand());
+  Record.AddStmt(S->getPromiseCall());
+  Record.push_back(S->isImplicit());
+  Code = serialization::STMT_CORETURN;
 }
 
-void ASTStmtWriter::VisitCoawaitExpr(CoawaitExpr *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtWriter::VisitCoroutineSuspendExpr(CoroutineSuspendExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getKeywordLoc());
+  for (Stmt *S : E->children())
+    Record.AddStmt(S);
+  Record.AddStmt(E->getOpaqueValue());
 }
 
-void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtWriter::VisitCoawaitExpr(CoawaitExpr *E) {
+  VisitCoroutineSuspendExpr(E);
+  Record.push_back(E->isImplicit());
+  Code = serialization::EXPR_COAWAIT;
 }
 
-void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
+  VisitCoroutineSuspendExpr(E);
+  Code = serialization::EXPR_COYIELD;
+}
+
+void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getKeywordLoc());
+  for (Stmt *S : E->children())
+    Record.AddStmt(S);
+  Code = serialization::EXPR_DEPENDENT_COAWAIT;
 }
 
 void ASTStmtWriter::VisitCapturedStmt(CapturedStmt *S) {
