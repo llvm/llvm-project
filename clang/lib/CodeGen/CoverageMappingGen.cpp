@@ -704,6 +704,8 @@ struct CounterCoverageMappingBuilder
     assert(!BreakContinueStack.empty() && "break not in a loop or switch!");
     BreakContinueStack.back().BreakCount = addCounters(
         BreakContinueStack.back().BreakCount, getRegion().getCounter());
+    // FIXME: a break in a switch should terminate regions for all preceding
+    // case statements, not just the most recent one.
     terminateRegion(S);
   }
 
@@ -845,15 +847,20 @@ struct CounterCoverageMappingBuilder
     extendRegion(Body);
     if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
       if (!CS->body_empty()) {
-        // The body of the switch needs a zero region so that fallthrough counts
-        // behave correctly, but it would be misleading to include the braces of
-        // the compound statement in the zeroed area, so we need to handle this
-        // specially.
+        // Make a region for the body of the switch.  If the body starts with
+        // a case, that case will reuse this region; otherwise, this covers
+        // the unreachable code at the beginning of the switch body.
         size_t Index =
-            pushRegion(Counter::getZero(), getStart(CS->body_front()),
-                       getEnd(CS->body_back()));
+            pushRegion(Counter::getZero(), getStart(CS->body_front()));
         for (const auto *Child : CS->children())
           Visit(Child);
+
+        // Set the end for the body of the switch, if it isn't already set.
+        for (size_t i = RegionStack.size(); i != Index; --i) {
+          if (!RegionStack[i - 1].hasEndLoc())
+            RegionStack[i - 1].setEndLoc(getEnd(CS->body_back()));
+        }
+
         popRegions(Index);
       }
     } else

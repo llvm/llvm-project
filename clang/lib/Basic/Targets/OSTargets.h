@@ -505,6 +505,8 @@ protected:
 
     Builder.defineMacro("__rtems__");
     Builder.defineMacro("__ELF__");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
   }
 
 public:

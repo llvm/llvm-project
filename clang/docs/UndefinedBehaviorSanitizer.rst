@@ -133,9 +133,9 @@ Available checks are:
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
      the wrong dynamic type, or that its lifetime has not begun or has ended.
-     Incompatible with ``-fno-rtti`` and ``-fno-sanitize=null``. Link must be
-     performed by ``clang++``, not ``clang``, to make sure C++-specific parts of
-     the runtime library and C++ standard libraries are present.
+     Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
+     ``clang``, to make sure C++-specific parts of the runtime library and C++
+     standard libraries are present.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than

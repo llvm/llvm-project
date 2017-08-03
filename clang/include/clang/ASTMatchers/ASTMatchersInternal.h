@@ -728,48 +728,85 @@ public:
   }
 
 private:
-  /// \brief If getDecl exists as a member of U, returns whether the inner
-  /// matcher matches Node.getDecl().
-  template <typename U>
-  bool matchesSpecialized(
-      const U &Node, ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder,
-      typename std::enable_if<has_getDecl<U>::value, int>::type = 0) const {
-    return matchesDecl(Node.getDecl(), Finder, Builder);
-  }
-
-  /// \brief Extracts the TagDecl of a QualType and returns whether the inner
-  /// matcher matches on it.
+  /// \brief Forwards to matching on the underlying type of the QualType.
   bool matchesSpecialized(const QualType &Node, ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const {
     if (Node.isNull())
       return false;
 
-    if (auto *TD = Node->getAsTagDecl())
-      return matchesDecl(TD, Finder, Builder);
-    else if (auto *TT = Node->getAs<TypedefType>())
-      return matchesDecl(TT->getDecl(), Finder, Builder);
-    // Do not use getAs<TemplateTypeParmType> instead of the direct dyn_cast.
-    // Calling getAs will return the canonical type, but that type does not
-    // store a TemplateTypeParmDecl. We *need* the uncanonical type, if it is
-    // available, and using dyn_cast ensures that.
-    else if (auto *TTP = dyn_cast<TemplateTypeParmType>(Node.getTypePtr()))
-      return matchesDecl(TTP->getDecl(), Finder, Builder);
-    else if (auto *OCIT = Node->getAs<ObjCInterfaceType>())
-      return matchesDecl(OCIT->getDecl(), Finder, Builder);
-    else if (auto *UUT = Node->getAs<UnresolvedUsingType>())
-      return matchesDecl(UUT->getDecl(), Finder, Builder);
-    else if (auto *ICNT = Node->getAs<InjectedClassNameType>())
-      return matchesDecl(ICNT->getDecl(), Finder, Builder);
+    return matchesSpecialized(*Node, Finder, Builder);
+  }
+
+  /// \brief Finds the best declaration for a type and returns whether the inner
+  /// matcher matches on it.
+  bool matchesSpecialized(const Type &Node, ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    // First, for any types that have a declaration, extract the declaration and
+    // match on it.
+    if (const auto *S = dyn_cast<TagType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
+    if (const auto *S = dyn_cast<InjectedClassNameType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
+    if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
+    if (const auto *S = dyn_cast<TypedefType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
+    if (const auto *S = dyn_cast<UnresolvedUsingType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
+    if (const auto *S = dyn_cast<ObjCObjectType>(&Node)) {
+      return matchesDecl(S->getInterface(), Finder, Builder);
+    }
+
+    // A SubstTemplateTypeParmType exists solely to mark a type substitution
+    // on the instantiated template. As users usually want to match the
+    // template parameter on the uninitialized template, we can always desugar
+    // one level without loss of expressivness.
+    // For example, given:
+    //   template<typename T> struct X { T t; } class A {}; X<A> a;
+    // The following matcher will match, which otherwise would not:
+    //   fieldDecl(hasType(pointerType())).
+    if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(&Node)) {
+      return matchesSpecialized(S->getReplacementType(), Finder, Builder);
+    }
+
+    // For template specialization types, we want to match the template
+    // declaration, as long as the type is still dependent, and otherwise the
+    // declaration of the instantiated tag type.
+    if (const auto *S = dyn_cast<TemplateSpecializationType>(&Node)) {
+      if (!S->isTypeAlias() && S->isSugared()) {
+        // If the template is non-dependent, we want to match the instantiated
+        // tag type.
+        // For example, given:
+        //   template<typename T> struct X {}; X<int> a;
+        // The following matcher will match, which otherwise would not:
+        //   templateSpecializationType(hasDeclaration(cxxRecordDecl())).
+        return matchesSpecialized(*S->desugar(), Finder, Builder);
+      }
+      // If the template is dependent or an alias, match the template
+      // declaration.
+      return matchesDecl(S->getTemplateName().getAsTemplateDecl(), Finder,
+                         Builder);
+    }
+
+    // FIXME: We desugar elaborated types. This makes the assumption that users
+    // do never want to match on whether a type is elaborated - there are
+    // arguments for both sides; for now, continue desugaring.
+    if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
+      return matchesSpecialized(S->desugar(), Finder, Builder);
+    }
     return false;
   }
 
-  /// \brief Gets the TemplateDecl from a TemplateSpecializationType
-  /// and returns whether the inner matches on it.
-  bool matchesSpecialized(const TemplateSpecializationType &Node,
-                          ASTMatchFinder *Finder,
+  /// \brief Extracts the Decl the DeclRefExpr references and returns whether
+  /// the inner matcher matches on it.
+  bool matchesSpecialized(const DeclRefExpr &Node, ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const {
-    return matchesDecl(Node.getTemplateName().getAsTemplateDecl(),
-                       Finder, Builder);
+    return matchesDecl(Node.getDecl(), Finder, Builder);
   }
 
   /// \brief Extracts the Decl of the callee of a CallExpr and returns whether
@@ -809,6 +846,13 @@ private:
                           ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const {
     return matchesDecl(Node.getLabel(), Finder, Builder);
+  }
+
+  /// \brief Extracts the declaration of a LabelStmt and returns whether the
+  /// inner matcher matches on it.
+  bool matchesSpecialized(const LabelStmt &Node, ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    return matchesDecl(Node.getDecl(), Finder, Builder);
   }
 
   /// \brief Returns whether the inner matcher \c Node. Returns false if \c Node
@@ -1016,9 +1060,10 @@ typedef TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc,
 
 /// \brief All types that are supported by HasDeclarationMatcher above.
 typedef TypeList<CallExpr, CXXConstructExpr, CXXNewExpr, DeclRefExpr, EnumType,
-                 InjectedClassNameType, LabelStmt, AddrLabelExpr, MemberExpr,
-                 QualType, RecordType, TagType, TemplateSpecializationType,
-                 TemplateTypeParmType, TypedefType, UnresolvedUsingType>
+                 ElaboratedType, InjectedClassNameType, LabelStmt,
+                 AddrLabelExpr, MemberExpr, QualType, RecordType, TagType,
+                 TemplateSpecializationType, TemplateTypeParmType, TypedefType,
+                 UnresolvedUsingType>
     HasDeclarationSupportedTypes;
 
 /// \brief Converts a \c Matcher<T> to a matcher of desired type \c To by
