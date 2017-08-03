@@ -65,6 +65,21 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MEXTERNSDATADEF %s
 // CHECK-MEXTERNSDATADEF-NOT: "-mllvm" "-mextern-sdata"
 //
+// -mno-abicalls -mgpopt -membedded-data
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mno-embedded-data -membedded-data 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MEMBEDDEDDATA %s
+// CHECK-MEMBEDDEDDATA: "-mllvm" "-membedded-data=1"
+//
+// -mno-abicalls -mgpopt -mno-embedded-data
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -membedded-data -mno-embedded-data 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOEMBEDDEDDATA %s
+// CHECK-MNOEMBEDDEDDATA: "-mllvm" "-membedded-data=0"
+//
+// -mno-abicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MEMBEDDEDDATADEF %s
+// CHECK-MEMBEDDEDDATADEF-NOT: "-mllvm" "-membedded-data"
+//
 // -mips16
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mips16 -mips16 2>&1 \

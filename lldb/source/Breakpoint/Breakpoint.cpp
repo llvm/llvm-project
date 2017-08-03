@@ -348,6 +348,14 @@ void Breakpoint::SetOneShot(bool one_shot) {
   m_options_up->SetOneShot(one_shot);
 }
 
+bool Breakpoint::IsAutoContinue() const { 
+  return m_options_up->IsAutoContinue();
+}
+
+void Breakpoint::SetAutoContinue(bool auto_continue) {
+  m_options_up->SetAutoContinue(auto_continue);
+}
+
 void Breakpoint::SetThreadID(lldb::tid_t thread_id) {
   if (m_options_up->GetThreadSpec()->GetTID() == thread_id)
     return;

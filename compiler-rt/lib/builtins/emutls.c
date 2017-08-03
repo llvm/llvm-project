@@ -102,7 +102,6 @@ static __inline emutls_address_array* emutls_getspecific() {
 #include <malloc.h>
 #include <stdio.h>
 #include <assert.h>
-#include <immintrin.h>
 
 static LPCRITICAL_SECTION emutls_mutex;
 static DWORD emutls_tls_index = TLS_OUT_OF_INDEXES;
@@ -203,25 +202,24 @@ static __inline emutls_address_array* emutls_getspecific() {
 /* Provide atomic load/store functions for emutls_get_index if built with MSVC.
  */
 #if !defined(__ATOMIC_RELEASE)
+#include <intrin.h>
 
 enum { __ATOMIC_ACQUIRE = 2, __ATOMIC_RELEASE = 3 };
 
 static __inline uintptr_t __atomic_load_n(void *ptr, unsigned type) {
     assert(type == __ATOMIC_ACQUIRE);
+    // These return the previous value - but since we do an OR with 0,
+    // it's equivalent to a plain load.
 #ifdef _WIN64
-    return (uintptr_t) _load_be_u64(ptr);
+    return InterlockedOr64(ptr, 0);
 #else
-    return (uintptr_t) _load_be_u32(ptr);
+    return InterlockedOr(ptr, 0);
 #endif
 }
 
 static __inline void __atomic_store_n(void *ptr, uintptr_t val, unsigned type) {
     assert(type == __ATOMIC_RELEASE);
-#ifdef _WIN64
-    _store_be_u64(ptr, val);
-#else
-    _store_be_u32(ptr, val);
-#endif
+    InterlockedExchangePointer((void *volatile *)ptr, (void *)val);
 }
 
 #endif

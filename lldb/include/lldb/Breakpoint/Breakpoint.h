@@ -421,6 +421,18 @@ public:
   bool IsOneShot() const;
 
   //------------------------------------------------------------------
+  /// If \a auto_continue is \b true, breakpoint will auto-continue when on hit.
+  //------------------------------------------------------------------
+  void SetAutoContinue(bool auto_continue);
+
+  //------------------------------------------------------------------
+  /// Check the AutoContinue state.
+  /// @return
+  ///     \b true if the breakpoint is set to auto-continue, \b false otherwise.
+  //------------------------------------------------------------------
+  bool IsAutoContinue() const;
+
+  //------------------------------------------------------------------
   /// Set the valid thread to be checked when the breakpoint is hit.
   /// @param[in] thread_id
   ///    If this thread hits the breakpoint, we stop, otherwise not.

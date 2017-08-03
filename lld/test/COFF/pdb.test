@@ -190,16 +190,16 @@ RAW-NEXT:    off = 20
 RAW-NEXT:    off = 0
 RAW:                        Section Contributions
 RAW-NEXT: ============================================================
-RAW-NEXT:   SC  | mod = 0, 65535:1288, size = 14, data crc = 0, reloc crc = 0
+RAW-NEXT:   SC  | mod = 0, 0001:0000, size = 12, data crc = 0, reloc crc = 0
+RAW-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+RAW-NEXT:   SC  | mod = 0, 0002:0000, size = 14, data crc = 0, reloc crc = 0
 RAW-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
 RAW-NEXT:         IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC  | mod = 0, 65535:1312, size = 8, data crc = 0, reloc crc = 0
-RAW-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC  | mod = 0, 65535:1320, size = 12, data crc = 0, reloc crc = 0
-RAW-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-RAW-NEXT:   SC  | mod = 1, 65535:1144, size = 6, data crc = 0, reloc crc = 0
+RAW-NEXT:   SC  | mod = 1, 0002:0016, size = 6, data crc = 0, reloc crc = 0
 RAW-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
 RAW-NEXT:         IMAGE_SCN_MEM_READ
+RAW-NEXT:   SC  | mod = 0, 0003:0000, size = 8, data crc = 0, reloc crc = 0
+RAW-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
 RAW:                             Section Map
 RAW-NEXT: ============================================================
 RAW-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 0, name = 1

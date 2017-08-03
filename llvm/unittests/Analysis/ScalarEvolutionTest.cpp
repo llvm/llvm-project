@@ -1000,9 +1000,9 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   Cond->eraseFromParent();
 
   Builder.SetInsertPoint(L);
-  Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000),
-                     "new.cond");
-  Builder.CreateCondBr(Cond, L, Post);
+  auto *NewCond = Builder.CreateICmp(
+      ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
+  Builder.CreateCondBr(NewCond, L, Post);
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
   EXPECT_NE(EC, NewEC);
 }
@@ -1081,9 +1081,9 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   Load->eraseFromParent();
 
   Builder.SetInsertPoint(L);
-  Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000),
-                     "new.cond");
-  Builder.CreateCondBr(Cond, L, Post);
+  auto *NewCond = Builder.CreateICmp(
+      ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
+  Builder.CreateCondBr(NewCond, L, Post);
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
   EXPECT_NE(EC, NewEC);
 }

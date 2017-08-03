@@ -64,3 +64,4 @@ endif:
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #0
 
 attributes #0 = { nounwind readnone convergent }
+

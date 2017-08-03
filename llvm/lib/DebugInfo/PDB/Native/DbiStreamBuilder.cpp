@@ -311,19 +311,6 @@ static uint16_t toSecMapFlags(uint32_t Flags) {
   return Ret;
 }
 
-void DbiStreamBuilder::addSectionContrib(DbiModuleDescriptorBuilder *ModuleDbi,
-                                         const object::coff_section *SecHdr) {
-  SectionContrib SC;
-  memset(&SC, 0, sizeof(SC));
-  SC.ISect = (uint16_t)~0U; // This represents nil.
-  SC.Off = SecHdr->PointerToRawData;
-  SC.Size = SecHdr->SizeOfRawData;
-  SC.Characteristics = SecHdr->Characteristics;
-  // Use the module index in the module dbi stream or nil (-1).
-  SC.Imod = ModuleDbi ? ModuleDbi->getModuleIndex() : (uint16_t)~0U;
-  SectionContribs.emplace_back(SC);
-}
-
 // A utility function to create a Section Map for a given list of COFF sections.
 //
 // A Section Map seem to be a copy of a COFF section list in other format.

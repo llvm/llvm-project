@@ -1462,24 +1462,27 @@ public:
     for (const auto &Renderer : OperandRenderers)
       Renderer->emitRenderOpcodes(Table, Rule);
 
-    Table << MatchTable::Opcode("GIR_MergeMemOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-          << MatchTable::Comment("MergeInsnID's");
-    // Emit the ID's for all the instructions that are matched by this rule.
-    // TODO: Limit this to matched instructions that mayLoad/mayStore or have
-    //       some other means of having a memoperand. Also limit this to emitted
-    //       instructions that expect to have a memoperand too. For example,
-    //       (G_SEXT (G_LOAD x)) that results in separate load and sign-extend
-    //       instructions shouldn't put the memoperand on the sign-extend since
-    //       it has no effect there.
-    std::vector<unsigned> MergeInsnIDs;
-    for (const auto &IDMatcherPair : Rule.defined_insn_vars())
-      MergeInsnIDs.push_back(IDMatcherPair.second);
-    std::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
-    for (const auto &MergeInsnID : MergeInsnIDs)
-      Table << MatchTable::IntValue(MergeInsnID);
-    Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList")
-          << MatchTable::LineBreak << MatchTable::Opcode("GIR_EraseFromParent")
+    if (I->mayLoad || I->mayStore) {
+      Table << MatchTable::Opcode("GIR_MergeMemOperands")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::Comment("MergeInsnID's");
+      // Emit the ID's for all the instructions that are matched by this rule.
+      // TODO: Limit this to matched instructions that mayLoad/mayStore or have
+      //       some other means of having a memoperand. Also limit this to
+      //       emitted instructions that expect to have a memoperand too. For
+      //       example, (G_SEXT (G_LOAD x)) that results in separate load and
+      //       sign-extend instructions shouldn't put the memoperand on the
+      //       sign-extend since it has no effect there.
+      std::vector<unsigned> MergeInsnIDs;
+      for (const auto &IDMatcherPair : Rule.defined_insn_vars())
+        MergeInsnIDs.push_back(IDMatcherPair.second);
+      std::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
+      for (const auto &MergeInsnID : MergeInsnIDs)
+        Table << MatchTable::IntValue(MergeInsnID);
+      Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList");
+    }
+
+    Table << MatchTable::Opcode("GIR_EraseFromParent")
           << MatchTable::Comment("InsnID")
           << MatchTable::IntValue(RecycleInsnID) << MatchTable::LineBreak;
   }

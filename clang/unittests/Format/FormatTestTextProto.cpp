@@ -245,6 +245,50 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                ">\n"
                "field: OK,\n"
                "field_c <field <field <>>>");
+
+  verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
+               "head_id: 1\n"
+               "data <key: value>");
+
+  verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
+               "head_id: 1\n"
+               "data <key: value>\n"
+               "tail_id: 2");
+
+  verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
+               "head_id: 1\n"
+               "data <key: value>\n"
+               "data {key: value}");
+
+  verifyFormat("app {\n"
+               "  app_id: 'com.javax.swing.salsa.latino'\n"
+               "  head_id: 1\n"
+               "  data <key: value>\n"
+               "}");
+
+  verifyFormat("app: {\n"
+               "  app_id: 'com.javax.swing.salsa.latino'\n"
+               "  head_id: 1\n"
+               "  data <key: value>\n"
+               "}");
+
+  verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
+               "headheadheadheadheadhead_id: 1\n"
+               "product_data {product {1}}");
+
+  verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
+               "headheadheadheadheadhead_id: 1\n"
+               "product_data <product {1}>");
+
+  verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
+               "headheadheadheadheadhead_id: 1\n"
+               "product_data <product <1>>");
+
+  verifyFormat("app <\n"
+               "  app_id: 'com.javax.swing.salsa.latino'\n"
+               "  headheadheadheadheadhead_id: 1\n"
+               "  product_data <product {1}>\n"
+               ">");
 }
 } // end namespace tooling
 } // end namespace clang

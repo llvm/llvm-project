@@ -21,7 +21,12 @@ using namespace llvm;
 VirtualUse VirtualUse ::create(Scop *S, const Use &U, LoopInfo *LI,
                                bool Virtual) {
   auto *UserBB = getUseBlock(U);
-  auto *UserStmt = S->getStmtFor(UserBB);
+  Instruction *UI = dyn_cast<Instruction>(U.getUser());
+  ScopStmt *UserStmt = nullptr;
+  if (PHINode *PHI = dyn_cast<PHINode>(UI))
+    UserStmt = S->getLastStmtFor(PHI->getIncomingBlock(U));
+  else
+    UserStmt = S->getStmtFor(UI);
   auto *UserScope = LI->getLoopFor(UserBB);
   return create(S, UserStmt, UserScope, U.get(), Virtual);
 }

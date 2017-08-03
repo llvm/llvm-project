@@ -759,9 +759,13 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
 
   if (UseTemporary) {
     // Create a temporary file.
-    SmallString<128> TempPath;
-    TempPath = OutFile;
+    // Insert -%%%%%%%% before the extension (if any), so that tools doing
+    // things based on the file extension do the right thing.
+    StringRef OutputExtension = llvm::sys::path::extension(OutFile);
+    SmallString<128> TempPath =
+        StringRef(OutFile).drop_back(OutputExtension.size());
     TempPath += "-%%%%%%%%";
+    TempPath += OutputExtension;
     int fd;
     std::error_code EC =
         llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
