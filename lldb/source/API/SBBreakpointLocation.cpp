@@ -165,7 +165,7 @@ bool SBBreakpointLocation::GetAutoContinue() {
         loc_sp->GetTarget().GetAPIMutex());
     return loc_sp->IsAutoContinue();
   }
-  return NULL;
+  return false;
 }
 
 void SBBreakpointLocation::SetScriptCallbackFunction(
