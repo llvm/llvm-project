@@ -1223,8 +1223,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
     //
     // FIXME: Assert that we aren't truncating non-padding bits when have access
     // to that information.
-    Src = CGF.Builder.CreateBitCast(Src,
-                                    Ty->getPointerTo(Src.getAddressSpace()));
+    Src = CGF.Builder.CreateBitCast(Src, llvm::PointerType::getUnqual(Ty));
     return CGF.Builder.CreateLoad(Src);
   }
 
@@ -3947,8 +3946,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
           Src = TempAlloca;
         } else {
-          Src = Builder.CreateBitCast(Src,
-                                      STy->getPointerTo(Src.getAddressSpace()));
+          Src = Builder.CreateBitCast(Src, llvm::PointerType::getUnqual(STy));
         }
 
         auto SrcLayout = CGM.getDataLayout().getStructLayout(STy);

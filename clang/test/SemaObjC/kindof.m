@@ -385,7 +385,7 @@ void testNullability() {
 @end
 
 @interface NSGeneric<ObjectType> : NSObject
-- (void)test:(__kindof ObjectType)T; // expected-note{{passing argument to parameter 'T' here}}
+- (void)test:(__kindof ObjectType)T;
 - (void)mapUsingBlock:(id (^)(__kindof ObjectType))block;
 @end
 @implementation NSGeneric
@@ -394,14 +394,6 @@ void testNullability() {
 - (void)mapUsingBlock:(id (^)(id))block {
 }
 @end
-
-void testGeneric(NSGeneric<NSString*> *generic) {
-  NSObject *NSObject_obj;
-  // Assign from NSObject_obj to __kindof NSString*.
-  [generic test:NSObject_obj]; // expected-warning{{incompatible pointer types sending 'NSObject *' to parameter of type '__kindof NSString *'}}
-  NSString *NSString_str;
-  [generic test:NSString_str];
-}
 
 // Check that clang doesn't crash when a type parameter is illegal.
 @interface Array1<T> : NSObject

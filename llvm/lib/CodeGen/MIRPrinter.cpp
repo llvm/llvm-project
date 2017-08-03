@@ -366,7 +366,6 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YamlObject.Offset = MFI.getObjectOffset(I);
     YamlObject.Size = MFI.getObjectSize(I);
     YamlObject.Alignment = MFI.getObjectAlignment(I);
-    YamlObject.StackID = MFI.getStackID(I);
     YamlObject.IsImmutable = MFI.isImmutableObjectIndex(I);
     YamlObject.IsAliased = MFI.isAliasedObjectIndex(I);
     YMF.FixedStackObjects.push_back(YamlObject);
@@ -393,7 +392,6 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YamlObject.Offset = MFI.getObjectOffset(I);
     YamlObject.Size = MFI.getObjectSize(I);
     YamlObject.Alignment = MFI.getObjectAlignment(I);
-    YamlObject.StackID = MFI.getStackID(I);
 
     YMF.StackObjects.push_back(YamlObject);
     StackObjectOperandMapping.insert(std::make_pair(
@@ -458,20 +456,17 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineConstantPool &ConstantPool) {
   unsigned ID = 0;
   for (const MachineConstantPoolEntry &Constant : ConstantPool.getConstants()) {
-    std::string Str;
-    raw_string_ostream StrOS(Str);
-    if (Constant.isMachineConstantPoolEntry()) {
-      Constant.Val.MachineCPVal->print(StrOS);
-    } else {
-      Constant.Val.ConstVal->printAsOperand(StrOS);
-    }
+    // TODO: Serialize target specific constant pool entries.
+    if (Constant.isMachineConstantPoolEntry())
+      llvm_unreachable("Can't print target specific constant pool entries yet");
 
     yaml::MachineConstantPoolValue YamlConstant;
+    std::string Str;
+    raw_string_ostream StrOS(Str);
+    Constant.Val.ConstVal->printAsOperand(StrOS);
     YamlConstant.ID = ID++;
     YamlConstant.Value = StrOS.str();
     YamlConstant.Alignment = Constant.getAlignment();
-    YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
-
     MF.Constants.push_back(YamlConstant);
   }
 }

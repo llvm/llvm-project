@@ -39,12 +39,6 @@ static cl::opt<int> ProfileSummaryCutoffCold(
     cl::desc("A count is cold if it is below the minimum count"
              " to reach this percentile of total counts."));
 
-static cl::opt<bool> AccurateSampleProfile(
-    "accurate-sample-profile", cl::Hidden, cl::init(false),
-    cl::desc("If the sample profile is accurate, we will mark all un-sampled "
-             "callsite as cold. Otherwise, treat un-sampled callsites as if "
-             "we have no profile."));
-
 // Find the minimum count to reach a desired percentile of counts.
 static uint64_t getMinCountForPercentile(SummaryEntryVector &DS,
                                          uint64_t Percentile) {
@@ -84,12 +78,10 @@ ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
   if (hasSampleProfile()) {
     // In sample PGO mode, check if there is a profile metadata on the
     // instruction. If it is present, determine hotness solely based on that,
-    // since the sampled entry count may not be accurate. If there is no
-    // annotated on the instruction, return None.
+    // since the sampled entry count may not be accurate.
     uint64_t TotalCount;
     if (Inst->extractProfTotalWeight(TotalCount))
       return TotalCount;
-    return None;
   }
   if (BFI)
     return BFI->getBlockProfileCount(Inst->getParent());
@@ -207,15 +199,7 @@ bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,
 bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
                                         BlockFrequencyInfo *BFI) {
   auto C = getProfileCount(CS.getInstruction(), BFI);
-  if (C)
-    return isColdCount(*C);
-
-  // In SamplePGO, if the caller has been sampled, and there is no profile
-  // annotatedon the callsite, we consider the callsite as cold.
-  // If there is no profile for the caller, and we know the profile is
-  // accurate, we consider the callsite as cold.
-  return (hasSampleProfile() &&
-          (CS.getCaller()->getEntryCount() || AccurateSampleProfile));
+  return C && isColdCount(*C);
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

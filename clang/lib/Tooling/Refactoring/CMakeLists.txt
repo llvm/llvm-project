@@ -1,6 +1,9 @@
-set(LLVM_LINK_COMPONENTS Support)
+set(LLVM_LINK_COMPONENTS
+  Option
+  Support
+  )
 
-add_clang_library(clangToolingRefactor
+add_clang_library(clangToolingRefactoring
   AtomicChange.cpp
   Rename/RenamingAction.cpp
   Rename/USRFinder.cpp
@@ -11,7 +14,6 @@ add_clang_library(clangToolingRefactor
   clangAST
   clangASTMatchers
   clangBasic
-  clangFormat
   clangIndex
   clangLex
   clangToolingCore

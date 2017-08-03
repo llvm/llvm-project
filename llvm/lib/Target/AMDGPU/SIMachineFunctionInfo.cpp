@@ -93,17 +93,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     // FIXME: Not really a system SGPR.
     PrivateSegmentWaveByteOffsetSystemSGPR = ScratchWaveOffsetReg;
-    if (F->hasFnAttribute("amdgpu-implicitarg-ptr"))
-      ImplicitArgPtr = true;
-  } else {
-    if (F->hasFnAttribute("amdgpu-implicitarg-ptr"))
-      KernargSegmentPtr = true;
   }
 
   CallingConv::ID CC = F->getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    if (!F->arg_empty())
-      KernargSegmentPtr = true;
+    KernargSegmentPtr = !F->arg_empty();
     WorkGroupIDX = true;
     WorkItemIDX = true;
   } else if (CC == CallingConv::AMDGPU_PS) {
@@ -237,15 +231,6 @@ unsigned SIMachineFunctionInfo::addImplicitBufferPtr(const SIRegisterInfo &TRI) 
   return ImplicitBufferPtrUserSGPR;
 }
 
-static bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) {
-  for (unsigned I = 0; CSRegs[I]; ++I) {
-    if (CSRegs[I] == Reg)
-      return true;
-  }
-
-  return false;
-}
-
 /// Reserve a slice of a VGPR to support spilling for FrameIndex \p FI.
 bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
                                                     int FI) {
@@ -267,8 +252,6 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 
   int NumLanes = Size / 4;
 
-  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(&MF);
-
   // Make sure to handle the case where a wide SGPR spill may span between two
   // VGPRs.
   for (int I = 0; I < NumLanes; ++I, ++NumVGPRSpillLanes) {
@@ -285,21 +268,14 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         return false;
       }
 
-      Optional<int> CSRSpillFI;
-      if (FrameInfo.hasCalls() && CSRegs && isCalleeSavedReg(CSRegs, LaneVGPR)) {
-        // TODO: Should this be a CreateSpillStackObject? This is technically a
-        // weird CSR spill.
-        CSRSpillFI = FrameInfo.CreateStackObject(4, 4, false);
-      }
-
-      SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, CSRSpillFI));
+      SpillVGPRs.push_back(LaneVGPR);
 
       // Add this register as live-in to all blocks to avoid machine verifer
       // complaining about use of an undefined physical register.
       for (MachineBasicBlock &BB : MF)
         BB.addLiveIn(LaneVGPR);
     } else {
-      LaneVGPR = SpillVGPRs.back().VGPR;
+      LaneVGPR = SpillVGPRs.back();
     }
 
     SpillLanes.push_back(SpilledReg(LaneVGPR, VGPRIndex));

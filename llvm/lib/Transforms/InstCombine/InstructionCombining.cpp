@@ -48,7 +48,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
@@ -3163,11 +3162,12 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   return MadeIRChange;
 }
 
-static bool combineInstructionsOverFunction(
-    Function &F, InstCombineWorklist &Worklist, AliasAnalysis *AA,
-    AssumptionCache &AC, TargetLibraryInfo &TLI, DominatorTree &DT,
-    OptimizationRemarkEmitter &ORE, bool ExpensiveCombines = true,
-    LoopInfo *LI = nullptr) {
+static bool
+combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
+                                AliasAnalysis *AA, AssumptionCache &AC,
+                                TargetLibraryInfo &TLI, DominatorTree &DT,
+                                bool ExpensiveCombines = true,
+                                LoopInfo *LI = nullptr) {
   auto &DL = F.getParent()->getDataLayout();
   ExpensiveCombines |= EnableExpensiveCombines;
 
@@ -3196,8 +3196,8 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange |= prepareICWorklistFromFunction(F, DL, &TLI, Worklist);
 
-    InstCombiner IC(Worklist, Builder, F.optForMinSize(), ExpensiveCombines, AA,
-                    AC, TLI, DT, ORE, DL, LI);
+    InstCombiner IC(Worklist, Builder, F.optForMinSize(), ExpensiveCombines,
+                    AA, AC, TLI, DT, DL, LI);
     IC.MaxArraySizeForCombine = MaxArraySize;
 
     if (!IC.run())
@@ -3212,12 +3212,11 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
 
   // FIXME: The AliasAnalysis is not yet supported in the new pass manager
-  if (!combineInstructionsOverFunction(F, Worklist, nullptr, AC, TLI, DT, ORE,
+  if (!combineInstructionsOverFunction(F, Worklist, nullptr, AC, TLI, DT,
                                        ExpensiveCombines, LI))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
@@ -3236,7 +3235,6 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addPreserved<BasicAAWrapperPass>();
@@ -3252,13 +3250,12 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
   // Optional analyses.
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
 
-  return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, DT, ORE,
+  return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, DT,
                                          ExpensiveCombines, LI);
 }
 
@@ -3270,7 +3267,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(InstructionCombiningPass, "instcombine",
                     "Combine redundant instructions", false, false)
 

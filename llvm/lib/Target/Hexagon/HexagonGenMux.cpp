@@ -1,4 +1,4 @@
-//===- HexagonGenMux.cpp --------------------------------------------------===//
+//===--- HexagonGenMux.cpp ------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,7 +26,6 @@
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -42,7 +41,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
-#include <cassert>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -111,9 +109,9 @@ namespace {
             Def2(&D2) {}
     };
 
-    using InstrIndexMap = DenseMap<MachineInstr *, unsigned>;
-    using DefUseInfoMap = DenseMap<unsigned, DefUseInfo>;
-    using MuxInfoList = SmallVector<MuxInfo, 4>;
+    typedef DenseMap<MachineInstr*,unsigned> InstrIndexMap;
+    typedef DenseMap<unsigned,DefUseInfo> DefUseInfoMap;
+    typedef SmallVector<MuxInfo,4> MuxInfoList;
 
     bool isRegPair(unsigned Reg) const {
       return Hexagon::DoubleRegsRegClass.contains(Reg);
@@ -131,9 +129,9 @@ namespace {
     bool genMuxInBlock(MachineBasicBlock &B);
   };
 
-} // end anonymous namespace
+  char HexagonGenMux::ID = 0;
 
-char HexagonGenMux::ID = 0;
+} // end anonymous namespace
 
 INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
   "Hexagon generate mux instructions", false, false)
@@ -222,8 +220,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
   DefUseInfoMap DUM;
   buildMaps(B, I2X, DUM);
 
-  using CondsetMap = DenseMap<unsigned, CondsetInfo>;
-
+  typedef DenseMap<unsigned,CondsetInfo> CondsetMap;
   CondsetMap CM;
   MuxInfoList ML;
 

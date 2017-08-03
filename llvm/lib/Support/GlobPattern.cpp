@@ -33,30 +33,27 @@ static Expected<BitVector> expand(StringRef S, StringRef Original) {
     if (S.size() < 3)
       break;
 
-    uint8_t Start = S[0];
-    uint8_t End = S[2];
-
     // If it doesn't start with something like X-Y,
     // consume the first character and proceed.
     if (S[1] != '-') {
-      BV[Start] = true;
+      BV[S[0]] = true;
       S = S.substr(1);
       continue;
     }
 
     // It must be in the form of X-Y.
     // Validate it and then interpret the range.
-    if (Start > End)
+    if (S[0] > S[2])
       return make_error<StringError>("invalid glob pattern: " + Original,
                                      errc::invalid_argument);
 
-    for (int C = Start; C <= End; ++C)
-      BV[(uint8_t)C] = true;
+    for (int C = S[0]; C <= S[2]; ++C)
+      BV[C] = true;
     S = S.substr(3);
   }
 
   for (char C : S)
-    BV[(uint8_t)C] = true;
+    BV[C] = true;
   return BV;
 }
 
@@ -92,7 +89,7 @@ static Expected<BitVector> scan(StringRef &S, StringRef Original) {
   }
   default:
     BitVector BV(256, false);
-    BV[(uint8_t)S[0]] = true;
+    BV[S[0]] = true;
     S = S.substr(1);
     return BV;
   }
@@ -162,7 +159,7 @@ bool GlobPattern::matchOne(ArrayRef<BitVector> Pats, StringRef S) const {
     }
 
     // If Pats[0] is not '*', it must consume one character.
-    if (S.empty() || !Pats[0][(uint8_t)S[0]])
+    if (S.empty() || !Pats[0][S[0]])
       return false;
     Pats = Pats.slice(1);
     S = S.substr(1);

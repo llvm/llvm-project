@@ -29,22 +29,10 @@ class TargetMachine;
 
 /// A struct capturing PGO tunables.
 struct PGOOptions {
-  PGOOptions(std::string ProfileGenFile = "", std::string ProfileUseFile = "",
-             std::string SampleProfileFile = "", bool RunProfileGen = false,
-             bool SamplePGOSupport = false)
-      : ProfileGenFile(ProfileGenFile), ProfileUseFile(ProfileUseFile),
-        SampleProfileFile(SampleProfileFile), RunProfileGen(RunProfileGen),
-        SamplePGOSupport(SamplePGOSupport || !SampleProfileFile.empty()) {
-    assert((RunProfileGen ||
-            !SampleProfileFile.empty() ||
-            !ProfileUseFile.empty() ||
-            SamplePGOSupport) && "Illegal PGOOptions.");
-  }
-  std::string ProfileGenFile;
-  std::string ProfileUseFile;
-  std::string SampleProfileFile;
-  bool RunProfileGen;
-  bool SamplePGOSupport;
+  std::string ProfileGenFile = "";
+  std::string ProfileUseFile = "";
+  std::string SampleProfileFile = "";
+  bool RunProfileGen = false;
 };
 
 /// \brief This class provides access to building LLVM's passes.
@@ -69,18 +57,6 @@ public:
   struct PipelineElement {
     StringRef Name;
     std::vector<PipelineElement> InnerPipeline;
-  };
-
-  /// \brief ThinLTO phase.
-  ///
-  /// This enumerates the LLVM ThinLTO optimization phases.
-  enum class ThinLTOPhase {
-    /// No ThinLTO behavior needed.
-    None,
-    // ThinLTO prelink (summary) phase.
-    PreLink,
-    // ThinLTO postlink (backend compile) phase.
-    PostLink
   };
 
   /// \brief LLVM-provided high-level optimization levels.
@@ -226,11 +202,13 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ///
-  /// \p Phase indicates the current ThinLTO phase.
+  /// \p PrepareForThinLTO indicates whether this is invoked in
+  /// PrepareForThinLTO phase. Special handling is needed for sample PGO to
+  /// ensure profile accurate in the backend profile annotation phase.
   FunctionPassManager
   buildFunctionSimplificationPipeline(OptimizationLevel Level,
-                                      ThinLTOPhase Phase,
-                                      bool DebugLogging = false);
+                                      bool DebugLogging = false,
+                                      bool PrepareForThinLTO = false);
 
   /// Construct the core LLVM module canonicalization and simplification
   /// pipeline.
@@ -246,11 +224,13 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ///
-  /// \p Phase indicates the current ThinLTO phase.
+  /// \p PrepareForThinLTO indicates whether this is invoked in
+  /// PrepareForThinLTO phase. Special handling is needed for sample PGO to
+  /// ensure profile accurate in the backend profile annotation phase.
   ModulePassManager
   buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                    ThinLTOPhase Phase,
-                                    bool DebugLogging = false);
+                                    bool DebugLogging = false,
+                                    bool PrepareForThinLTO = false);
 
   /// Construct the core LLVM module optimization pipeline.
   ///

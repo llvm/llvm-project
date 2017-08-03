@@ -15,7 +15,6 @@
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/GlobalsStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
@@ -81,12 +80,6 @@ PublicsStreamBuilder &PDBFileBuilder::getPublicsBuilder() {
   return *Publics;
 }
 
-GlobalsStreamBuilder &PDBFileBuilder::getGlobalsBuilder() {
-  if (!Globals)
-    Globals = llvm::make_unique<GlobalsStreamBuilder>(*Msf);
-  return *Globals;
-}
-
 Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
   auto ExpectedStream = Msf->addStream(Size);
   if (!ExpectedStream)
@@ -138,13 +131,6 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
     }
   }
 
-  if (Globals) {
-    if (auto EC = Globals->finalizeMsfLayout())
-      return std::move(EC);
-    if (Dbi)
-      Dbi->setGlobalsStreamIndex(Globals->getStreamIndex());
-  }
-
   return Msf->build();
 }
 
@@ -153,31 +139,6 @@ Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
   if (!NamedStreams.get(Name, SN))
     return llvm::make_error<pdb::RawError>(raw_error_code::no_stream);
   return SN;
-}
-
-void PDBFileBuilder::commitFpm(WritableBinaryStream &MsfBuffer,
-                               const MSFLayout &Layout) {
-  auto FpmStream =
-      WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator);
-
-  // We only need to create the alt fpm stream so that it gets initialized.
-  WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator,
-                                             true);
-
-  uint32_t BI = 0;
-  BinaryStreamWriter FpmWriter(*FpmStream);
-  while (BI < Layout.SB->NumBlocks) {
-    uint8_t ThisByte = 0;
-    for (uint32_t I = 0; I < 8; ++I) {
-      bool IsFree =
-          (BI < Layout.SB->NumBlocks) ? Layout.FreePageMap.test(BI) : true;
-      uint8_t Mask = uint8_t(IsFree) << I;
-      ThisByte |= Mask;
-      ++BI;
-    }
-    cantFail(FpmWriter.writeObject(ThisByte));
-  }
-  assert(FpmWriter.bytesRemaining() == 0);
 }
 
 Error PDBFileBuilder::commit(StringRef Filename) {
@@ -198,9 +159,6 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   if (auto EC = Writer.writeObject(*Layout.SB))
     return EC;
-
-  commitFpm(Buffer, Layout);
-
   uint32_t BlockMapOffset =
       msf::blockToOffset(Layout.SB->BlockMapAddr, Layout.SB->BlockSize);
   Writer.setOffset(BlockMapOffset);
@@ -254,19 +212,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   if (Publics) {
     auto PS = WritableMappedBlockStream::createIndexedStream(
         Layout, Buffer, Publics->getStreamIndex(), Allocator);
-    auto PRS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, Publics->getRecordStreamIdx(), Allocator);
     BinaryStreamWriter PSWriter(*PS);
-    BinaryStreamWriter RecWriter(*PRS);
-    if (auto EC = Publics->commit(PSWriter, RecWriter))
-      return EC;
-  }
-
-  if (Globals) {
-    auto GS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, Globals->getStreamIndex(), Allocator);
-    BinaryStreamWriter GSWriter(*GS);
-    if (auto EC = Globals->commit(GSWriter))
+    if (auto EC = Publics->commit(PSWriter))
       return EC;
   }
 

@@ -16,7 +16,6 @@
 #ifndef LLVM_ANALYSIS_MEMORYLOCATION_H
 #define LLVM_ANALYSIS_MEMORYLOCATION_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Metadata.h"
@@ -69,23 +68,17 @@ public:
   static MemoryLocation get(const AtomicCmpXchgInst *CXI);
   static MemoryLocation get(const AtomicRMWInst *RMWI);
   static MemoryLocation get(const Instruction *Inst) {
-    return *MemoryLocation::getOrNone(Inst);
-  }
-  static Optional<MemoryLocation> getOrNone(const Instruction *Inst) {
-    switch (Inst->getOpcode()) {
-    case Instruction::Load:
-      return get(cast<LoadInst>(Inst));
-    case Instruction::Store:
-      return get(cast<StoreInst>(Inst));
-    case Instruction::VAArg:
-      return get(cast<VAArgInst>(Inst));
-    case Instruction::AtomicCmpXchg:
-      return get(cast<AtomicCmpXchgInst>(Inst));
-    case Instruction::AtomicRMW:
-      return get(cast<AtomicRMWInst>(Inst));
-    default:
-      return None;
-    }
+    if (auto *I = dyn_cast<LoadInst>(Inst))
+      return get(I);
+    else if (auto *I = dyn_cast<StoreInst>(Inst))
+      return get(I);
+    else if (auto *I = dyn_cast<VAArgInst>(Inst))
+      return get(I);
+    else if (auto *I = dyn_cast<AtomicCmpXchgInst>(Inst))
+      return get(I);
+    else if (auto *I = dyn_cast<AtomicRMWInst>(Inst))
+      return get(I);
+    llvm_unreachable("unsupported memory instruction");
   }
 
   /// Return a location representing the source of a memory transfer.

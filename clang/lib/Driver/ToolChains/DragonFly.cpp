@@ -127,8 +127,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (D.CCCIsCXX()) {
-      if (getToolChain().ShouldLinkCXXStdlib(Args))
-        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 

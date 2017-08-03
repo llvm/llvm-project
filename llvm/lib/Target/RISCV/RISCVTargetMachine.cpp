@@ -43,21 +43,14 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
-  if (CM)
-    return *CM;
-  return CodeModel::Small;
-}
-
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT)
+                                       CodeModel::Model CM,
+                                       CodeGenOpt::Level OL)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM), OL),
+                        getEffectiveRelocModel(TT, RM), CM, OL),
       TLOF(make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }

@@ -356,7 +356,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     PIC = false;
   }
 
-  MOFI->InitMCObjectFileInfo(Triple(Opts.Triple), PIC, Ctx);
+  MOFI->InitMCObjectFileInfo(Triple(Opts.Triple), PIC, CodeModel::Default, Ctx);
   if (Opts.SaveTemporaryLabels)
     Ctx.setAllowTemporaryLabels(false);
   if (Opts.GenDwarfForAssembly)
@@ -504,8 +504,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Asm.ShowHelp) {
     std::unique_ptr<OptTable> Opts(driver::createDriverOptTable());
     Opts->PrintHelp(llvm::outs(), "clang -cc1as", "Clang Integrated Assembler",
-                    /*Include=*/driver::options::CC1AsOption, /*Exclude=*/0,
-                    /*ShowAllAliases=*/false);
+                    /*Include=*/driver::options::CC1AsOption, /*Exclude=*/0);
     return 0;
   }
 

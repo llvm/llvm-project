@@ -1275,7 +1275,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     printWeakBindTable(MachOOF);
 
   if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*MachOOF);
+    std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*MachOOF));
     // Dump the complete DWARF structure.
     DIDumpOptions DumpOpts;
     DumpOpts.DumpType = DwarfDumpType;
@@ -6594,7 +6594,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     }
 
     // Setup the DIContext
-    diContext = DWARFContext::create(*DbgObj);
+    diContext.reset(new DWARFContextInMemory(*DbgObj));
   }
 
   if (FilterSections.size() == 0)
@@ -9402,8 +9402,7 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
       }
     }
   }
-  Error Err = Error::success();
-  for (const llvm::object::ExportEntry &Entry : Obj->exports(Err)) {
+  for (const llvm::object::ExportEntry &Entry : Obj->exports()) {
     uint64_t Flags = Entry.flags();
     bool ReExport = (Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT);
     bool WeakDef = (Flags & MachO::EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION);
@@ -9456,8 +9455,6 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
     }
     outs() << "\n";
   }
-  if (Err)
-    report_error(Obj->getFileName(), std::move(Err));
 }
 
 //===----------------------------------------------------------------------===//

@@ -1465,30 +1465,11 @@ Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
     }
   }
 
-  if (!GEP1)
-    // No GEP found.
+  // Avoid duplicating the arithmetic if GEP2 has non-constant indices and
+  // multiple users.
+  if (!GEP1 ||
+      (GEP2 && !GEP2->hasAllConstantIndices() && !GEP2->hasOneUse()))
     return nullptr;
-
-  if (GEP2) {
-    // (gep X, ...) - (gep X, ...)
-    //
-    // Avoid duplicating the arithmetic if there are more than one non-constant
-    // indices between the two GEPs and either GEP has a non-constant index and
-    // multiple users. If zero non-constant index, the result is a constant and
-    // there is no duplication. If one non-constant index, the result is an add
-    // or sub with a constant, which is no larger than the original code, and
-    // there's no duplicated arithmetic, even if either GEP has multiple
-    // users. If more than one non-constant indices combined, as long as the GEP
-    // with at least one non-constant index doesn't have multiple users, there
-    // is no duplication.
-    unsigned NumNonConstantIndices1 = GEP1->countNonConstantIndices();
-    unsigned NumNonConstantIndices2 = GEP2->countNonConstantIndices();
-    if (NumNonConstantIndices1 + NumNonConstantIndices2 > 1 &&
-        ((NumNonConstantIndices1 > 0 && !GEP1->hasOneUse()) ||
-         (NumNonConstantIndices2 > 0 && !GEP2->hasOneUse()))) {
-      return nullptr;
-    }
-  }
 
   // Emit the offset of the GEP and an intptr_t.
   Value *Result = EmitGEPOffset(GEP1);
@@ -1619,7 +1600,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
       return BinaryOperator::CreateNeg(Y);
   }
 
-  // (sub (or A, B), (xor A, B)) --> (and A, B)
+  // (sub (or A, B) (xor A, B)) --> (and A, B)
   {
     Value *A, *B;
     if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&

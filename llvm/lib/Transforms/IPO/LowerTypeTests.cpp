@@ -634,10 +634,6 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
                            Br->getMetadata(LLVMContext::MD_prof));
         ReplaceInstWithInst(InitialBB->getTerminator(), NewBr);
 
-        // Update phis in Else resulting from InitialBB being split
-        for (auto &Phi : Else->phis())
-          Phi.addIncoming(Phi.getIncomingValueForBlock(Then), InitialBB);
-
         IRBuilder<> ThenB(CI);
         return createBitSetTest(ThenB, TIL, BitOffset);
       }
@@ -1516,27 +1512,14 @@ bool LowerTypeTestsModule::lower() {
               FunctionType::get(Type::getVoidTy(M.getContext()), false),
               GlobalVariable::ExternalLinkage, FunctionName, &M);
 
-        // If the function is available_externally, remove its definition so
-        // that it is handled the same way as a declaration. Later we will try
-        // to create an alias using this function's linkage, which will fail if
-        // the linkage is available_externally. This will also result in us
-        // following the code path below to replace the type metadata.
-        if (F->hasAvailableExternallyLinkage()) {
-          F->setLinkage(GlobalValue::ExternalLinkage);
-          F->deleteBody();
-          F->setComdat(nullptr);
-          F->clearMetadata();
-        }
+        if (Linkage == CFL_Definition)
+          F->eraseMetadata(LLVMContext::MD_type);
 
-        // If the function in the full LTO module is a declaration, replace its
-        // type metadata with the type metadata we found in cfi.functions. That
-        // metadata is presumed to be more accurate than the metadata attached
-        // to the declaration.
         if (F->isDeclaration()) {
           if (Linkage == CFL_WeakDeclaration)
             F->setLinkage(GlobalValue::ExternalWeakLinkage);
 
-          F->eraseMetadata(LLVMContext::MD_type);
+          SmallVector<MDNode *, 2> Types;
           for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));

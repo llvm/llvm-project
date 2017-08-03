@@ -190,23 +190,17 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
-  if (CM)
-    return *CM;
-  return CodeModel::Small;
-}
-
 /// Create an ARM architecture model.
 ///
 ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           CodeModel::Model CM,
                                            CodeGenOpt::Level OL, bool isLittle)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM), OL),
+                        CPU, FS, Options, getEffectiveRelocModel(TT, RM), CM,
+                        OL),
       TargetABI(computeTargetABI(TT, CPU, Options)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
@@ -282,20 +276,21 @@ TargetIRAnalysis ARMBaseTargetMachine::getTargetIRAnalysis() {
   });
 }
 
+
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT)
+                                       CodeModel::Model CM,
+                                       CodeGenOpt::Level OL)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
 ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT)
+                                       CodeModel::Model CM,
+                                       CodeGenOpt::Level OL)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
 namespace {

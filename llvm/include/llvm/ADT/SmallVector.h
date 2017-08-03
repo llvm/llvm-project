@@ -19,7 +19,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -239,8 +238,6 @@ void SmallVectorTemplateBase<T, isPodLike>::grow(size_t MinSize) {
   if (NewCapacity < MinSize)
     NewCapacity = MinSize;
   T *NewElts = static_cast<T*>(malloc(NewCapacity*sizeof(T)));
-  if (NewElts == nullptr)
-    report_bad_alloc_error("Allocation of SmallVector element failed.");
 
   // Move the elements over.
   this->uninitialized_move(this->begin(), this->end(), NewElts);

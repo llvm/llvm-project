@@ -49,7 +49,6 @@
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBProcess.h"
-#include "lldb/API/SBProcessInfo.h"
 #include "lldb/API/SBQueue.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBSection.h"

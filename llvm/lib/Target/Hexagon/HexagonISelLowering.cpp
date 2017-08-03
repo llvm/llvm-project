@@ -1364,44 +1364,10 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-static Constant *convert_i1_to_i8(const Constant *ConstVal) {
-  SmallVector<Constant *, 128> NewConst;
-  const ConstantVector *CV = dyn_cast<ConstantVector>(ConstVal);
-  if (!CV)
-    return nullptr;
-
-  LLVMContext &Ctx = ConstVal->getContext();
-  IRBuilder<> IRB(Ctx);
-  unsigned NumVectorElements = CV->getNumOperands();
-  assert(isPowerOf2_32(NumVectorElements) &&
-         "conversion only supported for pow2 VectorSize!");
-
-  for (unsigned i = 0; i < NumVectorElements / 8; ++i) {
-    uint8_t x = 0;
-    for (unsigned j = 0; j < 8; ++j) {
-      uint8_t y = CV->getOperand(i * 8 + j)->getUniqueInteger().getZExtValue();
-      x |= y << (7 - j);
-    }
-    assert((x == 0 || x == 255) && "Either all 0's or all 1's expected!");
-    NewConst.push_back(IRB.getInt8(x));
-  }
-  return ConstantVector::get(NewConst);
-}
-
 SDValue
 HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   EVT ValTy = Op.getValueType();
   ConstantPoolSDNode *CPN = cast<ConstantPoolSDNode>(Op);
-  Constant *CVal = nullptr;
-  bool isVTi1Type = false;
-  if (const Constant *ConstVal = dyn_cast<Constant>(CPN->getConstVal())) {
-    Type *CValTy = ConstVal->getType();
-    if (CValTy->isVectorTy() &&
-        CValTy->getVectorElementType()->isIntegerTy(1)) {
-      CVal = convert_i1_to_i8(ConstVal);
-      isVTi1Type = (CVal != nullptr);
-    }
-  }
   unsigned Align = CPN->getAlignment();
   bool IsPositionIndependent = isPositionIndependent();
   unsigned char TF = IsPositionIndependent ? HexagonII::MO_PCREL : 0;
@@ -1411,8 +1377,6 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   if (CPN->isMachineConstantPoolEntry())
     T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, Offset,
                                   TF);
-  else if (isVTi1Type)
-    T = DAG.getTargetConstantPool(CVal, ValTy, Align, Offset, TF);
   else
     T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset,
                                   TF);
@@ -2314,8 +2278,8 @@ static StridedLoadKind isStridedLoad(const ArrayRef<int> &Mask) {
   return StridedLoadKind::NoPattern;
 }
 
-bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
-                                               EVT VT) const {
+bool HexagonTargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &Mask,
+      EVT VT) const {
   if (Subtarget.useHVXOps())
     return isStridedLoad(Mask) != StridedLoadKind::NoPattern;
   return true;
@@ -2959,11 +2923,7 @@ HexagonTargetLowering::getConstraintType(StringRef Constraint) const {
       case 'q':
       case 'v':
         if (Subtarget.useHVXOps())
-          return C_RegisterClass;
-        break;
-      case 'a':
-        return C_RegisterClass;
-      default:
+          return C_Register;
         break;
     }
   }
@@ -2991,9 +2951,6 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case MVT::f64:
         return std::make_pair(0U, &Hexagon::DoubleRegsRegClass);
       }
-      break;
-    case 'a': // M0-M1
-      return std::make_pair(0U, &Hexagon::ModRegsRegClass);
     case 'q': // q0-q3
       switch (VT.getSizeInBits()) {
       default:
@@ -3003,7 +2960,6 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case 1024:
         return std::make_pair(0U, &Hexagon::VecPredRegs128BRegClass);
       }
-      break;
     case 'v': // V0-V31
       switch (VT.getSizeInBits()) {
       default:
@@ -3017,7 +2973,7 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case 2048:
         return std::make_pair(0U, &Hexagon::VecDblRegs128BRegClass);
       }
-      break;
+
     default:
       llvm_unreachable("Unknown asm register class");
     }
@@ -3037,7 +2993,7 @@ bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
 /// AM is legal for this target, for a load/store of the specified type.
 bool HexagonTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                   const AddrMode &AM, Type *Ty,
-                                                  unsigned AS, Instruction *I) const {
+                                                  unsigned AS) const {
   if (Ty->isSized()) {
     // When LSR detects uses of the same base address to access different
     // types (e.g. unions), it will assume a conservative type for these

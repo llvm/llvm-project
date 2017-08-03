@@ -512,6 +512,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     switch (TM.getCodeModel()) {
     case CodeModel::Small:
     case CodeModel::Medium:
+    case CodeModel::Default:
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBL))
           .add(predOps(ARMCC::AL))
@@ -520,6 +521,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlags(MachineInstr::FrameSetup);
       break;
     case CodeModel::Large:
+    case CodeModel::JITDefault:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ARM::R12)
         .addExternalSymbol("__chkstk")
         .setMIFlags(MachineInstr::FrameSetup);
@@ -1281,11 +1283,9 @@ skipAlignedDPRCS2Spills(MachineBasicBlock::iterator MI,
   case 7:
     ++MI;
     assert(MI->mayStore() && "Expecting spill instruction");
-    LLVM_FALLTHROUGH;
   default:
     ++MI;
     assert(MI->mayStore() && "Expecting spill instruction");
-    LLVM_FALLTHROUGH;
   case 1:
   case 2:
   case 4:

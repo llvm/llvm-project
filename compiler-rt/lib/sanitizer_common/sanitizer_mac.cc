@@ -23,7 +23,6 @@
 #include <stdio.h>
 
 #include "sanitizer_common.h"
-#include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"

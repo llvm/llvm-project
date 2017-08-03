@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc < %s -march=x86
 
 define void @test2(<2 x i32> %A, <2 x i32> %B, <2 x i32>* %C) nounwind {
        %D = icmp sgt <2 x i32> %A, %B

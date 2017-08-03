@@ -17,7 +17,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/Driver/Types.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -53,11 +52,6 @@ static llvm::cl::list<std::string>
     ClangArgs("Xcc", llvm::cl::ZeroOrMore,
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
               llvm::cl::CommaSeparated);
-
-static llvm::cl::opt<std::string>
-    Input("x", llvm::cl::Optional,
-          llvm::cl::desc("The language to parse (default: c++)"),
-          llvm::cl::init("c++"));
 
 static llvm::cl::opt<bool>
 DumpAST("dump-ast", llvm::cl::init(false),
@@ -116,7 +110,6 @@ private:
     llvm::errs() << LineString << '\n';
     llvm::errs().indent(LocColumn);
     llvm::errs() << '^';
-    llvm::errs() << '\n';
   }
 
   virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
@@ -150,7 +143,7 @@ private:
 };
 
 std::unique_ptr<CompilerInstance>
-BuildCompilerInstance() {
+BuildCompilerInstance(ArrayRef<const char *> ClangArgv) {
   auto Ins = llvm::make_unique<CompilerInstance>();
   auto DC = llvm::make_unique<TestDiagnosticConsumer>();
   const bool ShouldOwnClient = true;
@@ -158,27 +151,13 @@ BuildCompilerInstance() {
 
   auto Inv = llvm::make_unique<CompilerInvocation>();
 
-  std::vector<const char *> ClangArgv(ClangArgs.size());
-  std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
-                 [](const std::string &s) -> const char * { return s.data(); });
   CompilerInvocation::CreateFromArgs(*Inv, ClangArgv.data(),
                                      &ClangArgv.data()[ClangArgv.size()],
                                      Ins->getDiagnostics());
 
-  {
-    using namespace driver::types;
-    ID Id = lookupTypeForTypeSpecifier(Input.c_str());
-    assert(Id != TY_INVALID);
-    if (isCXX(Id)) {
-      Inv->getLangOpts()->CPlusPlus = true;
-      Inv->getLangOpts()->CPlusPlus11 = true;
-      Inv->getHeaderSearchOpts().UseLibcxx = true;
-    }
-    if (isObjC(Id)) {
-      Inv->getLangOpts()->ObjC1 = 1;
-      Inv->getLangOpts()->ObjC2 = 1;
-    }
-  }
+  Inv->getLangOpts()->CPlusPlus = true;
+  Inv->getLangOpts()->CPlusPlus11 = true;
+  Inv->getHeaderSearchOpts().UseLibcxx = true;
   Inv->getLangOpts()->Bool = true;
   Inv->getLangOpts()->WChar = true;
   Inv->getLangOpts()->Blocks = true;
@@ -237,8 +216,11 @@ void AddExternalSource(
 }
 
 std::unique_ptr<CompilerInstance> BuildIndirect(std::unique_ptr<CompilerInstance> &CI) {
+  std::vector<const char *> ClangArgv(ClangArgs.size());
+  std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
+                 [](const std::string &s) -> const char * { return s.data(); });
   std::unique_ptr<CompilerInstance> IndirectCI =
-      init_convenience::BuildCompilerInstance();
+      init_convenience::BuildCompilerInstance(ClangArgv);
   auto ST = llvm::make_unique<SelectorTable>();
   auto BC = llvm::make_unique<Builtin::Context>();
   std::unique_ptr<ASTContext> AST =
@@ -265,8 +247,11 @@ llvm::Expected<std::unique_ptr<CompilerInstance>>
 Parse(const std::string &Path,
       llvm::ArrayRef<std::unique_ptr<CompilerInstance>> Imports,
       bool ShouldDumpAST) {
+  std::vector<const char *> ClangArgv(ClangArgs.size());
+  std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
+                 [](const std::string &s) -> const char * { return s.data(); });
   std::unique_ptr<CompilerInstance> CI =
-      init_convenience::BuildCompilerInstance();
+      init_convenience::BuildCompilerInstance(ClangArgv);
   auto ST = llvm::make_unique<SelectorTable>();
   auto BC = llvm::make_unique<Builtin::Context>();
   std::unique_ptr<ASTContext> AST =

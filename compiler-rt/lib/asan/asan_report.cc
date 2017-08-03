@@ -141,9 +141,9 @@ class ScopedInErrorReport {
 
       // Can't use Report() here because of potential deadlocks
       // in nested signal handlers.
-      static const char msg[] =
-          "AddressSanitizer: nested bug in the same thread, aborting.\n";
-      CatastrophicErrorWrite(msg, sizeof(msg) - 1);
+      const char msg[] = "AddressSanitizer: nested bug in the same thread, "
+                         "aborting.\n";
+      WriteToFile(kStderrFd, msg, sizeof(msg));
 
       internal__exit(common_flags()->exitcode);
     }

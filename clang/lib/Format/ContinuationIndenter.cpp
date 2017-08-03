@@ -731,10 +731,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
     return State.Stack[State.Stack.size() - 2].LastSpace;
   if (Current.is(tok::identifier) && Current.Next &&
-      (Current.Next->is(TT_DictLiteral) ||
-       ((Style.Language == FormatStyle::LK_Proto ||
-         Style.Language == FormatStyle::LK_TextProto) &&
-        Current.Next->isOneOf(TT_TemplateOpener, tok::l_brace))))
+      Current.Next->is(TT_DictLiteral))
     return State.Stack.back().Indent;
   if (NextNonComment->is(TT_ObjCStringLiteral) &&
       State.StartOfStringLiteral != 0)
@@ -1317,7 +1314,6 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
   bool ReflowInProgress = false;
   unsigned Penalty = 0;
   unsigned RemainingTokenColumns = 0;
-  unsigned TailOffset = 0;
   for (unsigned LineIndex = 0, EndIndex = Token->getLineCount();
        LineIndex != EndIndex; ++LineIndex) {
     BreakableToken::Split SplitBefore(StringRef::npos, 0);
@@ -1326,7 +1322,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
                                           RemainingSpace, CommentPragmasRegex);
     }
     ReflowInProgress = SplitBefore.first != StringRef::npos;
-    TailOffset =
+    unsigned TailOffset =
         ReflowInProgress ? (SplitBefore.first + SplitBefore.second) : 0;
     if (!DryRun)
       Token->replaceWhitespaceBefore(LineIndex, RemainingTokenColumns,
@@ -1381,16 +1377,6 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
       ReflowInProgress = true;
       BreakInserted = true;
     }
-  }
-
-  BreakableToken::Split SplitAfterLastLine = Token->getSplitAfterLastLine(
-      TailOffset, ColumnLimit, CommentPragmasRegex);
-  if (SplitAfterLastLine.first != StringRef::npos) {
-    if (!DryRun)
-      Token->replaceWhitespaceAfterLastLine(TailOffset, SplitAfterLastLine,
-                                            Whitespaces);
-    RemainingTokenColumns = Token->getLineLengthAfterSplitAfterLastLine(
-        TailOffset, SplitAfterLastLine);
   }
 
   State.Column = RemainingTokenColumns;

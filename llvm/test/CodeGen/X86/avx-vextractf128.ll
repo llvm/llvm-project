@@ -119,7 +119,7 @@ entry:
 define void @t9(i64* %p) {
 ; CHECK-LABEL: t9:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-- -no-integrated-as < %s | FileCheck %s
+; RUN: llc -march=x86 -no-integrated-as < %s | FileCheck %s
 
 declare void @bar(i32* %junk)
 

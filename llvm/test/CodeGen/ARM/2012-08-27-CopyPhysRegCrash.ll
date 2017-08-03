@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=cortex-a8
+; RUN: llc < %s -mcpu=cortex-a8 -march=thumb
 ; Test that this doesn't crash.
 ; <rdar://problem/12183003>
 

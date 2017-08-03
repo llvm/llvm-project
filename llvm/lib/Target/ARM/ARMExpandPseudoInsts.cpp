@@ -24,6 +24,13 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h" // FIXME: for debug only. remove!
+#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
 
@@ -1704,8 +1711,9 @@ bool ARMExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   AFI = MF.getInfo<ARMFunctionInfo>();
 
   bool Modified = false;
-  for (MachineBasicBlock &MBB : MF)
-    Modified |= ExpandMBB(MBB);
+  for (MachineFunction::iterator MFI = MF.begin(), E = MF.end(); MFI != E;
+       ++MFI)
+    Modified |= ExpandMBB(*MFI);
   if (VerifyARMPseudo)
     MF.verify(this, "After expanding ARM pseudo instructions.");
   return Modified;

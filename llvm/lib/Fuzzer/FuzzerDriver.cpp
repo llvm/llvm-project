@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -564,6 +563,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
   Options.ExperimentalLenControl = Flags.experimental_len_control;
+  if (Flags.experimental_len_control && Flags.max_len == kMinDefaultLen)
+    Options.MaxLen = 1 << 20;
   Options.UnitTimeoutSec = Flags.timeout;
   Options.ErrorExitCode = Flags.error_exitcode;
   Options.TimeoutExitCode = Flags.timeout_exitcode;
@@ -640,8 +641,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleTerm = Flags.handle_term;
   Options.HandleXfsz = Flags.handle_xfsz;
   SetSignalHandler(Options);
-
-  std::atexit(Fuzzer::StaticExitCallback);
 
   if (Flags.minimize_crash)
     return MinimizeCrashInput(Args, Options);

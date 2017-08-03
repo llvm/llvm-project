@@ -22,8 +22,9 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
-  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      TT, CPU, FS, TargetOptions(), None, None, CodeGenOpt::Default));
+  return std::unique_ptr<TargetMachine>(
+      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), None,
+                                     CodeModel::Default, CodeGenOpt::Default));
 }
 
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {

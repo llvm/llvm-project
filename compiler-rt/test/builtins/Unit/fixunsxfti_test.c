@@ -1,5 +1,8 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
-// REQUIRES: x86-target-arch
+// XFAIL: aarch64
+// test fails for aarch64 (see pr32260)
+
+// UNSUPPORTED: mips
 
 //===-- fixunsxfti_test.c - Test __fixunsxfti -----------------------------===//
 //

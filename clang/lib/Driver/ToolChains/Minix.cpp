@@ -72,8 +72,7 @@ void tools::minix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (D.CCCIsCXX()) {
-      if (getToolChain().ShouldLinkCXXStdlib(Args))
-        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
   }

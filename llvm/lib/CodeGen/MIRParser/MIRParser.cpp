@@ -587,7 +587,6 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     else
       ObjectIdx = MFI.CreateFixedSpillStackObject(Object.Size, Object.Offset);
     MFI.setObjectAlignment(ObjectIdx, Object.Alignment);
-    MFI.setStackID(ObjectIdx, Object.StackID);
     if (!PFS.FixedStackObjectSlots.insert(std::make_pair(Object.ID.Value,
                                                          ObjectIdx))
              .second)
@@ -620,8 +619,6 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
           Object.Size, Object.Alignment,
           Object.Type == yaml::MachineStackObject::SpillSlot, Alloca);
     MFI.setObjectOffset(ObjectIdx, Object.Offset);
-    MFI.setStackID(ObjectIdx, Object.StackID);
-
     if (!PFS.StackObjectSlots.insert(std::make_pair(Object.ID.Value, ObjectIdx))
              .second)
       return error(Object.ID.SourceRange.Start,
@@ -719,10 +716,6 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
   const auto &M = *MF.getFunction()->getParent();
   SMDiagnostic Error;
   for (const auto &YamlConstant : YamlMF.Constants) {
-    if (YamlConstant.IsTargetSpecific)
-      // FIXME: Support target-specific constant pools
-      return error(YamlConstant.Value.SourceRange.Start,
-                   "Can't parse target-specific constant pool entries yet");
     const Constant *Value = dyn_cast_or_null<Constant>(
         parseConstantValue(YamlConstant.Value.Value, Error, M));
     if (!Value)

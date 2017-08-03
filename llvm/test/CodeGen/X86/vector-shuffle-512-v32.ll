@@ -53,7 +53,7 @@ define <32 x i16> @shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_
 ;
 ; SKX-LABEL: shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_1f:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,1,2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,31>
+; SKX-NEXT:    vmovdqu16 {{.*#+}} zmm1 = <2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,1,2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,31>
 ; SKX-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %c = shufflevector <32 x i16> %a, <32 x i16> undef, <32 x i32> <i32 2, i32 5, i32 undef, i32 undef, i32 7, i32 undef, i32 10, i32 1,  i32 0, i32 5, i32 undef, i32 4, i32 7, i32 undef, i32 10, i32 1, i32 2, i32 5, i32 undef, i32 undef, i32 7, i32 undef, i32 10, i32 1,  i32 0, i32 5, i32 undef, i32 4, i32 7, i32 undef, i32 10, i32 31>
@@ -86,7 +86,7 @@ define <32 x i16> @shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_1
 ;
 ; SKX-LABEL: shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_38:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24,15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,56]
+; SKX-NEXT:    vmovdqu16 {{.*#+}} zmm2 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24,15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,56]
 ; SKX-NEXT:    vpermt2w %zmm1, %zmm2, %zmm0
 ; SKX-NEXT:    retq
   %c = shufflevector <32 x i16> %a, <32 x i16> %b, <32 x i32> <i32 15, i32 31, i32 14, i32 22, i32 13, i32 29, i32 4, i32 28, i32 11, i32 27, i32 10, i32 26, i32 9, i32 25, i32 8, i32 24, i32 15, i32 31, i32 14, i32 22, i32 13, i32 29, i32 4, i32 28, i32 11, i32 27, i32 10, i32 26, i32 9, i32 25, i32 8, i32 56>
@@ -205,7 +205,7 @@ define <32 x i16> @shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<32 x i16> %a
 ; KNL-NEXT:    movl $65535, %eax ## imm = 0xFFFF
 ; KNL-NEXT:    vmovd %eax, %xmm1
 ; KNL-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
@@ -351,8 +351,24 @@ define <8 x i16> @pr32967(<32 x i16> %v) {
 ;
 ; SKX-LABEL: pr32967:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpsrld $16, %zmm0, %zmm0
-; SKX-NEXT:    vpmovqw %zmm0, %xmm0
+; SKX-NEXT:    vpextrw $5, %xmm0, %eax
+; SKX-NEXT:    vpextrw $1, %xmm0, %ecx
+; SKX-NEXT:    vmovd %ecx, %xmm1
+; SKX-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
+; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; SKX-NEXT:    vpextrw $1, %xmm2, %eax
+; SKX-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; SKX-NEXT:    vpextrw $5, %xmm2, %eax
+; SKX-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; SKX-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; SKX-NEXT:    vpextrw $1, %xmm2, %eax
+; SKX-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; SKX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm2[5],xmm1[6,7]
+; SKX-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; SKX-NEXT:    vpextrw $1, %xmm0, %eax
+; SKX-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; SKX-NEXT:    vpextrw $5, %xmm0, %eax
+; SKX-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
  %shuffle = shufflevector <32 x i16> %v, <32 x i16> undef, <8 x i32> <i32 1,i32 5,i32 9,i32 13,i32 17,i32 21,i32 25,i32 29>

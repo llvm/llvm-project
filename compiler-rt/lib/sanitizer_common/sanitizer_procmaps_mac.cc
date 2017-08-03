@@ -36,51 +36,6 @@
 
 namespace __sanitizer {
 
-// Contains information used to iterate through sections.
-struct MemoryMappedSegmentData {
-  char name[kMaxSegName];
-  uptr nsects;
-  char *current_load_cmd_addr;
-  u32 lc_type;
-  uptr base_virt_addr;
-  uptr addr_mask;
-};
-
-template <typename Section>
-static void NextSectionLoad(LoadedModule *module, MemoryMappedSegmentData *data,
-                            bool isWritable) {
-  const Section *sc = (const Section *)data->current_load_cmd_addr;
-  data->current_load_cmd_addr += sizeof(Section);
-
-  uptr sec_start = (sc->addr & data->addr_mask) + data->base_virt_addr;
-  uptr sec_end = sec_start + sc->size;
-  module->addAddressRange(sec_start, sec_end, /*executable=*/false, isWritable,
-                          sc->sectname);
-}
-
-void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
-  // Don't iterate over sections when the caller hasn't set up the
-  // data pointer, when there are no sections, or when the segment
-  // is executable. Avoid iterating over executable sections because
-  // it will confuse libignore, and because the extra granularity
-  // of information is not needed by any sanitizers.
-  if (!data_ || !data_->nsects || IsExecutable()) {
-    module->addAddressRange(start, end, IsExecutable(), IsWritable(),
-                            data_ ? data_->name : nullptr);
-    return;
-  }
-
-  do {
-    if (data_->lc_type == LC_SEGMENT) {
-      NextSectionLoad<struct section>(module, data_, IsWritable());
-#ifdef MH_MAGIC_64
-    } else if (data_->lc_type == LC_SEGMENT_64) {
-      NextSectionLoad<struct section_64>(module, data_, IsWritable());
-#endif
-    }
-  } while (--data_->nsects);
-}
-
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
   Reset();
 }
@@ -189,34 +144,19 @@ bool MemoryMappingLayout::NextSegmentLoad(MemoryMappedSegment *segment) {
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
 
-    uptr base_virt_addr, addr_mask;
     if (current_image_ == kDyldImageIdx) {
-      base_virt_addr = (uptr)get_dyld_hdr();
       // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
       // it contains an absolute address rather than an offset for dyld.
       // To make matters even more complicated, this absolute address
       // isn't actually the absolute segment address, but the offset portion
       // of the address is accurate when combined with the dyld base address,
       // and the mask will give just this offset.
-      addr_mask = 0xfffff;
+      segment->start = (sc->vmaddr & 0xfffff) + (uptr)get_dyld_hdr();
+      segment->end = (sc->vmaddr & 0xfffff) + sc->vmsize + (uptr)get_dyld_hdr();
     } else {
-      base_virt_addr = (uptr)_dyld_get_image_vmaddr_slide(current_image_);
-      addr_mask = ~0;
-    }
-    segment->start = (sc->vmaddr & addr_mask) + base_virt_addr;
-    segment->end = segment->start + sc->vmsize;
-
-    // Most callers don't need section information, so only fill this struct
-    // when required.
-    if (segment->data_) {
-      segment->data_->nsects = sc->nsects;
-      segment->data_->current_load_cmd_addr =
-          (char *)lc + sizeof(SegmentCommand);
-      segment->data_->lc_type = kLCSegment;
-      segment->data_->base_virt_addr = base_virt_addr;
-      segment->data_->addr_mask = addr_mask;
-      internal_strncpy(segment->data_->name, sc->segname,
-                       ARRAY_SIZE(segment->data_->name));
+      const sptr dlloff = _dyld_get_image_vmaddr_slide(current_image_);
+      segment->start = sc->vmaddr + dlloff;
+      segment->end = sc->vmaddr + sc->vmsize + dlloff;
     }
 
     // Return the initial protection.
@@ -352,9 +292,7 @@ void MemoryMappingLayout::DumpListOfModules(
   Reset();
   InternalScopedString module_name(kMaxPathLength);
   MemoryMappedSegment segment(module_name.data(), kMaxPathLength);
-  MemoryMappedSegmentData data;
-  segment.data_ = &data;
-  while (Next(&segment)) {
+  for (uptr i = 0; Next(&segment); i++) {
     if (segment.filename[0] == '\0') continue;
     LoadedModule *cur_module = nullptr;
     if (!modules->empty() &&
@@ -366,7 +304,8 @@ void MemoryMappingLayout::DumpListOfModules(
       cur_module->set(segment.filename, segment.start, segment.arch,
                       segment.uuid, current_instrumented_);
     }
-    segment.AddAddressRanges(cur_module);
+    cur_module->addAddressRange(segment.start, segment.end,
+                                segment.IsExecutable(), segment.IsWritable());
   }
 }
 

@@ -131,23 +131,18 @@ createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
       Conf.CodeModel, Conf.CGOptLevel));
 }
 
-static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
-                           unsigned OptLevel, bool IsThinLTO) {
-  Optional<PGOOptions> PGOOpt;
-  if (!Conf.SampleProfile.empty())
-    PGOOpt = PGOOptions("", "", Conf.SampleProfile, false, true);
-
-  PassBuilder PB(TM, PGOOpt);
+static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel,
+                           bool IsThinLTO) {
+  PassBuilder PB(TM);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.
-  if (!PB.parseAAPipeline(AA, "default"))
-    report_fatal_error("Error parsing default AA pipeline");
+  assert(PB.parseAAPipeline(AA, "default"));
 
-  LoopAnalysisManager LAM(Conf.DebugPassManager);
-  FunctionAnalysisManager FAM(Conf.DebugPassManager);
-  CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
-  ModuleAnalysisManager MAM(Conf.DebugPassManager);
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
 
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return std::move(AA); });
@@ -159,7 +154,7 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM(Conf.DebugPassManager);
+  ModulePassManager MPM;
   // FIXME (davide): verify the input.
 
   PassBuilder::OptimizationLevel OL;
@@ -182,9 +177,9 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   }
 
   if (IsThinLTO)
-    MPM = PB.buildThinLTODefaultPipeline(OL, Conf.DebugPassManager);
+    MPM = PB.buildThinLTODefaultPipeline(OL, false /* DebugLogging */);
   else
-    MPM = PB.buildLTODefaultPipeline(OL, Conf.DebugPassManager);
+    MPM = PB.buildLTODefaultPipeline(OL, false /* DebugLogging */);
   MPM.run(Mod, MAM);
 
   // FIXME (davide): verify the output.
@@ -267,7 +262,7 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
     runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
   else if (Conf.UseNewPM)
-    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO);
+    runNewPMPasses(Mod, TM, Conf.OptLevel, IsThinLTO);
   else
     runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);

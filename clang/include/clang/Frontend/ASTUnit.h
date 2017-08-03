@@ -448,7 +448,7 @@ public:
 
   IntrusiveRefCntPtr<ASTReader> getASTReader() const;
 
-  StringRef getOriginalSourceFileName() const {
+  StringRef getOriginalSourceFileName() {
     return OriginalSourceFile;
   }
 
@@ -524,26 +524,26 @@ public:
   /// \brief If \p Loc is a loaded location from the preamble, returns
   /// the corresponding local location of the main file, otherwise it returns
   /// \p Loc.
-  SourceLocation mapLocationFromPreamble(SourceLocation Loc) const;
+  SourceLocation mapLocationFromPreamble(SourceLocation Loc);
 
   /// \brief If \p Loc is a local location of the main file but inside the
   /// preamble chunk, returns the corresponding loaded location from the
   /// preamble, otherwise it returns \p Loc.
-  SourceLocation mapLocationToPreamble(SourceLocation Loc) const;
+  SourceLocation mapLocationToPreamble(SourceLocation Loc);
 
-  bool isInPreambleFileID(SourceLocation Loc) const;
-  bool isInMainFileID(SourceLocation Loc) const;
-  SourceLocation getStartOfMainFileID() const;
-  SourceLocation getEndOfPreambleFileID() const;
+  bool isInPreambleFileID(SourceLocation Loc);
+  bool isInMainFileID(SourceLocation Loc);
+  SourceLocation getStartOfMainFileID();
+  SourceLocation getEndOfPreambleFileID();
 
   /// \see mapLocationFromPreamble.
-  SourceRange mapRangeFromPreamble(SourceRange R) const {
+  SourceRange mapRangeFromPreamble(SourceRange R) {
     return SourceRange(mapLocationFromPreamble(R.getBegin()),
                        mapLocationFromPreamble(R.getEnd()));
   }
 
   /// \see mapLocationToPreamble.
-  SourceRange mapRangeToPreamble(SourceRange R) const {
+  SourceRange mapRangeToPreamble(SourceRange R) {
     return SourceRange(mapLocationToPreamble(R.getBegin()),
                        mapLocationToPreamble(R.getEnd()));
   }
@@ -607,7 +607,7 @@ public:
 
   /// \brief Returns true if the ASTUnit was constructed from a serialized
   /// module file.
-  bool isModuleFile() const;
+  bool isModuleFile();
 
   std::unique_ptr<llvm::MemoryBuffer>
   getBufferForFile(StringRef Filename, std::string *ErrorStr = nullptr);

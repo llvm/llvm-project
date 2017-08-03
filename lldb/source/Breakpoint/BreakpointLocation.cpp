@@ -58,15 +58,6 @@ lldb::addr_t BreakpointLocation::GetLoadAddress() const {
   return m_address.GetOpcodeLoadAddress(&m_owner.GetTarget());
 }
 
-const BreakpointOptions *
-BreakpointLocation::GetOptionsSpecifyingKind(BreakpointOptions::OptionKind kind)
-const {
-    if (m_options_ap && m_options_ap->IsOptionSet(kind))
-      return m_options_ap.get();
-    else
-      return m_owner.GetOptions();
-}
-
 Address &BreakpointLocation::GetAddress() { return m_address; }
 
 Breakpoint &BreakpointLocation::GetBreakpoint() { return m_owner; }
@@ -93,19 +84,6 @@ void BreakpointLocation::SetEnabled(bool enabled) {
                                              : eBreakpointEventTypeDisabled);
 }
 
-bool BreakpointLocation::IsAutoContinue() const {
-  if (m_options_ap 
-      && m_options_ap->IsOptionSet(BreakpointOptions::eAutoContinue))
-    return m_options_ap->IsAutoContinue();
-  else
-    return m_owner.IsAutoContinue();
-}
-
-void BreakpointLocation::SetAutoContinue(bool auto_continue) {
-  GetLocationOptions()->SetAutoContinue(auto_continue);
-  SendBreakpointLocationChangedEvent(eBreakpointEventTypeAutoContinueChanged);
-}
-
 void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
   if (thread_id != LLDB_INVALID_THREAD_ID)
     GetLocationOptions()->SetThreadID(thread_id);
@@ -119,11 +97,8 @@ void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
 }
 
 lldb::tid_t BreakpointLocation::GetThreadID() {
-  const ThreadSpec *thread_spec = 
-      GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
-          ->GetThreadSpecNoCreate();
-  if (thread_spec)
-    return thread_spec->GetTID();
+  if (GetOptionsNoCreate()->GetThreadSpecNoCreate())
+    return GetOptionsNoCreate()->GetThreadSpecNoCreate()->GetTID();
   else
     return LLDB_INVALID_THREAD_ID;
 }
@@ -141,11 +116,8 @@ void BreakpointLocation::SetThreadIndex(uint32_t index) {
 }
 
 uint32_t BreakpointLocation::GetThreadIndex() const {
-  const ThreadSpec *thread_spec = 
-      GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
-          ->GetThreadSpecNoCreate();
-  if (thread_spec)
-    return thread_spec->GetIndex();
+  if (GetOptionsNoCreate()->GetThreadSpecNoCreate())
+    return GetOptionsNoCreate()->GetThreadSpecNoCreate()->GetIndex();
   else
     return 0;
 }
@@ -163,11 +135,8 @@ void BreakpointLocation::SetThreadName(const char *thread_name) {
 }
 
 const char *BreakpointLocation::GetThreadName() const {
-  const ThreadSpec *thread_spec = 
-      GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
-          ->GetThreadSpecNoCreate();
-  if (thread_spec)
-    return thread_spec->GetName();
+  if (GetOptionsNoCreate()->GetThreadSpecNoCreate())
+    return GetOptionsNoCreate()->GetThreadSpecNoCreate()->GetName();
   else
     return nullptr;
 }
@@ -185,11 +154,8 @@ void BreakpointLocation::SetQueueName(const char *queue_name) {
 }
 
 const char *BreakpointLocation::GetQueueName() const {
-  const ThreadSpec *thread_spec = 
-      GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
-          ->GetThreadSpecNoCreate();
-  if (thread_spec)
-    return thread_spec->GetQueueName();
+  if (GetOptionsNoCreate()->GetThreadSpecNoCreate())
+    return GetOptionsNoCreate()->GetThreadSpecNoCreate()->GetQueueName();
   else
     return nullptr;
 }
@@ -227,8 +193,7 @@ void BreakpointLocation::SetCondition(const char *condition) {
 }
 
 const char *BreakpointLocation::GetConditionText(size_t *hash) const {
-  return GetOptionsSpecifyingKind(BreakpointOptions::eCondition)
-      ->GetConditionText(hash);
+  return GetOptionsNoCreate()->GetConditionText(hash);
 }
 
 bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
@@ -340,8 +305,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 }
 
 uint32_t BreakpointLocation::GetIgnoreCount() {
-  return GetOptionsSpecifyingKind(BreakpointOptions::eIgnoreCount)
-      ->GetIgnoreCount();
+  return GetOptionsNoCreate()->GetIgnoreCount();
 }
 
 void BreakpointLocation::SetIgnoreCount(uint32_t n) {
@@ -371,21 +335,26 @@ bool BreakpointLocation::IgnoreCountShouldStop() {
   return true;
 }
 
+const BreakpointOptions *BreakpointLocation::GetOptionsNoCreate() const {
+  if (m_options_ap.get() != nullptr)
+    return m_options_ap.get();
+  else
+    return m_owner.GetOptions();
+}
+
 BreakpointOptions *BreakpointLocation::GetLocationOptions() {
   // If we make the copy we don't copy the callbacks because that is potentially
   // expensive and we don't want to do that for the simple case where someone is
   // just disabling the location.
   if (m_options_ap.get() == nullptr)
     m_options_ap.reset(
-        new BreakpointOptions(false));
+        BreakpointOptions::CopyOptionsNoCallback(*m_owner.GetOptions()));
 
   return m_options_ap.get();
 }
 
 bool BreakpointLocation::ValidForThisThread(Thread *thread) {
-  return thread
-      ->MatchesSpec(GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
-      ->GetThreadSpecNoCreate());
+  return thread->MatchesSpec(GetOptionsNoCreate()->GetThreadSpecNoCreate());
 }
 
 // RETURNS - true if we should stop at this breakpoint, false if we
@@ -631,20 +600,17 @@ void BreakpointLocation::Dump(Stream *s) const {
   if (s == nullptr)
     return;
 
-  lldb::tid_t tid = GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
-      ->GetThreadSpecNoCreate()->GetTID();
   s->Printf(
       "BreakpointLocation %u: tid = %4.4" PRIx64 "  load addr = 0x%8.8" PRIx64
       "  state = %s  type = %s breakpoint  "
       "hw_index = %i  hit_count = %-4u  ignore_count = %-4u",
-      GetID(), tid,
+      GetID(), GetOptionsNoCreate()->GetThreadSpecNoCreate()->GetTID(),
       (uint64_t)m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
       (m_options_ap.get() ? m_options_ap->IsEnabled() : m_owner.IsEnabled())
           ? "enabled "
           : "disabled",
       IsHardware() ? "hardware" : "software", GetHardwareIndex(), GetHitCount(),
-      GetOptionsSpecifyingKind(BreakpointOptions::eIgnoreCount)
-          ->GetIgnoreCount());
+      GetOptionsNoCreate()->GetIgnoreCount());
 }
 
 void BreakpointLocation::SendBreakpointLocationChangedEvent(

@@ -505,7 +505,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
             : tools::arm::getARMTargetCPU(MCPU, MArch, Triple);
     StringRef Suffix =
       tools::arm::getLLVMArchSuffixForARM(CPU, MArch, Triple);
-    bool IsMProfile = ARM::parseArchProfile(Suffix) == ARM::ProfileKind::M;
+    bool IsMProfile = ARM::parseArchProfile(Suffix) == ARM::PK_M;
     bool ThumbDefault = IsMProfile || (ARM::parseArchVersion(Suffix) == 7 && 
                                        getTriple().isOSBinFormatMachO());
     // FIXME: this is invalid for WindowsCE
@@ -648,16 +648,8 @@ void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   DriverArgs.AddAllArgs(CC1Args, options::OPT_stdlib_EQ);
 }
 
-bool ToolChain::ShouldLinkCXXStdlib(const llvm::opt::ArgList &Args) const {
-  return getDriver().CCCIsCXX() &&
-         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
-                      options::OPT_nostdlibxx);
-}
-
 void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  assert(!Args.hasArg(options::OPT_nostdlibxx) &&
-         "should not have called this");
   CXXStdlibType Type = GetCXXStdlibType(Args);
 
   switch (Type) {

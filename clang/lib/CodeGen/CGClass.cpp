@@ -2523,10 +2523,8 @@ LeastDerivedClassWithSameLayout(const CXXRecordDecl *RD) {
 void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
                                                    llvm::Value *VTable,
                                                    SourceLocation Loc) {
-  if (SanOpts.has(SanitizerKind::CFIVCall))
-    EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
-  else if (CGM.getCodeGenOpts().WholeProgramVTables &&
-           CGM.HasHiddenLTOVisibility(RD)) {
+  if (CGM.getCodeGenOpts().WholeProgramVTables &&
+      CGM.HasHiddenLTOVisibility(RD)) {
     llvm::Metadata *MD =
         CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
     llvm::Value *TypeId =
@@ -2538,6 +2536,9 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
                            {CastedVTable, TypeId});
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);
   }
+
+  if (SanOpts.has(SanitizerKind::CFIVCall))
+    EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,

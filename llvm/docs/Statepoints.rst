@@ -172,7 +172,7 @@ SSA value ``%obj.relocated`` which represents the potentially changed value of
 ``%obj`` after the safepoint and update any following uses appropriately.  The 
 resulting relocation sequence is:
 
-.. code-block:: llvm
+.. code-block:: text
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
@@ -273,7 +273,7 @@ afterwards.
 If we extend our previous example to include a pointless derived pointer, 
 we get:
 
-.. code-block:: llvm
+.. code-block:: text
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
@@ -319,7 +319,7 @@ Let's assume a hypothetical GC--somewhat unimaginatively named "hypothetical-gc"
 --that requires that a TLS variable must be written to before and after a call
 to unmanaged code. The resulting relocation sequence is:
 
-.. code-block:: llvm
+.. code-block:: text
 
   @flag = thread_local global i32 0, align 4
 
@@ -702,7 +702,7 @@ whitelist or use one of the predefined ones.
 
 As an example, given this code:
 
-.. code-block:: llvm
+.. code-block:: text
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
@@ -712,7 +712,7 @@ As an example, given this code:
 
 The pass would produce this IR:
 
-.. code-block:: llvm
+.. code-block:: text
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
@@ -789,7 +789,7 @@ As an example, given input IR of the following:
 
 This pass would produce the following IR:
 
-.. code-block:: llvm
+.. code-block:: text
 
   define void @test() gc "statepoint-example" {
     call void @do_safepoint()

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv6-unknown-linux | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=thumbv7-unknown-linux | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv6-unknown-freebsd | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv6-unknown-bitrig | FileCheck %s
 
 typedef int _Atomic_word;
 _Atomic_word exchange_and_add(volatile _Atomic_word *__mem, int __val) {

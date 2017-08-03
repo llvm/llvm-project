@@ -2039,9 +2039,9 @@ void CommandLineParser::printOptionValues() {
     Opts[i].second->printOptionValue(MaxArgLen, PrintAllOptions);
 }
 
-static VersionPrinterTy OverrideVersionPrinter = nullptr;
+static void (*OverrideVersionPrinter)() = nullptr;
 
-static std::vector<VersionPrinterTy> *ExtraVersionPrinters = nullptr;
+static std::vector<void (*)()> *ExtraVersionPrinters = nullptr;
 
 namespace {
 class VersionPrinter {
@@ -2081,7 +2081,7 @@ public:
       return;
 
     if (OverrideVersionPrinter != nullptr) {
-      OverrideVersionPrinter(outs());
+      (*OverrideVersionPrinter)();
       exit(0);
     }
     print();
@@ -2090,8 +2090,10 @@ public:
     // information.
     if (ExtraVersionPrinters != nullptr) {
       outs() << '\n';
-      for (auto I : *ExtraVersionPrinters)
-        I(outs());
+      for (std::vector<void (*)()>::iterator I = ExtraVersionPrinters->begin(),
+                                             E = ExtraVersionPrinters->end();
+           I != E; ++I)
+        (*I)();
     }
 
     exit(0);
@@ -2129,11 +2131,11 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
 /// Utility function for printing version number.
 void cl::PrintVersionMessage() { VersionPrinterInstance.print(); }
 
-void cl::SetVersionPrinter(VersionPrinterTy func) { OverrideVersionPrinter = func; }
+void cl::SetVersionPrinter(void (*func)()) { OverrideVersionPrinter = func; }
 
-void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
+void cl::AddExtraVersionPrinter(void (*func)()) {
   if (!ExtraVersionPrinters)
-    ExtraVersionPrinters = new std::vector<VersionPrinterTy>;
+    ExtraVersionPrinters = new std::vector<void (*)()>;
 
   ExtraVersionPrinters->push_back(func);
 }

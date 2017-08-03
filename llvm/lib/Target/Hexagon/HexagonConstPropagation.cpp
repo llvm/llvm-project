@@ -1,4 +1,4 @@
-//===- HexagonConstPropagation.cpp ----------------------------------------===//
+//===--- HexagonConstPropagation.cpp --------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,16 +26,13 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -170,12 +167,10 @@ namespace {
     bool convertToProperty();
   };
 
-#ifndef NDEBUG
   raw_ostream &operator<< (raw_ostream &os, const LatticeCell &L) {
     L.print(os);
     return os;
   }
-#endif
 
   class MachineConstEvaluator;
 
@@ -229,8 +224,7 @@ namespace {
       void print(raw_ostream &os, const TargetRegisterInfo &TRI) const;
 
     private:
-      using MapType = std::map<unsigned, LatticeCell>;
-
+      typedef std::map<unsigned,LatticeCell> MapType;
       MapType Map;
       // To avoid creating "top" entries, return a const reference to
       // this cell in "get". Also, have a "Bottom" cell to return from
@@ -238,8 +232,7 @@ namespace {
       LatticeCell Top, Bottom;
 
     public:
-      using const_iterator = MapType::const_iterator;
-
+      typedef MapType::const_iterator const_iterator;
       const_iterator begin() const { return Map.begin(); }
       const_iterator end() const { return Map.end(); }
     };
@@ -261,10 +254,10 @@ namespace {
     MachineRegisterInfo      *MRI;
     MachineConstEvaluator    &MCE;
 
-    using CFGEdge = std::pair<unsigned, unsigned>;
-    using SetOfCFGEdge = std::set<CFGEdge>;
-    using SetOfInstr = std::set<const MachineInstr *>;
-    using QueueOfCFGEdge = std::queue<CFGEdge>;
+    typedef std::pair<unsigned,unsigned> CFGEdge;
+    typedef std::set<CFGEdge> SetOfCFGEdge;
+    typedef std::set<const MachineInstr*> SetOfInstr;
+    typedef std::queue<CFGEdge> QueueOfCFGEdge;
 
     LatticeCell     Bottom;
     CellMap         Cells;
@@ -298,7 +291,7 @@ namespace {
     // - A function "rewrite", that given the cell map after propagation,
     //   could rewrite instruction MI in a more beneficial form. Return
     //   "true" if a change has been made, "false" otherwise.
-    using CellMap = MachineConstPropagator::CellMap;
+    typedef MachineConstPropagator::CellMap CellMap;
     virtual bool evaluate(const MachineInstr &MI, const CellMap &Inputs,
                           CellMap &Outputs) = 0;
     virtual bool evaluate(const Register &R, const LatticeCell &SrcC,
@@ -465,7 +458,6 @@ bool LatticeCell::convertToProperty() {
   return true;
 }
 
-#ifndef NDEBUG
 void LatticeCell::print(raw_ostream &os) const {
   if (isProperty()) {
     os << "{ ";
@@ -503,7 +495,6 @@ void LatticeCell::print(raw_ostream &os) const {
   }
   os << " }";
 }
-#endif
 
 // "Meet" operation on two cells. This is the key of the propagation
 // algorithm.
@@ -606,13 +597,11 @@ uint32_t LatticeCell::properties() const {
   return Ps;
 }
 
-#ifndef NDEBUG
 void MachineConstPropagator::CellMap::print(raw_ostream &os,
       const TargetRegisterInfo &TRI) const {
   for (auto &I : Map)
     dbgs() << "  " << PrintReg(I.first, &TRI) << " -> " << I.second << '\n';
 }
-#endif
 
 void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
   const MachineBasicBlock *MB = PN.getParent();
@@ -1039,7 +1028,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
 // This is the constant propagation algorithm as described by Wegman-Zadeck.
 // Most of the terminology comes from there.
 bool MachineConstPropagator::run(MachineFunction &MF) {
-  DEBUG(MF.print(dbgs() << "Starting MachineConstPropagator\n", nullptr));
+  DEBUG(MF.print(dbgs() << "Starting MachineConstPropagator\n", 0));
 
   MRI = &MF.getRegInfo();
 
@@ -1054,7 +1043,7 @@ bool MachineConstPropagator::run(MachineFunction &MF) {
   DEBUG({
     dbgs() << "End of MachineConstPropagator (Changed=" << Changed << ")\n";
     if (Changed)
-      MF.print(dbgs(), nullptr);
+      MF.print(dbgs(), 0);
   });
   return Changed;
 }
@@ -1289,8 +1278,7 @@ bool MachineConstEvaluator::evaluateCMPpi(uint32_t Cmp, uint32_t Props,
 
 bool MachineConstEvaluator::evaluateCMPpp(uint32_t Cmp, uint32_t Props1,
       uint32_t Props2, bool &Result) {
-  using P = ConstantProperties;
-
+  typedef ConstantProperties P;
   if ((Props1 & P::NaN) && (Props2 & P::NaN))
     return false;
   if (!(Props1 & P::Finite) || !(Props2 & P::Finite))
@@ -1898,9 +1886,9 @@ namespace {
     }
   };
 
-} // end anonymous namespace
+  char HexagonConstPropagation::ID = 0;
 
-char HexagonConstPropagation::ID = 0;
+} // end anonymous namespace
 
 INITIALIZE_PASS(HexagonConstPropagation, "hcp", "Hexagon Constant Propagation",
                 false, false)
@@ -2204,8 +2192,7 @@ bool HexagonConstEvaluator::evaluate(const Register &R,
   if (Input.isBottom())
     return false;
 
-  using P = ConstantProperties;
-
+  typedef ConstantProperties P;
   if (Input.isProperty()) {
     uint32_t Ps = Input.properties();
     if (Ps & (P::Zero|P::NaN)) {
@@ -2850,8 +2837,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
     if (!L.isSingle()) {
       // If this a zero/non-zero cell, we can fold a definition
       // of a predicate register.
-      using P = ConstantProperties;
-
+      typedef ConstantProperties P;
       uint64_t Ps = L.properties();
       if (!(Ps & (P::Zero|P::NonZero)))
         continue;
@@ -3053,9 +3039,7 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
       assert(Inputs.has(R1.Reg) && Inputs.has(R2.Reg));
       LatticeCell LS1, LS2;
       unsigned CopyOf = 0;
-
-      using P = ConstantProperties;
-
+      typedef ConstantProperties P;
       if (getCell(R1, Inputs, LS1) && (LS1.properties() & P::Zero))
         CopyOf = 2;
       else if (getCell(R2, Inputs, LS2) && (LS2.properties() & P::Zero))

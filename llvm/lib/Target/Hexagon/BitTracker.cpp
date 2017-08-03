@@ -1,4 +1,4 @@
-//===- BitTracker.cpp -----------------------------------------------------===//
+//===--- BitTracker.cpp ---------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -71,7 +71,7 @@
 
 using namespace llvm;
 
-using BT = BitTracker;
+typedef BitTracker BT;
 
 namespace {
 
@@ -927,8 +927,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
     ++It;
   } while (FallsThrough && It != End);
 
-  using succ_iterator = MachineBasicBlock::const_succ_iterator;
-
+  typedef MachineBasicBlock::const_succ_iterator succ_iterator;
   if (!DefaultToAll) {
     // Need to add all CFG successors that lead to EH landing pads.
     // There won't be explicit branches to these blocks, but they must
@@ -959,8 +958,7 @@ void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
     dbgs() << "visiting uses of " << PrintReg(Reg, &ME.TRI) << "\n";
 
-  using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
-
+  typedef MachineRegisterInfo::use_nodbg_iterator use_iterator;
   use_iterator End = MRI.use_nodbg_end();
   for (use_iterator I = MRI.use_nodbg_begin(Reg); I != End; ++I) {
     MachineInstr *UseI = I->getParent();
@@ -1041,8 +1039,7 @@ void BT::run() {
   reset();
   assert(FlowQ.empty());
 
-  using MachineFlowGraphTraits = GraphTraits<const MachineFunction*>;
-
+  typedef GraphTraits<const MachineFunction*> MachineFlowGraphTraits;
   const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
 
   unsigned MaxBN = 0;

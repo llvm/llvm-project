@@ -41,7 +41,6 @@ public:
   // void Encode(BinaryStreamBuf& debug_abbrev_buf) const;
   dw_uleb128_t
   AppendAbbrevDeclSequential(const DWARFAbbreviationDeclaration &abbrevDecl);
-  void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
 
   const DWARFAbbreviationDeclaration *
   GetAbbreviationDeclaration(dw_uleb128_t abbrCode) const;
@@ -66,7 +65,6 @@ public:
   GetAbbreviationDeclarationSet(dw_offset_t cu_abbr_offset) const;
   void Dump(lldb_private::Stream *s) const;
   void Parse(const lldb_private::DWARFDataExtractor &data);
-  void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
 
 protected:
   DWARFAbbreviationDeclarationCollMap m_abbrevCollMap;

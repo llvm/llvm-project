@@ -30,7 +30,7 @@ struct DefaultAnalysisGraphTraits {
 
 template <
     typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
-    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT, GraphT> >
+    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT> >
 class DOTGraphTraitsViewer : public FunctionPass {
 public:
   DOTGraphTraitsViewer(StringRef GraphName, char &ID)
@@ -72,7 +72,7 @@ private:
 
 template <
     typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
-    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT, GraphT> >
+    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT> >
 class DOTGraphTraitsPrinter : public FunctionPass {
 public:
   DOTGraphTraitsPrinter(StringRef GraphName, char &ID)
@@ -124,7 +124,7 @@ private:
 
 template <
     typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
-    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT, GraphT> >
+    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT> >
 class DOTGraphTraitsModuleViewer : public ModulePass {
 public:
   DOTGraphTraitsModuleViewer(StringRef GraphName, char &ID)
@@ -150,7 +150,7 @@ private:
 
 template <
     typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
-    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT, GraphT> >
+    typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT> >
 class DOTGraphTraitsModulePrinter : public ModulePass {
 public:
   DOTGraphTraitsModulePrinter(StringRef GraphName, char &ID)

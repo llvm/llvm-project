@@ -57,13 +57,11 @@ static const char *const SanCovTracePCGuardName =
     "__sanitizer_cov_trace_pc_guard";
 static const char *const SanCovTracePCGuardInitName =
     "__sanitizer_cov_trace_pc_guard_init";
-static const char *const SanCov8bitCountersInitName =
+static const char *const SanCov8bitCountersInitName = 
     "__sanitizer_cov_8bit_counters_init";
-static const char *const SanCovPCsInitName = "__sanitizer_cov_pcs_init";
 
 static const char *const SanCovGuardsSectionName = "sancov_guards";
 static const char *const SanCovCountersSectionName = "sancov_cntrs";
-static const char *const SanCovPCsSectionName = "sancov_pcs";
 
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
@@ -79,19 +77,9 @@ static cl::opt<bool> ClTracePCGuard("sanitizer-coverage-trace-pc-guard",
                                     cl::desc("pc tracing with a guard"),
                                     cl::Hidden, cl::init(false));
 
-// If true, we create a global variable that contains PCs of all instrumented
-// BBs, put this global into a named section, and pass this section's bounds
-// to __sanitizer_cov_pcs_init.
-// This way the coverage instrumentation does not need to acquire the PCs
-// at run-time. Works with trace-pc-guard and inline-8bit-counters.
-static cl::opt<bool> ClCreatePCTable("sanitizer-coverage-pc-table",
-                                     cl::desc("create a static PC table"),
-                                     cl::Hidden, cl::init(false));
-
-static cl::opt<bool>
-    ClInline8bitCounters("sanitizer-coverage-inline-8bit-counters",
-                         cl::desc("increments 8-bit counter for every edge"),
-                         cl::Hidden, cl::init(false));
+static cl::opt<bool> ClInline8bitCounters("sanitizer-coverage-inline-8bit-counters",
+                                    cl::desc("increments 8-bit counter for every edge"),
+                                    cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClCMPTracing("sanitizer-coverage-trace-compares",
@@ -147,7 +135,6 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TracePC |= ClTracePC;
   Options.TracePCGuard |= ClTracePCGuard;
   Options.Inline8bitCounters |= ClInline8bitCounters;
-  Options.PCTable |= ClCreatePCTable;
   if (!Options.TracePCGuard && !Options.TracePC && !Options.Inline8bitCounters)
     Options.TracePCGuard = true; // TracePCGuard is default.
   Options.NoPrune |= !ClPruneBlocks;
@@ -185,13 +172,10 @@ private:
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
-  void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
-  void CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
+  void CreateFunctionLocalArrays(size_t NumGuards, Function &F);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, size_t Idx);
-  Function *CreateInitCallsForSections(Module &M, const char *InitFunctionName,
-                                       Type *Ty, const char *Section);
-  std::pair<GlobalVariable *, GlobalVariable *>
-  CreateSecStartEnd(Module &M, const char *Section, Type *Ty);
+  void CreateInitCallForSection(Module &M, const char *InitFunctionName,
+                                Type *Ty, const std::string &Section);
 
   void SetNoSanitizeMetadata(Instruction *I) {
     I->setMetadata(I->getModule()->getMDKindID("nosanitize"),
@@ -217,16 +201,17 @@ private:
 
   GlobalVariable *FunctionGuardArray;  // for trace-pc-guard.
   GlobalVariable *Function8bitCounterArray;  // for inline-8bit-counters.
-  GlobalVariable *FunctionPCsArray;  // for pc-table.
 
   SanitizerCoverageOptions Options;
 };
 
 } // namespace
 
-std::pair<GlobalVariable *, GlobalVariable *>
-SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
-                                           Type *Ty) {
+void SanitizerCoverageModule::CreateInitCallForSection(
+    Module &M, const char *InitFunctionName, Type *Ty,
+    const std::string &Section) {
+  IRBuilder<> IRB(M.getContext());
+  Function *CtorFunc;
   GlobalVariable *SecStart =
       new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage, nullptr,
                          getSectionStart(Section));
@@ -236,18 +221,6 @@ SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
                          nullptr, getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
 
-  return std::make_pair(SecStart, SecEnd);
-}
-
-
-Function *SanitizerCoverageModule::CreateInitCallsForSections(
-    Module &M, const char *InitFunctionName, Type *Ty,
-    const char *Section) {
-  IRBuilder<> IRB(M.getContext());
-  auto SecStartEnd = CreateSecStartEnd(M, Section, Ty);
-  auto SecStart = SecStartEnd.first;
-  auto SecEnd = SecStartEnd.second;
-  Function *CtorFunc;
   std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
       M, SanCovModuleCtorName, InitFunctionName, {Ty, Ty},
       {IRB.CreatePointerCast(SecStart, Ty), IRB.CreatePointerCast(SecEnd, Ty)});
@@ -259,7 +232,6 @@ Function *SanitizerCoverageModule::CreateInitCallsForSections(
   } else {
     appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority);
   }
-  return CtorFunc;
 }
 
 bool SanitizerCoverageModule::runOnModule(Module &M) {
@@ -271,7 +243,6 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   TargetTriple = Triple(M.getTargetTriple());
   FunctionGuardArray = nullptr;
   Function8bitCounterArray = nullptr;
-  FunctionPCsArray = nullptr;
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   IntptrPtrTy = PointerType::getUnqual(IntptrTy);
   Type *VoidTy = Type::getVoidTy(*C);
@@ -334,23 +305,13 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   for (auto &F : M)
     runOnFunction(F);
 
-  Function *Ctor = nullptr;
-
   if (FunctionGuardArray)
-    Ctor = CreateInitCallsForSections(M, SanCovTracePCGuardInitName, Int32PtrTy,
-                                      SanCovGuardsSectionName);
+    CreateInitCallForSection(M, SanCovTracePCGuardInitName, Int32PtrTy,
+                             SanCovGuardsSectionName);
   if (Function8bitCounterArray)
-    Ctor = CreateInitCallsForSections(M, SanCov8bitCountersInitName, Int8PtrTy,
-                                      SanCovCountersSectionName);
-  if (Ctor && Options.PCTable) {
-    auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, Int8PtrTy);
-    Function *InitFunction = declareSanitizerInitFunction(
-        M, SanCovPCsInitName, {Int8PtrTy, Int8PtrTy});
-    IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
-    IRBCtor.CreateCall(InitFunction,
-                       {IRB.CreatePointerCast(SecStartEnd.first, Int8PtrTy),
-                        IRB.CreatePointerCast(SecStartEnd.second, Int8PtrTy)});
-  }
+    CreateInitCallForSection(M, SanCov8bitCountersInitName, Int8PtrTy,
+                             SanCovCountersSectionName);
+
   return true;
 }
 
@@ -401,10 +362,6 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
   if (Options.NoPrune || &F.getEntryBlock() == BB)
     return true;
 
-  if (Options.CoverageType == SanitizerCoverageOptions::SCK_Function &&
-      &F.getEntryBlock() != BB)
-    return false;
-
   // Do not instrument full dominators, or full post-dominators with multiple
   // predecessors.
   return !isFullDominator(BB, DT)
@@ -418,9 +375,6 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
     return false; // Should not instrument sanitizer init functions.
   if (F.getName().startswith("__sanitizer_"))
     return false;  // Don't instrument __sanitizer_* callbacks.
-  // Don't touch available_externally functions, their actual body is elewhere.
-  if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
-    return false;
   // Don't instrument MSVC CRT configuration helpers. They may run before normal
   // initialization.
   if (F.getName() == "__local_stdio_printf_options" ||
@@ -490,48 +444,35 @@ GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
   if (auto Comdat = F.getComdat())
     Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
-  Array->setAlignment(Ty->isPointerTy() ? DL->getPointerSize()
-                                        : Ty->getPrimitiveSizeInBits() / 8);
   return Array;
 }
-
-void SanitizerCoverageModule::CreatePCArray(Function &F,
-                                            ArrayRef<BasicBlock *> AllBlocks) {
-  size_t N = AllBlocks.size();
-  assert(N);
-  SmallVector<Constant *, 16> PCs;
-  IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
-  for (size_t i = 0; i < N; i++)
-    if (&F.getEntryBlock() == AllBlocks[i])
-      PCs.push_back((Constant *)IRB.CreatePointerCast(&F, Int8PtrTy));
-    else
-      PCs.push_back(BlockAddress::get(AllBlocks[i]));
-  FunctionPCsArray =
-      CreateFunctionLocalArrayInSection(N, F, Int8PtrTy, SanCovPCsSectionName);
-  FunctionPCsArray->setInitializer(
-      ConstantArray::get(ArrayType::get(Int8PtrTy, N), PCs));
-  FunctionPCsArray->setConstant(true);
-}
-
-void SanitizerCoverageModule::CreateFunctionLocalArrays(
-    Function &F, ArrayRef<BasicBlock *> AllBlocks) {
+void SanitizerCoverageModule::CreateFunctionLocalArrays(size_t NumGuards,
+                                                       Function &F) {
   if (Options.TracePCGuard)
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
-        AllBlocks.size(), F, Int32Ty, SanCovGuardsSectionName);
+        NumGuards, F, Int32Ty, SanCovGuardsSectionName);
   if (Options.Inline8bitCounters)
     Function8bitCounterArray = CreateFunctionLocalArrayInSection(
-        AllBlocks.size(), F, Int8Ty, SanCovCountersSectionName);
-  if (Options.PCTable)
-    CreatePCArray(F, AllBlocks);
+        NumGuards, F, Int8Ty, SanCovCountersSectionName);
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks) {
   if (AllBlocks.empty()) return false;
-  CreateFunctionLocalArrays(F, AllBlocks);
-  for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
-    InjectCoverageAtBlock(F, *AllBlocks[i], i);
-  return true;
+  switch (Options.CoverageType) {
+  case SanitizerCoverageOptions::SCK_None:
+    return false;
+  case SanitizerCoverageOptions::SCK_Function:
+    CreateFunctionLocalArrays(1, F);
+    InjectCoverageAtBlock(F, F.getEntryBlock(), 0);
+    return true;
+  default: {
+    CreateFunctionLocalArrays(AllBlocks.size(), F);
+    for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
+      InjectCoverageAtBlock(F, *AllBlocks[i], i);
+    return true;
+  }
+  }
 }
 
 // On every indirect call we call a run-time function

@@ -29,7 +29,8 @@ int arm::getARMSubArchVersionNumber(const llvm::Triple &Triple) {
 // True if M-profile.
 bool arm::isARMMProfile(const llvm::Triple &Triple) {
   llvm::StringRef Arch = Triple.getArchName();
-  return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::M;
+  unsigned Profile = llvm::ARM::parseArchProfile(Arch);
+  return Profile == llvm::ARM::PK_M;
 }
 
 // Get Arch/CPU from args.
@@ -97,7 +98,7 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
   std::pair<StringRef, StringRef> Split = ArchName.split("+");
 
   std::string MArch = arm::getARMArch(ArchName, Triple);
-  if (llvm::ARM::parseArch(MArch) == llvm::ARM::ArchKind::INVALID ||
+  if (llvm::ARM::parseArch(MArch) == llvm::ARM::AK_INVALID ||
       (Split.second.size() && !DecodeARMFeatures(D, Split.second, Features)))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
@@ -392,7 +393,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
       if (A->getOption().matches(options::OPT_mexecute_only)) {
         if (getARMSubArchVersionNumber(Triple) < 7 &&
-            llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6T2)
+            llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::AK_ARMV6T2)
               D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
         else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
           D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
@@ -524,11 +525,11 @@ std::string arm::getARMTargetCPU(StringRef CPU, StringRef Arch,
 // FIXME: This is redundant with -mcpu, why does LLVM use this.
 StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
                                        const llvm::Triple &Triple) {
-  llvm::ARM::ArchKind ArchKind;
+  unsigned ArchKind;
   if (CPU == "generic") {
     std::string ARMArch = tools::arm::getARMArch(Arch, Triple);
     ArchKind = llvm::ARM::parseArch(ARMArch);
-    if (ArchKind == llvm::ARM::ArchKind::INVALID)
+    if (ArchKind == llvm::ARM::AK_INVALID)
       // In case of generic Arch, i.e. "arm",
       // extract arch from default cpu of the Triple
       ArchKind = llvm::ARM::parseCPUArch(Triple.getARMCPUForArch(ARMArch));
@@ -536,10 +537,10 @@ StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
     // FIXME: horrible hack to get around the fact that Cortex-A7 is only an
     // armv7k triple if it's actually been specified via "-arch armv7k".
     ArchKind = (Arch == "armv7k" || Arch == "thumbv7k")
-                          ? llvm::ARM::ArchKind::ARMV7K
+                          ? (unsigned)llvm::ARM::AK_ARMV7K
                           : llvm::ARM::parseCPUArch(CPU);
   }
-  if (ArchKind == llvm::ARM::ArchKind::INVALID)
+  if (ArchKind == llvm::ARM::AK_INVALID)
     return "";
   return llvm::ARM::getSubArch(ArchKind);
 }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc < %s -march=x86
 
 define i32 @test() {
 entry:

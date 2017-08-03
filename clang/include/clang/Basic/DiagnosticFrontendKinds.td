@@ -216,6 +216,10 @@ def err_modules_embed_file_not_found :
   Error<"file '%0' specified by '-fmodules-embed-file=' not found">,
   DefaultFatal;
 
+def remark_index_producing_module_file_data : Remark<"producing index data for "
+  "module file '%0'">,
+  InGroup<IndexStore>;
+
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;
@@ -224,6 +228,10 @@ def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
+
+def err_no_apinotes_cache_path : Error<
+  "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
+  DefaultFatal;
 
 def warn_option_invalid_ocl_version : Warning<
   "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;

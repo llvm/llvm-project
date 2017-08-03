@@ -1,32 +1,32 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,M2,M2-M3
-; RUN: llc < %s -march=mips -mcpu=mips32 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R1
-; RUN: llc < %s -march=mips -mcpu=mips32r2 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R2-R5
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R2-R5
-; RUN: llc < %s -march=mips -mcpu=mips32r5 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-32,CMOV-32R2-R5
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,SEL-32,32R6
-; RUN: llc < %s -march=mips64 -mcpu=mips3 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,M3,M2-M3
-; RUN: llc < %s -march=mips64 -mcpu=mips4 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-64
-; RUN: llc < %s -march=mips64 -mcpu=mips64 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,CMOV,CMOV-64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,SEL-64,64R6
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM32R3
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM32R6,SEL-32
 
 define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
@@ -53,8 +53,8 @@ entry:
 
   ; SEL-32:     mtc1    $7, $[[F0:f[0-9]+]]
   ; SEL-32:     mthc1   $6, $[[F0]]
-  ; SEL-32:     mtc1    $4, $f0
   ; SEL-32:     ldc1    $[[F1:f[0-9]+]], 16($sp)
+  ; SEL-32:     mtc1    $4, $f0
   ; SEL-32:     sel.d   $f0, $[[F1]], $[[F0]]
 
   ; M3:         andi    $[[T0:[0-9]+]], $4, 1

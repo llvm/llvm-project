@@ -81,22 +81,6 @@ static cl::opt<std::string> VectorizerStartEPPipeline(
     cl::desc("A textual description of the function pass pipeline inserted at "
              "the VectorizerStart extension point into default pipelines"),
     cl::Hidden);
-enum PGOKind { NoPGO, InstrGen, InstrUse, SampleUse };
-static cl::opt<PGOKind> PGOKindFlag(
-    "pgo-kind", cl::init(NoPGO), cl::Hidden,
-    cl::desc("The kind of profile guided optimization"),
-    cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
-               clEnumValN(InstrGen, "new-pm-pgo-instr-gen-pipeline",
-                          "Instrument the IR to generate profile."),
-               clEnumValN(InstrUse, "new-pm-pgo-instr-use-pipeline",
-                          "Use instrumented profile to guide PGO."),
-               clEnumValN(SampleUse, "new-pm-pgo-sample-use-pipeline",
-                          "Use sampled profile to guide PGO.")));
-static cl::opt<std::string> ProfileFile(
-    "profile-file", cl::desc("Path to the profile."), cl::Hidden);
-static cl::opt<bool> DebugInfoForProfiling(
-    "new-pm-debug-info-for-profiling", cl::init(false), cl::Hidden,
-    cl::desc("Emit special debug info to enable PGO profile generation."));
 /// @}}
 
 template <typename PassManagerT>
@@ -169,25 +153,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            bool ShouldPreserveBitcodeUseListOrder,
                            bool EmitSummaryIndex, bool EmitModuleHash) {
   bool VerifyEachPass = VK == VK_VerifyEachPass;
-
-  Optional<PGOOptions> P;
-  switch (PGOKindFlag) {
-    case InstrGen:
-      P = PGOOptions(ProfileFile, "", "", true);
-      break;
-    case InstrUse:
-      P = PGOOptions("", ProfileFile, "", false);
-      break;
-    case SampleUse:
-      P = PGOOptions("", "", ProfileFile, false);
-      break;
-    case NoPGO:
-      if (DebugInfoForProfiling)
-        P = PGOOptions("", "", "", false, true);
-      else
-        P = None;
-  }
-  PassBuilder PB(TM, P);
+  PassBuilder PB(TM);
   registerEPCallbacks(PB, VerifyEachPass, DebugPM);
 
   // Specially handle the alias analysis manager so that we can register

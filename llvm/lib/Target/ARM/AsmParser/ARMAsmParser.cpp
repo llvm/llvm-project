@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMFeatures.h"
-#include "Utils/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMMCExpr.h"
@@ -4090,14 +4089,81 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   StringRef Mask = Tok.getString();
 
   if (isMClass()) {
-    auto TheReg = ARMSysReg::lookupMClassSysRegByName(Mask.lower());
-    if (!TheReg || !TheReg->hasRequiredFeatures(getSTI().getFeatureBits()))
+    // See ARMv6-M 10.1.1
+    std::string Name = Mask.lower();
+    unsigned FlagsVal = StringSwitch<unsigned>(Name)
+      // Note: in the documentation:
+      //  ARM deprecates using MSR APSR without a _<bits> qualifier as an alias
+      //  for MSR APSR_nzcvq.
+      // but we do make it an alias here.  This is so to get the "mask encoding"
+      // bits correct on MSR APSR writes.
+      //
+      // FIXME: Note the 0xc00 "mask encoding" bits version of the registers
+      // should really only be allowed when writing a special register.  Note
+      // they get dropped in the MRS instruction reading a special register as
+      // the SYSm field is only 8 bits.
+      .Case("apsr", 0x800)
+      .Case("apsr_nzcvq", 0x800)
+      .Case("apsr_g", 0x400)
+      .Case("apsr_nzcvqg", 0xc00)
+      .Case("iapsr", 0x801)
+      .Case("iapsr_nzcvq", 0x801)
+      .Case("iapsr_g", 0x401)
+      .Case("iapsr_nzcvqg", 0xc01)
+      .Case("eapsr", 0x802)
+      .Case("eapsr_nzcvq", 0x802)
+      .Case("eapsr_g", 0x402)
+      .Case("eapsr_nzcvqg", 0xc02)
+      .Case("xpsr", 0x803)
+      .Case("xpsr_nzcvq", 0x803)
+      .Case("xpsr_g", 0x403)
+      .Case("xpsr_nzcvqg", 0xc03)
+      .Case("ipsr", 0x805)
+      .Case("epsr", 0x806)
+      .Case("iepsr", 0x807)
+      .Case("msp", 0x808)
+      .Case("psp", 0x809)
+      .Case("primask", 0x810)
+      .Case("basepri", 0x811)
+      .Case("basepri_max", 0x812)
+      .Case("faultmask", 0x813)
+      .Case("control", 0x814)
+      .Case("msplim", 0x80a)
+      .Case("psplim", 0x80b)
+      .Case("msp_ns", 0x888)
+      .Case("psp_ns", 0x889)
+      .Case("msplim_ns", 0x88a)
+      .Case("psplim_ns", 0x88b)
+      .Case("primask_ns", 0x890)
+      .Case("basepri_ns", 0x891)
+      .Case("basepri_max_ns", 0x892)
+      .Case("faultmask_ns", 0x893)
+      .Case("control_ns", 0x894)
+      .Case("sp_ns", 0x898)
+      .Default(~0U);
+
+    if (FlagsVal == ~0U)
       return MatchOperand_NoMatch;
 
-    unsigned SYSmvalue = TheReg->Encoding & 0xFFF;
+    if (!hasDSP() && (FlagsVal & 0x400))
+      // The _g and _nzcvqg versions are only valid if the DSP extension is
+      // available.
+      return MatchOperand_NoMatch;
+
+    if (!hasV7Ops() && FlagsVal >= 0x811 && FlagsVal <= 0x813)
+      // basepri, basepri_max and faultmask only valid for V7m.
+      return MatchOperand_NoMatch;
+
+    if (!has8MSecExt() && (FlagsVal == 0x80a || FlagsVal == 0x80b ||
+                             (FlagsVal > 0x814 && FlagsVal < 0xc00)))
+      return MatchOperand_NoMatch;
+
+    if (!hasV8MMainline() && (FlagsVal == 0x88a || FlagsVal == 0x88b ||
+                              (FlagsVal > 0x890 && FlagsVal <= 0x893)))
+      return MatchOperand_NoMatch;
 
     Parser.Lex(); // Eat identifier token.
-    Operands.push_back(ARMOperand::CreateMSRMask(SYSmvalue, S));
+    Operands.push_back(ARMOperand::CreateMSRMask(FlagsVal, S));
     return MatchOperand_Success;
   }
 
@@ -4175,10 +4241,46 @@ ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
     return MatchOperand_NoMatch;
   StringRef RegName = Tok.getString();
 
-  auto TheReg = ARMBankedReg::lookupBankedRegByName(RegName.lower());
-  if (!TheReg)
+  // The values here come from B9.2.3 of the ARM ARM, where bits 4-0 are SysM
+  // and bit 5 is R.
+  unsigned Encoding = StringSwitch<unsigned>(RegName.lower())
+                          .Case("r8_usr", 0x00)
+                          .Case("r9_usr", 0x01)
+                          .Case("r10_usr", 0x02)
+                          .Case("r11_usr", 0x03)
+                          .Case("r12_usr", 0x04)
+                          .Case("sp_usr", 0x05)
+                          .Case("lr_usr", 0x06)
+                          .Case("r8_fiq", 0x08)
+                          .Case("r9_fiq", 0x09)
+                          .Case("r10_fiq", 0x0a)
+                          .Case("r11_fiq", 0x0b)
+                          .Case("r12_fiq", 0x0c)
+                          .Case("sp_fiq", 0x0d)
+                          .Case("lr_fiq", 0x0e)
+                          .Case("lr_irq", 0x10)
+                          .Case("sp_irq", 0x11)
+                          .Case("lr_svc", 0x12)
+                          .Case("sp_svc", 0x13)
+                          .Case("lr_abt", 0x14)
+                          .Case("sp_abt", 0x15)
+                          .Case("lr_und", 0x16)
+                          .Case("sp_und", 0x17)
+                          .Case("lr_mon", 0x1c)
+                          .Case("sp_mon", 0x1d)
+                          .Case("elr_hyp", 0x1e)
+                          .Case("sp_hyp", 0x1f)
+                          .Case("spsr_fiq", 0x2e)
+                          .Case("spsr_irq", 0x30)
+                          .Case("spsr_svc", 0x32)
+                          .Case("spsr_abt", 0x34)
+                          .Case("spsr_und", 0x36)
+                          .Case("spsr_mon", 0x3c)
+                          .Case("spsr_hyp", 0x3e)
+                          .Default(~0U);
+
+  if (Encoding == ~0U)
     return MatchOperand_NoMatch;
-  unsigned Encoding = TheReg->Encoding;
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateBankedReg(Encoding, S));
@@ -9383,9 +9485,9 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
 ///  ::= .arch token
 bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
   StringRef Arch = getParser().parseStringToEndOfStatement().trim();
-  ARM::ArchKind ID = ARM::parseArch(Arch);
+  unsigned ID = ARM::parseArch(Arch);
 
-  if (ID == ARM::ArchKind::INVALID)
+  if (ID == ARM::AK_INVALID)
     return Error(L, "Unknown arch name");
 
   bool WasThumb = isThumb();
@@ -10033,9 +10135,9 @@ bool ARMAsmParser::parseDirectiveObjectArch(SMLoc L) {
   SMLoc ArchLoc = Parser.getTok().getLoc();
   Lex();
 
-  ARM::ArchKind ID = ARM::parseArch(Arch);
+  unsigned ID = ARM::parseArch(Arch);
 
-  if (ID == ARM::ArchKind::INVALID)
+  if (ID == ARM::AK_INVALID)
     return Error(ArchLoc, "unknown architecture '" + Arch + "'");
   if (parseToken(AsmToken::EndOfStatement))
     return true;

@@ -67,9 +67,7 @@ enum : uint64_t {
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
   VOPAsmPrefer32Bit = UINT64_C(1) << 41,
-  HasFPClamp = UINT64_C(1) << 42,
-  VOP3_OPSEL = UINT64_C(1) << 43,
-  maybeAtomic = UINT64_C(1) << 44
+  HasFPClamp = UINT64_C(1) << 42
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -139,8 +137,7 @@ namespace SISrcMods {
    SEXT = 1 << 0,  // Integer sign-extend modifier
    NEG_HI = ABS,   // Floating-point negate high packed component modifier.
    OP_SEL_0 = 1 << 2,
-   OP_SEL_1 = 1 << 3,
-   DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
+   OP_SEL_1 = 1 << 3
   };
 }
 

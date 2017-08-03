@@ -63,18 +63,6 @@ public:
 };
 
 enum {
-  /// Begin a try-block to attempt a match and jump to OnFail if it is
-  /// unsuccessful.
-  /// - OnFail - The MatchTable entry at which to resume if the match fails.
-  ///
-  /// FIXME: This ought to take an argument indicating the number of try-blocks
-  ///        to exit on failure. It's usually one but the last match attempt of
-  ///        a block will need more. The (implemented) alternative is to tack a
-  ///        GIM_Reject on the end of each try-block which is simpler but
-  ///        requires an extra opcode and iteration in the interpreter on each
-  ///        failed match.
-  GIM_Try,
-
   /// Record the specified instruction
   /// - NewInsnID - Instruction ID to define
   /// - InsnID - Instruction ID
@@ -136,10 +124,6 @@ enum {
   /// - InsnID - Instruction ID
   GIM_CheckIsSafeToFold,
 
-  /// Fail the current try-block, or completely fail to match if there is no
-  /// current try-block.
-  GIM_Reject,
-
   //=== Renderers ===
 
   /// Mutate an instruction
@@ -195,9 +179,6 @@ enum {
   GIR_ConstrainSelectedInstOperands,
   /// Merge all memory operands into instruction.
   /// - InsnID - Instruction ID to modify
-  /// - MergeInsnID... - One or more Instruction ID to merge into the result.
-  /// - GIU_MergeMemOperands_EndOfList - Terminates the list of instructions to
-  ///                                    merge.
   GIR_MergeMemOperands,
   /// Erase from parent.
   /// - InsnID - Instruction ID to erase
@@ -205,12 +186,6 @@ enum {
 
   /// A successful emission
   GIR_Done,
-};
-
-enum {
-  /// Indicates the end of the variable-length MergeInsnID list in a
-  /// GIR_MergeMemOperands opcode.
-  GIU_MergeMemOperands_EndOfList = -1,
 };
 
 /// Provides the logic to select generic machine instructions.

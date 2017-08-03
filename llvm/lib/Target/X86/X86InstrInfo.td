@@ -844,7 +844,6 @@ def HasFMA       : Predicate<"Subtarget->hasFMA()">;
 def HasFMA4      : Predicate<"Subtarget->hasFMA4()">;
 def HasXOP       : Predicate<"Subtarget->hasXOP()">;
 def HasTBM       : Predicate<"Subtarget->hasTBM()">;
-def NoTBM        : Predicate<"!Subtarget->hasTBM()">;
 def HasLWP       : Predicate<"Subtarget->hasLWP()">;
 def HasMOVBE     : Predicate<"Subtarget->hasMOVBE()">;
 def HasRDRAND    : Predicate<"Subtarget->hasRDRAND()">;
@@ -854,7 +853,6 @@ def HasFSGSBase  : Predicate<"Subtarget->hasFSGSBase()">;
 def HasLZCNT     : Predicate<"Subtarget->hasLZCNT()">;
 def HasBMI       : Predicate<"Subtarget->hasBMI()">;
 def HasBMI2      : Predicate<"Subtarget->hasBMI2()">;
-def NoBMI2       : Predicate<"!Subtarget->hasBMI2()">;
 def HasVBMI      : Predicate<"Subtarget->hasVBMI()">,
                      AssemblerPredicate<"FeatureVBMI", "AVX-512 VBMI ISA">;
 def HasIFMA      : Predicate<"Subtarget->hasIFMA()">,
@@ -1110,15 +1108,6 @@ let hasSideEffects = 0, SchedRW = [WriteZero] in {
                 "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
   def NOOPL : I<0x1f, MRMXm, (outs), (ins i32mem:$zero),
                 "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
-  def NOOPQ : RI<0x1f, MRMXm, (outs), (ins i64mem:$zero),
-                "nop{q}\t$zero", [], IIC_NOP>, TB;
-  // Also allow register so we can assemble/disassemble
-  def NOOPWr : I<0x1f, MRMXr, (outs), (ins GR16:$zero),
-                 "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
-  def NOOPLr : I<0x1f, MRMXr, (outs), (ins GR32:$zero),
-                 "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
-  def NOOPQr : RI<0x1f, MRMXr, (outs), (ins GR64:$zero),
-                  "nop{q}\t$zero", [], IIC_NOP>, TB;
 }
 
 
@@ -2354,40 +2343,16 @@ def CountTrailingOnes : SDNodeXForm<imm, [{
   return getI8Imm(countTrailingOnes(N->getZExtValue()), SDLoc(N));
 }]>;
 
-def BEXTRMaskXForm : SDNodeXForm<imm, [{
-  unsigned Length = countTrailingOnes(N->getZExtValue());
-  return getI32Imm(Length << 8, SDLoc(N));
+def BZHIMask : ImmLeaf<i64, [{
+  return isMask_64(Imm) && (countTrailingOnes<uint64_t>(Imm) > 32);
 }]>;
 
-def AndMask64 : ImmLeaf<i64, [{
-  return isMask_64(Imm) && Imm > UINT32_MAX;
-}]>;
-
-// Use BEXTR for 64-bit 'and' with large immediate 'mask'.
-let Predicates = [HasBMI, NoBMI2, NoTBM] in {
-  def : Pat<(and GR64:$src, AndMask64:$mask),
-            (BEXTR64rr GR64:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
-  def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
-            (BEXTR64rm addr:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
-}
-
-// Use BZHI for 64-bit 'and' with large immediate 'mask'.
-let Predicates = [HasBMI2, NoTBM] in {
-  def : Pat<(and GR64:$src, AndMask64:$mask),
+let Predicates = [HasBMI2] in {
+  def : Pat<(and GR64:$src, BZHIMask:$mask),
             (BZHI64rr GR64:$src,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
                              (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
-  def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
-            (BZHI64rm addr:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-                             (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
-}
 
-let Predicates = [HasBMI2] in {
   def : Pat<(and GR32:$src, (add (shl 1, GR8:$lz), -1)),
             (BZHI32rr GR32:$src,
               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
@@ -2532,15 +2497,6 @@ defm BLSIC   : tbm_binary_intr<0x01, "blsic", MRM6r, MRM6m>;
 defm T1MSKC  : tbm_binary_intr<0x01, "t1mskc", MRM7r, MRM7m>;
 defm TZMSK   : tbm_binary_intr<0x01, "tzmsk", MRM4r, MRM4m>;
 } // HasTBM, EFLAGS
-
-// Use BEXTRI for 64-bit 'and' with large immediate 'mask'.
-let Predicates = [HasTBM] in {
-  def : Pat<(and GR64:$src, AndMask64:$mask),
-            (BEXTRI64ri GR64:$src, (BEXTRMaskXForm imm:$mask))>;
-
-  def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
-            (BEXTRI64mi addr:$src, (BEXTRMaskXForm imm:$mask))>;
-}
 
 //===----------------------------------------------------------------------===//
 // Lightweight Profiling Instructions

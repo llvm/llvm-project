@@ -189,7 +189,6 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
   Opts.TracePCGuard = CGOpts.SanitizeCoverageTracePCGuard;
   Opts.NoPrune = CGOpts.SanitizeCoverageNoPrune;
   Opts.Inline8bitCounters = CGOpts.SanitizeCoverageInline8bitCounters;
-  Opts.PCTable = CGOpts.SanitizeCoveragePCTable;
   PM.add(createSanitizerCoverageModulePass(Opts));
 }
 
@@ -335,18 +334,16 @@ static CodeGenOpt::Level getCGOptLevel(const CodeGenOptions &CodeGenOpts) {
   }
 }
 
-static Optional<llvm::CodeModel::Model>
-getCodeModel(const CodeGenOptions &CodeGenOpts) {
-  unsigned CodeModel = llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
-                           .Case("small", llvm::CodeModel::Small)
-                           .Case("kernel", llvm::CodeModel::Kernel)
-                           .Case("medium", llvm::CodeModel::Medium)
-                           .Case("large", llvm::CodeModel::Large)
-                           .Case("default", ~1u)
-                           .Default(~0u);
+static llvm::CodeModel::Model getCodeModel(const CodeGenOptions &CodeGenOpts) {
+  unsigned CodeModel =
+      llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
+      .Case("small", llvm::CodeModel::Small)
+      .Case("kernel", llvm::CodeModel::Kernel)
+      .Case("medium", llvm::CodeModel::Medium)
+      .Case("large", llvm::CodeModel::Large)
+      .Case("default", llvm::CodeModel::Default)
+      .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
-  if (CodeModel == ~1u)
-    return None;
   return static_cast<llvm::CodeModel::Model>(CodeModel);
 }
 
@@ -660,7 +657,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   }
 
-  Optional<llvm::CodeModel::Model> CM = getCodeModel(CodeGenOpts);
+  llvm::CodeModel::Model CM  = getCodeModel(CodeGenOpts);
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
   llvm::Reloc::Model RM = getRelocModel(CodeGenOpts);
@@ -843,27 +840,28 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     return;
   TheModule->setDataLayout(TM->createDataLayout());
 
-  Optional<PGOOptions> PGOOpt;
+  PGOOptions PGOOpt;
 
-  if (CodeGenOpts.hasProfileIRInstr())
-    // -fprofile-generate.
-    PGOOpt = PGOOptions(CodeGenOpts.InstrProfileOutput.empty()
-                            ? DefaultProfileGenName
-                            : CodeGenOpts.InstrProfileOutput,
-                        "", "", true, CodeGenOpts.DebugInfoForProfiling);
-  else if (CodeGenOpts.hasProfileIRUse())
-    // -fprofile-use.
-    PGOOpt = PGOOptions("", CodeGenOpts.ProfileInstrumentUsePath, "", false,
-                        CodeGenOpts.DebugInfoForProfiling);
-  else if (!CodeGenOpts.SampleProfileFile.empty())
-    // -fprofile-sample-use
-    PGOOpt = PGOOptions("", "", CodeGenOpts.SampleProfileFile, false,
-                        CodeGenOpts.DebugInfoForProfiling);
-  else if (CodeGenOpts.DebugInfoForProfiling)
-    // -fdebug-info-for-profiling
-    PGOOpt = PGOOptions("", "", "", false, true);
+  // -fprofile-generate.
+  PGOOpt.RunProfileGen = CodeGenOpts.hasProfileIRInstr();
+  if (PGOOpt.RunProfileGen)
+    PGOOpt.ProfileGenFile = CodeGenOpts.InstrProfileOutput.empty() ?
+      DefaultProfileGenName : CodeGenOpts.InstrProfileOutput;
 
-  PassBuilder PB(TM.get(), PGOOpt);
+  // -fprofile-use.
+  if (CodeGenOpts.hasProfileIRUse())
+    PGOOpt.ProfileUseFile = CodeGenOpts.ProfileInstrumentUsePath;
+
+  if (!CodeGenOpts.SampleProfileFile.empty())
+    PGOOpt.SampleProfileFile = CodeGenOpts.SampleProfileFile;
+
+  // Only pass a PGO options struct if -fprofile-generate or
+  // -fprofile-use were passed on the cmdline.
+  PassBuilder PB(TM.get(),
+    (PGOOpt.RunProfileGen ||
+      !PGOOpt.ProfileUseFile.empty() ||
+      !PGOOpt.SampleProfileFile.empty()) ?
+        Optional<PGOOptions>(PGOOpt) : None);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -872,14 +870,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
 
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
-
-  // Register the target library analysis directly and give it a customized
-  // preset TLI.
-  Triple TargetTriple(TheModule->getTargetTriple());
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      createTLII(TargetTriple, CodeGenOpts));
-  FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
-  MAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);

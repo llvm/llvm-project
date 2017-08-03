@@ -38,8 +38,6 @@ public:
 
   bool IsEnabled();
 
-  uint32_t GetHitCount();
-
   uint32_t GetIgnoreCount();
 
   void SetIgnoreCount(uint32_t n);
@@ -47,19 +45,11 @@ public:
   void SetCondition(const char *condition);
 
   const char *GetCondition();
-   
-  void SetAutoContinue(bool auto_continue);
-
-  bool GetAutoContinue();
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
   SBError SetScriptCallbackBody(const char *script_body_text);
-  
-  void SetCommandLineCommands(SBStringList &commands);
 
-  bool GetCommandLineCommands(SBStringList &commands);
- 
   void SetThreadID(lldb::tid_t sb_thread_id);
 
   lldb::tid_t GetThreadID();

@@ -278,9 +278,14 @@ protected:
 
 class MCJITTestBase : public MCJITTestAPICommon, public TrivialModuleBuilder {
 protected:
+
   MCJITTestBase()
-      : TrivialModuleBuilder(HostTriple), OptLevel(CodeGenOpt::None),
-        CodeModel(CodeModel::Small), MArch(""), MM(new SectionMemoryManager) {
+    : TrivialModuleBuilder(HostTriple)
+    , OptLevel(CodeGenOpt::None)
+    , CodeModel(CodeModel::Default)
+    , MArch("")
+    , MM(new SectionMemoryManager)
+  {
     // The architectures below are known to be compatible with MCJIT as they
     // are copied from test/ExecutionEngine/MCJIT/lit.local.cfg and should be
     // kept in sync.
@@ -315,6 +320,7 @@ protected:
                  .setMCJITMemoryManager(std::move(MM))
                  .setErrorStr(&Error)
                  .setOptLevel(CodeGenOpt::None)
+                 .setCodeModel(CodeModel::JITDefault)
                  .setMArch(MArch)
                  .setMCPU(sys::getHostCPUName())
                  //.setMAttrs(MAttrs)

@@ -206,6 +206,10 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	UNAME_MACHINE_ARCH=`arch | sed 's/OpenBSD.//'`
 	echo ${UNAME_MACHINE_ARCH}-unknown-openbsd${UNAME_RELEASE}
 	exit ;;
+    *:Bitrig:*:*)
+	UNAME_MACHINE_ARCH=`arch | sed 's/Bitrig.//'`
+	echo ${UNAME_MACHINE_ARCH}-unknown-bitrig${UNAME_RELEASE}
+	exit ;;
     *:ekkoBSD:*:*)
 	echo ${UNAME_MACHINE}-unknown-ekkobsd${UNAME_RELEASE}
 	exit ;;

@@ -3187,7 +3187,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(
         Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
-    if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall())
+    if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
       report_fatal_error("failed to perform tail call elimination on a call "
                          "site marked musttail");
 
@@ -6912,7 +6912,8 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   return SDValue();
 }
 
-bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
+bool AArch64TargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &M,
+                                               EVT VT) const {
   if (VT.getVectorNumElements() == 4 &&
       (VT.is128BitVector() || VT.is64BitVector())) {
     unsigned PFIndexes[4];
@@ -7421,7 +7422,7 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
   if (isa<FPExtInst>(Ext))
     return false;
 
-  // Vector types are not free.
+  // Vector types are next free.
   if (Ext->getType()->isVectorTy())
     return false;
 
@@ -7820,7 +7821,7 @@ bool AArch64TargetLowering::isLegalICmpImmediate(int64_t Immed) const {
 /// by AM is legal for this target, for a load/store of the specified type.
 bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                   const AddrMode &AM, Type *Ty,
-                                                  unsigned AS, Instruction *I) const {
+                                                  unsigned AS) const {
   // AArch64 has five basic addressing modes:
   //  reg
   //  reg + 9-bit signed offset

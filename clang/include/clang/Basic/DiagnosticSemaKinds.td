@@ -712,19 +712,6 @@ def err_pragma_options_align_mac68k_target_unsupported : Error<
 def warn_pragma_pack_invalid_alignment : Warning<
   "expected #pragma pack parameter to be '1', '2', '4', '8', or '16'">,
   InGroup<IgnoredPragmas>;
-def warn_pragma_pack_non_default_at_include : Warning<
-  "non-default #pragma pack value changes the alignment of struct or union "
-  "members in the included file">, InGroup<PragmaPackSuspiciousInclude>,
-  DefaultIgnore;
-def warn_pragma_pack_modified_after_include : Warning<
-  "the current #pragma pack aligment value is modified in the included "
-  "file">, InGroup<PragmaPack>;
-def warn_pragma_pack_no_pop_eof : Warning<"unterminated "
-  "'#pragma pack (push, ...)' at end of file">, InGroup<PragmaPack>;
-def note_pragma_pack_here : Note<
-  "previous '#pragma pack' directive that modifies alignment is here">;
-def note_pragma_pack_pop_instead_reset : Note<
-  "did you intend to use '#pragma pack (pop)' instead of '#pragma pack()'?">;
 // Follow the Microsoft implementation.
 def warn_pragma_pack_show : Warning<"value of #pragma pack(show) == %0">;
 def warn_pragma_pack_pop_identifer_and_alignment : Warning<
@@ -1194,6 +1181,12 @@ def warn_unimplemented_selector:  Warning<
   InGroup<Selector>, DefaultIgnore;
 def warn_unimplemented_protocol_method : Warning<
   "method %0 in protocol %1 not implemented">, InGroup<Protocol>;
+def warn_class_does_not_conform_protocol : Warning<
+  "%select{class|category}0 %1 does not conform to protocol"
+  "%plural{1: %3|2:s %3 and %4|3:s %3, %4 and %5|:s %3, %4, %5, ...}2">,
+  InGroup<Protocol>;
+def note_add_missing_protocol_stubs : Note<
+  "add stubs for missing protocol requirements">;
 def warn_multiple_selectors: Warning<
   "several methods with selector %0 of mismatched types are found "
   "for the @selector expression">,
@@ -2400,9 +2393,8 @@ def err_attribute_requires_positive_integer : Error<
 def err_attribute_requires_opencl_version : Error<
   "%0 attribute requires OpenCL version %1%select{| or above}2">;
 def warn_unsupported_target_attribute
-    : Warning<"ignoring %select{unsupported|duplicate}0"
-              "%select{| architecture}1 '%2' in the target attribute string">,
-      InGroup<IgnoredAttributes>;
+    : Warning<"Ignoring unsupported '%0' in the target attribute string">,
+    InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported for this target">;
 // The err_*_attribute_argument_not_int are separate because they're used by
@@ -2884,6 +2876,9 @@ def warn_mismatched_availability_override_unavail : Warning<
   InGroup<Availability>;
 def note_overridden_method : Note<
   "overridden method is here">;
+def warn_availability_swift_unavailable_deprecated_only : Warning<
+  "only 'unavailable' and 'deprecated' are supported for Swift availability">,
+  InGroup<Availability>;
 def note_protocol_method : Note<
   "protocol method is here">;
 
@@ -3267,6 +3262,9 @@ def warn_attribute_nonnull_no_pointers : Warning<
 def warn_attribute_nonnull_parm_no_args : Warning<
   "'nonnull' attribute when used on parameters takes no arguments">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_noescape_non_pointer : Warning<
+  "'noescape' attribute ignored on parameter of non-pointer type %0">,
+  InGroup<IgnoredAttributes>;
 def note_declared_nonnull : Note<
   "declared %select{'returns_nonnull'|'nonnull'}0 here">;
 def warn_attribute_sentinel_named_arguments : Warning<
@@ -3391,6 +3389,68 @@ def err_objc_bridged_related_known_method : Error<
 
 def err_objc_attr_protocol_requires_definition : Error<
   "attribute %0 can only be applied to @protocol definitions, not forward declarations">;
+
+// Swift attributes
+def warn_attr_swift_name_decl_kind : Warning<
+  "%0 attribute cannot be applied to this declaration">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_function : Warning<
+  "parameter of %0 attribute must be a Swift function name string">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_function_no_prototype : Warning<
+  "%0 attribute can only be applied to function declarations with prototypes">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_context_name_invalid_identifier : Warning<
+  "%0 attribute has invalid identifier for context name">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_basename_invalid_identifier : Warning<
+  "%0 attribute has invalid identifier for base name">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_parameter_invalid_identifier : Warning<
+  "%0 attribute has invalid identifier for parameter name">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_missing_parameters : Warning<
+  "%0 attribute is missing parameter label clause">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_not_accessor : Warning<
+  "%0 attribute for 'subscript' must be a getter or setter">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_no_parameter : Warning<
+  "%0 attribute for 'subscript' must take at least one parameter">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_getter_newValue : Warning<
+  "%0 attribute for 'subscript' getter cannot take a 'newValue:' parameter">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_setter_no_newValue : Warning<
+  "%0 attribute for 'subscript' setter must take a 'newValue:' parameter">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_setter_multiple_newValues : Warning<
+  "%0 attribute for 'subscript' setter cannot take multiple 'newValue:' parameters">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_getter_parameters : Warning<
+  "%0 attribute for getter must not take any parameters besides 'self:'">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_setter_parameters : Warning<
+  "%0 attribute for setter must take one parameter for new value">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_multiple_selfs : Warning<
+  "%0 attribute cannot specify more than one 'self:' parameter">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_static_subscript : Warning<
+  "%0 attribute for 'subscript' must take a 'self:' parameter">,
+  InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_num_params : Warning<
+  "too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
+  InGroup<SwiftNameAttribute>;
+def err_attr_swift_error_no_error_parameter : Error<
+  "%0 attribute can only be applied to a %select{function|method}1 "
+  "with an error parameter">;
+def err_attr_swift_error_return_type : Error<
+  "%0 attribute with '%1' convention can only be applied to a "
+  "%select{function|method}2 returning %select{an integral type|a pointer}3">;
+def warn_swift_newtype_attribute_non_typedef : Warning<
+  "'swift_newtype' attribute may be put on a typedef only; "
+  "attribute is ignored">, InGroup<DiagGroup<"swift-newtype-attribute">>;
 
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;
@@ -7939,6 +7999,7 @@ def warn_missing_case : Warning<"%plural{"
   "3:enumeration values %1, %2, and %3 not handled in switch|"
   ":%0 enumeration values not handled in switch: %1, %2, %3...}0">,
   InGroup<Switch>;
+def note_fill_in_missing_cases : Note<"add missing switch cases">;
 
 def warn_unannotated_fallthrough : Warning<
   "unannotated fall-through between switch labels">,
@@ -8215,6 +8276,14 @@ def err_nsconsumed_attribute_mismatch : Error<
 def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
   " attributes">;
+
+def err_nserrordomain_not_tagdecl : Error<
+  "ns_error_domain attribute only valid on "
+  "%select{enums, structs, and unions|enums, structs, unions, and classes}0">;
+def err_nserrordomain_invalid_decl : Error<
+  "domain argument %0 does not refer to global constant">;
+def err_nserrordomain_requires_identifier : Error<
+  "domain argument must be an identifier">;
   
 def note_getter_unavailable : Note<
   "or because setter is declared here, but no getter method %0 is found">;
@@ -8499,6 +8568,13 @@ def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
   InGroup<OpenCLUnsupportedRGBA>;
 } // end of sema category
 
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+}
+
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
@@ -8532,8 +8608,6 @@ def err_omp_expected_var_name_member_expr : Error<
   "expected variable name%select{| or data member of current class}0">;
 def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
-def err_omp_expected_addressable_lvalue_or_array_item : Error<
-  "expected addressable lvalue expression, array element or array section">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
 def err_omp_bit_fields_forbidden_in_clause : Error<
@@ -8686,12 +8760,6 @@ def err_omp_reduction_in_task : Error<
   "reduction variables may not be accessed in an explicit task">;
 def err_omp_reduction_id_not_compatible : Error<
   "list item of type %0 is not valid for specified reduction operation: unable to provide default initialization value">;
-def err_omp_in_reduction_not_task_reduction : Error<
-  "in_reduction variable must appear in a task_reduction clause">;
-def err_omp_reduction_identifier_mismatch : Error<
-  "in_reduction variable must have the same reduction operation as in a task_reduction clause">;
-def note_omp_previous_reduction_identifier : Note<
-  "previously marked as task_reduction with different reduction operation">;
 def err_omp_prohibited_region : Error<
   "region cannot be%select{| closely}0 nested inside '%1' region"
   "%select{|; perhaps you forget to enclose 'omp %3' directive into a parallel region?|"
@@ -8843,6 +8911,12 @@ def note_omp_critical_hint_here : Note<
   "%select{|previous }0'hint' clause with value '%1'">;
 def note_omp_critical_no_hint : Note<
   "%select{|previous }0directive with no 'hint' clause specified">;
+def err_omp_firstprivate_distribute_private_teams : Error<
+  "private variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
+def err_omp_firstprivate_and_lastprivate_in_distribute : Error<
+  "lastprivate variable cannot be firstprivate in '#pragma omp distribute'">;
+def err_omp_firstprivate_distribute_in_teams_reduction : Error<
+  "reduction variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
 def err_omp_depend_clause_thread_simd : Error<
   "'depend' clauses cannot be mixed with '%0' clause">;
 def err_omp_depend_sink_expected_loop_iteration : Error<

@@ -53,6 +53,8 @@ STATISTIC(NumPatternTotal, "Total number of patterns");
 STATISTIC(NumPatternImported, "Number of patterns imported from SelectionDAG");
 STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
+/// A unique identifier for a MatchTable.
+static unsigned CurrentMatchTableID = 0;
 
 cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
 
@@ -73,14 +75,6 @@ private:
 
 public:
   LLTCodeGen(const LLT &Ty) : Ty(Ty) {}
-
-  std::string getCxxEnumValue() const {
-    std::string Str;
-    raw_string_ostream OS(Str);
-
-    emitCxxEnumValue(OS);
-    return OS.str();
-  }
 
   void emitCxxEnumValue(raw_ostream &OS) const {
     if (Ty.isScalar()) {
@@ -223,226 +217,6 @@ getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
     Name += ("_" + Feature->getName()).str();
   return Name;
 }
-
-//===- MatchTable Helpers -------------------------------------------------===//
-
-class MatchTable;
-
-/// A record to be stored in a MatchTable.
-///
-/// This class represents any and all output that may be required to emit the
-/// MatchTable. Instances  are most often configured to represent an opcode or
-/// value that will be emitted to the table with some formatting but it can also
-/// represent commas, comments, and other formatting instructions.
-struct MatchTableRecord {
-  enum RecordFlagsBits {
-    MTRF_None = 0x0,
-    /// Causes EmitStr to be formatted as comment when emitted.
-    MTRF_Comment = 0x1,
-    /// Causes the record value to be followed by a comma when emitted.
-    MTRF_CommaFollows = 0x2,
-    /// Causes the record value to be followed by a line break when emitted.
-    MTRF_LineBreakFollows = 0x4,
-    /// Indicates that the record defines a label and causes an additional
-    /// comment to be emitted containing the index of the label.
-    MTRF_Label = 0x8,
-    /// Causes the record to be emitted as the index of the label specified by
-    /// LabelID along with a comment indicating where that label is.
-    MTRF_JumpTarget = 0x10,
-    /// Causes the formatter to add a level of indentation before emitting the
-    /// record.
-    MTRF_Indent = 0x20,
-    /// Causes the formatter to remove a level of indentation after emitting the
-    /// record.
-    MTRF_Outdent = 0x40,
-  };
-
-  /// When MTRF_Label or MTRF_JumpTarget is used, indicates a label id to
-  /// reference or define.
-  unsigned LabelID;
-  /// The string to emit. Depending on the MTRF_* flags it may be a comment, a
-  /// value, a label name.
-  std::string EmitStr;
-
-private:
-  /// The number of MatchTable elements described by this record. Comments are 0
-  /// while values are typically 1. Values >1 may occur when we need to emit
-  /// values that exceed the size of a MatchTable element.
-  unsigned NumElements;
-
-public:
-  /// A bitfield of RecordFlagsBits flags.
-  unsigned Flags;
-
-  MatchTableRecord(Optional<unsigned> LabelID_, StringRef EmitStr,
-                   unsigned NumElements, unsigned Flags)
-      : LabelID(LabelID_.hasValue() ? LabelID_.getValue() : ~0u),
-        EmitStr(EmitStr), NumElements(NumElements), Flags(Flags) {
-    assert((!LabelID_.hasValue() || LabelID != ~0u) &&
-           "This value is reserved for non-labels");
-  }
-
-  void emit(raw_ostream &OS, bool LineBreakNextAfterThis,
-            const MatchTable &Table) const;
-  unsigned size() const { return NumElements; }
-};
-
-/// Holds the contents of a generated MatchTable to enable formatting and the
-/// necessary index tracking needed to support GIM_Try.
-class MatchTable {
-  /// An unique identifier for the table. The generated table will be named
-  /// MatchTable${ID}.
-  unsigned ID;
-  /// The records that make up the table. Also includes comments describing the
-  /// values being emitted and line breaks to format it.
-  std::vector<MatchTableRecord> Contents;
-  /// The currently defined labels.
-  DenseMap<unsigned, unsigned> LabelMap;
-  /// Tracks the sum of MatchTableRecord::NumElements as the table is built.
-  unsigned CurrentSize;
-
-  /// A unique identifier for a MatchTable label.
-  static unsigned CurrentLabelID;
-
-public:
-  static MatchTableRecord LineBreak;
-  static MatchTableRecord Comment(StringRef Comment) {
-    return MatchTableRecord(None, Comment, 0, MatchTableRecord::MTRF_Comment);
-  }
-  static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0) {
-    unsigned ExtraFlags = 0;
-    if (IndentAdjust > 0)
-      ExtraFlags |= MatchTableRecord::MTRF_Indent;
-    if (IndentAdjust < 0)
-      ExtraFlags |= MatchTableRecord::MTRF_Outdent;
-
-    return MatchTableRecord(None, Opcode, 1,
-                            MatchTableRecord::MTRF_CommaFollows | ExtraFlags);
-  }
-  static MatchTableRecord NamedValue(StringRef NamedValue) {
-    return MatchTableRecord(None, NamedValue, 1,
-                            MatchTableRecord::MTRF_CommaFollows);
-  }
-  static MatchTableRecord NamedValue(StringRef Namespace,
-                                     StringRef NamedValue) {
-    return MatchTableRecord(None, (Namespace + "::" + NamedValue).str(), 1,
-                            MatchTableRecord::MTRF_CommaFollows);
-  }
-  static MatchTableRecord IntValue(int64_t IntValue) {
-    return MatchTableRecord(None, llvm::to_string(IntValue), 1,
-                            MatchTableRecord::MTRF_CommaFollows);
-  }
-  static MatchTableRecord Label(unsigned LabelID) {
-    return MatchTableRecord(LabelID, "Label " + llvm::to_string(LabelID), 0,
-                            MatchTableRecord::MTRF_Label |
-                                MatchTableRecord::MTRF_Comment |
-                                MatchTableRecord::MTRF_LineBreakFollows);
-  }
-  static MatchTableRecord JumpTarget(unsigned LabelID) {
-    return MatchTableRecord(LabelID, "Label " + llvm::to_string(LabelID), 1,
-                            MatchTableRecord::MTRF_JumpTarget |
-                                MatchTableRecord::MTRF_Comment |
-                                MatchTableRecord::MTRF_CommaFollows);
-  }
-
-  MatchTable(unsigned ID) : ID(ID), CurrentSize(0) {}
-
-  void push_back(const MatchTableRecord &Value) {
-    if (Value.Flags & MatchTableRecord::MTRF_Label)
-      defineLabel(Value.LabelID);
-    Contents.push_back(Value);
-    CurrentSize += Value.size();
-  }
-
-  unsigned allocateLabelID() const { return CurrentLabelID++; }
-
-  void defineLabel(unsigned LabelID) {
-    LabelMap.insert(std::make_pair(LabelID, CurrentSize));
-  }
-
-  unsigned getLabelIndex(unsigned LabelID) const {
-    const auto I = LabelMap.find(LabelID);
-    assert(I != LabelMap.end() && "Use of undeclared label");
-    return I->second;
-  }
-
-  void emitUse(raw_ostream &OS) const { OS << "MatchTable" << ID; }
-
-  void emitDeclaration(raw_ostream &OS) const {
-    unsigned Indentation = 4;
-    OS << "  constexpr static int64_t MatchTable" << ID << "[] = {";
-    LineBreak.emit(OS, true, *this);
-    OS << std::string(Indentation, ' ');
-
-    for (auto I = Contents.begin(), E = Contents.end(); I != E;
-         ++I) {
-      bool LineBreakIsNext = false;
-      const auto &NextI = std::next(I);
-
-      if (NextI != E) {
-        if (NextI->EmitStr == "" &&
-            NextI->Flags == MatchTableRecord::MTRF_LineBreakFollows)
-          LineBreakIsNext = true;
-      }
-
-      if (I->Flags & MatchTableRecord::MTRF_Indent)
-        Indentation += 2;
-
-      I->emit(OS, LineBreakIsNext, *this);
-      if (I->Flags & MatchTableRecord::MTRF_LineBreakFollows)
-        OS << std::string(Indentation, ' ');
-
-      if (I->Flags & MatchTableRecord::MTRF_Outdent)
-        Indentation -= 2;
-    }
-    OS << "};\n";
-  }
-};
-
-unsigned MatchTable::CurrentLabelID = 0;
-
-MatchTableRecord MatchTable::LineBreak = {
-    None, "" /* Emit String */, 0 /* Elements */,
-    MatchTableRecord::MTRF_LineBreakFollows};
-
-void MatchTableRecord::emit(raw_ostream &OS, bool LineBreakIsNextAfterThis,
-                            const MatchTable &Table) const {
-  bool UseLineComment =
-      LineBreakIsNextAfterThis | (Flags & MTRF_LineBreakFollows);
-  if (Flags & (MTRF_JumpTarget | MTRF_CommaFollows))
-    UseLineComment = false;
-
-  if (Flags & MTRF_Comment)
-    OS << (UseLineComment ? "// " : "/*");
-
-  OS << EmitStr;
-  if (Flags & MTRF_Label)
-    OS << ": @" << Table.getLabelIndex(LabelID);
-
-  if (Flags & MTRF_Comment && !UseLineComment)
-    OS << "*/";
-
-  if (Flags & MTRF_JumpTarget) {
-    if (Flags & MTRF_Comment)
-      OS << " ";
-    OS << Table.getLabelIndex(LabelID);
-  }
-
-  if (Flags & MTRF_CommaFollows) {
-    OS << ",";
-    if (!LineBreakIsNextAfterThis && !(Flags & MTRF_LineBreakFollows))
-      OS << " ";
-  }
-
-  if (Flags & MTRF_LineBreakFollows)
-    OS << "\n";
-}
-
-MatchTable &operator<<(MatchTable &Table, const MatchTableRecord &Value) {
-  Table.push_back(Value);
-  return Table;
-}
-
 //===- Matchers -----------------------------------------------------------===//
 
 class OperandMatcher;
@@ -460,11 +234,9 @@ class RuleMatcher {
   /// have succeeded.
   std::vector<std::unique_ptr<MatchAction>> Actions;
 
-  typedef std::map<const InstructionMatcher *, unsigned>
-      DefinedInsnVariablesMap;
   /// A map of instruction matchers to the local variables created by
   /// emitCaptureOpcodes().
-  DefinedInsnVariablesMap InsnVariableIDs;
+  std::map<const InstructionMatcher *, unsigned> InsnVariableIDs;
 
   /// ID for the next instruction variable defined with defineInsnVar()
   unsigned NextInsnVarID;
@@ -487,23 +259,13 @@ public:
   /// This is used for the root of the match.
   unsigned implicitlyDefineInsnVar(const InstructionMatcher &Matcher);
   /// Define an instruction and emit corresponding state-machine opcodes.
-  unsigned defineInsnVar(MatchTable &Table, const InstructionMatcher &Matcher,
+  unsigned defineInsnVar(raw_ostream &OS, const InstructionMatcher &Matcher,
                          unsigned InsnVarID, unsigned OpIdx);
   unsigned getInsnVarID(const InstructionMatcher &InsnMatcher) const;
-  DefinedInsnVariablesMap::const_iterator defined_insn_vars_begin() const {
-    return InsnVariableIDs.begin();
-  }
-  DefinedInsnVariablesMap::const_iterator defined_insn_vars_end() const {
-    return InsnVariableIDs.end();
-  }
-  iterator_range<typename DefinedInsnVariablesMap::const_iterator>
-  defined_insn_vars() const {
-    return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
-  }
 
-  void emitCaptureOpcodes(MatchTable &Table);
+  void emitCaptureOpcodes(raw_ostream &OS);
 
-  void emit(MatchTable &Table);
+  void emit(raw_ostream &OS);
 
   /// Compare the priority of this object and B.
   ///
@@ -547,14 +309,14 @@ public:
 
   /// Emit MatchTable opcodes that tests whether all the predicates are met.
   template <class... Args>
-  void emitPredicateListOpcodes(MatchTable &Table, Args &&... args) const {
+  void emitPredicateListOpcodes(raw_ostream &OS, Args &&... args) const {
     if (Predicates.empty()) {
-      Table << MatchTable::Comment("No predicates") << MatchTable::LineBreak;
+      OS << "// No predicates\n";
       return;
     }
 
     for (const auto &Predicate : predicates())
-      Predicate->emitPredicateOpcodes(Table, std::forward<Args>(args)...);
+      Predicate->emitPredicateOpcodes(OS, std::forward<Args>(args)...);
   }
 };
 
@@ -608,11 +370,11 @@ public:
   ///
   /// Only InstructionOperandMatcher needs to do anything for this method the
   /// rest just walk the tree.
-  virtual void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  virtual void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                                   unsigned InsnVarID, unsigned OpIdx) const {}
 
   /// Emit MatchTable opcodes that check the predicate for the given operand.
-  virtual void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  virtual void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                                     unsigned InsnVarID,
                                     unsigned OpIdx) const = 0;
 
@@ -641,13 +403,12 @@ public:
     return P->getKind() == OPM_LLT;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
-    Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
-          << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Op")
-          << MatchTable::IntValue(OpIdx) << MatchTable::Comment("Type")
-          << MatchTable::NamedValue(Ty.getCxxEnumValue())
-          << MatchTable::LineBreak;
+    OS << "    GIM_CheckType, /*MI*/" << InsnVarID << ", /*Op*/" << OpIdx
+       << ", /*Type*/";
+    Ty.emitCxxEnumValue(OS);
+    OS << ", \n";
   }
 };
 
@@ -669,15 +430,12 @@ public:
     return P->getKind() == OPM_ComplexPattern;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     unsigned ID = getAllocatedTemporariesBaseID();
-    Table << MatchTable::Opcode("GIM_CheckComplexPattern")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::Comment("Renderer") << MatchTable::IntValue(ID)
-          << MatchTable::NamedValue(("GICP_" + TheDef.getName()).str())
-          << MatchTable::LineBreak;
+    OS << "    GIM_CheckComplexPattern, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", /*Renderer*/" << ID << ", GICP_"
+       << TheDef.getName() << ",\n";
   }
 
   unsigned countRendererFns() const override {
@@ -698,14 +456,10 @@ public:
     return P->getKind() == OPM_RegBank;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
-    Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::Comment("RC")
-          << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
-          << MatchTable::LineBreak;
+    OS << "    GIM_CheckRegBankForClass, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", /*RC*/" << RC.getQualifiedName() << "RegClassID,\n";
   }
 };
 
@@ -718,11 +472,9 @@ public:
     return P->getKind() == OPM_MBB;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
-    Table << MatchTable::Opcode("GIM_CheckIsMBB") << MatchTable::Comment("MI")
-          << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Op")
-          << MatchTable::IntValue(OpIdx) << MatchTable::LineBreak;
+    OS << "    GIM_CheckIsMBB, /*MI*/" << InsnVarID << ", /*Op*/" << OpIdx << ",\n";
   }
 };
 
@@ -740,12 +492,10 @@ public:
     return P->getKind() == OPM_Int;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
-    Table << MatchTable::Opcode("GIM_CheckConstantInt")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::IntValue(Value) << MatchTable::LineBreak;
+    OS << "    GIM_CheckConstantInt, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", " << Value << ",\n";
   }
 };
 
@@ -763,12 +513,10 @@ public:
     return P->getKind() == OPM_LiteralInt;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
-    Table << MatchTable::Opcode("GIM_CheckLiteralInt")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::IntValue(Value) << MatchTable::LineBreak;
+    OS << "    GIM_CheckLiteralInt, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", " << Value << ",\n";
   }
 };
 
@@ -785,13 +533,10 @@ public:
     return P->getKind() == OPM_IntrinsicID;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
-    Table << MatchTable::Opcode("GIM_CheckIntrinsicID")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::NamedValue("Intrinsic::" + II->EnumName)
-          << MatchTable::LineBreak;
+    OS << "    GIM_CheckIntrinsicID, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", Intrinsic::" << II->EnumName << ",\n";
   }
 };
 
@@ -844,26 +589,23 @@ public:
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
   /// Emit MatchTable opcodes to capture instructions into the MIs table.
-  void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned InsnVarID) const {
     for (const auto &Predicate : predicates())
-      Predicate->emitCaptureOpcodes(Table, Rule, InsnVarID, OpIdx);
+      Predicate->emitCaptureOpcodes(OS, Rule, InsnVarID, OpIdx);
   }
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarID matches all the predicates and all the operands.
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID) const {
-    std::string Comment;
-    raw_string_ostream CommentOS(Comment);
-    CommentOS << "MIs[" << InsnVarID << "] ";
+    OS << "    // MIs[" << InsnVarID << "] ";
     if (SymbolicName.empty())
-      CommentOS << "Operand " << OpIdx;
+      OS << "Operand " << OpIdx;
     else
-      CommentOS << SymbolicName;
-    Table << MatchTable::Comment(CommentOS.str()) << MatchTable::LineBreak;
-
-    emitPredicateListOpcodes(Table, Rule, InsnVarID, OpIdx);
+      OS << SymbolicName;
+    OS << "\n";
+    emitPredicateListOpcodes(OS, Rule, InsnVarID, OpIdx);
   }
 
   /// Compare the priority of this object and B.
@@ -931,7 +673,7 @@ public:
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarID matches the predicate.
-  virtual void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  virtual void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                                     unsigned InsnVarID) const = 0;
 
   /// Compare the priority of this object and B.
@@ -960,12 +702,10 @@ public:
     return P->getKind() == IPM_Opcode;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID) const override {
-    Table << MatchTable::Opcode("GIM_CheckOpcode") << MatchTable::Comment("MI")
-          << MatchTable::IntValue(InsnVarID)
-          << MatchTable::NamedValue(I->Namespace, I->TheDef->getName())
-          << MatchTable::LineBreak;
+    OS << "    GIM_CheckOpcode, /*MI*/" << InsnVarID << ", " << I->Namespace
+       << "::" << I->TheDef->getName() << ",\n";
   }
 
   /// Compare the priority of this object and B.
@@ -1055,23 +795,21 @@ public:
 
   /// Emit MatchTable opcodes to check the shape of the match and capture
   /// instructions into the MIs table.
-  void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned InsnID) {
-    Table << MatchTable::Opcode("GIM_CheckNumOperands")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnID)
-          << MatchTable::Comment("Expected")
-          << MatchTable::IntValue(getNumOperands()) << MatchTable::LineBreak;
+    OS << "    GIM_CheckNumOperands, /*MI*/" << InsnID << ", /*Expected*/"
+       << getNumOperands() << ",\n";
     for (const auto &Operand : Operands)
-      Operand->emitCaptureOpcodes(Table, Rule, InsnID);
+      Operand->emitCaptureOpcodes(OS, Rule, InsnID);
   }
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID) const {
-    emitPredicateListOpcodes(Table, Rule, InsnVarID);
+    emitPredicateListOpcodes(OS, Rule, InsnVarID);
     for (const auto &Operand : Operands)
-      Operand->emitPredicateOpcodes(Table, Rule, InsnVarID);
+      Operand->emitPredicateOpcodes(OS, Rule, InsnVarID);
   }
 
   /// Compare the priority of this object and B.
@@ -1148,17 +886,17 @@ public:
     return InsnMatcher->getOptionalOperand(SymbolicName);
   }
 
-  void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned InsnID, unsigned OpIdx) const override {
-    unsigned InsnVarID = Rule.defineInsnVar(Table, *InsnMatcher, InsnID, OpIdx);
-    InsnMatcher->emitCaptureOpcodes(Table, Rule, InsnVarID);
+    unsigned InsnVarID = Rule.defineInsnVar(OS, *InsnMatcher, InsnID, OpIdx);
+    InsnMatcher->emitCaptureOpcodes(OS, Rule, InsnVarID);
   }
 
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID_,
                             unsigned OpIdx_) const override {
     unsigned InsnVarID = Rule.getInsnVarID(*InsnMatcher);
-    InsnMatcher->emitPredicateOpcodes(Table, Rule, InsnVarID);
+    InsnMatcher->emitPredicateOpcodes(OS, Rule, InsnVarID);
   }
 };
 
@@ -1182,8 +920,7 @@ public:
 
   RendererKind getKind() const { return Kind; }
 
-  virtual void emitRenderOpcodes(MatchTable &Table,
-                                 RuleMatcher &Rule) const = 0;
+  virtual void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const = 0;
 };
 
 /// A CopyRenderer emits code to copy a single operand from an existing
@@ -1210,14 +947,12 @@ public:
 
   const StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
     unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-    Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
-          << MatchTable::IntValue(NewInsnID) << MatchTable::Comment("OldInsnID")
-          << MatchTable::IntValue(OldInsnVarID) << MatchTable::Comment("OpIdx")
-          << MatchTable::IntValue(Operand.getOperandIndex())
-          << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+    OS << "    GIR_Copy, /*NewInsnID*/" << NewInsnID << ", /*OldInsnID*/"
+       << OldInsnVarID << ", /*OpIdx*/" << Operand.getOperandIndex() << ", // "
+       << SymbolicName << "\n";
   }
 };
 
@@ -1248,17 +983,13 @@ public:
 
   const StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
     unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-    Table << MatchTable::Opcode("GIR_CopySubReg")
-          << MatchTable::Comment("NewInsnID") << MatchTable::IntValue(NewInsnID)
-          << MatchTable::Comment("OldInsnID")
-          << MatchTable::IntValue(OldInsnVarID) << MatchTable::Comment("OpIdx")
-          << MatchTable::IntValue(Operand.getOperandIndex())
-          << MatchTable::Comment("SubRegIdx")
-          << MatchTable::IntValue(SubReg->EnumValue)
-          << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+    OS << "    GIR_CopySubReg, /*NewInsnID*/" << NewInsnID
+       << ", /*OldInsnID*/" << OldInsnVarID << ", /*OpIdx*/"
+       << Operand.getOperandIndex() << ", /*SubRegIdx*/" << SubReg->EnumValue
+       << ", // " << SymbolicName << "\n";
   }
 };
 
@@ -1278,15 +1009,12 @@ public:
     return R->getKind() == OR_Register;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_AddRegister")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-          << MatchTable::NamedValue(
-                 (RegisterDef->getValue("Namespace")
-                      ? RegisterDef->getValueAsString("Namespace")
-                      : ""),
-                 RegisterDef->getName())
-          << MatchTable::LineBreak;
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
+    OS << "      GIR_AddRegister, /*InsnID*/" << InsnID << ", "
+       << (RegisterDef->getValue("Namespace")
+               ? RegisterDef->getValueAsString("Namespace")
+               : "")
+       << "::" << RegisterDef->getName() << ",\n";
   }
 };
 
@@ -1304,10 +1032,9 @@ public:
     return R->getKind() == OR_Imm;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-          << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
-          << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
+    OS << "      GIR_AddImm, /*InsnID*/" << InsnID << ", /*Imm*/" << Imm
+       << ",\n";
   }
 };
 
@@ -1337,11 +1064,9 @@ public:
     return R->getKind() == OR_ComplexPattern;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_ComplexRenderer")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-          << MatchTable::Comment("RendererID")
-          << MatchTable::IntValue(RendererID) << MatchTable::LineBreak;
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
+    OS << "    GIR_ComplexRenderer, /*InsnID*/" << InsnID << ", /*RendererID*/"
+       << RendererID << ",\n";
   }
 };
 
@@ -1354,13 +1079,13 @@ class MatchAction {
 public:
   virtual ~MatchAction() {}
 
-  /// Emit the MatchTable opcodes to implement the action.
+  /// Emit the C++ statements to implement the action.
   ///
   /// \param RecycleInsnID If given, it's an instruction to recycle. The
   ///                      requirements on the instruction vary from action to
   ///                      action.
-  virtual void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                 unsigned RecycleInsnID) const = 0;
+  virtual void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
+                                  unsigned RecycleInsnID) const = 0;
 };
 
 /// Generates a comment describing the matched rule being acted upon.
@@ -1371,11 +1096,10 @@ private:
 public:
   DebugCommentAction(const PatternToMatch &P) : P(P) {}
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                         unsigned RecycleInsnID) const override {
-    Table << MatchTable::Comment(llvm::to_string(*P.getSrcPattern()) + "  =>  " +
-                               llvm::to_string(*P.getDstPattern()))
-          << MatchTable::LineBreak;
+  void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned RecycleInsnID) const override {
+    OS << "    // " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern()
+       << "\n";
   }
 };
 
@@ -1418,35 +1142,27 @@ public:
     return *static_cast<Kind *>(OperandRenderers.back().get());
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                         unsigned RecycleInsnID) const override {
+  void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned RecycleInsnID) const override {
     if (canMutate()) {
-      Table << MatchTable::Opcode("GIR_MutateOpcode")
-            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-            << MatchTable::Comment("RecycleInsnID")
-            << MatchTable::IntValue(RecycleInsnID)
-            << MatchTable::Comment("Opcode")
-            << MatchTable::NamedValue(I->Namespace, I->TheDef->getName())
-            << MatchTable::LineBreak;
+      OS << "    GIR_MutateOpcode, /*InsnID*/" << InsnID
+         << ", /*RecycleInsnID*/ " << RecycleInsnID << ", /*Opcode*/"
+         << I->Namespace << "::" << I->TheDef->getName() << ",\n";
 
       if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
         for (auto Def : I->ImplicitDefs) {
           auto Namespace = Def->getValue("Namespace")
                                ? Def->getValueAsString("Namespace")
                                : "";
-          Table << MatchTable::Opcode("GIR_AddImplicitDef")
-                << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-                << MatchTable::NamedValue(Namespace, Def->getName())
-                << MatchTable::LineBreak;
+          OS << "    GIR_AddImplicitDef, " << InsnID << ", " << Namespace
+             << "::" << Def->getName() << ",\n";
         }
         for (auto Use : I->ImplicitUses) {
           auto Namespace = Use->getValue("Namespace")
                                ? Use->getValueAsString("Namespace")
                                : "";
-          Table << MatchTable::Opcode("GIR_AddImplicitUse")
-                << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-                << MatchTable::NamedValue(Namespace, Use->getName())
-                << MatchTable::LineBreak;
+          OS << "    GIR_AddImplicitUse, " << InsnID << ", " << Namespace
+             << "::" << Use->getName() << ",\n";
         }
       }
       return;
@@ -1455,36 +1171,13 @@ public:
     // TODO: Simple permutation looks like it could be almost as common as
     //       mutation due to commutative operations.
 
-    Table << MatchTable::Opcode("GIR_BuildMI") << MatchTable::Comment("InsnID")
-          << MatchTable::IntValue(InsnID) << MatchTable::Comment("Opcode")
-          << MatchTable::NamedValue(I->Namespace, I->TheDef->getName())
-          << MatchTable::LineBreak;
+    OS << "    GIR_BuildMI, /*InsnID*/" << InsnID << ", /*Opcode*/"
+       << I->Namespace << "::" << I->TheDef->getName() << ",\n";
     for (const auto &Renderer : OperandRenderers)
-      Renderer->emitRenderOpcodes(Table, Rule);
+      Renderer->emitRenderOpcodes(OS, Rule);
 
-    if (I->mayLoad || I->mayStore) {
-      Table << MatchTable::Opcode("GIR_MergeMemOperands")
-            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-            << MatchTable::Comment("MergeInsnID's");
-      // Emit the ID's for all the instructions that are matched by this rule.
-      // TODO: Limit this to matched instructions that mayLoad/mayStore or have
-      //       some other means of having a memoperand. Also limit this to
-      //       emitted instructions that expect to have a memoperand too. For
-      //       example, (G_SEXT (G_LOAD x)) that results in separate load and
-      //       sign-extend instructions shouldn't put the memoperand on the
-      //       sign-extend since it has no effect there.
-      std::vector<unsigned> MergeInsnIDs;
-      for (const auto &IDMatcherPair : Rule.defined_insn_vars())
-        MergeInsnIDs.push_back(IDMatcherPair.second);
-      std::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
-      for (const auto &MergeInsnID : MergeInsnIDs)
-        Table << MatchTable::IntValue(MergeInsnID);
-      Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList");
-    }
-
-    Table << MatchTable::Opcode("GIR_EraseFromParent")
-          << MatchTable::Comment("InsnID")
-          << MatchTable::IntValue(RecycleInsnID) << MatchTable::LineBreak;
+    OS << "    GIR_MergeMemOperands, /*InsnID*/" << InsnID << ",\n"
+       << "    GIR_EraseFromParent, /*InsnID*/" << RecycleInsnID << ",\n";
   }
 };
 
@@ -1496,11 +1189,9 @@ class ConstrainOperandsToDefinitionAction : public MatchAction {
 public:
   ConstrainOperandsToDefinitionAction(unsigned InsnID) : InsnID(InsnID) {}
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                         unsigned RecycleInsnID) const override {
-    Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-          << MatchTable::LineBreak;
+  void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned RecycleInsnID) const override {
+    OS << "    GIR_ConstrainSelectedInstOperands, /*InsnID*/" << InsnID << ",\n";
   }
 };
 
@@ -1516,13 +1207,10 @@ public:
                                    const CodeGenRegisterClass &RC)
       : InsnID(InsnID), OpIdx(OpIdx), RC(RC) {}
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                         unsigned RecycleInsnID) const override {
-    Table << MatchTable::Opcode("GIR_ConstrainOperandRC")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-          << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::Comment("RC " + RC.getName())
-          << MatchTable::IntValue(RC.EnumValue) << MatchTable::LineBreak;
+  void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned RecycleInsnID) const override {
+    OS << "    GIR_ConstrainOperandRC, /*InsnID*/" << InsnID << ", /*Op*/"
+       << OpIdx << ", /*RC " << RC.getName() << "*/ " << RC.EnumValue << ",\n";
   }
 };
 
@@ -1552,16 +1240,13 @@ RuleMatcher::implicitlyDefineInsnVar(const InstructionMatcher &Matcher) {
   return NewInsnVarID;
 }
 
-unsigned RuleMatcher::defineInsnVar(MatchTable &Table,
+unsigned RuleMatcher::defineInsnVar(raw_ostream &OS,
                                     const InstructionMatcher &Matcher,
                                     unsigned InsnID, unsigned OpIdx) {
   unsigned NewInsnVarID = implicitlyDefineInsnVar(Matcher);
-  Table << MatchTable::Opcode("GIM_RecordInsn")
-        << MatchTable::Comment("DefineMI") << MatchTable::IntValue(NewInsnVarID)
-        << MatchTable::Comment("MI") << MatchTable::IntValue(InsnID)
-        << MatchTable::Comment("OpIdx") << MatchTable::IntValue(OpIdx)
-        << MatchTable::Comment("MIs[" + llvm::to_string(NewInsnVarID) + "]")
-        << MatchTable::LineBreak;
+  OS << "    GIM_RecordInsn, /*DefineMI*/" << NewInsnVarID << ", /*MI*/"
+     << InsnID << ", /*OpIdx*/" << OpIdx << ", // MIs[" << NewInsnVarID
+     << "]\n";
   return NewInsnVarID;
 }
 
@@ -1574,13 +1259,13 @@ unsigned RuleMatcher::getInsnVarID(const InstructionMatcher &InsnMatcher) const 
 
 /// Emit MatchTable opcodes to check the shape of the match and capture
 /// instructions into local variables.
-void RuleMatcher::emitCaptureOpcodes(MatchTable &Table) {
+void RuleMatcher::emitCaptureOpcodes(raw_ostream &OS) {
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
   unsigned InsnVarID = implicitlyDefineInsnVar(*Matchers.front());
-  Matchers.front()->emitCaptureOpcodes(Table, *this, InsnVarID);
+  Matchers.front()->emitCaptureOpcodes(OS, *this, InsnVarID);
 }
 
-void RuleMatcher::emit(MatchTable &Table) {
+void RuleMatcher::emit(raw_ostream &OS) {
   if (Matchers.empty())
     llvm_unreachable("Unexpected empty matcher!");
 
@@ -1595,20 +1280,15 @@ void RuleMatcher::emit(MatchTable &Table) {
   // on some targets but we don't need to make use of that yet.
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
 
-  unsigned LabelID = Table.allocateLabelID();
-  Table << MatchTable::Opcode("GIM_Try", +1)
-        << MatchTable::Comment("On fail goto") << MatchTable::JumpTarget(LabelID)
-        << MatchTable::LineBreak;
-
+  OS << "  const static int64_t MatchTable" << CurrentMatchTableID << "[] = {\n";
   if (!RequiredFeatures.empty()) {
-    Table << MatchTable::Opcode("GIM_CheckFeatures")
-          << MatchTable::NamedValue(getNameForFeatureBitset(RequiredFeatures))
-          << MatchTable::LineBreak;
+    OS << "    GIM_CheckFeatures, " << getNameForFeatureBitset(RequiredFeatures)
+       << ",\n";
   }
 
-  emitCaptureOpcodes(Table);
+  emitCaptureOpcodes(OS);
 
-  Matchers.front()->emitPredicateOpcodes(Table, *this,
+  Matchers.front()->emitPredicateOpcodes(OS, *this,
                                          getInsnVarID(*Matchers.front()));
 
   // We must also check if it's safe to fold the matched instructions.
@@ -1627,9 +1307,7 @@ void RuleMatcher::emit(MatchTable &Table) {
 
     for (const auto &InsnID : InsnIDs) {
       // Reject the difficult cases until we have a more accurate check.
-      Table << MatchTable::Opcode("GIM_CheckIsSafeToFold")
-            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-            << MatchTable::LineBreak;
+      OS << "    GIM_CheckIsSafeToFold, /*InsnID*/" << InsnID << ",\n";
 
       // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
       //        account for unsafe cases.
@@ -1669,9 +1347,16 @@ void RuleMatcher::emit(MatchTable &Table) {
   }
 
   for (const auto &MA : Actions)
-    MA->emitActionOpcodes(Table, *this, 0);
-  Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak
-        << MatchTable::Label(LabelID);
+    MA->emitCxxActionStmts(OS, *this, 0);
+  OS << "    GIR_Done,\n"
+     << "  };\n"
+     << "  State.MIs.resize(1);\n"
+     << "  DEBUG(dbgs() << \"Processing MatchTable" << CurrentMatchTableID
+     << "\\n\");\n"
+     << "  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable"
+     << CurrentMatchTableID << ", TII, MRI, TRI, RBI, AvailableFeatures)) {\n"
+     << "    return true;\n"
+     << "  }\n\n";
 }
 
 bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
@@ -2521,18 +2206,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n\n";
 
-  MatchTable Table(0);
   for (auto &Rule : Rules) {
-    Rule.emit(Table);
+    Rule.emit(OS);
+    ++CurrentMatchTableID;
     ++NumPatternEmitted;
+    assert(CurrentMatchTableID == NumPatternEmitted &&
+           "Statistic deviates from number of emitted tables");
   }
-  Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
-  Table.emitDeclaration(OS);
-  OS << "  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, ";
-  Table.emitUse(OS);
-  OS << ", TII, MRI, TRI, RBI, AvailableFeatures)) {\n"
-     << "    return true;\n"
-     << "  }\n\n";
 
   OS << "  return false;\n"
      << "}\n"

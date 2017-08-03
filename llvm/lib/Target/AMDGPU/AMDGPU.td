@@ -79,12 +79,6 @@ def FeatureFlatScratchInsts : SubtargetFeature<"flat-scratch-insts",
   "Have scratch_* flat memory instructions"
 >;
 
-def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
-  "AddNoCarryInsts",
-  "true",
-  "Have VALU add/sub instructions without carry out"
->;
-
 def FeatureUnalignedBufferAccess : SubtargetFeature<"unaligned-buffer-access",
   "UnalignedBufferAccess",
   "true",
@@ -470,8 +464,7 @@ def FeatureGFX9 : SubtargetFeatureGeneration<"GFX9",
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P, FeatureVGPRIndexMode,
    FeatureFastFMAF32, FeatureDPP,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
-   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
-   FeatureAddNoCarryInsts
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts
   ]
 >;
 
@@ -687,14 +680,6 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<"FeatureFlatGlobalInsts">;
-def HasFlatScratchInsts : Predicate<"Subtarget->hasFlatScratchInsts()">,
-  AssemblerPredicate<"FeatureFlatScratchInsts">;
-
-def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarryInsts()">,
-  AssemblerPredicate<"FeatureAddNoCarryInsts">;
-
-def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarryInsts()">,
-  AssemblerPredicate<"!FeatureAddNoCarryInsts">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<"Feature16BitInsts">;

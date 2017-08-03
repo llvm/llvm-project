@@ -21,12 +21,6 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
   )
 
-if(CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_CFG_RESOLVED_INTDIR "${CMAKE_CFG_INTDIR}/")
-else()
-  set(CMAKE_CFG_RESOLVED_INTDIR "")
-endif()
-
 include(base-config-ix)
 include(CompilerRTUtils)
 
@@ -36,8 +30,6 @@ option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY)
-option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
-mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
 
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")
@@ -86,7 +78,6 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
-include(HandleCompilerRT)
 include(config-ix)
 
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
@@ -101,42 +92,6 @@ endif()
 
 option(SANITIZER_CAN_USE_CXXABI "Sanitizers can use cxxabi" ${use_cxxabi_default})
 pythonize_bool(SANITIZER_CAN_USE_CXXABI)
-
-set(SANITIZER_CXX_ABI "default" CACHE STRING
-    "Specify C++ ABI library to use.")
-set(CXXABIS none default libcxxabi libstdc++)
-set_property(CACHE SANITIZER_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
-
-if (SANITIZER_CXX_ABI STREQUAL "default")
-  if (HAVE_LIBCXXABI AND COMPILER_RT_DEFAULT_TARGET_ONLY)
-    set(SANITIZER_CXX_ABI_LIBNAME "libcxxabi")
-    set(SANITIZER_CXX_ABI_INTREE 1)
-  elseif (APPLE)
-    set(SANITIZER_CXX_ABI_LIBNAME "libcxxabi")
-    set(SANITIZER_CXX_ABI_SYSTEM 1)
-  else()
-    set(SANITIZER_CXX_ABI_LIBNAME "libstdc++")
-  endif()
-elseif()
-  set(SANITIZER_CXX_ABI_LIBNAME "${SANITIZER_CXX_ABI}")
-endif()
-
-if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libcxxabi")
-  if (SANITIZER_CXX_ABI_INTREE)
-    if (TARGET unwind_shared OR HAVE_LIBUNWIND)
-      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_shared)
-    endif()
-    if (TARGET cxxabi_shared OR HAVE_LIBCXXABI)
-      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_shared)
-    endif()
-  else()
-    list(APPEND SANITIZER_CXX_ABI_LIBRARY "c++abi")
-  endif()
-elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
-  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_CXX_ABI_LIBRARY)
-endif()
-
-option(SANITIZER_USE_COMPILER_RT "Use compiler-rt builtins instead of libgcc" OFF)
 
 #================================
 # Setup Compiler Flags
@@ -272,28 +227,6 @@ append_list_if(COMPILER_RT_HAS_WD4291_FLAG /wd4291 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4391_FLAG /wd4391 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4722_FLAG /wd4722 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
-
-# Set common link flags.
-append_list_if(COMPILER_RT_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMON_LINK_FLAGS)
-
-if (SANITIZER_USE_COMPILER_RT)
-  list(APPEND SANITIZER_COMMON_LINK_FLAGS -rtlib=compiler-rt)
-  find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
-  list(APPEND SANITIZER_COMMON_LINK_LIBS ${COMPILER_RT_BUILTINS_LIBRARY})
-else()
-  if (ANDROID)
-    append_list_if(COMPILER_RT_HAS_GCC_LIB gcc SANITIZER_COMMON_LINK_LIBS)
-  else()
-    append_list_if(COMPILER_RT_HAS_GCC_S_LIB gcc_s SANITIZER_COMMON_LINK_LIBS)
-  endif()
-endif()
-
-append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
-
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
-  list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
-  list(APPEND SANITIZER_COMMON_LINK_LIBS magenta)
-endif()
 
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

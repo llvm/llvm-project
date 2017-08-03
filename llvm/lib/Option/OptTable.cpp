@@ -446,14 +446,15 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
 }
 
 void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
-                         bool ShowHidden, bool ShowAllAliases) const {
+                         bool ShowHidden) const {
   PrintHelp(OS, Name, Title, /*Include*/ 0, /*Exclude*/
-            (ShowHidden ? 0 : HelpHidden), ShowAllAliases);
+            (ShowHidden ? 0 : HelpHidden));
 }
 
+
 void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
-                         unsigned FlagsToInclude, unsigned FlagsToExclude,
-                         bool ShowAllAliases) const {
+                         unsigned FlagsToInclude,
+                         unsigned FlagsToExclude) const {
   OS << "OVERVIEW: " << Title << "\n";
   OS << '\n';
   OS << "USAGE: " << Name << " [options] <inputs>\n";
@@ -477,19 +478,10 @@ void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
     if (Flags & FlagsToExclude)
       continue;
 
-    // If an alias doesn't have a help text, show a help text for the aliased
-    // option instead.
-    const char *HelpText = getOptionHelpText(Id);
-    if (!HelpText && ShowAllAliases) {
-      const Option Alias = getOption(Id).getAlias();
-      if (Alias.isValid())
-        HelpText = getOptionHelpText(Alias.getID());
-    }
-
-    if (HelpText) {
+    if (const char *Text = getOptionHelpText(Id)) {
       const char *HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
-      GroupedOptionHelp[HelpGroup].push_back({OptName, HelpText});
+      GroupedOptionHelp[HelpGroup].push_back({OptName, Text});
     }
   }
 

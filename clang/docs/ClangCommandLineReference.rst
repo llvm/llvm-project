@@ -1961,10 +1961,6 @@ Use 64-bit floating point registers (MIPS only)
 
 Enable merging of globals
 
-.. option:: -mgpopt, -mno-gpopt
-
-Use GP relative accesses for symbols known to be in a small data section (MIPS)
-
 .. option:: -mhard-float
 
 .. option:: -mhwdiv=<arg>, --mhwdiv <arg>, --mhwdiv=<arg>

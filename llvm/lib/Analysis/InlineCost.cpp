@@ -119,9 +119,8 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// Number of bytes allocated statically by the callee.
   uint64_t AllocatedSize;
   unsigned NumInstructions, NumVectorInstructions;
-  int VectorBonus, TenPercentVectorBonus;
-  // Bonus to be applied when the callee has only one reachable basic block.
-  int SingleBBBonus;
+  int FiftyPercentVectorBonus, TenPercentVectorBonus;
+  int VectorBonus;
 
   /// While we walk the potentially-inlined instructions, we build up and
   /// maintain a mapping of simplified values specific to this callsite. The
@@ -207,8 +206,6 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool visitCastInst(CastInst &I);
   bool visitUnaryInstruction(UnaryInstruction &I);
   bool visitCmpInst(CmpInst &I);
-  bool visitAnd(BinaryOperator &I);
-  bool visitOr(BinaryOperator &I);
   bool visitSub(BinaryOperator &I);
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitLoad(LoadInst &I);
@@ -238,11 +235,11 @@ public:
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
         HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
-        NumVectorInstructions(0), VectorBonus(0), SingleBBBonus(0),
-        NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
-        NumConstantPtrCmps(0), NumConstantPtrDiffs(0),
-        NumInstructionsSimplified(0), SROACostSavings(0),
-        SROACostSavingsLost(0) {}
+        NumVectorInstructions(0), FiftyPercentVectorBonus(0),
+        TenPercentVectorBonus(0), VectorBonus(0), NumConstantArgs(0),
+        NumConstantOffsetPtrArgs(0), NumAllocaArgs(0), NumConstantPtrCmps(0),
+        NumConstantPtrDiffs(0), NumInstructionsSimplified(0),
+        SROACostSavings(0), SROACostSavingsLost(0) {}
 
   bool analyzeCall(CallSite CS);
 
@@ -351,14 +348,15 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
 ///
 /// Respects any simplified values known during the analysis of this callsite.
 bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
-  SmallVector<Value *, 4> Operands;
-  Operands.push_back(GEP.getOperand(0));
+  SmallVector<Value *, 4> Indices;
   for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
     if (Constant *SimpleOp = SimplifiedValues.lookup(*I))
-       Operands.push_back(SimpleOp);
+       Indices.push_back(SimpleOp);
      else
-       Operands.push_back(*I);
-  return TargetTransformInfo::TCC_Free == TTI.getUserCost(&GEP, Operands);
+       Indices.push_back(*I);
+  return TargetTransformInfo::TCC_Free ==
+         TTI.getGEPCost(GEP.getSourceElementType(), GEP.getPointerOperand(),
+                        Indices);
 }
 
 bool CallAnalyzer::visitAlloca(AllocaInst &I) {
@@ -681,49 +679,11 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
     return B ? std::max(A, B.getValue()) : A;
   };
 
-  // Various bonus percentages. These are multiplied by Threshold to get the
-  // bonus values.
-  // SingleBBBonus: This bonus is applied if the callee has a single reachable
-  // basic block at the given callsite context. This is speculatively applied
-  // and withdrawn if more than one basic block is seen.
-  //
-  // Vector bonuses: We want to more aggressively inline vector-dense kernels
-  // and apply this bonus based on the percentage of vector instructions. A
-  // bonus is applied if the vector instructions exceed 50% and half that amount
-  // is applied if it exceeds 10%. Note that these bonuses are some what
-  // arbitrary and evolved over time by accident as much as because they are
-  // principled bonuses.
-  // FIXME: It would be nice to base the bonus values on something more
-  // scientific.
-  //
-  // LstCallToStaticBonus: This large bonus is applied to ensure the inlining
-  // of the last call to a static function as inlining such functions is
-  // guaranteed to reduce code size.
-  //
-  // These bonus percentages may be set to 0 based on properties of the caller
-  // and the callsite.
-  int SingleBBBonusPercent = 50;
-  int VectorBonusPercent = 150;
-  int LastCallToStaticBonus = InlineConstants::LastCallToStaticBonus;
-
-  // Lambda to set all the above bonus and bonus percentages to 0.
-  auto DisallowAllBonuses = [&]() {
-    SingleBBBonusPercent = 0;
-    VectorBonusPercent = 0;
-    LastCallToStaticBonus = 0;
-  };
-
   // Use the OptMinSizeThreshold or OptSizeThreshold knob if they are available
   // and reduce the threshold if the caller has the necessary attribute.
-  if (Caller->optForMinSize()) {
+  if (Caller->optForMinSize())
     Threshold = MinIfValid(Threshold, Params.OptMinSizeThreshold);
-    // For minsize, we want to disable the single BB bonus and the vector
-    // bonuses, but not the last-call-to-static bonus. Inlining the last call to
-    // a static function will, at the minimum, eliminate the parameter setup and
-    // call/return instructions.
-    SingleBBBonusPercent = 0;
-    VectorBonusPercent = 0;
-  } else if (Caller->optForSize())
+  else if (Caller->optForSize())
     Threshold = MinIfValid(Threshold, Params.OptSizeThreshold);
 
   // Adjust the threshold based on inlinehint attribute and profile based
@@ -747,11 +707,6 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
           Threshold = Params.HotCallSiteThreshold.getValue();
         } else if (isColdCallSite(CS, CallerBFI)) {
           DEBUG(dbgs() << "Cold callsite.\n");
-          // Do not apply bonuses for a cold callsite including the
-          // LastCallToStatic bonus. While this bonus might result in code size
-          // reduction, it can cause the size of a non-cold caller to increase
-          // preventing it from being inlined.
-          DisallowAllBonuses();
           Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
         }
       } else {
@@ -763,11 +718,6 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
           Threshold = MaxIfValid(Threshold, Params.HintThreshold);
         } else if (PSI->isFunctionEntryCold(&Callee)) {
           DEBUG(dbgs() << "Cold callee.\n");
-          // Do not apply bonuses for a cold callee including the
-          // LastCallToStatic bonus. While this bonus might result in code size
-          // reduction, it can cause the size of a non-cold caller to increase
-          // preventing it from being inlined.
-          DisallowAllBonuses();
           Threshold = MinIfValid(Threshold, Params.ColdThreshold);
         }
       }
@@ -777,17 +727,6 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // Finally, take the target-specific inlining threshold multiplier into
   // account.
   Threshold *= TTI.getInliningThresholdMultiplier();
-
-  SingleBBBonus = Threshold * SingleBBBonusPercent / 100;
-  VectorBonus = Threshold * VectorBonusPercent / 100;
-
-  bool OnlyOneCallAndLocalLinkage =
-      F.hasLocalLinkage() && F.hasOneUse() && &F == CS.getCalledFunction();
-  // If there is only one call of the function, and it has internal linkage,
-  // the cost of inlining it drops dramatically. It may seem odd to update
-  // Cost in updateThreshold, but the bonus depends on the logic in this method.
-  if (OnlyOneCallAndLocalLinkage)
-    Cost -= LastCallToStaticBonus;
 }
 
 bool CallAnalyzer::visitCmpInst(CmpInst &I) {
@@ -843,34 +782,6 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   }
 
   return false;
-}
-
-bool CallAnalyzer::visitOr(BinaryOperator &I) {
-  // This is necessary because the generic simplify instruction only works if
-  // both operands are constants.
-  for (unsigned i = 0; i < 2; ++i) {
-    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
-            SimplifiedValues.lookup(I.getOperand(i))))
-      if (C->isAllOnesValue()) {
-        SimplifiedValues[&I] = C;
-        return true;
-      }
-  }
-  return Base::visitOr(I);
-}
-
-bool CallAnalyzer::visitAnd(BinaryOperator &I) {
-  // This is necessary because the generic simplify instruction only works if
-  // both operands are constants.
-  for (unsigned i = 0; i < 2; ++i) {
-    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
-            SimplifiedValues.lookup(I.getOperand(i))))
-      if (C->isZero()) {
-        SimplifiedValues[&I] = C;
-        return true;
-      }
-  }
-  return Base::visitAnd(I);
 }
 
 bool CallAnalyzer::visitSub(BinaryOperator &I) {
@@ -1385,14 +1296,30 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // Update the threshold based on callsite properties
   updateThreshold(CS, F);
 
+  FiftyPercentVectorBonus = 3 * Threshold / 2;
+  TenPercentVectorBonus = 3 * Threshold / 4;
+
+  // Track whether the post-inlining function would have more than one basic
+  // block. A single basic block is often intended for inlining. Balloon the
+  // threshold by 50% until we pass the single-BB phase.
+  bool SingleBB = true;
+  int SingleBBBonus = Threshold / 2;
+
   // Speculatively apply all possible bonuses to Threshold. If cost exceeds
   // this Threshold any time, and cost cannot decrease, we can stop processing
   // the rest of the function body.
-  Threshold += (SingleBBBonus + VectorBonus);
+  Threshold += (SingleBBBonus + FiftyPercentVectorBonus);
 
   // Give out bonuses for the callsite, as the instructions setting them up
   // will be gone after inlining.
   Cost -= getCallsiteCost(CS, DL);
+
+  // If there is only one call of the function, and it has internal linkage,
+  // the cost of inlining it drops dramatically.
+  bool OnlyOneCallAndLocalLinkage =
+      F.hasLocalLinkage() && F.hasOneUse() && &F == CS.getCalledFunction();
+  if (OnlyOneCallAndLocalLinkage)
+    Cost -= InlineConstants::LastCallToStaticBonus;
 
   // If this function uses the coldcc calling convention, prefer not to inline
   // it.
@@ -1461,7 +1388,6 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
       BBSetVector;
   BBSetVector BBWorklist;
   BBWorklist.insert(&F.getEntryBlock());
-  bool SingleBB = true;
   // Note that we *must not* cache the size, this loop grows the worklist.
   for (unsigned Idx = 0; Idx != BBWorklist.size(); ++Idx) {
     // Bail out the moment we cross the threshold. This means we'll under-count
@@ -1526,8 +1452,6 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
     }
   }
 
-  bool OnlyOneCallAndLocalLinkage =
-      F.hasLocalLinkage() && F.hasOneUse() && &F == CS.getCalledFunction();
   // If this is a noduplicate call, we can still inline as long as
   // inlining this would cause the removal of the caller (so the instruction
   // is not actually duplicated, just moved).
@@ -1538,9 +1462,9 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // subtract the excess bonus, if any, from the Threshold before
   // comparing against Cost.
   if (NumVectorInstructions <= NumInstructions / 10)
-    Threshold -= VectorBonus;
+    Threshold -= FiftyPercentVectorBonus;
   else if (NumVectorInstructions <= NumInstructions / 2)
-    Threshold -= VectorBonus/2;
+    Threshold -= (FiftyPercentVectorBonus - TenPercentVectorBonus);
 
   return Cost < std::max(1, Threshold);
 }
@@ -1636,12 +1560,11 @@ InlineCost llvm::getInlineCost(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  Function *Caller = CS.getCaller();
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI))
+  if (!functionsHaveCompatibleAttributes(CS.getCaller(), Callee, CalleeTTI))
     return llvm::InlineCost::getNever();
 
   // Don't inline this call if the caller has the optnone attribute.
-  if (Caller->hasFnAttribute(Attribute::OptimizeNone))
+  if (CS.getCaller()->hasFnAttribute(Attribute::OptimizeNone))
     return llvm::InlineCost::getNever();
 
   // Don't inline functions which can be interposed at link-time.  Don't inline

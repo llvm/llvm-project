@@ -295,8 +295,7 @@ enum class instrprof_error {
   value_site_count_mismatch,
   compress_failed,
   uncompress_failed,
-  empty_raw_profile,
-  zlib_unavailable
+  empty_raw_profile
 };
 
 inline std::error_code make_error_code(instrprof_error E) {

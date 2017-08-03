@@ -1,4 +1,4 @@
-//===- RDFGraph.h -----------------------------------------------*- C++ -*-===//
+//===--- RDFGraph.h ---------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -226,13 +226,17 @@
 #define LLVM_LIB_TARGET_HEXAGON_RDFGRAPH_H
 
 #include "RDFRegisters.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -246,19 +250,17 @@ static_assert(sizeof(uint32_t) == sizeof(unsigned), "Those should be equal");
 
 namespace llvm {
 
-class MachineBasicBlock;
-class MachineDominanceFrontier;
-class MachineDominatorTree;
-class MachineFunction;
-class MachineInstr;
-class MachineOperand;
-class raw_ostream;
-class TargetInstrInfo;
-class TargetRegisterInfo;
+  class MachineBasicBlock;
+  class MachineFunction;
+  class MachineInstr;
+  class MachineOperand;
+  class MachineDominanceFrontier;
+  class MachineDominatorTree;
+  class TargetInstrInfo;
 
 namespace rdf {
 
-  using NodeId = uint32_t;
+  typedef uint32_t NodeId;
 
   struct DataFlowGraph;
 
@@ -333,7 +335,7 @@ namespace rdf {
   };
 
   template <typename T> struct NodeAddr {
-    NodeAddr() = default;
+    NodeAddr() : Addr(nullptr) {}
     NodeAddr(T A, NodeId I) : Addr(A), Id(I) {}
 
     // Type cast (casting constructor). The reason for having this class
@@ -349,7 +351,7 @@ namespace rdf {
       return !operator==(NA);
     }
 
-    T Addr = nullptr;
+    T Addr;
     NodeId Id = 0;
   };
 
@@ -406,11 +408,11 @@ namespace rdf {
     const uint32_t IndexMask;
     char *ActiveEnd = nullptr;
     std::vector<char*> Blocks;
-    using AllocatorTy = BumpPtrAllocatorImpl<MallocAllocator, 65536>;
+    typedef BumpPtrAllocatorImpl<MallocAllocator, 65536> AllocatorTy;
     AllocatorTy MemPool;
   };
 
-  using RegisterSet = std::set<RegisterRef>;
+  typedef std::set<RegisterRef> RegisterSet;
 
   struct TargetOperandInfo {
     TargetOperandInfo(const TargetInstrInfo &tii) : TII(tii) {}
@@ -435,12 +437,10 @@ namespace rdf {
     LaneBitmask getLaneMaskForIndex(uint32_t K) const {
       return K == 0 ? LaneBitmask::getAll() : get(K);
     }
-
     uint32_t getIndexForLaneMask(LaneBitmask LM) {
       assert(LM.any());
       return LM.all() ? 0 : insert(LM);
     }
-
     uint32_t getIndexForLaneMask(LaneBitmask LM) const {
       assert(LM.any());
       return LM.all() ? 0 : find(LM);
@@ -463,10 +463,8 @@ namespace rdf {
 
     // Insert node NA after "this" in the circular chain.
     void append(NodeAddr<NodeBase*> NA);
-
     // Initialize all members to 0.
     void init() { memset(this, 0, sizeof *this); }
-
     void setNext(NodeId N) { Next = N; }
 
   protected:
@@ -510,8 +508,9 @@ namespace rdf {
   static_assert(sizeof(NodeBase) <= NodeAllocator::NodeMemSize,
         "NodeBase must be at most NodeAllocator::NodeMemSize bytes");
 
-  using NodeList = SmallVector<NodeAddr<NodeBase *>, 4>;
-  using NodeSet = std::set<NodeId>;
+//  typedef std::vector<NodeAddr<NodeBase*>> NodeList;
+  typedef SmallVector<NodeAddr<NodeBase*>,4> NodeList;
+  typedef std::set<NodeId> NodeSet;
 
   struct RefNode : public NodeBase {
     RefNode() = default;
@@ -673,9 +672,9 @@ namespace rdf {
       bool empty() const { return Stack.empty() || top() == bottom(); }
 
     private:
-      using value_type = NodeAddr<DefNode *>;
+      typedef NodeAddr<DefNode*> value_type;
       struct Iterator {
-        using value_type = DefStack::value_type;
+        typedef DefStack::value_type value_type;
 
         Iterator &up() { Pos = DS.nextUp(Pos); return *this; }
         Iterator &down() { Pos = DS.nextDown(Pos); return *this; }
@@ -692,19 +691,17 @@ namespace rdf {
         bool operator!=(const Iterator &It) const { return Pos != It.Pos; }
 
       private:
-        friend struct DefStack;
-
         Iterator(const DefStack &S, bool Top);
 
         // Pos-1 is the index in the StorageType object that corresponds to
         // the top of the DefStack.
         const DefStack &DS;
         unsigned Pos;
+        friend struct DefStack;
       };
 
     public:
-      using iterator = Iterator;
-
+      typedef Iterator iterator;
       iterator top() const { return Iterator(*this, true); }
       iterator bottom() const { return Iterator(*this, false); }
       unsigned size() const;
@@ -716,8 +713,7 @@ namespace rdf {
 
     private:
       friend struct Iterator;
-
-      using StorageType = std::vector<value_type>;
+      typedef std::vector<value_type> StorageType;
 
       bool isDelimiter(const StorageType::value_type &P, NodeId N = 0) const {
         return (P.Addr == nullptr) && (N == 0 || P.Id == N);
@@ -731,7 +727,7 @@ namespace rdf {
 
     // Make this std::unordered_map for speed of accessing elements.
     // Map: Register (physical or virtual) -> DefStack
-    using DefStackMap = std::unordered_map<RegisterId, DefStack>;
+    typedef std::unordered_map<RegisterId,DefStack> DefStackMap;
 
     void build(unsigned Options = BuildOptions::None);
     void pushAllDefs(NodeAddr<InstrNode*> IA, DefStackMap &DM);
@@ -843,7 +839,7 @@ namespace rdf {
     locateNextRef(NodeAddr<InstrNode*> IA, NodeAddr<RefNode*> RA,
         Predicate P) const;
 
-    using BlockRefsMap = std::map<NodeId, RegisterSet>;
+    typedef std::map<NodeId,RegisterSet> BlockRefsMap;
 
     void buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In);
     void buildBlockRefs(NodeAddr<BlockNode*> BA, BlockRefsMap &RefM);
@@ -927,6 +923,7 @@ namespace rdf {
     return MM;
   }
 
+
   template <typename T> struct Print;
   template <typename T>
   raw_ostream &operator<< (raw_ostream &OS, const Print<T> &P);
@@ -934,7 +931,6 @@ namespace rdf {
   template <typename T>
   struct Print {
     Print(const T &x, const DataFlowGraph &g) : Obj(x), G(g) {}
-
     const T &Obj;
     const DataFlowGraph &G;
   };

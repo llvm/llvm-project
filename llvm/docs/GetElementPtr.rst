@@ -196,7 +196,7 @@ illegal.
 In order to access the 18th integer in the array, you would need to do the
 following:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %idx = getelementptr { [40 x i32]* }, { [40 x i32]* }* %, i64 0, i32 0
   %arr = load [40 x i32]** %idx

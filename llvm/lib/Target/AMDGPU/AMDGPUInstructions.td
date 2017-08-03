@@ -247,7 +247,6 @@ class GlobalLoad <SDPatternOperator op> : GlobalMemOp <
 >;
 
 def global_load : GlobalLoad <load>;
-def global_atomic_load : GlobalLoad<atomic_load>;
 
 // Global address space stores
 class GlobalStore <SDPatternOperator op> : GlobalMemOp <

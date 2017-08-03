@@ -110,13 +110,13 @@ public:
 
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, int64_t Scale,
-                             unsigned AddrSpace, Instruction *I = nullptr) {
+                             unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
-    return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
+    return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace);
   }
 
   bool isLSRCostLess(TTI::LSRCost C1, TTI::LSRCost C2) {
@@ -409,7 +409,7 @@ public:
 
   unsigned getScalarizationOverhead(Type *VecTy, ArrayRef<const Value *> Args) {
     assert (VecTy->isVectorTy());
-
+    
     unsigned Cost = 0;
 
     Cost += getScalarizationOverhead(VecTy, true, false);
@@ -873,7 +873,7 @@ public:
     }
     }
   }
-
+  
   /// Get intrinsic cost based on argument types.
   /// If ScalarizationCostPassed is UINT_MAX, the cost of scalarizing the
   /// arguments and the return value will be computed based on types.
@@ -1096,7 +1096,7 @@ public:
 
   unsigned getAddressComputationCost(Type *Ty, ScalarEvolution *,
                                      const SCEV *) {
-    return 0;
+    return 0; 
   }
 
   /// Try to calculate arithmetic and shuffle op costs for reduction operations.
@@ -1134,8 +1134,7 @@ public:
   ///
   /// The cost model should take into account that the actual length of the
   /// vector is reduced on each iteration.
-  unsigned getArithmeticReductionCost(unsigned Opcode, Type *Ty,
-                                      bool IsPairwise) {
+  unsigned getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwise) {
     assert(Ty->isVectorTy() && "Expect a vector type");
     Type *ScalarTy = Ty->getVectorElementType();
     unsigned NumVecElts = Ty->getVectorNumElements();
@@ -1160,7 +1159,7 @@ public:
     }
     // The minimal length of the vector is limited by the real length of vector
     // operations performed on the current platform. That's why several final
-    // reduction operations are performed on the vectors with the same
+    // reduction opertions are perfomed on the vectors with the same
     // architecture-dependent length.
     ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
                    ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,

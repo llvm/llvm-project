@@ -17,7 +17,6 @@ set(CLANG_IMPORT_TEST_LIB_DEPS
   clangAST
   clangBasic
   clangCodeGen
-  clangDriver
   clangFrontend
   clangLex
   clangParse

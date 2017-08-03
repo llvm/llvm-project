@@ -31,6 +31,7 @@ add_clang_library(clangDriver
   ToolChains/Ananas.cpp
   ToolChains/AMDGPU.cpp
   ToolChains/AVR.cpp
+  ToolChains/Bitrig.cpp
   ToolChains/BareMetal.cpp
   ToolChains/Clang.cpp
   ToolChains/CloudABI.cpp

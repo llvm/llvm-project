@@ -1,4 +1,4 @@
-//===- HexagonMCChecker.h - Instruction bundle checking ---------*- C++ -*-===//
+//===----- HexagonMCChecker.h - Instruction bundle checking ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,23 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCHECKER_H
-#define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCHECKER_H
+#ifndef HEXAGONMCCHECKER_H
+#define HEXAGONMCCHECKER_H
 
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/SMLoc.h"
+#include "MCTargetDesc/HexagonMCShuffler.h"
+#include <queue>
 #include <set>
-#include <utility>
+
+using namespace llvm;
 
 namespace llvm {
-
-class MCContext;
-class MCInst;
-class MCInstrInfo;
-class MCRegisterInfo;
-class MCSubtargetInfo;
+class MCOperandInfo;
 
 /// Check for a valid bundle.
 class HexagonMCChecker {
@@ -40,13 +34,13 @@ class HexagonMCChecker {
   bool ReportErrors;
 
   /// Set of definitions: register #, if predicated, if predicated true.
-  using PredSense = std::pair<unsigned, bool>;
+  typedef std::pair<unsigned, bool> PredSense;
   static const PredSense Unconditional;
-  using PredSet = std::multiset<PredSense>;
-  using PredSetIterator = std::multiset<PredSense>::iterator;
+  typedef std::multiset<PredSense> PredSet;
+  typedef std::multiset<PredSense>::iterator PredSetIterator;
 
-  using DefsIterator = DenseMap<unsigned, PredSet>::iterator;
-  DenseMap<unsigned, PredSet> Defs;
+  typedef llvm::DenseMap<unsigned, PredSet>::iterator DefsIterator;
+  llvm::DenseMap<unsigned, PredSet> Defs;
 
   /// Information about how a new-value register is defined or used:
   ///   PredReg = predicate register, 0 if use/def not predicated,
@@ -58,7 +52,6 @@ class HexagonMCChecker {
   struct NewSense {
     unsigned PredReg;
     bool IsFloat, IsNVJ, Cond;
-
     // The special-case "constructors":
     static NewSense Jmp(bool isNVJ) {
       NewSense NS = {/*PredReg=*/0, /*IsFloat=*/false, /*IsNVJ=*/isNVJ,
@@ -76,38 +69,37 @@ class HexagonMCChecker {
       return NS;
     }
   };
-
   /// Set of definitions that produce new register:
-  using NewSenseList = SmallVector<NewSense, 2>;
-  using NewDefsIterator = DenseMap<unsigned, NewSenseList>::iterator;
-  DenseMap<unsigned, NewSenseList> NewDefs;
+  typedef llvm::SmallVector<NewSense, 2> NewSenseList;
+  typedef llvm::DenseMap<unsigned, NewSenseList>::iterator NewDefsIterator;
+  llvm::DenseMap<unsigned, NewSenseList> NewDefs;
 
   /// Set of weak definitions whose clashes should be enforced selectively.
-  using SoftDefsIterator = std::set<unsigned>::iterator;
+  typedef std::set<unsigned>::iterator SoftDefsIterator;
   std::set<unsigned> SoftDefs;
 
   /// Set of temporary definitions not committed to the register file.
-  using TmpDefsIterator = std::set<unsigned>::iterator;
+  typedef std::set<unsigned>::iterator TmpDefsIterator;
   std::set<unsigned> TmpDefs;
 
   /// Set of new predicates used.
-  using NewPredsIterator = std::set<unsigned>::iterator;
+  typedef std::set<unsigned>::iterator NewPredsIterator;
   std::set<unsigned> NewPreds;
 
   /// Set of predicates defined late.
-  using LatePredsIterator = std::multiset<unsigned>::iterator;
+  typedef std::multiset<unsigned>::iterator LatePredsIterator;
   std::multiset<unsigned> LatePreds;
 
   /// Set of uses.
-  using UsesIterator = std::set<unsigned>::iterator;
+  typedef std::set<unsigned>::iterator UsesIterator;
   std::set<unsigned> Uses;
 
   /// Set of new values used: new register, if new-value jump.
-  using NewUsesIterator = DenseMap<unsigned, NewSense>::iterator;
-  DenseMap<unsigned, NewSense> NewUses;
+  typedef llvm::DenseMap<unsigned, NewSense>::iterator NewUsesIterator;
+  llvm::DenseMap<unsigned, NewSense> NewUses;
 
   /// Pre-defined set of read-only registers.
-  using ReadOnlyIterator = std::set<unsigned>::iterator;
+  typedef std::set<unsigned>::iterator ReadOnlyIterator;
   std::set<unsigned> ReadOnly;
 
   void init();
@@ -134,12 +126,11 @@ class HexagonMCChecker {
   bool isPredicateRegister(unsigned R) const {
     return (Hexagon::P0 == R || Hexagon::P1 == R || Hexagon::P2 == R ||
             Hexagon::P3 == R);
-  }
-
+  };
   bool isLoopRegister(unsigned R) const {
     return (Hexagon::SA0 == R || Hexagon::LC0 == R || Hexagon::SA1 == R ||
             Hexagon::LC1 == R);
-  }
+  };
 
   bool hasValidNewValueDef(const NewSense &Use, const NewSenseList &Defs) const;
 
@@ -151,11 +142,11 @@ public:
   bool check(bool FullCheck = true);
   void reportErrorRegisters(unsigned Register);
   void reportErrorNewValue(unsigned Register);
-  void reportError(SMLoc Loc, Twine const &Msg);
-  void reportError(Twine const &Msg);
-  void reportWarning(Twine const &Msg);
+  void reportError(SMLoc Loc, llvm::Twine const &Msg);
+  void reportError(llvm::Twine const &Msg);
+  void reportWarning(llvm::Twine const &Msg);
 };
 
-} // end namespace llvm
+} // namespace llvm
 
-#endif // LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCCHECKER_H
+#endif // HEXAGONMCCHECKER_H

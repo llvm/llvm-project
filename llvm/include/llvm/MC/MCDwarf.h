@@ -509,7 +509,6 @@ struct MCDwarfFrameInfo {
   uint32_t CompactUnwindEncoding = 0;
   bool IsSignalFrame = false;
   bool IsSimple = false;
-  unsigned RAReg = static_cast<unsigned>(INT_MAX);
 };
 
 class MCDwarfFrameEmitter {

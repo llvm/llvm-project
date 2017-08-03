@@ -1,4 +1,4 @@
-//===- HexagonBitTracker.h --------------------------------------*- C++ -*-===//
+//===--- HexagonBitTracker.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,16 +18,12 @@ namespace llvm {
 
 class HexagonInstrInfo;
 class HexagonRegisterInfo;
-class MachineFrameInfo;
-class MachineFunction;
-class MachineInstr;
-class MachineRegisterInfo;
 
 struct HexagonEvaluator : public BitTracker::MachineEvaluator {
-  using CellMapType = BitTracker::CellMapType;
-  using RegisterRef = BitTracker::RegisterRef;
-  using RegisterCell = BitTracker::RegisterCell;
-  using BranchTargetList = BitTracker::BranchTargetList;
+  typedef BitTracker::CellMapType CellMapType;
+  typedef BitTracker::RegisterRef RegisterRef;
+  typedef BitTracker::RegisterCell RegisterCell;
+  typedef BitTracker::BranchTargetList BranchTargetList;
 
   HexagonEvaluator(const HexagonRegisterInfo &tri, MachineRegisterInfo &mri,
                    const HexagonInstrInfo &tii, MachineFunction &mf);
@@ -63,7 +59,7 @@ private:
     uint16_t Width = 0;
   };
   // Map VR -> extension type.
-  using RegExtMap = DenseMap<unsigned, ExtType>;
+  typedef DenseMap<unsigned, ExtType> RegExtMap;
   RegExtMap VRX;
 };
 

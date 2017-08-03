@@ -181,7 +181,7 @@ public:
   /// A helper function to create children of a Scope DIE.
   DIE *createScopeChildrenDIE(LexicalScope *Scope,
                               SmallVectorImpl<DIE *> &Children,
-                              bool *HasNonScopeChildren = nullptr);
+                              unsigned *ChildScopeCount = nullptr);
 
   /// \brief Construct a DIE for this subprogram scope.
   void constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope);

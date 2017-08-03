@@ -101,8 +101,9 @@ define i32 @main() nounwind ssp {
 define void @foo(i8* %fmt, ...) nounwind {
 entry:
 ; CHECK-LABEL: foo:
+; CHECK: orr {{x[0-9]+}}, {{x[0-9]+}}, #0x8
 ; CHECK: ldr {{w[0-9]+}}, [sp, #48]
-; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, #23
+; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, #15
 ; CHECK: and x[[ADDR:[0-9]+]], {{x[0-9]+}}, #0xfffffffffffffff0
 ; CHECK: ldr {{q[0-9]+}}, [x[[ADDR]]]
   %fmt.addr = alloca i8*, align 8
@@ -141,8 +142,9 @@ entry:
 define void @foo2(i8* %fmt, ...) nounwind {
 entry:
 ; CHECK-LABEL: foo2:
+; CHECK: orr {{x[0-9]+}}, {{x[0-9]+}}, #0x8
 ; CHECK: ldr {{w[0-9]+}}, [sp, #48]
-; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, #23
+; CHECK: add {{x[0-9]+}}, {{x[0-9]+}}, #15
 ; CHECK: and x[[ADDR:[0-9]+]], {{x[0-9]+}}, #0xfffffffffffffff0
 ; CHECK: ldr {{q[0-9]+}}, [x[[ADDR]]]
   %fmt.addr = alloca i8*, align 8

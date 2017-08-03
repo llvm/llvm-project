@@ -189,12 +189,9 @@ const char *X86Subtarget::getBZeroEntry() const {
 }
 
 bool X86Subtarget::hasSinCos() const {
-  if (getTargetTriple().isMacOSX()) {
-    return !getTargetTriple().isMacOSXVersionLT(10, 9) && is64Bit();
-  } else if (getTargetTriple().isOSFuchsia()) {
-    return true;
-  }
-  return false;
+  return getTargetTriple().isMacOSX() &&
+    !getTargetTriple().isMacOSXVersionLT(10, 9) &&
+    is64Bit();
 }
 
 /// Return true if the subtarget allows calls to immediate address.

@@ -163,10 +163,6 @@ def CC_AMDGPU : CallingConv<[
            "AMDGPUSubtarget::SOUTHERN_ISLANDS",
         CCDelegateTo<CC_SI>>,
    CCIf<"static_cast<const AMDGPUSubtarget&>"
-         "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
-           "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
-        CCDelegateTo<CC_AMDGPU_Func>>,
-   CCIf<"static_cast<const AMDGPUSubtarget&>"
           "(State.getMachineFunction().getSubtarget()).getGeneration() < "
             "AMDGPUSubtarget::SOUTHERN_ISLANDS",
         CCDelegateTo<CC_R600>>

@@ -239,44 +239,17 @@ static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 
   auto *ExitBlock = L->getUniqueExitBlock();
   assert(ExitBlock && "Should have a unique exit block!");
+
   assert(L->hasDedicatedExits() && "Loop should have dedicated exits!");
 
-  auto *OldBr = dyn_cast<BranchInst>(Preheader->getTerminator());
-  assert(OldBr && "Preheader must end with a branch");
-  assert(OldBr->isUnconditional() && "Preheader must have a single successor");
-  // Connect the preheader to the exit block. Keep the old edge to the header
-  // around to perform the dominator tree update in two separate steps
-  // -- #1 insertion of the edge preheader -> exit and #2 deletion of the edge
-  // preheader -> header.
-  //
-  //
-  // 0.  Preheader          1.  Preheader           2.  Preheader
-  //        |                    |   |                   |
-  //        V                    |   V                   |
-  //      Header <--\            | Header <--\           | Header <--\
-  //       |  |     |            |  |  |     |           |  |  |     |
-  //       |  V     |            |  |  V     |           |  |  V     |
-  //       | Body --/            |  | Body --/           |  | Body --/
-  //       V                     V  V                    V  V
-  //      Exit                   Exit                    Exit
-  //
-  // By doing this is two separate steps we can perform the dominator tree
-  // update without using the batch update API.
-  //
+  // Connect the preheader directly to the exit block.
   // Even when the loop is never executed, we cannot remove the edge from the
   // source block to the exit block. Consider the case where the unexecuted loop
   // branches back to an outer loop. If we deleted the loop and removed the edge
   // coming to this inner loop, this will break the outer loop structure (by
   // deleting the backedge of the outer loop). If the outer loop is indeed a
   // non-loop, it will be deleted in a future iteration of loop deletion pass.
-  IRBuilder<> Builder(OldBr);
-  Builder.CreateCondBr(Builder.getFalse(), L->getHeader(), ExitBlock);
-  // Remove the old branch. The conditional branch becomes a new terminator.
-  OldBr->eraseFromParent();
-
-  // Update the dominator tree by informing it about the new edge from the
-  // preheader to the exit.
-  DT.insertEdge(Preheader, ExitBlock);
+  Preheader->getTerminator()->replaceUsesOfWith(L->getHeader(), ExitBlock);
 
   // Rewrite phis in the exit block to get their inputs from the Preheader
   // instead of the exiting block.
@@ -303,19 +276,25 @@ static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     ++BI;
   }
 
-  // Disconnect the loop body by branching directly to its exit.
-  Builder.SetInsertPoint(Preheader->getTerminator());
-  Builder.CreateBr(ExitBlock);
-  // Remove the old branch.
-  Preheader->getTerminator()->eraseFromParent();
+  // Update the dominator tree and remove the instructions and blocks that will
+  // be deleted from the reference counting scheme.
+  SmallVector<DomTreeNode*, 8> ChildNodes;
+  for (Loop::block_iterator LI = L->block_begin(), LE = L->block_end();
+       LI != LE; ++LI) {
+    // Move all of the block's children to be children of the Preheader, which
+    // allows us to remove the domtree entry for the block.
+    ChildNodes.insert(ChildNodes.begin(), DT[*LI]->begin(), DT[*LI]->end());
+    for (DomTreeNode *ChildNode : ChildNodes) {
+      DT.changeImmediateDominator(ChildNode, DT[Preheader]);
+    }
 
-  // Inform the dominator tree about the removed edge.
-  DT.deleteEdge(Preheader, L->getHeader());
+    ChildNodes.clear();
+    DT.eraseNode(*LI);
 
-  // Remove the block from the reference counting scheme, so that we can
-  // delete it freely later.
-  for (auto *Block : L->blocks())
-    Block->dropAllReferences();
+    // Remove the block from the reference counting scheme, so that we can
+    // delete it freely later.
+    (*LI)->dropAllReferences();
+  }
 
   // Erase the instructions and the blocks without having to worry
   // about ordering because we already dropped the references.

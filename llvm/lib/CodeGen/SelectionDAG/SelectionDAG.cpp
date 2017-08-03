@@ -1952,69 +1952,6 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
   return SDValue();
 }
 
-/// See if the specified operand can be simplified with the knowledge that only
-/// the bits specified by Mask are used.
-SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
-  switch (V.getOpcode()) {
-  default:
-    break;
-  case ISD::Constant: {
-    const ConstantSDNode *CV = cast<ConstantSDNode>(V.getNode());
-    assert(CV && "Const value should be ConstSDNode.");
-    const APInt &CVal = CV->getAPIntValue();
-    APInt NewVal = CVal & Mask;
-    if (NewVal != CVal)
-      return getConstant(NewVal, SDLoc(V), V.getValueType());
-    break;
-  }
-  case ISD::OR:
-  case ISD::XOR:
-    // If the LHS or RHS don't contribute bits to the or, drop them.
-    if (MaskedValueIsZero(V.getOperand(0), Mask))
-      return V.getOperand(1);
-    if (MaskedValueIsZero(V.getOperand(1), Mask))
-      return V.getOperand(0);
-    break;
-  case ISD::SRL:
-    // Only look at single-use SRLs.
-    if (!V.getNode()->hasOneUse())
-      break;
-    if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
-      // See if we can recursively simplify the LHS.
-      unsigned Amt = RHSC->getZExtValue();
-
-      // Watch out for shift count overflow though.
-      if (Amt >= Mask.getBitWidth())
-        break;
-      APInt NewMask = Mask << Amt;
-      if (SDValue SimplifyLHS = GetDemandedBits(V.getOperand(0), NewMask))
-        return getNode(ISD::SRL, SDLoc(V), V.getValueType(), SimplifyLHS,
-                       V.getOperand(1));
-    }
-    break;
-  case ISD::AND: {
-    // X & -1 -> X (ignoring bits which aren't demanded).
-    ConstantSDNode *AndVal = isConstOrConstSplat(V.getOperand(1));
-    if (AndVal && Mask.isSubsetOf(AndVal->getAPIntValue()))
-      return V.getOperand(0);
-    break;
-  }
-  case ISD::ANY_EXTEND: {
-    SDValue Src = V.getOperand(0);
-    unsigned SrcBitWidth = Src.getScalarValueSizeInBits();
-    // Being conservative here - only peek through if we only demand bits in the
-    // non-extended source (even though the extended bits are technically undef).
-    if (Mask.getActiveBits() > SrcBitWidth)
-      break;
-    APInt SrcMask = Mask.trunc(SrcBitWidth);
-    if (SDValue DemandedSrc = GetDemandedBits(Src, SrcMask))
-      return getNode(ISD::ANY_EXTEND, SDLoc(V), V.getValueType(), DemandedSrc);
-    break;
-  }
-  }
-  return SDValue();
-}
-
 /// SignBitIsZero - Return true if the sign bit of Op is known to be zero.  We
 /// use this predicate to simplify operations downstream.
 bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
@@ -6641,7 +6578,7 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   unsigned NewOpc;
   bool IsUnary = false;
   switch (OrigOpc) {
-  default:
+  default: 
     llvm_unreachable("mutateStrictFPToFP called with unexpected opcode!");
   case ISD::STRICT_FADD: NewOpc = ISD::FADD; break;
   case ISD::STRICT_FSUB: NewOpc = ISD::FSUB; break;
@@ -6677,7 +6614,7 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   else
     Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1),
                                            Node->getOperand(2) });
-
+  
   // MorphNodeTo can operate in two ways: if an existing node with the
   // specified operands exists, it can just return it.  Otherwise, it
   // updates the node in place to have the requested operands.
@@ -6690,7 +6627,7 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
     RemoveDeadNode(Node);
   }
 
-  return Res;
+  return Res; 
 }
 
 /// getMachineNode - These are used for target selectors to create a new node

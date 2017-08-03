@@ -488,8 +488,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
-    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
-        Ty.getSizeInBits() > 64)
+    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc))
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
       OpRegBankIdx[Idx] = PMI_FirstGPR;

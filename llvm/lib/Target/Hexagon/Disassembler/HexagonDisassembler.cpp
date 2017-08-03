@@ -1,4 +1,4 @@
-//===- HexagonDisassembler.cpp - Disassembler for Hexagon ISA -------------===//
+//===-- HexagonDisassembler.cpp - Disassembler for Hexagon ISA ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,7 +24,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,7 +35,7 @@
 using namespace llvm;
 using namespace Hexagon;
 
-using DecodeStatus = MCDisassembler::DecodeStatus;
+typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 namespace {
 
@@ -61,37 +60,36 @@ public:
   void addSubinstOperands(MCInst *MI, unsigned opcode, unsigned inst) const;
 };
 
+namespace {
+  uint32_t fullValue(MCInstrInfo const &MCII, MCInst &MCB, MCInst &MI,
+                     int64_t Value) {
+    MCInst const *Extender = HexagonMCInstrInfo::extenderForIndex(
+      MCB, HexagonMCInstrInfo::bundleSize(MCB));
+    if (!Extender || MI.size() != HexagonMCInstrInfo::getExtendableOp(MCII, MI))
+      return Value;
+    unsigned Alignment = HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
+    uint32_t Lower6 = static_cast<uint32_t>(Value >> Alignment) & 0x3f;
+    int64_t Bits;
+    bool Success = Extender->getOperand(0).getExpr()->evaluateAsAbsolute(Bits);
+    assert(Success); (void)Success;
+    uint32_t Upper26 = static_cast<uint32_t>(Bits);
+    uint32_t Operand = Upper26 | Lower6;
+    return Operand;
+  }
+  HexagonDisassembler const &disassembler(void const *Decoder) {
+    return *static_cast<HexagonDisassembler const *>(Decoder);
+  }
+  template <size_t T>
+  void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
+    HexagonDisassembler const &Disassembler = disassembler(Decoder);
+    int64_t FullValue =
+        fullValue(*Disassembler.MCII, **Disassembler.CurrentBundle, MI,
+                  SignExtend64<T>(tmp));
+    int64_t Extended = SignExtend64<32>(FullValue);
+    HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
+  }
+}
 } // end anonymous namespace
-
-static uint32_t fullValue(MCInstrInfo const &MCII, MCInst &MCB, MCInst &MI,
-                          int64_t Value) {
-  MCInst const *Extender = HexagonMCInstrInfo::extenderForIndex(
-    MCB, HexagonMCInstrInfo::bundleSize(MCB));
-  if (!Extender || MI.size() != HexagonMCInstrInfo::getExtendableOp(MCII, MI))
-    return Value;
-  unsigned Alignment = HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
-  uint32_t Lower6 = static_cast<uint32_t>(Value >> Alignment) & 0x3f;
-  int64_t Bits;
-  bool Success = Extender->getOperand(0).getExpr()->evaluateAsAbsolute(Bits);
-  assert(Success); (void)Success;
-  uint32_t Upper26 = static_cast<uint32_t>(Bits);
-  uint32_t Operand = Upper26 | Lower6;
-  return Operand;
-}
-
-static HexagonDisassembler const &disassembler(void const *Decoder) {
-  return *static_cast<HexagonDisassembler const *>(Decoder);
-}
-
-template <size_t T>
-static void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
-  HexagonDisassembler const &Disassembler = disassembler(Decoder);
-  int64_t FullValue =
-      fullValue(*Disassembler.MCII, **Disassembler.CurrentBundle, MI,
-                SignExtend64<T>(tmp));
-  int64_t Extended = SignExtend64<32>(FullValue);
-  HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
-}
 
 // Forward declare these because the auto-generated code will reference them.
 // Definitions are further down.
@@ -200,7 +198,8 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Success;
 }
 
-static void adjustDuplex(MCInst &MI, MCContext &Context) {
+namespace {
+void adjustDuplex(MCInst &MI, MCContext &Context) {
   switch (MI.getOpcode()) {
   case Hexagon::SA1_setin1:
     MI.insert(MI.begin() + 1,
@@ -213,6 +212,7 @@ static void adjustDuplex(MCInst &MI, MCContext &Context) {
   default:
     break;
   }
+}
 }
 
 DecodeStatus HexagonDisassembler::getSingleInstruction(
@@ -551,7 +551,6 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t /*Address*/,
                                                const void *Decoder) {
   using namespace Hexagon;
-
   static const MCPhysReg CtrlRegDecoderTable[] = {
     /*  0 */  SA0,        LC0,        SA1,        LC1,
     /*  4 */  P3_0,       C5,         M0,         M1,
@@ -579,7 +578,6 @@ static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t /*Address*/,
                                                  const void *Decoder) {
   using namespace Hexagon;
-
   static const MCPhysReg CtrlReg64DecoderTable[] = {
     /*  0 */  C1_0,       0,          C3_2,       0,
     /*  4 */  C5_4,       0,          C7_6,       0,
@@ -657,3 +655,5 @@ static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
     HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
   return MCDisassembler::Success;
 }
+
+

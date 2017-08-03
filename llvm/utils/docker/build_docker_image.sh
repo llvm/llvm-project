@@ -15,7 +15,7 @@ DOCKER_TAG=""
 BUILDSCRIPT_ARGS=""
 
 function show_usage() {
-  cat << EOF
+  usage=$(cat << EOF
 Usage: build_docker_image.sh [options] [-- [cmake_args]...]
 
 Available options:
@@ -64,6 +64,8 @@ $ ./build_docker_image.sh -s debian8 -d mydocker/clang-debian8 -t "latest" \
     -DCLANG_ENABLE_BOOTSTRAP=ON \ 
     -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-headers"
 EOF
+)
+  echo "$usage"
 }
 
 SEEN_INSTALL_TARGET=0

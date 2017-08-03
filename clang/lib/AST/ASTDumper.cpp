@@ -1184,7 +1184,7 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
          I != E; ++I)
       dumpCXXCtorInitializer(*I);
 
-  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D))
     if (MD->size_overridden_methods() != 0) {
       auto dumpOverride =
         [=](const CXXMethodDecl *D) {
@@ -1199,14 +1199,11 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
         dumpOverride(*FirstOverrideItr);
         for (const auto *Override :
                llvm::make_range(FirstOverrideItr + 1,
-                                MD->end_overridden_methods())) {
-          OS << ", ";
+                                MD->end_overridden_methods()))
           dumpOverride(Override);
-        }
         OS << " ]";
       });
     }
-  }
 
   if (D->doesThisDeclarationHaveABody())
     dumpStmt(D->getBody());
@@ -1714,6 +1711,8 @@ void ASTDumper::VisitObjCImplementationDecl(const ObjCImplementationDecl *D) {
 void ASTDumper::VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D) {
   dumpName(D);
   dumpDeclRef(D->getClassInterface());
+  OS << " ";
+  dumpLocation(D->getClassInterfaceLoc());
 }
 
 void ASTDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {

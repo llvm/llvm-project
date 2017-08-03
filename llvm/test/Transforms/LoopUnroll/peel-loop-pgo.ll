@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<opt-remark-emit>,unroll' 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure we use the profile information correctly to peel-off 3 iterations
@@ -9,10 +8,6 @@
 ; CHECK: PEELING loop %for.body with iteration count 3!
 ; CHECK: Loop Unroll: F[optsize]
 ; CHECK-NOT: PEELING
-
-; Confirm that no peeling occurs when we are performing full unrolling.
-; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<opt-remark-emit>,loop(unroll-full)' 2>&1 | FileCheck %s --check-prefix=FULLUNROLL
-; FULLUNROLL-NOT: PEELING
 
 ; CHECK-LABEL: @basic
 ; CHECK: br i1 %{{.*}}, label %[[NEXT0:.*]], label %for.cond.for.end_crit_edge, !prof !1

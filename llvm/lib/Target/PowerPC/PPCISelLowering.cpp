@@ -226,12 +226,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::UREM, MVT::i64, Expand);
   }
 
-  if (Subtarget.hasP9Vector()) {
-    setOperationAction(ISD::ABS, MVT::v4i32, Legal);
-    setOperationAction(ISD::ABS, MVT::v8i16, Legal);
-    setOperationAction(ISD::ABS, MVT::v16i8, Legal);
-  }
-
   // Don't use SMUL_LOHI/UMUL_LOHI or SDIVREM/UDIVREM to lower SREM/UREM.
   setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
@@ -2476,6 +2470,7 @@ SDValue PPCTargetLowering::getPICJumpTableRelocBase(SDValue Table,
     return TargetLowering::getPICJumpTableRelocBase(Table, DAG);
 
   switch (getTargetMachine().getCodeModel()) {
+  case CodeModel::Default:
   case CodeModel::Small:
   case CodeModel::Medium:
     return TargetLowering::getPICJumpTableRelocBase(Table, DAG);
@@ -2493,6 +2488,7 @@ PPCTargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
     return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);
 
   switch (getTargetMachine().getCodeModel()) {
+  case CodeModel::Default:
   case CodeModel::Small:
   case CodeModel::Medium:
     return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);
@@ -4339,12 +4335,12 @@ needStackSlotPassParameters(const PPCSubtarget &Subtarget,
 }
 
 static bool
-hasSameArgumentList(const Function *CallerFn, ImmutableCallSite CS) {
-  if (CS.arg_size() != CallerFn->arg_size())
+hasSameArgumentList(const Function *CallerFn, ImmutableCallSite *CS) {
+  if (CS->arg_size() != CallerFn->arg_size())
     return false;
 
-  ImmutableCallSite::arg_iterator CalleeArgIter = CS.arg_begin();
-  ImmutableCallSite::arg_iterator CalleeArgEnd = CS.arg_end();
+  ImmutableCallSite::arg_iterator CalleeArgIter = CS->arg_begin();
+  ImmutableCallSite::arg_iterator CalleeArgEnd = CS->arg_end();
   Function::const_arg_iterator CallerArgIter = CallerFn->arg_begin();
 
   for (; CalleeArgIter != CalleeArgEnd; ++CalleeArgIter, ++CallerArgIter) {
@@ -4371,7 +4367,7 @@ bool
 PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
                                     SDValue Callee,
                                     CallingConv::ID CalleeCC,
-                                    ImmutableCallSite CS,
+                                    ImmutableCallSite *CS,
                                     bool isVarArg,
                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -4680,7 +4676,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
             bool isPatchPoint, bool hasNest,
             SmallVectorImpl<std::pair<unsigned, SDValue>> &RegsToPass,
             SmallVectorImpl<SDValue> &Ops, std::vector<EVT> &NodeTys,
-            ImmutableCallSite CS, const PPCSubtarget &Subtarget) {
+            ImmutableCallSite *CS, const PPCSubtarget &Subtarget) {
   bool isPPC64 = Subtarget.isPPC64();
   bool isSVR4ABI = Subtarget.isSVR4ABI();
   bool isELFv2ABI = Subtarget.isELFv2ABI();
@@ -4791,7 +4787,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
                              MachineMemOperand::MOInvariant)
                           : MachineMemOperand::MONone;
 
-      MachinePointerInfo MPI(CS ? CS.getCalledValue() : nullptr);
+      MachinePointerInfo MPI(CS ? CS->getCalledValue() : nullptr);
       SDValue LoadFuncPtr = DAG.getLoad(MVT::i64, dl, LDChain, Callee, MPI,
                                         /* Alignment = */ 8, MMOFlags);
 
@@ -4921,7 +4917,7 @@ SDValue PPCTargetLowering::FinishCall(
     SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass, SDValue InFlag,
     SDValue Chain, SDValue CallSeqStart, SDValue &Callee, int SPDiff,
     unsigned NumBytes, const SmallVectorImpl<ISD::InputArg> &Ins,
-    SmallVectorImpl<SDValue> &InVals, ImmutableCallSite CS) const {
+    SmallVectorImpl<SDValue> &InVals, ImmutableCallSite *CS) const {
   std::vector<EVT> NodeTys;
   SmallVector<SDValue, 8> Ops;
   unsigned CallOpc = PrepareCall(DAG, Callee, InFlag, Chain, CallSeqStart, dl,
@@ -5029,10 +5025,10 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
   bool isPatchPoint                     = CLI.IsPatchPoint;
-  ImmutableCallSite CS                  = CLI.CS;
+  ImmutableCallSite *CS                 = CLI.CS;
 
   if (isTailCall) {
-    if (Subtarget.useLongCalls() && !(CS && CS.isMustTailCall()))
+    if (Subtarget.useLongCalls() && !(CS && CS->isMustTailCall()))
       isTailCall = false;
     else if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
       isTailCall =
@@ -5060,7 +5056,7 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  if (!isTailCall && CS && CS.isMustTailCall())
+  if (!isTailCall && CS && CS->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
@@ -5094,7 +5090,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
-    ImmutableCallSite CS) const {
+    ImmutableCallSite *CS) const {
   // See PPCTargetLowering::LowerFormalArguments_32SVR4() for a description
   // of the 32-bit SVR4 ABI stack frame layout.
 
@@ -5328,7 +5324,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
-    ImmutableCallSite CS) const {
+    ImmutableCallSite *CS) const {
   bool isELFv2ABI = Subtarget.isELFv2ABI();
   bool isLittleEndian = Subtarget.isLittleEndian();
   unsigned NumOps = Outs.size();
@@ -5978,7 +5974,7 @@ SDValue PPCTargetLowering::LowerCall_Darwin(
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
-    ImmutableCallSite CS) const {
+    ImmutableCallSite *CS) const {
   unsigned NumOps = Outs.size();
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -8394,8 +8390,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntrinsicID =
     cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
 
-  SDLoc dl(Op);
-
   if (IntrinsicID == Intrinsic::thread_pointer) {
     // Reads the thread pointer register, used for __builtin_thread_pointer.
     if (Subtarget.isPPC64())
@@ -8403,37 +8397,9 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(PPC::R2, MVT::i32);
   }
 
-  // We are looking for absolute values here.
-  // The idea is to try to fit one of two patterns:
-  //  max (a, (0-a))  OR  max ((0-a), a)
-  if (Subtarget.hasP9Vector() &&
-      (IntrinsicID == Intrinsic::ppc_altivec_vmaxsw ||
-       IntrinsicID == Intrinsic::ppc_altivec_vmaxsh ||
-       IntrinsicID == Intrinsic::ppc_altivec_vmaxsb)) {
-    SDValue V1 = Op.getOperand(1);
-    SDValue V2 = Op.getOperand(2);
-    if (V1.getSimpleValueType() == V2.getSimpleValueType() &&
-        (V1.getSimpleValueType() == MVT::v4i32 ||
-         V1.getSimpleValueType() == MVT::v8i16 ||
-         V1.getSimpleValueType() == MVT::v16i8)) {
-      if ( V1.getOpcode() == ISD::SUB &&
-           ISD::isBuildVectorAllZeros(V1.getOperand(0).getNode()) &&
-           V1.getOperand(1) == V2 ) {
-        // Generate the abs instruction with the operands
-        return DAG.getNode(ISD::ABS, dl, V2.getValueType(),V2);
-      }
-
-      if ( V2.getOpcode() == ISD::SUB &&
-           ISD::isBuildVectorAllZeros(V2.getOperand(0).getNode()) &&
-           V2.getOperand(1) == V1 ) {
-        // Generate the abs instruction with the operands
-        return DAG.getNode(ISD::ABS, dl, V1.getValueType(),V1);
-      }
-    }
-  }
-
   // If this is a lowered altivec predicate compare, CompareOpc is set to the
   // opcode number of the comparison.
+  SDLoc dl(Op);
   int CompareOpc;
   bool isDot;
   if (!getVectorCompareInfo(Op, CompareOpc, isDot, Subtarget))
@@ -12844,7 +12810,7 @@ void PPCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
 // by AM is legal for this target, for a load/store of the specified type.
 bool PPCTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               const AddrMode &AM, Type *Ty,
-                                              unsigned AS, Instruction *I) const {
+                                              unsigned AS) const {
   // PPC does not allow r+i addressing modes for vectors!
   if (Ty->isVectorTy() && AM.BaseOffs != 0)
     return false;

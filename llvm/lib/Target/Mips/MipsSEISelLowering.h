@@ -43,7 +43,8 @@ namespace llvm {
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
 
-    bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
+    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask,
+                            EVT VT) const override {
       return false;
     }
 
@@ -75,7 +76,6 @@ namespace llvm {
     /// \brief Lower VECTOR_SHUFFLE into one of a number of instructions
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
 
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;

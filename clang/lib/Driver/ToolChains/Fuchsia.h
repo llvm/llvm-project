@@ -42,7 +42,6 @@ public:
 
   bool HasNativeLLVMSupport() const override { return true; }
   bool IsIntegratedAssemblerDefault() const override { return true; }
-  bool IsMathErrnoDefault() const override { return false; }
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
   }

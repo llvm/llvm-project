@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc < %s -march=x86
 
 declare {x86_fp80, x86_fp80} @test()
 

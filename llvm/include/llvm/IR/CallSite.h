@@ -488,7 +488,7 @@ public:
     CALLSITE_DELEGATE_GETTER(cannotDuplicate());
   }
   void setCannotDuplicate() {
-    CALLSITE_DELEGATE_SETTER(setCannotDuplicate());
+    CALLSITE_DELEGATE_GETTER(setCannotDuplicate());
   }
 
   /// Determine if the call is convergent.

@@ -901,7 +901,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   return true;
 }
 
-AsmPrinter::CFIMoveType AsmPrinter::needsCFIMoves() const {
+AsmPrinter::CFIMoveType AsmPrinter::needsCFIMoves() {
   if (MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI &&
       MF->getFunction()->needsUnwindTableEntry())
     return CFI_M_EH;

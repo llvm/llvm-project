@@ -2463,12 +2463,11 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
     // Test our bit from the guard variable.
     llvm::ConstantInt *Bit = llvm::ConstantInt::get(GuardTy, 1ULL << GuardNum);
     llvm::LoadInst *LI = Builder.CreateLoad(GuardAddr);
-    llvm::Value *NeedsInit =
-        Builder.CreateICmpEQ(Builder.CreateAnd(LI, Bit), Zero);
+    llvm::Value *IsInitialized =
+        Builder.CreateICmpNE(Builder.CreateAnd(LI, Bit), Zero);
     llvm::BasicBlock *InitBlock = CGF.createBasicBlock("init");
     llvm::BasicBlock *EndBlock = CGF.createBasicBlock("init.end");
-    CGF.EmitCXXGuardedInitBranch(NeedsInit, InitBlock, EndBlock,
-                                 CodeGenFunction::GuardKind::VariableGuard, &D);
+    Builder.CreateCondBr(IsInitialized, EndBlock, InitBlock);
 
     // Set our bit in the guard variable and emit the initializer and add a global
     // destructor if appropriate.
@@ -2503,8 +2502,7 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
         Builder.CreateICmpSGT(FirstGuardLoad, InitThreadEpoch);
     llvm::BasicBlock *AttemptInitBlock = CGF.createBasicBlock("init.attempt");
     llvm::BasicBlock *EndBlock = CGF.createBasicBlock("init.end");
-    CGF.EmitCXXGuardedInitBranch(IsUninitialized, AttemptInitBlock, EndBlock,
-                                 CodeGenFunction::GuardKind::VariableGuard, &D);
+    Builder.CreateCondBr(IsUninitialized, AttemptInitBlock, EndBlock);
 
     // This BasicBlock attempts to determine whether or not this thread is
     // responsible for doing the initialization.

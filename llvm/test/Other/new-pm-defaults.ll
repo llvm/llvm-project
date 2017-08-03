@@ -84,7 +84,6 @@
 ; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
@@ -122,6 +121,7 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
+; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
 ; CHECK-O-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O-NEXT: Running analysis: ScalarEvolutionAnalysis
@@ -140,7 +140,7 @@
 ; CHECK-O-NEXT: Running pass: LoopIdiomRecognizePass
 ; CHECK-EP-LOOP-LATE-NEXT: Running pass: NoOpLoopPass
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
-; CHECK-O-NEXT: Running pass: LoopFullUnrollPass
+; CHECK-O-NEXT: Running pass: LoopUnrollPass
 ; CHECK-EP-LOOP-END-NEXT: Running pass: NoOpLoopPass
 ; CHECK-O-NEXT: Finished Loop pass manager run.
 ; CHECK-Os-NEXT: Running pass: MergedLoadStoreMotionPass
@@ -197,7 +197,7 @@
 ; CHECK-O-NEXT: Running pass: SLPVectorizerPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O-NEXT: Running pass: LoopUnrollPass
+; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopUnrollPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass

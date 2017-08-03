@@ -46,11 +46,11 @@ list(APPEND CLANG_TEST_DEPS
   c-index-test diagtool
   clang-tblgen
   clang-offload-bundler
+  clang-refactor-test
   clang-import-test
   clang-rename
-  clang-diff
   )
-  
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check

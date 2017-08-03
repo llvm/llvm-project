@@ -215,10 +215,6 @@ static void **GetBucketFor(unsigned Hash, void **Buckets, unsigned NumBuckets) {
 /// AllocateBuckets - Allocated initialized bucket memory.
 static void **AllocateBuckets(unsigned NumBuckets) {
   void **Buckets = static_cast<void**>(calloc(NumBuckets+1, sizeof(void*)));
-
-  if (Buckets == nullptr)
-    report_bad_alloc_error("Allocation of Buckets failed.");
-  
   // Set the very last bucket to be a non-null "pointer".
   Buckets[NumBuckets] = reinterpret_cast<void*>(-1);
   return Buckets;
@@ -275,11 +271,10 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
   assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
   void **OldBuckets = Buckets;
   unsigned OldNumBuckets = NumBuckets;
+  NumBuckets = NewBucketCount;
   
   // Clear out new buckets.
-  Buckets = AllocateBuckets(NewBucketCount);
-  // Set NumBuckets only if allocation of new buckets was succesful
-  NumBuckets = NewBucketCount; 
+  Buckets = AllocateBuckets(NumBuckets);
   NumNodes = 0;
 
   // Walk the old buckets, rehashing nodes into their new place.

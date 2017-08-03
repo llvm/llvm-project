@@ -35,15 +35,14 @@ private:
 public:
   PPCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
-                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                   CodeGenOpt::Level OL, bool JIT);
+                   Optional<Reloc::Model> RM, CodeModel::Model CM,
+                   CodeGenOpt::Level OL);
 
   ~PPCTargetMachine() override;
 
   const PPCSubtarget *getSubtargetImpl(const Function &F) const override;
-  // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
-  // subtargets are per-function entities based on the target-specific
-  // attributes of each function.
+  // The no argument getSubtargetImpl, while it exists on some targets, is
+  // deprecated and should not be used.
   const PPCSubtarget *getSubtargetImpl() const = delete;
 
   // Pass Pipeline Configuration

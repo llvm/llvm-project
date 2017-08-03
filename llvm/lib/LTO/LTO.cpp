@@ -118,10 +118,7 @@ static void computeCacheKey(
     AddUnsigned(*Conf.RelocModel);
   else
     AddUnsigned(-1);
-  if (Conf.CodeModel)
-    AddUnsigned(*Conf.CodeModel);
-  else
-    AddUnsigned(-1);
+  AddUnsigned(Conf.CodeModel);
   AddUnsigned(Conf.CGOptLevel);
   AddUnsigned(Conf.CGFileType);
   AddUnsigned(Conf.OptLevel);
@@ -1074,12 +1071,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
         ExportedGUIDs.insert(GUID);
     }
-
-    // Any functions referenced by the jump table in the regular LTO object must
-    // be exported.
-    for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
-      ExportedGUIDs.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
 
     auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
       const auto &ExportList = ExportLists.find(ModuleIdentifier);

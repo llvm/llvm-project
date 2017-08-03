@@ -1117,7 +1117,7 @@ private:
         auto IP = CGF.Builder.saveAndClearIP();
         CGF.EmitBlock(Stack.back().ExitBlock.getBlock());
         CodeGen(CGF);
-        CGF.EmitBranch(Stack.back().ContBlock.getBlock());
+        CGF.EmitBranchThroughCleanup(Stack.back().ContBlock);
         CGF.Builder.restoreIP(IP);
         Stack.back().HasBeenEmitted = true;
       }
@@ -3496,14 +3496,6 @@ public:
   /// of a class template.
   void EmitCXXGuardedInit(const VarDecl &D, llvm::GlobalVariable *DeclPtr,
                           bool PerformInit);
-
-  enum class GuardKind { VariableGuard, TlsGuard };
-
-  /// Emit a branch to select whether or not to perform guarded initialization.
-  void EmitCXXGuardedInitBranch(llvm::Value *NeedsInit,
-                                llvm::BasicBlock *InitBlock,
-                                llvm::BasicBlock *NoInitBlock,
-                                GuardKind Kind, const VarDecl *D);
 
   /// GenerateCXXGlobalInitFunc - Generates code for initializing global
   /// variables.

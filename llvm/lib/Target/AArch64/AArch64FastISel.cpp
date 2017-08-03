@@ -1,4 +1,4 @@
-//===- AArch6464FastISel.cpp - AArch64 FastISel implementation ------------===//
+//===-- AArch6464FastISel.cpp - AArch64 FastISel implementation -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -53,7 +53,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -64,7 +63,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -80,10 +78,10 @@ namespace {
 class AArch64FastISel final : public FastISel {
   class Address {
   public:
-    using BaseKind = enum {
+    typedef enum {
       RegBase,
       FrameIndexBase
-    };
+    } BaseKind;
 
   private:
     BaseKind Kind = RegBase;
@@ -945,6 +943,7 @@ bool AArch64FastISel::computeCallAddress(const Value *V, Address &Addr) {
 
   return false;
 }
+
 
 bool AArch64FastISel::isTypeLegal(Type *Ty, MVT &VT) {
   EVT evt = TLI.getValueType(DL, Ty, true);

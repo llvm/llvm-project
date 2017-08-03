@@ -23,8 +23,6 @@
 
 namespace llvm {
 
-class MachineInstr;
-
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
@@ -147,7 +145,7 @@ public:
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
 
-  using SetOfInstructions = SmallPtrSet<const MachineInstr *, 16>;
+  typedef SmallPtrSet<const MachineInstr *, 16> SetOfInstructions;
 
   const SetOfInstructions &getLOHRelated() const { return LOHRelated; }
 
@@ -159,7 +157,7 @@ public:
     SmallVector<const MachineInstr *, 3> Args;
 
   public:
-    using LOHArgs = ArrayRef<const MachineInstr *>;
+    typedef ArrayRef<const MachineInstr *> LOHArgs;
 
     MILOHDirective(MCLOHType Kind, LOHArgs Args)
         : Kind(Kind), Args(Args.begin(), Args.end()) {
@@ -170,8 +168,8 @@ public:
     LOHArgs getArgs() const { return Args; }
   };
 
-  using MILOHArgs = MILOHDirective::LOHArgs;
-  using MILOHContainer = SmallVector<MILOHDirective, 32>;
+  typedef MILOHDirective::LOHArgs MILOHArgs;
+  typedef SmallVector<MILOHDirective, 32> MILOHContainer;
 
   const MILOHContainer &getLOHContainer() const { return LOHContainerSet; }
 

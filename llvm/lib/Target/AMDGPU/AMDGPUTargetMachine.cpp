@@ -123,23 +123,12 @@ static cl::opt<bool> LateCFGStructurize(
   cl::init(false),
   cl::Hidden);
 
-static cl::opt<bool> EnableAMDGPUFunctionCalls(
-  "amdgpu-function-calls",
-  cl::Hidden,
-  cl::desc("Enable AMDGPU function call support"),
-  cl::init(false));
-
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
   RegisterTargetMachine<GCNTargetMachine> Y(getTheGCNTarget());
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
-  initializeR600ClauseMergePassPass(*PR);
-  initializeR600ControlFlowFinalizerPass(*PR);
-  initializeR600PacketizerPass(*PR);
-  initializeR600ExpandSpecialInstrsPassPass(*PR);
-  initializeR600VectorRegMergerPass(*PR);
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
@@ -147,7 +136,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
-  initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
@@ -155,7 +143,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
-  initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
   initializeSIInsertWaitsPass(*PR);
@@ -163,7 +150,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
   initializeSIInsertSkipsPass(*PR);
-  initializeSIMemoryLegalizerPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
@@ -266,32 +252,20 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return Reloc::PIC_;
 }
 
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
-  if (CM)
-    return *CM;
-  return CodeModel::Small;
-}
-
 AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          TargetOptions Options,
                                          Optional<Reloc::Model> RM,
-                                         Optional<CodeModel::Model> CM,
+                                         CodeModel::Model CM,
                                          CodeGenOpt::Level OptLevel)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
-                        FS, Options, getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM), OptLevel),
-      TLOF(createTLOF(getTargetTriple())) {
+  : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
+                      FS, Options, getEffectiveRelocModel(RM), CM, OptLevel),
+    TLOF(createTLOF(getTargetTriple())) {
   AS = AMDGPU::getAMDGPUAS(TT);
   initAsmInfo();
 }
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
-
-bool AMDGPUTargetMachine::enableFunctionCalls() const {
-  return EnableAMDGPUFunctionCalls &&
-         getTargetTriple().getArch() == Triple::amdgcn;
-}
 
 StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
   Attribute GPUAttr = F.getFnAttribute("target-cpu");
@@ -385,9 +359,8 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      TargetOptions Options,
                                      Optional<Reloc::Model> RM,
-                                     Optional<CodeModel::Model> CM,
-                                     CodeGenOpt::Level OL, bool JIT)
-    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
+                                     CodeModel::Model CM, CodeGenOpt::Level OL)
+  : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setRequiresStructuredCFG(true);
 }
 
@@ -419,9 +392,8 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    TargetOptions Options,
                                    Optional<Reloc::Model> RM,
-                                   Optional<CodeModel::Model> CM,
-                                   CodeGenOpt::Level OL, bool JIT)
-    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
+                                   CodeModel::Model CM, CodeGenOpt::Level OL)
+  : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 const SISubtarget *GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef GPU = getGPUName(F);
@@ -500,10 +472,7 @@ public:
 class GCNPassConfig final : public AMDGPUPassConfig {
 public:
   GCNPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
-    : AMDGPUPassConfig(TM, PM) {
-    // It is necessary to know the register usage of the entire call graph.
-    setRequiresCodeGenSCCOrder(EnableAMDGPUFunctionCalls);
-  }
+    : AMDGPUPassConfig(TM, PM) {}
 
   GCNTargetMachine &getGCNTargetMachine() const {
     return getTM<GCNTargetMachine>();
@@ -799,9 +768,6 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
-  if (getOptLevel() > CodeGenOpt::None)
-    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
-
   // This needs to be run directly before register allocation because earlier
   // passes might recompute live intervals.
   insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);
@@ -840,7 +806,6 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(createSIInsertWaitsPass());
   addPass(createSIShrinkInstructionsPass());
   addPass(&SIInsertSkipsPassID);
-  addPass(createSIMemoryLegalizerPass());
   addPass(createSIDebuggerInsertNopsPass());
   addPass(&BranchRelaxationPassID);
 }

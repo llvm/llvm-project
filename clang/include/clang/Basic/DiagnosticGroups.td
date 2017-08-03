@@ -62,7 +62,6 @@ def DoublePromotion : DiagGroup<"double-promotion">;
 def EnumTooLarge : DiagGroup<"enum-too-large">;
 def UnsupportedNan : DiagGroup<"unsupported-nan">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
-def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
@@ -153,9 +152,6 @@ def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
-
-def InvalidIOSDeploymentTarget : DiagGroup<"invalid-ios-deployment-target">;
-
 def CXX1zCompatMangling : DiagGroup<"c++1z-compat-mangling">;
 // Name of this warning in GCC.
 def NoexceptType : DiagGroup<"noexcept-type", [CXX1zCompatMangling]>;
@@ -299,6 +295,7 @@ def MissingFieldInitializers : DiagGroup<"missing-field-initializers">;
 def ModuleBuild : DiagGroup<"module-build">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
+def IndexStore : DiagGroup<"index-store">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
 def NullabilityDeclSpec : DiagGroup<"nullability-declspec">;
@@ -405,6 +402,9 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
+
+def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
+
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalPointerCompare : DiagGroup<"tautological-pointer-compare">;
 def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
@@ -474,10 +474,8 @@ def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 def UnknownPragmas : DiagGroup<"unknown-pragmas">;
 def IgnoredPragmas : DiagGroup<"ignored-pragmas", [IgnoredPragmaIntrinsic]>;
 def PragmaClangAttribute : DiagGroup<"pragma-clang-attribute">;
-def PragmaPackSuspiciousInclude : DiagGroup<"pragma-pack-suspicious-include">;
-def PragmaPack : DiagGroup<"pragma-pack", [PragmaPackSuspiciousInclude]>;
 def Pragmas : DiagGroup<"pragmas", [UnknownPragmas, IgnoredPragmas,
-                                    PragmaClangAttribute, PragmaPack]>;
+                                    PragmaClangAttribute]>;
 def UnknownWarningOption : DiagGroup<"unknown-warning-option">;
 def NSobjectAttribute : DiagGroup<"NSObject-attribute">;
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;

@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc < %s -march=x86
 ; PR2982
 
 target datalayout =

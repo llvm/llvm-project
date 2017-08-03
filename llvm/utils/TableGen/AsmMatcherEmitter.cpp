@@ -1847,30 +1847,13 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
   if (HasOptionalOperands) {
-    size_t MaxNumOperands = 0;
-    for (const auto &MI : Infos) {
-      MaxNumOperands = std::max(MaxNumOperands, MI->AsmOperands.size());
-    }
-    CvtOS << "  unsigned DefaultsOffset[" << (MaxNumOperands) << "];\n";
-    CvtOS << "  assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-          << ");\n";
-    CvtOS << "  for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
-          << "; ++i) {\n";
-    CvtOS << "    DefaultsOffset[i] = NumDefaults;\n";
-    CvtOS << "    NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
-    CvtOS << "  }\n";
+    CvtOS << "  unsigned NumDefaults = 0;\n";
   }
   CvtOS << "  unsigned OpIdx;\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n";
   if (HasOptionalOperands) {
-    // OpIdx has different semantics for Tied operands and the rest of the
-    // operands. For Tied it is the index in the Inst, therefore we use it
-    // directly. For the rest of the operands, we need to account for the
-    // offset.
-    CvtOS << "    OpIdx = *(p + 1);\n";
-    CvtOS << "    OpIdx -= (*p != CVT_Tied) ? DefaultsOffset[*(p + 1) - 1] : "
-             "0;\n";
+    CvtOS << "    OpIdx = *(p + 1) - NumDefaults;\n";
   } else {
     CvtOS << "    OpIdx = *(p + 1);\n";
   }
@@ -2005,6 +1988,7 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                 << "        " << Op.Class->DefaultMethod << "()"
                 << "->" << Op.Class->RenderMethod << "(Inst, "
                 << OpInfo.MINumOperands << ");\n"
+                << "        ++NumDefaults;\n"
                 << "      } else {\n"
                 << "        static_cast<" << TargetOperandClass
                 << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod

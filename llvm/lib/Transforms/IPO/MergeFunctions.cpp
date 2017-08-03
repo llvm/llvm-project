@@ -119,6 +119,7 @@ using namespace llvm;
 
 STATISTIC(NumFunctionsMerged, "Number of functions merged");
 STATISTIC(NumThunksWritten, "Number of thunks generated");
+STATISTIC(NumAliasesWritten, "Number of aliases generated");
 STATISTIC(NumDoubleWeak, "Number of new functions created");
 
 static cl::opt<unsigned> NumFunctionsForSanityCheck(
@@ -178,7 +179,8 @@ class MergeFunctions : public ModulePass {
 public:
   static char ID;
   MergeFunctions()
-    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)), FNodesInTree() {
+    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)), FNodesInTree(),
+      HasGlobalAliases(false) {
     initializeMergeFunctionsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -234,6 +236,9 @@ private:
   /// again.
   void mergeTwoFunctions(Function *F, Function *G);
 
+  /// Replace G with a thunk or an alias to F. Deletes G.
+  void writeThunkOrAlias(Function *F, Function *G);
+
   /// Fill PDIUnrelatedWL with instructions from the entry block that are
   /// unrelated to parameter related debug info.
   void filterInstsUnrelatedToPDI(BasicBlock *GEntryBlock,
@@ -251,6 +256,9 @@ private:
   /// delete G.
   void writeThunk(Function *F, Function *G);
 
+  /// Replace G with an alias to F. Deletes G.
+  void writeAlias(Function *F, Function *G);
+
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
 
@@ -263,6 +271,9 @@ private:
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   ValueMap<Function*, FnTreeType::iterator> FNodesInTree;
+
+  /// Whether or not the target supports global aliases.
+  bool HasGlobalAliases;
 };
 
 } // end anonymous namespace
@@ -441,6 +452,19 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
       U->set(BitcastNew);
     }
   }
+}
+
+// Replace G with an alias to F if possible, or else a thunk to F. Deletes G.
+void MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
+  if (HasGlobalAliases && G->hasGlobalUnnamedAddr()) {
+    if (G->hasExternalLinkage() || G->hasLocalLinkage() ||
+        G->hasWeakLinkage()) {
+      writeAlias(F, G);
+      return;
+    }
+  }
+
+  writeThunk(F, G);
 }
 
 // Helper for writeThunk,
@@ -710,6 +734,20 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   ++NumThunksWritten;
 }
 
+// Replace G with an alias to F and delete G.
+void MergeFunctions::writeAlias(Function *F, Function *G) {
+  auto *GA = GlobalAlias::create(G->getLinkage(), "", F);
+  F->setAlignment(std::max(F->getAlignment(), G->getAlignment()));
+  GA->takeName(G);
+  GA->setVisibility(G->getVisibility());
+  removeUsers(G);
+  G->replaceAllUsesWith(GA);
+  G->eraseFromParent();
+
+  DEBUG(dbgs() << "writeAlias: " << GA->getName() << '\n');
+  ++NumAliasesWritten;
+}
+
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
   if (F->isInterposable()) {
@@ -725,14 +763,19 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
     unsigned MaxAlignment = std::max(G->getAlignment(), H->getAlignment());
 
-    writeThunk(F, G);
-    writeThunk(F, H);
+    if (HasGlobalAliases) {
+      writeAlias(F, G);
+      writeAlias(F, H);
+    } else {
+      writeThunk(F, G);
+      writeThunk(F, H);
+    }
 
     F->setAlignment(MaxAlignment);
     F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
   } else {
-    writeThunk(F, G);
+    writeThunkOrAlias(F, G);
   }
 
   ++NumFunctionsMerged;

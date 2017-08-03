@@ -9,6 +9,7 @@ set(SOURCES
   CIndexInclusionStack.cpp
   CIndexUSRs.cpp
   CIndexer.cpp
+  CRefactor.cpp
   CXComment.cpp
   CXCursor.cpp
   CXIndexDataConsumer.cpp
@@ -35,6 +36,7 @@ set(SOURCES
 
 set(LIBS
   clangAST
+  clangAPINotes
   clangBasic
   clangFrontend
   clangIndex
@@ -51,9 +53,6 @@ if (TARGET clangTidyPlugin)
   add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
   list(APPEND LIBS clangTidyPlugin)
   list(APPEND LIBS clangIncludeFixerPlugin)
-  if(LLVM_ENABLE_MODULES)
-    list(APPEND LLVM_COMPILE_FLAGS "-fmodules-ignore-macro=CLANG_TOOL_EXTRA_BUILD")
-  endif()
 endif ()
 
 find_library(DL_LIBRARY_PATH dl)
@@ -118,12 +117,6 @@ if(ENABLE_SHARED)
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
-    # FIXME: _CINDEX_LIB_ affects dllexport/dllimport on Win32.
-    if(LLVM_ENABLE_MODULES AND NOT WIN32)
-      target_compile_options(libclang PRIVATE
-        "-fmodules-ignore-macro=_CINDEX_LIB_"
-        )
-    endif()
   endif()
 endif()
 

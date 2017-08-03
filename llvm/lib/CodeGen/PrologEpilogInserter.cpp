@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -110,9 +109,6 @@ private:
   // FrameIndexVirtualScavenging is used.
   bool FrameIndexEliminationScavenging;
 
-  // Emit remarks.
-  MachineOptimizationRemarkEmitter *ORE = nullptr;
-
   void calculateCallFrameInfo(MachineFunction &Fn);
   void calculateSaveRestoreBlocks(MachineFunction &Fn);
 
@@ -137,7 +133,6 @@ INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(PEI, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
                     false)
@@ -154,7 +149,6 @@ void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfo>();
   AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<StackProtector>();
-  AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -188,7 +182,6 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(Fn);
   FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
     TRI->requiresFrameIndexReplacementScavenging(Fn);
-  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   // Calculate the MaxCallFrameSize and AdjustsStack variables for the
   // function's frame information. Also eliminates call frame pseudo
@@ -467,47 +460,76 @@ static void updateLiveness(MachineFunction &MF) {
   }
 }
 
-/// Insert restore code for the callee-saved registers used in the function.
-static void insertCSRSaves(MachineBasicBlock &SaveBlock,
-                           ArrayRef<CalleeSavedInfo> CSI) {
-  MachineFunction &Fn = *SaveBlock.getParent();
+/// insertCSRSpillsAndRestores - Insert spill and restore code for
+/// callee saved registers used in the function.
+///
+static void insertCSRSpillsAndRestores(MachineFunction &Fn,
+                                       const MBBVector &SaveBlocks,
+                                       const MBBVector &RestoreBlocks) {
+  // Get callee saved register information.
+  MachineFrameInfo &MFI = Fn.getFrameInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+  MFI.setCalleeSavedInfoValid(true);
+
+  // Early exit if no callee saved registers are modified!
+  if (CSI.empty())
+    return;
+
   const TargetInstrInfo &TII = *Fn.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
+  MachineBasicBlock::iterator I;
 
-  MachineBasicBlock::iterator I = SaveBlock.begin();
-  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
-    for (const CalleeSavedInfo &CS : CSI) {
-      // Insert the spill to the stack frame.
-      unsigned Reg = CS.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
-                              TRI);
+  // Spill using target interface.
+  for (MachineBasicBlock *SaveBlock : SaveBlocks) {
+    I = SaveBlock->begin();
+    if (!TFI->spillCalleeSavedRegisters(*SaveBlock, I, CSI, TRI)) {
+      for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
+        // Insert the spill to the stack frame.
+        unsigned Reg = CSI[i].getReg();
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        TII.storeRegToStackSlot(*SaveBlock, I, Reg, true, CSI[i].getFrameIdx(),
+                                RC, TRI);
+      }
     }
+    // Update the live-in information of all the blocks up to the save point.
+    updateLiveness(Fn);
   }
-}
 
-/// Insert restore code for the callee-saved registers used in the function.
-static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
-                              ArrayRef<CalleeSavedInfo> CSI) {
-  MachineFunction &Fn = *RestoreBlock.getParent();
-  const TargetInstrInfo &TII = *Fn.getSubtarget().getInstrInfo();
-  const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
-  const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
+  // Restore using target interface.
+  for (MachineBasicBlock *MBB : RestoreBlocks) {
+    I = MBB->end();
 
-  // Restore all registers immediately before the return and any
-  // terminators that precede it.
-  MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
+    // Skip over all terminator instructions, which are part of the return
+    // sequence.
+    MachineBasicBlock::iterator I2 = I;
+    while (I2 != MBB->begin() && (--I2)->isTerminator())
+      I = I2;
 
-  if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
-    for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      unsigned Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
-      assert(I != RestoreBlock.begin() &&
-             "loadRegFromStackSlot didn't insert any code!");
-      // Insert in reverse order.  loadRegFromStackSlot can insert
-      // multiple instructions.
+    bool AtStart = I == MBB->begin();
+    MachineBasicBlock::iterator BeforeI = I;
+    if (!AtStart)
+      --BeforeI;
+
+    // Restore all registers immediately before the return and any
+    // terminators that precede it.
+    if (!TFI->restoreCalleeSavedRegisters(*MBB, I, CSI, TRI)) {
+      for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
+        unsigned Reg = CSI[i].getReg();
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        TII.loadRegFromStackSlot(*MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI);
+        assert(I != MBB->begin() &&
+               "loadRegFromStackSlot didn't insert any code!");
+        // Insert in reverse order.  loadRegFromStackSlot can insert
+        // multiple instructions.
+        if (AtStart)
+          I = MBB->begin();
+        else {
+          I = BeforeI;
+          ++I;
+        }
+      }
     }
   }
 }
@@ -519,7 +541,6 @@ static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
                                    const MBBVector &RestoreBlocks) {
   const Function *F = Fn.getFunction();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
-  MachineFrameInfo &MFI = Fn.getFrameInfo();
   MinCSFrameIndex = std::numeric_limits<unsigned>::max();
   MaxCSFrameIndex = 0;
 
@@ -531,21 +552,8 @@ static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
   assignCalleeSavedSpillSlots(Fn, SavedRegs, MinCSFrameIndex, MaxCSFrameIndex);
 
   // Add the code to save and restore the callee saved registers.
-  if (!F->hasFnAttribute(Attribute::Naked)) {
-    MFI.setCalleeSavedInfoValid(true);
-
-    ArrayRef<CalleeSavedInfo> CSI = MFI.getCalleeSavedInfo();
-    if (!CSI.empty()) {
-      for (MachineBasicBlock *SaveBlock : SaveBlocks) {
-        insertCSRSaves(*SaveBlock, CSI);
-        // Update the live-in information of all the blocks up to the save
-        // point.
-        updateLiveness(Fn);
-      }
-      for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
-        insertCSRRestores(*RestoreBlock, CSI);
-    }
-  }
+  if (!F->hasFnAttribute(Attribute::Naked))
+    insertCSRSpillsAndRestores(Fn, SaveBlocks, RestoreBlocks);
 }
 
 /// AdjustStackOffset - Helper function used to adjust the stack frame offset.
@@ -961,12 +969,6 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   int64_t StackSize = Offset - LocalAreaOffset;
   MFI.setStackSize(StackSize);
   NumBytesStackSpace += StackSize;
-
-  MachineOptimizationRemarkAnalysis R(
-      DEBUG_TYPE, "StackSize", Fn.getFunction()->getSubprogram(), &Fn.front());
-  R << ore::NV("NumStackBytes", StackSize)
-    << " stack bytes in function";
-  ORE->emit(R);
 }
 
 /// insertPrologEpilogCode - Scan the function for modified callee saved

@@ -148,6 +148,7 @@ unsigned SIRegisterInfo::reservedStackPtrOffsetReg(
 
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
+  Reserved.set(AMDGPU::INDIRECT_BASE_ADDR);
 
   // EXEC_LO and EXEC_HI could be allocated and used as regular register, but
   // this seems likely to result in bugs, so I'm marking them as reserved.
@@ -236,15 +237,8 @@ bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const
   return true;
 }
 
-bool SIRegisterInfo::requiresFrameIndexScavenging(
-  const MachineFunction &MF) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MFI.hasStackObjects())
-    return true;
-
-  // May need to deal with callee saved registers.
-  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  return !Info->isEntryFunction();
+bool SIRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
+  return MF.getFrameInfo().hasStackObjects();
 }
 
 bool SIRegisterInfo::requiresFrameIndexReplacementScavenging(
@@ -478,16 +472,17 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
   if (LoadStoreOp == -1)
     return false;
 
-  const MachineOperand *Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
+  unsigned Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata)->getReg();
+
   BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
-    .add(*Reg)
-    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
-    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
-    .addImm(Offset)
-    .addImm(0) // glc
-    .addImm(0) // slc
-    .addImm(0) // tfe
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+      .addReg(Reg, getDefRegState(!IsStore))
+      .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
+      .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
+      .addImm(Offset)
+      .addImm(0) // glc
+      .addImm(0) // slc
+      .addImm(0) // tfe
+      .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
   return true;
 }
 
@@ -1280,7 +1275,8 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
     return RC;
 
   // We can assume that each lane corresponds to one 32-bit register.
-  unsigned Count = getSubRegIndexLaneMask(SubIdx).getNumLanes();
+  LaneBitmask::Type Mask = getSubRegIndexLaneMask(SubIdx).getAsInteger();
+  unsigned Count = countPopulation(Mask);
   if (isSGPRClass(RC)) {
     switch (Count) {
     case 1:

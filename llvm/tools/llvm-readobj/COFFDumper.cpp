@@ -1627,7 +1627,7 @@ void COFFDumper::printCOFFDirectives() {
   }
 }
 
-static std::string getBaseRelocTypeName(uint8_t Type) {
+static StringRef getBaseRelocTypeName(uint8_t Type) {
   switch (Type) {
   case COFF::IMAGE_REL_BASED_ABSOLUTE: return "ABSOLUTE";
   case COFF::IMAGE_REL_BASED_HIGH: return "HIGH";
@@ -1636,7 +1636,11 @@ static std::string getBaseRelocTypeName(uint8_t Type) {
   case COFF::IMAGE_REL_BASED_HIGHADJ: return "HIGHADJ";
   case COFF::IMAGE_REL_BASED_ARM_MOV32T: return "ARM_MOV32(T)";
   case COFF::IMAGE_REL_BASED_DIR64: return "DIR64";
-  default: return "unknown (" + llvm::utostr(Type) + ")";
+  default: {
+    static std::string Result;
+    Result = "unknown (" + llvm::utostr(Type) + ")";
+    return Result;
+  }
   }
 }
 

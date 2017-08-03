@@ -26,8 +26,6 @@ class LazyRandomTypeCollection;
 }
 
 namespace pdb {
-class GSIHashTable;
-
 class DumpOutputStyle : public OutputStyle {
 public:
   DumpOutputStyle(PDBFile &File);
@@ -48,9 +46,7 @@ private:
   Error dumpModules();
   Error dumpModuleFiles();
   Error dumpModuleSyms();
-  Error dumpGlobals();
   Error dumpPublics();
-  Error dumpSymbolsFromGSI(const GSIHashTable &Table, bool HashExtras);
   Error dumpSectionContribs();
   Error dumpSectionMap();
 

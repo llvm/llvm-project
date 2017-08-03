@@ -24,14 +24,12 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-using namespace PatternMatch;
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
@@ -185,46 +183,27 @@ static bool matchPairwiseShuffleMask(ShuffleVectorInst *SI, bool IsLeft,
   return Mask == ActualMask;
 }
 
-namespace {
-/// Contains opcode + LHS/RHS parts of the reduction operations.
-struct ReductionData {
-  explicit ReductionData() = default;
-  ReductionData(unsigned Opcode, Value *LHS, Value *RHS)
-      : Opcode(Opcode), LHS(LHS), RHS(RHS) {}
-  unsigned Opcode = 0;
-  Value *LHS = nullptr;
-  Value *RHS = nullptr;
-};
-} // namespace
-
-static Optional<ReductionData> getReductionData(Instruction *I) {
-  Value *L, *R;
-  if (m_BinOp(m_Value(L), m_Value(R)).match(I))
-    return ReductionData(I->getOpcode(), L, R);
-  return llvm::None;
-}
-
-static bool matchPairwiseReductionAtLevel(Instruction *I, unsigned Level,
-                                          unsigned NumLevels) {
+static bool matchPairwiseReductionAtLevel(const BinaryOperator *BinOp,
+                                          unsigned Level, unsigned NumLevels) {
   // Match one level of pairwise operations.
   // %rdx.shuf.0.0 = shufflevector <4 x float> %rdx, <4 x float> undef,
   //       <4 x i32> <i32 0, i32 2 , i32 undef, i32 undef>
   // %rdx.shuf.0.1 = shufflevector <4 x float> %rdx, <4 x float> undef,
   //       <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
   // %bin.rdx.0 = fadd <4 x float> %rdx.shuf.0.0, %rdx.shuf.0.1
-  if (!I)
+  if (BinOp == nullptr)
     return false;
 
-  assert(I->getType()->isVectorTy() && "Expecting a vector type");
+  assert(BinOp->getType()->isVectorTy() && "Expecting a vector type");
 
-  Optional<ReductionData> RD = getReductionData(I);
-  if (!RD)
-    return false;
+  unsigned Opcode = BinOp->getOpcode();
+  Value *L = BinOp->getOperand(0);
+  Value *R = BinOp->getOperand(1);
 
-  ShuffleVectorInst *LS = dyn_cast<ShuffleVectorInst>(RD->LHS);
+  ShuffleVectorInst *LS = dyn_cast<ShuffleVectorInst>(L);
   if (!LS && Level)
     return false;
-  ShuffleVectorInst *RS = dyn_cast<ShuffleVectorInst>(RD->RHS);
+  ShuffleVectorInst *RS = dyn_cast<ShuffleVectorInst>(R);
   if (!RS && Level)
     return false;
 
@@ -249,30 +228,31 @@ static bool matchPairwiseReductionAtLevel(Instruction *I, unsigned Level,
     // Example:
     //  %NextLevelOpL = shufflevector %R, <1, undef ...>
     //  %BinOp        = fadd          %NextLevelOpL, %R
-    if (NextLevelOpL && NextLevelOpL != RD->RHS)
+    if (NextLevelOpL && NextLevelOpL != R)
       return false;
-    else if (NextLevelOpR && NextLevelOpR != RD->LHS)
+    else if (NextLevelOpR && NextLevelOpR != L)
       return false;
 
-    NextLevelOp = NextLevelOpL ? RD->RHS : RD->LHS;
+    NextLevelOp = NextLevelOpL ? R : L;
   } else
     return false;
 
   // Check that the next levels binary operation exists and matches with the
   // current one.
+  BinaryOperator *NextLevelBinOp = nullptr;
   if (Level + 1 != NumLevels) {
-    Optional<ReductionData> NextLevelRD =
-        getReductionData(cast<Instruction>(NextLevelOp));
-    if (!NextLevelRD || RD->Opcode != NextLevelRD->Opcode)
+    if (!(NextLevelBinOp = dyn_cast<BinaryOperator>(NextLevelOp)))
+      return false;
+    else if (NextLevelBinOp->getOpcode() != Opcode)
       return false;
   }
 
   // Shuffle mask for pairwise operation must match.
-  if (matchPairwiseShuffleMask(LS, /*IsLeft=*/true, Level)) {
-    if (!matchPairwiseShuffleMask(RS, /*IsLeft=*/false, Level))
+  if (matchPairwiseShuffleMask(LS, true, Level)) {
+    if (!matchPairwiseShuffleMask(RS, false, Level))
       return false;
-  } else if (matchPairwiseShuffleMask(RS, /*IsLeft=*/true, Level)) {
-    if (!matchPairwiseShuffleMask(LS, /*IsLeft=*/false, Level))
+  } else if (matchPairwiseShuffleMask(RS, true, Level)) {
+    if (!matchPairwiseShuffleMask(LS, false, Level))
       return false;
   } else
     return false;
@@ -281,8 +261,7 @@ static bool matchPairwiseReductionAtLevel(Instruction *I, unsigned Level,
     return true;
 
   // Match next level.
-  return matchPairwiseReductionAtLevel(cast<Instruction>(NextLevelOp), Level,
-                                       NumLevels);
+  return matchPairwiseReductionAtLevel(NextLevelBinOp, Level, NumLevels);
 }
 
 static bool matchPairwiseReduction(const ExtractElementInst *ReduxRoot,
@@ -298,14 +277,11 @@ static bool matchPairwiseReduction(const ExtractElementInst *ReduxRoot,
   if (Idx != 0)
     return false;
 
-  auto *RdxStart = dyn_cast<Instruction>(ReduxRoot->getOperand(0));
+  BinaryOperator *RdxStart = dyn_cast<BinaryOperator>(ReduxRoot->getOperand(0));
   if (!RdxStart)
     return false;
-  Optional<ReductionData> RD = getReductionData(RdxStart);
-  if (!RD)
-    return false;
 
-  Type *VecTy = RdxStart->getType();
+  Type *VecTy = ReduxRoot->getOperand(0)->getType();
   unsigned NumVecElems = VecTy->getVectorNumElements();
   if (!isPowerOf2_32(NumVecElems))
     return false;
@@ -331,14 +307,17 @@ static bool matchPairwiseReduction(const ExtractElementInst *ReduxRoot,
   if (!matchPairwiseReductionAtLevel(RdxStart, 0,  Log2_32(NumVecElems)))
     return false;
 
-  Opcode = RD->Opcode;
+  Opcode = RdxStart->getOpcode();
   Ty = VecTy;
 
   return true;
 }
 
 static std::pair<Value *, ShuffleVectorInst *>
-getShuffleAndOtherOprd(Value *L, Value *R) {
+getShuffleAndOtherOprd(BinaryOperator *B) {
+
+  Value *L = B->getOperand(0);
+  Value *R = B->getOperand(1);
   ShuffleVectorInst *S = nullptr;
 
   if ((S = dyn_cast<ShuffleVectorInst>(L)))
@@ -361,12 +340,10 @@ static bool matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
   if (Idx != 0)
     return false;
 
-  auto *RdxStart = dyn_cast<Instruction>(ReduxRoot->getOperand(0));
+  BinaryOperator *RdxStart = dyn_cast<BinaryOperator>(ReduxRoot->getOperand(0));
   if (!RdxStart)
     return false;
-  Optional<ReductionData> RD = getReductionData(RdxStart);
-  if (!RD)
-    return false;
+  unsigned RdxOpcode = RdxStart->getOpcode();
 
   Type *VecTy = ReduxRoot->getOperand(0)->getType();
   unsigned NumVecElems = VecTy->getVectorNumElements();
@@ -385,21 +362,20 @@ static bool matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
   // %r = extractelement <4 x float> %bin.rdx8, i32 0
 
   unsigned MaskStart = 1;
-  Instruction *RdxOp = RdxStart;
+  Value *RdxOp = RdxStart;
   SmallVector<int, 32> ShuffleMask(NumVecElems, 0);
   unsigned NumVecElemsRemain = NumVecElems;
   while (NumVecElemsRemain - 1) {
     // Check for the right reduction operation.
-    if (!RdxOp)
+    BinaryOperator *BinOp;
+    if (!(BinOp = dyn_cast<BinaryOperator>(RdxOp)))
       return false;
-    Optional<ReductionData> RDLevel = getReductionData(RdxOp);
-    if (!RDLevel || RDLevel->Opcode != RD->Opcode)
+    if (BinOp->getOpcode() != RdxOpcode)
       return false;
 
     Value *NextRdxOp;
     ShuffleVectorInst *Shuffle;
-    std::tie(NextRdxOp, Shuffle) =
-        getShuffleAndOtherOprd(RDLevel->LHS, RDLevel->RHS);
+    std::tie(NextRdxOp, Shuffle) = getShuffleAndOtherOprd(BinOp);
 
     // Check the current reduction operation and the shuffle use the same value.
     if (Shuffle == nullptr)
@@ -417,12 +393,12 @@ static bool matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
     if (ShuffleMask != Mask)
       return false;
 
-    RdxOp = dyn_cast<Instruction>(NextRdxOp);
+    RdxOp = NextRdxOp;
     NumVecElemsRemain /= 2;
     MaskStart *= 2;
   }
 
-  Opcode = RD->Opcode;
+  Opcode = RdxOpcode;
   Ty = VecTy;
   return true;
 }
@@ -519,14 +495,10 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
     unsigned ReduxOpCode;
     Type *ReduxType;
 
-    if (matchVectorSplittingReduction(EEI, ReduxOpCode, ReduxType)) {
-      return TTI->getArithmeticReductionCost(ReduxOpCode, ReduxType,
-                                             /*IsPairwiseForm=*/false);
-    }
-    if (matchPairwiseReduction(EEI, ReduxOpCode, ReduxType)) {
-      return TTI->getArithmeticReductionCost(ReduxOpCode, ReduxType,
-                                             /*IsPairwiseForm=*/true);
-    }
+    if (matchVectorSplittingReduction(EEI, ReduxOpCode, ReduxType))
+      return TTI->getReductionCost(ReduxOpCode, ReduxType, false);
+    else if (matchPairwiseReduction(EEI, ReduxOpCode, ReduxType))
+      return TTI->getReductionCost(ReduxOpCode, ReduxType, true);
 
     return TTI->getVectorInstrCost(I->getOpcode(),
                                    EEI->getOperand(0)->getType(), Idx);

@@ -18,46 +18,36 @@
 #define LLVM_ANALYSIS_ALIASSETTRACKER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/Casting.h"
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <iterator>
 #include <vector>
 
 namespace llvm {
 
-class AliasSetTracker;
-class BasicBlock;
 class LoadInst;
-class MemSetInst;
-class MemTransferInst;
-class raw_ostream;
 class StoreInst;
 class VAArgInst;
-class Value;
+class MemSetInst;
+class AliasSetTracker;
+class AliasSet;
 
 class AliasSet : public ilist_node<AliasSet> {
   friend class AliasSetTracker;
 
   class PointerRec {
     Value *Val;  // The pointer this record corresponds to.
-    PointerRec **PrevInList = nullptr;
-    PointerRec *NextInList = nullptr;
-    AliasSet *AS = nullptr;
-    uint64_t Size = 0;
+    PointerRec **PrevInList, *NextInList;
+    AliasSet *AS;
+    uint64_t Size;
     AAMDNodes AAInfo;
 
   public:
     PointerRec(Value *V)
-      : Val(V), AAInfo(DenseMapInfo<AAMDNodes>::getEmptyKey()) {}
+      : Val(V), PrevInList(nullptr), NextInList(nullptr), AS(nullptr), Size(0),
+        AAInfo(DenseMapInfo<AAMDNodes>::getEmptyKey()) {}
 
     Value *getValue() const { return Val; }
 
@@ -131,10 +121,9 @@ class AliasSet : public ilist_node<AliasSet> {
   };
 
   // Doubly linked list of nodes.
-  PointerRec *PtrList = nullptr;
-  PointerRec **PtrListEnd;
+  PointerRec *PtrList, **PtrListEnd;
   // Forwarding pointer.
-  AliasSet *Forward = nullptr;
+  AliasSet *Forward;
 
   /// All instructions without a specific address in this alias set.
   /// In rare cases this vector can have a null'ed out WeakVH
@@ -178,7 +167,7 @@ class AliasSet : public ilist_node<AliasSet> {
   /// True if this alias set contains volatile loads or stores.
   unsigned Volatile : 1;
 
-  unsigned SetSize = 0;
+  unsigned SetSize;
 
   void addRef() { ++RefCount; }
 
@@ -194,9 +183,6 @@ class AliasSet : public ilist_node<AliasSet> {
   }
 
 public:
-  AliasSet(const AliasSet &) = delete;
-  AliasSet &operator=(const AliasSet &) = delete;
-
   /// Accessors...
   bool isRef() const { return Access & RefAccess; }
   bool isMod() const { return Access & ModAccess; }
@@ -263,8 +249,12 @@ public:
 private:
   // Can only be created by AliasSetTracker.
   AliasSet()
-      : PtrListEnd(&PtrList), RefCount(0),  AliasAny(false), Access(NoAccess),
-        Alias(SetMustAlias), Volatile(false) {}
+      : PtrList(nullptr), PtrListEnd(&PtrList), Forward(nullptr), RefCount(0),
+        AliasAny(false), Access(NoAccess), Alias(SetMustAlias),
+        Volatile(false), SetSize(0) {}
+
+  AliasSet(const AliasSet &AS) = delete;
+  void operator=(const AliasSet &AS) = delete;
 
   PointerRec *getSomePointer() const {
     return PtrList;
@@ -291,7 +281,6 @@ private:
                   const AAMDNodes &AAInfo,
                   bool KnownMustAlias = false);
   void addUnknownInst(Instruction *I, AliasAnalysis &AA);
-
   void removeUnknownInst(AliasSetTracker &AST, Instruction *I) {
     bool WasEmpty = UnknownInsts.empty();
     for (size_t i = 0, e = UnknownInsts.size(); i != e; ++i)
@@ -303,7 +292,6 @@ private:
     if (!WasEmpty && UnknownInsts.empty())
       dropRef(AST);
   }
-
   void setVolatile() { Volatile = true; }
 
 public:
@@ -324,13 +312,11 @@ class AliasSetTracker {
   /// Value is deleted.
   class ASTCallbackVH final : public CallbackVH {
     AliasSetTracker *AST;
-
     void deleted() override;
     void allUsesReplacedWith(Value *) override;
 
   public:
     ASTCallbackVH(Value *V, AliasSetTracker *AST = nullptr);
-
     ASTCallbackVH &operator=(Value *V);
   };
   /// Traits to tell DenseMap that tell us how to compare and hash the value
@@ -340,8 +326,9 @@ class AliasSetTracker {
   AliasAnalysis &AA;
   ilist<AliasSet> AliasSets;
 
-  using PointerMapType = DenseMap<ASTCallbackVH, AliasSet::PointerRec *,
-                                  ASTCallbackVHDenseMapInfo>;
+  typedef DenseMap<ASTCallbackVH, AliasSet::PointerRec*,
+                   ASTCallbackVHDenseMapInfo>
+    PointerMapType;
 
   // Map from pointers to their node
   PointerMapType PointerMap;
@@ -349,7 +336,8 @@ class AliasSetTracker {
 public:
   /// Create an empty collection of AliasSets, and use the specified alias
   /// analysis object to disambiguate load and store addresses.
-  explicit AliasSetTracker(AliasAnalysis &aa) : AA(aa) {}
+  explicit AliasSetTracker(AliasAnalysis &aa)
+      : AA(aa), TotalMayAliasSetSize(0), AliasAnyAS(nullptr) {}
   ~AliasSetTracker() { clear(); }
 
   /// These methods are used to add different types of instructions to the alias
@@ -413,8 +401,8 @@ public:
   /// tracker already knows about a value, it will ignore the request.
   void copyValue(Value *From, Value *To);
 
-  using iterator = ilist<AliasSet>::iterator;
-  using const_iterator = ilist<AliasSet>::const_iterator;
+  typedef ilist<AliasSet>::iterator iterator;
+  typedef ilist<AliasSet>::const_iterator const_iterator;
 
   const_iterator begin() const { return AliasSets.begin(); }
   const_iterator end()   const { return AliasSets.end(); }
@@ -429,11 +417,11 @@ private:
   friend class AliasSet;
 
   // The total number of pointers contained in all "may" alias sets.
-  unsigned TotalMayAliasSetSize = 0;
+  unsigned TotalMayAliasSetSize;
 
   // A non-null value signifies this AST is saturated. A saturated AST lumps
   // all pointers into a single "May" set.
-  AliasSet *AliasAnyAS = nullptr;
+  AliasSet *AliasAnyAS;
 
   void removeAliasSet(AliasSet *AS);
 
@@ -463,6 +451,6 @@ inline raw_ostream& operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
   return OS;
 }
 
-} // end namespace llvm
+} // End llvm namespace
 
-#endif // LLVM_ANALYSIS_ALIASSETTRACKER_H
+#endif

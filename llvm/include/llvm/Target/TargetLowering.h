@@ -733,7 +733,8 @@ public:
   /// VECTOR_SHUFFLE operations, those with specific masks.  By default, if a
   /// target supports the VECTOR_SHUFFLE node, all mask values are assumed to be
   /// legal.
-  virtual bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const {
+  virtual bool isShuffleMaskLegal(const SmallVectorImpl<int> &/*Mask*/,
+                                  EVT /*VT*/) const {
     return true;
   }
 
@@ -1886,8 +1887,7 @@ public:
   ///
   /// TODO: Remove default argument
   virtual bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                                     Type *Ty, unsigned AddrSpace,
-                                     Instruction *I = nullptr) const;
+                                     Type *Ty, unsigned AddrSpace) const;
 
   /// \brief Return the cost of the scaling factor used in the addressing mode
   /// represented by AM for this target, for a load/store of the specified type.
@@ -2768,20 +2768,6 @@ public:
     return false;
   }
 
-  // Return true if it is profitable to combine a BUILD_VECTOR with a stride-pattern
-  // to a shuffle and a truncate.
-  // Example of such a combine:
-  // v4i32 build_vector((extract_elt V, 1),
-  //                    (extract_elt V, 3),
-  //                    (extract_elt V, 5),
-  //                    (extract_elt V, 7))
-  //  -->
-  // v4i32 truncate (bitcast (shuffle<1,u,3,u,5,u,7,u> V, u) to v4i64)
-  virtual bool isDesirableToCombineBuildVectorToShuffleTruncate(
-      ArrayRef<int> ShuffleMask, EVT SrcVT, EVT TruncVT) const {
-    return false;
-  }
-
   /// Return true if the target has native support for the specified value type
   /// and it is 'desirable' to use the type for the given node type. e.g. On x86
   /// i16 is legal, but undesirable since i16 instruction encodings are longer
@@ -2880,7 +2866,7 @@ public:
     ArgListTy Args;
     SelectionDAG &DAG;
     SDLoc DL;
-    ImmutableCallSite CS;
+    ImmutableCallSite *CS = nullptr;
     SmallVector<ISD::OutputArg, 32> Outs;
     SmallVector<SDValue, 32> OutVals;
     SmallVector<ISD::InputArg, 32> Ins;
@@ -2927,7 +2913,7 @@ public:
 
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
-                                ImmutableCallSite Call) {
+                                ImmutableCallSite &Call) {
       RetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
@@ -2946,7 +2932,7 @@ public:
       NumFixedArgs = FTy->getNumParams();
       Args = std::move(ArgsList);
 
-      CS = Call;
+      CS = &Call;
 
       return *this;
     }

@@ -37,14 +37,12 @@ namespace ELFYAML {
 // In the future, these would probably be better suited by C++11 enum
 // class's with appropriate fixed underlying type.
 LLVM_YAML_STRONG_TYPEDEF(uint16_t, ELF_ET)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_PT)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_EM)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFCLASS)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFDATA)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFOSABI)
 // Just use 64, since it can hold 32-bit values too.
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_EF)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_PF)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_SHT)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_REL)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_RSS)
@@ -71,18 +69,6 @@ struct FileHeader {
   ELF_EM Machine;
   ELF_EF Flags;
   llvm::yaml::Hex64 Entry;
-};
-
-struct SectionName {
-  StringRef Section;
-};
-
-struct ProgramHeader {
-  ELF_PT Type;
-  ELF_PF Flags;
-  llvm::yaml::Hex64 VAddr;
-  llvm::yaml::Hex64 PAddr;
-  std::vector<SectionName> Sections;
 };
 
 struct Symbol {
@@ -197,7 +183,6 @@ struct MipsABIFlags : Section {
 
 struct Object {
   FileHeader Header;
-  std::vector<ProgramHeader> ProgramHeaders;
   std::vector<std::unique_ptr<Section>> Sections;
   // Although in reality the symbols reside in a section, it is a lot
   // cleaner and nicer if we read them from the YAML as a separate
@@ -209,12 +194,10 @@ struct Object {
 } // end namespace ELFYAML
 } // end namespace llvm
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Section>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Symbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionOrType)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionName)
 
 namespace llvm {
 namespace yaml {
@@ -222,10 +205,6 @@ namespace yaml {
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_ET> {
   static void enumeration(IO &IO, ELFYAML::ELF_ET &Value);
-};
-
-template <> struct ScalarEnumerationTraits<ELFYAML::ELF_PT> {
-  static void enumeration(IO &IO, ELFYAML::ELF_PT &Value);
 };
 
 template <>
@@ -251,10 +230,6 @@ struct ScalarEnumerationTraits<ELFYAML::ELF_ELFOSABI> {
 template <>
 struct ScalarBitSetTraits<ELFYAML::ELF_EF> {
   static void bitset(IO &IO, ELFYAML::ELF_EF &Value);
-};
-
-template <> struct ScalarBitSetTraits<ELFYAML::ELF_PF> {
-  static void bitset(IO &IO, ELFYAML::ELF_PF &Value);
 };
 
 template <>
@@ -327,10 +302,6 @@ struct MappingTraits<ELFYAML::FileHeader> {
   static void mapping(IO &IO, ELFYAML::FileHeader &FileHdr);
 };
 
-template <> struct MappingTraits<ELFYAML::ProgramHeader> {
-  static void mapping(IO &IO, ELFYAML::ProgramHeader &FileHdr);
-};
-
 template <>
 struct MappingTraits<ELFYAML::Symbol> {
   static void mapping(IO &IO, ELFYAML::Symbol &Symbol);
@@ -358,10 +329,6 @@ struct MappingTraits<ELFYAML::Object> {
 
 template <> struct MappingTraits<ELFYAML::SectionOrType> {
   static void mapping(IO &IO, ELFYAML::SectionOrType &sectionOrType);
-};
-
-template <> struct MappingTraits<ELFYAML::SectionName> {
-  static void mapping(IO &IO, ELFYAML::SectionName &sectionName);
 };
 
 } // end namespace yaml

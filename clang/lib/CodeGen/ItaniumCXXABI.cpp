@@ -157,17 +157,9 @@ public:
                                Address Ptr, QualType ElementType,
                                const CXXDestructorDecl *Dtor) override;
 
-  /// Itanium says that an _Unwind_Exception has to be "double-word"
-  /// aligned (and thus the end of it is also so-aligned), meaning 16
-  /// bytes.  Of course, that was written for the actual Itanium,
-  /// which is a 64-bit platform.  Classically, the ABI doesn't really
-  /// specify the alignment on other platforms, but in practice
-  /// libUnwind declares the struct with __attribute__((aligned)), so
-  /// we assume that alignment here.  (It's generally 16 bytes, but
-  /// some targets overwrite it.)
   CharUnits getAlignmentOfExnObject() {
-    auto align = CGM.getContext().getTargetDefaultAlignForAttributeAligned();
-    return CGM.getContext().toCharUnitsFromBits(align);
+    unsigned Align = CGM.getContext().getTargetInfo().getExnObjectAlignment();
+    return CGM.getContext().toCharUnitsFromBits(Align);
   }
 
   void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) override;
@@ -292,14 +284,6 @@ public:
     // linkage together with vtables when needed.
     if (ForVTable && !Thunk->hasLocalLinkage())
       Thunk->setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);
-
-    // Propagate dllexport storage, to enable the linker to generate import
-    // thunks as necessary (e.g. when a parent class has a key function and a
-    // child class doesn't, and the construction vtable for the parent in the
-    // child needs to reference the parent's thunks).
-    const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
-    if (MD->hasAttr<DLLExportAttr>())
-      Thunk->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
   }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
@@ -2121,14 +2105,13 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
       (UseARMGuardVarABI && !useInt8GuardVariable)
           ? Builder.CreateAnd(LI, llvm::ConstantInt::get(CGM.Int8Ty, 1))
           : LI;
-  llvm::Value *NeedsInit = Builder.CreateIsNull(V, "guard.uninitialized");
+  llvm::Value *isInitialized = Builder.CreateIsNull(V, "guard.uninitialized");
 
   llvm::BasicBlock *InitCheckBlock = CGF.createBasicBlock("init.check");
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("init.end");
 
   // Check if the first byte of the guard variable is zero.
-  CGF.EmitCXXGuardedInitBranch(NeedsInit, InitCheckBlock, EndBlock,
-                               CodeGenFunction::GuardKind::VariableGuard, &D);
+  Builder.CreateCondBr(isInitialized, InitCheckBlock, EndBlock);
 
   CGF.EmitBlock(InitCheckBlock);
 

@@ -20,7 +20,7 @@ if(POLICY CMP0057)
 endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 6)
+  set(LLVM_VERSION_MAJOR 5)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -29,7 +29,7 @@ if(NOT DEFINED LLVM_VERSION_PATCH)
   set(LLVM_VERSION_PATCH 0)
 endif()
 if(NOT DEFINED LLVM_VERSION_SUFFIX)
-  set(LLVM_VERSION_SUFFIX svn)
+  set(LLVM_VERSION_SUFFIX "")
 endif()
 
 if (POLICY CMP0048)
@@ -362,8 +362,6 @@ set(LLVM_TARGET_ARCH "host"
   CACHE STRING "Set target to use for LLVM JIT or use \"host\" for automatic detection.")
 
 option(LLVM_ENABLE_TERMINFO "Use terminfo database if available." ON)
-
-option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
 option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
 
@@ -845,6 +843,15 @@ add_subdirectory(lib/TableGen)
 
 add_subdirectory(utils/TableGen)
 
+# Force target to be built as soon as possible. Clang modules builds depend
+# header-wise on it as they ship all headers from the umbrella folders. Building
+# an entire module might include header, which depends on intrinsics_gen. This
+# should be right after LLVMSupport and LLVMTableGen otherwise we introduce a
+# circular dependence.
+if (LLVM_ENABLE_MODULES)
+  list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
+endif(LLVM_ENABLE_MODULES)
+
 add_subdirectory(include/llvm)
 
 add_subdirectory(lib)
@@ -897,7 +904,6 @@ if( LLVM_INCLUDE_TESTS )
       NO_INSTALL
       ALWAYS_CLEAN)
   endif()
-  add_subdirectory(utils/lit)
   add_subdirectory(test)
   add_subdirectory(unittests)
   if( LLVM_INCLUDE_UTILS )

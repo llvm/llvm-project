@@ -12,17 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/IntervalPartition.h"
-#include "llvm/Analysis/Interval.h"
 #include "llvm/Analysis/IntervalIterator.h"
-#include "llvm/Pass.h"
-#include <cassert>
-#include <utility>
-
 using namespace llvm;
 
 char IntervalPartition::ID = 0;
-
 INITIALIZE_PASS(IntervalPartition, "intervals",
                 "Interval Partition Construction", true, true)
 
@@ -47,6 +40,7 @@ void IntervalPartition::print(raw_ostream &O, const Module*) const {
 // addIntervalToPartition - Add an interval to the internal list of intervals,
 // and then add mappings from all of the basic blocks in the interval to the
 // interval itself (in the IntervalMap).
+//
 void IntervalPartition::addIntervalToPartition(Interval *I) {
   Intervals.push_back(I);
 
@@ -60,6 +54,7 @@ void IntervalPartition::addIntervalToPartition(Interval *I) {
 // the interval data structures.  After interval generation is complete,
 // run through all of the intervals and propagate successor info as
 // predecessor info.
+//
 void IntervalPartition::updatePredecessors(Interval *Int) {
   BasicBlock *Header = Int->getHeaderNode();
   for (BasicBlock *Successor : Int->Successors)
@@ -68,6 +63,7 @@ void IntervalPartition::updatePredecessors(Interval *Int) {
 
 // IntervalPartition ctor - Build the first level interval partition for the
 // specified function...
+//
 bool IntervalPartition::runOnFunction(Function &F) {
   // Pass false to intervals_begin because we take ownership of it's memory
   function_interval_iterator I = intervals_begin(&F, false);
@@ -88,9 +84,11 @@ bool IntervalPartition::runOnFunction(Function &F) {
   return false;
 }
 
+
 // IntervalPartition ctor - Build a reduced interval partition from an
 // existing interval graph.  This takes an additional boolean parameter to
 // distinguish it from a copy constructor.  Always pass in false for now.
+//
 IntervalPartition::IntervalPartition(IntervalPartition &IP, bool)
   : FunctionPass(ID) {
   assert(IP.getRootInterval() && "Cannot operate on empty IntervalPartitions!");
@@ -112,3 +110,4 @@ IntervalPartition::IntervalPartition(IntervalPartition &IP, bool)
   for (unsigned i = 0, e = Intervals.size(); i != e; ++i)
     updatePredecessors(Intervals[i]);
 }
+

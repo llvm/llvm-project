@@ -367,45 +367,28 @@ void ASTStmtReader::VisitMSAsmStmt(MSAsmStmt *S) {
 }
 
 void ASTStmtReader::VisitCoroutineBodyStmt(CoroutineBodyStmt *S) {
-  VisitStmt(S);
-  assert(Record.peekInt() == S->NumParams);
-  Record.skipInts(1);
-  auto *StoredStmts = S->getStoredStmts();
-  for (unsigned i = 0;
-       i < CoroutineBodyStmt::SubStmt::FirstParamMove + S->NumParams; ++i)
-    StoredStmts[i] = Record.readSubStmt();
+  // FIXME: Implement coroutine serialization.
+  llvm_unreachable("unimplemented");
 }
 
 void ASTStmtReader::VisitCoreturnStmt(CoreturnStmt *S) {
-  VisitStmt(S);
-  S->CoreturnLoc = Record.readSourceLocation();
-  for (auto &SubStmt: S->SubStmts)
-    SubStmt = Record.readSubStmt();
-  S->IsImplicit = Record.readInt() != 0;
+  // FIXME: Implement coroutine serialization.
+  llvm_unreachable("unimplemented");
 }
 
-void ASTStmtReader::VisitCoawaitExpr(CoawaitExpr *E) {
-  VisitExpr(E);
-  E->KeywordLoc = ReadSourceLocation();
-  for (auto &SubExpr: E->SubExprs)
-    SubExpr = Record.readSubStmt();
-  E->OpaqueValue = cast_or_null<OpaqueValueExpr>(Record.readSubStmt());
-  E->setIsImplicit(Record.readInt() != 0);
+void ASTStmtReader::VisitCoawaitExpr(CoawaitExpr *S) {
+  // FIXME: Implement coroutine serialization.
+  llvm_unreachable("unimplemented");
 }
 
-void ASTStmtReader::VisitCoyieldExpr(CoyieldExpr *E) {
-  VisitExpr(E);
-  E->KeywordLoc = ReadSourceLocation();
-  for (auto &SubExpr: E->SubExprs)
-    SubExpr = Record.readSubStmt();
-  E->OpaqueValue = cast_or_null<OpaqueValueExpr>(Record.readSubStmt());
+void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *S) {
+  // FIXME: Implement coroutine serialization.
+  llvm_unreachable("unimplemented");
 }
 
-void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
-  VisitExpr(E);
-  E->KeywordLoc = ReadSourceLocation();
-  for (auto &SubExpr: E->SubExprs)
-    SubExpr = Record.readSubStmt();
+void ASTStmtReader::VisitCoyieldExpr(CoyieldExpr *S) {
+  // FIXME: Implement coroutine serialization.
+  llvm_unreachable("unimplemented");
 }
 
 void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
@@ -1854,9 +1837,6 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_task_reduction:
     C = OMPTaskReductionClause::CreateEmpty(Context, Reader->Record.readInt());
     break;
-  case OMPC_in_reduction:
-    C = OMPInReductionClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
   case OMPC_linear:
     C = OMPLinearClause::CreateEmpty(Context, Reader->Record.readInt());
     break;
@@ -2193,44 +2173,6 @@ void OMPClauseReader::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
   for (unsigned I = 0; I != NumVars; ++I)
     Vars.push_back(Reader->Record.readSubExpr());
   C->setReductionOps(Vars);
-}
-
-void OMPClauseReader::VisitOMPInReductionClause(OMPInReductionClause *C) {
-  VisitOMPClauseWithPostUpdate(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  NestedNameSpecifierLoc NNSL = Reader->Record.readNestedNameSpecifierLoc();
-  DeclarationNameInfo DNI;
-  Reader->ReadDeclarationNameInfo(DNI);
-  C->setQualifierLoc(NNSL);
-  C->setNameInfo(DNI);
-
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivates(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setLHSExprs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setRHSExprs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setReductionOps(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setTaskgroupDescriptors(Vars);
 }
 
 void OMPClauseReader::VisitOMPLinearClause(OMPLinearClause *C) {
@@ -2807,7 +2749,6 @@ void ASTStmtReader::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *D) {
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
-  D->setReductionRef(Record.readSubExpr());
 }
 
 void ASTStmtReader::VisitOMPFlushDirective(OMPFlushDirective *D) {
@@ -4006,29 +3947,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = LambdaExpr::CreateDeserialized(Context, NumCaptures);
       break;
     }
-
-    case STMT_COROUTINE_BODY: {
-      unsigned NumParams = Record[ASTStmtReader::NumStmtFields];
-      S = CoroutineBodyStmt::Create(Context, Empty, NumParams);
-      break;
-    }
-
-    case STMT_CORETURN:
-      S = new (Context) CoreturnStmt(Empty);
-      break;
-
-    case EXPR_COAWAIT:
-      S = new (Context) CoawaitExpr(Empty);
-      break;
-
-    case EXPR_COYIELD:
-      S = new (Context) CoyieldExpr(Empty);
-      break;
-
-    case EXPR_DEPENDENT_COAWAIT:
-      S = new (Context) DependentCoawaitExpr(Empty);
-      break;
-
     }
 
     // We hit a STMT_STOP, so we're done with this expression.

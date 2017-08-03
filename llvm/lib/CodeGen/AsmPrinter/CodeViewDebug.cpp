@@ -546,6 +546,8 @@ void CodeViewDebug::emitTypeInformation() {
   }
 }
 
+namespace {
+
 static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
   switch (DWLang) {
   case dwarf::DW_LANG_C:
@@ -571,8 +573,6 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     return SourceLanguage::Cobol;
   case dwarf::DW_LANG_Java:
     return SourceLanguage::Java;
-  case dwarf::DW_LANG_D:
-    return SourceLanguage::D;
   default:
     // There's no CodeView representation for this language, and CV doesn't
     // have an "unknown" option for the language field, so we'll use MASM,
@@ -581,11 +581,9 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
   }
 }
 
-namespace {
 struct Version {
   int Part[4];
 };
-} // end anonymous namespace
 
 // Takes a StringRef like "clang 4.0.0.0 (other nonsense 123)" and parses out
 // the version number.
@@ -608,18 +606,19 @@ static Version parseVersion(StringRef Name) {
 
 static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
   switch (Type) {
-  case Triple::ArchType::x86:
-    return CPUType::Pentium3;
-  case Triple::ArchType::x86_64:
-    return CPUType::X64;
-  case Triple::ArchType::thumb:
-    return CPUType::Thumb;
-  case Triple::ArchType::aarch64:
-    return CPUType::ARM64;
-  default:
-    report_fatal_error("target architecture doesn't map to a CodeView CPUType");
+    case Triple::ArchType::x86:
+      return CPUType::Pentium3;
+    case Triple::ArchType::x86_64:
+      return CPUType::X64;
+    case Triple::ArchType::thumb:
+      return CPUType::Thumb;
+    default:
+      report_fatal_error("target architecture doesn't map to a CodeView "
+                         "CPUType");
   }
 }
+
+} // end anonymous namespace
 
 void CodeViewDebug::emitCompilerInformation() {
   MCContext &Context = MMI->getContext();
@@ -2168,8 +2167,6 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
   if (!DL && MI->getParent() != PrevInstBB) {
     for (const auto &NextMI : *MI->getParent()) {
-      if (NextMI.isDebugValue())
-        continue;
       DL = NextMI.getDebugLoc();
       if (DL)
         break;

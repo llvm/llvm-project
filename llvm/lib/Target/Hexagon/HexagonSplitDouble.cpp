@@ -1,4 +1,4 @@
-//===- HexagonSplitDouble.cpp ---------------------------------------------===//
+//===--- HexagonSplitDouble.cpp -------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -51,18 +51,19 @@ namespace llvm {
 
 } // end namespace llvm
 
-static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
-    cl::desc("Maximum number of split partitions"));
-static cl::opt<bool> MemRefsFixed("hsdr-no-mem", cl::Hidden, cl::init(true),
-    cl::desc("Do not split loads or stores"));
-
 namespace {
+
+  static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
+      cl::desc("Maximum number of split partitions"));
+  static cl::opt<bool> MemRefsFixed("hsdr-no-mem", cl::Hidden, cl::init(true),
+      cl::desc("Do not split loads or stores"));
 
   class HexagonSplitDoubleRegs : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonSplitDoubleRegs() : MachineFunctionPass(ID) {
+    HexagonSplitDoubleRegs() : MachineFunctionPass(ID), TRI(nullptr),
+        TII(nullptr) {
       initializeHexagonSplitDoubleRegsPass(*PassRegistry::getPassRegistry());
     }
 
@@ -81,16 +82,16 @@ namespace {
   private:
     static const TargetRegisterClass *const DoubleRC;
 
-    const HexagonRegisterInfo *TRI = nullptr;
-    const HexagonInstrInfo *TII = nullptr;
+    const HexagonRegisterInfo *TRI;
+    const HexagonInstrInfo *TII;
     const MachineLoopInfo *MLI;
     MachineRegisterInfo *MRI;
 
-    using USet = std::set<unsigned>;
-    using UUSetMap = std::map<unsigned, USet>;
-    using UUPair = std::pair<unsigned, unsigned>;
-    using UUPairMap = std::map<unsigned, UUPair>;
-    using LoopRegMap = std::map<const MachineLoop *, USet>;
+    typedef std::set<unsigned> USet;
+    typedef std::map<unsigned,USet> UUSetMap;
+    typedef std::pair<unsigned,unsigned> UUPair;
+    typedef std::map<unsigned,UUPair> UUPairMap;
+    typedef std::map<const MachineLoop*,USet> LoopRegMap;
 
     bool isInduction(unsigned Reg, LoopRegMap &IRM) const;
     bool isVolatileInstr(const MachineInstr *MI) const;
@@ -116,17 +117,16 @@ namespace {
     bool splitPartition(const USet &Part);
 
     static int Counter;
-
     static void dump_partition(raw_ostream&, const USet&,
        const TargetRegisterInfo&);
   };
 
-} // end anonymous namespace
+  char HexagonSplitDoubleRegs::ID;
+  int HexagonSplitDoubleRegs::Counter = 0;
+  const TargetRegisterClass *const HexagonSplitDoubleRegs::DoubleRC
+      = &Hexagon::DoubleRegsRegClass;
 
-char HexagonSplitDoubleRegs::ID;
-int HexagonSplitDoubleRegs::Counter = 0;
-const TargetRegisterClass *const HexagonSplitDoubleRegs::DoubleRC =
-    &Hexagon::DoubleRegsRegClass;
+} // end anonymous namespace
 
 INITIALIZE_PASS(HexagonSplitDoubleRegs, "hexagon-split-double",
   "Hexagon Split Double Registers", false, false)
@@ -217,8 +217,8 @@ bool HexagonSplitDoubleRegs::isFixedInstr(const MachineInstr *MI) const {
 }
 
 void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
-  using UUMap = std::map<unsigned, unsigned>;
-  using UVect = std::vector<unsigned>;
+  typedef std::map<unsigned,unsigned> UUMap;
+  typedef std::vector<unsigned> UVect;
 
   unsigned NumRegs = MRI->getNumVirtRegs();
   BitVector DoubleRegs(NumRegs);
@@ -501,8 +501,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
 
   // Get the set of all double registers defined by phi nodes in the
   // loop header.
-  using UVect = std::vector<unsigned>;
-
+  typedef std::vector<unsigned> UVect;
   UVect DP;
   for (auto &MI : *HB) {
     if (!MI.isPHI())
@@ -543,8 +542,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
 }
 
 void HexagonSplitDoubleRegs::collectIndRegs(LoopRegMap &IRM) {
-  using LoopVector = std::vector<MachineLoop *>;
-
+  typedef std::vector<MachineLoop*> LoopVector;
   LoopVector WorkQ;
 
   for (auto I : *MLI)
@@ -1099,9 +1097,8 @@ void HexagonSplitDoubleRegs::collapseRegPairs(MachineInstr *MI,
 }
 
 bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
-  using MISet = std::set<MachineInstr *>;
-
   const TargetRegisterClass *IntRC = &Hexagon::IntRegsRegClass;
+  typedef std::set<MachineInstr*> MISet;
   bool Changed = false;
 
   DEBUG(dbgs() << "Splitting partition: "; dump_partition(dbgs(), Part, *TRI);

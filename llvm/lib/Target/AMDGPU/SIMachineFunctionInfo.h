@@ -186,10 +186,6 @@ private:
   // Other shaders indirect 64-bits at sgpr[0:1]
   bool ImplicitBufferPtr : 1;
 
-  // Pointer to where the ABI inserts special kernel arguments separate from the
-  // user arguments. This is an offset from the KernargSegmentPtr.
-  bool ImplicitArgPtr : 1;
-
   MCPhysReg getNextUserSGPR() const {
     assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
     return AMDGPU::SGPR0 + NumUserSGPRs;
@@ -211,19 +207,6 @@ public:
     bool hasReg() { return VGPR != AMDGPU::NoRegister;}
   };
 
-  struct SGPRSpillVGPRCSR {
-    // VGPR used for SGPR spills
-    unsigned VGPR;
-
-    // If the VGPR is a CSR, the stack slot used to save/restore it in the
-    // prolog/epilog.
-    Optional<int> FI;
-
-    SGPRSpillVGPRCSR(unsigned V, Optional<int> F) :
-      VGPR(V),
-      FI(F) {}
-  };
-
 private:
   // SGPR->VGPR spilling support.
   typedef std::pair<unsigned, unsigned> SpillRegMask;
@@ -232,7 +215,7 @@ private:
   // frameindex key.
   DenseMap<int, std::vector<SpilledReg>> SGPRToVGPRSpills;
   unsigned NumVGPRSpillLanes = 0;
-  SmallVector<SGPRSpillVGPRCSR, 2> SpillVGPRs;
+  SmallVector<unsigned, 2> SpillVGPRs;
 
 public:
 
@@ -242,10 +225,6 @@ public:
     auto I = SGPRToVGPRSpills.find(FrameIndex);
     return (I == SGPRToVGPRSpills.end()) ?
       ArrayRef<SpilledReg>() : makeArrayRef(I->second);
-  }
-
-  ArrayRef<SGPRSpillVGPRCSR> getSGPRSpillVGPRs() const {
-    return SpillVGPRs;
   }
 
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
@@ -365,10 +344,6 @@ public:
 
   bool hasWorkItemIDZ() const {
     return WorkItemIDZ;
-  }
-
-  bool hasImplicitArgPtr() const {
-    return ImplicitArgPtr;
   }
 
   bool hasImplicitBufferPtr() const {

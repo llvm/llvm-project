@@ -380,8 +380,7 @@ FLAGS_ENUM(BreakpointEventType){
     eBreakpointEventTypeCommandChanged = (1u << 8),
     eBreakpointEventTypeConditionChanged = (1u << 9),
     eBreakpointEventTypeIgnoreChanged = (1u << 10),
-    eBreakpointEventTypeThreadChanged = (1u << 11),
-    eBreakpointEventTypeAutoContinueChanged = (1u << 12)};
+    eBreakpointEventTypeThreadChanged = (1u << 11)};
 
 FLAGS_ENUM(WatchpointEventType){
     eWatchpointEventTypeInvalidType = (1u << 0),
@@ -567,7 +566,6 @@ enum CommandArgumentType {
   eArgTypeWatchpointIDRange,
   eArgTypeWatchType,
   eArgRawInput,
-  eArgTypeCommand,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };

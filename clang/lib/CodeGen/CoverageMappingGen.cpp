@@ -73,36 +73,6 @@ public:
   }
 };
 
-/// Spelling locations for the start and end of a source region.
-struct SpellingRegion {
-  /// The line where the region starts.
-  unsigned LineStart;
-
-  /// The column where the region starts.
-  unsigned ColumnStart;
-
-  /// The line where the region ends.
-  unsigned LineEnd;
-
-  /// The column where the region ends.
-  unsigned ColumnEnd;
-
-  SpellingRegion(SourceManager &SM, SourceLocation LocStart,
-                 SourceLocation LocEnd) {
-    LineStart = SM.getSpellingLineNumber(LocStart);
-    ColumnStart = SM.getSpellingColumnNumber(LocStart);
-    LineEnd = SM.getSpellingLineNumber(LocEnd);
-    ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
-  }
-
-  /// Check if the start and end locations appear in source order, i.e
-  /// top->bottom, left->right.
-  bool isInSourceOrder() const {
-    return (LineStart < LineEnd) ||
-           (LineStart == LineEnd && ColumnStart <= ColumnEnd);
-  }
-};
-
 /// \brief Provides the common functionality for the different
 /// coverage mapping region builders.
 class CoverageMappingBuilder {
@@ -271,9 +241,12 @@ public:
       auto CovFileID = getCoverageFileID(LocStart);
       if (!CovFileID)
         continue;
-      SpellingRegion SR{SM, LocStart, LocEnd};
+      unsigned LineStart = SM.getSpellingLineNumber(LocStart);
+      unsigned ColumnStart = SM.getSpellingColumnNumber(LocStart);
+      unsigned LineEnd = SM.getSpellingLineNumber(LocEnd);
+      unsigned ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
       auto Region = CounterMappingRegion::makeSkipped(
-          *CovFileID, SR.LineStart, SR.ColumnStart, SR.LineEnd, SR.ColumnEnd);
+          *CovFileID, LineStart, ColumnStart, LineEnd, ColumnEnd);
       // Make sure that we only collect the regions that are inside
       // the souce code of this function.
       if (Region.LineStart >= FileLineRanges[*CovFileID].first &&
@@ -311,12 +284,16 @@ public:
       if (Filter.count(std::make_pair(LocStart, LocEnd)))
         continue;
 
-      // Find the spelling locations for the mapping region.
-      SpellingRegion SR{SM, LocStart, LocEnd};
-      assert(SR.isInSourceOrder() && "region start and end out of order");
+      // Find the spilling locations for the mapping region.
+      unsigned LineStart = SM.getSpellingLineNumber(LocStart);
+      unsigned ColumnStart = SM.getSpellingColumnNumber(LocStart);
+      unsigned LineEnd = SM.getSpellingLineNumber(LocEnd);
+      unsigned ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
+
+      assert(LineStart <= LineEnd && "region start and end out of order");
       MappingRegions.push_back(CounterMappingRegion::makeRegion(
-          Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
-          SR.LineEnd, SR.ColumnEnd));
+          Region.getCounter(), *CovFileID, LineStart, ColumnStart, LineEnd,
+          ColumnEnd));
     }
   }
 
@@ -340,11 +317,14 @@ public:
              "region spans multiple files");
       Filter.insert(std::make_pair(ParentLoc, LocEnd));
 
-      SpellingRegion SR{SM, ParentLoc, LocEnd};
-      assert(SR.isInSourceOrder() && "region start and end out of order");
+      unsigned LineStart = SM.getSpellingLineNumber(ParentLoc);
+      unsigned ColumnStart = SM.getSpellingColumnNumber(ParentLoc);
+      unsigned LineEnd = SM.getSpellingLineNumber(LocEnd);
+      unsigned ColumnEnd = SM.getSpellingColumnNumber(LocEnd);
+
       MappingRegions.push_back(CounterMappingRegion::makeExpansion(
-          *ParentFileID, *ExpandedFileID, SR.LineStart, SR.ColumnStart,
-          SR.LineEnd, SR.ColumnEnd));
+          *ParentFileID, *ExpandedFileID, LineStart, ColumnStart, LineEnd,
+          ColumnEnd));
     }
     return Filter;
   }
@@ -501,17 +481,15 @@ struct CounterCoverageMappingBuilder
 
   /// \brief Propagate counts through the children of \c S.
   Counter propagateCounts(Counter TopCount, const Stmt *S) {
-    SourceLocation StartLoc = getStart(S);
-    SourceLocation EndLoc = getEnd(S);
-    size_t Index = pushRegion(TopCount, StartLoc, EndLoc);
+    size_t Index = pushRegion(TopCount, getStart(S), getEnd(S));
     Visit(S);
     Counter ExitCount = getRegion().getCounter();
     popRegions(Index);
 
     // The statement may be spanned by an expansion. Make sure we handle a file
     // exit out of this expansion before moving to the next statement.
-    if (SM.isBeforeInTranslationUnit(StartLoc, S->getLocStart()))
-      MostRecentLocation = EndLoc;
+    if (SM.isBeforeInTranslationUnit(getStart(S), S->getLocStart()))
+      MostRecentLocation = getEnd(S);
 
     return ExitCount;
   }
@@ -704,8 +682,6 @@ struct CounterCoverageMappingBuilder
     assert(!BreakContinueStack.empty() && "break not in a loop or switch!");
     BreakContinueStack.back().BreakCount = addCounters(
         BreakContinueStack.back().BreakCount, getRegion().getCounter());
-    // FIXME: a break in a switch should terminate regions for all preceding
-    // case statements, not just the most recent one.
     terminateRegion(S);
   }
 
@@ -847,20 +823,15 @@ struct CounterCoverageMappingBuilder
     extendRegion(Body);
     if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
       if (!CS->body_empty()) {
-        // Make a region for the body of the switch.  If the body starts with
-        // a case, that case will reuse this region; otherwise, this covers
-        // the unreachable code at the beginning of the switch body.
+        // The body of the switch needs a zero region so that fallthrough counts
+        // behave correctly, but it would be misleading to include the braces of
+        // the compound statement in the zeroed area, so we need to handle this
+        // specially.
         size_t Index =
-            pushRegion(Counter::getZero(), getStart(CS->body_front()));
+            pushRegion(Counter::getZero(), getStart(CS->body_front()),
+                       getEnd(CS->body_back()));
         for (const auto *Child : CS->children())
           Visit(Child);
-
-        // Set the end for the body of the switch, if it isn't already set.
-        for (size_t i = RegionStack.size(); i != Index; --i) {
-          if (!RegionStack[i - 1].hasEndLoc())
-            RegionStack[i - 1].setEndLoc(getEnd(CS->body_back()));
-        }
-
         popRegions(Index);
       }
     } else

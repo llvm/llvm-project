@@ -11,7 +11,6 @@ set(ASAN_SOURCES
   asan_globals.cc
   asan_globals_win.cc
   asan_interceptors.cc
-  asan_interceptors_memintrinsics.cc
   asan_linux.cc
   asan_mac.cc
   asan_malloc_linux.cc
@@ -22,7 +21,6 @@ set(ASAN_SOURCES
   asan_posix.cc
   asan_report.cc
   asan_rtl.cc
-  asan_shadow_setup.cc
   asan_stack.cc
   asan_stats.cc
   asan_suppressions.cc
@@ -41,7 +39,7 @@ set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
 append_rtti_flag(OFF ASAN_CFLAGS)
 
-set(ASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
+set(ASAN_DYNAMIC_LINK_FLAGS)
 
 if(ANDROID)
 # On Android, -z global does not do what it is documented to do.
@@ -66,15 +64,13 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG ASAN_DYNAMIC_LINK_FLAGS)
 
-set(ASAN_DYNAMIC_LIBS ${SANITIZER_COMMON_LINK_LIBS})
-
+append_list_if(COMPILER_RT_HAS_LIBC c ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBDL dl ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBM m ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread ASAN_DYNAMIC_LIBS)
+append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_DYNAMIC_LIBS)
-
-list(APPEND ASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARY})
 
 # Compile ASan sources into an object library.
 

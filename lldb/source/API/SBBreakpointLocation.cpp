@@ -12,7 +12,6 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/API/SBStringList.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -101,16 +100,6 @@ bool SBBreakpointLocation::IsEnabled() {
     return false;
 }
 
-uint32_t SBBreakpointLocation::GetHitCount() {
-  BreakpointLocationSP loc_sp = GetSP();
-  if (loc_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        loc_sp->GetTarget().GetAPIMutex());
-    return loc_sp->GetHitCount();
-  } else
-    return 0;
-}
-
 uint32_t SBBreakpointLocation::GetIgnoreCount() {
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
@@ -147,25 +136,6 @@ const char *SBBreakpointLocation::GetCondition() {
     return loc_sp->GetConditionText();
   }
   return NULL;
-}
-
-void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
-  BreakpointLocationSP loc_sp = GetSP();
-  if (loc_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        loc_sp->GetTarget().GetAPIMutex());
-    loc_sp->SetAutoContinue(auto_continue);
-  }
-}
-
-bool SBBreakpointLocation::GetAutoContinue() {
-  BreakpointLocationSP loc_sp = GetSP();
-  if (loc_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        loc_sp->GetTarget().GetAPIMutex());
-    return loc_sp->IsAutoContinue();
-  }
-  return false;
 }
 
 void SBBreakpointLocation::SetScriptCallbackFunction(
@@ -213,33 +183,6 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
     sb_error.SetErrorString("invalid breakpoint");
 
   return sb_error;
-}
-
-void SBBreakpointLocation::SetCommandLineCommands(SBStringList &commands) {
-  BreakpointLocationSP loc_sp = GetSP();
-  if (!loc_sp)
-    return;
-  if (commands.GetSize() == 0)
-    return;
-
-  std::lock_guard<std::recursive_mutex> guard(
-      loc_sp->GetTarget().GetAPIMutex());
-  std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
-      new BreakpointOptions::CommandData(*commands, eScriptLanguageNone));
-
-  loc_sp->GetLocationOptions()->SetCommandDataCallback(cmd_data_up);
-}
-
-bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
-  BreakpointLocationSP loc_sp = GetSP();
-  if (!loc_sp)
-    return false;
-  StringList command_list;
-  bool has_commands =
-      loc_sp->GetLocationOptions()->GetCommandLineCallbacks(command_list);
-  if (has_commands)
-    commands.AppendList(command_list);
-  return has_commands;
 }
 
 void SBBreakpointLocation::SetThreadID(tid_t thread_id) {

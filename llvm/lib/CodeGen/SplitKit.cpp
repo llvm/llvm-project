@@ -552,7 +552,7 @@ SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
     if ((SubRegMask & ~LaneMask).any())
       continue;
 
-    unsigned PopCount = SubRegMask.getNumLanes();
+    unsigned PopCount = countPopulation(SubRegMask.getAsInteger());
     PossibleIndexes.push_back(Idx);
     if (PopCount > BestCover) {
       BestCover = PopCount;
@@ -583,8 +583,8 @@ SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
 
       // Try to cover as much of the remaining lanes as possible but
       // as few of the already covered lanes as possible.
-      int Cover = (SubRegMask & LanesLeft).getNumLanes()
-                - (SubRegMask & ~LanesLeft).getNumLanes();
+      int Cover = countPopulation((SubRegMask & LanesLeft).getAsInteger())
+                - countPopulation((SubRegMask & ~LanesLeft).getAsInteger());
       if (Cover > BestCover) {
         BestCover = Cover;
         BestIdx = Idx;

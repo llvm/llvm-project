@@ -12,7 +12,6 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
-#include "lldb/API/SBProcessInfo.h"
 #include "lldb/API/SBQueue.h"
 #include "lldb/API/SBTarget.h"
 #include <stdio.h>
@@ -380,15 +379,6 @@ public:
   ///     A list of all witin the process memory regions.
   //------------------------------------------------------------------
   lldb::SBMemoryRegionInfoList GetMemoryRegions();
-
-  //------------------------------------------------------------------
-  /// Return information about the process.
-  ///
-  /// Valid process info will only be returned when the process is
-  /// alive, use SBProcessInfo::IsValid() to check returned info is
-  /// valid.
-  //------------------------------------------------------------------
-  lldb::SBProcessInfo GetProcessInfo();
 
 protected:
   friend class SBAddress;

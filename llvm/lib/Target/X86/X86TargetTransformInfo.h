@@ -85,8 +85,7 @@ public:
                             ArrayRef<Value *> Args, FastMathFlags FMF,
                             unsigned VF = 1);
 
-  int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
-                                 bool IsPairwiseForm);
+  int getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwiseForm);
 
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                  unsigned Factor, ArrayRef<unsigned> Indices,

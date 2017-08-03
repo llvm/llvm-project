@@ -616,10 +616,8 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   std::stable_sort(indexes.begin(), indexes.end(), comparator);
 
   // Remove any duplicates if requested
-  if (remove_duplicates) {
-    auto last = std::unique(indexes.begin(), indexes.end());
-    indexes.erase(last, indexes.end());
-  }
+  if (remove_duplicates)
+    std::unique(indexes.begin(), indexes.end());
 }
 
 uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,

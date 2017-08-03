@@ -29,8 +29,6 @@ add_compiler_rt_object_libraries(RTLSanCommon
 if(COMPILER_RT_HAS_LSAN)
   add_compiler_rt_component(lsan)
   if(APPLE)
-    set(LSAN_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
-
     add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
     add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
@@ -44,8 +42,7 @@ if(COMPILER_RT_HAS_LSAN)
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
       CFLAGS ${LSAN_CFLAGS}
-      LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
-      LINK_LIBS ${LSAN_LINK_LIBS}
+      LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET lsan)
   else()
     foreach(arch ${LSAN_SUPPORTED_ARCH})

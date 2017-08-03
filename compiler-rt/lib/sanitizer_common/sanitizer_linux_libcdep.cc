@@ -19,7 +19,6 @@
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
-#include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_freebsd.h"
 #include "sanitizer_linux.h"

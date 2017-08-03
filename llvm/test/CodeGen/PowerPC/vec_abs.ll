@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -march=ppc64le \
 ; RUN:          -mattr=+altivec -mattr=+vsx |  FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -march=ppc64le \
 ; RUN:          -mattr=+altivec -mattr=-vsx |  FileCheck %s \
 ; RUN:          -check-prefix=CHECK-NOVSX
 

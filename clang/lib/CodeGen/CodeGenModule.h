@@ -1239,8 +1239,7 @@ private:
 
   /// Set function attributes for a function declaration.
   void SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
-                             bool IsIncompleteFunction, bool IsThunk,
-                             ForDefinition_t IsForDefinition);
+                             bool IsIncompleteFunction, bool IsThunk);
 
   void EmitGlobalDefinition(GlobalDecl D, llvm::GlobalValue *GV = nullptr);
 

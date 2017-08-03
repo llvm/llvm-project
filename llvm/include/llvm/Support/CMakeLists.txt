@@ -9,6 +9,7 @@ function(find_first_existing_file out_var)
 endfunction()
 
 macro(find_first_existing_vc_file out_var path)
+  if ( LLVM_APPEND_VC_REV )
     find_program(git_executable NAMES git git.exe git.cmd)
     # Run from a subdirectory to force git to print an absolute path.
     execute_process(COMMAND ${git_executable} rev-parse --git-dir
@@ -29,6 +30,7 @@ macro(find_first_existing_vc_file out_var path)
         "${path}/.svn/entries" # SVN 1.6
       )
     endif()
+  endif()
 endmacro()
 
 find_first_existing_vc_file(llvm_vc "${LLVM_MAIN_SRC_DIR}")
@@ -38,20 +40,7 @@ set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSRevision.h")
 
 set(get_svn_script "${LLVM_CMAKE_PATH}/GenerateVersionFromCVS.cmake")
 
-file(WRITE "${version_inc}.empty" "")
-if((DEFINED llvm_vc) AND LLVM_APPEND_VC_REV)
-
-  execute_process(COMMAND ${CMAKE_COMMAND} -E compare_files
-      "${version_inc}.empty" "${version_inc}"
-      RESULT_VARIABLE files_not_equal
-      OUTPUT_QUIET
-      ERROR_QUIET)
-  # Remove ${version_inc} if it's empty -- toggling LLMV_APPEND_VC_REV
-  # from OFF to ON.
-  if(NOT files_not_equal)
-    file(REMOVE "${version_inc}")
-  endif()
-
+if(DEFINED llvm_vc)
   # Create custom target to generate the VC revision include.
   add_custom_command(OUTPUT "${version_inc}"
     DEPENDS "${llvm_vc}" "${get_svn_script}"
@@ -60,16 +49,13 @@ if((DEFINED llvm_vc) AND LLVM_APPEND_VC_REV)
                      "-DNAME=LLVM_REVISION"
                      "-DHEADER_FILE=${version_inc}"
                      -P "${get_svn_script}")
-else()
-  # Make sure ${version_inc} is an empty file.
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${version_inc}.empty" "${version_inc}")
-endif()
-file(REMOVE "${version_inc}.empty")
 
-# Mark the generated header as being generated.
-set_source_files_properties("${version_inc}"
-  PROPERTIES GENERATED TRUE
-             HEADER_FILE_ONLY TRUE)
+  # Mark the generated header as being generated.
+  set_source_files_properties("${version_inc}"
+    PROPERTIES GENERATED TRUE
+               HEADER_FILE_ONLY TRUE)
+else()
+  file(WRITE "${version_inc}" "")
+endif()
 
 add_custom_target(llvm_vcsrevision_h DEPENDS "${version_inc}")

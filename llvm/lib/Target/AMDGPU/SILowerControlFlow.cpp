@@ -149,19 +149,9 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineOperand &ImpDefSCC = MI.getOperand(4);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
 
-  // If there is only one use of save exec register and that use is SI_END_CF,
-  // we can optimize SI_IF by returning the full saved exec mask instead of
-  // just cleared bits.
-  bool SimpleIf = false;
-  auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
-  SimpleIf = U != MRI->use_instr_nodbg_end() &&
-             std::next(U) == MRI->use_instr_nodbg_end() &&
-             U->getOpcode() == AMDGPU::SI_END_CF;
-
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
-  unsigned CopyReg = SimpleIf ? SaveExecReg
-                       : MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
   MachineInstr *CopyExec =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addReg(AMDGPU::EXEC)
@@ -176,14 +166,11 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     .addReg(Cond.getReg());
   setImpSCCDefDead(*And, true);
 
-  MachineInstr *Xor = nullptr;
-  if (!SimpleIf) {
-    Xor =
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
-      .addReg(Tmp)
-      .addReg(CopyReg);
-    setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
-  }
+  MachineInstr *Xor =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
+    .addReg(Tmp)
+    .addReg(CopyReg);
+  setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
 
   // Use a copy that is a terminator to get correct spill code placement it with
   // fast regalloc.
@@ -207,8 +194,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // register.
   LIS->ReplaceMachineInstrInMaps(MI, *And);
 
-  if (!SimpleIf)
-    LIS->InsertMachineInstrInMaps(*Xor);
+  LIS->InsertMachineInstrInMaps(*Xor);
   LIS->InsertMachineInstrInMaps(*SetExec);
   LIS->InsertMachineInstrInMaps(*NewBr);
 
@@ -221,8 +207,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->removeInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(Tmp);
-  if (!SimpleIf)
-    LIS->createAndComputeVirtRegInterval(CopyReg);
+  LIS->createAndComputeVirtRegInterval(CopyReg);
 }
 
 void SILowerControlFlow::emitElse(MachineInstr &MI) {

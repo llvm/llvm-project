@@ -113,7 +113,8 @@ namespace HexagonISD {
     bool shouldExpandBuildVectorWithShuffles(EVT VT,
         unsigned DefinedValues) const override;
 
-    bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
+    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask, EVT VT)
+        const override;
 
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
     const char *getTargetNodeName(unsigned Opcode) const override;
@@ -230,8 +231,7 @@ namespace HexagonISD {
     /// mode is legal for a load/store of any legal type.
     /// TODO: Handle pre/postinc as well.
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS,
-                               Instruction *I = nullptr) const override;
+                               Type *Ty, unsigned AS) const override;
     /// Return true if folding a constant offset with the given GlobalAddress
     /// is legal.  It is frequently not legal in PIC relocation models.
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;

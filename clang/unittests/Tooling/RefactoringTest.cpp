@@ -25,6 +25,9 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/Refactor/IndexerQuery.h"
+#include "clang/Tooling/Refactor/RefactoringOperation.h"
+#include "clang/Tooling/Refactor/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Tooling.h"
@@ -1090,6 +1093,51 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
   EXPECT_TRUE(FileToReplaces.empty());
 }
 
+namespace {
+struct TestRefactoringValueOption final : RefactoringOption {
+  int Value;
+  TestRefactoringValueOption(int Value) : Value(Value) {}
+
+  static constexpr const char *Name = "test value option";
+};
+} // end anonymous namespace
+
+TEST(RefactoringOptionSet, AddGet) {
+  RefactoringOptionSet Options;
+  const TestRefactoringValueOption Kind(21);
+  const TestRefactoringValueOption DefaultKind(42);
+
+  EXPECT_EQ(Options.get<TestRefactoringValueOption>(), nullptr);
+  EXPECT_EQ(Options.get(DefaultKind).Value, DefaultKind.Value);
+
+  Options.add(Kind);
+
+  auto *Ptr = Options.get<TestRefactoringValueOption>();
+  ASSERT_TRUE(Ptr);
+  EXPECT_EQ(Ptr->Value, Kind.Value);
+  EXPECT_EQ(Options.get(DefaultKind).Value, Kind.Value);
+}
+
+namespace {
+struct TestRefactoringOption final : RefactoringOption {
+  int &Counter;
+  TestRefactoringOption(int &Counter) : Counter(Counter) {}
+  ~TestRefactoringOption() { ++Counter; }
+
+  static constexpr const char *Name = "test option";
+};
+} // end anonymous namespace
+
+TEST(RefactoringOptionSet, OptionDestroyed) {
+  int Counter = 0;
+  {
+    RefactoringOptionSet Options;
+    Options.add(TestRefactoringOption(Counter));
+    Options.add(TestRefactoringOption(Counter));
+  }
+  EXPECT_EQ(Counter, 3);
+}
+
 class AtomicChangeTest : public ::testing::Test {
   protected:
     void SetUp() override {
@@ -1295,426 +1343,126 @@ TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
       Replacement(Context.Sources, SourceLocation(), 0, "b")));
 }
 
-class ApplyAtomicChangesTest : public ::testing::Test {
-protected:
-  ApplyAtomicChangesTest() : FilePath("file.cc") {
-    Spec.Cleanup = true;
-    Spec.Format = ApplyChangesSpec::kAll;
-    Spec.Style = format::getLLVMStyle();
+namespace {
+
+class RefactoringOperationTest {
+  RefactoringActionType Type;
+  unsigned Line, Column;
+  bool Success = true;
+  std::function<void(const RefactoringResult &Result)> ResultHandler;
+
+public:
+  RefactoringOperationTest(
+      RefactoringActionType Type, unsigned Line, unsigned Column,
+      std::function<void(const RefactoringResult &Result)> ResultHandler)
+      : Type(Type), Line(Line), Column(Column),
+        ResultHandler(std::move(ResultHandler)) {}
+
+  bool runOver(StringRef Code) {
+    return runToolOnCode(new TestAction(this), Code);
   }
 
-  ~ApplyAtomicChangesTest() override {}
+  bool succeeded() const { return Success; }
 
-  void setInput(llvm::StringRef Input) {
-    Code = Input;
-    FID = Context.createInMemoryFile(FilePath, Code);
-  }
-
-  SourceLocation getLoc(unsigned Offset) const {
-    return Context.Sources.getLocForStartOfFile(FID).getLocWithOffset(Offset);
-  }
-
-  AtomicChange replacementToAtomicChange(llvm::StringRef Key, unsigned Offset,
-                                         unsigned Length,
-                                         llvm::StringRef Text) {
-    AtomicChange Change(FilePath, Key);
-    llvm::Error Err =
-        Change.replace(Context.Sources, getLoc(Offset), Length, Text);
-    EXPECT_FALSE(Err);
-    return Change;
-  }
-
-  std::string rewrite(bool FailureExpected = false) {
-    llvm::Expected<std::string> ChangedCode =
-        applyAtomicChanges(FilePath, Code, Changes, Spec);
-    EXPECT_EQ(FailureExpected, !ChangedCode);
-    if (!ChangedCode) {
-      llvm::errs() << "Failed to apply changes: "
-                   << llvm::toString(ChangedCode.takeError()) << "\n";
-      return "";
+  void run() {
+    assert(PP && Context && "Invalid state");
+    SourceLocation Loc = Context->getSourceManager().translateLineCol(
+        Context->getSourceManager().getMainFileID(), Line, Column);
+    if (Loc.isInvalid()) {
+      Success = false;
+      return;
     }
-    return *ChangedCode;
+    RefactoringOperationResult Op =
+        initiateRefactoringOperationAt(Loc, SourceRange(), *Context, Type);
+    if (!Op.Initiated) {
+      Success = false;
+      return;
+    }
+    RefactoringOptionSet Options;
+    llvm::Expected<RefactoringResult> Result =
+        Op.RefactoringOp->perform(*Context, *PP, Options);
+    if (!Result) {
+      (void)!llvm::handleErrors(
+          Result.takeError(),
+          [&](const RefactoringOperationError &Error) { Success = false; });
+      return;
+    }
+    ResultHandler(Result.get());
   }
 
-  RewriterTestContext Context;
-  FileID FID;
-  ApplyChangesSpec Spec;
-  std::string Code;
-  std::string FilePath;
-  llvm::SmallVector<AtomicChange, 8> Changes;
+protected:
+  clang::Preprocessor *PP;
+  clang::ASTContext *Context;
+
+private:
+  class TestConsumer : public clang::ASTConsumer {
+  public:
+    TestConsumer(RefactoringOperationTest *Test) : Test(Test) {}
+
+    void HandleTranslationUnit(clang::ASTContext &Context) override {
+      Test->run();
+    }
+
+  private:
+    RefactoringOperationTest *Test;
+  };
+
+  class TestAction : public clang::ASTFrontendAction {
+  public:
+    TestAction(RefactoringOperationTest *Test) : Test(Test) {}
+
+    std::unique_ptr<clang::ASTConsumer>
+    CreateASTConsumer(clang::CompilerInstance &Compiler,
+                      llvm::StringRef) override {
+      Test->PP = &Compiler.getPreprocessor();
+      Test->Context = &Compiler.getASTContext();
+      return llvm::make_unique<TestConsumer>(Test);
+    }
+
+  private:
+    RefactoringOperationTest *Test;
+  };
 };
 
-TEST_F(ApplyAtomicChangesTest, BasicRefactoring) {
-  setInput("int a;");
-  AtomicChange Change(FilePath, "key1");
-  Changes.push_back(replacementToAtomicChange("key1", 4, 1, "b"));
-  EXPECT_EQ("int b;", rewrite());
-}
+} // end anonymous namespace
 
-TEST_F(ApplyAtomicChangesTest, SeveralRefactorings) {
-  setInput("int a;\n"
-           "int b;");
-  Changes.push_back(replacementToAtomicChange("key1", 0, 3, "float"));
-  Changes.push_back(replacementToAtomicChange("key2", 4, 1, "f"));
-  Changes.push_back(replacementToAtomicChange("key3", 11, 1, "g"));
-  Changes.push_back(replacementToAtomicChange("key4", 7, 3, "float"));
-  EXPECT_EQ("float f;\n"
-            "float g;",
-            rewrite());
-}
+TEST(RefactoringContinuation, ContinuationAndQueriesExist) {
+  using namespace clang::tooling::indexer;
+  using namespace clang::tooling::indexer::detail;
+  RefactoringOperationTest Test(
+      RefactoringActionType::ImplementDeclaredMethods, 2, 1,
+      [](const RefactoringResult &Result) {
+        EXPECT_TRUE(Result.Replacements.empty());
+        ASSERT_NE(Result.Continuation, nullptr);
+        RefactoringContinuation &Continuation = *Result.Continuation;
 
-TEST_F(ApplyAtomicChangesTest, IgnorePathsInRefactorings) {
-  setInput("int a;\n"
-           "int b;");
-  Changes.push_back(replacementToAtomicChange("key1", 4, 1, "aa"));
+        ASTProducerQuery *ASTQuery = Continuation.getASTUnitIndexerQuery();
+        ASSERT_NE(ASTQuery, nullptr);
+        EXPECT_TRUE(isa<ASTProducerQuery>(ASTQuery));
+        EXPECT_TRUE(isa<ASTUnitForImplementationOfDeclarationQuery>(ASTQuery));
+        EXPECT_FALSE(isa<DeclarationsQuery>(ASTQuery));
 
-  FileID ID = Context.createInMemoryFile("AnotherFile", "12345678912345");
-  Changes.emplace_back("AnotherFile", "key2");
-  auto Err = Changes.back().replace(
-      Context.Sources,
-      Context.Sources.getLocForStartOfFile(ID).getLocWithOffset(11), 1, "bb");
-  ASSERT_TRUE(!Err);
-  EXPECT_EQ("int aa;\n"
-            "int bb;",
-            rewrite());
-}
+        auto AdditionalQueries = Continuation.getAdditionalIndexerQueries();
+        ASSERT_EQ(AdditionalQueries.size(), (size_t)1);
+        EXPECT_FALSE(isa<ASTProducerQuery>(AdditionalQueries[0]));
+        EXPECT_FALSE(isa<ASTUnitForImplementationOfDeclarationQuery>(
+            AdditionalQueries[0]));
+        ASSERT_TRUE(isa<DeclarationsQuery>(AdditionalQueries[0]));
 
-TEST_F(ApplyAtomicChangesTest, AppliesDuplicateInsertions) {
-  setInput("int a;");
-  Changes.push_back(replacementToAtomicChange("key1", 5, 0, "b"));
-  Changes.push_back(replacementToAtomicChange("key2", 5, 0, "b"));
-  EXPECT_EQ("int abb;", rewrite());
-}
+        const DeclPredicateNode &Predicate =
+            cast<DeclarationsQuery>(AdditionalQueries[0])->getPredicateNode();
+        ASSERT_TRUE(isa<DeclPredicateNotPredicate>(Predicate));
+        const DeclPredicateNode &SubPredicate =
+            cast<DeclPredicateNotPredicate>(Predicate).getChild();
+        ASSERT_TRUE(isa<DeclPredicateNodePredicate>(SubPredicate));
+        EXPECT_EQ(cast<DeclPredicateNodePredicate>(SubPredicate).getPredicate(),
+                  DeclEntity().isDefined().Predicate);
 
-TEST_F(ApplyAtomicChangesTest, BailsOnOverlappingRefactorings) {
-  setInput("int a;");
-  Changes.push_back(replacementToAtomicChange("key1", 0, 5, "float f"));
-  Changes.push_back(replacementToAtomicChange("key2", 4, 1, "b"));
-  EXPECT_EQ("", rewrite(/*FailureExpected=*/true));
-}
-
-TEST_F(ApplyAtomicChangesTest, BasicReformatting) {
-  setInput("int  a;");
-  Changes.push_back(replacementToAtomicChange("key1", 5, 1, "b"));
-  EXPECT_EQ("int b;", rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, OnlyFormatWhenViolateColumnLimits) {
-  Spec.Format = ApplyChangesSpec::kViolations;
-  Spec.Style.ColumnLimit = 8;
-  setInput("int  a;\n"
-           "int    a;\n"
-           "int  aaaaaaaa;\n");
-  Changes.push_back(replacementToAtomicChange("key1", 5, 1, "x"));
-  Changes.push_back(replacementToAtomicChange("key2", 15, 1, "x"));
-  Changes.push_back(replacementToAtomicChange("key3", 23, 8, "xx"));
-  EXPECT_EQ("int  x;\n"
-            "int x;\n"
-            "int  xx;\n",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, LastLineViolateColumnLimits) {
-  Spec.Format = ApplyChangesSpec::kViolations;
-  Spec.Style.ColumnLimit = 8;
-  setInput("int  a;\n"
-           "int    a;");
-  Changes.push_back(replacementToAtomicChange("key1", 0, 1, "i"));
-  Changes.push_back(replacementToAtomicChange("key2", 15, 2, "y;"));
-  EXPECT_EQ("int  a;\n"
-            "int y;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, LastLineWithNewlineViolateColumnLimits) {
-  Spec.Format = ApplyChangesSpec::kViolations;
-  Spec.Style.ColumnLimit = 8;
-  setInput("int  a;\n"
-           "int   a;\n");
-  Changes.push_back(replacementToAtomicChange("key1", 0, 1, "i"));
-  Changes.push_back(replacementToAtomicChange("key2", 14, 3, "y;\n"));
-  EXPECT_EQ("int  a;\n"
-            "int   y;\n",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, Longer) {
-  setInput("int  a;");
-  Changes.push_back(replacementToAtomicChange("key1", 5, 1, "bbb"));
-  EXPECT_EQ("int bbb;", rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, Shorter) {
-  setInput("int  aaa;");
-  Changes.push_back(replacementToAtomicChange("key1", 5, 3, "b"));
-  EXPECT_EQ("int b;", rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, OnlyFormatChangedLines) {
-  setInput("int  aaa;\n"
-           "int a = b;\n"
-           "int  bbb;");
-  Changes.push_back(replacementToAtomicChange("key1", 14, 1, "b"));
-  EXPECT_EQ("int  aaa;\n"
-            "int b = b;\n"
-            "int  bbb;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, DisableFormatting) {
-  Spec.Format = ApplyChangesSpec::kNone;
-  setInput("int  aaa;\n"
-           "int a   = b;\n"
-           "int  bbb;");
-  Changes.push_back(replacementToAtomicChange("key1", 14, 1, "b"));
-  EXPECT_EQ("int  aaa;\n"
-            "int b   = b;\n"
-            "int  bbb;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, AdaptsToLocalPointerStyle) {
-  setInput("int *aaa;\n"
-           "int *bbb;");
-  Changes.push_back(replacementToAtomicChange("key1", 0, 0, "int* ccc;\n"));
-  EXPECT_EQ("int *ccc;\n"
-            "int *aaa;\n"
-            "int *bbb;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, AcceptsSurroundingFormatting) {
-  setInput("   int  aaa;\n"
-           "   int a = b;\n"
-           "   int  bbb;");
-  Changes.push_back(replacementToAtomicChange("key1", 20, 1, "b"));
-  EXPECT_EQ("   int  aaa;\n"
-            "   int b = b;\n"
-            "   int  bbb;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, BailsOutOnConflictingChanges) {
-  setInput("int c;\n"
-           "int f;");
-  // Insertions at the same offset are only allowed in the same AtomicChange.
-  Changes.push_back(replacementToAtomicChange("key1", 0, 0, "int a;\n"));
-  Changes.push_back(replacementToAtomicChange("key2", 0, 0, "int b;\n"));
-  EXPECT_EQ("", rewrite(/*FailureExpected=*/true));
-}
-
-TEST_F(ApplyAtomicChangesTest, InsertsNewIncludesInRightOrder) {
-  setInput("int a;");
-  Changes.emplace_back(FilePath, "key1");
-  Changes.back().addHeader("b");
-  Changes.back().addHeader("c");
-  Changes.emplace_back(FilePath, "key2");
-  Changes.back().addHeader("a");
-  EXPECT_EQ("#include \"a\"\n"
-            "#include \"b\"\n"
-            "#include \"c\"\n"
-            "int a;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, RemoveAndSortIncludes) {
-  setInput("#include \"a\"\n"
-           "#include \"b\"\n"
-           "#include \"c\"\n"
-           "\n"
-           "int a;");
-  Changes.emplace_back(FilePath, "key1");
-  Changes.back().removeHeader("b");
-  EXPECT_EQ("#include \"a\"\n"
-            "#include \"c\"\n"
-            "\n"
-            "int a;",
-            rewrite());
-}
-TEST_F(ApplyAtomicChangesTest, InsertsSystemIncludes) {
-  setInput("#include <asys>\n"
-           "#include <csys>\n"
-           "\n"
-           "#include \"a\"\n"
-           "#include \"c\"\n");
-  Changes.emplace_back(FilePath, "key1");
-  Changes.back().addHeader("<asys>"); // Already exists.
-  Changes.back().addHeader("<b>");
-  Changes.back().addHeader("<d>");
-  Changes.back().addHeader("\"b-already-escaped\"");
-  EXPECT_EQ("#include <asys>\n"
-            "#include <b>\n"
-            "#include <csys>\n"
-            "#include <d>\n"
-            "\n"
-            "#include \"a\"\n"
-            "#include \"b-already-escaped\"\n"
-            "#include \"c\"\n",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, RemoveSystemIncludes) {
-  setInput("#include <a>\n"
-           "#include <b>\n"
-           "\n"
-           "#include \"c\""
-           "\n"
-           "int a;");
-  Changes.emplace_back(FilePath, "key1");
-  Changes.back().removeHeader("<a>");
-  EXPECT_EQ("#include <b>\n"
-            "\n"
-            "#include \"c\""
-            "\n"
-            "int a;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest,
-       DoNotFormatFollowingLinesIfSeparatedWithNewline) {
-  setInput("#ifndef __H__\n"
-           "#define __H__\n"
-           "#include \"b\"\n"
-           "\n"
-           "int  a;\n"
-           "int  a;\n"
-           "int  a;\n"
-           "#endif // __H__\n");
-  Changes.push_back(replacementToAtomicChange("key1",
-                                              llvm::StringRef("#ifndef __H__\n"
-                                                              "#define __H__\n"
-                                                              "\n"
-                                                              "#include \"b\"\n"
-                                                              "int  a;\n"
-                                                              "int  ")
-                                                  .size(),
-                                              1, "b"));
-  Changes.back().addHeader("a");
-  EXPECT_EQ("#ifndef __H__\n"
-            "#define __H__\n"
-            "#include \"a\"\n"
-            "#include \"b\"\n"
-            "\n"
-            "int  a;\n"
-            "int b;\n"
-            "int  a;\n"
-            "#endif // __H__\n",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, FormatsCorrectLineWhenHeaderIsRemoved) {
-  setInput("#include \"a\"\n"
-           "\n"
-           "int  a;\n"
-           "int  a;\n"
-           "int  a;");
-  Changes.push_back(replacementToAtomicChange("key1", 27, 1, "b"));
-  Changes.back().removeHeader("a");
-  EXPECT_EQ("\n"
-            "int  a;\n"
-            "int b;\n"
-            "int  a;",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, CleansUpCtorInitializers) {
-  setInput("A::A() : a(), b() {}\n"
-           "A::A() : a(), b() {}\n"
-           "A::A() : a(), b() {}\n"
-           "A::A() : a()/**/, b() {}\n"
-           "A::A() : a()  ,// \n"
-           "   /**/    b()    {}");
-  Changes.emplace_back(FilePath, "key1");
-  auto Err = Changes.back().replace(Context.Sources, getLoc(9), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(35), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(51), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(56), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(72), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(97), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(118), 3, "");
-  ASSERT_TRUE(!Err);
-  EXPECT_EQ("A::A() : b() {}\n"
-            "A::A() : a() {}\n"
-            "A::A() {}\n"
-            "A::A() : b() {}\n"
-            "A::A() {}",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, CleansUpParameterLists) {
-  setInput("void f(int i, float f, string s);\n"
-           "f(1, 2.0f, \"a\");\n"
-           "g(1, 1);");
-  Changes.emplace_back(FilePath, "key1");
-  auto Err = Changes.back().replace(Context.Sources, getLoc(7), 5, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(23), 8, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(36), 1, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(45), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(53), 1, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(56), 1, "");
-  ASSERT_TRUE(!Err);
-  EXPECT_EQ("void f(float f);\n"
-            "f(2.0f);\n"
-            "g();",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, DisableCleanup) {
-  Spec.Cleanup = false;
-  setInput("void f(int i, float f, string s);\n"
-           "f(1, 2.0f, \"a\");\n"
-           "g(1, 1);");
-  Changes.emplace_back(FilePath, "key1");
-  auto Err = Changes.back().replace(Context.Sources, getLoc(7), 5, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(23), 8, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(36), 1, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(45), 3, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(53), 1, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(56), 1, "");
-  ASSERT_TRUE(!Err);
-  EXPECT_EQ("void f(, float f, );\n"
-            "f(, 2.0f, );\n"
-            "g(, );",
-            rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, EverythingDeleted) {
-  setInput("int a;");
-  Changes.push_back(replacementToAtomicChange("key1", 0, 6, ""));
-  EXPECT_EQ("", rewrite());
-}
-
-TEST_F(ApplyAtomicChangesTest, DoesNotDeleteInserts) {
-  setInput("int a;\n"
-           "int b;");
-  Changes.emplace_back(FilePath, "key1");
-  auto Err = Changes.back().replace(Context.Sources, getLoc(4), 1, "");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(4), 0, "b");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(11), 0, "a");
-  ASSERT_TRUE(!Err);
-  Err = Changes.back().replace(Context.Sources, getLoc(11), 1, "");
-  ASSERT_TRUE(!Err);
-  EXPECT_EQ("int b;\n"
-            "int a;",
-            rewrite());
+        ASTQuery->invalidateTUSpecificState();
+        AdditionalQueries[0]->invalidateTUSpecificState();
+      });
+  Test.runOver("class Foo {\nvoid method();\n};\n");
+  EXPECT_TRUE(Test.succeeded());
 }
 
 } // end namespace tooling

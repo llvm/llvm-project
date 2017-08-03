@@ -2,7 +2,6 @@ create_subdirectory_options(CLANG TOOL)
 
 add_clang_subdirectory(diagtool)
 add_clang_subdirectory(driver)
-add_clang_subdirectory(clang-diff)
 add_clang_subdirectory(clang-format)
 add_clang_subdirectory(clang-format-vs)
 add_clang_subdirectory(clang-fuzzer)
@@ -10,6 +9,7 @@ add_clang_subdirectory(clang-import-test)
 add_clang_subdirectory(clang-offload-bundler)
 
 add_clang_subdirectory(c-index-test)
+add_clang_subdirectory(IndexStore)
 
 add_clang_subdirectory(clang-rename)
 
@@ -33,3 +33,6 @@ add_llvm_external_project(clang-tools-extra extra)
 
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
+
+add_clang_subdirectory(clang-refactor-test)
+

@@ -17,7 +17,6 @@
 #if SANITIZER_POSIX
 
 #include "sanitizer_common.h"
-#include "sanitizer_file.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"

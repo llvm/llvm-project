@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -march=x86-64 < %s
 
 ; This testcase used to crash. See PR29132.
 

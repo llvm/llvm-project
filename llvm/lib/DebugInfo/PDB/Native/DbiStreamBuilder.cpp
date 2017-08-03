@@ -49,10 +49,6 @@ void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
   SectionMap = SecMap;
 }
 
-void DbiStreamBuilder::setGlobalsStreamIndex(uint32_t Index) {
-  GlobalsStreamIndex = Index;
-}
-
 void DbiStreamBuilder::setSymbolRecordStreamIndex(uint32_t Index) {
   SymRecordStreamIndex = Index;
 }
@@ -274,7 +270,7 @@ Error DbiStreamBuilder::finalize() {
   H->SymRecordStreamIndex = SymRecordStreamIndex;
   H->PublicSymbolStreamIndex = PublicsStreamIndex;
   H->MFCTypeServerIndex = kInvalidStreamIndex;
-  H->GlobalSymbolStreamIndex = GlobalsStreamIndex;
+  H->GlobalSymbolStreamIndex = kInvalidStreamIndex;
 
   Header = H;
   return Error::success();

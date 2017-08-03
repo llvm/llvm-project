@@ -9,7 +9,7 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC
 
 #include "sanitizer_libignore.h"
 #include "sanitizer_flags.h"
@@ -125,5 +125,4 @@ void LibIgnore::OnLibraryUnloaded() {
 
 } // namespace __sanitizer
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC ||
-        // SANITIZER_NETBSD
+#endif // #if SANITIZER_FREEBSD || SANITIZER_LINUX

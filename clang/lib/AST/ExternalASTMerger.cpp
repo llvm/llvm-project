@@ -44,9 +44,6 @@ public:
       ToTag->setMustBuildLookupTable();
     } else if (auto ToNamespace = dyn_cast<NamespaceDecl>(To)) {
       ToNamespace->setHasExternalVisibleStorage();
-    } else if (auto ToContainer = dyn_cast<ObjCContainerDecl>(To)) {
-      ToContainer->setHasExternalLexicalStorage();
-      ToContainer->setMustBuildLookupTable();
     }
     return ASTImporter::Imported(From, To);
   }
@@ -83,12 +80,11 @@ LookupSameContext(Source<TranslationUnitDecl *> SourceTU, const DeclContext *DC,
 }
 
 bool IsForwardDeclaration(Decl *D) {
+  assert(!isa<ObjCInterfaceDecl>(D)); // TODO handle this case
   if (auto TD = dyn_cast<TagDecl>(D)) {
     return !TD->isThisDeclarationADefinition();
   } else if (auto FD = dyn_cast<FunctionDecl>(D)) {
     return !FD->isThisDeclarationADefinition();
-  } else if (auto OID = dyn_cast<ObjCInterfaceDecl>(D)) {
-     return OID->isThisDeclarationADefinition();
   } else {
     return false;
   }

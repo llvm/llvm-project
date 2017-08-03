@@ -1829,8 +1829,7 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
   return ::replaceDominatedUsesWith(From, To, BB, ProperlyDominates);
 }
 
-bool llvm::callsGCLeafFunction(ImmutableCallSite CS,
-                               const TargetLibraryInfo &TLI) {
+bool llvm::callsGCLeafFunction(ImmutableCallSite CS) {
   // Check if the function is specifically marked as a gc leaf function.
   if (CS.hasFnAttr("gc-leaf-function"))
     return true;
@@ -1842,14 +1841,6 @@ bool llvm::callsGCLeafFunction(ImmutableCallSite CS,
       // Most LLVM intrinsics do not take safepoints.
       return IID != Intrinsic::experimental_gc_statepoint &&
              IID != Intrinsic::experimental_deoptimize;
-  }
-
-  // Lib calls can be materialized by some passes, and won't be
-  // marked as 'gc-leaf-function.' All available Libcalls are
-  // GC-leaf.
-  LibFunc LF;
-  if (TLI.getLibFunc(CS, LF)) {
-    return TLI.has(LF);
   }
 
   return false;

@@ -1,4 +1,4 @@
-//===- HexagonCommonGEP.cpp -----------------------------------------------===//
+//===--- HexagonCommonGEP.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -67,12 +66,12 @@ namespace llvm {
 namespace {
 
   struct GepNode;
-  using NodeSet = std::set<GepNode *>;
-  using NodeToValueMap = std::map<GepNode *, Value *>;
-  using NodeVect = std::vector<GepNode *>;
-  using NodeChildrenMap = std::map<GepNode *, NodeVect>;
-  using UseSet = std::set<Use *>;
-  using NodeToUsesMap = std::map<GepNode *, UseSet>;
+  typedef std::set<GepNode*> NodeSet;
+  typedef std::map<GepNode*,Value*> NodeToValueMap;
+  typedef std::vector<GepNode*> NodeVect;
+  typedef std::map<GepNode*,NodeVect> NodeChildrenMap;
+  typedef std::set<Use*> UseSet;
+  typedef std::map<GepNode*,UseSet> NodeToUsesMap;
 
   // Numbering map for gep nodes. Used to keep track of ordering for
   // gep nodes.
@@ -115,9 +114,9 @@ namespace {
     }
 
   private:
-    using ValueToNodeMap = std::map<Value *, GepNode *>;
-    using ValueVect = std::vector<Value *>;
-    using NodeToValuesMap = std::map<GepNode *, ValueVect>;
+    typedef std::map<Value*,GepNode*> ValueToNodeMap;
+    typedef std::vector<Value*> ValueVect;
+    typedef std::map<GepNode*,ValueVect> NodeToValuesMap;
 
     void getBlockTraversalOrder(BasicBlock *Root, ValueVect &Order);
     bool isHandledGepForm(GetElementPtrInst *GepI);
@@ -161,7 +160,6 @@ namespace {
 } // end anonymous namespace
 
 char HexagonCommonGEP::ID = 0;
-
 INITIALIZE_PASS_BEGIN(HexagonCommonGEP, "hcommgep", "Hexagon Common GEP",
       false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
@@ -181,15 +179,15 @@ namespace {
       InBounds  = 0x08
     };
 
-    uint32_t Flags = 0;
+    uint32_t Flags;
     union {
       GepNode *Parent;
       Value *BaseVal;
     };
-    Value *Idx = nullptr;
-    Type *PTy = nullptr;  // Type of the pointer operand.
+    Value *Idx;
+    Type *PTy;  // Type of the pointer operand.
 
-    GepNode() : Parent(nullptr) {}
+    GepNode() : Flags(0), Parent(nullptr), Idx(nullptr), PTy(nullptr) {}
     GepNode(const GepNode *N) : Flags(N->Flags), Idx(N->Idx), PTy(N->PTy) {
       if (Flags & Root)
         BaseVal = N->BaseVal;
@@ -269,8 +267,7 @@ namespace {
 
   template <typename NodeContainer>
   void dump_node_container(raw_ostream &OS, const NodeContainer &S) {
-    using const_iterator = typename NodeContainer::const_iterator;
-
+    typedef typename NodeContainer::const_iterator const_iterator;
     for (const_iterator I = S.begin(), E = S.end(); I != E; ++I)
       OS << *I << ' ' << **I << '\n';
   }
@@ -285,8 +282,7 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS,
                            const NodeToUsesMap &M) LLVM_ATTRIBUTE_UNUSED;
   raw_ostream &operator<< (raw_ostream &OS, const NodeToUsesMap &M){
-    using const_iterator = NodeToUsesMap::const_iterator;
-
+    typedef NodeToUsesMap::const_iterator const_iterator;
     for (const_iterator I = M.begin(), E = M.end(); I != E; ++I) {
       const UseSet &Us = I->second;
       OS << I->first << " -> #" << Us.size() << '{';
@@ -304,7 +300,6 @@ namespace {
 
   struct in_set {
     in_set(const NodeSet &S) : NS(S) {}
-
     bool operator() (GepNode *N) const {
       return NS.find(N) != NS.end();
     }
@@ -431,8 +426,7 @@ void HexagonCommonGEP::collect() {
 
 static void invert_find_roots(const NodeVect &Nodes, NodeChildrenMap &NCM,
                               NodeVect &Roots) {
-    using const_iterator = NodeVect::const_iterator;
-
+    typedef NodeVect::const_iterator const_iterator;
     for (const_iterator I = Nodes.begin(), E = Nodes.end(); I != E; ++I) {
       GepNode *N = *I;
       if (N->Flags & GepNode::Root) {
@@ -464,9 +458,9 @@ static void nodes_for_root(GepNode *Root, NodeChildrenMap &NCM,
 
 namespace {
 
-  using NodeSymRel = std::set<NodeSet>;
-  using NodePair = std::pair<GepNode *, GepNode *>;
-  using NodePairSet = std::set<NodePair>;
+  typedef std::set<NodeSet> NodeSymRel;
+  typedef std::pair<GepNode*,GepNode*> NodePair;
+  typedef std::set<NodePair> NodePairSet;
 
 } // end anonymous namespace
 
@@ -535,7 +529,7 @@ void HexagonCommonGEP::common() {
   // To do this we need to compare all pairs of nodes. To save time,
   // first, partition the set of all nodes into sets of potentially equal
   // nodes, and then compare pairs from within each partition.
-  using NodeSetMap = std::map<unsigned, NodeSet>;
+  typedef std::map<unsigned,NodeSet> NodeSetMap;
   NodeSetMap MaybeEq;
 
   for (NodeVect::iterator I = Nodes.begin(), E = Nodes.end(); I != E; ++I) {
@@ -594,7 +588,7 @@ void HexagonCommonGEP::common() {
   });
 
   // Create a projection from a NodeSet to the minimal element in it.
-  using ProjMap = std::map<const NodeSet *, GepNode *>;
+  typedef std::map<const NodeSet*,GepNode*> ProjMap;
   ProjMap PM;
   for (NodeSymRel::iterator I = EqRel.begin(), E = EqRel.end(); I != E; ++I) {
     const NodeSet &S = *I;
@@ -723,9 +717,7 @@ static BasicBlock *nearest_common_dominatee(DominatorTree *DT, T &Blocks) {
 template <typename T>
 static BasicBlock::iterator first_use_of_in_block(T &Values, BasicBlock *B) {
     BasicBlock::iterator FirstUse = B->end(), BEnd = B->end();
-
-    using iterator = typename T::iterator;
-
+    typedef typename T::iterator iterator;
     for (iterator I = Values.begin(), E = Values.end(); I != E; ++I) {
       Value *V = *I;
       // If V is used in a PHI node, the use belongs to the incoming block,
@@ -1255,9 +1247,7 @@ void HexagonCommonGEP::removeDeadCode() {
   for (unsigned i = BO.size(); i > 0; --i) {
     BasicBlock *B = cast<BasicBlock>(BO[i-1]);
     BasicBlock::InstListType &IL = B->getInstList();
-
-    using reverse_iterator = BasicBlock::InstListType::reverse_iterator;
-
+    typedef BasicBlock::InstListType::reverse_iterator reverse_iterator;
     ValueVect Ins;
     for (reverse_iterator I = IL.rbegin(), E = IL.rend(); I != E; ++I)
       Ins.push_back(&*I);

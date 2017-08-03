@@ -53,14 +53,20 @@ set(MSAN_UNITTEST_LINK_FLAGS
 
 append_list_if(COMPILER_RT_HAS_LIBDL -ldl MSAN_UNITTEST_LINK_FLAGS)
 
-macro(msan_compile obj_list source arch kind cflags)
-  sanitizer_test_compile(
-    ${obj_list} ${source} ${arch}
-    KIND ${kind}
-    COMPILE_DEPS ${MSAN_UNITTEST_HEADERS}
-    DEPS gtest msan
-    CFLAGS ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags}
-  )
+# Compile source for the given architecture, using compiler
+# options in ${ARGN}, and add it to the object list.
+macro(msan_compile obj_list source arch kind)
+  get_filename_component(basename ${source} NAME)
+  set(output_obj "${basename}.${arch}${kind}.o")
+  get_target_flags_for_arch(${arch} TARGET_CFLAGS)
+  set(COMPILE_DEPS ${MSAN_UNITTEST_HEADERS})
+  if(NOT COMPILER_RT_STANDALONE_BUILD)
+    list(APPEND COMPILE_DEPS gtest msan)
+  endif()
+  clang_compile(${output_obj} ${source}
+                CFLAGS ${ARGN} ${TARGET_CFLAGS}
+                DEPS ${COMPILE_DEPS})
+  list(APPEND ${obj_list} ${output_obj})
 endmacro()
 
 macro(msan_link_shared so_list so_name arch kind)
@@ -82,22 +88,23 @@ add_custom_target(MsanUnitTests)
 set_target_properties(MsanUnitTests PROPERTIES FOLDER "MSan unit tests")
 
 # Adds MSan unit tests and benchmarks for architecture.
-macro(add_msan_tests_for_arch arch kind cflags)
+macro(add_msan_tests_for_arch arch kind)
   # Build gtest instrumented with MSan.
   set(MSAN_INST_GTEST)
   msan_compile(MSAN_INST_GTEST ${COMPILER_RT_GTEST_SOURCE} ${arch} "${kind}"
-                               "${cflags}")
+                               ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${ARGN})
 
   # Instrumented tests.
   set(MSAN_INST_TEST_OBJECTS)
   foreach (SOURCE ${MSAN_UNITTEST_SOURCES})
-    msan_compile(MSAN_INST_TEST_OBJECTS ${SOURCE} ${arch} "${kind}" "${cflags}")
+    msan_compile(MSAN_INST_TEST_OBJECTS ${SOURCE} ${arch} "${kind}"
+                 ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} ${ARGN})
   endforeach(SOURCE)
 
   # Instrumented loadable module objects.
   set(MSAN_INST_LOADABLE_OBJECTS)
   msan_compile(MSAN_INST_LOADABLE_OBJECTS ${MSAN_LOADABLE_SOURCE} ${arch} "${kind}"
-               "-fPIC;${cflags}")
+               ${MSAN_UNITTEST_INSTRUMENTED_CFLAGS} "-fPIC" ${ARGN})
 
   # Instrumented loadable library tests.
   set(MSAN_LOADABLE_SO)
@@ -131,8 +138,8 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND COMPILER_RT_HAS_LIBCXX_SOURCES)
       CFLAGS ${MSAN_LIBCXX_CFLAGS} ${TARGET_CFLAGS})
     set(MSAN_LIBCXX_SO ${LIBCXX_PREFIX}/lib/libc++.so)
 
-    add_msan_tests_for_arch(${arch} "" "")
+    add_msan_tests_for_arch(${arch} "")
     add_msan_tests_for_arch(${arch} "-with-call"
-                            "-mllvm;-msan-instrumentation-with-call-threshold=0")
+                            -mllvm -msan-instrumentation-with-call-threshold=0)
   endforeach()
 endif()

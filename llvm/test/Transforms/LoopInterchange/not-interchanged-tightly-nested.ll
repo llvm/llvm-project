@@ -93,7 +93,7 @@ for.end17:
 ; CHECK: ret void
 
 
-declare void @foo(...) readnone
+declare void @foo(...)
 
 ;; Loops not tightly nested are not interchanged
 ;;  for(int j=0;j<N;j++) {

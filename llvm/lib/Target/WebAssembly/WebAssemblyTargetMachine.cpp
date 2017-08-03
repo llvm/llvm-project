@@ -68,12 +68,12 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    CodeModel::Model CM, CodeGenOpt::Level OL)
     : LLVMTargetMachine(T,
                         TT.isArch64Bit() ? "e-m:e-p:64:64-i64:64-n32:64-S128"
                                          : "e-m:e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM),
-                        CM ? *CM : CodeModel::Large, OL),
+                        CM, OL),
       TLOF(TT.isOSBinFormatELF() ?
               static_cast<TargetLoweringObjectFile*>(
                   new WebAssemblyTargetObjectFileELF()) :

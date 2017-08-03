@@ -497,21 +497,6 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
     if (section_list == NULL)
       return 0;
 
-    // On non Apple platforms we might have .debug_types debug info that
-    // is created by using "-fdebug-types-section". LLDB currently will try
-    // to load this debug info, but it causes crashes during debugging when
-    // types are missing since it doesn't know how to parse the info in
-    // the .debug_types type units. This causes all complex debug info
-    // types to be unresolved. Because this causes LLDB to crash and since
-    // it really doesn't provide a solid debuggiung experience, we should
-    // disable trying to debug this kind of DWARF until support gets
-    // added or deprecated.
-    if (section_list->FindSectionByName(ConstString(".debug_types"))) {
-      m_obj_file->GetModule()->ReportWarning(
-        "lldb doesn’t support .debug_types debug info");
-      return 0;
-    }
-
     uint64_t debug_abbrev_file_size = 0;
     uint64_t debug_info_file_size = 0;
     uint64_t debug_line_file_size = 0;
@@ -531,20 +516,6 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
               .get();
       if (section)
         debug_abbrev_file_size = section->GetFileSize();
-
-      DWARFDebugAbbrev *abbrev = DebugAbbrev();
-      if (abbrev) {
-        std::set<dw_form_t> invalid_forms;
-        abbrev->GetUnsupportedForms(invalid_forms);
-        if (!invalid_forms.empty()) {
-          StreamString error;
-          error.Printf("unsupported DW_FORM value%s:", invalid_forms.size() > 1 ? "s" : "");
-          for (auto form : invalid_forms)
-            error.Printf(" %#x", form);
-          m_obj_file->GetModule()->ReportWarning("%s", error.GetString().str().c_str());
-          return 0;
-        }
-      }
 
       section =
           section_list->FindSectionByType(eSectionTypeDWARFDebugLine, true)

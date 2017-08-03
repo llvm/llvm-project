@@ -317,8 +317,7 @@ class InstrItineraryData;
     /// isLegalAddressingMode - Return true if the addressing mode represented
     /// by AM is legal for this target, for a load/store of the specified type.
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS,
-                               Instruction *I = nullptr) const override;
+                               Type *Ty, unsigned AS) const override;
 
     /// getScalingFactorCost - Return the cost of the scaling used in
     /// addressing mode represented by AM.
@@ -440,7 +439,7 @@ class InstrItineraryData;
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
     bool
-    isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
+    isShuffleMaskLegal(const SmallVectorImpl<int> &M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the

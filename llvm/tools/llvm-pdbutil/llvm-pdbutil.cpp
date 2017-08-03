@@ -342,8 +342,6 @@ cl::list<std::string>
 
 cl::opt<bool> NameMap("name-map", cl::desc("Dump bytes of PDB Name Map"),
                       cl::sub(BytesSubcommand), cl::cat(PdbBytes));
-cl::opt<bool> Fpm("fpm", cl::desc("Dump free page map"),
-                  cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::opt<bool> SectionContributions("sc", cl::desc("Dump section contributions"),
                                    cl::sub(BytesSubcommand), cl::cat(DbiBytes));
@@ -452,15 +450,8 @@ cl::opt<bool> DumpTypeDependents(
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 // SYMBOL OPTIONS
-cl::opt<bool> DumpGlobals("globals", cl::desc("dump Globals symbol records"),
-                          cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
-cl::opt<bool> DumpGlobalExtras("global-extras", cl::desc("dump Globals hashes"),
-                               cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
-cl::opt<bool> DumpPublicExtras("public-extras",
-                               cl::desc("dump Publics hashes and address maps"),
-                               cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSymbols("symbols", cl::desc("dump module symbols"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
@@ -1072,7 +1063,6 @@ int main(int argc_, const char *argv_[]) {
       opts::dump::DumpXme = true;
       opts::dump::DumpXmi = true;
       opts::dump::DumpIds = true;
-      opts::dump::DumpGlobals = true;
       opts::dump::DumpPublics = true;
       opts::dump::DumpSectionContribs = true;
       opts::dump::DumpSectionMap = true;

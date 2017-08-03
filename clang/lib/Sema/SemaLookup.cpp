@@ -1031,8 +1031,7 @@ struct FindLocalExternScope {
   FindLocalExternScope(LookupResult &R)
       : R(R), OldFindLocalExtern(R.getIdentifierNamespace() &
                                  Decl::IDNS_LocalExtern) {
-    R.setFindLocalExtern(R.getIdentifierNamespace() &
-                         (Decl::IDNS_Ordinary | Decl::IDNS_NonMemberOperator));
+    R.setFindLocalExtern(R.getIdentifierNamespace() & Decl::IDNS_Ordinary);
   }
   void restore() {
     R.setFindLocalExtern(OldFindLocalExtern);

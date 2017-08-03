@@ -11,7 +11,6 @@
 #include <algorithm>
 
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #include "gtest/gtest.h"

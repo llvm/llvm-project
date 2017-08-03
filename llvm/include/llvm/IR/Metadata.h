@@ -1188,8 +1188,7 @@ void TempMDNodeDeleter::operator()(MDNode *Node) const {
 /// particular Metadata subclass.
 template <class T>
 class TypedMDOperandIterator
-    : public std::iterator<std::input_iterator_tag, T *, std::ptrdiff_t, void,
-                           T *> {
+    : std::iterator<std::input_iterator_tag, T *, std::ptrdiff_t, void, T *> {
   MDNode::op_iterator I = nullptr;
 
 public:

@@ -1,0 +1,5 @@
+module A {
+  header "A.h"
+}
+
+module A1 {}

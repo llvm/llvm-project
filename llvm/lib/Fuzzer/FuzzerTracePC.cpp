@@ -66,15 +66,6 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   NumInline8bitCounters += Stop - Start;
 }
 
-void TracePC::HandlePCsInit(const uint8_t *Start, const uint8_t *Stop) {
-  const uintptr_t *B = reinterpret_cast<const uintptr_t *>(Start);
-  const uintptr_t *E = reinterpret_cast<const uintptr_t *>(Stop);
-  if (NumPCTables && ModulePCTable[NumPCTables - 1].Start == B) return;
-  assert(NumPCTables < sizeof(ModulePCTable) / sizeof(ModulePCTable[0]));
-  ModulePCTable[NumPCTables++] = {B, E};
-  NumPCsInPCTables += E - B;
-}
-
 void TracePC::HandleInit(uint32_t *Start, uint32_t *Stop) {
   if (Start == Stop || *Start) return;
   assert(NumModules < sizeof(Modules) / sizeof(Modules[0]));
@@ -94,37 +85,16 @@ void TracePC::HandleInit(uint32_t *Start, uint32_t *Stop) {
 }
 
 void TracePC::PrintModuleInfo() {
-  if (NumGuards) {
-    Printf("INFO: Loaded %zd modules   (%zd guards): ", NumModules, NumGuards);
-    for (size_t i = 0; i < NumModules; i++)
-      Printf("%zd [%p, %p), ", Modules[i].Stop - Modules[i].Start,
-             Modules[i].Start, Modules[i].Stop);
-    Printf("\n");
-  }
+  Printf("INFO: Loaded %zd modules (%zd guards): ", NumModules, NumGuards);
+  for (size_t i = 0; i < NumModules; i++)
+    Printf("[%p, %p), ", Modules[i].Start, Modules[i].Stop);
+  Printf("\n");
   if (NumModulesWithInline8bitCounters) {
-    Printf("INFO: Loaded %zd modules   (%zd inline 8-bit counters): ",
+    Printf("INFO: Loaded %zd modules with %zd inline 8-bit counters\n",
            NumModulesWithInline8bitCounters, NumInline8bitCounters);
     for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++)
-      Printf("%zd [%p, %p), ", ModuleCounters[i].Stop - ModuleCounters[i].Start,
-             ModuleCounters[i].Start, ModuleCounters[i].Stop);
+      Printf("[%p, %p), ", ModuleCounters[i].Start, ModuleCounters[i].Stop);
     Printf("\n");
-  }
-  if (NumPCTables) {
-    Printf("INFO: Loaded %zd PC tables (%zd PCs): ", NumPCTables,
-           NumPCsInPCTables);
-    for (size_t i = 0; i < NumPCTables; i++) {
-      Printf("%zd [%p,%p), ", ModulePCTable[i].Stop - ModulePCTable[i].Start,
-             ModulePCTable[i].Start, ModulePCTable[i].Stop);
-    }
-    Printf("\n");
-
-    if ((NumGuards && NumGuards != NumPCsInPCTables) ||
-        (NumInline8bitCounters && NumInline8bitCounters != NumPCsInPCTables)) {
-      Printf("ERROR: The size of coverage PC tables does not match the"
-             " number of instrumented PCs. This might be a bug in the compiler,"
-             " please contact the libFuzzer developers.\n");
-      _Exit(1);
-    }
   }
 }
 
@@ -339,14 +309,6 @@ static size_t InternalStrnlen2(const char *S1, const char *S2) {
   return Len;
 }
 
-void TracePC::ClearInlineCounters() {
-  for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
-    uint8_t *Beg = ModuleCounters[i].Start;
-    size_t Size = ModuleCounters[i].Stop - Beg;
-    memset(Beg, 0, Size);
-  }
-}
-
 } // namespace fuzzer
 
 extern "C" {
@@ -357,8 +319,6 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
   uint32_t Idx = *Guard;
   __sancov_trace_pc_pcs[Idx] = PC;
   __sancov_trace_pc_guard_8bit_counters[Idx]++;
-  // Uncomment the following line to get stack-depth profiling.
-  // fuzzer::TPC.RecordCurrentStack();
 }
 
 // Best-effort support for -fsanitize-coverage=trace-pc, which is available
@@ -380,11 +340,6 @@ void __sanitizer_cov_trace_pc_guard_init(uint32_t *Start, uint32_t *Stop) {
 ATTRIBUTE_INTERFACE
 void __sanitizer_cov_8bit_counters_init(uint8_t *Start, uint8_t *Stop) {
   fuzzer::TPC.HandleInline8bitCountersInit(Start, Stop);
-}
-
-ATTRIBUTE_INTERFACE
-void __sanitizer_cov_pcs_init(const uint8_t *pcs_beg, const uint8_t *pcs_end) {
-  fuzzer::TPC.HandlePCsInit(pcs_beg, pcs_end);
 }
 
 ATTRIBUTE_INTERFACE

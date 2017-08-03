@@ -1,4 +1,4 @@
-//==- AArch64PromoteConstant.cpp - Promote constant to global for AArch64 --==//
+//=- AArch64PromoteConstant.cpp --- Promote constant to global for AArch64 -==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,31 +22,23 @@
 
 #include "AArch64.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
-#include <utility>
 
 using namespace llvm;
 
@@ -64,7 +56,6 @@ STATISTIC(NumPromotedUses, "Number of promoted constants uses");
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Promotes interesting constant into global variables.
 /// The motivating example is:
 /// static const uint16_t TableA[32] = {
@@ -92,12 +83,13 @@ namespace {
 /// Therefore the final assembly final has 4 different loads. With this pass
 /// enabled, only one load is issued for the constants.
 class AArch64PromoteConstant : public ModulePass {
+
 public:
   struct PromotedConstant {
     bool ShouldConvert = false;
     GlobalVariable *GV = nullptr;
   };
-  using PromotionCacheTy = SmallDenseMap<Constant *, PromotedConstant, 16>;
+  typedef SmallDenseMap<Constant *, PromotedConstant, 16> PromotionCacheTy;
 
   struct UpdateRecord {
     Constant *C;
@@ -109,7 +101,6 @@ public:
   };
 
   static char ID;
-
   AArch64PromoteConstant() : ModulePass(ID) {
     initializeAArch64PromoteConstantPass(*PassRegistry::getPassRegistry());
   }
@@ -144,9 +135,9 @@ private:
   }
 
   /// Type to store a list of Uses.
-  using Uses = SmallVector<std::pair<Instruction *, unsigned>, 4>;
+  typedef SmallVector<std::pair<Instruction *, unsigned>, 4> Uses;
   /// Map an insertion point to all the uses it dominates.
-  using InsertionPoints = DenseMap<Instruction *, Uses>;
+  typedef DenseMap<Instruction *, Uses> InsertionPoints;
 
   /// Find the closest point that dominates the given Use.
   Instruction *findInsertionPoint(Instruction &User, unsigned OpNo);
@@ -221,7 +212,6 @@ private:
     InsertPts.erase(OldInstr);
   }
 };
-
 } // end anonymous namespace
 
 char AArch64PromoteConstant::ID = 0;
@@ -367,6 +357,7 @@ Instruction *AArch64PromoteConstant::findInsertionPoint(Instruction &User,
 bool AArch64PromoteConstant::isDominated(Instruction *NewPt, Instruction *User,
                                          unsigned OpNo,
                                          InsertionPoints &InsertPts) {
+
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(
       *NewPt->getParent()->getParent()).getDomTree();
 

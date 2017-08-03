@@ -47,12 +47,11 @@ static inline unsigned clampStackAlignment(bool ShouldClamp, unsigned Align,
 }
 
 int MachineFrameInfo::CreateStackObject(uint64_t Size, unsigned Alignment,
-                                        bool isSS, const AllocaInst *Alloca,
-                                        uint8_t ID) {
+                      bool isSS, const AllocaInst *Alloca) {
   assert(Size != 0 && "Cannot allocate zero size stack objects!");
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.push_back(StackObject(Size, Alignment, 0, false, isSS, Alloca,
-                                !isSS, ID));
+                                !isSS));
   int Index = (int)Objects.size() - NumFixedObjects - 1;
   assert(Index >= 0 && "Bad frame index!");
   ensureMaxAlignment(Alignment);
@@ -213,10 +212,6 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
   for (unsigned i = 0, e = Objects.size(); i != e; ++i) {
     const StackObject &SO = Objects[i];
     OS << "  fi#" << (int)(i-NumFixedObjects) << ": ";
-
-    if (SO.StackID != 0)
-      OS << "id=" << SO.StackID << ' ';
-
     if (SO.Size == ~0ULL) {
       OS << "dead\n";
       continue;

@@ -40,7 +40,7 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
-  Optional<CodeModel::Model> CodeModel = None;
+  CodeModel::Model CodeModel = CodeModel::Default;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   TargetMachine::CodeGenFileType CGFileType = TargetMachine::CGFT_ObjectFile;
   unsigned OptLevel = 2;
@@ -78,9 +78,6 @@ struct Config {
 
   /// Whether to emit optimization remarks with hotness informations.
   bool RemarksWithHotness = false;
-
-  /// Whether to emit the pass manager debuggging informations.
-  bool DebugPassManager = false;
 
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;

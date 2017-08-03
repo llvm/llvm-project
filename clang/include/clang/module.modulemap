@@ -69,7 +69,8 @@ module Clang_Diagnostics {
   module Frontend { header "Frontend/FrontendDiagnostic.h" export * }
   module Lex { header "Lex/LexDiagnostic.h" export * }
   module Parse { header "Parse/ParseDiagnostic.h" export * }
-  module Sema { header "Sema/SemaDiagnostic.h" export * }
+  // FIXME: This breaks the build of Clang_Sema, for unknown reasons.
+  //module Sema { header "Sema/SemaDiagnostic.h" export * }
   module Serialization { header "Serialization/SerializationDiagnostic.h" export * }
 }
 
@@ -102,8 +103,7 @@ module Clang_FrontendTool { requires cplusplus umbrella "FrontendTool" module * 
 module Clang_Index { requires cplusplus umbrella "Index" module * { export * } }
 module Clang_Lex { requires cplusplus umbrella "Lex" module * { export * } }
 module Clang_Parse { requires cplusplus umbrella "Parse" module * { export * } }
-module Clang_Rewrite { requires cplusplus umbrella "Rewrite/Core" module * { export * } }
-module Clang_RewriteFrontend { requires cplusplus umbrella "Rewrite/Frontend" module * { export * } }
+module Clang_Rewrite { requires cplusplus umbrella "Rewrite" module * { export * } }
 module Clang_Sema { requires cplusplus umbrella "Sema" module * { export * } }
 module Clang_Serialization { requires cplusplus umbrella "Serialization" module * { export * } }
 
@@ -138,9 +138,7 @@ module Clang_Tooling {
   // importing the AST matchers library gives a link dependency on the AST
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
-}
+  exclude header "Tooling/Refactor/USRFinder.h"
 
-module Clang_ToolingCore {
-  requires cplusplus
-  umbrella "Tooling/Core" module * { export * }
+  textual header "Tooling/Refactor/RefactoringActions.def"
 }

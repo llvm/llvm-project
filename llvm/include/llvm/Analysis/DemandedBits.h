@@ -1,4 +1,4 @@
-//===- llvm/Analysis/DemandedBits.h - Determine demanded bits ---*- C++ -*-===//
+//===-- llvm/Analysis/DemandedBits.h - Determine demanded bits --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,24 +24,23 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
-class AssumptionCache;
-class DominatorTree;
+class FunctionPass;
 class Function;
 class Instruction;
+class DominatorTree;
+class AssumptionCache;
 struct KnownBits;
-class raw_ostream;
 
 class DemandedBits {
 public:
   DemandedBits(Function &F, AssumptionCache &AC, DominatorTree &DT) :
-    F(F), AC(AC), DT(DT) {}
+    F(F), AC(AC), DT(DT), Analyzed(false) {}
 
   /// Return the bits demanded from instruction I.
   APInt getDemandedBits(Instruction *I);
@@ -52,17 +51,17 @@ public:
   void print(raw_ostream &OS);
 
 private:
+  Function &F;
+  AssumptionCache &AC;
+  DominatorTree &DT;
+
   void performAnalysis();
   void determineLiveOperandBits(const Instruction *UserI,
     const Instruction *I, unsigned OperandNo,
     const APInt &AOut, APInt &AB,
     KnownBits &Known, KnownBits &Known2);
 
-  Function &F;
-  AssumptionCache &AC;
-  DominatorTree &DT;
-
-  bool Analyzed = false;
+  bool Analyzed;
 
   // The set of visited instructions (non-integer-typed only).
   SmallPtrSet<Instruction*, 32> Visited;
@@ -72,10 +71,8 @@ private:
 class DemandedBitsWrapperPass : public FunctionPass {
 private:
   mutable Optional<DemandedBits> DB;
-
 public:
   static char ID; // Pass identification, replacement for typeid
-
   DemandedBitsWrapperPass();
 
   bool runOnFunction(Function &F) override;
@@ -92,12 +89,11 @@ public:
 /// An analysis that produces \c DemandedBits for a function.
 class DemandedBitsAnalysis : public AnalysisInfoMixin<DemandedBitsAnalysis> {
   friend AnalysisInfoMixin<DemandedBitsAnalysis>;
-
   static AnalysisKey Key;
 
 public:
-  /// \brief Provide the result type for this analysis pass.
-  using Result = DemandedBits;
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef DemandedBits Result;
 
   /// \brief Run the analysis pass over a function and produce demanded bits
   /// information.
@@ -110,13 +106,12 @@ class DemandedBitsPrinterPass : public PassInfoMixin<DemandedBitsPrinterPass> {
 
 public:
   explicit DemandedBitsPrinterPass(raw_ostream &OS) : OS(OS) {}
-
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Create a demanded bits analysis pass.
 FunctionPass *createDemandedBitsWrapperPass();
 
-} // end namespace llvm
+} // End llvm namespace
 
-#endif // LLVM_ANALYSIS_DEMANDED_BITS_H
+#endif

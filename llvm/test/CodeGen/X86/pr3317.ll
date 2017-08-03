@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc < %s -march=x86
 ; PR3317
 
 %VT = type [0 x i32 (...)*]

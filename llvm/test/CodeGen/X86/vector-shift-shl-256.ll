@@ -192,7 +192,7 @@ define <16 x i16> @var_shift_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; AVX2-LABEL: var_shift_v16i16:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; AVX2-NEXT:    vpsllvd %ymm3, %ymm4, %ymm3
@@ -288,7 +288,7 @@ define <16 x i16> @var_shift_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; X32-AVX2-LABEL: var_shift_v16i16:
 ; X32-AVX2:       # BB#0:
-; X32-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X32-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X32-AVX2-NEXT:    vpsllvd %ymm3, %ymm4, %ymm3
@@ -506,6 +506,8 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; X32-AVX1-LABEL: splatvar_shift_v4i64:
 ; X32-AVX1:       # BB#0:
+; X32-AVX1-NEXT:    vpextrd $1, %xmm1, %eax
+; X32-AVX1-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; X32-AVX1-NEXT:    vpsllq %xmm1, %xmm2, %xmm2
 ; X32-AVX1-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
@@ -514,6 +516,8 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; X32-AVX2-LABEL: splatvar_shift_v4i64:
 ; X32-AVX2:       # BB#0:
+; X32-AVX2-NEXT:    vpextrd $1, %xmm1, %eax
+; X32-AVX2-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vpsllq %xmm1, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    retl
   %splat = shufflevector <4 x i64> %b, <4 x i64> undef, <4 x i32> zeroinitializer

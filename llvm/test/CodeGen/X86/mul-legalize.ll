@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -march=x86 | FileCheck %s
 ; PR2135
 
 ; CHECK: 24576

@@ -51,7 +51,7 @@
 
 /* .. */
 
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__Bitrig__)
 #include <machine/endian.h>
 
 #if _BYTE_ORDER == _BIG_ENDIAN
@@ -62,7 +62,7 @@
 #define _YUGA_BIG_ENDIAN    0
 #endif /* _BYTE_ORDER */
 
-#endif /* OpenBSD */
+#endif /* OpenBSD and Bitrig. */
 
 /* .. */
 

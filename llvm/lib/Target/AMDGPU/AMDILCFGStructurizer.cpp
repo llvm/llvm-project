@@ -1168,7 +1168,6 @@ int AMDGPUCFGStructurizer::handleJumpintoIfImp(MachineBasicBlock *HeadMBB,
   return Num;
 }
 
-#ifndef NDEBUG
 void AMDGPUCFGStructurizer::showImproveSimpleJumpintoIf(
     MachineBasicBlock *HeadMBB, MachineBasicBlock *TrueMBB,
     MachineBasicBlock *FalseMBB, MachineBasicBlock *LandMBB, bool Detail) {
@@ -1210,7 +1209,6 @@ void AMDGPUCFGStructurizer::showImproveSimpleJumpintoIf(
 
   dbgs() << "\n";
 }
-#endif
 
 int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
     MachineBasicBlock *TrueMBB, MachineBasicBlock *FalseMBB,

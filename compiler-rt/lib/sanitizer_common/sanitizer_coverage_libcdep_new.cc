@@ -8,14 +8,10 @@
 //===----------------------------------------------------------------------===//
 // Sanitizer Coverage Controller for Trace PC Guard.
 
-#include "sanitizer_platform.h"
-
-#if !SANITIZER_FUCHSIA
 #include "sancov_flags.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
-#include "sanitizer_file.h"
 #include "sanitizer_symbolizer.h"
 
 using namespace __sanitizer;
@@ -128,17 +124,11 @@ class TracePcGuardController {
   }
 
   void TracePcGuard(u32* guard, uptr pc) {
-    u32 idx = *guard;
+    atomic_uint32_t* guard_ptr = reinterpret_cast<atomic_uint32_t*>(guard);
+    u32 idx = atomic_exchange(guard_ptr, 0, memory_order_relaxed);
     if (!idx) return;
     // we start indices from 1.
-    atomic_uintptr_t* pc_ptr =
-        reinterpret_cast<atomic_uintptr_t*>(&pc_vector[idx - 1]);
-    if (atomic_load(pc_ptr, memory_order_relaxed) == 0)
-      atomic_store(pc_ptr, pc, memory_order_relaxed);
-  }
-
-  void Reset() {
-    internal_memset(&pc_vector[0], 0, sizeof(pc_vector[0]) * pc_vector.size());
+    pc_vector[idx - 1] = pc;
   }
 
   void Dump() {
@@ -190,9 +180,6 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_trace_pc_guard_coverage() {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
   __sanitizer_dump_trace_pc_guard_coverage();
 }
-SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_reset() {
-  __sancov::pc_guard_controller.Reset();
-}
 // Default empty implementations (weak). Users should redefine them.
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}
@@ -204,8 +191,4 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
 }  // extern "C"
-
-#endif  // !SANITIZER_FUCHSIA

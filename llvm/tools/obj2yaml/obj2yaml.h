@@ -29,12 +29,13 @@ std::error_code wasm2yaml(llvm::raw_ostream &Out,
 
 // Forward decls for dwarf2yaml
 namespace llvm {
-class DWARFContext;
+class DWARFContextInMemory;
 namespace DWARFYAML {
 struct Data;
 }
 }
 
-std::error_code dwarf2yaml(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);
+std::error_code dwarf2yaml(llvm::DWARFContextInMemory &DCtx,
+                           llvm::DWARFYAML::Data &Y);
 
 #endif

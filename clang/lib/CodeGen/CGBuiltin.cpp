@@ -643,8 +643,8 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 
 Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
                                                  BuiltinCheckKind Kind) {
-  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero)
-          && "Unsupported builtin check kind");
+  assert(Kind == BCK_CLZPassedZero ||
+         Kind == BCK_CTZPassedZero && "Unsupported builtin check kind");
 
   Value *ArgValue = EmitScalarExpr(E);
   if (!SanOpts.has(SanitizerKind::Builtin) || !getTarget().isCLZForZeroUndef())
@@ -2703,25 +2703,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
             llvm::FunctionType::get(IntTy, GenericVoidPtrTy, false),
             "__get_kernel_preferred_work_group_multiple_impl"),
         Arg));
-  }
-  case Builtin::BIget_kernel_max_sub_group_size_for_ndrange:
-  case Builtin::BIget_kernel_sub_group_count_for_ndrange: {
-    llvm::Type *GenericVoidPtrTy = Builder.getInt8PtrTy(
-        getContext().getTargetAddressSpace(LangAS::opencl_generic));
-    LValue NDRangeL = EmitAggExprToLValue(E->getArg(0));
-    llvm::Value *NDRange = NDRangeL.getAddress().getPointer();
-    Value *Block = EmitScalarExpr(E->getArg(1));
-    Block = Builder.CreatePointerCast(Block, GenericVoidPtrTy);
-    const char *Name =
-        BuiltinID == Builtin::BIget_kernel_max_sub_group_size_for_ndrange
-            ? "__get_kernel_max_sub_group_size_for_ndrange_impl"
-            : "__get_kernel_sub_group_count_for_ndrange_impl";
-    return RValue::get(Builder.CreateCall(
-        CGM.CreateRuntimeFunction(
-            llvm::FunctionType::get(
-                IntTy, {NDRange->getType(), GenericVoidPtrTy}, false),
-            Name),
-        {NDRange, Block}));
   }
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX())

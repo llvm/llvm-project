@@ -10,8 +10,6 @@
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Utility/Stream.h"
 
-#include <mutex>
-
 using namespace lldb_private;
 
 uint64_t g_TotalSizeOfMetadata = 0;
@@ -20,19 +18,15 @@ typedef llvm::DenseMap<clang::ExternalASTSource *,
                        ClangExternalASTSourceCommon *>
     ASTSourceMap;
 
-static ASTSourceMap &GetSourceMap(std::unique_lock<std::mutex> &guard) {
+static ASTSourceMap &GetSourceMap() {
   // Intentionally leaked to avoid problems with global destructors.
   static ASTSourceMap *s_source_map = new ASTSourceMap;
-  static std::mutex s_mutex;
-  std::unique_lock<std::mutex> locked_guard(s_mutex);
-  guard.swap(locked_guard);
   return *s_source_map;
 }
 
 ClangExternalASTSourceCommon *
 ClangExternalASTSourceCommon::Lookup(clang::ExternalASTSource *source) {
-  std::unique_lock<std::mutex> guard;
-  ASTSourceMap &source_map = GetSourceMap(guard);
+  ASTSourceMap &source_map = GetSourceMap();
 
   ASTSourceMap::iterator iter = source_map.find(source);
 
@@ -46,13 +40,11 @@ ClangExternalASTSourceCommon::Lookup(clang::ExternalASTSource *source) {
 ClangExternalASTSourceCommon::ClangExternalASTSourceCommon()
     : clang::ExternalASTSource() {
   g_TotalSizeOfMetadata += m_metadata.size();
-  std::unique_lock<std::mutex> guard;
-  GetSourceMap(guard)[this] = this;
+  GetSourceMap()[this] = this;
 }
 
 ClangExternalASTSourceCommon::~ClangExternalASTSourceCommon() {
-  std::unique_lock<std::mutex> guard;
-  GetSourceMap(guard).erase(this);
+  GetSourceMap().erase(this);
   g_TotalSizeOfMetadata -= m_metadata.size();
 }
 

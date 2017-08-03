@@ -68,14 +68,14 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
 
 void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
-  llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
+  unsigned ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
   if (Str == "x86_64h")
     T.setArchName(Str);
-  else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
-           ArchKind == llvm::ARM::ArchKind::ARMV7M ||
-           ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
+  else if (ArchKind == llvm::ARM::AK_ARMV6M ||
+           ArchKind == llvm::ARM::AK_ARMV7M ||
+           ArchKind == llvm::ARM::AK_ARMV7EM) {
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }
@@ -436,6 +436,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // more information.
   ArgStringList CmdArgs;
 
+  Args.ClaimAllArgs(options::OPT_index_store_path);
+  Args.ClaimAllArgs(options::OPT_index_ignore_system_symbols);
+  Args.ClaimAllArgs(options::OPT_index_record_codegen_name);
+
   /// Hack(tm) to ignore linking errors when we are doing ARC migration.
   if (Args.hasArg(options::OPT_ccc_arcmt_check,
                   options::OPT_ccc_arcmt_migrate)) {
@@ -549,9 +553,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-threads=") + llvm::to_string(Parallelism)));
   }
 
-  if (getToolChain().ShouldLinkCXXStdlib(Args))
-    getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    if (getToolChain().getDriver().CCCIsCXX())
+      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+
     // link_ssp spec is empty.
 
     // Let the tool chain choose which runtime library to link.
@@ -739,8 +744,8 @@ static const char *ArmMachOArchName(StringRef Arch) {
 }
 
 static const char *ArmMachOArchNameCPU(StringRef CPU) {
-  llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
-  if (ArchKind == llvm::ARM::ArchKind::INVALID)
+  unsigned ArchKind = llvm::ARM::parseCPUArch(CPU);
+  if (ArchKind == llvm::ARM::AK_INVALID)
     return nullptr;
   StringRef Arch = llvm::ARM::getArchName(ArchKind);
 
@@ -1174,12 +1179,13 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   unsigned Major, Minor, Micro;
   bool HadExtra;
 
-  // The iOS deployment target that is explicitly specified via a command line
-  // option or an environment variable.
-  std::string ExplicitIOSDeploymentTargetStr;
-
-  if (iOSVersion)
-    ExplicitIOSDeploymentTargetStr = iOSVersion->getAsString(Args);
+  // iOS 10 is the maximum deployment target for 32-bit targets.
+  if (iOSVersion && getTriple().isArch32Bit() &&
+      Driver::GetReleaseVersion(iOSVersion->getValue(), Major, Minor, Micro,
+                                HadExtra) &&
+      Major > 10)
+    getDriver().Diag(diag::err_invalid_ios_deployment_target)
+        << iOSVersion->getAsString(Args);
 
   // Add a macro to differentiate between m(iphone|tv|watch)os-version-min=X.Y and
   // -m(iphone|tv|watch)simulator-version-min=X.Y.
@@ -1222,9 +1228,13 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     if (char *env = ::getenv("WATCHOS_DEPLOYMENT_TARGET"))
       WatchOSTarget = env;
 
-    if (!iOSTarget.empty())
-      ExplicitIOSDeploymentTargetStr =
-          std::string("IPHONEOS_DEPLOYMENT_TARGET=") + iOSTarget;
+    // iOS 10 is the maximum deployment target for 32-bit targets.
+    if (!iOSTarget.empty() && getTriple().isArch32Bit() &&
+        Driver::GetReleaseVersion(iOSTarget.c_str(), Major, Minor, Micro,
+                                  HadExtra) &&
+        Major > 10)
+      getDriver().Diag(diag::err_invalid_ios_deployment_target)
+          << std::string("IPHONEOS_DEPLOYMENT_TARGET=") + iOSTarget;
 
     // If there is no command-line argument to specify the Target version and
     // no environment variable defined, see if we can set the default based
@@ -1388,19 +1398,12 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         HadExtra || Major >= 100 || Minor >= 100 || Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << iOSVersion->getAsString(Args);
-    // For 32-bit targets, the deployment target for iOS has to be earlier than
-    // iOS 11.
+    // iOS 10 is the maximum deployment target for 32-bit targets. If the
+    // inferred deployment target is iOS 11 or later, set it to 10.99.
     if (getTriple().isArch32Bit() && Major >= 11) {
-      // If the deployment target is explicitly specified, print a diagnostic.
-      if (!ExplicitIOSDeploymentTargetStr.empty()) {
-        getDriver().Diag(diag::warn_invalid_ios_deployment_target)
-            << ExplicitIOSDeploymentTargetStr;
-      // Otherwise, set it to 10.99.99.
-      } else {
-        Major = 10;
-        Minor = 99;
-        Micro = 99;
-      }
+      Major = 10;
+      Minor = 99;
+      Micro = 99;
     }
   } else if (Platform == TvOS) {
     if (!Driver::GetReleaseVersion(TvOSVersion->getValue(), Major, Minor,

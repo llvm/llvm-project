@@ -620,10 +620,7 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
 
     // Get image and pipe access qualifier:
     if (ty->isImageType()|| ty->isPipeType()) {
-      const Decl *PDecl = parm;
-      if (auto *TD = dyn_cast<TypedefType>(ty))
-        PDecl = TD->getDecl();
-      const OpenCLAccessAttr *A = PDecl->getAttr<OpenCLAccessAttr>();
+      const OpenCLAccessAttr *A = parm->getAttr<OpenCLAccessAttr>();
       if (A && A->isWriteOnly())
         accessQuals.push_back(llvm::MDString::get(Context, "write_only"));
       else if (A && A->isReadWrite())

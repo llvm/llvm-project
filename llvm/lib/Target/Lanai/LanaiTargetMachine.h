@@ -34,8 +34,7 @@ public:
                      StringRef Cpu, StringRef FeatureString,
                      const TargetOptions &Options,
                      Optional<Reloc::Model> RelocationModel,
-                     Optional<CodeModel::Model> CodeModel,
-                     CodeGenOpt::Level OptLevel, bool JIT);
+                     CodeModel::Model CodeModel, CodeGenOpt::Level OptLevel);
 
   const LanaiSubtarget *
   getSubtargetImpl(const llvm::Function & /*Fn*/) const override {

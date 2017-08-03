@@ -260,7 +260,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
 
 Expected<std::unique_ptr<CoverageMapping>>
 CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
-                      StringRef ProfileFilename, ArrayRef<StringRef> Arches) {
+                      StringRef ProfileFilename, StringRef Arch) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
   if (Error E = ProfileReaderOrErr.takeError())
     return std::move(E);
@@ -268,11 +268,10 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
 
   SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
-  for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(File.value());
+  for (StringRef ObjectFilename : ObjectFilenames) {
+    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(ObjectFilename);
     if (std::error_code EC = CovMappingBufOrErr.getError())
       return errorCodeToError(EC);
-    StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
     auto CoverageReaderOrErr =
         BinaryCoverageReader::create(CovMappingBufOrErr.get(), Arch);
     if (Error E = CoverageReaderOrErr.takeError())
@@ -510,8 +509,8 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   return FileCoverage;
 }
 
-std::vector<InstantiationGroup>
-CoverageMapping::getInstantiationGroups(StringRef Filename) const {
+std::vector<const FunctionRecord *>
+CoverageMapping::getInstantiations(StringRef Filename) const {
   FunctionInstantiationSetCollector InstantiationSetCollector;
   for (const auto &Function : Functions) {
     auto MainFileID = findMainViewFileID(Filename, Function);
@@ -520,12 +519,12 @@ CoverageMapping::getInstantiationGroups(StringRef Filename) const {
     InstantiationSetCollector.insert(Function, *MainFileID);
   }
 
-  std::vector<InstantiationGroup> Result;
+  std::vector<const FunctionRecord *> Result;
   for (const auto &InstantiationSet : InstantiationSetCollector) {
-    InstantiationGroup IG{InstantiationSet.first.first,
-                          InstantiationSet.first.second,
-                          std::move(InstantiationSet.second)};
-    Result.emplace_back(std::move(IG));
+    if (InstantiationSet.second.size() < 2)
+      continue;
+    Result.insert(Result.end(), InstantiationSet.second.begin(),
+                  InstantiationSet.second.end());
   }
   return Result;
 }

@@ -17,20 +17,17 @@
 #define LLVM_SUPPORT_CODEGENCWRAPPERS_H
 
 #include "llvm-c/TargetMachine.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 
-inline Optional<CodeModel::Model> unwrap(LLVMCodeModel Model, bool &JIT) {
-  JIT = false;
+inline CodeModel::Model unwrap(LLVMCodeModel Model) {
   switch (Model) {
-  case LLVMCodeModelJITDefault:
-    JIT = true;
-    LLVM_FALLTHROUGH;
   case LLVMCodeModelDefault:
-    return None;
+    return CodeModel::Default;
+  case LLVMCodeModelJITDefault:
+    return CodeModel::JITDefault;
   case LLVMCodeModelSmall:
     return CodeModel::Small;
   case LLVMCodeModelKernel:
@@ -40,11 +37,15 @@ inline Optional<CodeModel::Model> unwrap(LLVMCodeModel Model, bool &JIT) {
   case LLVMCodeModelLarge:
     return CodeModel::Large;
   }
-  return CodeModel::Small;
+  return CodeModel::Default;
 }
 
 inline LLVMCodeModel wrap(CodeModel::Model Model) {
   switch (Model) {
+  case CodeModel::Default:
+    return LLVMCodeModelDefault;
+  case CodeModel::JITDefault:
+    return LLVMCodeModelJITDefault;
   case CodeModel::Small:
     return LLVMCodeModelSmall;
   case CodeModel::Kernel:
@@ -60,3 +61,4 @@ inline LLVMCodeModel wrap(CodeModel::Model Model) {
 } // end llvm namespace
 
 #endif
+

@@ -11,7 +11,7 @@
 set -e
 
 function show_usage() {
-  cat << EOF
+  usage=$(cat << EOF
 Usage: build_install_llvm.sh [options] -- [cmake-args]
 
 Checkout svn sources and run cmake with the specified arguments. Used
@@ -37,6 +37,8 @@ Required options: At least one --install-target.
 
 All options after '--' are passed to CMake invocation.
 EOF
+)
+  echo "$usage"
 }
 
 LLVM_SVN_REV=""
@@ -46,7 +48,6 @@ CMAKE_INSTALL_TARGETS=""
 # We always checkout llvm
 LLVM_PROJECTS="llvm"
 CMAKE_LLVM_ENABLE_PROJECTS=""
-CLANG_TOOLS_EXTRA_ENABLED=0
 
 function contains_project() {
   local TARGET_PROJ="$1"
@@ -57,17 +58,6 @@ function contains_project() {
     fi
   done
   return 1
-}
-
-function append_project() {
-  local PROJ="$1"
-
-  LLVM_PROJECTS="$LLVM_PROJECTS $PROJ"
-  if [ "$CMAKE_LLVM_ENABLE_PROJECTS" != "" ]; then
-    CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLE_PROJECTS;$PROJ"
-  else
-    CMAKE_LLVM_ENABLE_PROJECTS="$PROJ"
-  fi
 }
 
 while [[ $# -gt 0 ]]; do
@@ -85,27 +75,19 @@ while [[ $# -gt 0 ]]; do
     -p|--llvm-project)
       shift
       PROJ="$1"
-      shift
-
       if [ "$PROJ" == "cfe" ]; then
         PROJ="clang"
       fi
-
-      if [ "$PROJ" == "clang-tools-extra" ]; then
-        if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
-          echo "Project 'clang-tools-extra' is already enabled, ignoring extra occurences."
-        else
-          CLANG_TOOLS_EXTRA_ENABLED=1
-        fi
-
-        continue
-      fi
-
       if ! contains_project "$PROJ" ; then
-        append_project "$PROJ"
+        LLVM_PROJECTS="$LLVM_PROJECTS $PROJ"
+        if [ "$CMAKE_LLVM_ENABLE_PROJECTS" != "" ]; then
+          CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLE_PROJECTS;"
+        fi
+        CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLED_PROJECTS$PROJ"
       else
         echo "Project '$PROJ' is already enabled, ignoring extra occurences."
       fi
+      shift
       ;;
     -i|--install-target)
       shift
@@ -130,15 +112,6 @@ done
 if [ "$CMAKE_INSTALL_TARGETS" == "" ]; then
   echo "No install targets. Please pass one or more --install-target."
   exit 1
-fi
-
-if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
-  if ! contains_project "clang"; then
-    echo "Project 'clang-tools-extra' was enabled without 'clang'."
-    echo "Adding 'clang' to a list of projects."
-
-    append_project "clang"
-  fi
 fi
 
 if [ "$LLVM_BRANCH" == "" ]; then
@@ -174,16 +147,6 @@ for LLVM_PROJECT in $LLVM_PROJECTS; do
     "https://llvm.org/svn/llvm-project/$SVN_PROJECT/$LLVM_BRANCH" \
     "$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
 done
-
-if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
-  echo "Checking out https://llvm.org/svn/llvm-project/clang-tools-extra to $CLANG_BUILD_DIR/src/clang/tools/extra"
-  # FIXME: --trust-server-cert is required to workaround 'SSL issuer is not
-  #        trusted' error. Using https seems preferable to http either way,
-  #        albeit this is not secure.
-  svn co -q $SVN_REV_ARG --trust-server-cert \
-    "https://llvm.org/svn/llvm-project/clang-tools-extra/$LLVM_BRANCH" \
-    "$CLANG_BUILD_DIR/src/clang/tools/extra"
-fi
 
 mkdir "$CLANG_BUILD_DIR/build"
 pushd "$CLANG_BUILD_DIR/build"

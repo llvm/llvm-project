@@ -66,12 +66,6 @@ namespace llvm {
       // Floating Point Compare
       FPCmp,
 
-      // Floating point select
-      FSELECT,
-
-      // Node used to generate an MTC1 i32 to f64 instruction
-      MTC1_D64,
-
       // Floating Point Conditional Moves
       CMovFP_T,
       CMovFP_F,
@@ -625,8 +619,7 @@ namespace llvm {
     }
 
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS,
-                               Instruction *I = nullptr) const override;
+                               Type *Ty, unsigned AS) const override;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 

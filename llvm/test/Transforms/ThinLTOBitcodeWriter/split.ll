@@ -8,6 +8,8 @@
 ; RUN: not llvm-modextract -b -n 2 -o - %t 2>&1 | FileCheck --check-prefix=ERROR %s
 ; RUN: llvm-dis -o - %t0.bc | FileCheck --check-prefix=M0 %s
 ; RUN: llvm-dis -o - %t1.bc | FileCheck --check-prefix=M1 %s
+; RUN: llvm-dis -o - %t0.thinlink.bc | FileCheck --check-prefix=NODEBUG %s
+; RUN: llvm-dis -o - %t1.thinlink.bc | FileCheck --check-prefix=NODEBUG %s
 ; RUN: llvm-bcanalyzer -dump %t0.bc | FileCheck --check-prefix=BCA0 %s
 ; RUN: llvm-bcanalyzer -dump %t1.bc | FileCheck --check-prefix=BCA1 %s
 
@@ -42,3 +44,12 @@ define i8* @f() {
 
 ; M1: !0 = !{i32 0, !"typeid"}
 !0 = !{i32 0, !"typeid"}
+
+; M0: !llvm.dbg.cu
+; M1-NOT: !llvm.dbg.cu
+; NODEBUG-NOT: !llvm.dbg.cu
+!llvm.dbg.cu = !{}
+
+; M1: !{i32 1, !"ThinLTO", i32 0}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!llvm.module.flags = !{!1}

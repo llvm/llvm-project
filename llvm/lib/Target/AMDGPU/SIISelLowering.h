@@ -23,7 +23,6 @@ namespace llvm {
 class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
-  SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
   SDValue lowerKernargMemParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                    const SDLoc &SL, SDValue Chain,
                                    uint64_t Offset, bool Signed,
@@ -118,7 +117,6 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue performCvtF32UByteNCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   bool isLegalFlatAddressingMode(const AddrMode &AM) const;
-  bool isLegalGlobalAddressingMode(const AddrMode &AM) const;
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;
@@ -142,7 +140,8 @@ public:
 
   const SISubtarget *getSubtarget() const;
 
-  bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
+  bool isShuffleMaskLegal(const SmallVectorImpl<int> &/*Mask*/,
+                          EVT /*VT*/) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
                           unsigned IntrinsicID) const override;
@@ -152,8 +151,7 @@ public:
                             Type *&/*AccessTy*/) const override;
 
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS,
-                             Instruction *I = nullptr) const override;
+                             unsigned AS) const override;
 
   bool canMergeStoresTo(unsigned AS, EVT MemVT,
                         const SelectionDAG &DAG) const override;
@@ -183,12 +181,6 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-  bool supportSplitCSR(MachineFunction *MF) const override;
-  void initializeSplitCSR(MachineBasicBlock *Entry) const override;
-  void insertCopiesSplitCSR(
-    MachineBasicBlock *Entry,
-    const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
-
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -204,15 +196,6 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
-
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
-                          CallingConv::ID CallConv, bool isVarArg,
-                          const SmallVectorImpl<ISD::InputArg> &Ins,
-                          const SDLoc &DL, SelectionDAG &DAG,
-                          SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                          SDValue ThisVal) const;
-  SDValue LowerCall(CallLoweringInfo &CLI,
-                    SmallVectorImpl<SDValue> &InVals) const override;
 
   unsigned getRegisterByName(const char* RegName, EVT VT,
                              SelectionDAG &DAG) const override;

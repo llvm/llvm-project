@@ -81,6 +81,7 @@ extern "C" void LLVMInitializeAVRTarget() {
 
   auto &PR = *PassRegistry::getPassRegistry();
   initializeAVRExpandPseudoPass(PR);
+  initializeAVRInstrumentFunctionsPass(PR);
   initializeAVRRelaxMemPass(PR);
 }
 

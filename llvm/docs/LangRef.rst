@@ -1381,9 +1381,6 @@ example:
 ``naked``
     This attribute disables prologue / epilogue emission for the
     function. This can have very system-specific consequences.
-``no-jump-tables``
-    When this attribute is set to true, the jump tables and lookup tables that
-    can be generated from a switch case lowering are disabled.
 ``nobuiltin``
     This indicates that the callee function at a call site is not recognized as
     a built-in function. LLVM will retain the original call and not replace it

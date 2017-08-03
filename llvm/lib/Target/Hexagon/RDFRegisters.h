@@ -1,4 +1,4 @@
-//===- RDFRegisters.h -------------------------------------------*- C++ -*-===//
+//===--- RDFRegisters.h -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,23 +11,16 @@
 #define LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include <cassert>
-#include <cstdint>
-#include <map>
+
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
-
-class MachineFunction;
-class raw_ostream;
-
 namespace rdf {
 
-  using RegisterId = uint32_t;
+  typedef uint32_t RegisterId;
 
   // Template class for a map translating uint32_t into arbitrary types.
   // The map will act like an indexed set: upon insertion of a new object,
@@ -35,7 +28,7 @@ namespace rdf {
   // as invalid and is never allocated.
   template <typename T, unsigned N = 32>
   struct IndexedSet {
-    IndexedSet() { Map.reserve(N); }
+    IndexedSet() : Map() { Map.reserve(N); }
 
     T get(uint32_t Idx) const {
       // Index Idx corresponds to Map[Idx-1].
@@ -60,8 +53,7 @@ namespace rdf {
 
     uint32_t size() const { return Map.size(); }
 
-    using const_iterator = typename std::vector<T>::const_iterator;
-
+    typedef typename std::vector<T>::const_iterator const_iterator;
     const_iterator begin() const { return Map.begin(); }
     const_iterator end() const { return Map.end(); }
 
@@ -80,15 +72,12 @@ namespace rdf {
     operator bool() const {
       return Reg != 0 && Mask.any();
     }
-
     bool operator== (const RegisterRef &RR) const {
       return Reg == RR.Reg && Mask == RR.Mask;
     }
-
     bool operator!= (const RegisterRef &RR) const {
       return !operator==(RR);
     }
-
     bool operator< (const RegisterRef &RR) const {
       return Reg < RR.Reg || (Reg == RR.Reg && Mask < RR.Mask);
     }
@@ -102,15 +91,12 @@ namespace rdf {
     static bool isRegMaskId(RegisterId R) {
       return TargetRegisterInfo::isStackSlot(R);
     }
-
     RegisterId getRegMaskId(const uint32_t *RM) const {
       return TargetRegisterInfo::index2StackSlot(RegMasks.find(RM));
     }
-
     const uint32_t *getRegMaskBits(RegisterId R) const {
       return RegMasks.get(TargetRegisterInfo::stackSlot2Index(R));
     }
-
     RegisterRef normalize(RegisterRef RR) const;
 
     bool alias(RegisterRef RA, RegisterRef RB) const {
@@ -118,18 +104,16 @@ namespace rdf {
         return !isRegMaskId(RB.Reg) ? aliasRR(RA, RB) : aliasRM(RA, RB);
       return !isRegMaskId(RB.Reg) ? aliasRM(RB, RA) : aliasMM(RA, RB);
     }
-
     std::set<RegisterId> getAliasSet(RegisterId Reg) const;
 
     RegisterRef getRefForUnit(uint32_t U) const {
       return RegisterRef(UnitInfos[U].Reg, UnitInfos[U].Mask);
     }
-
     const BitVector &getMaskUnits(RegisterId MaskId) const {
       return MaskInfos[TargetRegisterInfo::stackSlot2Index(MaskId)].Units;
     }
-
     RegisterRef mapTo(RegisterRef RR, unsigned R) const;
+
     const TargetRegisterInfo &getTRI() const { return TRI; }
 
   private:
@@ -155,6 +139,7 @@ namespace rdf {
     bool aliasMM(RegisterRef RM, RegisterRef RN) const;
   };
 
+
   struct RegisterAggr {
     RegisterAggr(const PhysicalRegisterInfo &pri)
         : Units(pri.getTRI().getNumRegUnits()), PRI(pri) {}
@@ -163,7 +148,6 @@ namespace rdf {
     bool empty() const { return Units.none(); }
     bool hasAliasOf(RegisterRef RR) const;
     bool hasCoverOf(RegisterRef RR) const;
-
     static bool isCoverOf(RegisterRef RA, RegisterRef RB,
                           const PhysicalRegisterInfo &PRI) {
       return RegisterAggr(PRI).insert(RA).hasCoverOf(RB);
@@ -183,32 +167,26 @@ namespace rdf {
     void print(raw_ostream &OS) const;
 
     struct rr_iterator {
-      using MapType = std::map<RegisterId, LaneBitmask>;
-
+      typedef std::map<RegisterId,LaneBitmask> MapType;
     private:
       MapType Masks;
       MapType::iterator Pos;
       unsigned Index;
       const RegisterAggr *Owner;
-
     public:
       rr_iterator(const RegisterAggr &RG, bool End);
-
       RegisterRef operator*() const {
         return RegisterRef(Pos->first, Pos->second);
       }
-
       rr_iterator &operator++() {
         ++Pos;
         ++Index;
         return *this;
       }
-
       bool operator==(const rr_iterator &I) const {
         assert(Owner == I.Owner);
         return Index == I.Index;
       }
-
       bool operator!=(const rr_iterator &I) const {
         return !(*this == I);
       }
@@ -226,6 +204,7 @@ namespace rdf {
     const PhysicalRegisterInfo &PRI;
   };
 
+
   // Optionally print the lane mask, if it is not ~0.
   struct PrintLaneMaskOpt {
     PrintLaneMaskOpt(LaneBitmask M) : Mask(M) {}
@@ -233,8 +212,8 @@ namespace rdf {
   };
   raw_ostream &operator<< (raw_ostream &OS, const PrintLaneMaskOpt &P);
 
-} // end namespace rdf
+} // namespace rdf
+} // namespace llvm
 
-} // end namespace llvm
+#endif
 
-#endif // LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H

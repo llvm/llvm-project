@@ -33,7 +33,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -49,7 +48,6 @@
 #include <memory>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 using namespace slpvectorizer;
 
 #define SV_NAME "slp-vectorizer"
@@ -156,119 +154,6 @@ static bool isSplat(ArrayRef<Value *> VL) {
     if (VL[i] != VL[0])
       return false;
   return true;
-}
-
-/// Checks if the vector of instructions can be represented as a shuffle, like:
-/// %x0 = extractelement <4 x i8> %x, i32 0
-/// %x3 = extractelement <4 x i8> %x, i32 3
-/// %y1 = extractelement <4 x i8> %y, i32 1
-/// %y2 = extractelement <4 x i8> %y, i32 2
-/// %x0x0 = mul i8 %x0, %x0
-/// %x3x3 = mul i8 %x3, %x3
-/// %y1y1 = mul i8 %y1, %y1
-/// %y2y2 = mul i8 %y2, %y2
-/// %ins1 = insertelement <4 x i8> undef, i8 %x0x0, i32 0
-/// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
-/// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
-/// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
-/// ret <4 x i8> %ins4
-/// can be transformed into:
-/// %1 = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 3, i32 5,
-///                                                         i32 6>
-/// %2 = mul <4 x i8> %1, %1
-/// ret <4 x i8> %2
-/// We convert this initially to something like:
-/// %x0 = extractelement <4 x i8> %x, i32 0
-/// %x3 = extractelement <4 x i8> %x, i32 3
-/// %y1 = extractelement <4 x i8> %y, i32 1
-/// %y2 = extractelement <4 x i8> %y, i32 2
-/// %1 = insertelement <4 x i8> undef, i8 %x0, i32 0
-/// %2 = insertelement <4 x i8> %1, i8 %x3, i32 1
-/// %3 = insertelement <4 x i8> %2, i8 %y1, i32 2
-/// %4 = insertelement <4 x i8> %3, i8 %y2, i32 3
-/// %5 = mul <4 x i8> %4, %4
-/// %6 = extractelement <4 x i8> %5, i32 0
-/// %ins1 = insertelement <4 x i8> undef, i8 %6, i32 0
-/// %7 = extractelement <4 x i8> %5, i32 1
-/// %ins2 = insertelement <4 x i8> %ins1, i8 %7, i32 1
-/// %8 = extractelement <4 x i8> %5, i32 2
-/// %ins3 = insertelement <4 x i8> %ins2, i8 %8, i32 2
-/// %9 = extractelement <4 x i8> %5, i32 3
-/// %ins4 = insertelement <4 x i8> %ins3, i8 %9, i32 3
-/// ret <4 x i8> %ins4
-/// InstCombiner transforms this into a shuffle and vector mul
-static Optional<TargetTransformInfo::ShuffleKind>
-isShuffle(ArrayRef<Value *> VL) {
-  auto *EI0 = cast<ExtractElementInst>(VL[0]);
-  unsigned Size = EI0->getVectorOperandType()->getVectorNumElements();
-  Value *Vec1 = nullptr;
-  Value *Vec2 = nullptr;
-  enum ShuffleMode {Unknown, FirstAlternate, SecondAlternate, Permute};
-  ShuffleMode CommonShuffleMode = Unknown;
-  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
-    auto *EI = cast<ExtractElementInst>(VL[I]);
-    auto *Vec = EI->getVectorOperand();
-    // All vector operands must have the same number of vector elements.
-    if (Vec->getType()->getVectorNumElements() != Size)
-      return None;
-    auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
-    if (!Idx)
-      return None;
-    // Undefined behavior if Idx is negative or >= Size.
-    if (Idx->getValue().uge(Size))
-      continue;
-    unsigned IntIdx = Idx->getValue().getZExtValue();
-    // We can extractelement from undef vector.
-    if (isa<UndefValue>(Vec))
-      continue;
-    // For correct shuffling we have to have at most 2 different vector operands
-    // in all extractelement instructions.
-    if (Vec1 && Vec2 && Vec != Vec1 && Vec != Vec2)
-      return None;
-    if (CommonShuffleMode == Permute)
-      continue;
-    // If the extract index is not the same as the operation number, it is a
-    // permutation.
-    if (IntIdx != I) {
-      CommonShuffleMode = Permute;
-      continue;
-    }
-    // Check the shuffle mode for the current operation.
-    if (!Vec1)
-      Vec1 = Vec;
-    else if (Vec != Vec1)
-      Vec2 = Vec;
-    // Example: shufflevector A, B, <0,5,2,7>
-    // I is odd and IntIdx for A == I - FirstAlternate shuffle.
-    // I is even and IntIdx for B == I - FirstAlternate shuffle.
-    // Example: shufflevector A, B, <4,1,6,3>
-    // I is even and IntIdx for A == I - SecondAlternate shuffle.
-    // I is odd and IntIdx for B == I - SecondAlternate shuffle.
-    const bool IIsEven = I & 1;
-    const bool CurrVecIsA = Vec == Vec1;
-    const bool IIsOdd = !IIsEven;
-    const bool CurrVecIsB = !CurrVecIsA;
-    ShuffleMode CurrentShuffleMode =
-        ((IIsOdd && CurrVecIsA) || (IIsEven && CurrVecIsB)) ? FirstAlternate
-                                                            : SecondAlternate;
-    // Common mode is not set or the same as the shuffle mode of the current
-    // operation - alternate.
-    if (CommonShuffleMode == Unknown)
-      CommonShuffleMode = CurrentShuffleMode;
-    // Common shuffle mode is not the same as the shuffle mode of the current
-    // operation - permutation.
-    if (CommonShuffleMode != CurrentShuffleMode)
-      CommonShuffleMode = Permute;
-  }
-  // If we're not crossing lanes in different vectors, consider it as blending.
-  if ((CommonShuffleMode == FirstAlternate ||
-       CommonShuffleMode == SecondAlternate) &&
-      Vec2)
-    return TargetTransformInfo::SK_Alternate;
-  // If Vec2 was never used, we have a permutation of a single vector, otherwise
-  // we have permutation of 2 vectors.
-  return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
-              : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
 ///\returns Opcode that can be clubbed with \p Op to create an alternate
@@ -531,9 +416,6 @@ public:
 private:
   struct TreeEntry;
 
-  /// Checks if all users of \p I are the part of the vectorization tree.
-  bool areAllUsersVectorized(Instruction *I) const;
-
   /// \returns the cost of the vectorizable entry.
   int getEntryCost(TreeEntry *E);
 
@@ -542,7 +424,7 @@ private:
 
   /// \returns True if the ExtractElement/ExtractValue instructions in VL can
   /// be vectorized to use the original vector (or aggregate "bitcast" to a vector).
-  bool canReuseExtract(ArrayRef<Value *> VL, Value *OpValue) const;
+  bool canReuseExtract(ArrayRef<Value *> VL, unsigned Opcode) const;
 
   /// Vectorize a single entry in the tree.
   Value *vectorizeTree(TreeEntry *E);
@@ -1398,7 +1280,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     case Instruction::ExtractValue:
     case Instruction::ExtractElement: {
-      bool Reuse = canReuseExtract(VL, VL0);
+      bool Reuse = canReuseExtract(VL, Opcode);
       if (Reuse) {
         DEBUG(dbgs() << "SLP: Reusing extract sequence.\n");
       } else {
@@ -1415,7 +1297,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // loading/storing it as an i8 struct. If we vectorize loads/stores from
       // such a struct we read/write packed bits disagreeing with the
       // unvectorized version.
-      Type *ScalarTy = VL0->getType();
+      Type *ScalarTy = VL[0]->getType();
 
       if (DL->getTypeSizeInBits(ScalarTy) !=
           DL->getTypeAllocSizeInBits(ScalarTy)) {
@@ -1517,7 +1399,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::FCmp: {
       // Check that all of the compares have the same predicate.
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
-      Type *ComparedTy = VL0->getOperand(0)->getType();
+      Type *ComparedTy = cast<Instruction>(VL[0])->getOperand(0)->getType();
       for (unsigned i = 1, e = VL.size(); i < e; ++i) {
         CmpInst *Cmp = cast<CmpInst>(VL[i]);
         if (Cmp->getPredicate() != P0 ||
@@ -1597,7 +1479,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // We can't combine several GEPs into one vector if they operate on
       // different types.
-      Type *Ty0 = VL0->getOperand(0)->getType();
+      Type *Ty0 = cast<Instruction>(VL0)->getOperand(0)->getType();
       for (unsigned j = 0; j < VL.size(); ++j) {
         Type *CurTy = cast<Instruction>(VL[j])->getOperand(0)->getType();
         if (Ty0 != CurTy) {
@@ -1654,7 +1536,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     case Instruction::Call: {
       // Check if the calls are all to the same vectorizable intrinsic.
-      CallInst *CI = cast<CallInst>(VL0);
+      CallInst *CI = cast<CallInst>(VL[0]);
       // Check if this is an Intrinsic call or something that can be
       // represented by an intrinsic call
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
@@ -1781,18 +1663,19 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
   return N;
 }
 
-bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue) const {
-  Instruction *E0 = cast<Instruction>(OpValue);
-  assert(E0->getOpcode() == Instruction::ExtractElement ||
-         E0->getOpcode() == Instruction::ExtractValue);
-  assert(E0->getOpcode() == getSameOpcode(VL) && "Invalid opcode");
+bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, unsigned Opcode) const {
+  assert(Opcode == Instruction::ExtractElement ||
+         Opcode == Instruction::ExtractValue);
+  assert(Opcode == getSameOpcode(VL) && "Invalid opcode");
   // Check if all of the extracts come from the same vector and from the
   // correct offset.
+  Value *VL0 = VL[0];
+  Instruction *E0 = cast<Instruction>(VL0);
   Value *Vec = E0->getOperand(0);
 
   // We have to extract from a vector/aggregate with the same number of elements.
   unsigned NElts;
-  if (E0->getOpcode() == Instruction::ExtractValue) {
+  if (Opcode == Instruction::ExtractValue) {
     const DataLayout &DL = E0->getModule()->getDataLayout();
     NElts = canMapToVector(Vec->getType(), DL);
     if (!NElts)
@@ -1809,22 +1692,18 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue) const {
     return false;
 
   // Check that all of the indices extract from the correct offset.
-  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
-    Instruction *Inst = cast<Instruction>(VL[I]);
-    if (!matchExtractIndex(Inst, I, Inst->getOpcode()))
+  if (!matchExtractIndex(E0, 0, Opcode))
+    return false;
+
+  for (unsigned i = 1, e = VL.size(); i < e; ++i) {
+    Instruction *E = cast<Instruction>(VL[i]);
+    if (!matchExtractIndex(E, i, Opcode))
       return false;
-    if (Inst->getOperand(0) != Vec)
+    if (E->getOperand(0) != Vec)
       return false;
   }
 
   return true;
-}
-
-bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
-  return I->hasOneUse() ||
-         std::all_of(I->user_begin(), I->user_end(), [this](User *U) {
-           return ScalarToTreeEntry.count(U) > 0;
-         });
 }
 
 int BoUpSLP::getEntryCost(TreeEntry *E) {
@@ -1849,26 +1728,6 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     if (isSplat(VL)) {
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, 0);
     }
-    if (getSameOpcode(VL) == Instruction::ExtractElement) {
-      Optional<TargetTransformInfo::ShuffleKind> ShuffleKind = isShuffle(VL);
-      if (ShuffleKind.hasValue()) {
-        int Cost = TTI->getShuffleCost(ShuffleKind.getValue(), VecTy);
-        for (auto *V : VL) {
-          // If all users of instruction are going to be vectorized and this
-          // instruction itself is not going to be vectorized, consider this
-          // instruction as dead and remove its cost from the final cost of the
-          // vectorized tree.
-          if (areAllUsersVectorized(cast<Instruction>(V)) &&
-              !ScalarToTreeEntry.count(V)) {
-            auto *IO = cast<ConstantInt>(
-                cast<ExtractElementInst>(V)->getIndexOperand());
-            Cost -= TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                            IO->getZExtValue());
-          }
-        }
-        return Cost;
-      }
-    }
     return getGatherCost(E->Scalars);
   }
   unsigned Opcode = getSameOpcode(VL);
@@ -1880,14 +1739,17 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::ExtractValue:
     case Instruction::ExtractElement: {
-      if (canReuseExtract(VL, VL0)) {
+      if (canReuseExtract(VL, Opcode)) {
         int DeadCost = 0;
         for (unsigned i = 0, e = VL.size(); i < e; ++i) {
           Instruction *E = cast<Instruction>(VL[i]);
           // If all users are going to be vectorized, instruction can be
           // considered as dead.
           // The same, if have only one user, it will be vectorized for sure.
-          if (areAllUsersVectorized(E))
+          if (E->hasOneUse() ||
+              std::all_of(E->user_begin(), E->user_end(), [this](User *U) {
+                return ScalarToTreeEntry.count(U) > 0;
+              }))
             // Take credit for instruction that will become dead.
             DeadCost +=
                 TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);
@@ -2646,7 +2508,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
 
     case Instruction::ExtractElement: {
-      if (canReuseExtract(E->Scalars, VL0)) {
+      if (canReuseExtract(E->Scalars, Instruction::ExtractElement)) {
         Value *V = VL0->getOperand(0);
         E->VectorizedValue = V;
         return V;
@@ -2657,7 +2519,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::ExtractValue: {
-      if (canReuseExtract(E->Scalars, VL0)) {
+      if (canReuseExtract(E->Scalars, Instruction::ExtractValue)) {
         LoadInst *LI = cast<LoadInst>(VL0->getOperand(0));
         Builder.SetInsertPoint(LI);
         PointerType *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
@@ -2888,7 +2750,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::Call: {
       CallInst *CI = cast<CallInst>(VL0);
-      setInsertPointAfterBundle(VL0);
+      setInsertPointAfterBundle(E->Scalars);
       Function *FI;
       Intrinsic::ID IID  = Intrinsic::not_intrinsic;
       Value *ScalarArg = nullptr;
@@ -3128,8 +2990,9 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         for (User *U : Scalar->users()) {
           DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
-          // It is legal to replace users in the ignorelist by undef.
-          assert((getTreeEntry(U) || is_contained(UserIgnoreList, U)) &&
+          assert((getTreeEntry(U) ||
+                  // It is legal to replace users in the ignorelist by undef.
+                  is_contained(UserIgnoreList, U)) &&
                  "Replacing out-of-tree value with undef");
         }
 #endif
@@ -4352,18 +4215,15 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
-  if (!I)
+bool SLPVectorizerPass::tryToVectorize(BinaryOperator *V, BoUpSLP &R) {
+  if (!V)
     return false;
 
-  if (!isa<BinaryOperator>(I))
-    return false;
-
-  Value *P = I->getParent();
+  Value *P = V->getParent();
 
   // Vectorize in current basic block only.
-  auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
-  auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
+  auto *Op0 = dyn_cast<Instruction>(V->getOperand(0));
+  auto *Op1 = dyn_cast<Instruction>(V->getOperand(1));
   if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P)
     return false;
 
@@ -4459,104 +4319,12 @@ class HorizontalReduction {
   // Use map vector to make stable output.
   MapVector<Instruction *, Value *> ExtraArgs;
 
-  /// Contains info about operation, like its opcode, left and right operands.
-  struct OperationData {
-    /// true if the operation is a reduced value, false if reduction operation.
-    bool IsReducedValue = false;
-    /// Opcode of the instruction.
-    unsigned Opcode = 0;
-    /// Left operand of the reduction operation.
-    Value *LHS = nullptr;
-    /// Right operand of the reduction operation.
-    Value *RHS = nullptr;
+  BinaryOperator *ReductionRoot = nullptr;
 
-    /// Checks if the reduction operation can be vectorized.
-    bool isVectorizable() const {
-      return LHS && RHS &&
-             // We currently only support adds.
-             (Opcode == Instruction::Add || Opcode == Instruction::FAdd);
-    }
-
-  public:
-    explicit OperationData() = default;
-    /// Construction for reduced values. They are identified by opcode only and
-    /// don't have associated LHS/RHS values.
-    explicit OperationData(Value *V) : IsReducedValue(true) {
-      if (auto *I = dyn_cast<Instruction>(V))
-        Opcode = I->getOpcode();
-    }
-    /// Constructor for binary reduction operations with opcode and its left and
-    /// right operands.
-    OperationData(unsigned Opcode, Value *LHS, Value *RHS)
-        : IsReducedValue(false), Opcode(Opcode), LHS(LHS), RHS(RHS) {}
-    explicit operator bool() const { return Opcode; }
-    /// Get the index of the first operand.
-    unsigned getFirstOperandIndex() const {
-      assert(!!*this && "The opcode is not set.");
-      return 0;
-    }
-    /// Total number of operands in the reduction operation.
-    unsigned getNumberOfOperands() const {
-      assert(!IsReducedValue && !!*this && LHS && RHS &&
-             "Expected reduction operation.");
-      return 2;
-    }
-    /// Expected number of uses for reduction operations/reduced values.
-    unsigned getRequiredNumberOfUses() const {
-      assert(!IsReducedValue && !!*this && LHS && RHS &&
-             "Expected reduction operation.");
-      return 1;
-    }
-    /// Checks if instruction is associative and can be vectorized.
-    bool isAssociative(Instruction *I) const {
-      assert(!IsReducedValue && *this && LHS && RHS &&
-             "Expected reduction operation.");
-      return I->isAssociative();
-    }
-    /// Checks if the reduction operation can be vectorized.
-    bool isVectorizable(Instruction *I) const {
-      return isVectorizable() && isAssociative(I);
-    }
-
-    /// Checks if two operation data are both a reduction op or both a reduced
-    /// value.
-    bool operator==(const OperationData &OD) {
-      assert(((IsReducedValue != OD.IsReducedValue) ||
-              ((!LHS == !OD.LHS) && (!RHS == !OD.RHS))) &&
-             "One of the comparing operations is incorrect.");
-      return this == &OD ||
-             (IsReducedValue == OD.IsReducedValue && Opcode == OD.Opcode);
-    }
-    bool operator!=(const OperationData &OD) { return !(*this == OD); }
-    void clear() {
-      IsReducedValue = false;
-      Opcode = 0;
-      LHS = nullptr;
-      RHS = nullptr;
-    }
-    /// Get the opcode of the reduction operation.
-    unsigned getOpcode() const {
-      assert(isVectorizable() && "Expected vectorizable operation.");
-      return Opcode;
-    }
-    Value *getLHS() const { return LHS; }
-    Value *getRHS() const { return RHS; }
-    /// Creates reduction operation with the current opcode.
-    Value *createOp(IRBuilder<> &Builder, const Twine &Name = "") const {
-      assert(!IsReducedValue &&
-             (Opcode == Instruction::FAdd || Opcode == Instruction::Add) &&
-             "Expected add|fadd reduction operation.");
-      return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
-                                 Name);
-    }
-  };
-
-  Instruction *ReductionRoot = nullptr;
-
-  /// The operation data of the reduction operation.
-  OperationData ReductionData;
-  /// The operation data of the values we perform a reduction on.
-  OperationData ReducedValueData;
+  /// The opcode of the reduction.
+  Instruction::BinaryOps ReductionOpcode = Instruction::BinaryOpsEnd;
+  /// The opcode of the values we perform a reduction on.
+  unsigned ReducedValueOpcode = 0;
   /// Should we model this reduction as a pairwise reduction tree or a tree that
   /// splits the vector in halves and adds those halves.
   bool IsPairwiseReduction = false;
@@ -4581,65 +4349,55 @@ class HorizontalReduction {
     }
   }
 
-  static OperationData getOperationData(Value *V) {
-    if (!V)
-      return OperationData();
-
-    Value *LHS;
-    Value *RHS;
-    if (m_BinOp(m_Value(LHS), m_Value(RHS)).match(V))
-      return OperationData(cast<BinaryOperator>(V)->getOpcode(), LHS, RHS);
-    return OperationData(V);
-  }
-
 public:
   HorizontalReduction() = default;
 
   /// \brief Try to find a reduction tree.
-  bool matchAssociativeReduction(PHINode *Phi, Instruction *B) {
+  bool matchAssociativeReduction(PHINode *Phi, BinaryOperator *B) {
     assert((!Phi || is_contained(Phi->operands(), B)) &&
            "Thi phi needs to use the binary operator");
-
-    ReductionData = getOperationData(B);
 
     // We could have a initial reductions that is not an add.
     //  r *= v1 + v2 + v3 + v4
     // In such a case start looking for a tree rooted in the first '+'.
     if (Phi) {
-      if (ReductionData.getLHS() == Phi) {
+      if (B->getOperand(0) == Phi) {
         Phi = nullptr;
-        B = dyn_cast<Instruction>(ReductionData.getRHS());
-        ReductionData = getOperationData(B);
-      } else if (ReductionData.getRHS() == Phi) {
+        B = dyn_cast<BinaryOperator>(B->getOperand(1));
+      } else if (B->getOperand(1) == Phi) {
         Phi = nullptr;
-        B = dyn_cast<Instruction>(ReductionData.getLHS());
-        ReductionData = getOperationData(B);
+        B = dyn_cast<BinaryOperator>(B->getOperand(0));
       }
     }
 
-    if (!ReductionData.isVectorizable(B))
+    if (!B)
       return false;
 
     Type *Ty = B->getType();
     if (!isValidElementType(Ty))
       return false;
 
-    ReducedValueData.clear();
+    ReductionOpcode = B->getOpcode();
+    ReducedValueOpcode = 0;
     ReductionRoot = B;
 
+    // We currently only support adds.
+    if ((ReductionOpcode != Instruction::Add &&
+         ReductionOpcode != Instruction::FAdd) ||
+        !B->isAssociative())
+      return false;
+
     // Post order traverse the reduction tree starting at B. We only handle true
-    // trees containing only binary operators.
+    // trees containing only binary operators or selects.
     SmallVector<std::pair<Instruction *, unsigned>, 32> Stack;
-    Stack.push_back(std::make_pair(B, ReductionData.getFirstOperandIndex()));
-    const unsigned NUses = ReductionData.getRequiredNumberOfUses();
+    Stack.push_back(std::make_pair(B, 0));
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
       unsigned EdgeToVist = Stack.back().second++;
-      OperationData OpData = getOperationData(TreeN);
-      bool IsReducedValue = OpData != ReductionData;
+      bool IsReducedValue = TreeN->getOpcode() != ReductionOpcode;
 
       // Postorder vist.
-      if (IsReducedValue || EdgeToVist == OpData.getNumberOfOperands()) {
+      if (EdgeToVist == 2 || IsReducedValue) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
         else {
@@ -4668,13 +4426,12 @@ public:
       Value *NextV = TreeN->getOperand(EdgeToVist);
       if (NextV != Phi) {
         auto *I = dyn_cast<Instruction>(NextV);
-        OpData = getOperationData(I);
         // Continue analysis if the next operand is a reduction operation or
         // (possibly) a reduced value. If the reduced value opcode is not set,
         // the first met operation != reduction operation is considered as the
         // reduced value class.
-        if (I && (!ReducedValueData || OpData == ReducedValueData ||
-                  OpData == ReductionData)) {
+        if (I && (!ReducedValueOpcode || I->getOpcode() == ReducedValueOpcode ||
+                  I->getOpcode() == ReductionOpcode)) {
           // Only handle trees in the current basic block.
           if (I->getParent() != B->getParent()) {
             // I is an extra argument for TreeN (its parent operation).
@@ -4682,32 +4439,32 @@ public:
             continue;
           }
 
-          // Each tree node needs to have minimal number of users except for the
-          // ultimate reduction.
-          if (!I->hasNUses(NUses) && I != B) {
+          // Each tree node needs to have one user except for the ultimate
+          // reduction.
+          if (!I->hasOneUse() && I != B) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
           }
 
-          if (OpData == ReductionData) {
+          if (I->getOpcode() == ReductionOpcode) {
             // We need to be able to reassociate the reduction operations.
-            if (!OpData.isAssociative(I)) {
+            if (!I->isAssociative()) {
               // I is an extra argument for TreeN (its parent operation).
               markExtraArg(Stack.back(), I);
               continue;
             }
-          } else if (ReducedValueData &&
-                     ReducedValueData != OpData) {
+          } else if (ReducedValueOpcode &&
+                     ReducedValueOpcode != I->getOpcode()) {
             // Make sure that the opcodes of the operations that we are going to
             // reduce match.
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
-          } else if (!ReducedValueData)
-            ReducedValueData = OpData;
+          } else if (!ReducedValueOpcode)
+            ReducedValueOpcode = I->getOpcode();
 
-          Stack.push_back(std::make_pair(I, OpData.getFirstOperandIndex()));
+          Stack.push_back(std::make_pair(I, 0));
           continue;
         }
       }
@@ -4780,9 +4537,8 @@ public:
           emitReduction(VectorizedRoot, Builder, ReduxWidth, ReductionOps, TTI);
       if (VectorizedTree) {
         Builder.SetCurrentDebugLocation(Loc);
-        OperationData VectReductionData(ReductionData.getOpcode(),
-                                        VectorizedTree, ReducedSubTree);
-        VectorizedTree = VectReductionData.createOp(Builder, "bin.rdx");
+        VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
+                                             ReducedSubTree, "bin.rdx");
         propagateIRFlags(VectorizedTree, ReductionOps);
       } else
         VectorizedTree = ReducedSubTree;
@@ -4795,9 +4551,8 @@ public:
       for (; i < NumReducedVals; ++i) {
         auto *I = cast<Instruction>(ReducedVals[i]);
         Builder.SetCurrentDebugLocation(I->getDebugLoc());
-        OperationData VectReductionData(ReductionData.getOpcode(),
-                                        VectorizedTree, I);
-        VectorizedTree = VectReductionData.createOp(Builder);
+        VectorizedTree =
+            Builder.CreateBinOp(ReductionOpcode, VectorizedTree, I);
         propagateIRFlags(VectorizedTree, ReductionOps);
       }
       for (auto &Pair : ExternallyUsedValues) {
@@ -4806,9 +4561,8 @@ public:
         // Add each externally used value to the final reduction.
         for (auto *I : Pair.second) {
           Builder.SetCurrentDebugLocation(I->getDebugLoc());
-          OperationData VectReductionData(ReductionData.getOpcode(),
-                                          VectorizedTree, Pair.first);
-          VectorizedTree = VectReductionData.createOp(Builder, "bin.extra");
+          VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
+                                               Pair.first, "bin.extra");
           propagateIRFlags(VectorizedTree, I);
         }
       }
@@ -4829,19 +4583,15 @@ private:
     Type *ScalarTy = FirstReducedVal->getType();
     Type *VecTy = VectorType::get(ScalarTy, ReduxWidth);
 
-    int PairwiseRdxCost =
-        TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
-                                        /*IsPairwiseForm=*/true);
-    int SplittingRdxCost =
-        TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
-                                        /*IsPairwiseForm=*/false);
+    int PairwiseRdxCost = TTI->getReductionCost(ReductionOpcode, VecTy, true);
+    int SplittingRdxCost = TTI->getReductionCost(ReductionOpcode, VecTy, false);
 
     IsPairwiseReduction = PairwiseRdxCost < SplittingRdxCost;
     int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
 
     int ScalarReduxCost =
         (ReduxWidth - 1) *
-        TTI->getArithmeticInstrCost(ReductionData.getOpcode(), ScalarTy);
+        TTI->getArithmeticInstrCost(ReductionOpcode, ScalarTy);
 
     DEBUG(dbgs() << "SLP: Adding cost " << VecReduxCost - ScalarReduxCost
                  << " for reduction that starts with " << *FirstReducedVal
@@ -4862,7 +4612,7 @@ private:
 
     if (!IsPairwiseReduction)
       return createSimpleTargetReduction(
-          Builder, TTI, ReductionData.getOpcode(), VectorizedValue,
+          Builder, TTI, ReductionOpcode, VectorizedValue,
           TargetTransformInfo::ReductionFlags(), RedOps);
 
     Value *TmpVec = VectorizedValue;
@@ -4877,9 +4627,8 @@ private:
       Value *RightShuf = Builder.CreateShuffleVector(
           TmpVec, UndefValue::get(TmpVec->getType()), (RightMask),
           "rdx.shuf.r");
-      OperationData VectReductionData(ReductionData.getOpcode(), LeftShuf,
-                                      RightShuf);
-      TmpVec = VectReductionData.createOp(Builder, "bin.rdx");
+      TmpVec =
+          Builder.CreateBinOp(ReductionOpcode, LeftShuf, RightShuf, "bin.rdx");
       propagateIRFlags(TmpVec, RedOps);
     }
 
@@ -5018,14 +4767,14 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
 static bool tryToVectorizeHorReductionOrInstOperands(
     PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
     TargetTransformInfo *TTI,
-    const function_ref<bool(Instruction *, BoUpSLP &)> Vectorize) {
+    const function_ref<bool(BinaryOperator *, BoUpSLP &)> Vectorize) {
   if (!ShouldVectorizeHor)
     return false;
 
   if (!Root)
     return false;
 
-  if (Root->getParent() != BB || isa<PHINode>(Root))
+  if (Root->getParent() != BB)
     return false;
   // Start analysis starting from Root instruction. If horizontal reduction is
   // found, try to vectorize it. If it is not a horizontal reduction or
@@ -5046,7 +4795,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     if (!V)
       continue;
     auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
+    if (!Inst || isa<PHINode>(Inst))
       continue;
     if (auto *BI = dyn_cast<BinaryOperator>(Inst)) {
       HorizontalReduction HorRdx;
@@ -5074,20 +4823,15 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     // Set P to nullptr to avoid re-analysis of phi node in
     // matchAssociativeReduction function unless this is the root node.
     P = nullptr;
-    if (Vectorize(Inst, R)) {
+    if (Vectorize(dyn_cast<BinaryOperator>(Inst), R)) {
       Res = true;
       continue;
     }
 
     // Try to vectorize operands.
-    // Continue analysis for the instruction from the same basic block only to
-    // save compile time.
     if (++Level < RecursionMaxDepth)
       for (auto *Op : Inst->operand_values())
-        if (VisitedInstrs.insert(Op).second)
-          if (auto *I = dyn_cast<Instruction>(Op))
-            if (!isa<PHINode>(Inst) && I->getParent() == BB)
-              Stack.emplace_back(Op, Level);
+        Stack.emplace_back(Op, Level);
   }
   return Res;
 }
@@ -5104,11 +4848,10 @@ bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
   if (!isa<BinaryOperator>(I))
     P = nullptr;
   // Try to match and vectorize a horizontal reduction.
-  auto &&ExtraVectorization = [this](Instruction *I, BoUpSLP &R) -> bool {
-    return tryToVectorize(I, R);
-  };
-  return tryToVectorizeHorReductionOrInstOperands(P, I, BB, R, TTI,
-                                                  ExtraVectorization);
+  return tryToVectorizeHorReductionOrInstOperands(
+      P, I, BB, R, TTI, [this](BinaryOperator *BI, BoUpSLP &R) -> bool {
+        return tryToVectorize(BI, R);
+      });
 }
 
 bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {

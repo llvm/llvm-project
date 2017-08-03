@@ -230,6 +230,7 @@ private:
     CF_END
   };
 
+  static char ID;
   const R600InstrInfo *TII = nullptr;
   const R600RegisterInfo *TRI = nullptr;
   unsigned MaxFetchInst;
@@ -498,8 +499,6 @@ private:
   }
 
 public:
-  static char ID;
-
   R600ControlFlowFinalizer() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -703,16 +702,9 @@ public:
   }
 };
 
-} // end anonymous namespace
-
-INITIALIZE_PASS_BEGIN(R600ControlFlowFinalizer, DEBUG_TYPE,
-                     "R600 Control Flow Finalizer", false, false)
-INITIALIZE_PASS_END(R600ControlFlowFinalizer, DEBUG_TYPE,
-                    "R600 Control Flow Finalizer", false, false)
-
 char R600ControlFlowFinalizer::ID = 0;
 
-char &llvm::R600ControlFlowFinalizerID = R600ControlFlowFinalizer::ID;
+} // end anonymous namespace
 
 FunctionPass *llvm::createR600ControlFlowFinalizer() {
   return new R600ControlFlowFinalizer();

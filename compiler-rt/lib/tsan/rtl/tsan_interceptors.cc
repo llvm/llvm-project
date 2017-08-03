@@ -584,7 +584,7 @@ TSAN_INTERCEPTOR(void*, malloc, uptr size) {
 
 TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
   SCOPED_TSAN_INTERCEPTOR(__libc_memalign, align, sz);
-  return user_memalign(thr, pc, align, sz);
+  return user_alloc(thr, pc, sz, align);
 }
 
 TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
@@ -730,7 +730,7 @@ TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
   SCOPED_INTERCEPTOR_RAW(memalign, align, sz);
-  return user_memalign(thr, pc, align, sz);
+  return user_alloc(thr, pc, sz, align);
 }
 #define TSAN_MAYBE_INTERCEPT_MEMALIGN TSAN_INTERCEPT(memalign)
 #else
@@ -739,20 +739,21 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
-  SCOPED_INTERCEPTOR_RAW(aligned_alloc, align, sz);
-  return user_aligned_alloc(thr, pc, align, sz);
+  SCOPED_INTERCEPTOR_RAW(memalign, align, sz);
+  return user_alloc(thr, pc, sz, align);
 }
 
 TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
   SCOPED_INTERCEPTOR_RAW(valloc, sz);
-  return user_valloc(thr, pc, sz);
+  return user_alloc(thr, pc, sz, GetPageSizeCached());
 }
 #endif
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
   SCOPED_INTERCEPTOR_RAW(pvalloc, sz);
-  return user_pvalloc(thr, pc, sz);
+  sz = RoundUp(sz, GetPageSizeCached());
+  return user_alloc(thr, pc, sz, GetPageSizeCached());
 }
 #define TSAN_MAYBE_INTERCEPT_PVALLOC TSAN_INTERCEPT(pvalloc)
 #else
@@ -762,7 +763,8 @@ TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
   SCOPED_INTERCEPTOR_RAW(posix_memalign, memptr, align, sz);
-  return user_posix_memalign(thr, pc, memptr, align, sz);
+  *memptr = user_alloc(thr, pc, sz, align);
+  return 0;
 }
 #endif
 

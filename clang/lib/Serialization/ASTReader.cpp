@@ -2060,12 +2060,14 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   StringRef Filename = FI.Filename;
 
   const FileEntry *File = FileMgr.getFile(Filename, /*OpenFile=*/false);
+
   // If we didn't find the file, resolve it relative to the
   // original directory from which this AST file was created.
-  if (File == nullptr && !F.OriginalDir.empty() && !F.BaseDirectory.empty() &&
-      F.OriginalDir != F.BaseDirectory) {
-    std::string Resolved = resolveFileRelativeToOriginalDir(
-        Filename, F.OriginalDir, F.BaseDirectory);
+  if (File == nullptr && !F.OriginalDir.empty() && !CurrentDir.empty() &&
+      F.OriginalDir != CurrentDir) {
+    std::string Resolved = resolveFileRelativeToOriginalDir(Filename,
+                                                            F.OriginalDir,
+                                                            CurrentDir);
     if (!Resolved.empty())
       File = FileMgr.getFile(Resolved);
   }
@@ -3382,7 +3384,6 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         PragmaPackStackEntry Entry;
         Entry.Value = Record[Idx++];
         Entry.Location = ReadSourceLocation(F, Record[Idx++]);
-        Entry.PushLocation = ReadSourceLocation(F, Record[Idx++]);
         PragmaPackStrings.push_back(ReadString(Record, Idx));
         Entry.SlotLabel = PragmaPackStrings.back();
         PragmaPackStack.push_back(Entry);
@@ -4063,6 +4064,13 @@ ASTReader::ReadASTCore(StringRef FileName,
   }
 
   assert(M && "Missing module file");
+
+  // FIXME: This seems rather a hack. Should CurrentDir be part of the
+  // module?
+  if (FileName != "-") {
+    CurrentDir = llvm::sys::path::parent_path(FileName);
+    if (CurrentDir.empty()) CurrentDir = ".";
+  }
 
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
@@ -4900,6 +4908,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       bool IsExplicit = Record[Idx++];
       bool IsSystem = Record[Idx++];
       bool IsExternC = Record[Idx++];
+      bool IsSwiftInferImportAsMember = Record[Idx++];
       bool InferSubmodules = Record[Idx++];
       bool InferExplicitSubmodules = Record[Idx++];
       bool InferExportWildcard = Record[Idx++];
@@ -4947,6 +4956,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       CurrentModule->IsFromModuleFile = true;
       CurrentModule->IsSystem = IsSystem || CurrentModule->IsSystem;
       CurrentModule->IsExternC = IsExternC;
+      CurrentModule->IsSwiftInferImportAsMember = IsSwiftInferImportAsMember;
       CurrentModule->InferSubmodules = InferSubmodules;
       CurrentModule->InferExplicitSubmodules = InferExplicitSubmodules;
       CurrentModule->InferExportWildcard = InferExportWildcard;
@@ -7571,14 +7581,13 @@ void ASTReader::UpdateSema() {
              "Expected a default alignment value");
       SemaObj->PackStack.Stack.emplace_back(
           PragmaPackStack.front().SlotLabel, SemaObj->PackStack.CurrentValue,
-          SemaObj->PackStack.CurrentPragmaLocation,
-          PragmaPackStack.front().PushLocation);
+          SemaObj->PackStack.CurrentPragmaLocation);
       DropFirst = true;
     }
     for (const auto &Entry :
          llvm::makeArrayRef(PragmaPackStack).drop_front(DropFirst ? 1 : 0))
       SemaObj->PackStack.Stack.emplace_back(Entry.SlotLabel, Entry.Value,
-                                            Entry.Location, Entry.PushLocation);
+                                            Entry.Location);
     if (PragmaPackCurrentLocation.isInvalid()) {
       assert(*PragmaPackCurrentValue == SemaObj->PackStack.DefaultValue &&
              "Expected a default alignment value");

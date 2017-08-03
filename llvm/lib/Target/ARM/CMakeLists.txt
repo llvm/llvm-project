@@ -15,7 +15,6 @@ tablegen(LLVM ARMGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM ARMGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM ARMGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM ARMGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM ARMGenSystemRegister.inc -gen-searchable-tables)
 add_public_tablegen_target(ARMCommonTableGen)
 
 # Add GlobalISel files if the user wants to build it.
@@ -74,4 +73,3 @@ add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
-add_subdirectory(Utils)

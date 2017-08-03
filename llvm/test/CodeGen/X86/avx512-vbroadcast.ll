@@ -44,7 +44,7 @@ define   <16 x float> @_inreg16xfloat(float %a) {
 define   <16 x float> @_ss16xfloat_mask(float %a, <16 x float> %i, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_mask:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; ALL-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; ALL-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
 ; ALL-NEXT:    vmovaps %zmm1, %zmm0
@@ -59,7 +59,7 @@ define   <16 x float> @_ss16xfloat_mask(float %a, <16 x float> %i, <16 x i32> %m
 define   <16 x float> @_ss16xfloat_maskz(float %a, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_maskz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
@@ -84,7 +84,7 @@ define   <16 x float> @_ss16xfloat_load(float* %a.ptr) {
 define   <16 x float> @_ss16xfloat_mask_load(float* %a.ptr, <16 x float> %i, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_mask_load:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
 ; ALL-NEXT:    retq
@@ -99,7 +99,7 @@ define   <16 x float> @_ss16xfloat_mask_load(float* %a.ptr, <16 x float> %i, <16
 define   <16 x float> @_ss16xfloat_maskz_load(float* %a.ptr, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_maskz_load:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; ALL-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
@@ -125,7 +125,7 @@ define   <8 x double> @_sd8xdouble_mask(double %a, <8 x double> %i, <8 x i32> %m
 ; ALL-LABEL: _sd8xdouble_mask:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<def>
-; ALL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; ALL-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; ALL-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm1 {%k1}
 ; ALL-NEXT:    vmovapd %zmm1, %zmm0
@@ -141,7 +141,7 @@ define   <8 x double> @_sd8xdouble_maskz(double %a, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_maskz:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
@@ -167,7 +167,7 @@ define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8
 ; ALL-LABEL: _sd8xdouble_mask_load:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; ALL-NEXT:    retq
@@ -183,7 +183,7 @@ define   <8 x double> @_sd8xdouble_maskz_load(double* %a.ptr, <8 x i32> %mask1) 
 ; ALL-LABEL: _sd8xdouble_maskz_load:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
 ; ALL-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
@@ -216,7 +216,7 @@ define   <16 x float> @_xmm16xfloat(<16 x float> %a) {
 define <16 x i32> @test_vbroadcast() {
 ; ALL-LABEL: test_vbroadcast:
 ; ALL:       # BB#0: # %entry
-; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; ALL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
 ; ALL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    knotw %k1, %k1

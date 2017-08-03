@@ -44,15 +44,12 @@ FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
-FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIFixSGPRCopiesPass();
-FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
-FunctionPass *createAMDGPURewriteOutArgumentsPass();
 
 void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
 extern char &AMDGPUMachineCFGStructurizerID;
@@ -66,24 +63,6 @@ extern char &AMDGPUAnnotateKernelFeaturesID;
 ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
-
-void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
-extern char &AMDGPURewriteOutArgumentsID;
-
-void initializeR600ClauseMergePassPass(PassRegistry &);
-extern char &R600ClauseMergePassID;
-
-void initializeR600ControlFlowFinalizerPass(PassRegistry &);
-extern char &R600ControlFlowFinalizerID;
-
-void initializeR600ExpandSpecialInstrsPassPass(PassRegistry &);
-extern char &R600ExpandSpecialInstrsPassID;
-
-void initializeR600VectorRegMergerPass(PassRegistry &);
-extern char &R600VectorRegMergerID;
-
-void initializeR600PacketizerPass(PassRegistry &);
-extern char &R600PacketizerID;
 
 void initializeSIFoldOperandsPass(PassRegistry &);
 extern char &SIFoldOperandsID;
@@ -137,9 +116,6 @@ extern char &AMDGPUUnifyMetadataID;
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
 
-void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
-extern char &SIOptimizeExecMaskingPreRAID;
-
 void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
 extern char &AMDGPUAnnotateUniformValuesPassID;
 
@@ -148,9 +124,6 @@ extern char &AMDGPUCodeGenPrepareID;
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;
-
-void initializeSIMemoryLegalizerPass(PassRegistry&);
-extern char &SIMemoryLegalizerID;
 
 void initializeSIDebuggerInsertNopsPass(PassRegistry&);
 extern char &SIDebuggerInsertNopsID;

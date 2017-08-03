@@ -312,12 +312,6 @@ template <typename T> class ArrayRef;
                             const DataLayout &DL, LoopInfo *LI = nullptr,
                             unsigned MaxLookup = 6);
 
-  /// This is a wrapper around GetUnderlyingObjects and adds support for basic
-  /// ptrtoint+arithmetic+inttoptr sequences.
-  void getUnderlyingObjectsForCodeGen(const Value *V,
-                            SmallVectorImpl<Value *> &Objects,
-                            const DataLayout &DL);
-
   /// Return true if the only users of this pointer are lifetime markers.
   bool onlyUsedByLifetimeMarkers(const Value *V);
 
@@ -528,8 +522,11 @@ template <typename T> class ArrayRef;
   ///  F | T | T
   /// (A)
   Optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
-                                    const DataLayout &DL, bool LHSIsTrue = true,
-                                    unsigned Depth = 0);
+                                    const DataLayout &DL,
+                                    bool LHSIsFalse = false, unsigned Depth = 0,
+                                    AssumptionCache *AC = nullptr,
+                                    const Instruction *CxtI = nullptr,
+                                    const DominatorTree *DT = nullptr);
 } // end namespace llvm
 
 #endif

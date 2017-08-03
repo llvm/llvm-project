@@ -33,7 +33,6 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
-#include "clang/Lex/VariadicMacroSupport.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1653,12 +1652,18 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
                                           DiagnosticsEngine &Diags, Module *M) {
   Module::Requirement Requirement;
   Module::UnresolvedHeaderDirective MissingHeader;
-  if (M->isAvailable(LangOpts, TargetInfo, Requirement, MissingHeader))
+  Module *ShadowingModule = nullptr;
+  if (M->isAvailable(LangOpts, TargetInfo, Requirement, MissingHeader,
+                     ShadowingModule))
     return false;
 
   if (MissingHeader.FileNameLoc.isValid()) {
     Diags.Report(MissingHeader.FileNameLoc, diag::err_module_header_missing)
         << MissingHeader.IsUmbrella << MissingHeader.FileName;
+  } else if (ShadowingModule) {
+    Diags.Report(M->DefinitionLoc, diag::err_module_shadowed) << M->Name;
+    Diags.Report(ShadowingModule->DefinitionLoc,
+                 diag::note_previous_definition);
   } else {
     // FIXME: Track the location at which the requirement was specified, and
     // use it here.
@@ -2291,10 +2296,6 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   Token Tok;
   LexUnexpandedToken(Tok);
 
-  // Used to un-poison and then re-poison identifiers of the __VA_ARGS__ ilk
-  // within their appropriate context.
-  VariadicMacroScopeGuard VariadicMacroScopeGuard(*this);
-
   // If this is a function-like macro definition, parse the argument list,
   // marking each of the identifiers as being used as macro arguments.  Also,
   // check other constraints on the first token of the macro body.
@@ -2319,14 +2320,14 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
       return nullptr;
     }
 
-    // If this is a definition of an ISO C/C++ variadic function-like macro (not
-    // using the GNU named varargs extension) inform our variadic scope guard
-    // which un-poisons and re-poisons certain identifiers (e.g. __VA_ARGS__)
-    // allowed only within the definition of a variadic macro.
+    // If this is a definition of a variadic C99 function-like macro, not using
+    // the GNU named varargs extension, enabled __VA_ARGS__.
 
-    if (MI->isC99Varargs()) {
-      VariadicMacroScopeGuard.enterScope();
-    }
+    // "Poison" __VA_ARGS__, which can only appear in the expansion of a macro.
+    // This gets unpoisoned where it is allowed.
+    assert(Ident__VA_ARGS__->isPoisoned() && "__VA_ARGS__ should be poisoned!");
+    if (MI->isC99Varargs())
+      Ident__VA_ARGS__->setIsPoisoned(false);
 
     // Read the first token after the arg list for down below.
     LexUnexpandedToken(Tok);
@@ -2436,6 +2437,9 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
         } else {
           Diag(Tok, diag::err_pp_stringize_not_parameter)
             << LastTok.is(tok::hashat);
+
+          // Disable __VA_ARGS__ again.
+          Ident__VA_ARGS__->setIsPoisoned(true);
           return nullptr;
         }
       }
@@ -2450,6 +2454,9 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
     }
   }
   MI->setDefinitionEndLoc(LastTok.getLocation());
+  // Disable __VA_ARGS__ again.
+  Ident__VA_ARGS__->setIsPoisoned(true);
+
   return MI;
 }
 /// HandleDefineDirective - Implements \#define.  This consumes the entire macro

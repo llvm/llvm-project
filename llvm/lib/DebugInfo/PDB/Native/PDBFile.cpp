@@ -150,7 +150,8 @@ Error PDBFile::parseFileHeaders() {
       MappedBlockStream::createFpmStream(ContainerLayout, *Buffer, Allocator);
   BinaryStreamReader FpmReader(*FpmStream);
   ArrayRef<uint8_t> FpmBytes;
-  if (auto EC = FpmReader.readBytes(FpmBytes, FpmReader.bytesRemaining()))
+  if (auto EC = FpmReader.readBytes(FpmBytes,
+                                    msf::getFullFpmByteSize(ContainerLayout)))
     return EC;
   uint32_t BlocksRemaining = getBlockCount();
   uint32_t BI = 0;
@@ -237,10 +238,6 @@ MSFStreamLayout PDBFile::getStreamLayout(uint32_t StreamIdx) const {
   return Result;
 }
 
-msf::MSFStreamLayout PDBFile::getFpmStreamLayout() const {
-  return msf::getFpmStreamLayout(ContainerLayout);
-}
-
 Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {
   if (!Globals) {
     auto DbiS = getPDBDbiStream();
@@ -321,7 +318,8 @@ Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
         ContainerLayout, *Buffer, DbiS->getPublicSymbolStreamIndex());
     if (!PublicS)
       return PublicS.takeError();
-    auto TempPublics = llvm::make_unique<PublicsStream>(std::move(*PublicS));
+    auto TempPublics =
+        llvm::make_unique<PublicsStream>(*this, std::move(*PublicS));
     if (auto EC = TempPublics->reload())
       return std::move(EC);
     Publics = std::move(TempPublics);

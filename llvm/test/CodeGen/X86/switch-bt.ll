@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -asm-verbose=false < %s -jump-table-density=40 | FileCheck %s
+; RUN: llc -march=x86-64 -asm-verbose=false < %s -jump-table-density=40 | FileCheck %s
 
 ; This switch should use bit tests, and the third bit test case is just
 ; testing for one possible value, so it doesn't need a bt.

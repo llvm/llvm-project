@@ -893,6 +893,8 @@ def err_pragma_expected_clang_section_name : Error<
   "expected one of [bss|data|rodata|text] section kind in '#pragma %0'">;
 def err_pragma_clang_section_expected_equal : Error<
   "expected '=' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
+def err_pragma_clang_section_expected_name_or_clear : Error<
+  "expected section name or '\"\"' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
 def warn_pragma_expected_section_name : Warning<
   "expected a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
@@ -1103,6 +1105,9 @@ def err_pragma_fp_scope : Error<
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
+
+// API notes.
+def err_type_unparsed : Error<"unparsed tokens following type">;
 
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<

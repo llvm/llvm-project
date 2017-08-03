@@ -1,4 +1,4 @@
-//===- HexagonBaseInfo.h - Top level definitions for Hexagon ----*- C++ -*-===//
+//===-- HexagonBaseInfo.h - Top level definitions for Hexagon --*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,12 +18,15 @@
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 
 #include "HexagonDepITypes.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "HexagonMCTargetDesc.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <stdint.h>
 
 namespace llvm {
 
 /// HexagonII - This namespace holds all of the target specific flags that
 /// instruction info tracks.
+///
 namespace HexagonII {
   unsigned const TypeCVI_FIRST = TypeCVI_HIST;
   unsigned const TypeCVI_LAST = TypeCVI_VX_LATE;
@@ -263,8 +266,8 @@ namespace HexagonII {
     INST_ICLASS_ALU32_3   = 0xf0000000
   };
 
-} // end namespace HexagonII
+} // End namespace HexagonII.
 
-} // end namespace llvm
+} // End namespace llvm.
 
-#endif // LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
+#endif

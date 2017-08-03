@@ -337,15 +337,23 @@ void DwarfCompileUnit::constructScopeDIE(
     if (DD->isLexicalScopeDIENull(Scope))
       return;
 
-    bool HasNonScopeChildren = false;
+    unsigned ChildScopeCount;
 
     // We create children here when we know the scope DIE is not going to be
     // null and the children will be added to the scope DIE.
-    createScopeChildrenDIE(Scope, Children, &HasNonScopeChildren);
+    createScopeChildrenDIE(Scope, Children, &ChildScopeCount);
+
+    // Skip imported directives in gmlt-like data.
+    if (!includeMinimalInlineScopes()) {
+      // There is no need to emit empty lexical block DIE.
+      for (const auto *IE : ImportedEntities[DS])
+        Children.push_back(
+            constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
+    }
 
     // If there are only other scopes as children, put them directly in the
     // parent instead, as this scope would serve no purpose.
-    if (!HasNonScopeChildren) {
+    if (Children.size() == ChildScopeCount) {
       FinalChildren.insert(FinalChildren.end(),
                            std::make_move_iterator(Children.begin()),
                            std::make_move_iterator(Children.end()));
@@ -548,26 +556,19 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV,
 
 DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
                                               SmallVectorImpl<DIE *> &Children,
-                                              bool *HasNonScopeChildren) {
-  assert(Children.empty());
+                                              unsigned *ChildScopeCount) {
   DIE *ObjectPointer = nullptr;
 
   for (DbgVariable *DV : DU->getScopeVariables().lookup(Scope))
     Children.push_back(constructVariableDIE(*DV, *Scope, ObjectPointer));
 
-  // Skip imported directives in gmlt-like data.
-  if (!includeMinimalInlineScopes()) {
-    // There is no need to emit empty lexical block DIE.
-    for (const auto *IE : ImportedEntities[Scope->getScopeNode()])
-      Children.push_back(
-          constructImportedEntityDIE(cast<DIImportedEntity>(IE)));
-  }
-
-  if (HasNonScopeChildren)
-    *HasNonScopeChildren = !Children.empty();
+  unsigned ChildCountWithoutScopes = Children.size();
 
   for (LexicalScope *LS : Scope->getChildren())
     constructScopeDIE(LS, Children);
+
+  if (ChildScopeCount)
+    *ChildScopeCount = Children.size() - ChildCountWithoutScopes;
 
   return ObjectPointer;
 }

@@ -222,10 +222,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   }
 
   // Recursively emit all the callsite samples.
-  uint64_t NumCallsites = 0;
-  for (const auto &J : S.getCallsiteSamples())
-    NumCallsites += J.second.size();
-  encodeULEB128(NumCallsites, OS);
+  encodeULEB128(S.getCallsiteSamples().size(), OS);
   for (const auto &J : S.getCallsiteSamples())
     for (const auto &FS : J.second) {
       LineLocation Loc = J.first;

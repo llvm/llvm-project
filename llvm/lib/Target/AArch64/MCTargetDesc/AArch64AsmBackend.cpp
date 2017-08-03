@@ -30,14 +30,12 @@ namespace {
 class AArch64AsmBackend : public MCAsmBackend {
   static const unsigned PCRelFlagVal =
       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits | MCFixupKindInfo::FKF_IsPCRel;
-  Triple TheTriple;
-
 public:
   bool IsLittleEndian;
 
 public:
-  AArch64AsmBackend(const Target &T, const Triple &TT, bool IsLittleEndian)
-      : MCAsmBackend(), TheTriple(TT), IsLittleEndian(IsLittleEndian) {}
+  AArch64AsmBackend(const Target &T, bool IsLittleEndian)
+     : MCAsmBackend(), IsLittleEndian(IsLittleEndian) {}
 
   unsigned getNumFixupKinds() const override {
     return AArch64::NumTargetFixupKinds;
@@ -90,9 +88,6 @@ public:
   unsigned getPointerSize() const { return 8; }
 
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
 };
 
 } // end anonymous namespace
@@ -145,8 +140,7 @@ static unsigned AdrImmBits(unsigned Value) {
 }
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
-                                 MCContext &Ctx, const Triple &TheTriple,
-                                 bool IsResolved) {
+                                 MCContext &Ctx) {
   unsigned Kind = Fixup.getKind();
   int64_t SignedValue = static_cast<int64_t>(Value);
   switch (Kind) {
@@ -157,9 +151,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     return AdrImmBits(Value & 0x1fffffULL);
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
-    assert(!IsResolved);
-    if (TheTriple.isOSBinFormatCOFF())
-      return AdrImmBits(Value & 0x1fffffULL);
     return AdrImmBits((Value & 0x1fffff000ULL) >> 12);
   case AArch64::fixup_aarch64_ldr_pcrel_imm19:
   case AArch64::fixup_aarch64_pcrel_branch19:
@@ -172,15 +163,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return (Value >> 2) & 0x7ffff;
   case AArch64::fixup_aarch64_add_imm12:
   case AArch64::fixup_aarch64_ldst_imm12_scale1:
-    if (TheTriple.isOSBinFormatCOFF() && !IsResolved)
-      Value &= 0xfff;
     // Unsigned 12-bit immediate
     if (Value >= 0x1000)
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     return Value;
   case AArch64::fixup_aarch64_ldst_imm12_scale2:
-    if (TheTriple.isOSBinFormatCOFF() && !IsResolved)
-      Value &= 0xfff;
     // Unsigned 12-bit immediate which gets multiplied by 2
     if (Value >= 0x2000)
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -188,8 +175,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 2-byte aligned");
     return Value >> 1;
   case AArch64::fixup_aarch64_ldst_imm12_scale4:
-    if (TheTriple.isOSBinFormatCOFF() && !IsResolved)
-      Value &= 0xfff;
     // Unsigned 12-bit immediate which gets multiplied by 4
     if (Value >= 0x4000)
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -197,8 +182,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 4-byte aligned");
     return Value >> 2;
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
-    if (TheTriple.isOSBinFormatCOFF() && !IsResolved)
-      Value &= 0xfff;
     // Unsigned 12-bit immediate which gets multiplied by 8
     if (Value >= 0x8000)
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -206,8 +189,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 8-byte aligned");
     return Value >> 3;
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
-    if (TheTriple.isOSBinFormatCOFF() && !IsResolved)
-      Value &= 0xfff;
     // Unsigned 12-bit immediate which gets multiplied by 16
     if (Value >= 0x10000)
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -294,7 +275,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
   // Apply any target-specific value adjustments.
-  Value = adjustFixupValue(Fixup, Value, Ctx, TheTriple, IsResolved);
+  Value = adjustFixupValue(Fixup, Value, Ctx);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;
@@ -357,26 +338,6 @@ bool AArch64AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   return true;
 }
 
-bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                              const MCFixup &Fixup,
-                                              const MCValue &Target) {
-  // The ADRP instruction adds some multiple of 0x1000 to the current PC &
-  // ~0xfff. This means that the required offset to reach a symbol can vary by
-  // up to one step depending on where the ADRP is in memory. For example:
-  //
-  //     ADRP x0, there
-  //  there:
-  //
-  // If the ADRP occurs at address 0xffc then "there" will be at 0x1000 and
-  // we'll need that as an offset. At any other address "there" will be in the
-  // same page as the ADRP and the instruction should encode 0x0. Assuming the
-  // section isn't 0x1000-aligned, we therefore need to delegate this decision
-  // to the linker -- a relocation!
-  if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21)
-    return true;
-  return false;
-}
-
 namespace {
 
 namespace CU {
@@ -428,9 +389,8 @@ class DarwinAArch64AsmBackend : public AArch64AsmBackend {
   }
 
 public:
-  DarwinAArch64AsmBackend(const Target &T, const Triple &TT,
-                          const MCRegisterInfo &MRI)
-      : AArch64AsmBackend(T, TT, /*IsLittleEndian*/ true), MRI(MRI) {}
+  DarwinAArch64AsmBackend(const Target &T, const MCRegisterInfo &MRI)
+      : AArch64AsmBackend(T, /*IsLittleEndian*/true), MRI(MRI) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64MachObjectWriter(OS, MachO::CPU_TYPE_ARM64,
@@ -577,15 +537,37 @@ public:
   uint8_t OSABI;
   bool IsILP32;
 
-  ELFAArch64AsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
-                       bool IsLittleEndian, bool IsILP32)
-      : AArch64AsmBackend(T, TT, IsLittleEndian), OSABI(OSABI),
-        IsILP32(IsILP32) {}
+  ELFAArch64AsmBackend(const Target &T, uint8_t OSABI, bool IsLittleEndian,
+                       bool IsILP32)
+    : AArch64AsmBackend(T, IsLittleEndian), OSABI(OSABI), IsILP32(IsILP32) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian, IsILP32);
   }
+
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 };
+
+bool ELFAArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
+                                                 const MCFixup &Fixup,
+                                                 const MCValue &Target) {
+  // The ADRP instruction adds some multiple of 0x1000 to the current PC &
+  // ~0xfff. This means that the required offset to reach a symbol can vary by
+  // up to one step depending on where the ADRP is in memory. For example:
+  //
+  //     ADRP x0, there
+  //  there:
+  //
+  // If the ADRP occurs at address 0xffc then "there" will be at 0x1000 and
+  // we'll need that as an offset. At any other address "there" will be in the
+  // same page as the ADRP and the instruction should encode 0x0. Assuming the
+  // section isn't 0x1000-aligned, we therefore need to delegate this decision
+  // to the linker -- a relocation!
+  if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21)
+    return true;
+  return false;
+}
 
 }
 
@@ -593,7 +575,7 @@ namespace {
 class COFFAArch64AsmBackend : public AArch64AsmBackend {
 public:
   COFFAArch64AsmBackend(const Target &T, const Triple &TheTriple)
-      : AArch64AsmBackend(T, TheTriple, /*IsLittleEndian*/ true) {}
+      : AArch64AsmBackend(T, /*IsLittleEndian*/true) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64WinCOFFObjectWriter(OS);
@@ -607,7 +589,7 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
                                               StringRef CPU,
                                               const MCTargetOptions &Options) {
   if (TheTriple.isOSBinFormatMachO())
-    return new DarwinAArch64AsmBackend(T, TheTriple, MRI);
+    return new DarwinAArch64AsmBackend(T, MRI);
 
   if (TheTriple.isOSBinFormatCOFF())
     return new COFFAArch64AsmBackend(T, TheTriple);
@@ -616,8 +598,7 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
   bool IsILP32 = Options.getABIName() == "ilp32";
-  return new ELFAArch64AsmBackend(T, TheTriple, OSABI, /*IsLittleEndian=*/true,
-                                  IsILP32);
+  return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/true, IsILP32);
 }
 
 MCAsmBackend *llvm::createAArch64beAsmBackend(const Target &T,
@@ -629,6 +610,5 @@ MCAsmBackend *llvm::createAArch64beAsmBackend(const Target &T,
          "Big endian is only supported for ELF targets!");
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
   bool IsILP32 = Options.getABIName() == "ilp32";
-  return new ELFAArch64AsmBackend(T, TheTriple, OSABI, /*IsLittleEndian=*/false,
-                                  IsILP32);
+  return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/false, IsILP32);
 }

@@ -12,6 +12,7 @@
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
 #include "ToolChains/Ananas.h"
+#include "ToolChains/Bitrig.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CloudABI.h"
 #include "ToolChains/Contiki.h"
@@ -68,7 +69,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <memory>
@@ -87,7 +87,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
     : Opts(createDriverOptTable()), Diags(Diags), VFS(std::move(VFS)),
       Mode(GCCMode), SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       LTOMode(LTOK_None), ClangExecutable(ClangExecutable),
-      SysRoot(DEFAULT_SYSROOT), 
+      SysRoot(DEFAULT_SYSROOT), UseStdLib(true),
       DriverTitle("clang LLVM compiler"), CCPrintOptionsFilename(nullptr),
       CCPrintHeadersFilename(nullptr), CCLogDiagnosticsFilename(nullptr),
       CCCPrintBindings(false), CCPrintHeaders(false), CCLogDiagnostics(false),
@@ -678,6 +678,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     SysRoot = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT__dyld_prefix_EQ))
     DyldPrefix = A->getValue();
+  if (Args.hasArg(options::OPT_nostdlib))
+    UseStdLib = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_resource_dir))
     ResourceDir = A->getValue();
@@ -993,7 +995,9 @@ void Driver::generateCompilationDiagnostics(Compilation &C,
   }
 
   // Assume associated files are based off of the first temporary file.
-  CrashReportInfo CrashInfo(TempFiles[0], VFS);
+  CrashReportInfo CrashInfo(
+      TempFiles[0], VFS,
+      C.getArgs().getLastArgValue(options::OPT_index_store_path));
 
   std::string Script = CrashInfo.Filename.rsplit('.').first.str() + ".sh";
   std::error_code EC;
@@ -1124,8 +1128,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
     ExcludedFlagsBitmask |= HelpHidden;
 
   getOpts().PrintHelp(llvm::outs(), Name.c_str(), DriverTitle.c_str(),
-                      IncludedFlagsBitmask, ExcludedFlagsBitmask,
-                      /*ShowAllAliases=*/false);
+                      IncludedFlagsBitmask, ExcludedFlagsBitmask);
 }
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
@@ -3808,6 +3811,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::OpenBSD:
       TC = llvm::make_unique<toolchains::OpenBSD>(*this, Target, Args);
+      break;
+    case llvm::Triple::Bitrig:
+      TC = llvm::make_unique<toolchains::Bitrig>(*this, Target, Args);
       break;
     case llvm::Triple::NetBSD:
       TC = llvm::make_unique<toolchains::NetBSD>(*this, Target, Args);

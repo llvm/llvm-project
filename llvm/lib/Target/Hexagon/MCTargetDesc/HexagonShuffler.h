@@ -1,4 +1,4 @@
-//===- HexagonShuffler.h - Instruction bundle shuffling ---------*- C++ -*-===//
+//===----- HexagonShuffler.h - Instruction bundle shuffling ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,25 +12,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONSHUFFLER_H
-#define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONSHUFFLER_H
+#ifndef HEXAGONSHUFFLER_H
+#define HEXAGONSHUFFLER_H
 
 #include "Hexagon.h"
-#include "llvm/ADT/DenseMap.h"
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
+
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/SMLoc.h"
-#include <cstdint>
-#include <utility>
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+
+using namespace llvm;
 
 namespace llvm {
-
-class MCContext;
-class MCInst;
-class MCInstrInfo;
-class MCSubtargetInfo;
-
 // Insn resources.
 class HexagonResource {
   // Mask of the slots or units that may execute the insn and
@@ -38,34 +32,32 @@ class HexagonResource {
   unsigned Slots, Weight;
 
 public:
-  HexagonResource(unsigned s) { setUnits(s); }
+  HexagonResource(unsigned s) { setUnits(s); };
 
   void setUnits(unsigned s) {
     Slots = s & ((1u << HEXAGON_PACKET_SIZE) - 1);
     setWeight(s);
-  }
-
+  };
   unsigned setWeight(unsigned s);
 
-  unsigned getUnits() const { return (Slots); }
-  unsigned getWeight() const { return (Weight); }
+  unsigned getUnits() const { return (Slots); };
+  unsigned getWeight() const { return (Weight); };
 
   // Check if the resources are in ascending slot order.
   static bool lessUnits(const HexagonResource &A, const HexagonResource &B) {
     return (countPopulation(A.getUnits()) < countPopulation(B.getUnits()));
-  }
-
+  };
   // Check if the resources are in ascending weight order.
   static bool lessWeight(const HexagonResource &A, const HexagonResource &B) {
     return (A.getWeight() < B.getWeight());
-  }
+  };
 };
 
 // HVX insn resources.
 class HexagonCVIResource : public HexagonResource {
 public:
-  using UnitsAndLanes = std::pair<unsigned, unsigned>;
-  using TypeUnitsAndLanes = DenseMap<unsigned, UnitsAndLanes>;
+  typedef std::pair<unsigned, unsigned> UnitsAndLanes;
+  typedef llvm::DenseMap<unsigned, UnitsAndLanes> TypeUnitsAndLanes;
 
 private:
   // Available HVX slots.
@@ -86,20 +78,19 @@ private:
   // Flag whether the HVX resources are valid.
   bool Valid;
 
-  void setLanes(unsigned l) { Lanes = l; }
-  void setLoad(bool f = true) { Load = f; }
-  void setStore(bool f = true) { Store = f; }
+  void setLanes(unsigned l) { Lanes = l; };
+  void setLoad(bool f = true) { Load = f; };
+  void setStore(bool f = true) { Store = f; };
 
 public:
   HexagonCVIResource(TypeUnitsAndLanes *TUL, MCInstrInfo const &MCII,
                      unsigned s, MCInst const *id);
-
   static void SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU);
 
-  bool isValid() const { return Valid; }
-  unsigned getLanes() const { return Lanes; }
-  bool mayLoad() const { return Load; }
-  bool mayStore() const { return Store; }
+  bool isValid() const { return Valid; };
+  unsigned getLanes() const { return Lanes; };
+  bool mayLoad() const { return Load; };
+  bool mayStore() const { return Store; };
 };
 
 // Handle to an insn used by the shuffling algorithm.
@@ -115,31 +106,30 @@ public:
   HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
                MCInstrInfo const &MCII, MCInst const *id,
                MCInst const *Extender, unsigned s)
-      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {}
+      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {};
 
-  MCInst const &getDesc() const { return *ID; }
+  MCInst const &getDesc() const { return *ID; };
+
   MCInst const *getExtender() const { return Extender; }
 
   // Check if the handles are in ascending order for shuffling purposes.
   bool operator<(const HexagonInstr &B) const {
     return (HexagonResource::lessWeight(B.Core, Core));
-  }
-
+  };
   // Check if the handles are in ascending order by core slots.
   static bool lessCore(const HexagonInstr &A, const HexagonInstr &B) {
     return (HexagonResource::lessUnits(A.Core, B.Core));
-  }
-
+  };
   // Check if the handles are in ascending order by HVX slots.
   static bool lessCVI(const HexagonInstr &A, const HexagonInstr &B) {
     return (HexagonResource::lessUnits(A.CVI, B.CVI));
-  }
+  };
 };
 
 // Bundle shuffler.
 class HexagonShuffler {
-  using HexagonPacket =
-      SmallVector<HexagonInstr, HEXAGON_PRESHUFFLE_PACKET_SIZE>;
+  typedef SmallVector<HexagonInstr, HEXAGON_PRESHUFFLE_PACKET_SIZE>
+      HexagonPacket;
 
   // Insn handles in a bundle.
   HexagonPacket Packet;
@@ -156,7 +146,7 @@ protected:
   bool ReportErrors;
 
 public:
-  using iterator = HexagonPacket::iterator;
+  typedef HexagonPacket::iterator iterator;
 
   HexagonShuffler(MCContext &Context, bool ReportErrors,
                   MCInstrInfo const &MCII, MCSubtargetInfo const &STI);
@@ -168,18 +158,17 @@ public:
   // Reorder the insn handles in the bundle.
   bool shuffle();
 
-  unsigned size() const { return (Packet.size()); }
+  unsigned size() const { return (Packet.size()); };
 
-  iterator begin() { return (Packet.begin()); }
-  iterator end() { return (Packet.end()); }
+  iterator begin() { return (Packet.begin()); };
+  iterator end() { return (Packet.end()); };
 
   // Add insn handle to the bundle .
   void append(MCInst const &ID, MCInst const *Extender, unsigned S);
 
   // Return the error code for the last check or shuffling of the bundle.
-  void reportError(Twine const &Msg);
+  void reportError(llvm::Twine const &Msg);
 };
+} // namespace llvm
 
-} // end namespace llvm
-
-#endif //  LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONSHUFFLER_H
+#endif // HEXAGONSHUFFLER_H

@@ -102,7 +102,6 @@ extern llvm::Optional<NumberRange> DumpBlockRange;
 extern llvm::Optional<NumberRange> DumpByteRange;
 extern llvm::cl::list<std::string> DumpStreamData;
 extern llvm::cl::opt<bool> NameMap;
-extern llvm::cl::opt<bool> Fpm;
 
 extern llvm::cl::opt<bool> SectionContributions;
 extern llvm::cl::opt<bool> SectionMap;
@@ -124,7 +123,6 @@ extern llvm::cl::opt<bool> SplitChunks;
 namespace dump {
 
 extern llvm::cl::opt<bool> DumpSummary;
-extern llvm::cl::opt<bool> DumpFpm;
 extern llvm::cl::opt<bool> DumpStreams;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 
@@ -145,10 +143,7 @@ extern llvm::cl::opt<bool> DumpIdExtras;
 extern llvm::cl::list<uint32_t> DumpIdIndex;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
-extern llvm::cl::opt<bool> DumpGlobals;
-extern llvm::cl::opt<bool> DumpGlobalExtras;
 extern llvm::cl::opt<bool> DumpPublics;
-extern llvm::cl::opt<bool> DumpPublicExtras;
 extern llvm::cl::opt<bool> DumpSectionContribs;
 extern llvm::cl::opt<bool> DumpSectionMap;
 extern llvm::cl::opt<bool> DumpModules;

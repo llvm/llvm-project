@@ -15,7 +15,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -33,9 +32,7 @@ void SmallPtrSetImplBase::shrink_and_clear() {
 
   // Install the new array.  Clear all the buckets to empty.
   CurArray = (const void**)malloc(sizeof(void*) * CurArraySize);
-  if (CurArray == nullptr)
-    report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
-
+  assert(CurArray && "Failed to allocate memory?");
   memset(CurArray, -1, CurArraySize*sizeof(void*));
 }
 
@@ -99,12 +96,8 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
   bool WasSmall = isSmall();
 
   // Install the new array.  Clear all the buckets to empty.
-  const void **NewBuckets = (const void**) malloc(sizeof(void*) * NewSize);
-  if (NewBuckets == nullptr)
-    report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
-
-  // Reset member only if memory was allocated successfully
-  CurArray = NewBuckets;
+  CurArray = (const void**)malloc(sizeof(void*) * NewSize);
+  assert(CurArray && "Failed to allocate memory?");
   CurArraySize = NewSize;
   memset(CurArray, -1, NewSize*sizeof(void*));
 
@@ -132,8 +125,7 @@ SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
   // Otherwise, allocate new heap space (unless we were the same size)
   } else {
     CurArray = (const void**)malloc(sizeof(void*) * that.CurArraySize);
-    if (CurArray == nullptr)
-      report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
+    assert(CurArray && "Failed to allocate memory?");
   }
 
   // Copy over the that array.
@@ -170,8 +162,7 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
         free(CurArray);
       CurArray = T;
     }
-    if (CurArray == nullptr)
-      report_bad_alloc_error("Allocation of SmallPtrSet bucket array failed.");
+    assert(CurArray && "Failed to allocate memory?");
   }
 
   CopyHelper(RHS);

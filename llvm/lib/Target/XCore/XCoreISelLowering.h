@@ -123,8 +123,7 @@ namespace llvm {
                                 MachineBasicBlock *MBB) const override;
 
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS,
-                               Instruction *I = nullptr) const override;
+                               Type *Ty, unsigned AS) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.

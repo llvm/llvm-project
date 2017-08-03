@@ -37,14 +37,6 @@
 
 using namespace llvm;
 
-static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
-  if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
-    ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
-    return true;
-  }
-  return false;
-}
-
 namespace {
 
 static const char OpPrecedence[] = {
@@ -133,8 +125,8 @@ private:
     int64_t popOperand() {
       assert (!PostfixStack.empty() && "Poped an empty stack!");
       ICToken Op = PostfixStack.pop_back_val();
-      if (!(Op.first == IC_IMM || Op.first == IC_REGISTER))
-        return -1; // The invalid Scale value will be caught later by checkScale
+      assert ((Op.first == IC_IMM || Op.first == IC_REGISTER)
+              && "Expected and immediate or register!");
       return Op.second;
     }
     void pushOperand(InfixCalculatorTok Op, int64_t Val = 0) {
@@ -430,7 +422,7 @@ private:
       }
       PrevState = CurrState;
     }
-    bool onPlus(StringRef &ErrMsg) {
+    void onPlus() {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -447,10 +439,7 @@ private:
           if (!BaseReg) {
             BaseReg = TmpReg;
           } else {
-            if (IndexReg) {
-              ErrMsg = "BaseReg/IndexReg already set!";
-              return true;
-            }
+            assert (!IndexReg && "BaseReg/IndexReg already set!");
             IndexReg = TmpReg;
             Scale = 1;
           }
@@ -458,9 +447,8 @@ private:
         break;
       }
       PrevState = CurrState;
-      return false;
     }
-    bool onMinus(StringRef &ErrMsg) {
+    void onMinus() {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -487,11 +475,7 @@ private:
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
             CurrState == IES_INTEGER  || CurrState == IES_RBRAC)
           IC.pushOperator(IC_MINUS);
-        else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
-          // We have negate operator for Scale: it's illegal
-          ErrMsg = "Scale can't be negative";
-          return true;
-        } else
+        else
           IC.pushOperator(IC_NEG);
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
@@ -499,10 +483,7 @@ private:
           if (!BaseReg) {
             BaseReg = TmpReg;
           } else {
-            if (IndexReg) {
-              ErrMsg = "BaseReg/IndexReg already set!";
-              return true;
-            }
+            assert (!IndexReg && "BaseReg/IndexReg already set!");
             IndexReg = TmpReg;
             Scale = 1;
           }
@@ -510,7 +491,6 @@ private:
         break;
       }
       PrevState = CurrState;
-      return false;
     }
     void onNot() {
       IntelExprState CurrState = State;
@@ -537,8 +517,7 @@ private:
       }
       PrevState = CurrState;
     }
-
-    bool onRegister(unsigned Reg, StringRef &ErrMsg) {
+    void onRegister(unsigned Reg) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -553,16 +532,11 @@ private:
       case IES_MULTIPLY:
         // Index Register - Scale * Register
         if (PrevState == IES_INTEGER) {
-          if (IndexReg) {
-            ErrMsg = "BaseReg/IndexReg already set!";
-            return true;
-          }
+          assert (!IndexReg && "IndexReg already set!");
           State = IES_REGISTER;
           IndexReg = Reg;
           // Get the scale and replace the 'Scale * Register' with '0'.
           Scale = IC.popOperand();
-          if (checkScale(Scale, ErrMsg))
-            return true;
           IC.pushOperand(IC_IMM);
           IC.popOperator();
         } else {
@@ -571,7 +545,6 @@ private:
         break;
       }
       PrevState = CurrState;
-      return false;
     }
     void onIdentifierExpr(const MCExpr *SymRef, StringRef SymRefName) {
       PrevState = State;
@@ -610,14 +583,13 @@ private:
         State = IES_INTEGER;
         if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // Index Register - Register * Scale
-          if (IndexReg) {
-            ErrMsg = "BaseReg/IndexReg already set!";
-            return true;
-          }
+          assert (!IndexReg && "IndexReg already set!");
           IndexReg = TmpReg;
           Scale = TmpInt;
-          if (checkScale(Scale, ErrMsg))
+          if(Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
+            ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
             return true;
+          }
           // Get the scale and replace the 'Register * Scale' with '0'.
           IC.popOperator();
         } else {
@@ -913,8 +885,8 @@ static unsigned MatchRegisterName(StringRef Name);
 
 /// }
 
-static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
-                                            unsigned Scale, StringRef &ErrMsg) {
+static bool CheckBaseRegAndIndexReg(unsigned BaseReg, unsigned IndexReg,
+                                    StringRef &ErrMsg) {
   // If we have both a base register and an index register make sure they are
   // both 64-bit or 32-bit registers.
   // To support VSIB, IndexReg can be 128-bit or 256-bit registers.
@@ -953,7 +925,7 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
       }
     }
   }
-  return checkScale(Scale, ErrMsg);
+  return false;
 }
 
 bool X86AsmParser::ParseRegister(unsigned &RegNo,
@@ -1376,7 +1348,6 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine
 bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
-  StringRef ErrMsg;
 
   AsmToken::TokenKind PrevTK = AsmToken::Error;
   bool Done = false;
@@ -1415,8 +1386,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
       if (TK != AsmToken::String && !ParseRegister(TmpReg, IdentLoc, End)) {
-        if (SM.onRegister(TmpReg, ErrMsg))
-          return Error(Tok.getLoc(), ErrMsg);
+        SM.onRegister(TmpReg);
       } else if (ParseIntelNamedOperator(Identifier, SM)) {
         UpdateLocLex = true;
       } else if (!isParsingInlineAsm()) {
@@ -1430,6 +1400,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         int64_t Val = ParseIntelOperator(OpKind);
         if (!Val)
           return true;
+        StringRef ErrMsg;
         if (SM.onInteger(Val, ErrMsg))
           return Error(IdentLoc, ErrMsg);
       } else if (Identifier.find('.') != StringRef::npos &&
@@ -1445,6 +1416,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       break;
     }
     case AsmToken::Integer: {
+      StringRef ErrMsg;
       if (isParsingInlineAsm() && SM.getAddImmPrefix())
         InstInfo->AsmRewrites->emplace_back(AOK_ImmPrefix, Tok.getLoc());
       // Look for 'b' or 'f' following an Integer as a directional label
@@ -1475,14 +1447,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       }
       break;
     }
-    case AsmToken::Plus:
-      if (SM.onPlus(ErrMsg))
-        return Error(getTok().getLoc(), ErrMsg);
-      break;
-    case AsmToken::Minus:
-      if (SM.onMinus(ErrMsg))
-        return Error(getTok().getLoc(), ErrMsg);
-      break;
+    case AsmToken::Plus:    SM.onPlus(); break;
+    case AsmToken::Minus:   SM.onMinus(); break;
     case AsmToken::Tilde:   SM.onNot(); break;
     case AsmToken::Star:    SM.onStar(); break;
     case AsmToken::Slash:   SM.onDivide(); break;
@@ -1589,7 +1555,7 @@ X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
                                    Start, End, Size);
     }
     StringRef ErrMsg;
-    if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, ErrMsg)) {
+    if (CheckBaseRegAndIndexReg(BaseReg, IndexReg, ErrMsg)) {
       Error(StartInBrac, ErrMsg);
       return nullptr;
     }
@@ -2292,7 +2258,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   }
 
   StringRef ErrMsg;
-  if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, ErrMsg)) {
+  if (CheckBaseRegAndIndexReg(BaseReg, IndexReg, ErrMsg)) {
     Error(BaseLoc, ErrMsg);
     return nullptr;
   }
@@ -2309,8 +2275,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   InstInfo = &Info;
   StringRef PatchedName = Name;
 
-  if ((Name.equals("jmp") || Name.equals("jc") || Name.equals("jz")) &&
-      isParsingIntelSyntax() && isParsingInlineAsm()) {
+  if (Name == "jmp" && isParsingIntelSyntax() && isParsingInlineAsm()) {
     StringRef NextTok = Parser.getTok().getString();
     if (NextTok == "short") {
       SMLoc NameEndLoc =

@@ -1,6 +1,7 @@
 # RUN: %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-BASIC %s
 # CHECK-BASIC: Testing: 5 tests
 
+
 # Check that regex-filtering works
 #
 # RUN: %{lit} --filter 'o[a-z]e' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
@@ -8,7 +9,7 @@
 
 # Check that regex-filtering based on environment variables work.
 #
-# RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER-ENV %s
+# RUN: LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER-ENV %s
 # CHECK-FILTER-ENV: Testing: 2 of 5 tests
 
 

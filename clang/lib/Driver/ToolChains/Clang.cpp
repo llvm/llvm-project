@@ -1462,67 +1462,6 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
     A->claim();
   }
 
-  Arg *GPOpt = Args.getLastArg(options::OPT_mgpopt, options::OPT_mno_gpopt);
-  Arg *ABICalls =
-      Args.getLastArg(options::OPT_mabicalls, options::OPT_mno_abicalls);
-
-  // -mabicalls is the default for many MIPS environments, even with -fno-pic.
-  // -mgpopt is the default for static, -fno-pic environments but these two
-  // options conflict. We want to be certain that -mno-abicalls -mgpopt is
-  // the only case where -mllvm -mgpopt is passed.
-  // NOTE: We need a warning here or in the backend to warn when -mgpopt is
-  //       passed explicitly when compiling something with -mabicalls
-  //       (implictly) in affect. Currently the warning is in the backend.
-  bool NoABICalls =
-      ABICalls && ABICalls->getOption().matches(options::OPT_mno_abicalls);
-  bool WantGPOpt = GPOpt && GPOpt->getOption().matches(options::OPT_mgpopt);
-  // We quietly ignore -mno-gpopt as the backend defaults to -mno-gpopt.
-  if (NoABICalls && (!GPOpt || WantGPOpt)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-mgpopt");
-
-    Arg *LocalSData = Args.getLastArg(options::OPT_mlocal_sdata,
-                                      options::OPT_mno_local_sdata);
-    Arg *ExternSData = Args.getLastArg(options::OPT_mextern_sdata,
-                                       options::OPT_mno_extern_sdata);
-    Arg *EmbeddedData = Args.getLastArg(options::OPT_membedded_data,
-                                        options::OPT_mno_embedded_data);
-    if (LocalSData) {
-      CmdArgs.push_back("-mllvm");
-      if (LocalSData->getOption().matches(options::OPT_mlocal_sdata)) {
-        CmdArgs.push_back("-mlocal-sdata=1");
-      } else {
-        CmdArgs.push_back("-mlocal-sdata=0");
-      }
-      LocalSData->claim();
-    }
-
-    if (ExternSData) {
-      CmdArgs.push_back("-mllvm");
-      if (ExternSData->getOption().matches(options::OPT_mextern_sdata)) {
-        CmdArgs.push_back("-mextern-sdata=1");
-      } else {
-        CmdArgs.push_back("-mextern-sdata=0");
-      }
-      ExternSData->claim();
-    }
-
-    if (EmbeddedData) {
-      CmdArgs.push_back("-mllvm");
-      if (EmbeddedData->getOption().matches(options::OPT_membedded_data)) {
-        CmdArgs.push_back("-membedded-data=1");
-      } else {
-        CmdArgs.push_back("-membedded-data=0");
-      }
-      EmbeddedData->claim();
-    }
-
-  } else if ((!ABICalls || (!NoABICalls && ABICalls)) && WantGPOpt)
-    D.Diag(diag::warn_drv_unsupported_gpopt) << (ABICalls ? 0 : 1);
-
-  if (GPOpt)
-    GPOpt->claim();
-
   if (Arg *A = Args.getLastArg(options::OPT_mcompact_branches_EQ)) {
     StringRef Val = StringRef(A->getValue());
     if (mips::hasCompactBranches(CPUName)) {
@@ -3007,6 +2946,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_objcmt_whitelist_dir_path);
   }
 
+  if (Args.hasArg(options::OPT_index_store_path)) {
+    Args.AddLastArg(CmdArgs, options::OPT_index_store_path);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_system_symbols);
+    Args.AddLastArg(CmdArgs, options::OPT_index_record_codegen_name);
+
+    // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
+    // invocation so that the index action knows what the out file is.
+    if (isa<CompileJobAction>(JA) && JA.getType() == types::TY_Nothing) {
+      Args.AddLastArg(CmdArgs, options::OPT_o);
+    }
+  }
+
+  if (const char *IdxStorePath = ::getenv("CLANG_PROJECT_INDEX_PATH")) {
+    CmdArgs.push_back("-index-store-path");
+    CmdArgs.push_back(IdxStorePath);
+    CmdArgs.push_back("-index-ignore-system-symbols");
+    CmdArgs.push_back("-index-record-codegen-name");
+  }
+
+
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor.
   //
@@ -3541,6 +3500,41 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
+
+  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false) ||
+      Args.hasFlag(options::OPT_fapinotes_modules,
+                   options::OPT_fno_apinotes_modules, false) ||
+      Args.hasArg(options::OPT_iapinotes_modules)) {
+    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
+      CmdArgs.push_back("-fapinotes");
+    if (Args.hasFlag(options::OPT_fapinotes_modules,
+                     options::OPT_fno_apinotes_modules, false))
+      CmdArgs.push_back("-fapinotes-modules");
+
+    SmallString<128> APINotesCachePath;
+    if (Arg *A = Args.getLastArg(options::OPT_fapinotes_cache_path)) {
+      APINotesCachePath = A->getValue();
+    }
+
+    if (C.isForDiagnostics()) {
+      // When generating crash reports, we want to emit the API notes along with
+      // the reproduction sources, so we ignore any provided API notes path.
+      APINotesCachePath = Output.getFilename();
+      llvm::sys::path::replace_extension(APINotesCachePath, ".cache");
+      llvm::sys::path::append(APINotesCachePath, "apinotes");
+    } else if (APINotesCachePath.empty()) {
+      // No API notes path was provided: use the default.
+      llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false,
+                                             APINotesCachePath);
+      llvm::sys::path::append(APINotesCachePath, "org.llvm.clang");
+      llvm::sys::path::append(APINotesCachePath, "APINotesCache");
+    }
+    const char Arg[] = "-fapinotes-cache-path=";
+    APINotesCachePath.insert(APINotesCachePath.begin(), Arg, Arg + strlen(Arg));
+    CmdArgs.push_back(Args.MakeArgString(APINotesCachePath));
+
+    Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
+  }
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,

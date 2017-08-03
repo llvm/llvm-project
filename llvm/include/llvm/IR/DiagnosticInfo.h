@@ -419,11 +419,8 @@ public:
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
     Argument(StringRef Key, const Value *V);
     Argument(StringRef Key, const Type *T);
-    Argument(StringRef Key, StringRef S);
     Argument(StringRef Key, int N);
-    Argument(StringRef Key, int64_t N);
     Argument(StringRef Key, unsigned N);
-    Argument(StringRef Key, uint64_t N);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
   };
 

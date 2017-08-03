@@ -94,6 +94,12 @@ def remark_module_lock_failure : Remark<
   "could not acquire lock file for module '%0': %1">, InGroup<ModuleBuild>;
 def remark_module_lock_timeout : Remark<
   "timed out waiting to acquire lock file for module '%0'">, InGroup<ModuleBuild>;
+def err_module_shadowed : Error<
+  "import of shadowed module '%0'">;
+def err_module_lock_failure : Error<
+  "could not acquire lock file for module '%0': %1">, DefaultFatal;
+def err_module_lock_timeout : Error<
+  "timed out waiting to acquire lock file for module '%0'">, DefaultFatal;
 def err_module_cycle : Error<"cyclic dependency in module '%0': %1">, 
   DefaultFatal;
 def err_module_prebuilt : Error<
@@ -223,6 +229,11 @@ def note_mt_message : Note<"[rewriter] %0">;
 // ARCMigrate
 def warn_arcmt_nsalloc_realloc : Warning<"[rewriter] call returns pointer to GC managed memory; it will become unmanaged in ARC">;
 def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to be used with an object with ownership other than __unsafe_unretained">;
+
+// API notes
+def err_apinotes_message : Error<"%0">;
+def warn_apinotes_message : Warning<"%0">, InGroup<DiagGroup<"apinotes">>;
+def note_apinotes_message : Note<"%0">;
 
 // OpenMP
 def err_omp_more_one_clause : Error<

@@ -83,8 +83,7 @@ public:
                           SelectionDAG &DAG) const override;
 
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS,
-                             Instruction *I = nullptr) const override;
+                             unsigned AS) const override;
 
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
                                  ISD::MemIndexedMode &AM,

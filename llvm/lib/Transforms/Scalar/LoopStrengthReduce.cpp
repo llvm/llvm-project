@@ -195,11 +195,11 @@ public:
 
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void RegSortData::print(raw_ostream &OS) const {
   OS << "[NumUses=" << UsedByIndices.count() << ']';
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegSortData::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -562,7 +562,6 @@ bool Formula::hasRegsUsedByUsesOtherThan(size_t LUIdx,
   return false;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Formula::print(raw_ostream &OS) const {
   bool First = true;
   if (BaseGV) {
@@ -599,6 +598,7 @@ void Formula::print(raw_ostream &OS) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Formula::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -783,15 +783,8 @@ static bool isAddressUse(Instruction *Inst, Value *OperandVal) {
     // of intrinsics.
     switch (II->getIntrinsicID()) {
       default: break;
-      case Intrinsic::memset:
       case Intrinsic::prefetch:
         if (II->getArgOperand(0) == OperandVal)
-          isAddress = true;
-        break;
-      case Intrinsic::memmove:
-      case Intrinsic::memcpy:
-        if (II->getArgOperand(0) == OperandVal ||
-            II->getArgOperand(1) == OperandVal)
           isAddress = true;
         break;
     }
@@ -1287,7 +1280,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
 
     // Check with target if this offset with this instruction is
     // specifically not supported.
-    if (LU.Kind == LSRUse::Address && Offset != 0 &&
+    if ((isa<LoadInst>(Fixup.UserInst) || isa<StoreInst>(Fixup.UserInst)) &&
         !TTI.isFoldableMemAccessOffset(Fixup.UserInst, Offset))
       C.NumBaseAdds++;
   }
@@ -1350,7 +1343,6 @@ bool Cost::isLess(Cost &Other, const TargetTransformInfo &TTI) {
   return TTI.isLSRCostLess(C, Other.C);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Cost::print(raw_ostream &OS) const {
   if (InsnsCost)
     OS << C.Insns << " instruction" << (C.Insns == 1 ? " " : "s ");
@@ -1371,6 +1363,7 @@ void Cost::print(raw_ostream &OS) const {
     OS << ", plus " << C.SetupCost << " setup cost";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Cost::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -1394,7 +1387,6 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   return !L->contains(UserInst);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRFixup::print(raw_ostream &OS) const {
   OS << "UserInst=";
   // Store is common and interesting enough to be worth special-casing.
@@ -1418,6 +1410,7 @@ void LSRFixup::print(raw_ostream &OS) const {
     OS << ", Offset=" << Offset;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LSRFixup::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -1500,7 +1493,6 @@ void LSRUse::RecomputeRegs(size_t LUIdx, RegUseTracker &RegUses) {
       RegUses.dropRegister(S, LUIdx);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRUse::print(raw_ostream &OS) const {
   OS << "LSR Use: Kind=";
   switch (Kind) {
@@ -1534,6 +1526,7 @@ void LSRUse::print(raw_ostream &OS) const {
     OS << ", widest fixup type: " << *WidestFixupType;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LSRUse::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -1542,12 +1535,11 @@ LLVM_DUMP_METHOD void LSRUse::dump() const {
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, int64_t BaseOffset,
-                                 bool HasBaseReg, int64_t Scale,
-                                 Instruction *Fixup = nullptr) {
+                                 bool HasBaseReg, int64_t Scale) {
   switch (Kind) {
   case LSRUse::Address:
     return TTI.isLegalAddressingMode(AccessTy.MemTy, BaseGV, BaseOffset,
-                                     HasBaseReg, Scale, AccessTy.AddrSpace, Fixup);
+                                     HasBaseReg, Scale, AccessTy.AddrSpace);
 
   case LSRUse::ICmpZero:
     // There's not even a target hook for querying whether it would be legal to
@@ -1653,16 +1645,6 @@ static bool isLegalUse(const TargetTransformInfo &TTI, int64_t MinOffset,
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  const LSRUse &LU, const Formula &F) {
-  // Target may want to look at the user instructions.
-  if (LU.Kind == LSRUse::Address && TTI.LSRWithInstrQueries()) {
-    for (const LSRFixup &Fixup : LU.Fixups)
-      if (!isAMCompletelyFolded(TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
-                                F.BaseOffset, F.HasBaseReg, F.Scale,
-                                Fixup.UserInst))
-        return false;
-    return true;
-  }
-
   return isAMCompletelyFolded(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind,
                               LU.AccessTy, F.BaseGV, F.BaseOffset, F.HasBaseReg,
                               F.Scale);
@@ -3859,12 +3841,12 @@ struct WorkItem {
 
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void WorkItem::print(raw_ostream &OS) const {
   OS << "in formulae referencing " << *OrigReg << " in use " << LUIdx
      << " , add offset " << Imm;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void WorkItem::dump() const {
   print(errs()); errs() << '\n';
 }
@@ -5320,7 +5302,6 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   ImplementSolution(Solution);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRInstance::print_factors_and_types(raw_ostream &OS) const {
   if (Factors.empty() && Types.empty()) return;
 
@@ -5371,6 +5352,7 @@ void LSRInstance::print(raw_ostream &OS) const {
   print_uses(OS);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LSRInstance::dump() const {
   print(errs()); errs() << '\n';
 }

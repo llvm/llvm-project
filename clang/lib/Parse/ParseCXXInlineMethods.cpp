@@ -47,6 +47,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
                                            VS, ICIS_NoInit);
     if (FnD) {
       Actions.ProcessDeclAttributeList(getCurScope(), FnD, AccessAttrs);
+      Actions.ProcessAPINotes(FnD);
       if (PureSpecLoc.isValid())
         Actions.ActOnPureSpecifier(FnD, PureSpecLoc);
     }

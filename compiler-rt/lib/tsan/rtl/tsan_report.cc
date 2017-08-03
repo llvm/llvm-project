@@ -13,7 +13,6 @@
 #include "tsan_report.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
-#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"

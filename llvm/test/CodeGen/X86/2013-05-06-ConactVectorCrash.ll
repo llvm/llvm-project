@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc < %s -march=x86
 
 ; Make sure this doesn't crash
 

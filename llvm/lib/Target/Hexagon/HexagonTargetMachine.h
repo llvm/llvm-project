@@ -30,8 +30,8 @@ class HexagonTargetMachine : public LLVMTargetMachine {
 public:
   HexagonTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                       CodeGenOpt::Level OL, bool JIT);
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
+                       CodeGenOpt::Level OL);
   ~HexagonTargetMachine() override;
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;
 

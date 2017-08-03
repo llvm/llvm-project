@@ -162,11 +162,6 @@ static cl::opt<unsigned>
                 cl::desc("Maximum depth of recursive SExt/ZExt"),
                 cl::init(8));
 
-static cl::opt<unsigned>
-    MaxAddRecSize("scalar-evolution-max-add-rec-size", cl::Hidden,
-                  cl::desc("Max coefficients in AddRec during evolving"),
-                  cl::init(16));
-
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -415,6 +410,9 @@ void SCEVUnknown::deleted() {
 }
 
 void SCEVUnknown::allUsesReplacedWith(Value *New) {
+  // Clear this SCEVUnknown from various maps.
+  SE->forgetMemoizedResults(this);
+
   // Remove this SCEVUnknown from the uniquing map.
   SE->UniqueSCEVs.RemoveNode(this);
 
@@ -2676,23 +2674,20 @@ static uint64_t Choose(uint64_t n, uint64_t k, bool &Overflow) {
 
 /// Determine if any of the operands in this SCEV are a constant or if
 /// any of the add or multiply expressions in this SCEV contain a constant.
-static bool containsConstantInAddMulChain(const SCEV *StartExpr) {
-  struct FindConstantInAddMulChain {
-    bool FoundConstant = false;
+static bool containsConstantSomewhere(const SCEV *StartExpr) {
+  SmallVector<const SCEV *, 4> Ops;
+  Ops.push_back(StartExpr);
+  while (!Ops.empty()) {
+    const SCEV *CurrentExpr = Ops.pop_back_val();
+    if (isa<SCEVConstant>(*CurrentExpr))
+      return true;
 
-    bool follow(const SCEV *S) {
-      FoundConstant |= isa<SCEVConstant>(S);
-      return isa<SCEVAddExpr>(S) || isa<SCEVMulExpr>(S);
+    if (isa<SCEVAddExpr>(*CurrentExpr) || isa<SCEVMulExpr>(*CurrentExpr)) {
+      const auto *CurrentNAry = cast<SCEVNAryExpr>(CurrentExpr);
+      Ops.append(CurrentNAry->op_begin(), CurrentNAry->op_end());
     }
-    bool isDone() const {
-      return FoundConstant;
-    }
-  };
-
-  FindConstantInAddMulChain F;
-  SCEVTraversal<FindConstantInAddMulChain> ST(F);
-  ST.visitAll(StartExpr);
-  return F.FoundConstant;
+  }
+  return false;
 }
 
 /// Get a canonical multiply expression, or something simpler if possible.
@@ -2729,11 +2724,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           // If any of Add's ops are Adds or Muls with a constant,
           // apply this transformation as well.
           if (Add->getNumOperands() == 2)
-            // TODO: There are some cases where this transformation is not
-            // profitable, for example:
-            // Add = (C0 + X) * Y + Z.
-            // Maybe the scope of this transformation should be narrowed down.
-            if (containsConstantInAddMulChain(Add))
+            if (containsConstantSomewhere(Add))
               return getAddExpr(getMulExpr(LHSC, Add->getOperand(0),
                                            SCEV::FlagAnyWrap, Depth + 1),
                                 getMulExpr(LHSC, Add->getOperand(1),
@@ -2885,12 +2876,6 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       const SCEVAddRecExpr *OtherAddRec =
         dyn_cast<SCEVAddRecExpr>(Ops[OtherIdx]);
       if (!OtherAddRec || OtherAddRec->getLoop() != AddRecLoop)
-        continue;
-
-      // Limit max number of arguments to avoid creation of unreasonably big
-      // SCEVAddRecs with very complex operands.
-      if (AddRec->getNumOperands() + OtherAddRec->getNumOperands() - 1 >
-          MaxAddRecSize)
         continue;
 
       bool Overflow = false;
@@ -6200,7 +6185,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
         // own when it gets to that point.
         if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old)) {
           eraseValueFromMap(It->first);
-          forgetMemoizedResults(Old, false);
+          forgetMemoizedResults(Old);
         }
         if (PHINode *PN = dyn_cast<PHINode>(I))
           ConstantEvolutionLoopExitValue.erase(PN);
@@ -6262,12 +6247,6 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     PushDefUseChildren(I, Worklist);
-  }
-
-  for (auto I = ExitLimits.begin(); I != ExitLimits.end(); ++I) {
-    auto &Query = I->first;
-    if (Query.L == L)
-      ExitLimits.erase(I);
   }
 
   // Forget all contained loops too, to avoid dangling entries in the
@@ -6532,18 +6511,6 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                   bool AllowPredicates) {
-  ExitLimitQuery Query(L, ExitingBlock, AllowPredicates);
-  auto MaybeEL = ExitLimits.find(Query);
-  if (MaybeEL != ExitLimits.end())
-    return MaybeEL->second;
-  ExitLimit EL = computeExitLimitImpl(L, ExitingBlock, AllowPredicates);
-  ExitLimits.insert({Query, EL});
-  return EL;
-}
-
-ScalarEvolution::ExitLimit
-ScalarEvolution::computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
-                                      bool AllowPredicates) {
 
   // Okay, we've chosen an exiting block.  See what condition causes us to exit
   // at this block and remember the exit block and whether all other targets
@@ -7355,8 +7322,8 @@ ScalarEvolution::getConstantEvolutionLoopExitValue(PHINode *PN,
   Value *BEValue = PN->getIncomingValueForBlock(Latch);
 
   // Execute the loop symbolically to determine the exit value.
-  assert(BEs.getActiveBits() < CHAR_BIT * sizeof(unsigned) &&
-         "BEs is <= MaxBruteForceIterations which is an 'unsigned'!");
+  if (BEs.getActiveBits() >= 32)
+    return RetVal = nullptr; // More than 2^32-1 iterations?? Not doing it!
 
   unsigned NumIterations = BEs.getZExtValue(); // must be in range
   unsigned IterationNum = 0;
@@ -7615,25 +7582,6 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
             const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
             if (const SCEVConstant *BTCC =
                   dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
-
-              // This trivial case can show up in some degenerate cases where
-              // the incoming IR has not yet been fully simplified.
-              if (BTCC->getValue()->isZero()) {
-                Value *InitValue = nullptr;
-                bool MultipleInitValues = false;
-                for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-                  if (!LI->contains(PN->getIncomingBlock(i))) {
-                    if (!InitValue)
-                      InitValue = PN->getIncomingValue(i);
-                    else if (InitValue != PN->getIncomingValue(i)) {
-                      MultipleInitValues = true;
-                      break;
-                    }
-                  }
-                  if (!MultipleInitValues && InitValue)
-                    return getSCEV(InitValue);
-                }
-              }
               // Okay, we know how many times the containing loop executes.  If
               // this is a constant evolving PHI node, get the final value at
               // the specified iteration number.
@@ -10426,7 +10374,6 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
-      ExitLimits(std::move(Arg.ExitLimits)),
       ConstantEvolutionLoopExitValue(
           std::move(Arg.ConstantEvolutionLoopExitValue)),
       ValuesAtScopes(std::move(Arg.ValuesAtScopes)),
@@ -10829,16 +10776,7 @@ bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
   return SCEVExprContains(S, [&](const SCEV *Expr) { return Expr == Op; });
 }
 
-bool ScalarEvolution::ExitLimit::hasOperand(const SCEV *S) const {
-  auto IsS = [&](const SCEV *X) { return S == X; };
-  auto ContainsS = [&](const SCEV *X) {
-    return !isa<SCEVCouldNotCompute>(X) && SCEVExprContains(X, IsS);
-  };
-  return ContainsS(ExactNotTaken) || ContainsS(MaxNotTaken);
-}
-
-void
-ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
+void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
   ValuesAtScopes.erase(S);
   LoopDispositions.erase(S);
   BlockDispositions.erase(S);
@@ -10871,13 +10809,6 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
 
   RemoveSCEVFromBackedgeMap(BackedgeTakenCounts);
   RemoveSCEVFromBackedgeMap(PredicatedBackedgeTakenCounts);
-
-  // TODO: There is a suspicion that we only need to do it when there is a
-  // SCEVUnknown somewhere inside S. Need to check this.
-  if (EraseExitLimit)
-    for (auto I = ExitLimits.begin(), E = ExitLimits.end(); I != E; ++I)
-      if (I->second.hasOperand(S))
-        ExitLimits.erase(I);
 }
 
 void ScalarEvolution::verify() const {
