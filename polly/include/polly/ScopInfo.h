@@ -2161,7 +2161,7 @@ private:
   /// @param S The SCEV to normalize.
   ///
   /// @return The representing SCEV for invariant loads or @p S if none.
-  const SCEV *getRepresentingInvariantLoadSCEV(const SCEV *S);
+  const SCEV *getRepresentingInvariantLoadSCEV(const SCEV *S) const;
 
   /// Create a new SCoP statement for @p BB.
   ///
@@ -2425,7 +2425,7 @@ public:
   /// @param Parameter A SCEV that was recognized as a Parameter.
   ///
   /// @return The corresponding isl_id or NULL otherwise.
-  __isl_give isl_id *getIdForParam(const SCEV *Parameter);
+  __isl_give isl_id *getIdForParam(const SCEV *Parameter) const;
 
   /// Get the maximum region of this static control part.
   ///
@@ -2512,7 +2512,21 @@ public:
   ///
   /// @return The constraint on parameter of this Scop.
   __isl_give isl_set *getContext() const;
+
+  /// Return space of isl context parameters.
+  ///
+  /// Returns the set of context parameters that are currently constrained. In
+  /// case the full set of parameters is needed, see @getFullParamSpace.
   __isl_give isl_space *getParamSpace() const;
+
+  /// Return the full space of parameters.
+  ///
+  /// getParamSpace will only return the parameters of the context that are
+  /// actually constrained, whereas getFullParamSpace will return all
+  //  parameters. This is useful in cases, where we need to ensure all
+  //  parameters are available, as certain isl functions will abort if this is
+  //  not the case.
+  isl::space getFullParamSpace() const;
 
   /// Get the assumed context for this Scop.
   ///
