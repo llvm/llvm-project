@@ -393,7 +393,10 @@ protected:
 
           for (size_t j = 0; j < num_owners; j++) {
             lldb::BreakpointLocationSP bp_loc_sp = site_locations.GetByIndex(j);
-
+            StreamString loc_desc;
+            if (log) {
+              bp_loc_sp->GetDescription(&loc_desc, eDescriptionLevelBrief);
+            }
             // If another action disabled this breakpoint or its location, then
             // don't run the actions.
             if (!bp_loc_sp->IsEnabled() ||
@@ -405,16 +408,16 @@ protected:
             // this thread.  Skip the ones that aren't:
             if (!bp_loc_sp->ValidForThisThread(thread_sp.get())) {
               if (log) {
-                StreamString s;
-                bp_loc_sp->GetDescription(&s, eDescriptionLevelBrief);
                 log->Printf("Breakpoint %s hit on thread 0x%llx but it was not "
                             "for this thread, continuing.",
-                            s.GetData(), static_cast<unsigned long long>(
+                            loc_desc.GetData(), static_cast<unsigned long long>(
                                              thread_sp->GetID()));
               }
               continue;
             }
 
+            internal_breakpoint = bp_loc_sp->GetBreakpoint().IsInternal();
+            
             // First run the precondition, but since the precondition is per
             // breakpoint, only run it once
             // per breakpoint.
@@ -458,11 +461,10 @@ protected:
                 error_sp->Flush();
               } else {
                 if (log) {
-                  StreamString s;
-                  bp_loc_sp->GetDescription(&s, eDescriptionLevelBrief);
                   log->Printf("Condition evaluated for breakpoint %s on thread "
                               "0x%llx conditon_says_stop: %i.",
-                              s.GetData(), static_cast<unsigned long long>(
+                              loc_desc.GetData(), 
+                              static_cast<unsigned long long>(
                                                thread_sp->GetID()),
                               condition_says_stop);
                 }
@@ -477,7 +479,26 @@ protected:
               }
             }
 
-            bool callback_says_stop;
+            // Check the auto-continue bit on the location, do this before the
+            // callback since it may change this, but that would be for the
+            // NEXT hit.  Note, you might think you could check auto-continue
+            // before the condition, and not evaluate the condition if it says
+            // to continue.  But failing the condition means the breakpoint was
+            // effectively NOT HIT.  So these two states are different.
+            bool auto_continue_says_stop = true;
+            if (bp_loc_sp->IsAutoContinue())
+            {
+              if (log)
+                log->Printf("Continuing breakpoint %s as AutoContinue was set.",
+                            loc_desc.GetData());
+              // We want this stop reported, so you will know we auto-continued
+              // but only for external breakpoints:
+              if (!internal_breakpoint)
+                thread_sp->SetShouldReportStop(eVoteYes);
+              auto_continue_says_stop = false;
+            }
+
+            bool callback_says_stop = true;
 
             // FIXME: For now the callbacks have to run in async mode - the
             // first time we restart we need
@@ -493,11 +514,8 @@ protected:
 
             debugger.SetAsyncExecution(old_async);
 
-            if (callback_says_stop)
+            if (callback_says_stop && auto_continue_says_stop)
               m_should_stop = true;
-
-            if (m_should_stop && !bp_loc_sp->GetBreakpoint().IsInternal())
-              internal_breakpoint = false;
                   
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
@@ -506,7 +524,6 @@ protected:
               thread_sp->GetProcess()->GetTarget().RemoveBreakpointByID(
                   bp_loc_sp->GetBreakpoint().GetID());
             }
-
             // Also make sure that the callback hasn't continued the target.
             // If it did, when we'll set m_should_start to false and get out of
             // here.

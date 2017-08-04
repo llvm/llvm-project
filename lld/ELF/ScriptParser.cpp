@@ -90,6 +90,8 @@ private:
   void readSort();
   AssertCommand *readAssert();
   Expr readAssertExpr();
+  Expr readConstant();
+  Expr getPageSize();
 
   uint64_t readMemoryAssignment(StringRef, StringRef, StringRef);
   std::pair<uint32_t, uint32_t> readMemoryAttributes();
@@ -793,13 +795,24 @@ Expr ScriptParser::readExpr1(Expr Lhs, int MinPrec) {
   return Lhs;
 }
 
-uint64_t static getConstant(StringRef S) {
+Expr ScriptParser::getPageSize() {
+  std::string Location = getCurrentLocation();
+  return [=]() -> uint64_t {
+    if (Target)
+      return Target->PageSize;
+    error(Location + ": unable to calculate page size");
+    return 4096; // Return a dummy value.
+  };
+}
+
+Expr ScriptParser::readConstant() {
+  StringRef S = readParenLiteral();
   if (S == "COMMONPAGESIZE")
-    return Target->PageSize;
+    return getPageSize();
   if (S == "MAXPAGESIZE")
-    return Config->MaxPageSize;
-  error("unknown constant: " + S);
-  return 0;
+    return [] { return Config->MaxPageSize; };
+  setError("unknown constant: " + S);
+  return {};
 }
 
 // Parses Tok as an integer. It recognizes hexadecimal (prefixed with
@@ -919,10 +932,8 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "ASSERT")
     return readAssertExpr();
-  if (Tok == "CONSTANT") {
-    StringRef Name = readParenLiteral();
-    return [=] { return getConstant(Name); };
-  }
+  if (Tok == "CONSTANT")
+    return readConstant();
   if (Tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
     Expr E = readExpr();
@@ -948,7 +959,8 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [] { return alignTo(Script->getDot(), Target->PageSize); };
+    Expr E = getPageSize();
+    return [=] { return alignTo(Script->getDot(), E().getValue()); };
   }
   if (Tok == "DEFINED") {
     StringRef Name = readParenLiteral();
