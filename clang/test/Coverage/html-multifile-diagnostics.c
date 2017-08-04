@@ -1,31 +1,21 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -analyze -analyzer-output=html -analyzer-checker=core -o %t %s
 // RUN: find %t -name "*.html" -exec cat "{}" ";" | FileCheck %s
-//
-// RUN: rm -rf %t
-// RUN: %clang_cc1 -analyze -analyzer-output=html-single-file -analyzer-checker=core -o %t %s
-// RUN: find %t -name "*.html" -exec cat "{}" ";" | FileCheck %s
 
 // REQUIRES: staticanalyzer
 
 // CHECK: <h3>Annotated Source Code</h3>
 
-// Make sure it's not generated as a multi-file HTML output
-// CHECK-NOT: <h4 class=FileName>{{.*}}
+// Make sure it's generated as multi-file HTML output
+// CHECK: <h4 class=FileName>{{.*}}html-multifile-diagnostics.c</h4>
+// CHECK: <h4 class=FileName>{{.*}}html-multifile-diagnostics.h</h4>
 
 // Without tweaking expr, the expr would hit to the line below
 // emitted to the output as comment.
 // CHECK: {{[D]ereference of null pointer}}
 
-void f0(int x) {
-  int *p = &x;
+#include "html-multifile-diagnostics.h"
 
-  if (x > 10) {
-    if (x == 22)
-      p = 0;
-  }
-
-  *p = 10;
+void f0() {
+  f1((int*)0);
 }
-
-

@@ -49,7 +49,7 @@ when the code is incorrect or dubious.  In Clang, each diagnostic produced has
 (at the minimum) a unique ID, an English translation associated with it, a
 :ref:`SourceLocation <SourceLocation>` to "put the caret", and a severity
 (e.g., ``WARNING`` or ``ERROR``).  They can also optionally include a number of
-arguments to the dianostic (which fill in "%0"'s in the string) as well as a
+arguments to the diagnostic (which fill in "%0"'s in the string) as well as a
 number of source ranges that related to the diagnostic.
 
 In this section, we'll be giving examples produced by the Clang command line
@@ -795,7 +795,7 @@ preprocessor and notifies a client of the parsing progress.
 Historically, the parser used to talk to an abstract ``Action`` interface that
 had virtual methods for parse events, for example ``ActOnBinOp()``.  When Clang
 grew C++ support, the parser stopped supporting general ``Action`` clients --
-it now always talks to the :ref:`Sema libray <Sema>`.  However, the Parser
+it now always talks to the :ref:`Sema library <Sema>`.  However, the Parser
 still accesses AST objects only through opaque types like ``ExprResult`` and
 ``StmtResult``.  Only :ref:`Sema <Sema>` looks at the AST node contents of these
 wrappers.
@@ -1324,9 +1324,9 @@ range of iterators over declarations of "``f``".
 function ``DeclContext::getPrimaryContext`` retrieves the "primary" context for
 a given ``DeclContext`` instance, which is the ``DeclContext`` responsible for
 maintaining the lookup table used for the semantics-centric view.  Given a
-DeclContext, one can obtain the set of declaration contexts that are semanticaly
-connected to this declaration context, in source order, including this context
-(which will be the only result, for non-namespace contexts) via
+DeclContext, one can obtain the set of declaration contexts that are
+semantically connected to this declaration context, in source order, including
+this context (which will be the only result, for non-namespace contexts) via
 ``DeclContext::collectAllContexts``. Note that these functions are used
 internally within the lookup and insertion methods of the ``DeclContext``, so
 the vast majority of clients can ignore them.
@@ -1514,7 +1514,7 @@ use an i-c-e where one is required, but accepting the code unless running with
 Things get a little bit more tricky when it comes to compatibility with
 real-world source code.  Specifically, GCC has historically accepted a huge
 superset of expressions as i-c-e's, and a lot of real world code depends on
-this unfortuate accident of history (including, e.g., the glibc system
+this unfortunate accident of history (including, e.g., the glibc system
 headers).  GCC accepts anything its "fold" optimizer is capable of reducing to
 an integer constant, which means that the definition of what it accepts changes
 as its optimizer does.  One example is that GCC accepts things like "``case

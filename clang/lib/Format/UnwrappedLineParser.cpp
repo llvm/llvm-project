@@ -1450,6 +1450,15 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       nextToken();
       parseBracedList();
       break;
+    case tok::less:
+      if (Style.Language == FormatStyle::LK_Proto) {
+        nextToken();
+        parseBracedList(/*ContinueOnSemicolons=*/false,
+                        /*ClosingBraceKind=*/tok::greater);
+      } else {
+        nextToken();
+      }
+      break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
       // lists (in so-called TypeMemberLists). Thus, the semicolon cannot be

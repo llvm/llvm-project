@@ -171,7 +171,7 @@ bool SanitizerArgs::needsUbsanRt() const {
   return ((Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
           CoverageFeatures) &&
          !Sanitizers.has(Address) && !Sanitizers.has(Memory) &&
-         !Sanitizers.has(Thread) && !Sanitizers.has(DataFlow) && 
+         !Sanitizers.has(Thread) && !Sanitizers.has(DataFlow) &&
          !Sanitizers.has(Leak) && !CfiCrossDso;
 }
 
@@ -557,8 +557,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   if (AllAddedKinds & Address) {
     AsanSharedRuntime =
-        Args.hasArg(options::OPT_shared_libasan) || TC.getTriple().isAndroid();
-    NeedPIE |= TC.getTriple().isAndroid();
+        Args.hasArg(options::OPT_shared_libasan) ||
+        TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();
+    NeedPIE |= TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();
     if (Arg *A =
             Args.getLastArg(options::OPT_fsanitize_address_field_padding)) {
         StringRef S = A->getValue();
@@ -592,7 +593,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping =
-        !TC.getTriple().isOSBinFormatELF() ||
+        !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
         Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
   } else {
     AsanUseAfterScope = false;
