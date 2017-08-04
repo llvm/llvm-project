@@ -104,10 +104,6 @@ protected:
   const unsigned SymbolKind : 8;
 
 public:
-  // True if the linker has to generate a copy relocation.
-  // For SharedSymbol only.
-  unsigned NeedsCopy : 1;
-
   // True the symbol should point to its PLT entry.
   // For SharedSymbol only.
   unsigned NeedsPltAddr : 1;

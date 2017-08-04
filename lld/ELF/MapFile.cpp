@@ -52,10 +52,10 @@ template <class ELFT> static std::vector<DefinedRegular *> getSymbols() {
   std::vector<DefinedRegular *> V;
   for (ObjFile<ELFT> *File : ObjFile<ELFT>::Instances)
     for (SymbolBody *B : File->getSymbols())
-      if (B->File == File && !B->isSection())
-        if (auto *Sym = dyn_cast<DefinedRegular>(B))
-          if (Sym->Section && Sym->Section->Live)
-            V.push_back(Sym);
+      if (auto *DR = dyn_cast<DefinedRegular>(B))
+        if (DR->File == File && !DR->isSection() && DR->Section &&
+            DR->Section->Live)
+          V.push_back(DR);
   return V;
 }
 
