@@ -162,15 +162,9 @@ ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
 }
 
 template <class ELFT> ArrayRef<SymbolBody *> ObjFile<ELFT>::getLocalSymbols() {
-  if (this->SymbolBodies.empty())
-    return this->SymbolBodies;
-  return makeArrayRef(this->SymbolBodies).slice(1, this->FirstNonLocal - 1);
-}
-
-template <class ELFT> ArrayRef<SymbolBody *> ObjFile<ELFT>::getSymbols() {
-  if (this->SymbolBodies.empty())
-    return this->SymbolBodies;
-  return makeArrayRef(this->SymbolBodies).slice(1);
+  if (this->Symbols.empty())
+    return {};
+  return makeArrayRef(this->Symbols).slice(1, this->FirstNonLocal - 1);
 }
 
 template <class ELFT>
@@ -523,9 +517,9 @@ StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
-  SymbolBodies.reserve(this->ELFSyms.size());
+  this->Symbols.reserve(this->ELFSyms.size());
   for (const Elf_Sym &Sym : this->ELFSyms)
-    SymbolBodies.push_back(createSymbolBody(&Sym));
+    this->Symbols.push_back(createSymbolBody(&Sym));
 }
 
 template <class ELFT>

@@ -106,6 +106,10 @@ def err_drv_malformed_sanitizer_blacklist : Error<
 
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;
+def err_cpu_unsupported_isa
+  : Error<"CPU '%0' does not support '%1' execution mode">;
+def err_arch_unsupported_isa
+  : Error<"Architecture '%0' does not support '%1' execution mode">;
 
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
@@ -282,7 +286,7 @@ def warn_target_unsupported_compact_branches : Warning<
   " support it">, InGroup<UnsupportedCB>;
 def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
-  " usage of}0-mabicalls">,
+  " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<

@@ -995,7 +995,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   const SCEV *EC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
   EXPECT_TRUE(isa<SCEVConstant>(EC));
-  EXPECT_EQ(cast<SCEVConstant>(EC)->getAPInt().getLimitedValue(), 999);
+  EXPECT_EQ(cast<SCEVConstant>(EC)->getAPInt().getLimitedValue(), 999u);
 
   SE.forgetLoop(Loop);
   Br->eraseFromParent();
@@ -1008,7 +1008,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
   EXPECT_TRUE(isa<SCEVConstant>(NewEC));
-  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999);
+  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
 }
 
 // Make sure that SCEV invalidates exit limits after invalidating the values it
@@ -1092,7 +1092,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
   EXPECT_TRUE(isa<SCEVConstant>(NewEC));
-  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999);
+  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
 }
 
 }  // end anonymous namespace

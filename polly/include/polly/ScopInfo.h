@@ -3029,7 +3029,9 @@ public:
 
 class ScopInfo {
 public:
-  using RegionToScopMapTy = DenseMap<Region *, std::unique_ptr<Scop>>;
+  using RegionToScopMapTy = MapVector<Region *, std::unique_ptr<Scop>>;
+  using reverse_iterator = RegionToScopMapTy::reverse_iterator;
+  using const_reverse_iterator = RegionToScopMapTy::const_reverse_iterator;
   using iterator = RegionToScopMapTy::iterator;
   using const_iterator = RegionToScopMapTy::const_iterator;
 
@@ -3060,6 +3062,10 @@ public:
   iterator end() { return RegionToScopMap.end(); }
   const_iterator begin() const { return RegionToScopMap.begin(); }
   const_iterator end() const { return RegionToScopMap.end(); }
+  reverse_iterator rbegin() { return RegionToScopMap.rbegin(); }
+  reverse_iterator rend() { return RegionToScopMap.rend(); }
+  const_reverse_iterator rbegin() const { return RegionToScopMap.rbegin(); }
+  const_reverse_iterator rend() const { return RegionToScopMap.rend(); }
   bool empty() const { return RegionToScopMap.empty(); }
 };
 

@@ -5290,7 +5290,9 @@ ScopInfoAnalysis::Result ScopInfoAnalysis::run(Function &F,
 PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   auto &SI = FAM.getResult<ScopInfoAnalysis>(F);
-  for (auto &It : SI) {
+  // Since the legacy PM processes Scops in bottom up, we print them in reverse
+  // order here to keep the output persistent
+  for (auto &It : reverse(SI)) {
     if (It.second)
       It.second->print(Stream, PollyPrintInstructions);
     else

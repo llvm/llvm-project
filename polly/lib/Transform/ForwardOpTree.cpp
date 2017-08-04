@@ -64,6 +64,14 @@ enum ForwardingDecision {
 
   /// Used to indicate that a forwarding has be carried out successfully.
   FD_DidForward,
+
+  /// A forwarding method cannot be applied to the operand tree.
+  /// The difference to FD_CannotForward is that there might be other methods
+  /// that can handle it.
+  /// The conditions that make an operand tree applicable must be checked even
+  /// with DoIt==true because a method following the one that returned
+  /// FD_NotApplicable might have returned FD_CanForwardTree.
+  FD_NotApplicable
 };
 
 /// Implementation of operand tree forwarding for a specific SCoP.
@@ -120,6 +128,78 @@ private:
       Stmt.printInstructions(OS);
     }
     OS.indent(Indent) << "}\n";
+  }
+
+  /// Forwards a speculatively executable instruction.
+  ///
+  /// If the instruction itself cannot be executed speculatively, returns
+  /// FD_NotApplicable.
+  ///
+  /// The parameters the same as for
+  /// @see forwardTree()
+  ForwardingDecision forwardSpeculatable(ScopStmt *TargetStmt,
+                                         Instruction *UseInst,
+                                         ScopStmt *UseStmt, Loop *UseLoop,
+                                         bool DoIt) {
+    // PHIs, unless synthesizable, are not yet supported.
+    if (isa<PHINode>(UseInst))
+      return FD_NotApplicable;
+
+    // Compatible instructions must satisfy the following conditions:
+    // 1. Idempotent (instruction will be copied, not moved; although its
+    //    original instance might be removed by simplification)
+    // 2. Not access memory (There might be memory writes between)
+    // 3. Not cause undefined behaviour (we might copy to a location when the
+    //    original instruction was no executed; this is currently not possible
+    //    because we do not forward PHINodes)
+    // 4. Not leak memory if executed multiple times (i.e. malloc)
+    //
+    // Instruction::mayHaveSideEffects is not sufficient because it considers
+    // malloc to not have side-effects. llvm::isSafeToSpeculativelyExecute is
+    // not sufficient because it allows memory accesses.
+    if (mayBeMemoryDependent(*UseInst))
+      return FD_NotApplicable;
+
+    Loop *DefLoop = LI->getLoopFor(UseInst->getParent());
+    ScopStmt *DefStmt = S->getStmtFor(UseInst);
+    assert(DefStmt && "Value must be defined somewhere");
+
+    if (DoIt) {
+      // To ensure the right order, prepend this instruction before its
+      // operands. This ensures that its operands are inserted before the
+      // instruction using them.
+      // TODO: The operand tree is not really a tree, but a DAG. We should be
+      // able to handle DAGs without duplication.
+      TargetStmt->prependInstruction(UseInst);
+      NumInstructionsCopied++;
+      TotalInstructionsCopied++;
+    }
+
+    for (Value *OpVal : UseInst->operand_values()) {
+      ForwardingDecision OpDecision =
+          forwardTree(TargetStmt, OpVal, DefStmt, DefLoop, DoIt);
+      switch (OpDecision) {
+      case FD_CannotForward:
+        assert(!DoIt);
+        return FD_CannotForward;
+
+      case FD_CanForwardLeaf:
+      case FD_CanForwardTree:
+        assert(!DoIt);
+        break;
+
+      case FD_DidForward:
+        assert(DoIt);
+        break;
+
+      case FD_NotApplicable:
+        llvm_unreachable("forwardTree should never return FD_NotApplicable");
+      }
+    }
+
+    if (DoIt)
+      return FD_DidForward;
+    return FD_CanForwardTree;
   }
 
   /// Determines whether an operand tree can be forwarded or carries out a
@@ -198,68 +278,15 @@ private:
     case VirtualUse::Inter:
       auto Inst = cast<Instruction>(UseVal);
 
-      // PHIs, unless synthesizable, are not yet supported.
-      if (isa<PHINode>(Inst)) {
-        DEBUG(dbgs() << "    Cannot forward PHI: " << *UseVal << "\n");
-        return FD_CannotForward;
-      }
+      ForwardingDecision SpeculativeResult =
+          forwardSpeculatable(TargetStmt, Inst, UseStmt, UseLoop, DoIt);
+      if (SpeculativeResult != FD_NotApplicable)
+        return SpeculativeResult;
 
-      // Compatible instructions must satisfy the following conditions:
-      // 1. Idempotent (instruction will be copied, not moved; although its
-      //    original instance might be removed by simplification)
-      // 2. Not access memory (There might be memory writes between)
-      // 3. Not cause undefined behaviour (we might copy to a location when the
-      //    original instruction was no executed; this is currently not possible
-      //    because we do not forward PHINodes)
-      // 4. Not leak memory if executed multiple times (I am looking at you,
-      //    malloc!)
-      //
-      // Instruction::mayHaveSideEffects is not sufficient because it considers
-      // malloc to not have side-effects. llvm::isSafeToSpeculativelyExecute is
-      // not sufficient because it allows memory accesses.
-      if (mayBeMemoryDependent(*Inst)) {
-        DEBUG(dbgs() << "    Cannot forward side-effect instruction: " << *Inst
-                     << "\n");
-        return FD_CannotForward;
-      }
-
-      Loop *DefLoop = LI->getLoopFor(Inst->getParent());
-      ScopStmt *DefStmt = S->getStmtFor(Inst);
-      assert(DefStmt && "Value must be defined somewhere");
-
-      if (DoIt) {
-        // To ensure the right order, prepend this instruction before its
-        // operands. This ensures that its operands are inserted before the
-        // instruction using them.
-        // TODO: The operand tree is not really a tree, but a DAG. We should be
-        // able to handle DAGs without duplication.
-        TargetStmt->prependInstruction(Inst);
-        NumInstructionsCopied++;
-        TotalInstructionsCopied++;
-      }
-
-      for (Value *OpVal : Inst->operand_values()) {
-        ForwardingDecision OpDecision =
-            forwardTree(TargetStmt, OpVal, DefStmt, DefLoop, DoIt);
-        switch (OpDecision) {
-        case FD_CannotForward:
-          assert(!DoIt);
-          return FD_CannotForward;
-
-        case FD_CanForwardLeaf:
-        case FD_CanForwardTree:
-          assert(!DoIt);
-          break;
-
-        case FD_DidForward:
-          assert(DoIt);
-          break;
-        }
-      }
-
-      if (DoIt)
-        return FD_DidForward;
-      return FD_CanForwardTree;
+      // When no method is found to forward the operand tree, we effectively
+      // cannot handle it.
+      DEBUG(dbgs() << "    Cannot forward instruction: " << *Inst << "\n");
+      return FD_CannotForward;
     }
 
     llvm_unreachable("Case unhandled");

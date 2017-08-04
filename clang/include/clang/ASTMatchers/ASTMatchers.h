@@ -2566,8 +2566,21 @@ const internal::VariadicOperatorMatcherFunc<1, 1> unless = {
 /// - for CXXConstructExpr, the declaration of the constructor
 /// - for CXXNewExpr, the declaration of the operator new
 ///
-/// Also usable as Matcher<T> for any T supporting the getDecl() member
-/// function. e.g. various subtypes of clang::Type and various expressions.
+/// For type nodes, hasDeclaration will generally match the declaration of the
+/// sugared type. Given
+/// \code
+///   class X {};
+///   typedef X Y;
+///   Y y;
+/// \endcode
+/// in varDecl(hasType(hasDeclaration(decl()))) the decl will match the
+/// typedefDecl. A common use case is to match the underlying, desugared type.
+/// This can be achieved by using the hasUnqualifiedDesugaredType matcher:
+/// \code
+///   varDecl(hasType(hasUnqualifiedDesugaredType(
+///       recordType(hasDeclaration(decl())))))
+/// \endcode
+/// In this matcher, the decl will match the CXXRecordDecl of class X.
 ///
 /// Usable as: Matcher<AddrLabelExpr>, Matcher<CallExpr>,
 ///   Matcher<CXXConstructExpr>, Matcher<CXXNewExpr>, Matcher<DeclRefExpr>,
@@ -2860,7 +2873,7 @@ AST_MATCHER_P_OVERLOAD(QualType, pointsTo, internal::Matcher<Decl>,
 ///   class A {};
 ///   using B = A;
 /// \endcode
-/// The matcher type(hasUniqualifeidDesugaredType(recordType())) matches
+/// The matcher type(hasUnqualifeidDesugaredType(recordType())) matches
 /// both B and A.
 AST_MATCHER_P(Type, hasUnqualifiedDesugaredType, internal::Matcher<Type>,
               InnerMatcher) {

@@ -990,6 +990,7 @@ unsigned StringTableSection::addString(StringRef S, bool HashIt) {
 void StringTableSection::writeTo(uint8_t *Buf) {
   for (StringRef S : Strings) {
     memcpy(Buf, S.data(), S.size());
+    Buf[S.size()] = '\0';
     Buf += S.size() + 1;
   }
 }
@@ -2218,15 +2219,14 @@ size_t MergeSyntheticSection::getSize() const { return Builder.getSize(); }
 void elf::decompressAndMergeSections() {
   // splitIntoPieces needs to be called on each MergeInputSection before calling
   // finalizeContents(). Do that first.
-  parallelForEach(InputSections.begin(), InputSections.end(),
-                  [](InputSectionBase *S) {
-                    if (!S->Live)
-                      return;
-                    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
-                      S->uncompress();
-                    if (auto *MS = dyn_cast<MergeInputSection>(S))
-                      MS->splitIntoPieces();
-                  });
+  parallelForEach(InputSections, [](InputSectionBase *S) {
+    if (!S->Live)
+      return;
+    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
+      S->uncompress();
+    if (auto *MS = dyn_cast<MergeInputSection>(S))
+      MS->splitIntoPieces();
+  });
 
   std::vector<MergeSyntheticSection *> MergeSections;
   for (InputSectionBase *&S : InputSections) {

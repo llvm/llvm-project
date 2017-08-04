@@ -199,7 +199,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
   // output sections.
-  parallelForEach(OutputSections.begin(), OutputSections.end(),
+  parallelForEach(OutputSections,
                   [](OutputSection *Sec) { Sec->maybeCompress<ELFT>(); });
 
   Script->assignAddresses();
@@ -872,27 +872,8 @@ template <class ELFT> static void sortBySymbolsOrder() {
   if (Config->SymbolOrderingFile.empty())
     return;
 
-  // Build a map from symbols to their priorities. Symbols that didn't
-  // appear in the symbol ordering file have the lowest priority 0.
-  // All explicitly mentioned symbols have negative (higher) priorities.
-  DenseMap<StringRef, int> SymbolOrder;
-  int Priority = -Config->SymbolOrderingFile.size();
-  for (StringRef S : Config->SymbolOrderingFile)
-    SymbolOrder.insert({S, Priority++});
-
-  // Build a map from sections to their priorities.
-  DenseMap<SectionBase *, int> SectionOrder;
-  for (ObjFile<ELFT> *File : ObjFile<ELFT>::Instances) {
-    for (SymbolBody *Body : File->getSymbols()) {
-      auto *D = dyn_cast<DefinedRegular>(Body);
-      if (!D || !D->Section)
-        continue;
-      int &Priority = SectionOrder[D->Section];
-      Priority = std::min(Priority, SymbolOrder.lookup(D->getName()));
-    }
-  }
-
   // Sort sections by priority.
+  DenseMap<SectionBase *, int> SectionOrder = buildSectionOrder<ELFT>();
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       Sec->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
