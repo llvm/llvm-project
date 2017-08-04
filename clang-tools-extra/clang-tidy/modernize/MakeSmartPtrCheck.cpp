@@ -242,16 +242,33 @@ void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     // Range of the substring that we do not want to remove.
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
-      // Direct initialization with initialization list.
-      //   struct S { S(int x) {} };
-      //   smart_ptr<S>(new S{5});
-      // The arguments in the initialization list are going to be forwarded to
-      // the constructor, so this has to be replaced with:
-      //   struct S { S(int x) {} };
-      //   std::make_smart_ptr<S>(5);
-      InitRange = SourceRange(
-          NewConstruct->getParenOrBraceRange().getBegin().getLocWithOffset(1),
-          NewConstruct->getParenOrBraceRange().getEnd().getLocWithOffset(-1));
+      if (NewConstruct->isStdInitListInitialization()) {
+        // Direct Initialization with the initializer-list constructor.
+        //   struct S { S(std::initializer_list<T>); };
+        //   smart_ptr<S>(new S{1, 2, 3});
+        //   smart_ptr<S>(new S{}); // use initializer-list consturctor
+        // The brace has to be kept, so this has to be replaced with:
+        //   std::make_smart_ptr<S>({1, 2, 3});
+        //   std::make_smart_ptr<S>({});
+        unsigned NumArgs = NewConstruct->getNumArgs();
+        if (NumArgs == 0) {
+          return;
+        }
+        InitRange = SourceRange(NewConstruct->getArg(0)->getLocStart(),
+                                NewConstruct->getArg(NumArgs - 1)->getLocEnd());
+      } else {
+        // Direct initialization with ordinary constructors.
+        //   struct S { S(int x); S(); };
+        //   smart_ptr<S>(new S{5});
+        //   smart_ptr<S>(new S{}); // use default constructor
+        // The arguments in the initialization list are going to be forwarded to
+        // the constructor, so this has to be replaced with:
+        //   std::make_smart_ptr<S>(5);
+        //   std::make_smart_ptr<S>();
+        InitRange = SourceRange(
+            NewConstruct->getParenOrBraceRange().getBegin().getLocWithOffset(1),
+            NewConstruct->getParenOrBraceRange().getEnd().getLocWithOffset(-1));
+      }
     } else {
       // Aggregate initialization.
       //   smart_ptr<Pair>(new Pair{first, second});
