@@ -28,11 +28,11 @@ void NameToDIE::Finalize() {
 }
 
 void NameToDIE::Insert(const ConstString &name, const DIERef &die_ref) {
-  m_map.Append(name.GetStringRef(), die_ref);
+  m_map.Append(name, die_ref);
 }
 
 size_t NameToDIE::Find(const ConstString &name, DIEArray &info_array) const {
-  return m_map.GetValues(name.GetStringRef(), info_array);
+  return m_map.GetValues(name, info_array);
 }
 
 size_t NameToDIE::Find(const RegularExpression &regex,
@@ -55,15 +55,15 @@ size_t NameToDIE::FindAllEntriesForCompileUnit(dw_offset_t cu_offset,
 void NameToDIE::Dump(Stream *s) {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    llvm::StringRef cstr = m_map.GetCStringAtIndex(i);
+    ConstString cstr = m_map.GetCStringAtIndex(i);
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    s->Printf("%p: {0x%8.8x/0x%8.8x} \"%s\"\n", (const void *)cstr.data(),
-              die_ref.cu_offset, die_ref.die_offset, cstr.str().c_str());
+    s->Printf("%p: {0x%8.8x/0x%8.8x} \"%s\"\n", (const void *)cstr.GetCString(),
+              die_ref.cu_offset, die_ref.die_offset, cstr.GetCString());
   }
 }
 
 void NameToDIE::ForEach(
-    std::function<bool(llvm::StringRef name, const DIERef &die_ref)> const
+    std::function<bool(ConstString name, const DIERef &die_ref)> const
         &callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
