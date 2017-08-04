@@ -345,7 +345,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericEntryHeader(CodeGenFunction &CGF,
   Bld.CreateCondBr(IsWorker, WorkerBB, MasterCheckBB);
 
   CGF.EmitBlock(WorkerBB);
-  CGF.EmitCallOrInvoke(WST.WorkerFn, llvm::None);
+  emitOutlinedFunctionCall(CGF, WST.WorkerFn);
   CGF.EmitBranch(EST.ExitBB);
 
   CGF.EmitBlock(MasterCheckBB);
@@ -555,7 +555,7 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
         CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty, /*Name=*/".zero.addr");
     CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C=*/0));
     llvm::Value *FnArgs[] = {ZeroAddr.getPointer(), ZeroAddr.getPointer()};
-    CGF.EmitCallOrInvoke(Fn, FnArgs);
+    emitOutlinedFunctionCall(CGF, Fn, FnArgs);
 
     // Go to end of parallel region.
     CGF.EmitBranch(TerminateBB);
@@ -883,7 +883,7 @@ void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  CGF.EmitCallOrInvoke(OutlinedFn, OutlinedFnArgs);
+  emitOutlinedFunctionCall(CGF, OutlinedFn, OutlinedFnArgs);
 }
 
 void CGOpenMPRuntimeNVPTX::emitParallelCall(
@@ -944,7 +944,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
       OutlinedFnArgs.push_back(
           llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
       OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-      CGF.EmitCallOrInvoke(Fn, OutlinedFnArgs);
+      emitOutlinedFunctionCall(CGF, Fn, OutlinedFnArgs);
     };
 
     RegionCodeGenTy RCG(CodeGen);
@@ -980,7 +980,7 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
   OutlinedFnArgs.push_back(
       llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  CGF.EmitCallOrInvoke(OutlinedFn, OutlinedFnArgs);
+  emitOutlinedFunctionCall(CGF, OutlinedFn, OutlinedFnArgs);
 }
 
 /// This function creates calls to one of two shuffle functions to copy
