@@ -12,7 +12,7 @@
 
 #include "lldb/Interpreter/OptionValue.h"
 
-#include "lldb/Utility/FileSpec.h"
+#include "lldb/Host/FileSpec.h"
 #include "llvm/Support/Chrono.h"
 
 namespace lldb_private {
@@ -37,10 +37,10 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  Status
+  Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
+  Error
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 

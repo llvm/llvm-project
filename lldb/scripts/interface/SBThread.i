@@ -135,8 +135,31 @@ public:
     size_t
     GetStopDescription (char *dst, size_t dst_len);
 
+    %feature("autodoc", "
+    If the last stop on this thread was a thread plan that gathered a return value from the stop,
+    this function will fetch that stop result.  At present only the \"step-out\" thread plan gathers
+    stop return values.
+    ") GetStopReturnValue;
     SBValue
     GetStopReturnValue ();
+
+    %feature("autodoc", "
+    If the last stop on this thread was a thread plan that gathered an error value from the stop,
+    this function will fetch that stop result.  At present only the \"step-out\" thread plan gathers
+    stop error values, and that only for stepping out of Swift functions.
+    ") GetStopErrorValue;
+    SBValue
+    GetStopErrorValue ();
+
+//    FIXME: THis is a useful API, but our typemaps don't handle out bool types correctly.  We'll have to fix
+//    the typemaps before we can make this real.
+//    %feature("autodoc", "
+//    If the last stop on this thread was a thread plan that gathered a return or error value from the stop,
+//    this function will fetch that stop result.  Furthermore, the bool passed in will be set to whether it
+//    was an error or a return value.
+//    ") GetStopReturnOrErrorValue;
+//    SBValue
+//    GetStopReturnOrErrorValue (bool &is_swift_error_value);
 
     %feature("autodoc", "
     Returns a unique thread identifier (type lldb::tid_t, typically a 64-bit type)
@@ -182,14 +205,12 @@ public:
     lldb::queue_id_t
     GetQueueID() const;
 
-    %feature("docstring", "
-    //--------------------------------------------------------------------------
-    /// Takes a path string and a SBStream reference as parameters, returns a bool.  
-    /// Collects the thread's 'info' dictionary from the remote system, uses the path
-    /// argument to descend into the dictionary to an item of interest, and prints
-    /// it into the SBStream in a natural format.  Return bool is to indicate if
-    /// anything was printed into the stream (true) or not (false).
-    //--------------------------------------------------------------------------
+    %feature("autodoc", "
+    Takes a path string and a SBStream reference as parameters, returns a bool.  
+    Collects the thread's 'info' dictionary from the remote system, uses the path
+    argument to descend into the dictionary to an item of interest, and prints
+    it into the SBStream in a natural format.  Return bool is to indicate if
+    anything was printed into the stream (true) or not (false).
     ") GetInfoItemByPathAsString;
 
     bool

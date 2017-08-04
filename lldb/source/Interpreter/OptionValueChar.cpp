@@ -13,9 +13,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
@@ -36,9 +36,9 @@ void OptionValueChar::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueChar::SetValueFromString(llvm::StringRef value,
-                                           VarSetOperationType op) {
-  Status error;
+Error OptionValueChar::SetValueFromString(llvm::StringRef value,
+                                          VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

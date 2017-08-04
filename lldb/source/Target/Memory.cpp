@@ -13,11 +13,11 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -129,8 +129,7 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
   return false;
 }
 
-size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
-                         Status &error) {
+size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len, Error &error) {
   size_t bytes_left = dst_len;
 
   // Check the L1 cache for a range that contain the entire memory read.
@@ -253,78 +252,146 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
 
 AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
                                uint32_t permissions, uint32_t chunk_size)
-    : m_range(addr, byte_size), m_permissions(permissions),
-      m_chunk_size(chunk_size)
+    : m_addr(addr), m_byte_size(byte_size), m_permissions(permissions),
+      m_chunk_size(chunk_size), m_offset_to_chunk_size()
+//    m_allocated (byte_size / chunk_size)
 {
-  // The entire address range is free to start with.
-  m_free_blocks.Append(m_range);
   assert(byte_size > chunk_size);
 }
 
 AllocatedBlock::~AllocatedBlock() {}
 
 lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
-  // We must return something valid for zero bytes.
-  if (size == 0)
-    size = 1;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  
-  const size_t free_count = m_free_blocks.GetSize();
-  for (size_t i=0; i<free_count; ++i)
-  {
-    auto &free_block = m_free_blocks.GetEntryRef(i);
-    const lldb::addr_t range_size = free_block.GetByteSize();
-    if (range_size >= size)
-    {
-      // We found a free block that is big enough for our data. Figure out how
-      // many chunks we will need and calculate the resulting block size we will
-      // reserve.
-      addr_t addr = free_block.GetRangeBase();
-      size_t num_chunks = CalculateChunksNeededForSize(size);
-      lldb::addr_t block_size = num_chunks * m_chunk_size;
-      lldb::addr_t bytes_left = range_size - block_size;
-      if (bytes_left == 0)
-      {
-        // The newly allocated block will take all of the bytes in this
-        // available block, so we can just add it to the allocated ranges and
-        // remove the range from the free ranges.
-        m_reserved_blocks.Insert(free_block, false);
-        m_free_blocks.RemoveEntryAtIndex(i);
+  addr_t addr = LLDB_INVALID_ADDRESS;
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  if (size <= m_byte_size) {
+    const uint32_t needed_chunks = CalculateChunksNeededForSize(size);
+
+    if (m_offset_to_chunk_size.empty()) {
+      m_offset_to_chunk_size[0] = needed_chunks;
+      if (log)
+        log->Printf("[1] AllocatedBlock::ReserveBlock(%p) (size = %u (0x%x)) "
+                    "=> offset = 0x%x, %u %u bit chunks",
+                    (void *)this, size, size, 0, needed_chunks, m_chunk_size);
+      addr = m_addr;
+    } else {
+      uint32_t last_offset = 0;
+      OffsetToChunkSize::const_iterator pos = m_offset_to_chunk_size.begin();
+      OffsetToChunkSize::const_iterator end = m_offset_to_chunk_size.end();
+      while (pos != end) {
+        if (pos->first > last_offset) {
+          const uint32_t bytes_available = pos->first - last_offset;
+          const uint32_t num_chunks =
+              CalculateChunksNeededForSize(bytes_available);
+          if (num_chunks >= needed_chunks) {
+            m_offset_to_chunk_size[last_offset] = needed_chunks;
+            if (log)
+              log->Printf("[2] AllocatedBlock::ReserveBlock(%p) (size = %u "
+                          "(0x%x)) => offset = 0x%x, %u %u bit chunks - "
+                          "num_chunks %zu",
+                          (void *)this, size, size, last_offset, needed_chunks,
+                          m_chunk_size, m_offset_to_chunk_size.size());
+            addr = m_addr + last_offset;
+            break;
+          }
+        }
+
+        last_offset = pos->first + pos->second * m_chunk_size;
+
+        if (++pos == end) {
+          // Last entry...
+          const uint32_t chunks_left =
+              CalculateChunksNeededForSize(m_byte_size - last_offset);
+          if (chunks_left >= needed_chunks) {
+            m_offset_to_chunk_size[last_offset] = needed_chunks;
+            if (log)
+              log->Printf("[3] AllocatedBlock::ReserveBlock(%p) (size = %u "
+                          "(0x%x)) => offset = 0x%x, %u %u bit chunks - "
+                          "num_chunks %zu",
+                          (void *)this, size, size, last_offset, needed_chunks,
+                          m_chunk_size, m_offset_to_chunk_size.size());
+            addr = m_addr + last_offset;
+            break;
+          }
+        }
       }
-      else
-      {
-        // Make the new allocated range and add it to the allocated ranges.
-        Range<lldb::addr_t, uint32_t> reserved_block(free_block);
-        reserved_block.SetByteSize(block_size);
-        // Insert the reserved range and don't combine it with other blocks
-        // in the reserved blocks list.
-        m_reserved_blocks.Insert(reserved_block, false);
-        // Adjust the free range in place since we won't change the sorted
-        // ordering of the m_free_blocks list.
-        free_block.SetRangeBase(reserved_block.GetRangeEnd());
-        free_block.SetByteSize(bytes_left);
-      }
-      LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size, addr);
-      return addr;
     }
+    //        const uint32_t total_chunks = m_allocated.size ();
+    //        uint32_t unallocated_idx = 0;
+    //        uint32_t allocated_idx = m_allocated.find_first();
+    //        uint32_t first_chunk_idx = UINT32_MAX;
+    //        uint32_t num_chunks;
+    //        while (1)
+    //        {
+    //            if (allocated_idx == UINT32_MAX)
+    //            {
+    //                // No more bits are set starting from unallocated_idx, so
+    //                we
+    //                // either have enough chunks for the request, or we don't.
+    //                // Either way we break out of the while loop...
+    //                num_chunks = total_chunks - unallocated_idx;
+    //                if (needed_chunks <= num_chunks)
+    //                    first_chunk_idx = unallocated_idx;
+    //                break;
+    //            }
+    //            else if (allocated_idx > unallocated_idx)
+    //            {
+    //                // We have some allocated chunks, check if there are
+    //                enough
+    //                // free chunks to satisfy the request?
+    //                num_chunks = allocated_idx - unallocated_idx;
+    //                if (needed_chunks <= num_chunks)
+    //                {
+    //                    // Yep, we have enough!
+    //                    first_chunk_idx = unallocated_idx;
+    //                    break;
+    //                }
+    //            }
+    //
+    //            while (unallocated_idx < total_chunks)
+    //            {
+    //                if (m_allocated[unallocated_idx])
+    //                    ++unallocated_idx;
+    //                else
+    //                    break;
+    //            }
+    //
+    //            if (unallocated_idx >= total_chunks)
+    //                break;
+    //
+    //            allocated_idx = m_allocated.find_next(unallocated_idx);
+    //        }
+    //
+    //        if (first_chunk_idx != UINT32_MAX)
+    //        {
+    //            const uint32_t end_bit_idx = unallocated_idx + needed_chunks;
+    //            for (uint32_t idx = first_chunk_idx; idx < end_bit_idx; ++idx)
+    //                m_allocated.set(idx);
+    //            return m_addr + m_chunk_size * first_chunk_idx;
+    //        }
   }
 
-  LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size,
-            LLDB_INVALID_ADDRESS);
-  return LLDB_INVALID_ADDRESS;
+  if (log)
+    log->Printf("AllocatedBlock::ReserveBlock(%p) (size = %u (0x%x)) => "
+                "0x%16.16" PRIx64,
+                (void *)this, size, size, (uint64_t)addr);
+  return addr;
 }
 
 bool AllocatedBlock::FreeBlock(addr_t addr) {
+  uint32_t offset = addr - m_addr;
+  OffsetToChunkSize::iterator pos = m_offset_to_chunk_size.find(offset);
   bool success = false;
-  auto entry_idx = m_reserved_blocks.FindEntryIndexThatContains(addr);
-  if (entry_idx != UINT32_MAX)
-  {
-    m_free_blocks.Insert(m_reserved_blocks.GetEntryRef(entry_idx), true);
-    m_reserved_blocks.RemoveEntryAtIndex(entry_idx);
+  if (pos != m_offset_to_chunk_size.end()) {
+    m_offset_to_chunk_size.erase(pos);
     success = true;
   }
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  LLDB_LOGV(log, "({0}) (addr = {1:x}) => {2}", this, addr, success);
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  if (log)
+    log->Printf("AllocatedBlock::FreeBlock(%p) (addr = 0x%16.16" PRIx64
+                ") => %i, num_chunks: %zu",
+                (void *)this, (uint64_t)addr, success,
+                m_offset_to_chunk_size.size());
   return success;
 }
 
@@ -345,7 +412,7 @@ void AllocatedMemoryCache::Clear() {
 
 AllocatedMemoryCache::AllocatedBlockSP
 AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
-                                   uint32_t chunk_size, Status &error) {
+                                   uint32_t chunk_size, Error &error) {
   AllocatedBlockSP block_sp;
   const size_t page_size = 4096;
   const size_t num_pages = (byte_size + page_size - 1) / page_size;
@@ -371,7 +438,7 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
 
 lldb::addr_t AllocatedMemoryCache::AllocateMemory(size_t byte_size,
                                                   uint32_t permissions,
-                                                  Status &error) {
+                                                  Error &error) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   addr_t addr = LLDB_INVALID_ADDRESS;

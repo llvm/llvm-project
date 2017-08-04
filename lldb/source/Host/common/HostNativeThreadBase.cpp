@@ -8,12 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostNativeThreadBase.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/ThisThread.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Utility/Log.h"
-
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Threading.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -53,7 +52,7 @@ lldb::thread_result_t
 HostNativeThreadBase::ThreadCreateTrampoline(lldb::thread_arg_t arg) {
   ThreadLauncher::HostThreadCreateInfo *info =
       (ThreadLauncher::HostThreadCreateInfo *)arg;
-  llvm::set_thread_name(info->thread_name);
+  ThisThread::SetName(info->thread_name, HostInfo::GetMaxThreadNameLength());
 
   thread_func_t thread_fptr = info->thread_fptr;
   thread_arg_t thread_arg = info->thread_arg;

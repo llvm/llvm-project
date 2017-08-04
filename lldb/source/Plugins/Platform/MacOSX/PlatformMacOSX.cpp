@@ -17,20 +17,21 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -190,7 +191,7 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
             int signo = 0;
             std::string output;
             const char *command = "xcrun -sdk macosx --show-sdk-path";
-            lldb_private::Status error = RunShellCommand(
+            lldb_private::Error error = RunShellCommand(
                 command, // shell command to run
                 NULL,    // current working directory
                 &status, // Put the exit status of the process in here
@@ -235,9 +236,9 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   return ConstString();
 }
 
-Status PlatformMacOSX::GetSymbolFile(const FileSpec &platform_file,
-                                     const UUID *uuid_ptr,
-                                     FileSpec &local_file) {
+Error PlatformMacOSX::GetSymbolFile(const FileSpec &platform_file,
+                                    const UUID *uuid_ptr,
+                                    FileSpec &local_file) {
   if (IsRemote()) {
     if (m_remote_platform_sp)
       return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
@@ -246,10 +247,10 @@ Status PlatformMacOSX::GetSymbolFile(const FileSpec &platform_file,
 
   // Default to the local case
   local_file = platform_file;
-  return Status();
+  return Error();
 }
 
-lldb_private::Status
+lldb_private::Error
 PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
                                 const lldb_private::UUID *uuid_ptr,
                                 lldb_private::FileSpec &local_file) {
@@ -263,7 +264,7 @@ PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
     if (local_os_build.compare(remote_os_build) == 0) {
       // same OS version: the local file is good enough
       local_file = platform_file;
-      return Status();
+      return Error();
     } else {
       // try to find the file in the cache
       std::string cache_path(GetLocalCacheDirectory());
@@ -272,14 +273,14 @@ PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
       FileSpec module_cache_spec(cache_path, false);
       if (module_cache_spec.Exists()) {
         local_file = module_cache_spec;
-        return Status();
+        return Error();
       }
       // bring in the remote module file
       FileSpec module_cache_folder =
           module_cache_spec.CopyByRemovingLastPathComponent();
       // try to make the local directory first
-      Status err(
-          llvm::sys::fs::create_directory(module_cache_folder.GetPath()));
+      Error err = FileSystem::MakeDirectory(module_cache_folder,
+                                            eFilePermissionsDirectoryDefault);
       if (err.Fail())
         return err;
       err = GetFile(platform_file, module_cache_spec);
@@ -287,13 +288,13 @@ PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
         return err;
       if (module_cache_spec.Exists()) {
         local_file = module_cache_spec;
-        return Status();
+        return Error();
       } else
-        return Status("unable to obtain valid module file");
+        return Error("unable to obtain valid module file");
     }
   }
   local_file = platform_file;
-  return Status();
+  return Error();
 }
 
 bool PlatformMacOSX::GetSupportedArchitectureAtIndex(uint32_t idx,
@@ -305,12 +306,12 @@ bool PlatformMacOSX::GetSupportedArchitectureAtIndex(uint32_t idx,
 #endif
 }
 
-lldb_private::Status PlatformMacOSX::GetSharedModule(
+lldb_private::Error PlatformMacOSX::GetSharedModule(
     const lldb_private::ModuleSpec &module_spec, Process *process,
     lldb::ModuleSP &module_sp,
     const lldb_private::FileSpecList *module_search_paths_ptr,
     lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
-  Status error = GetSharedModuleWithLocalCache(
+  Error error = GetSharedModuleWithLocalCache(
       module_spec, module_sp, module_search_paths_ptr, old_module_sp_ptr,
       did_create_ptr);
 
@@ -325,7 +326,7 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
         lldb::ModuleSP x86_64_module_sp;
         lldb::ModuleSP old_x86_64_module_sp;
         bool did_create = false;
-        Status x86_64_error = GetSharedModuleWithLocalCache(
+        Error x86_64_error = GetSharedModuleWithLocalCache(
             module_spec_x86_64, x86_64_module_sp, module_search_paths_ptr,
             &old_x86_64_module_sp, &did_create);
         if (x86_64_module_sp && x86_64_module_sp->GetObjectFile()) {

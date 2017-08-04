@@ -9,33 +9,25 @@
 
 #include "lldb/Core/EmulateInstruction.h"
 
+// C Includes
+// C++ Includes
+#include <cstring>
+
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Address.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/StackFrame.h"   // for StackFrame
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h" // for Stream, Stream::::eBinary
-#include "lldb/Utility/StreamString.h"
-#include "lldb/lldb-forward.h"            // for ProcessSP
-#include "lldb/lldb-private-interfaces.h" // for EmulateInstructionCreateIn...
-
-#include "llvm/ADT/StringRef.h" // for StringRef
-
-#include <cstring>
-#include <memory> // for shared_ptr
-
-#include <inttypes.h> // for PRIx64, PRId64, PRIu64
-#include <stdio.h>    // for stdout
-
-namespace lldb_private {
-class Target;
-}
+#include "lldb/Target/Target.h"
+#include "lldb/Target/Thread.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -263,7 +255,7 @@ size_t EmulateInstruction::ReadMemoryFrame(EmulateInstruction *instruction,
 
   ProcessSP process_sp(frame->CalculateProcess());
   if (process_sp) {
-    Status error;
+    Error error;
     return process_sp->ReadMemory(addr, dst, dst_len, error);
   }
   return 0;
@@ -280,7 +272,7 @@ size_t EmulateInstruction::WriteMemoryFrame(EmulateInstruction *instruction,
 
   ProcessSP process_sp(frame->CalculateProcess());
   if (process_sp) {
-    Status error;
+    Error error;
     return process_sp->WriteMemory(addr, src, src_len, error);
   }
 

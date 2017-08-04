@@ -17,8 +17,11 @@
 #include <string>
 
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
@@ -40,9 +43,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 
@@ -101,7 +101,7 @@ bool UserExpression::MatchesContext(ExecutionContext &exe_ctx) {
 
 lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
                                               ConstString &object_name,
-                                              Status &err) {
+                                              Error &err) {
   err.Clear();
 
   if (!frame_sp) {
@@ -140,7 +140,7 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
 lldb::ExpressionResults UserExpression::Evaluate(
     ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
     llvm::StringRef expr, llvm::StringRef prefix,
-    lldb::ValueObjectSP &result_valobj_sp, Status &error, uint32_t line_offset,
+    lldb::ValueObjectSP &result_valobj_sp, Error &error, uint32_t line_offset,
     std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
                                                   LIBLLDB_LOG_STEP));
@@ -208,6 +208,16 @@ lldb::ExpressionResults UserExpression::Evaluate(
       language = frame->GetLanguage();
   }
 
+  // If the language was not specified in the expression command,
+  // set it to the language in the target's properties if
+  // specified, else default to the langage for the frame.
+  if (language == lldb::eLanguageTypeUnknown) {
+    if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
+      language = target->GetLanguage();
+    else if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GetLanguage();
+  }
+
   lldb::UserExpressionSP user_expression_sp(
       target->GetUserExpressionForLanguage(expr, full_prefix, language,
                                            desired_type, options, error));
@@ -234,9 +244,9 @@ lldb::ExpressionResults UserExpression::Evaluate(
 
   DiagnosticManager diagnostic_manager;
 
-  bool parse_success =
-      user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy,
-                                keep_expression_in_memory, generate_debug_info);
+  bool parse_success = user_expression_sp->Parse(
+      diagnostic_manager, exe_ctx, execution_policy, keep_expression_in_memory,
+      generate_debug_info, 0);
 
   // Calculate the fixed expression always, since we need it for errors.
   std::string tmp_fixed_expression;
@@ -259,7 +269,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
       DiagnosticManager fixed_diagnostic_manager;
       parse_success = fixed_expression_sp->Parse(
           fixed_diagnostic_manager, exe_ctx, execution_policy,
-          keep_expression_in_memory, generate_debug_info);
+          keep_expression_in_memory, generate_debug_info, 0);
       if (parse_success) {
         diagnostic_manager.Clear();
         user_expression_sp = fixed_expression_sp;

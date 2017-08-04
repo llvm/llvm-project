@@ -21,15 +21,15 @@ public:
   ~LockFileWindows();
 
 protected:
-  Status DoWriteLock(const uint64_t start, const uint64_t len) override;
+  Error DoWriteLock(const uint64_t start, const uint64_t len) override;
 
-  Status DoTryWriteLock(const uint64_t start, const uint64_t len) override;
+  Error DoTryWriteLock(const uint64_t start, const uint64_t len) override;
 
-  Status DoReadLock(const uint64_t start, const uint64_t len) override;
+  Error DoReadLock(const uint64_t start, const uint64_t len) override;
 
-  Status DoTryReadLock(const uint64_t start, const uint64_t len) override;
+  Error DoTryReadLock(const uint64_t start, const uint64_t len) override;
 
-  Status DoUnlock() override;
+  Error DoUnlock() override;
 
   bool IsValidFile() const override;
 

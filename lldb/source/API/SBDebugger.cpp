@@ -57,7 +57,7 @@ using namespace lldb_private;
 
 static llvm::sys::DynamicLibrary LoadPlugin(const lldb::DebuggerSP &debugger_sp,
                                             const FileSpec &spec,
-                                            Status &error) {
+                                            Error &error) {
   llvm::sys::DynamicLibrary dynlib =
       llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
   if (dynlib.isValid()) {
@@ -551,7 +551,7 @@ SBDebugger::CreateTargetWithFileAndTargetTriple(const char *filename,
   TargetSP target_sp;
   if (m_opaque_sp) {
     const bool add_dependent_modules = true;
-    Status error(m_opaque_sp->GetTargetList().CreateTarget(
+    Error error(m_opaque_sp->GetTargetList().CreateTarget(
         *m_opaque_sp, filename, target_triple, add_dependent_modules, nullptr,
         target_sp));
     sb_target.SetSP(target_sp);
@@ -574,7 +574,7 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
   SBTarget sb_target;
   TargetSP target_sp;
   if (m_opaque_sp) {
-    Status error;
+    Error error;
     const bool add_dependent_modules = true;
 
     error = m_opaque_sp->GetTargetList().CreateTarget(
@@ -600,7 +600,7 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
   SBTarget sb_target;
   TargetSP target_sp;
   if (m_opaque_sp) {
-    Status error;
+    Error error;
     const bool add_dependent_modules = true;
     error = m_opaque_sp->GetTargetList().CreateTarget(
         *m_opaque_sp, filename, "", add_dependent_modules, nullptr, target_sp);
@@ -873,7 +873,7 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
   SBError sb_error;
   DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
       ConstString(debugger_instance_name)));
-  Status error;
+  Error error;
   if (debugger_sp) {
     ExecutionContext exe_ctx(
         debugger_sp->GetCommandInterpreter().GetExecutionContext());
@@ -894,7 +894,7 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
   SBStringList ret_value;
   DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
       ConstString(debugger_instance_name)));
-  Status error;
+  Error error;
   if (debugger_sp) {
     ExecutionContext exe_ctx(
         debugger_sp->GetCommandInterpreter().GetExecutionContext());
@@ -1120,23 +1120,13 @@ SBTypeSynthetic SBDebugger::GetSyntheticForType(SBTypeNameSpecifier type_name) {
 }
 #endif // LLDB_DISABLE_PYTHON
 
-static llvm::ArrayRef<const char *> GetCategoryArray(const char **categories) {
-  if (categories == nullptr)
-    return {};
-  size_t len = 0;
-  while (categories[len] != nullptr)
-    ++len;
-  return llvm::makeArrayRef(categories, len);
-}
-
 bool SBDebugger::EnableLog(const char *channel, const char **categories) {
   if (m_opaque_sp) {
     uint32_t log_options =
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    return m_opaque_sp->EnableLog(channel, GetCategoryArray(categories), "",
-                                  log_options, error_stream);
+    StreamString errors;
+    return m_opaque_sp->EnableLog(channel, categories, nullptr, log_options,
+                                  errors);
   } else
     return false;
 }

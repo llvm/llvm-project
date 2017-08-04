@@ -29,6 +29,9 @@ class LibcxxVBoolDataFormatterTestCase(TestBase):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
+        lldbutil.skip_if_library_missing(
+            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
+
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=-1)
 

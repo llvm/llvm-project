@@ -108,7 +108,6 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
             "arm",
             "aarch64"],
         bugnumber="llvm.org/pr24739")
-    @skipIf(triple='^mips')
     def test_single_step_only_steps_one_instruction_with_Hc_vCont_s_llgs(self):
         self.init_llgs_test()
         self.build()
@@ -137,7 +136,6 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
             "arm",
             "aarch64"],
         bugnumber="llvm.org/pr24739")
-    @skipIf(triple='^mips')
     def test_single_step_only_steps_one_instruction_with_vCont_s_thread_llgs(
             self):
         self.init_llgs_test()

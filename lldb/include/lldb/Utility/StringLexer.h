@@ -11,9 +11,9 @@
 #ifndef utility_StringLexer_h_
 #define utility_StringLexer_h_
 
-#include <initializer_list> // for initializer_list
-#include <string>           // for string
-#include <utility>          // for pair
+#include <initializer_list>
+#include <list>
+#include <string>
 
 namespace lldb_utility {
 
@@ -40,6 +40,8 @@ public:
   Character Next();
 
   bool HasAtLeast(Size s);
+
+  bool HasAny(Character c);
 
   std::string GetUnlexed();
 

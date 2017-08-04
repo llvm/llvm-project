@@ -15,6 +15,8 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -24,8 +26,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -413,24 +413,25 @@ StateType ThreadPlanStepRange::GetPlanRunState() {
 }
 
 bool ThreadPlanStepRange::MischiefManaged() {
-  // If we have pushed some plans between ShouldStop & MischiefManaged, then
-  // we're not done...
-  // I do this check first because we might have stepped somewhere that will
-  // fool InRange into
-  // thinking it needs to step past the end of that line.  This happens, for
-  // instance, when stepping
-  // over inlined code that is in the middle of the current line.
-
-  if (!m_no_more_plans)
-    return false;
-
   bool done = true;
   if (!IsPlanComplete()) {
-    if (InRange()) {
+    // If we have pushed some plans between ShouldStop & MischiefManaged, then
+    // we're not done...
+    // I do this check first because we might have stepped somewhere that will
+    // fool InRange into
+    // thinking it needs to step past the end of that line.  This happens, for
+    // instance, when stepping
+    // over inlined code that is in the middle of the current line.
+
+    if (!m_no_more_plans)
       done = false;
-    } else {
-      FrameComparison frame_order = CompareCurrentFrameToStartFrame();
-      done = (frame_order != eFrameCompareOlder) ? m_no_more_plans : true;
+    else {
+      if (InRange()) {
+        done = false;
+      } else {
+        FrameComparison frame_order = CompareCurrentFrameToStartFrame();
+        done = (frame_order != eFrameCompareOlder) ? m_no_more_plans : true;
+      }
     }
   }
 
@@ -461,16 +462,6 @@ bool ThreadPlanStepRange::IsPlanStale() {
     // One tricky bit here is that some stubs don't push a frame, so we should.
     // check that we are in the same symbol.
     if (!InRange()) {
-      // Set plan Complete when we reach next instruction just after the range
-      lldb::addr_t addr = m_thread.GetRegisterContext()->GetPC() - 1;
-      size_t num_ranges = m_address_ranges.size();
-      for (size_t i = 0; i < num_ranges; i++) {
-        bool in_range = m_address_ranges[i].ContainsLoadAddress(
-            addr, m_thread.CalculateTarget().get());
-        if (in_range) {
-          SetPlanComplete();
-        }
-      }
       return true;
     }
   }

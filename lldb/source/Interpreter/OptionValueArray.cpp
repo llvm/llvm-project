@@ -13,9 +13,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Stream.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -70,19 +70,18 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueArray::SetValueFromString(llvm::StringRef value,
-                                            VarSetOperationType op) {
+Error OptionValueArray::SetValueFromString(llvm::StringRef value,
+                                           VarSetOperationType op) {
   Args args(value.str());
-  Status error = SetArgs(args, op);
+  Error error = SetArgs(args, op);
   if (error.Success())
     NotifyValueChanged();
   return error;
 }
 
 lldb::OptionValueSP
-OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx,
-                              llvm::StringRef name, bool will_modify,
-                              Status &error) const {
+OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx, llvm::StringRef name,
+                              bool will_modify, Error &error) const {
   if (name.empty() || name.front() != '[') {
     error.SetErrorStringWithFormat(
       "invalid value path '%s', %s values only support '[<index>]' subvalues "
@@ -150,8 +149,8 @@ size_t OptionValueArray::GetArgs(Args &args) const {
   return args.GetArgumentCount();
 }
 
-Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
-  Status error;
+Error OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
+  Error error;
   const size_t argc = args.GetArgumentCount();
   switch (op) {
   case eVarSetOperationInvalid:

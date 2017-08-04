@@ -14,7 +14,7 @@
 #include <chrono>
 #include <string>
 
-#include "lldb/Utility/Status.h"
+#include "lldb/Core/Error.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -23,18 +23,17 @@ class PipeBase {
 public:
   virtual ~PipeBase();
 
-  virtual Status CreateNew(bool child_process_inherit) = 0;
-  virtual Status CreateNew(llvm::StringRef name,
-                           bool child_process_inherit) = 0;
-  virtual Status CreateWithUniqueName(llvm::StringRef prefix,
-                                      bool child_process_inherit,
-                                      llvm::SmallVectorImpl<char> &name) = 0;
+  virtual Error CreateNew(bool child_process_inherit) = 0;
+  virtual Error CreateNew(llvm::StringRef name, bool child_process_inherit) = 0;
+  virtual Error CreateWithUniqueName(llvm::StringRef prefix,
+                                     bool child_process_inherit,
+                                     llvm::SmallVectorImpl<char> &name) = 0;
 
-  virtual Status OpenAsReader(llvm::StringRef name,
-                              bool child_process_inherit) = 0;
+  virtual Error OpenAsReader(llvm::StringRef name,
+                             bool child_process_inherit) = 0;
 
-  Status OpenAsWriter(llvm::StringRef name, bool child_process_inherit);
-  virtual Status
+  Error OpenAsWriter(llvm::StringRef name, bool child_process_inherit);
+  virtual Error
   OpenAsWriterWithTimeout(llvm::StringRef name, bool child_process_inherit,
                           const std::chrono::microseconds &timeout) = 0;
 
@@ -52,13 +51,13 @@ public:
   virtual void Close() = 0;
 
   // Delete named pipe.
-  virtual Status Delete(llvm::StringRef name) = 0;
+  virtual Error Delete(llvm::StringRef name) = 0;
 
-  virtual Status Write(const void *buf, size_t size, size_t &bytes_written) = 0;
-  virtual Status ReadWithTimeout(void *buf, size_t size,
-                                 const std::chrono::microseconds &timeout,
-                                 size_t &bytes_read) = 0;
-  Status Read(void *buf, size_t size, size_t &bytes_read);
+  virtual Error Write(const void *buf, size_t size, size_t &bytes_written) = 0;
+  virtual Error ReadWithTimeout(void *buf, size_t size,
+                                const std::chrono::microseconds &timeout,
+                                size_t &bytes_read) = 0;
+  Error Read(void *buf, size_t size, size_t &bytes_read);
 };
 }
 

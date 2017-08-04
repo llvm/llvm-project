@@ -18,10 +18,6 @@ class ReturnValueTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def affected_by_pr33042(self):
-        return ("clang" in self.getCompiler() and self.getArchitecture() ==
-            "aarch64" and self.getPlatform() == "linux")
-
     @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
     @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
     @expectedFailureAll(
@@ -31,8 +27,15 @@ class ReturnValueTestCase(TestBase):
             "<=",
             "3.6"],
         archs=["i386"])
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr25785",
+        hostoslist=["windows"],
+        compiler="gcc",
+        archs=["i386"],
+        triple='.*-android')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054828")
     def test_with_python(self):
         """Test getting return values from stepping out."""
         self.build()
@@ -146,8 +149,7 @@ class ReturnValueTestCase(TestBase):
         self.return_and_test_struct_value("return_two_int")
         self.return_and_test_struct_value("return_three_int")
         self.return_and_test_struct_value("return_four_int")
-        if not self.affected_by_pr33042():
-            self.return_and_test_struct_value("return_five_int")
+        self.return_and_test_struct_value("return_five_int")
 
         self.return_and_test_struct_value("return_two_double")
         self.return_and_test_struct_value("return_one_double_two_float")
@@ -170,39 +172,17 @@ class ReturnValueTestCase(TestBase):
         #self.return_and_test_struct_value ("return_one_int_one_double_packed")
         self.return_and_test_struct_value("return_one_int_one_long")
 
-    @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
-    @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
-    @expectedFailureAll(
-        oslist=["linux"],
-        compiler="clang",
-        compiler_version=[
-            "<=",
-            "3.6"],
-        archs=["i386"])
-    @expectedFailureAll(compiler=["gcc"], archs=["x86_64", "i386"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    def test_vector_values(self):
-        self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        error = lldb.SBError()
-
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        main_bktp = self.target.BreakpointCreateByName("main", exe)
-        self.assertTrue(main_bktp, VALID_BREAKPOINT)
-
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-        self.assertEqual(len(lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, main_bktp)), 1)
-
-        self.return_and_test_struct_value("return_vector_size_float32_8")
-        self.return_and_test_struct_value("return_vector_size_float32_16")
-        self.return_and_test_struct_value("return_vector_size_float32_32")
-        self.return_and_test_struct_value("return_ext_vector_size_float32_2")
-        self.return_and_test_struct_value("return_ext_vector_size_float32_4")
-        self.return_and_test_struct_value("return_ext_vector_size_float32_8")
+        # icc and gcc don't support this extension.
+        if self.getCompiler().endswith('clang'):
+            self.return_and_test_struct_value("return_vector_size_float32_8")
+            self.return_and_test_struct_value("return_vector_size_float32_16")
+            self.return_and_test_struct_value("return_vector_size_float32_32")
+            self.return_and_test_struct_value(
+                "return_ext_vector_size_float32_2")
+            self.return_and_test_struct_value(
+                "return_ext_vector_size_float32_4")
+            self.return_and_test_struct_value(
+                "return_ext_vector_size_float32_8")
 
     def return_and_test_struct_value(self, func_name):
         """Pass in the name of the function to return from - takes in value, returns value."""

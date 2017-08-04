@@ -19,15 +19,13 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/FileSpec.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
 // C includes
@@ -35,23 +33,33 @@
 // C++ includes
 #include <memory>
 
+extern const char *TestMainArgv0;
+
 using namespace lldb_private;
 using namespace minidump;
 
 class MinidumpParserTest : public testing::Test {
 public:
-  void SetUpData(const char *minidump_filename,
-                 uint64_t load_size = UINT64_MAX) {
-    std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+  void SetUp() override {
+    llvm::StringRef dmp_folder = llvm::sys::path::parent_path(TestMainArgv0);
+    inputs_folder = dmp_folder;
+    llvm::sys::path::append(inputs_folder, "Inputs");
+  }
 
+  void SetUpData(const char *minidump_filename, size_t load_size = SIZE_MAX) {
+    llvm::SmallString<128> filename = inputs_folder;
+    llvm::sys::path::append(filename, minidump_filename);
+    FileSpec minidump_file(filename.c_str(), false);
+    lldb::DataBufferSP data_sp(
+        minidump_file.MemoryMapFileContents(0, load_size));
     llvm::Optional<MinidumpParser> optional_parser =
-        MinidumpParser::Create(BufferPtr);
+        MinidumpParser::Create(data_sp);
     ASSERT_TRUE(optional_parser.hasValue());
     parser.reset(new MinidumpParser(optional_parser.getValue()));
     ASSERT_GT(parser->GetData().size(), 0UL);
   }
 
+  llvm::SmallString<128> inputs_folder;
   std::unique_ptr<MinidumpParser> parser;
 };
 

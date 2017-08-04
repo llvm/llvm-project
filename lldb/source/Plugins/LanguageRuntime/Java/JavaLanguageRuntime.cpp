@@ -105,7 +105,7 @@ bool JavaLanguageRuntime::GetDynamicTypeAndAddress(
 
   ConstString linkage_name;
   CompilerType in_type = in_value.GetCompilerType();
-  if (in_type.IsPossibleDynamicType(nullptr, false, false))
+  if (in_type.IsPossibleDynamicType(nullptr, false, false, false))
     linkage_name = GetDynamicTypeId(&exe_ctx, target, in_value);
   else
     linkage_name = JavaASTContext::GetLinkageName(in_type);

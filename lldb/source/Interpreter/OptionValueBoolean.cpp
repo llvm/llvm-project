@@ -13,10 +13,10 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
@@ -35,9 +35,9 @@ void OptionValueBoolean::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
-                                              VarSetOperationType op) {
-  Status error;
+Error OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
+                                             VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

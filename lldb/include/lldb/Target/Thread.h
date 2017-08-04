@@ -21,12 +21,12 @@
 // Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
+#include "lldb/Core/StructuredData.h"
+#include "lldb/Core/UserID.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
-#include "lldb/Utility/StructuredData.h"
-#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 #define LLDB_THREAD_MAX_STOP_EXC_DATA 8
@@ -126,7 +126,6 @@ public:
                            // bit of data.
     lldb::StopInfoSP stop_info_sp; // You have to restore the stop info or you
                                    // might continue with the wrong signals.
-    std::vector<lldb::ThreadPlanSP> m_completed_plan_stack;
     lldb::RegisterCheckpointSP
         register_backup_sp; // You need to restore the registers, of course...
     uint32_t current_inlined_depth;
@@ -441,16 +440,16 @@ public:
     return GetStackFrameList()->GetCurrentInlinedDepth();
   }
 
-  Status ReturnFromFrameWithIndex(uint32_t frame_idx,
-                                  lldb::ValueObjectSP return_value_sp,
-                                  bool broadcast = false);
+  Error ReturnFromFrameWithIndex(uint32_t frame_idx,
+                                 lldb::ValueObjectSP return_value_sp,
+                                 bool broadcast = false);
 
-  Status ReturnFromFrame(lldb::StackFrameSP frame_sp,
-                         lldb::ValueObjectSP return_value_sp,
-                         bool broadcast = false);
+  Error ReturnFromFrame(lldb::StackFrameSP frame_sp,
+                        lldb::ValueObjectSP return_value_sp,
+                        bool broadcast = false);
 
-  Status JumpToLine(const FileSpec &file, uint32_t line,
-                    bool can_leave_function, std::string *warnings = nullptr);
+  Error JumpToLine(const FileSpec &file, uint32_t line, bool can_leave_function,
+                   std::string *warnings = nullptr);
 
   virtual lldb::StackFrameSP GetFrameWithStackID(const StackID &stack_id) {
     if (stack_id.IsValid())
@@ -530,7 +529,7 @@ public:
   /// @return
   ///     An error that describes anything that went wrong
   //------------------------------------------------------------------
-  virtual Status
+  virtual Error
   StepIn(bool source_step,
          LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
          LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -548,7 +547,7 @@ public:
   /// @return
   ///     An error that describes anything that went wrong
   //------------------------------------------------------------------
-  virtual Status StepOver(
+  virtual Error StepOver(
       bool source_step,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
@@ -561,7 +560,7 @@ public:
   /// @return
   ///     An error that describes anything that went wrong
   //------------------------------------------------------------------
-  virtual Status StepOut();
+  virtual Error StepOut();
 
   //------------------------------------------------------------------
   /// Retrieves the per-thread data area.
@@ -778,6 +777,13 @@ public:
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
+  virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRangeNoShouldStop(
+      bool abort_other_plans, const AddressRange &range,
+      const SymbolContext &addr_context, const char *step_in_target,
+      lldb::RunMode stop_other_threads,
+      LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
+      LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
+
   // Helper function that takes a LineEntry to step, insted of an AddressRange.
   // This may combine multiple
   // LineEntries of the same source line number to step over a longer address
@@ -973,7 +979,7 @@ public:
   ///     An error if the thread plan could not be unwound.
   //------------------------------------------------------------------
 
-  Status UnwindInnermostExpression();
+  Error UnwindInnermostExpression();
 
   //------------------------------------------------------------------
   /// Gets the outer-most plan that was popped off the plan stack in the
@@ -987,11 +993,15 @@ public:
   //------------------------------------------------------------------
   /// Gets the outer-most return value from the completed plans
   ///
+  /// @param[out] is_swift_error_value
+  ///     If non-NULL, will be set to true if this is a Swift error value
+  ///     not a true return.
+  ///
   /// @return
   ///     A ValueObjectSP, either empty if there is no return value,
   ///     or containing the return value.
   //------------------------------------------------------------------
-  lldb::ValueObjectSP GetReturnValueObject();
+  lldb::ValueObjectSP GetReturnValueObject(bool *is_swift_error_value);
 
   //------------------------------------------------------------------
   /// Gets the outer-most expression variable from the completed plans
@@ -1029,15 +1039,6 @@ public:
   //------------------------------------------------------------------
   bool WasThreadPlanDiscarded(ThreadPlan *plan);
 
-  //------------------------------------------------------------------
-  /// Check if we have completed plan to override breakpoint stop reason
-  ///
-  /// @return
-  ///     Returns true if completed plan stack is not empty
-  ///     false otherwise.
-  //------------------------------------------------------------------
-  bool CompletedPlanOverridesBreakpoint();
-                   
   //------------------------------------------------------------------
   /// Queues a generic thread plan.
   ///
@@ -1163,8 +1164,8 @@ public:
   GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr);
 
   size_t GetStatus(Stream &strm, uint32_t start_frame, uint32_t num_frames,
-                   uint32_t num_frames_with_source, bool stop_format,
-                   bool only_stacks = false);
+                   uint32_t num_frames_with_source,
+                   bool stop_format);
 
   size_t GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                              uint32_t num_frames, bool show_frame_info,
@@ -1222,8 +1223,6 @@ public:
   }
 
   void SetStopInfo(const lldb::StopInfoSP &stop_info_sp);
-
-  void ResetStopInfo();
 
   void SetShouldReportStop(Vote vote);
 

@@ -38,8 +38,6 @@
 #include "MICmnMIResultRecord.h"
 #include "MICmnMIValueConst.h"
 
-#include <algorithm>
-
 //++
 //------------------------------------------------------------------------------------
 // Details: CMICmdCmdVarCreate constructor.
@@ -184,7 +182,7 @@ bool CMICmdCmdVarCreate::Execute() {
     const bool bArgs = true;
     const bool bLocals = true;
     const bool bStatics = true;
-    const bool bInScopeOnly = true;
+    const bool bInScopeOnly = false;
     const lldb::SBValueList valueList =
         frame.GetVariables(bArgs, bLocals, bStatics, bInScopeOnly);
     value = valueList.GetFirstValueByName(rStrExpression.c_str());
@@ -510,20 +508,22 @@ bool CMICmdCmdVarUpdate::ExamineSBValueForChange(lldb::SBValue &vrwValue,
   }
 
   lldb::SBType valueType = vrwValue.GetType();
+  if (!valueType.IsPointerType() && !valueType.IsReferenceType()) {
+    const MIuint nChildren = vrwValue.GetNumChildren();
+    for (MIuint i = 0; i < nChildren; ++i) {
+      lldb::SBValue member = vrwValue.GetChildAtIndex(i);
+      if (!member.IsValid())
+        continue;
 
-  const MIuint nChildren = vrwValue.GetNumChildren();
-  for (MIuint i = 0; i < nChildren; ++i) {
-    lldb::SBValue member = vrwValue.GetChildAtIndex(i);
-    if (!member.IsValid())
-      continue;
-
-    if (member.GetValueDidChange()) {
-      vrwbChanged = true;
-      return MIstatus::success;
-    } else if (ExamineSBValueForChange(member, vrwbChanged) && vrwbChanged)
-      // Handle composite types (i.e. struct or arrays)
-      return MIstatus::success;
+      if (member.GetValueDidChange()) {
+        vrwbChanged = true;
+        return MIstatus::success;
+      } else if (ExamineSBValueForChange(member, vrwbChanged) && vrwbChanged)
+        // Handle composite types (i.e. struct or arrays)
+        return MIstatus::success;
+    }
   }
+
   vrwbChanged = false;
   return MIstatus::success;
 }

@@ -10,16 +10,15 @@
 #include "DWARFCompileUnit.h"
 
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
 
 #include "DWARFDIECollection.h"
 #include "DWARFDebugAbbrev.h"
@@ -135,9 +134,8 @@ size_t DWARFCompileUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
   if ((cu_die_only && initial_die_array_size > 0) || initial_die_array_size > 1)
     return 0; // Already parsed
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      func_cat,
+      LLVM_PRETTY_FUNCTION,
       "%8.8x: DWARFCompileUnit::ExtractDIEsIfNeeded( cu_die_only = %i )",
       m_offset, cu_die_only);
 
@@ -258,15 +256,16 @@ size_t DWARFCompileUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
                                                          m_die_array.end());
     exact_size_die_array.swap(m_die_array);
   }
-  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
-  if (log && log->GetVerbose()) {
+  Log *verbose_log(
+      LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO | DWARF_LOG_VERBOSE));
+  if (verbose_log) {
     StreamString strm;
     Dump(&strm);
     if (m_die_array.empty())
       strm.Printf("error: no DIE for compile unit");
     else
       m_die_array[0].Dump(m_dwarf2Data, this, strm, UINT32_MAX);
-    log->PutString(strm.GetString());
+    verbose_log->PutString(strm.GetString());
   }
 
   if (!m_dwo_symbol_file)
@@ -325,14 +324,18 @@ bool DWARFCompileUnit::Verify(Stream *s) const {
   bool abbr_offset_OK =
       m_dwarf2Data->get_debug_abbrev_data().ValidOffset(GetAbbrevOffset());
   bool addr_size_OK = ((m_addr_size == 4) || (m_addr_size == 8));
+  bool verbose = s->GetVerbose();
   if (valid_offset && length_OK && version_OK && addr_size_OK &&
       abbr_offset_OK) {
+    if (verbose)
+      s->Printf("    0x%8.8x: OK\n", m_offset);
     return true;
   } else {
     s->Printf("    0x%8.8x: ", m_offset);
-    DumpDataExtractor(m_dwarf2Data->get_debug_info_data(), s, m_offset,
-                      lldb::eFormatHex, 1, Size(), 32, LLDB_INVALID_ADDRESS, 0,
-                      0);
+
+    m_dwarf2Data->get_debug_info_data().Dump(s, m_offset, lldb::eFormatHex, 1,
+                                             Size(), 32, LLDB_INVALID_ADDRESS,
+                                             0, 0);
     s->EOL();
     if (valid_offset) {
       if (!length_OK)
@@ -804,30 +807,52 @@ void DWARFCompileUnit::IndexPrivate(
     case DW_TAG_subprogram:
       if (has_address) {
         if (name) {
-          ObjCLanguage::MethodName objc_method(name, true);
-          if (objc_method.IsValid(true)) {
-            ConstString objc_class_name_with_category(
-                objc_method.GetClassNameWithCategory());
-            ConstString objc_selector_name(objc_method.GetSelector());
-            ConstString objc_fullname_no_category_name(
-                objc_method.GetFullNameWithoutCategory(true));
-            ConstString objc_class_name_no_category(objc_method.GetClassName());
-            func_fullnames.Insert(ConstString(name),
-                                  DIERef(cu_offset, die.GetOffset()));
-            if (objc_class_name_with_category)
-              objc_class_selectors.Insert(objc_class_name_with_category,
-                                          DIERef(cu_offset, die.GetOffset()));
-            if (objc_class_name_no_category &&
-                objc_class_name_no_category != objc_class_name_with_category)
-              objc_class_selectors.Insert(objc_class_name_no_category,
-                                          DIERef(cu_offset, die.GetOffset()));
-            if (objc_selector_name)
-              func_selectors.Insert(objc_selector_name,
+          bool has_valid_objc_method = false;
+
+          if (Language::LanguageIsObjC(cu_language)) {
+            ObjCLanguage::MethodName objc_method(name, true);
+            if (objc_method.IsValid(true)) {
+              ConstString objc_class_name_with_category(
+                  objc_method.GetClassNameWithCategory());
+              ConstString objc_selector_name(objc_method.GetSelector());
+              ConstString objc_fullname_no_category_name(
+                  objc_method.GetFullNameWithoutCategory(true));
+              ConstString objc_class_name_no_category(
+                  objc_method.GetClassName());
+              func_fullnames.Insert(ConstString(name),
                                     DIERef(cu_offset, die.GetOffset()));
-            if (objc_fullname_no_category_name)
-              func_fullnames.Insert(objc_fullname_no_category_name,
+              if (objc_class_name_with_category)
+                objc_class_selectors.Insert(objc_class_name_with_category,
+                                            DIERef(cu_offset, die.GetOffset()));
+              if (objc_class_name_no_category &&
+                  objc_class_name_no_category != objc_class_name_with_category)
+                objc_class_selectors.Insert(objc_class_name_no_category,
+                                            DIERef(cu_offset, die.GetOffset()));
+              if (objc_selector_name)
+                func_selectors.Insert(objc_selector_name,
+                                      DIERef(cu_offset, die.GetOffset()));
+              if (objc_fullname_no_category_name)
+                func_fullnames.Insert(objc_fullname_no_category_name,
+                                      DIERef(cu_offset, die.GetOffset()));
+              has_valid_objc_method = true;
+            }
+          } else if (cu_language == eLanguageTypeGo) {
+            // If the name is of the form {something}.{basename}, we're going
+            // to inject an accelerator for basename into the mapping table.
+            // This will allow us to handle user-specified symbol names
+            // in Go versions where the DW_AT_name of the subprogram is
+            // set to {package}.{funcname}, without colliding with how
+            // Swift handles this.
+            llvm::StringRef name_string_ref(name);
+            const size_t dot_pos = name_string_ref.find_last_of('.');
+            if ((dot_pos != llvm::StringRef::npos) &&
+                (name_string_ref.size() > dot_pos + 1)) {
+              llvm::StringRef base_name = name_string_ref.substr(dot_pos + 1);
+              func_basenames.Insert(ConstString(base_name.str()),
                                     DIERef(cu_offset, die.GetOffset()));
+            }
           }
+
           // If we have a mangled name, then the DW_AT_name attribute
           // is usually the method name without the class or any parameters
           const DWARFDebugInfoEntry *parent = die.GetParent();
@@ -855,7 +880,7 @@ void DWARFCompileUnit::IndexPrivate(
             func_basenames.Insert(ConstString(name),
                                   DIERef(cu_offset, die.GetOffset()));
 
-          if (!is_method && !mangled_cstr && !objc_method.IsValid(true))
+          if (!is_method && !mangled_cstr && !has_valid_objc_method)
             func_fullnames.Insert(ConstString(name),
                                   DIERef(cu_offset, die.GetOffset()));
         }
@@ -917,8 +942,24 @@ void DWARFCompileUnit::IndexPrivate(
     case DW_TAG_typedef:
     case DW_TAG_union_type:
     case DW_TAG_unspecified_type:
-      if (name && !is_declaration)
+      if (name && !is_declaration) {
+        if (cu_language == eLanguageTypeGo) {
+          // For Go, check if the type name appears to have the full
+          // package scope in it.  If so, reduce to the basename and
+          // add a type lookup for the basename.
+          llvm::StringRef name_string_ref(name);
+          const size_t dot_pos = name_string_ref.find_last_of('.');
+          if ((dot_pos != llvm::StringRef::npos) &&
+              (name_string_ref.size() > dot_pos + 1)) {
+            llvm::StringRef base_name = name_string_ref.substr(dot_pos + 1);
+            types.Insert(ConstString(base_name),
+                         DIERef(cu_offset, die.GetOffset()));
+          }
+        }
+
+        // Add a type mapping for the name just as it appeared.
         types.Insert(ConstString(name), DIERef(cu_offset, die.GetOffset()));
+      }
       if (mangled_cstr && !is_declaration)
         types.Insert(ConstString(mangled_cstr),
                      DIERef(cu_offset, die.GetOffset()));
@@ -1051,6 +1092,12 @@ uint32_t DWARFCompileUnit::GetProducerVersionUpdate() {
     ParseProducerInfo();
   return m_producer_version_update;
 }
+
+// Remove this once GOOGLE_RenderScript is available in our LLVM.
+#if !defined(DW_LANG_GOOGLE_RenderScript)
+// HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript)
+#define DW_LANG_GOOGLE_RenderScript 0x8e57
+#endif
 
 LanguageType DWARFCompileUnit::LanguageTypeFromDWARF(uint64_t val) {
   // Note: user languages between lo_user and hi_user

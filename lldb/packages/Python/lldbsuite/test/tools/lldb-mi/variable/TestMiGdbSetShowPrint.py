@@ -34,7 +34,6 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_set_show_print_char_array_as_string(self):
         """Test that 'lldb-mi --interpreter' can print array of chars as string."""
 
@@ -174,7 +173,6 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi working on Windows
     @expectedFailureAll(compiler="gcc", bugnumber="llvm.org/pr23357")
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_set_show_print_expand_aggregates(self):
         """Test that 'lldb-mi --interpreter' can expand aggregates everywhere."""
 
@@ -249,7 +247,6 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi working on Windows
     @expectedFailureAll(compiler="gcc", bugnumber="llvm.org/pr23357")
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_set_show_print_aggregate_field_names(self):
         """Test that 'lldb-mi --interpreter' can expand aggregates everywhere."""
 

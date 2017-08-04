@@ -14,14 +14,14 @@
 #include "lldb/Breakpoint/BreakpointOptions.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StringList.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -63,7 +63,7 @@ BreakpointOptions::CommandData::SerializeToStructuredData() {
 
 std::unique_ptr<BreakpointOptions::CommandData>
 BreakpointOptions::CommandData::CreateFromStructuredData(
-    const StructuredData::Dictionary &options_dict, Status &error) {
+    const StructuredData::Dictionary &options_dict, Error &error) {
   std::unique_ptr<CommandData> data_up(new CommandData());
   bool found_something = false;
 
@@ -73,7 +73,7 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
   if (success)
     found_something = true;
 
-  llvm::StringRef interpreter_str;
+  std::string interpreter_str;
   ScriptLanguage interp_language;
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::Interpreter), interpreter_str);
@@ -99,7 +99,7 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
     found_something = true;
     size_t num_elems = user_source->GetSize();
     for (size_t i = 0; i < num_elems; i++) {
-      llvm::StringRef elem_string;
+      std::string elem_string;
       success = user_source->GetItemAtIndexAsString(i, elem_string);
       if (success)
         data_up->user_source.AppendString(elem_string);
@@ -196,7 +196,7 @@ BreakpointOptions::~BreakpointOptions() = default;
 
 std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     Target &target, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+    Error &error) {
   bool enabled = true;
   bool one_shot = false;
   int32_t ignore_count = 0;
@@ -230,7 +230,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsDictionary(
       CommandData::GetSerializationKey(), cmds_dict);
   if (success && cmds_dict) {
-    Status cmds_error;
+    Error cmds_error;
     cmd_data_up = CommandData::CreateFromStructuredData(*cmds_dict, cmds_error);
     if (cmds_error.Fail()) {
       error.SetErrorStringWithFormat(
@@ -260,7 +260,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
                 .c_str());
         return nullptr;
       }
-      Status script_error;
+      Error script_error;
       script_error =
           interp->SetBreakpointCommandCallback(bp_options.get(), cmd_data_up);
       if (script_error.Fail()) {
@@ -275,7 +275,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsDictionary(
       ThreadSpec::GetSerializationKey(), thread_spec_dict);
   if (success) {
-    Status thread_spec_error;
+    Error thread_spec_error;
     std::unique_ptr<ThreadSpec> thread_spec_up =
         ThreadSpec::CreateFromStructuredData(*thread_spec_dict,
                                              thread_spec_error);

@@ -33,15 +33,15 @@ public:
 
   ~PlatformAndroidRemoteGDBServer() override;
 
-  Status ConnectRemote(Args &args) override;
+  Error ConnectRemote(Args &args) override;
 
-  Status DisconnectRemote() override;
+  Error DisconnectRemote() override;
 
   lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
                                  llvm::StringRef plugin_name,
                                  lldb_private::Debugger &debugger,
                                  lldb_private::Target *target,
-                                 lldb_private::Status &error) override;
+                                 lldb_private::Error &error) override;
 
 protected:
   std::string m_device_id;
@@ -54,9 +54,9 @@ protected:
 
   void DeleteForwardPort(lldb::pid_t pid);
 
-  Status MakeConnectURL(const lldb::pid_t pid, const uint16_t remote_port,
-                        llvm::StringRef remote_socket_name,
-                        std::string &connect_url);
+  Error MakeConnectURL(const lldb::pid_t pid, const uint16_t remote_port,
+                       llvm::StringRef remote_socket_name,
+                       std::string &connect_url);
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformAndroidRemoteGDBServer);

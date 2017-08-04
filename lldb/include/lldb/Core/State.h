@@ -10,13 +10,11 @@
 #ifndef liblldb_State_h_
 #define liblldb_State_h_
 
-#include "llvm/Support/FormatProviders.h"
-
-#include "lldb/lldb-enumerations.h"   // for StateType
-#include "llvm/ADT/StringRef.h"       // for StringRef
-#include "llvm/Support/raw_ostream.h" // for raw_ostream
-
-#include <stdint.h> // for uint32_t
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -72,14 +70,5 @@ bool StateIsStoppedState(lldb::StateType state, bool must_exist);
 const char *GetPermissionsAsCString(uint32_t permissions);
 
 } // namespace lldb_private
-
-namespace llvm {
-template <> struct format_provider<lldb::StateType> {
-  static void format(const lldb::StateType &state, raw_ostream &Stream,
-                     StringRef Style) {
-    Stream << lldb_private::StateAsCString(state);
-  }
-};
-}
 
 #endif // liblldb_State_h_

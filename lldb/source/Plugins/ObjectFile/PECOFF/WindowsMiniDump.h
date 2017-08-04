@@ -16,7 +16,7 @@ namespace lldb_private {
 
 bool SaveMiniDump(const lldb::ProcessSP &process_sp,
                   const lldb_private::FileSpec &outfile,
-                  lldb_private::Status &error);
+                  lldb_private::Error &error);
 
 } // namespace lldb_private
 

@@ -15,11 +15,12 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -140,7 +141,7 @@ public:
 
   static lldb::BreakpointResolverSP
   CreateFromStructuredData(const StructuredData::Dictionary &resolver_dict,
-                           Status &error);
+                           Error &error);
 
   virtual StructuredData::ObjectSP SerializeToStructuredData() {
     return StructuredData::ObjectSP();
@@ -192,7 +193,7 @@ public:
 
   static const char *ResolverTyToName(enum ResolverTy);
 
-  static ResolverTy NameToResolverTy(llvm::StringRef name);
+  static ResolverTy NameToResolverTy(const char *name);
 
   virtual lldb::BreakpointResolverSP
   CopyForBreakpoint(Breakpoint &breakpoint) = 0;

@@ -17,9 +17,12 @@
 #include "lldb/API/SBTypeSynthetic.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
@@ -36,9 +39,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBExpressionOptions.h"
@@ -112,7 +112,7 @@ public:
 
   lldb::ValueObjectSP GetSP(Process::StopLocker &stop_locker,
                             std::unique_lock<std::recursive_mutex> &lock,
-                            Status &error) {
+                            Error &error) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
     if (!m_valobj_sp) {
       error.SetErrorString("invalid value object");
@@ -218,12 +218,12 @@ public:
     return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
   }
 
-  Status &GetError() { return m_lock_error; }
+  Error &GetError() { return m_lock_error; }
 
 private:
   Process::StopLocker m_stop_locker;
   std::unique_lock<std::recursive_mutex> m_lock;
-  Status m_lock_error;
+  Error m_lock_error;
 };
 
 SBValue::SBValue() : m_opaque_sp() {}
@@ -1112,7 +1112,7 @@ SBValue SBValue::Dereference() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    Status error;
+    Error error;
     sb_value = value_sp->Dereference(error);
   }
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
@@ -1336,7 +1336,7 @@ lldb::SBValue SBValue::AddressOf() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    Status error;
+    Error error;
     sb_value.SetSP(value_sp->AddressOf(error), GetPreferDynamicValue(),
                    GetPreferSyntheticValue());
   }
@@ -1445,7 +1445,7 @@ lldb::SBData SBValue::GetData() {
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
     DataExtractorSP data_sp(new DataExtractor());
-    Status error;
+    Error error;
     value_sp->GetData(*data_sp, error);
     if (error.Success())
       *sb_data = data_sp;
@@ -1475,7 +1475,7 @@ bool SBValue::SetData(lldb::SBData &data, SBError &error) {
       error.SetErrorString("No data to set");
       ret = false;
     } else {
-      Status set_error;
+      Error set_error;
 
       value_sp->SetData(*data_extractor, set_error);
 
@@ -1541,7 +1541,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
     if (write)
       watch_type |= LLDB_WATCH_TYPE_WRITE;
 
-    Status rc;
+    Error rc;
     CompilerType type(value_sp->GetCompilerType());
     WatchpointSP watchpoint_sp =
         target_sp->CreateWatchpoint(addr, byte_size, &type, watch_type, rc);

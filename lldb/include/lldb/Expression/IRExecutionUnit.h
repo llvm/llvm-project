@@ -14,6 +14,7 @@
 // C++ Includes
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -22,10 +23,10 @@
 #include "llvm/IR/Module.h"
 
 // Project includes
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
@@ -39,7 +40,7 @@ class ObjectCache;
 
 namespace lldb_private {
 
-class Status;
+class Error;
 
 //----------------------------------------------------------------------
 /// @class IRExecutionUnit IRExecutionUnit.h "lldb/Expression/IRExecutionUnit.h"
@@ -86,7 +87,7 @@ public:
                                   : nullptr);
   }
 
-  void GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
+  void GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
                        lldb::addr_t &func_end);
 
   //------------------------------------------------------------------
@@ -95,7 +96,7 @@ public:
   /// IRExecutionUnit unless the client explicitly chooses to free it.
   //------------------------------------------------------------------
 
-  lldb::addr_t WriteNow(const uint8_t *bytes, size_t size, Status &error);
+  lldb::addr_t WriteNow(const uint8_t *bytes, size_t size, Error &error);
 
   void FreeNow(lldb::addr_t allocation);
 
@@ -115,6 +116,16 @@ public:
   bool GetArchitecture(lldb_private::ArchSpec &arch) override;
 
   lldb::ModuleSP GetJITModule();
+
+  lldb::ModuleSP CreateJITModule(const char *name,
+                                 const FileSpec *limit_file_ptr = NULL,
+                                 uint32_t limit_start_line = 0,
+                                 uint32_t limit_end_line = 0);
+
+  //------------------------------------------------------------------
+  /// Accessor for the mutex that guards LLVM::getGlobalContext()
+  //------------------------------------------------------------------
+  static std::recursive_mutex &GetLLVMGlobalContextMutex();
 
   lldb::addr_t FindSymbol(const ConstString &name);
 
@@ -240,7 +251,7 @@ private:
   //------------------------------------------------------------------
   bool WriteData(lldb::ProcessSP &process_sp);
 
-  Status DisassembleFunction(Stream &stream, lldb::ProcessSP &process_sp);
+  Error DisassembleFunction(Stream &stream, lldb::ProcessSP &process_sp);
 
   struct SearchSpec;
 
@@ -335,6 +346,11 @@ private:
     void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                           size_t Size) override {}
 
+    virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
+                                    size_t Size) override {
+      return;
+    }
+
     uint64_t getSymbolAddress(const std::string &Name) override;
 
     void *getPointerToNamedFunction(const std::string &Name,
@@ -391,7 +407,7 @@ private:
     void dump(Log *log);
   };
 
-  bool CommitOneAllocation(lldb::ProcessSP &process_sp, Status &error,
+  bool CommitOneAllocation(lldb::ProcessSP &process_sp, Error &error,
                            AllocationRecord &record);
 
   typedef std::vector<AllocationRecord> RecordVector;
@@ -401,7 +417,8 @@ private:
   std::unique_ptr<llvm::ExecutionEngine> m_execution_engine_ap;
   std::unique_ptr<llvm::ObjectCache> m_object_cache_ap;
   std::unique_ptr<llvm::Module>
-      m_module_ap;        ///< Holder for the module until it's been handed off
+      m_module_ap; ///< Holder for the module until it's been handed off
+  lldb::ModuleWP m_jit_module_wp;
   llvm::Module *m_module; ///< Owned by the execution engine
   std::vector<std::string> m_cpu_features;
   std::vector<JittedFunction> m_jitted_functions; ///< A vector of all functions

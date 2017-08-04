@@ -11,7 +11,7 @@
 #include "RegisterContextMinidump_x86_32.h"
 
 // Other libraries and framework includes
-#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Core/DataBufferHeap.h"
 
 // C includes
 // C++ includes

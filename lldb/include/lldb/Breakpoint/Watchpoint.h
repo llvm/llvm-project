@@ -19,9 +19,9 @@
 // Project includes
 #include "lldb/Breakpoint/StoppointLocation.h"
 #include "lldb/Breakpoint/WatchpointOptions.h"
+#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -100,7 +100,7 @@ public:
   void DumpSnapshots(Stream *s, const char *prefix = nullptr) const;
   void DumpWithLevel(Stream *s, lldb::DescriptionLevel description_level) const;
   Target &GetTarget() { return m_target; }
-  const Status &GetError() { return m_error; }
+  const Error &GetError() { return m_error; }
 
   //------------------------------------------------------------------
   /// Returns the WatchpointOptions structure set for this watchpoint.
@@ -213,8 +213,8 @@ private:
   lldb::ValueObjectSP m_old_value_sp;
   lldb::ValueObjectSP m_new_value_sp;
   CompilerType m_type;
-  Status m_error; // An error object describing errors associated with this
-                  // watchpoint.
+  Error m_error; // An error object describing errors associated with this
+                 // watchpoint.
   WatchpointOptions
       m_options; // Settable watchpoint options, which is a delegate to handle
                  // the callback machinery.

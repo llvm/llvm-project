@@ -14,6 +14,7 @@
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/Block.h"
@@ -26,7 +27,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Unwind.h"
-#include "lldb/Utility/Log.h"
 
 //#define DEBUG_STACK_FRAMES 1
 
@@ -802,7 +802,6 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
-                                 bool show_unique,
                                  const char *selected_frame_marker) {
   size_t num_frames_displayed = 0;
 
@@ -843,7 +842,7 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
 
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),
-                             show_unique, marker))
+                             marker))
       break;
     ++num_frames_displayed;
   }

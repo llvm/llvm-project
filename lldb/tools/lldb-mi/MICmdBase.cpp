@@ -195,7 +195,7 @@ bool CMICmdBase::HasMIResultRecordExtra() const {
 // metadata
 //          object and set the command's error status.
 // Type:    Method.
-// Args:    rErrMsg - (R) Status description.
+// Args:    rErrMsg - (R) Error description.
 // Return:  None.
 // Throws:  None.
 //--

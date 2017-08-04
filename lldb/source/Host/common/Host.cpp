@@ -28,8 +28,7 @@
 #endif
 
 #if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__)
+    defined(__FreeBSD_kernel__) || defined(__APPLE__) || defined(__NetBSD__)
 #if !defined(__ANDROID__)
 #include <spawn.h>
 #endif
@@ -41,17 +40,16 @@
 #include <pthread_np.h>
 #endif
 
-#if defined(__NetBSD__)
-#include <lwp.h>
-#endif
-
 // C++ Includes
-#include <csignal>
 
 // Other libraries and framework includes
 // Project includes
 
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostProcess.h"
@@ -59,26 +57,20 @@
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/CleanUp.h"
-#include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
 #if defined(_WIN32)
-#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
+#elif defined(__linux__)
+#include "lldb/Host/linux/ProcessLauncherLinux.h"
 #else
-#include "lldb/Host/posix/ProcessLauncherPosixFork.h"
+#include "lldb/Host/posix/ProcessLauncherPosix.h"
 #endif
 
 #if defined(__APPLE__)
@@ -188,7 +180,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
   delete info;
 
   int status = -1;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #define __WALL 0
 #endif
   const int options = __WALL;
@@ -220,9 +212,10 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
       if (errno == EINTR)
         continue;
       else {
-        LLDB_LOG(log,
-                 "arg = {0}, thread exiting because waitpid failed ({1})...",
-                 arg, llvm::sys::StrError());
+        if (log)
+          log->Printf(
+              "%s (arg = %p) thread exiting because waitpid failed (%s)...",
+              __FUNCTION__, arg, strerror(errno));
         break;
       }
     } else if (wait_pid > 0) {
@@ -317,6 +310,25 @@ lldb::pid_t Host::GetCurrentProcessID() { return ::getpid(); }
 
 #ifndef _WIN32
 
+lldb::tid_t Host::GetCurrentThreadID() {
+#if defined(__APPLE__)
+  // Calling "mach_thread_self()" bumps the reference count on the thread
+  // port, so we need to deallocate it. mach_task_self() doesn't bump the ref
+  // count.
+  thread_port_t thread_self = mach_thread_self();
+  mach_port_deallocate(mach_task_self(), thread_self);
+  return thread_self;
+#elif defined(__FreeBSD__)
+  return lldb::tid_t(pthread_getthreadid_np());
+#elif defined(__ANDROID__)
+  return lldb::tid_t(gettid());
+#elif defined(__linux__)
+  return lldb::tid_t(syscall(SYS_gettid));
+#else
+  return lldb::tid_t(pthread_self());
+#endif
+}
+
 lldb::thread_t Host::GetCurrentThread() {
   return lldb::thread_t(pthread_self());
 }
@@ -409,6 +421,25 @@ const char *Host::GetSignalAsCString(int signo) {
 
 #endif
 
+#ifndef _WIN32
+
+lldb::thread_key_t
+Host::ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback) {
+  pthread_key_t key;
+  ::pthread_key_create(&key, callback);
+  return key;
+}
+
+void *Host::ThreadLocalStorageGet(lldb::thread_key_t key) {
+  return ::pthread_getspecific(key);
+}
+
+void Host::ThreadLocalStorageSet(lldb::thread_key_t key, void *value) {
+  ::pthread_setspecific(key, value);
+}
+
+#endif
+
 #if !defined(__APPLE__) // see Host.mm
 
 bool Host::GetBundleDirectory(const FileSpec &file, FileSpec &bundle) {
@@ -467,19 +498,19 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
   return true;
 }
 
-Status Host::RunShellCommand(const char *command, const FileSpec &working_dir,
-                             int *status_ptr, int *signo_ptr,
-                             std::string *command_output_ptr,
-                             uint32_t timeout_sec, bool run_in_default_shell) {
+Error Host::RunShellCommand(const char *command, const FileSpec &working_dir,
+                            int *status_ptr, int *signo_ptr,
+                            std::string *command_output_ptr,
+                            uint32_t timeout_sec, bool run_in_default_shell) {
   return RunShellCommand(Args(command), working_dir, status_ptr, signo_ptr,
                          command_output_ptr, timeout_sec, run_in_default_shell);
 }
 
-Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
-                             int *status_ptr, int *signo_ptr,
-                             std::string *command_output_ptr,
-                             uint32_t timeout_sec, bool run_in_default_shell) {
-  Status error;
+Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
+                            int *status_ptr, int *signo_ptr,
+                            std::string *command_output_ptr,
+                            uint32_t timeout_sec, bool run_in_default_shell) {
+  Error error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
   if (run_in_default_shell) {
@@ -570,33 +601,382 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
             error.SetErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
-            auto Buffer =
-                DataBufferLLVM::CreateFromPath(output_file_spec.GetPath());
+            std::vector<char> command_output(file_size);
+            output_file_spec.ReadFileContents(0, command_output.data(),
+                                              file_size, &error);
             if (error.Success())
-              command_output_ptr->assign(Buffer->GetChars(),
-                                         Buffer->GetByteSize());
+              command_output_ptr->assign(command_output.data(), file_size);
           }
         }
       }
     }
   }
 
-  llvm::sys::fs::remove(output_file_spec.GetPath());
+  if (FileSystem::GetFileExists(output_file_spec))
+    FileSystem::Unlink(output_file_spec);
   return error;
 }
 
-// The functions below implement process launching for non-Apple-based platforms
+// LaunchProcessPosixSpawn for Apple, Linux, FreeBSD and other GLIBC
+// systems
+
+#if defined(__APPLE__) || defined(__linux__) || defined(__FreeBSD__) ||        \
+    defined(__GLIBC__) || defined(__NetBSD__)
+#if !defined(__ANDROID__)
+// this method needs to be visible to macosx/Host.cpp and
+// common/Host.cpp.
+
+short Host::GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
+  short flags = POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK;
+
+#if defined(__APPLE__)
+  if (launch_info.GetFlags().Test(eLaunchFlagExec))
+    flags |= POSIX_SPAWN_SETEXEC; // Darwin specific posix_spawn flag
+
+  if (launch_info.GetFlags().Test(eLaunchFlagDebug))
+    flags |= POSIX_SPAWN_START_SUSPENDED; // Darwin specific posix_spawn flag
+
+  if (launch_info.GetFlags().Test(eLaunchFlagDisableASLR))
+    flags |= _POSIX_SPAWN_DISABLE_ASLR; // Darwin specific posix_spawn flag
+
+  if (launch_info.GetLaunchInSeparateProcessGroup())
+    flags |= POSIX_SPAWN_SETPGROUP;
+
+#ifdef POSIX_SPAWN_CLOEXEC_DEFAULT
+#if defined(__APPLE__) && (defined(__x86_64__) || defined(__i386__))
+  static LazyBool g_use_close_on_exec_flag = eLazyBoolCalculate;
+  if (g_use_close_on_exec_flag == eLazyBoolCalculate) {
+    g_use_close_on_exec_flag = eLazyBoolNo;
+
+    uint32_t major, minor, update;
+    if (HostInfo::GetOSVersion(major, minor, update)) {
+      // Kernel panic if we use the POSIX_SPAWN_CLOEXEC_DEFAULT on 10.7 or
+      // earlier
+      if (major > 10 || (major == 10 && minor > 7)) {
+        // Only enable for 10.8 and later OS versions
+        g_use_close_on_exec_flag = eLazyBoolYes;
+      }
+    }
+  }
+#else
+  static LazyBool g_use_close_on_exec_flag = eLazyBoolYes;
+#endif
+  // Close all files exception those with file actions if this is supported.
+  if (g_use_close_on_exec_flag == eLazyBoolYes)
+    flags |= POSIX_SPAWN_CLOEXEC_DEFAULT;
+#endif
+#endif // #if defined (__APPLE__)
+  return flags;
+}
+
+Error Host::LaunchProcessPosixSpawn(const char *exe_path,
+                                    const ProcessLaunchInfo &launch_info,
+                                    lldb::pid_t &pid) {
+  Error error;
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
+                                                  LIBLLDB_LOG_PROCESS));
+
+  posix_spawnattr_t attr;
+  error.SetError(::posix_spawnattr_init(&attr), eErrorTypePOSIX);
+
+  if (error.Fail() || log)
+    error.PutToLog(log, "::posix_spawnattr_init ( &attr )");
+  if (error.Fail())
+    return error;
+
+  // Make a quick class that will cleanup the posix spawn attributes in case
+  // we return in the middle of this function.
+  lldb_utility::CleanUp<posix_spawnattr_t *, int> posix_spawnattr_cleanup(
+      &attr, posix_spawnattr_destroy);
+
+  sigset_t no_signals;
+  sigset_t all_signals;
+  sigemptyset(&no_signals);
+  sigfillset(&all_signals);
+  ::posix_spawnattr_setsigmask(&attr, &no_signals);
+#if defined(__linux__) || defined(__FreeBSD__)
+  ::posix_spawnattr_setsigdefault(&attr, &no_signals);
+#else
+  ::posix_spawnattr_setsigdefault(&attr, &all_signals);
+#endif
+
+  short flags = GetPosixspawnFlags(launch_info);
+
+  error.SetError(::posix_spawnattr_setflags(&attr, flags), eErrorTypePOSIX);
+  if (error.Fail() || log)
+    error.PutToLog(log, "::posix_spawnattr_setflags ( &attr, flags=0x%8.8x )",
+                   flags);
+  if (error.Fail())
+    return error;
+
+// posix_spawnattr_setbinpref_np appears to be an Apple extension per:
+// http://www.unix.com/man-page/OSX/3/posix_spawnattr_setbinpref_np/
+#if defined(__APPLE__) && !defined(__arm__)
+
+  // Don't set the binpref if a shell was provided.  After all, that's only
+  // going to affect what version of the shell
+  // is launched, not what fork of the binary is launched.  We insert "arch
+  // --arch <ARCH> as part of the shell invocation
+  // to do that job on OSX.
+
+  if (launch_info.GetShell() == nullptr) {
+    // We don't need to do this for ARM, and we really shouldn't now that we
+    // have multiple CPU subtypes and no posix_spawnattr call that allows us
+    // to set which CPU subtype to launch...
+    const ArchSpec &arch_spec = launch_info.GetArchitecture();
+    cpu_type_t cpu = arch_spec.GetMachOCPUType();
+    cpu_type_t sub = arch_spec.GetMachOCPUSubType();
+    if (cpu != 0 && cpu != static_cast<cpu_type_t>(UINT32_MAX) &&
+        cpu != static_cast<cpu_type_t>(LLDB_INVALID_CPUTYPE) &&
+        !(cpu == 0x01000007 && sub == 8)) // If haswell is specified, don't try
+                                          // to set the CPU type or we will fail
+    {
+      size_t ocount = 0;
+      error.SetError(::posix_spawnattr_setbinpref_np(&attr, 1, &cpu, &ocount),
+                     eErrorTypePOSIX);
+      if (error.Fail() || log)
+        error.PutToLog(log, "::posix_spawnattr_setbinpref_np ( &attr, 1, "
+                            "cpu_type = 0x%8.8x, count => %llu )",
+                       cpu, (uint64_t)ocount);
+
+      if (error.Fail() || ocount != 1)
+        return error;
+    }
+  }
+
+#endif
+
+  const char *tmp_argv[2];
+  char *const *argv = const_cast<char *const *>(
+      launch_info.GetArguments().GetConstArgumentVector());
+  char *const *envp = const_cast<char *const *>(
+      launch_info.GetEnvironmentEntries().GetConstArgumentVector());
+  if (argv == NULL) {
+    // posix_spawn gets very unhappy if it doesn't have at least the program
+    // name in argv[0]. One of the side affects I have noticed is the
+    // environment
+    // variables don't make it into the child process if "argv == NULL"!!!
+    tmp_argv[0] = exe_path;
+    tmp_argv[1] = NULL;
+    argv = const_cast<char *const *>(tmp_argv);
+  }
+
 #if !defined(__APPLE__)
-Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
+  // manage the working directory
+  char current_dir[PATH_MAX];
+  current_dir[0] = '\0';
+#endif
+
+  FileSpec working_dir{launch_info.GetWorkingDirectory()};
+  if (working_dir) {
+#if defined(__APPLE__)
+    // Set the working directory on this thread only
+    if (__pthread_chdir(working_dir.GetCString()) < 0) {
+      if (errno == ENOENT) {
+        error.SetErrorStringWithFormat("No such file or directory: %s",
+                                       working_dir.GetCString());
+      } else if (errno == ENOTDIR) {
+        error.SetErrorStringWithFormat("Path doesn't name a directory: %s",
+                                       working_dir.GetCString());
+      } else {
+        error.SetErrorStringWithFormat("An unknown error occurred when "
+                                       "changing directory for process "
+                                       "execution.");
+      }
+      return error;
+    }
+#else
+    if (::getcwd(current_dir, sizeof(current_dir)) == NULL) {
+      error.SetError(errno, eErrorTypePOSIX);
+      error.LogIfError(log, "unable to save the current directory");
+      return error;
+    }
+
+    if (::chdir(working_dir.GetCString()) == -1) {
+      error.SetError(errno, eErrorTypePOSIX);
+      error.LogIfError(log, "unable to change working directory to %s",
+                       working_dir.GetCString());
+      return error;
+    }
+#endif
+  }
+
+  ::pid_t result_pid = LLDB_INVALID_PROCESS_ID;
+  const size_t num_file_actions = launch_info.GetNumFileActions();
+  if (num_file_actions > 0) {
+    posix_spawn_file_actions_t file_actions;
+    error.SetError(::posix_spawn_file_actions_init(&file_actions),
+                   eErrorTypePOSIX);
+    if (error.Fail() || log)
+      error.PutToLog(log, "::posix_spawn_file_actions_init ( &file_actions )");
+    if (error.Fail())
+      return error;
+
+    // Make a quick class that will cleanup the posix spawn attributes in case
+    // we return in the middle of this function.
+    lldb_utility::CleanUp<posix_spawn_file_actions_t *, int>
+        posix_spawn_file_actions_cleanup(&file_actions,
+                                         posix_spawn_file_actions_destroy);
+
+    for (size_t i = 0; i < num_file_actions; ++i) {
+      const FileAction *launch_file_action =
+          launch_info.GetFileActionAtIndex(i);
+      if (launch_file_action) {
+        if (!AddPosixSpawnFileAction(&file_actions, launch_file_action, log,
+                                     error))
+          return error;
+      }
+    }
+
+    error.SetError(
+        ::posix_spawnp(&result_pid, exe_path, &file_actions, &attr, argv, envp),
+        eErrorTypePOSIX);
+
+    if (error.Fail() || log) {
+      error.PutToLog(
+          log, "::posix_spawnp ( pid => %i, path = '%s', file_actions = %p, "
+               "attr = %p, argv = %p, envp = %p )",
+          result_pid, exe_path, static_cast<void *>(&file_actions),
+          static_cast<void *>(&attr), reinterpret_cast<const void *>(argv),
+          reinterpret_cast<const void *>(envp));
+      if (log) {
+        for (int ii = 0; argv[ii]; ++ii)
+          log->Printf("argv[%i] = '%s'", ii, argv[ii]);
+      }
+    }
+
+  } else {
+    error.SetError(
+        ::posix_spawnp(&result_pid, exe_path, NULL, &attr, argv, envp),
+        eErrorTypePOSIX);
+
+    if (error.Fail() || log) {
+      error.PutToLog(log, "::posix_spawnp ( pid => %i, path = '%s', "
+                          "file_actions = NULL, attr = %p, argv = %p, envp = "
+                          "%p )",
+                     result_pid, exe_path, static_cast<void *>(&attr),
+                     reinterpret_cast<const void *>(argv),
+                     reinterpret_cast<const void *>(envp));
+      if (log) {
+        for (int ii = 0; argv[ii]; ++ii)
+          log->Printf("argv[%i] = '%s'", ii, argv[ii]);
+      }
+    }
+  }
+  pid = result_pid;
+
+  if (working_dir) {
+#if defined(__APPLE__)
+    // No more thread specific current working directory
+    __pthread_fchdir(-1);
+#else
+    if (::chdir(current_dir) == -1 && error.Success()) {
+      error.SetError(errno, eErrorTypePOSIX);
+      error.LogIfError(log, "unable to change current directory back to %s",
+                       current_dir);
+    }
+#endif
+  }
+
+  return error;
+}
+
+bool Host::AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
+                                   Log *log, Error &error) {
+  if (info == NULL)
+    return false;
+
+  posix_spawn_file_actions_t *file_actions =
+      reinterpret_cast<posix_spawn_file_actions_t *>(_file_actions);
+
+  switch (info->GetAction()) {
+  case FileAction::eFileActionNone:
+    error.Clear();
+    break;
+
+  case FileAction::eFileActionClose:
+    if (info->GetFD() == -1)
+      error.SetErrorString(
+          "invalid fd for posix_spawn_file_actions_addclose(...)");
+    else {
+      error.SetError(
+          ::posix_spawn_file_actions_addclose(file_actions, info->GetFD()),
+          eErrorTypePOSIX);
+      if (log && (error.Fail() || log))
+        error.PutToLog(log,
+                       "posix_spawn_file_actions_addclose (action=%p, fd=%i)",
+                       static_cast<void *>(file_actions), info->GetFD());
+    }
+    break;
+
+  case FileAction::eFileActionDuplicate:
+    if (info->GetFD() == -1)
+      error.SetErrorString(
+          "invalid fd for posix_spawn_file_actions_adddup2(...)");
+    else if (info->GetActionArgument() == -1)
+      error.SetErrorString(
+          "invalid duplicate fd for posix_spawn_file_actions_adddup2(...)");
+    else {
+      error.SetError(
+          ::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
+                                             info->GetActionArgument()),
+          eErrorTypePOSIX);
+      if (log && (error.Fail() || log))
+        error.PutToLog(
+            log,
+            "posix_spawn_file_actions_adddup2 (action=%p, fd=%i, dup_fd=%i)",
+            static_cast<void *>(file_actions), info->GetFD(),
+            info->GetActionArgument());
+    }
+    break;
+
+  case FileAction::eFileActionOpen:
+    if (info->GetFD() == -1)
+      error.SetErrorString(
+          "invalid fd in posix_spawn_file_actions_addopen(...)");
+    else {
+      int oflag = info->GetActionArgument();
+
+      mode_t mode = 0;
+
+      if (oflag & O_CREAT)
+        mode = 0640;
+
+      error.SetError(::posix_spawn_file_actions_addopen(
+                         file_actions, info->GetFD(),
+                         info->GetPath().str().c_str(), oflag, mode),
+                     eErrorTypePOSIX);
+      if (error.Fail() || log)
+        error.PutToLog(log, "posix_spawn_file_actions_addopen (action=%p, "
+                            "fd=%i, path='%s', oflag=%i, mode=%i)",
+                       static_cast<void *>(file_actions), info->GetFD(),
+                       info->GetPath().str().c_str(), oflag, mode);
+    }
+    break;
+  }
+  return error.Success();
+}
+#endif // !defined(__ANDROID__)
+#endif // defined (__APPLE__) || defined (__linux__) || defined (__FreeBSD__) ||
+       // defined (__GLIBC__) || defined(__NetBSD__)
+
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__GLIBC__) ||        \
+    defined(__NetBSD__) || defined(_WIN32)
+// The functions below implement process launching via posix_spawn() for Linux,
+// FreeBSD and NetBSD.
+
+Error Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   std::unique_ptr<ProcessLauncher> delegate_launcher;
 #if defined(_WIN32)
   delegate_launcher.reset(new ProcessLauncherWindows());
+#elif defined(__linux__)
+  delegate_launcher.reset(new ProcessLauncherLinux());
 #else
-  delegate_launcher.reset(new ProcessLauncherPosixFork());
+  delegate_launcher.reset(new ProcessLauncherPosix());
 #endif
   MonitoringProcessLauncher launcher(std::move(delegate_launcher));
 
-  Status error;
+  Error error;
   HostProcess process = launcher.LaunchProcess(launch_info, error);
 
   // TODO(zturner): It would be better if the entire HostProcess were returned
@@ -606,7 +986,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
   return error;
 }
-#endif // !defined(__APPLE__)
+#endif // defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
 
 #ifndef _WIN32
 void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
@@ -625,60 +1005,4 @@ const UnixSignalsSP &Host::GetUnixSignals() {
   static const auto s_unix_signals_sp =
       UnixSignals::Create(HostInfo::GetArchitecture());
   return s_unix_signals_sp;
-}
-
-std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
-#if defined(_WIN32)
-  if (url.startswith("file://"))
-    return std::unique_ptr<Connection>(new ConnectionGenericFile());
-#endif
-  return std::unique_ptr<Connection>(new ConnectionFileDescriptor());
-}
-
-#if defined(LLVM_ON_UNIX)
-WaitStatus WaitStatus::Decode(int wstatus) {
-  if (WIFEXITED(wstatus))
-    return {Exit, uint8_t(WEXITSTATUS(wstatus))};
-  else if (WIFSIGNALED(wstatus))
-    return {Signal, uint8_t(WTERMSIG(wstatus))};
-  else if (WIFSTOPPED(wstatus))
-    return {Stop, uint8_t(WSTOPSIG(wstatus))};
-  llvm_unreachable("Unknown wait status");
-}
-#endif
-
-void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
-                                               raw_ostream &OS,
-                                               StringRef Options) {
-  if (Options == "g") {
-    char type;
-    switch (WS.type) {
-    case WaitStatus::Exit:
-      type = 'W';
-      break;
-    case WaitStatus::Signal:
-      type = 'X';
-      break;
-    case WaitStatus::Stop:
-      type = 'S';
-      break;
-    }
-    OS << formatv("{0}{1:x-2}", type, WS.status);
-    return;
-  }
-
-  assert(Options.empty());
-  const char *desc;
-  switch(WS.type) {
-  case WaitStatus::Exit:
-    desc = "Exited with status";
-    break;
-  case WaitStatus::Signal:
-    desc = "Killed by signal";
-    break;
-  case WaitStatus::Stop:
-    desc = "Stopped by signal";
-    break;
-  }
-  OS << desc << " " << int(WS.status);
 }

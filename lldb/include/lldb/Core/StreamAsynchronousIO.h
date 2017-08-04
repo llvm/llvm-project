@@ -1,4 +1,5 @@
-//===-- StreamAsynchronousIO.h -----------------------------------*- C++-*-===//
+//===-- StreamAsynchronousIO.h -----------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,15 +11,9 @@
 #ifndef liblldb_StreamAsynchronousIO_h_
 #define liblldb_StreamAsynchronousIO_h_
 
-#include "lldb/Utility/Stream.h"
-
 #include <string>
 
-#include <stddef.h> // for size_t
-
-namespace lldb_private {
-class Debugger;
-}
+#include "lldb/Core/Stream.h"
 
 namespace lldb_private {
 

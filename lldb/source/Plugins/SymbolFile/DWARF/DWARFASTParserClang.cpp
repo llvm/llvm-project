@@ -21,7 +21,10 @@
 #include "UniqueDWARFASTType.h"
 
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/Args.h"
@@ -36,8 +39,6 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -3732,8 +3733,8 @@ static DWARFDIE GetContainingFunctionWithAbstractOrigin(const DWARFDIE &die) {
       }
     }
   }
-  assert(0 && "Shouldn't call GetContainingFunctionWithAbstractOrigin on "
-              "something not in a function");
+  assert(!"Shouldn't call GetContainingFunctionWithAbstractOrigin on something "
+          "not in a function");
   return DWARFDIE();
 }
 

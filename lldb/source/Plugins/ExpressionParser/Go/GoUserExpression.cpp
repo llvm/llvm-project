@@ -26,8 +26,14 @@
 // Project includes
 #include "GoUserExpression.h"
 
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataEncoder.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -43,12 +49,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataEncoder.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private.h"
 
 #include "Plugins/ExpressionParser/Go/GoAST.h"
@@ -150,7 +150,7 @@ public:
 
   CompilerType EvaluateType(const GoASTExpr *e);
 
-  Status &error() { return m_error; }
+  Error &error() { return m_error; }
 
 private:
   std::nullptr_t NotImplemented(const GoASTExpr *e) {
@@ -163,7 +163,7 @@ private:
   lldb::StackFrameSP m_frame;
   GoParser m_parser;
   DynamicValueType m_use_dynamic;
-  Status m_error;
+  Error m_error;
   llvm::StringRef m_package;
   std::vector<std::unique_ptr<GoASTStmt>> m_statements;
 };
@@ -209,7 +209,7 @@ bool GoUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                              ExecutionContext &exe_ctx,
                              lldb_private::ExecutionPolicy execution_policy,
                              bool keep_result_in_memory,
-                             bool generate_debug_info) {
+                             bool generate_debug_info, uint32_t line_offset) {
   InstallContext(exe_ctx);
   m_interpreter.reset(new GoInterpreter(exe_ctx, GetUserText()));
   if (m_interpreter->Parse())
@@ -254,7 +254,7 @@ GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
-  Status err = m_interpreter->error();
+  Error err = m_interpreter->error();
   m_interpreter.reset();
 
   if (!result_val_sp) {
@@ -651,7 +651,8 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitCallExpr(
 GoPersistentExpressionState::GoPersistentExpressionState()
     : PersistentExpressionState(eKindGo) {}
 
-ConstString GoPersistentExpressionState::GetNextPersistentVariableName() {
+ConstString
+GoPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
   char name_cstr[256];
   // We can't use the same variable format as clang.
   ::snprintf(name_cstr, sizeof(name_cstr), "$go%u",

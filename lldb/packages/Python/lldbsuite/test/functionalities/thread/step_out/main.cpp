@@ -10,7 +10,7 @@
 // This test is intended to create a situation in which two threads are stopped
 // at a breakpoint and the debugger issues a step-out command.
 
-#include "pseudo_barrier.h"
+#include <atomic>
 #include <thread>
 
 pseudo_barrier_t g_barrier;

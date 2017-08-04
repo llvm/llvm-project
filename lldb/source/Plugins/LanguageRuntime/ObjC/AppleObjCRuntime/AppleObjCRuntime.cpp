@@ -14,11 +14,15 @@
 #include "clang/AST/Type.h"
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -30,10 +34,6 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
 
 #include <vector>
 
@@ -145,7 +145,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   lldb::addr_t wrapper_struct_addr = LLDB_INVALID_ADDRESS;
 
   if (!m_print_object_caller_up) {
-    Status error;
+    Error error;
     m_print_object_caller_up.reset(
         exe_scope->CalculateTarget()->GetFunctionCallerForLanguage(
             eLanguageTypeObjC, return_compiler_type, *function_address,
@@ -185,7 +185,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   size_t full_buffer_len = sizeof(buf) - 1;
   size_t curr_len = full_buffer_len;
   while (curr_len == full_buffer_len) {
-    Status error;
+    Error error;
     curr_len = process->ReadCStringFromMemory(result_ptr + cstr_len, buf,
                                               sizeof(buf), error);
     strm.Write(buf, curr_len);
@@ -235,10 +235,17 @@ Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
 }
 
 bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
+  return CouldHaveDynamicValue(in_value,
+                               /* allow_swift = */ false);
+}
+
+bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value,
+                                             bool allow_swift) {
   return in_value.GetCompilerType().IsPossibleDynamicType(
       NULL,
       false, // do not check C++
-      true); // check ObjC
+      true,  // check ObjC
+      allow_swift);
 }
 
 bool AppleObjCRuntime::GetDynamicTypeAndAddress(
@@ -277,6 +284,17 @@ AppleObjCRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
     ret.SetName(corrected_name.c_str());
   }
   return ret;
+}
+
+bool AppleObjCRuntime::GetDynamicTypeAndAddress(
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name, Address &address,
+    Value::ValueType &value_type, bool allow_swift) {
+  if (!allow_swift)
+    return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
+                                    address, value_type);
+  else
+    return false;
 }
 
 bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {

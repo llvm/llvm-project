@@ -13,15 +13,15 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/STLUtils.h"
+#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Symtab.h"
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/Timer.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -68,7 +68,8 @@ void Symtab::SectionFileAddressesChanged() {
   m_file_addr_to_index_computed = false;
 }
 
-void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order) {
+void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
+                  Mangled::NamePreference name_preference) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
@@ -95,7 +96,7 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order) {
       const_iterator end = m_symbols.end();
       for (const_iterator pos = m_symbols.begin(); pos != end; ++pos) {
         s->Indent();
-        pos->Dump(s, target, std::distance(begin, pos));
+        pos->Dump(s, target, std::distance(begin, pos), name_preference);
       }
     } break;
 
@@ -120,7 +121,8 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order) {
                                            end = name_map.end();
            pos != end; ++pos) {
         s->Indent();
-        pos->second->Dump(s, target, pos->second - &m_symbols[0]);
+        pos->second->Dump(s, target, pos->second - &m_symbols[0],
+                          name_preference);
       }
     } break;
 
@@ -133,15 +135,15 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order) {
       for (size_t i = 0; i < num_entries; ++i) {
         s->Indent();
         const uint32_t symbol_idx = m_file_addr_to_index.GetEntryRef(i).data;
-        m_symbols[symbol_idx].Dump(s, target, symbol_idx);
+        m_symbols[symbol_idx].Dump(s, target, symbol_idx, name_preference);
       }
       break;
     }
   }
 }
 
-void Symtab::Dump(Stream *s, Target *target,
-                  std::vector<uint32_t> &indexes) const {
+void Symtab::Dump(Stream *s, Target *target, std::vector<uint32_t> &indexes,
+                  Mangled::NamePreference name_preference) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   const size_t num_symbols = GetNumSymbols();
@@ -159,7 +161,7 @@ void Symtab::Dump(Stream *s, Target *target,
       size_t idx = *pos;
       if (idx < num_symbols) {
         s->Indent();
-        m_symbols[idx].Dump(s, target, idx);
+        m_symbols[idx].Dump(s, target, idx, name_preference);
       }
     }
   }
@@ -220,8 +222,7 @@ void Symtab::InitNameIndexes() {
   // Protected function, no need to lock mutex...
   if (!m_name_indexes_computed) {
     m_name_indexes_computed = true;
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     // Create the name index vector to be able to quickly search by name
     const size_t num_symbols = m_symbols.size();
 #if 1
@@ -268,6 +269,10 @@ void Symtab::InitNameIndexes() {
       if (entry.cstring) {
         m_name_to_index.Append(entry);
 
+        // Now try and figure out the basename and figure out if the
+        // basename is a method, function, etc and put that in the
+        // appropriate table.
+        llvm::StringRef name = entry.cstring.GetStringRef();
         if (symbol->ContainsLinkerAnnotations()) {
           // If the symbol has linker annotations, also add the version without
           // the annotations.
@@ -300,24 +305,17 @@ void Symtab::InitNameIndexes() {
               const char *const_context =
                   ConstString(cxx_method.GetContext()).GetCString();
 
-              if (!const_context || const_context[0] == 0) {
-                // No context for this function so this has to be a basename
-                m_basename_to_index.Append(entry);
-                // If there is no context (no namespaces or class scopes that
-                // come before the function name) then this also could be a
-                // fullname.
-                m_name_to_index.Append(entry);
+              entry_ref = entry.cstring.GetStringRef();
+              if (entry_ref[0] == '~' ||
+                  !cxx_method.GetQualifiers().empty()) {
+                // The first character of the demangled basename is '~' which
+                // means we have a class destructor. We can use this information
+                // to help us know what is a class and what isn't.
+                if (class_contexts.find(const_context) == class_contexts.end())
+                  class_contexts.insert(const_context);
+                m_method_to_index.Append(entry);
               } else {
-                entry_ref = entry.cstring.GetStringRef();
-                if (entry_ref[0] == '~' ||
-                    !cxx_method.GetQualifiers().empty()) {
-                  // The first character of the demangled basename is '~' which
-                  // means we have a class destructor. We can use this information
-                  // to help us know what is a class and what isn't.
-                  if (class_contexts.find(const_context) == class_contexts.end())
-                    class_contexts.insert(const_context);
-                  m_method_to_index.Append(entry);
-                } else {
+                if (const_context && const_context[0]) {
                   if (class_contexts.find(const_context) !=
                       class_contexts.end()) {
                     // The current decl context is in our "class_contexts" which
@@ -334,7 +332,30 @@ void Symtab::InitNameIndexes() {
                     mangled_name_to_index.Append(entry);
                     symbol_contexts[entry.value] = const_context;
                   }
+                } else {
+                  // No context for this function so this has to be a basename
+                  m_basename_to_index.Append(entry);
+                  // If there is no context (no namespaces or class scopes that
+                  // come before the function name) then this also could be a
+                  // fullname.
+                  if (cxx_method.GetContext().empty())
+                    m_name_to_index.Append(entry);
                 }
+              }
+            }
+          } else if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str())) {
+            lldb_private::ConstString basename;
+            bool is_method = false;
+            ConstString mangled_name = mangled.GetMangledName();
+            if (SwiftLanguageRuntime::MethodName::
+                    ExtractFunctionBasenameFromMangled(mangled_name, basename,
+                                                       is_method)) {
+              if (basename && basename != mangled_name) {
+                entry.cstring = basename;
+                if (is_method)
+                  m_method_to_index.Append(entry);
+                else
+                  m_basename_to_index.Append(entry);
               }
             }
           }
@@ -425,17 +446,11 @@ void Symtab::InitNameIndexes() {
   }
 }
 
-void Symtab::PreloadSymbols() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  InitNameIndexes();
-}
-
 void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
                                     bool add_demangled, bool add_mangled,
                                     NameToIndexMap &name_to_index_map) const {
   if (add_demangled || add_mangled) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Create the name index vector to be able to quickly search by name
@@ -597,8 +612,7 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
                                       bool remove_duplicates) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
   // No need to sort if we have zero or one items...
   if (indexes.size() <= 1)
     return;
@@ -624,8 +638,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
   if (symbol_name) {
     if (!m_name_indexes_computed)
       InitNameIndexes();
@@ -641,8 +654,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
   if (symbol_name) {
     const size_t old_size = indexes.size();
     if (!m_name_indexes_computed)
@@ -771,8 +783,7 @@ Symtab::FindAllSymbolsWithNameAndType(const ConstString &name,
                                       std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
   // Initialize all of the lookup by name indexes before converting NAME
   // to a uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -791,8 +802,7 @@ size_t Symtab::FindAllSymbolsWithNameAndType(
     Visibility symbol_visibility, std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
   // Initialize all of the lookup by name indexes before converting NAME
   // to a uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -824,8 +834,7 @@ Symbol *Symtab::FindFirstSymbolWithNameAndType(const ConstString &name,
                                                Visibility symbol_visibility) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
   if (!m_name_indexes_computed)
     InitNameIndexes();
 

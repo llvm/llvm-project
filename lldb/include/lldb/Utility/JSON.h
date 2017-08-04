@@ -10,19 +10,18 @@
 #ifndef utility_JSON_h_
 #define utility_JSON_h_
 
+#include "lldb/Core/Stream.h"
 #include "lldb/Utility/StringExtractor.h"
 
+#include <inttypes.h>
 #include <map>
 #include <memory>
+#include <stdint.h>
 #include <string>
-#include <type_traits>
 #include <vector>
 
-#include <stdint.h>
+#include "llvm/Support/Casting.h"
 
-namespace lldb_private {
-class Stream;
-}
 namespace lldb_private {
 
 class JSONValue {
@@ -253,7 +252,7 @@ class JSONParser : public StringExtractor {
 public:
   enum Token {
     Invalid,
-    Status,
+    Error,
     ObjectStart,
     ObjectEnd,
     ArrayStart,
@@ -269,7 +268,7 @@ public:
     EndOfFile
   };
 
-  JSONParser(llvm::StringRef data);
+  JSONParser(const char *cstr);
 
   int GetEscapedChar(bool &was_escaped);
 

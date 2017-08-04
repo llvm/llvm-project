@@ -7,15 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Host.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/posix/HostProcessPosix.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Host.h"
 
 #include "llvm/ADT/STLExtras.h"
 
-#include <csignal>
 #include <limits.h>
-#include <unistd.h>
 
 using namespace lldb_private;
 
@@ -31,9 +29,9 @@ HostProcessPosix::HostProcessPosix(lldb::process_t process)
 
 HostProcessPosix::~HostProcessPosix() {}
 
-Status HostProcessPosix::Signal(int signo) const {
+Error HostProcessPosix::Signal(int signo) const {
   if (m_process == kInvalidPosixProcess) {
-    Status error;
+    Error error;
     error.SetErrorString("HostProcessPosix refers to an invalid process");
     return error;
   }
@@ -41,8 +39,8 @@ Status HostProcessPosix::Signal(int signo) const {
   return HostProcessPosix::Signal(m_process, signo);
 }
 
-Status HostProcessPosix::Signal(lldb::process_t process, int signo) {
-  Status error;
+Error HostProcessPosix::Signal(lldb::process_t process, int signo) {
+  Error error;
 
   if (-1 == ::kill(process, signo))
     error.SetErrorToErrno();
@@ -50,10 +48,10 @@ Status HostProcessPosix::Signal(lldb::process_t process, int signo) {
   return error;
 }
 
-Status HostProcessPosix::Terminate() { return Signal(SIGKILL); }
+Error HostProcessPosix::Terminate() { return Signal(SIGKILL); }
 
-Status HostProcessPosix::GetMainModule(FileSpec &file_spec) const {
-  Status error;
+Error HostProcessPosix::GetMainModule(FileSpec &file_spec) const {
+  Error error;
 
   // Use special code here because proc/[pid]/exe is a symbolic link.
   char link_path[PATH_MAX];
@@ -84,7 +82,7 @@ bool HostProcessPosix::IsRunning() const {
     return false;
 
   // Send this process the null signal.  If it succeeds the process is running.
-  Status error = Signal(0);
+  Error error = Signal(0);
   return error.Success();
 }
 

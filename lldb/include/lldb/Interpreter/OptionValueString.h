@@ -16,15 +16,14 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Flags.h"
-
+#include "lldb/Core/Flags.h"
 #include "lldb/Interpreter/OptionValue.h"
 
 namespace lldb_private {
 
 class OptionValueString : public OptionValue {
 public:
-  typedef Status (*ValidatorCallback)(const char *string, void *baton);
+  typedef Error (*ValidatorCallback)(const char *string, void *baton);
 
   enum Options { eOptionEncodeCharacterEscapeSequences = (1u << 0) };
 
@@ -85,10 +84,10 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  Status
+  Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
+  Error
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
@@ -119,10 +118,10 @@ public:
   const char *GetDefaultValue() const { return m_default_value.c_str(); }
   llvm::StringRef GetDefaultValueAsRef() const { return m_default_value; }
 
-  Status SetCurrentValue(const char *) = delete;
-  Status SetCurrentValue(llvm::StringRef value);
+  Error SetCurrentValue(const char *) = delete;
+  Error SetCurrentValue(llvm::StringRef value);
 
-  Status AppendToCurrentValue(const char *value);
+  Error AppendToCurrentValue(const char *value);
 
   void SetDefaultValue(const char *value) {
     if (value && value[0])

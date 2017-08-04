@@ -10,17 +10,10 @@
 #include "lldb/Core/FileLineResolver.h"
 
 // Project includes
-#include "lldb/Core/FileSpecList.h" // for FileSpecList
+#include "lldb/Core/Log.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Stream.h"      // for Stream
-
-#include <string> // for string
-
-namespace lldb_private {
-class Address;
-}
 
 using namespace lldb;
 using namespace lldb_private;

@@ -7,22 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
 
-#include "lldb/Core/Value.h" // for Value
+#include "lldb/Core/Log.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Target/ExecutionContext.h" // for ExecutionContext
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"    // for GetLogIfAllCategoriesSet
-#include "lldb/Utility/SharingPtr.h" // for SharingPtr
-#include "lldb/Utility/Status.h"     // for Status
-
-#include "llvm/ADT/STLExtras.h"
-
-namespace lldb_private {
-class Declaration;
-}
 
 using namespace lldb_private;
 
@@ -131,7 +124,7 @@ lldb::ValueType ValueObjectSynthetic::GetValueType() const {
 void ValueObjectSynthetic::CreateSynthFilter() {
   m_synth_filter_ap = (m_synth_sp->GetFrontEnd(*m_parent));
   if (!m_synth_filter_ap.get())
-    m_synth_filter_ap = llvm::make_unique<DummySyntheticFrontEnd>(*m_parent);
+    m_synth_filter_ap.reset(new DummySyntheticFrontEnd(*m_parent));
 }
 
 bool ValueObjectSynthetic::UpdateValue() {
@@ -312,7 +305,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetNonSyntheticValue() {
 void ValueObjectSynthetic::CopyValueData(ValueObject *source) {
   m_value = (source->UpdateValueIfNeeded(), source->GetValue());
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+  m_error = GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
 }
 
 bool ValueObjectSynthetic::CanProvideValue() {
@@ -324,7 +317,7 @@ bool ValueObjectSynthetic::CanProvideValue() {
 }
 
 bool ValueObjectSynthetic::SetValueFromCString(const char *value_str,
-                                               Status &error) {
+                                               Error &error) {
   return m_parent->SetValueFromCString(value_str, error);
 }
 

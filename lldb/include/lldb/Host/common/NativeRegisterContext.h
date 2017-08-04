@@ -53,15 +53,15 @@ public:
 
   virtual const RegisterSet *GetRegisterSet(uint32_t set_index) const = 0;
 
-  virtual Status ReadRegister(const RegisterInfo *reg_info,
-                              RegisterValue &reg_value) = 0;
+  virtual Error ReadRegister(const RegisterInfo *reg_info,
+                             RegisterValue &reg_value) = 0;
 
-  virtual Status WriteRegister(const RegisterInfo *reg_info,
-                               const RegisterValue &reg_value) = 0;
+  virtual Error WriteRegister(const RegisterInfo *reg_info,
+                              const RegisterValue &reg_value) = 0;
 
-  virtual Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) = 0;
+  virtual Error ReadAllRegisterValues(lldb::DataBufferSP &data_sp) = 0;
 
-  virtual Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) = 0;
+  virtual Error WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) = 0;
 
   uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,
                                                uint32_t num) const;
@@ -75,11 +75,6 @@ public:
 
   virtual bool ClearHardwareBreakpoint(uint32_t hw_idx);
 
-  virtual Status ClearAllHardwareBreakpoints();
-
-  virtual Status GetHardwareBreakHitIndex(uint32_t &bp_index,
-                                          lldb::addr_t trap_addr);
-
   virtual uint32_t NumSupportedHardwareWatchpoints();
 
   virtual uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
@@ -87,14 +82,14 @@ public:
 
   virtual bool ClearHardwareWatchpoint(uint32_t hw_index);
 
-  virtual Status ClearAllHardwareWatchpoints();
+  virtual Error ClearAllHardwareWatchpoints();
 
-  virtual Status IsWatchpointHit(uint32_t wp_index, bool &is_hit);
+  virtual Error IsWatchpointHit(uint32_t wp_index, bool &is_hit);
 
-  virtual Status GetWatchpointHitIndex(uint32_t &wp_index,
-                                       lldb::addr_t trap_addr);
+  virtual Error GetWatchpointHitIndex(uint32_t &wp_index,
+                                      lldb::addr_t trap_addr);
 
-  virtual Status IsWatchpointVacant(uint32_t wp_index, bool &is_vacant);
+  virtual Error IsWatchpointVacant(uint32_t wp_index, bool &is_vacant);
 
   virtual lldb::addr_t GetWatchpointAddress(uint32_t wp_index);
 
@@ -114,12 +109,12 @@ public:
 
   virtual bool HardwareSingleStep(bool enable);
 
-  virtual Status
+  virtual Error
   ReadRegisterValueFromMemory(const lldb_private::RegisterInfo *reg_info,
                               lldb::addr_t src_addr, size_t src_len,
                               RegisterValue &reg_value);
 
-  virtual Status
+  virtual Error
   WriteRegisterValueToMemory(const lldb_private::RegisterInfo *reg_info,
                              lldb::addr_t dst_addr, size_t dst_len,
                              const RegisterValue &reg_value);
@@ -141,15 +136,15 @@ public:
   virtual lldb::addr_t
   GetPCfromBreakpointLocation(lldb::addr_t fail_value = LLDB_INVALID_ADDRESS);
 
-  Status SetPC(lldb::addr_t pc);
+  Error SetPC(lldb::addr_t pc);
 
   lldb::addr_t GetSP(lldb::addr_t fail_value = LLDB_INVALID_ADDRESS);
 
-  Status SetSP(lldb::addr_t sp);
+  Error SetSP(lldb::addr_t sp);
 
   lldb::addr_t GetFP(lldb::addr_t fail_value = LLDB_INVALID_ADDRESS);
 
-  Status SetFP(lldb::addr_t fp);
+  Error SetFP(lldb::addr_t fp);
 
   const char *GetRegisterName(uint32_t reg);
 
@@ -162,9 +157,9 @@ public:
   lldb::addr_t ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
                                       lldb::addr_t fail_value);
 
-  Status WriteRegisterFromUnsigned(uint32_t reg, uint64_t uval);
+  Error WriteRegisterFromUnsigned(uint32_t reg, uint64_t uval);
 
-  Status WriteRegisterFromUnsigned(const RegisterInfo *reg_info, uint64_t uval);
+  Error WriteRegisterFromUnsigned(const RegisterInfo *reg_info, uint64_t uval);
 
   // uint32_t
   // GetStopID () const

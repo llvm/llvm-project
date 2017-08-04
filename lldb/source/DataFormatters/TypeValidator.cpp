@@ -15,7 +15,7 @@
 
 // Project includes
 #include "lldb/DataFormatters/TypeValidator.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Core/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

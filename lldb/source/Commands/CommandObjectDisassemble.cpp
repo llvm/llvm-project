@@ -16,7 +16,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -71,10 +71,10 @@ CommandObjectDisassemble::CommandOptions::CommandOptions()
 
 CommandObjectDisassemble::CommandOptions::~CommandOptions() = default;
 
-Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
+Error CommandObjectDisassemble::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Status error;
+  Error error;
 
   const int short_option = m_getopt_table[option_idx].val;
 
@@ -224,11 +224,11 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   some_location_specified = false;
 }
 
-Status CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
+Error CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
     ExecutionContext *execution_context) {
   if (!some_location_specified)
     current_function = true;
-  return Status();
+  return Error();
 }
 
 llvm::ArrayRef<OptionDefinition>

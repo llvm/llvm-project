@@ -12,11 +12,11 @@
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -53,12 +53,6 @@ const SBAddress &SBAddress::operator=(const SBAddress &rhs) {
       m_opaque_ap.reset(new Address());
   }
   return *this;
-}
-
-bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
-  if (lhs.IsValid() && rhs.IsValid())
-    return lhs.ref() == rhs.ref();
-  return false;
 }
 
 bool SBAddress::IsValid() const {

@@ -11,6 +11,9 @@
 #include "ItaniumABILanguageRuntime.h"
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -30,9 +33,6 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 #include <vector>
 
@@ -44,8 +44,9 @@ static const char *vtable_demangled_prefix = "vtable for ";
 bool ItaniumABILanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
   const bool check_cxx = true;
   const bool check_objc = false;
-  return in_value.GetCompilerType().IsPossibleDynamicType(NULL, check_cxx,
-                                                          check_objc);
+  const bool check_swift = false;
+  return in_value.GetCompilerType().IsPossibleDynamicType(
+      NULL, check_cxx, check_objc, check_swift);
 }
 
 TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
@@ -217,7 +218,7 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
     if (process == nullptr)
       return false;
 
-    Status error;
+    Error error;
     const lldb::addr_t vtable_address_point =
         process->ReadPointerFromMemory(original_ptr, error);
 

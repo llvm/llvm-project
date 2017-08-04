@@ -12,13 +12,14 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Utils.h"
 // Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
@@ -95,8 +96,8 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
   // Read the register
   if (ReadRegisterBytes(reg_info, m_reg_data)) {
     const bool partial_data_ok = false;
-    Status error(value.SetValueFromData(
-        reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
+    Error error(value.SetValueFromData(reg_info, m_reg_data,
+                                       reg_info->byte_offset, partial_data_ok));
     return error.Success();
   }
   return false;

@@ -11,7 +11,6 @@
 #define liblldb_RegisterContextPOSIXProcessMonitor_mips64_H_
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_mips64.h"
-#include "Plugins/Process/Utility/lldb-mips-freebsd-register-enums.h"
 #include "RegisterContextPOSIX.h"
 
 class RegisterContextPOSIXProcessMonitor_mips64
@@ -73,8 +72,6 @@ protected:
   uint32_t NumSupportedHardwareWatchpoints();
 
 private:
-  uint64_t 
-  m_gpr_mips64[k_num_gpr_registers_mips64]; // general purpose registers.
   ProcessMonitor &GetMonitor();
 };
 

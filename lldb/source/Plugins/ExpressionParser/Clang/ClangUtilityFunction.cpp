@@ -19,16 +19,16 @@
 
 // C++ Includes
 
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 
@@ -118,24 +118,14 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
   bool can_interpret = false; // should stay that way
 
-  Status jit_error = parser.PrepareForExecution(
+  Error jit_error = parser.PrepareForExecution(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       can_interpret, eExecutionPolicyAlways);
 
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS) {
     m_jit_process_wp = process->shared_from_this();
-    if (parser.GetGenerateDebugInfo()) {
-      lldb::ModuleSP jit_module_sp(m_execution_unit_sp->GetJITModule());
-
-      if (jit_module_sp) {
-        ConstString const_func_name(FunctionName());
-        FileSpec jit_file;
-        jit_file.GetFilename() = const_func_name;
-        jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
-        m_jit_module_wp = jit_module_sp;
-        target->GetImages().Append(jit_module_sp);
-      }
-    }
+    if (parser.GetGenerateDebugInfo())
+      m_execution_unit_sp->CreateJITModule(FunctionName());
   }
 
 #if 0

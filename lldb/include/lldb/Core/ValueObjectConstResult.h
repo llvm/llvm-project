@@ -10,30 +10,14 @@
 #ifndef liblldb_ValueObjectConstResult_h_
 #define liblldb_ValueObjectConstResult_h_
 
-#include "lldb/Core/Value.h" // for Value
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/ValueObject.h"
+
 #include "lldb/Core/ValueObjectConstResultImpl.h"
-#include "lldb/Symbol/CompilerType.h"       // for CompilerType
-#include "lldb/Utility/ConstString.h"       // for ConstString
-#include "lldb/Utility/Status.h"            // for Status
-#include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-enumerations.h"         // for ByteOrder, Dynamic...
-#include "lldb/lldb-forward.h"              // for ValueObjectSP, Dat...
-#include "lldb/lldb-private-enumerations.h" // for AddressType, Addre...
-#include "lldb/lldb-types.h"                // for addr_t
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
-
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class ExecutionContextScope;
-}
-namespace lldb_private {
-class Module;
-}
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -69,7 +53,7 @@ public:
 
   // When an expression fails to evaluate, we return an error
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    const Status &error);
+                                    const Error &error);
 
   uint64_t GetByteSize() override;
 
@@ -85,7 +69,7 @@ public:
 
   void SetByteSize(size_t size);
 
-  lldb::ValueObjectSP Dereference(Status &error) override;
+  lldb::ValueObjectSP Dereference(Error &error) override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
@@ -94,7 +78,7 @@ public:
       uint32_t offset, const CompilerType &type, bool can_create,
       ConstString name_const_str = ConstString()) override;
 
-  lldb::ValueObjectSP AddressOf(Status &error) override;
+  lldb::ValueObjectSP AddressOf(Error &error) override;
 
   lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
                             AddressType *address_type = nullptr) override;
@@ -153,7 +137,7 @@ private:
   ValueObjectConstResult(ExecutionContextScope *exe_scope, const Value &value,
                          const ConstString &name, Module *module = nullptr);
 
-  ValueObjectConstResult(ExecutionContextScope *exe_scope, const Status &error);
+  ValueObjectConstResult(ExecutionContextScope *exe_scope, const Error &error);
 
   DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResult);
 };

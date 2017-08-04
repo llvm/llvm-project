@@ -40,9 +40,9 @@ public:
     thread_state_flavor_t flavors[EXC_TYPES_COUNT];
     mach_msg_type_number_t count;
 
-    Status Save(task_t task);
+    Error Save(task_t task);
 
-    Status Restore(task_t task);
+    Error Restore(task_t task);
   };
 
   struct Data {
@@ -96,11 +96,11 @@ public:
 
     bool CatchExceptionRaise(task_t task);
 
-    Status Reply(::pid_t inferior_pid, task_t inferior_task, int signal);
+    Error Reply(::pid_t inferior_pid, task_t inferior_task, int signal);
 
-    Status Receive(mach_port_t receive_port, mach_msg_option_t options,
-                   mach_msg_timeout_t timeout,
-                   mach_port_t notify_port = MACH_PORT_NULL);
+    Error Receive(mach_port_t receive_port, mach_msg_option_t options,
+                  mach_msg_timeout_t timeout,
+                  mach_port_t notify_port = MACH_PORT_NULL);
 
     void Dump(Stream &stream) const;
 

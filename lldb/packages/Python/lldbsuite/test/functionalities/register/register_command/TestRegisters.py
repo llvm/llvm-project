@@ -18,7 +18,6 @@ from lldbsuite.test import lldbutil
 class RegisterCommandsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         TestBase.setUp(self)
@@ -30,6 +29,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
         self.build()
@@ -59,6 +59,7 @@ class RegisterCommandsTestCase(TestBase):
     # problem
     @skipIfTargetAndroid(archs=["i386"])
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
         self.build()
@@ -69,6 +70,7 @@ class RegisterCommandsTestCase(TestBase):
     @expectedFailureAndroid(archs=["i386"])
     @skipIfFreeBSD  # llvm.org/pr25057
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
         self.build()
@@ -76,6 +78,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
         self.build()
@@ -140,10 +143,17 @@ class RegisterCommandsTestCase(TestBase):
         # This intentionally checks the host platform rather than the target
         # platform as logging is host side.
         self.platform = ""
-        if (sys.platform.startswith("freebsd") or
-                sys.platform.startswith("linux") or
-                sys.platform.startswith("netbsd")):
-            self.platform = "posix"
+        if sys.platform.startswith("darwin"):
+            self.platform = ""  # TODO: add support for "log enable darwin registers"
+
+        if sys.platform.startswith("freebsd"):
+            self.platform = "freebsd"
+
+        if sys.platform.startswith("linux"):
+            self.platform = "linux"
+
+        if sys.platform.startswith("netbsd"):
+            self.platform = "netbsd"
 
         if self.platform != "":
             self.log_file = os.path.join(os.getcwd(), 'TestRegisters.log')

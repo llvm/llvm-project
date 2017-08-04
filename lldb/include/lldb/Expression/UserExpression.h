@@ -96,7 +96,8 @@ public:
   virtual bool Parse(DiagnosticManager &diagnostic_manager,
                      ExecutionContext &exe_ctx,
                      lldb_private::ExecutionPolicy execution_policy,
-                     bool keep_result_in_memory, bool generate_debug_info) = 0;
+                     bool keep_result_in_memory, bool generate_debug_info,
+                     uint32_t line_offset) = 0;
 
   virtual bool CanInterpret() = 0;
 
@@ -213,6 +214,8 @@ public:
     return lldb::ExpressionVariableSP();
   }
 
+  // FIXME: This doesn't make sense in UserExpression.  It is only used in
+  // UserExpression::Evaluate.
   virtual lldb::ModuleSP GetJITModule() { return lldb::ModuleSP(); }
 
   //------------------------------------------------------------------
@@ -259,13 +262,13 @@ public:
   static lldb::ExpressionResults
   Evaluate(ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
-           lldb::ValueObjectSP &result_valobj_sp, Status &error,
+           lldb::ValueObjectSP &result_valobj_sp, Error &error,
            uint32_t line_offset = 0, std::string *fixed_expression = nullptr,
            lldb::ModuleSP *jit_module_sp_ptr = nullptr);
 
-  static const Status::ValueType kNoResult =
+  static const Error::ValueType kNoResult =
       0x1001; ///< ValueObject::GetError() returns this if there is no result
-              /// from the expression.
+              ///from the expression.
 
   const char *GetFixedText() {
     if (m_fixed_text.empty())
@@ -281,7 +284,7 @@ protected:
             lldb::ExpressionVariableSP &result) = 0;
 
   static lldb::addr_t GetObjectPointer(lldb::StackFrameSP frame_sp,
-                                       ConstString &object_name, Status &err);
+                                       ConstString &object_name, Error &err);
 
   //------------------------------------------------------------------
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the

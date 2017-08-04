@@ -22,12 +22,12 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -180,10 +180,10 @@ bool PlatformWindows::GetModuleSpec(const FileSpec &module_file_spec,
   return Platform::GetModuleSpec(module_file_spec, arch, module_spec);
 }
 
-Status PlatformWindows::ResolveExecutable(
+Error PlatformWindows::ResolveExecutable(
     const ModuleSpec &ms, lldb::ModuleSP &exe_module_sp,
     const FileSpecList *module_search_paths_ptr) {
-  Status error;
+  Error error;
   // Nothing special to do here, just use the actual file and architecture
 
   char exe_path[PATH_MAX];
@@ -323,8 +323,8 @@ bool PlatformWindows::IsConnected() const {
   return false;
 }
 
-Status PlatformWindows::ConnectRemote(Args &args) {
-  Status error;
+Error PlatformWindows::ConnectRemote(Args &args) {
+  Error error;
   if (IsHost()) {
     error.SetErrorStringWithFormat(
         "can't connect to the host platform '%s', always connected",
@@ -353,8 +353,8 @@ Status PlatformWindows::ConnectRemote(Args &args) {
   return error;
 }
 
-Status PlatformWindows::DisconnectRemote() {
-  Status error;
+Error PlatformWindows::DisconnectRemote() {
+  Error error;
 
   if (IsHost()) {
     error.SetErrorStringWithFormat(
@@ -396,8 +396,8 @@ PlatformWindows::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   return match_count;
 }
 
-Status PlatformWindows::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
+Error PlatformWindows::LaunchProcess(ProcessLaunchInfo &launch_info) {
+  Error error;
   if (IsHost()) {
     error = Platform::LaunchProcess(launch_info);
   } else {
@@ -411,7 +411,7 @@ Status PlatformWindows::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
 ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
                                         Debugger &debugger, Target *target,
-                                        Status &error) {
+                                        Error &error) {
   // Windows has special considerations that must be followed when launching or
   // attaching to a process.  The
   // key requirement is that when launching or attaching to a process, you must
@@ -457,7 +457,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
 
 lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
                                         Debugger &debugger, Target *target,
-                                        Status &error) {
+                                        Error &error) {
   error.Clear();
   lldb::ProcessSP process_sp;
   if (!IsHost()) {
@@ -516,9 +516,9 @@ const char *PlatformWindows::GetGroupName(uint32_t gid) {
   return nullptr;
 }
 
-Status PlatformWindows::GetFileWithUUID(const FileSpec &platform_file,
-                                        const UUID *uuid_ptr,
-                                        FileSpec &local_file) {
+Error PlatformWindows::GetFileWithUUID(const FileSpec &platform_file,
+                                       const UUID *uuid_ptr,
+                                       FileSpec &local_file) {
   if (IsRemote()) {
     if (m_remote_platform_sp)
       return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
@@ -527,14 +527,14 @@ Status PlatformWindows::GetFileWithUUID(const FileSpec &platform_file,
 
   // Default to the local case
   local_file = platform_file;
-  return Status();
+  return Error();
 }
 
-Status PlatformWindows::GetSharedModule(
+Error PlatformWindows::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
-  Status error;
+  Error error;
   module_sp.reset();
 
   if (IsRemote()) {

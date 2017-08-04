@@ -725,47 +725,6 @@ def get_crashed_threads(test, process):
             threads.append(thread)
     return threads
 
-def run_to_source_breakpoint(test, bkpt_pattern, source_spec, launch_info = None, exe_name = "a.out", in_cwd = True):
-    """Start up a target, using exe_name as the executable, and run it to 
-       a breakpoint set by source regex bkpt_pattern.
-       If you want to pass in launch arguments or environment variables, you can optionally pass in 
-       an SBLaunchInfo.  If you do that, remember to set the working directory as well.
-       If your executable isn't called a.out, you can pass that in.  And if your executable isn't
-       in the CWD, pass in the absolute path to the executable in exe_name, and set in_cwd to False.
-       If the target isn't valid, the breakpoint isn't found, or hit, the
-       function will cause a testsuite failure.
-       If successful it returns a tuple with the target process and thread that hit the breakpoint."""
-
-    if in_cwd:
-        exe = os.path.join(os.getcwd(), exe_name)
-    
-    # Create the target
-    target = test.dbg.CreateTarget(exe)
-    test.assertTrue(target, "Target: %s is not valid."%(exe_name))
-
-    # Set the breakpoints
-    breakpoint = target.BreakpointCreateBySourceRegex(
-            bkpt_pattern, source_spec)
-    test.assertTrue(breakpoint.GetNumLocations() > 0, 
-                    'No locations found for source breakpoint: "%s"'%(bkpt_pattern))
-
-    # Launch the process, and do not stop at the entry point.
-    if not launch_info:
-        launch_info = lldb.SBLaunchInfo(None)
-        launch_info.SetWorkingDirectory(test.get_process_working_directory())
-
-    error = lldb.SBError()
-    process = target.Launch(launch_info, error)
-
-    test.assertTrue(process, "Could not create a valid process for %s: %s"%(exe_name, error.GetCString()))
-
-    # Frame #0 should be at our breakpoint.
-    threads = get_threads_stopped_at_breakpoint(
-                process, breakpoint)
-
-    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
-    thread = threads[0]
-    return (target, process, thread, breakpoint)
 
 def continue_to_breakpoint(process, bkpt):
     """ Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""
@@ -1182,6 +1141,72 @@ class RecursiveDecentFormatter(BasicFormatter):
                         self, child, buffer=output, indent=new_indent)
 
         return output.getvalue()
+
+
+def check_variable(
+        test,
+        valobj,
+        use_dynamic=False,
+        summary=None,
+        value=None,
+        typename=None,
+        num_children=None,
+        use_synthetic=True):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    if use_dynamic:
+        valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
+        test.assertTrue(
+            valobj.IsValid(),
+            "dynamic value of %s is not valid" %
+            (valobj.GetName() if valobj else "<unknown>"))
+        test.assertTrue(
+            valobj.IsDynamic(),
+            "dynamic value of %s is not dynamic" %
+            (valobj.GetName() if valobj else "<unknown>"))
+    if use_synthetic:
+        valobj.SetPreferSyntheticValue(True)
+    if summary:
+        test.assertTrue(
+            valobj.GetSummary() == summary,
+            "expected summary: '%s' - actual summary: '%s'" %
+            (summary,
+             valobj.GetSummary() if valobj else "<unknown>"))
+    if value:
+        test.assertTrue(
+            valobj.GetValue() == value, "expected value: '%s' - actual value: '%s'" %
+            (value, valobj.GetValue() if valobj else "<unknown>"))
+    if typename:
+        test.assertTrue(
+            valobj.GetTypeName() == typename,
+            "expected typename: '%s' - actual typename: '%s'" %
+            (typename,
+             valobj.GetTypeName() if valobj else "<unknown>"))
+    if num_children:
+        test.assertTrue(
+            valobj.GetNumChildren() == num_children,
+            "expected num children: '%s' - actual num children: '%s'" %
+            (num_children,
+             valobj.GetNumChildren() if valobj else "<unknown>"))
+
+
+def check_children(test, valobj, thecallable):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    i = 0
+    while i < valobj.GetNumChildren():
+        child = valobj.GetChildAtIndex(i)
+        test.assertTrue(
+            thecallable(
+                child,
+                i),
+            "child %d failed the test" %
+            (i))
+        i = i + 1
 
 # ===========================================================
 # Utility functions for path manipulation on remote platforms

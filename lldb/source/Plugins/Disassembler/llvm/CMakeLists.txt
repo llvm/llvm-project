@@ -8,7 +8,5 @@ add_lldb_library(lldbPluginDisassemblerLLVM PLUGIN
   LINK_COMPONENTS
     ${LLVM_TARGETS_TO_BUILD}
     MC
-    MCDisassembler
-    RuntimeDyld
     Support
   )

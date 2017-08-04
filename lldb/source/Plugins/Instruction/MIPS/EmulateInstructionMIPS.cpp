@@ -1,4 +1,5 @@
-//===-- EmulateInstructionMIPS.cpp -------------------------------*- C++-*-===//
+//===-- EmulateInstructionMIPS.cpp -------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,14 +14,13 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Stream.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -63,10 +63,10 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     const lldb_private::ArchSpec &arch)
     : EmulateInstruction(arch) {
   /* Create instance of llvm::MCDisassembler */
-  std::string Status;
+  std::string Error;
   llvm::Triple triple = arch.GetTriple();
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
+      llvm::TargetRegistry::lookupTarget(triple.getTriple(), Error);
 
 /*
  * If we fail to get the target then we haven't registered it. The
@@ -83,7 +83,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     LLVMInitializeMipsAsmPrinter();
     LLVMInitializeMipsTargetMC();
     LLVMInitializeMipsDisassembler();
-    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
+    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), Error);
   }
 #endif
 
@@ -1019,7 +1019,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
 
   if (EmulateInstruction::SetInstruction(insn_opcode, inst_addr, target)) {
     if (inst_addr.GetAddressClass() == eAddressClassCodeAlternateISA) {
-      Status error;
+      Error error;
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
 
       /*
@@ -1101,10 +1101,13 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
    * mc_insn.getOpcode() returns decoded opcode. However to make use
    * of llvm::Mips::<insn> we would need "MipsGenInstrInfo.inc".
   */
-  const char *op_name = m_insn_info->getName(mc_insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(mc_insn.getOpcode());
 
-  if (op_name == NULL)
+  if (op_name_ref.empty())
     return false;
+
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   /*
    * Decoding has been done already. Just get the call-back function
@@ -1297,7 +1300,7 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
     context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Status error;
+    Error error;
 
     if (!ReadRegister(&reg_info_base, data_src))
       return false;
@@ -1373,7 +1376,10 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
   bool success = false;
   uint64_t result;
   uint8_t src, dst, rt;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   dst = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
@@ -1563,7 +1569,7 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
     context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Status error;
+    Error error;
 
     if (!ReadRegister(&reg_info_base, data_src))
       return false;
@@ -1646,7 +1652,7 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Status error;
+    Error error;
 
     if (!ReadRegister(&reg_info_base, data_src))
       return false;
@@ -1834,7 +1840,9 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs, rt;
   int32_t offset, pc, target = 0, rs_val, rt_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   rt = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
@@ -1886,7 +1894,11 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs, rt;
   int32_t offset, pc, target = 0, rs_val, rt_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
+
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -1969,7 +1981,9 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link_C(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2038,7 +2052,9 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2088,7 +2104,9 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2144,7 +2162,9 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   uint32_t rs;
   int32_t offset, pc, target = 0;
   int32_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -2236,7 +2256,9 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
   bool success = false;
   int32_t target = 0;
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
   bool update_ra = false;
   uint32_t ra_offset = 0;
 
@@ -2336,7 +2358,9 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
 bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
   bool success = false;
   uint32_t ra_offset = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   uint32_t rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
 
@@ -2375,7 +2399,9 @@ bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
 bool EmulateInstructionMIPS::Emulate_JALx(llvm::MCInst &insn) {
   bool success = false;
   uint32_t offset = 0, target = 0, pc = 0, ra_offset = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   /*
    * JALS target
@@ -2735,7 +2761,9 @@ bool EmulateInstructionMIPS::Emulate_FP_branch(llvm::MCInst &insn) {
   bool success = false;
   uint32_t cc, fcsr;
   int32_t pc, offset, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -2860,7 +2888,9 @@ bool EmulateInstructionMIPS::Emulate_3D_branch(llvm::MCInst &insn) {
   bool success = false;
   uint32_t cc, fcsr;
   int32_t pc, offset, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();

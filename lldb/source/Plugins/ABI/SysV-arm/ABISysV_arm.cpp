@@ -18,6 +18,8 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -29,8 +31,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -1327,7 +1327,7 @@ size_t ABISysV_arm::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_arm::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
+ABISysV_arm::CreateInstance(const ArchSpec &arch) {
   static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
@@ -1336,7 +1336,7 @@ ABISysV_arm::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
     if ((arch_type == llvm::Triple::arm) ||
         (arch_type == llvm::Triple::thumb)) {
       if (!g_abi_sp)
-        g_abi_sp.reset(new ABISysV_arm(process_sp));
+        g_abi_sp.reset(new ABISysV_arm);
       return g_abi_sp;
     }
   }
@@ -1518,7 +1518,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 
           // Arguments 5 on up are on the stack
           const uint32_t arg_byte_size = (bit_width + (8 - 1)) / 8;
-          Status error;
+          Error error;
           if (!exe_ctx.GetProcessRef().ReadScalarIntegerFromMemory(
                   sp, arg_byte_size, is_signed, value->GetScalar(), error))
             return false;
@@ -1534,7 +1534,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 static bool GetReturnValuePassedInMemory(Thread &thread,
                                          RegisterContext *reg_ctx,
                                          size_t byte_size, Value &value) {
-  Status error;
+  Error error;
   DataBufferHeap buffer(byte_size, 0);
 
   const RegisterInfo *r0_reg_info =
@@ -1815,7 +1815,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
       // Make sure we have enough room in "data_sp"
       if ((data_offset + vfp_byte_size) <= data_sp->GetByteSize()) {
-        Status error;
+        Error error;
         const size_t bytes_copied = reg_value.GetAsMemoryData(
             reg_info, data_sp->GetBytes() + data_offset, vfp_byte_size,
             byte_order, error);
@@ -1846,9 +1846,9 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                         lldb::ValueObjectSP &new_value_sp) {
-  Status error;
+Error ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                        lldb::ValueObjectSP &new_value_sp) {
+  Error error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -1872,7 +1872,7 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Status data_error;
+    Error data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(

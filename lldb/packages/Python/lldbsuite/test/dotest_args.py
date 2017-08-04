@@ -69,10 +69,19 @@ def create_parser():
         '-A',
         '--arch',
         metavar='arch',
-        dest='arch',
+        action='append',
+        dest='archs',
         help=textwrap.dedent('''Specify the architecture(s) to test. This option can be specified more than once'''))
-    group.add_argument('-C', '--compiler', metavar='compiler', dest='compiler', help=textwrap.dedent(
+    group.add_argument('-C', '--compiler', metavar='compiler', dest='compilers', action='append', help=textwrap.dedent(
         '''Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times.'''))
+    group.add_argument(
+        '--swift-compiler',
+        dest='swiftcompiler',
+        help='The path to a valid Swift compiler')
+    group.add_argument(
+        '--swift-library',
+        dest='swiftlibrary',
+        help='The path to a folder that contains valid Swift library files')
     if sys.platform == 'darwin':
         group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="macosx", help=textwrap.dedent(
             '''Specify the name of the Apple SDK (macosx, macosx.internal, iphoneos, iphoneos.internal, or path to SDK) and use the appropriate tools from that SDK's toolchain.'''))

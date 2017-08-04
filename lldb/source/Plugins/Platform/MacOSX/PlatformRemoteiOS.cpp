@@ -22,10 +22,10 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

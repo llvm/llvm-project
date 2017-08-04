@@ -11,14 +11,13 @@
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #endif
 
+#include "lldb/Core/Log.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/SafeMachO.h"
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -153,7 +152,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     // the lldb driver.
     raw_path.append("/../bin");
     FileSpec support_dir_spec(raw_path, true);
-    if (!llvm::sys::fs::is_directory(support_dir_spec.GetPath())) {
+    if (!support_dir_spec.Exists() || !support_dir_spec.IsDirectory()) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
       if (log)
         log->Printf("HostInfoMacOSX::%s(): failed to find support directory",
@@ -176,6 +175,11 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   file_spec.GetDirectory().SetString(
       llvm::StringRef(raw_path.c_str(), raw_path.size()));
   return (bool)file_spec.GetDirectory();
+}
+
+bool HostInfoMacOSX::ComputeSupportFileDirectory(FileSpec &file_spec) {
+  // The bundle's Resources directory, just like for executables
+  return HostInfoMacOSX::ComputeSupportExeDirectory(file_spec);
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
@@ -241,6 +245,26 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &file_spec) {
   raw_path.resize(framework_pos);
   raw_path.append("/Resources/Clang");
   
+  file_spec.SetFile(raw_path.c_str(), true);
+  return true;
+}
+
+bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
+  FileSpec lldb_file_spec;
+  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+    return false;
+
+  std::string raw_path = lldb_file_spec.GetPath();
+
+  size_t framework_pos = raw_path.find("LLDB.framework");
+  if (framework_pos == std::string::npos)
+    return HostInfoPosix::ComputeSwiftDirectory(file_spec);
+
+  if (framework_pos != std::string::npos) {
+    framework_pos += strlen("LLDB.framework");
+    raw_path.resize(framework_pos);
+    raw_path.append("/Resources/Swift");
+  }
   file_spec.SetFile(raw_path.c_str(), true);
   return true;
 }
@@ -335,3 +359,5 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
     }
   }
 }
+
+uint32_t HostInfoMacOSX::GetMaxThreadNameLength() { return 64; }

@@ -10,13 +10,16 @@
 #ifndef liblldb_OptionValueEnumeration_h_
 #define liblldb_OptionValueEnumeration_h_
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Interpreter/OptionValue.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/lldb-private-types.h"
 
 namespace lldb_private {
 
@@ -44,10 +47,10 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  Status
+  Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
+  Error
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 

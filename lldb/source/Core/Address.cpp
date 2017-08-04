@@ -9,53 +9,23 @@
 
 #include "lldb/Core/Address.h"
 
-#include "lldb/Core/ArchSpec.h" // for ArchSpec
-#include "lldb/Core/DumpDataExtractor.h"
+// C Includes
+// C++ Includes
+#include "llvm/ADT/Triple.h"
+
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/Declaration.h" // for Declaration
-#include "lldb/Symbol/LineEntry.h"   // for LineEntry
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/Symbol.h"        // for Symbol
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
 #include "lldb/Symbol/SymbolVendor.h"
-#include "lldb/Symbol/Symtab.h" // for Symtab
-#include "lldb/Symbol/Type.h"   // for Type
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextScope
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"   // for ConstString
-#include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Endian.h"        // for InlHostByteOrder
-#include "lldb/Utility/FileSpec.h"      // for FileSpec
-#include "lldb/Utility/Status.h"        // for Status
-#include "lldb/Utility/Stream.h"        // for Stream
-#include "lldb/Utility/StreamString.h"  // for StreamString
-
-#include "llvm/ADT/StringRef.h" // for StringRef
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
-
-#include <cstdint> // for uint8_t, uint32_t
-#include <memory>  // for shared_ptr, operator!=
-#include <vector>  // for vector
-
-#include <assert.h>   // for assert
-#include <inttypes.h> // for PRIu64, PRIx64
-#include <string.h>   // for size_t, strlen
-
-namespace lldb_private {
-class CompileUnit;
-}
-namespace lldb_private {
-class Function;
-}
 
 using namespace lldb;
 using namespace lldb_private;
@@ -67,7 +37,7 @@ static size_t ReadBytes(ExecutionContextScope *exe_scope,
 
   TargetSP target_sp(exe_scope->CalculateTarget());
   if (target_sp) {
-    Status error;
+    Error error;
     bool prefer_file_cache = false;
     return target_sp->ReadMemory(address, prefer_file_cache, dst, dst_len,
                                  error);
@@ -173,15 +143,15 @@ static bool DumpUInt(ExecutionContextScope *exe_scope, const Address &address,
     if (GetByteOrderAndAddressSize(exe_scope, address, byte_order, addr_size)) {
       DataExtractor data(&buf.front(), buf.size(), byte_order, addr_size);
 
-      DumpDataExtractor(data, strm,
-                        0,                    // Start offset in "data"
-                        eFormatHex,           // Print as characters
-                        buf.size(),           // Size of item
-                        1,                    // Items count
-                        UINT32_MAX,           // num per line
-                        LLDB_INVALID_ADDRESS, // base address
-                        0,                    // bitfield bit size
-                        0);                   // bitfield bit offset
+      data.Dump(strm,
+                0,                    // Start offset in "data"
+                eFormatHex,           // Print as characters
+                buf.size(),           // Size of item
+                1,                    // Items count
+                UINT32_MAX,           // num per line
+                LLDB_INVALID_ADDRESS, // base address
+                0,                    // bitfield bit size
+                0);                   // bitfield bit offset
 
       return true;
     }
@@ -211,16 +181,16 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
     if (len > bytes_read)
       len = bytes_read;
 
-    DumpDataExtractor(data, strm,
-                      0,                    // Start offset in "data"
-                      eFormatChar,          // Print as characters
-                      1,                    // Size of item (1 byte for a char!)
-                      len,                  // How many bytes to print?
-                      UINT32_MAX,           // num per line
-                      LLDB_INVALID_ADDRESS, // base address
-                      0,                    // bitfield bit size
+    data.Dump(strm,
+              0,                    // Start offset in "data"
+              eFormatChar,          // Print as characters
+              1,                    // Size of item (1 byte for a char!)
+              len,                  // How many bytes to print?
+              UINT32_MAX,           // num per line
+              LLDB_INVALID_ADDRESS, // base address
+              0,                    // bitfield bit size
 
-                      0); // bitfield bit offset
+              0); // bitfield bit offset
 
     total_len += bytes_read;
 
@@ -322,7 +292,7 @@ addr_t Address::GetCallableLoadAddress(Target *target, bool is_indirect) const {
 
   if (is_indirect && target) {
     ProcessSP processSP = target->GetProcessSP();
-    Status error;
+    Error error;
     if (processSP) {
       code_addr = processSP->ResolveIndirectFunction(this, error);
       if (!error.Success())
@@ -361,9 +331,8 @@ addr_t Address::GetOpcodeLoadAddress(Target *target,
 }
 
 bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
-                                   AddressClass addr_class,
-                                   bool allow_section_end) {
-  if (SetLoadAddress(load_addr, target, allow_section_end)) {
+                                   AddressClass addr_class) {
+  if (SetLoadAddress(load_addr, target)) {
     if (target) {
       if (addr_class == eAddressClassInvalid)
         addr_class = GetAddressClass();
@@ -735,7 +704,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     if (process) {
       addr_t load_addr = GetLoadAddress(target);
       if (load_addr != LLDB_INVALID_ADDRESS) {
-        Status memory_error;
+        Error memory_error;
         addr_t dereferenced_load_addr =
             process->ReadPointerFromMemory(load_addr, memory_error);
         if (dereferenced_load_addr != LLDB_INVALID_ADDRESS) {
@@ -1002,10 +971,9 @@ AddressClass Address::GetAddressClass() const {
   return eAddressClassUnknown;
 }
 
-bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
-                             bool allow_section_end) {
-  if (target && target->GetSectionLoadList().ResolveLoadAddress(
-                    load_addr, *this, allow_section_end))
+bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target) {
+  if (target &&
+      target->GetSectionLoadList().ResolveLoadAddress(load_addr, *this))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;

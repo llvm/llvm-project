@@ -18,6 +18,8 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -29,8 +31,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -1326,7 +1326,7 @@ size_t ABIMacOSX_arm::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABIMacOSX_arm::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
+ABIMacOSX_arm::CreateInstance(const ArchSpec &arch) {
   static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
@@ -1335,7 +1335,7 @@ ABIMacOSX_arm::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
     if ((arch_type == llvm::Triple::arm) ||
         (arch_type == llvm::Triple::thumb)) {
       if (!g_abi_sp)
-        g_abi_sp.reset(new ABIMacOSX_arm(process_sp));
+        g_abi_sp.reset(new ABIMacOSX_arm);
       return g_abi_sp;
     }
   }
@@ -1533,7 +1533,7 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 
           // Arguments 5 on up are on the stack
           const uint32_t arg_byte_size = (bit_width + (8 - 1)) / 8;
-          Status error;
+          Error error;
           if (!exe_ctx.GetProcessRef().ReadScalarIntegerFromMemory(
                   sp, arg_byte_size, is_signed, value->GetScalar(), error))
             return false;
@@ -1546,14 +1546,16 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
   return true;
 }
 
-bool ABIMacOSX_arm::IsArmv7kProcess() const {
+bool ABIMacOSX_arm::IsArmv7kProcess(Thread *thread) const {
   bool is_armv7k = false;
-  ProcessSP process_sp(GetProcessSP());
-  if (process_sp) {
-    const ArchSpec &arch(process_sp->GetTarget().GetArchitecture());
-    const ArchSpec::Core system_core = arch.GetCore();
-    if (system_core == ArchSpec::eCore_arm_armv7k) {
-      is_armv7k = true;
+  if (thread) {
+    ProcessSP process_sp(thread->GetProcess());
+    if (process_sp) {
+      const ArchSpec &arch(process_sp->GetTarget().GetArchitecture());
+      const ArchSpec::Core system_core = arch.GetCore();
+      if (system_core == ArchSpec::eCore_arm_armv7k) {
+        is_armv7k = true;
+      }
     }
   }
   return is_armv7k;
@@ -1586,7 +1588,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
     default:
       return return_valobj_sp;
     case 128:
-      if (IsArmv7kProcess()) {
+      if (IsArmv7kProcess(&thread)) {
         // "A composite type not larger than 16 bytes is returned in r0-r3. The
         // format is
         // as if the result had been stored in memory at a word-aligned address
@@ -1617,7 +1619,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
                   reg_ctx->ReadRegister(r1_reg_info, r1_reg_value) &&
                   reg_ctx->ReadRegister(r2_reg_info, r2_reg_value) &&
                   reg_ctx->ReadRegister(r3_reg_info, r3_reg_value)) {
-                Status error;
+                Error error;
                 if (r0_reg_value.GetAsMemoryData(r0_reg_info,
                                                  heap_data_ap->GetBytes() + 0,
                                                  4, byte_order, error) &&
@@ -1700,9 +1702,9 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                           lldb::ValueObjectSP &new_value_sp) {
-  Status error;
+Error ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                          lldb::ValueObjectSP &new_value_sp) {
+  Error error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -1726,7 +1728,7 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Status data_error;
+    Error data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(
@@ -1753,7 +1755,8 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             set_it_simple = true;
         }
       }
-    } else if (num_bytes <= 16 && IsArmv7kProcess()) {
+    } else if (num_bytes <= 16 &&
+               IsArmv7kProcess(frame_sp->GetThread().get())) {
       // "A composite type not larger than 16 bytes is returned in r0-r3. The
       // format is
       // as if the result had been stored in memory at a word-aligned address

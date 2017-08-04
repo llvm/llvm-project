@@ -72,7 +72,7 @@ private:
   friend class SBTarget;
   friend class SBValue;
 
-  std::weak_ptr<lldb_private::Watchpoint> m_opaque_wp;
+  lldb::WatchpointSP m_opaque_sp;
 };
 
 } // namespace lldb

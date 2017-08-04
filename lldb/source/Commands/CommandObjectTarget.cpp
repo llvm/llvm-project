@@ -16,9 +16,9 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
-#include "lldb/Host/OptionParser.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Interpreter/Args.h"
@@ -49,9 +49,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Utility/Timer.h"
-
-#include "llvm/Support/FileSystem.h"
 
 // C Includes
 // C++ Includes
@@ -269,8 +266,8 @@ protected:
       }
 
       const char *file_path = command.GetArgumentAtIndex(0);
-      static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-      Timer scoped_timer(func_cat, "(lldb) target create '%s'", file_path);
+      Timer scoped_timer(LLVM_PRETTY_FUNCTION, "(lldb) target create '%s'",
+                         file_path);
       FileSpec file_spec;
 
       if (file_path)
@@ -284,7 +281,7 @@ protected:
       llvm::StringRef arch_cstr = m_arch_option.GetArchitectureName();
       const bool get_dependent_files =
           m_add_dependents.GetOptionValue().GetCurrentValue();
-      Status error(debugger.GetTargetList().CreateTarget(
+      Error error(debugger.GetTargetList().CreateTarget(
           debugger, file_path, arch_cstr, get_dependent_files, nullptr,
           target_sp));
 
@@ -303,7 +300,7 @@ protected:
             if (file_spec && file_spec.Exists()) {
               // if the remote file does not exist, push it there
               if (!platform_sp->GetFileExists(remote_file)) {
-                Status err = platform_sp->PutFile(file_spec, remote_file);
+                Error err = platform_sp->PutFile(file_spec, remote_file);
                 if (err.Fail()) {
                   result.AppendError(err.AsCString());
                   result.SetStatus(eReturnStatusFailed);
@@ -324,7 +321,7 @@ protected:
               }
               if (file_path) {
                 // copy the remote file to the local file
-                Status err = platform_sp->GetFile(remote_file, file_spec);
+                Error err = platform_sp->GetFile(remote_file, file_spec);
                 if (err.Fail()) {
                   result.AppendError(err.AsCString());
                   result.SetStatus(eReturnStatusFailed);
@@ -839,7 +836,7 @@ protected:
           matches = target->GetImages().FindGlobalVariables(
               regex, true, UINT32_MAX, variable_list);
         } else {
-          Status error(Variable::GetValuesForVariableExpressionPath(
+          Error error(Variable::GetValuesForVariableExpressionPath(
               arg, m_exe_ctx.GetBestExecutionContextScope(),
               GetVariableCallback, target, variable_list, valobj_list));
           matches = variable_list.GetSize();
@@ -1413,14 +1410,15 @@ static size_t DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list) {
 }
 
 static void DumpModuleSymtab(CommandInterpreter &interpreter, Stream &strm,
-                             Module *module, SortOrder sort_order) {
+                             Module *module, SortOrder sort_order,
+                             Mangled::NamePreference name_preference) {
   if (module) {
     SymbolVendor *sym_vendor = module->GetSymbolVendor();
     if (sym_vendor) {
       Symtab *symtab = sym_vendor->GetSymtab();
       if (symtab)
         symtab->Dump(&strm, interpreter.GetExecutionContext().GetTargetPtr(),
-                     sort_order);
+                     sort_order, name_preference);
     }
   }
 }
@@ -1970,7 +1968,8 @@ static OptionEnumValueElement g_sort_option_enumeration[4] = {
 
 static OptionDefinition g_target_modules_dump_symtab_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "sort", 's', OptionParser::eRequiredArgument, nullptr, g_sort_option_enumeration, 0, eArgTypeSortOrder, "Supply a sort order when dumping the symbol table." }
+    { LLDB_OPT_SET_1, false, "sort",               's', OptionParser::eRequiredArgument, nullptr, g_sort_option_enumeration, 0, eArgTypeSortOrder, "Supply a sort order when dumping the symbol table." },
+    { LLDB_OPT_SET_1, false, "show-mangled-names", 'm', OptionParser::eNoArgument,       nullptr, nullptr,                   0, eArgTypeNone,      "Do not demangle symbol names before showing them." },
     // clang-format on
 };
 
@@ -1989,16 +1988,23 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_sort_order(eSortOrderNone) {}
+    CommandOptions()
+        : Options(), m_sort_order(eSortOrderNone),
+          m_prefer_mangled(false, false) {}
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'm':
+        m_prefer_mangled.SetCurrentValue(true);
+        m_prefer_mangled.SetOptionWasSet();
+        break;
+
       case 's':
         m_sort_order = (SortOrder)Args::StringToOptionEnum(
             option_arg, GetDefinitions()[option_idx].enum_values,
@@ -2015,6 +2021,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_sort_order = eSortOrderNone;
+      m_prefer_mangled.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2022,6 +2029,7 @@ public:
     }
 
     SortOrder m_sort_order;
+    OptionValueBoolean m_prefer_mangled;
   };
 
 protected:
@@ -2034,6 +2042,10 @@ protected:
       return false;
     } else {
       uint32_t num_dumped = 0;
+
+      Mangled::NamePreference preference =
+          (m_options.m_prefer_mangled ? Mangled::ePreferMangled
+                                      : Mangled::ePreferDemangled);
 
       uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
       result.GetOutputStream().SetAddressByteSize(addr_byte_size);
@@ -2057,7 +2069,7 @@ protected:
             DumpModuleSymtab(
                 m_interpreter, result.GetOutputStream(),
                 target->GetImages().GetModulePointerAtIndexUnlocked(image_idx),
-                m_options.m_sort_order);
+                m_options.m_sort_order, preference);
           }
         } else {
           result.AppendError("the target has no associated executable images");
@@ -2083,7 +2095,7 @@ protected:
                 }
                 num_dumped++;
                 DumpModuleSymtab(m_interpreter, result.GetOutputStream(),
-                                 module, m_options.m_sort_order);
+                                 module, m_options.m_sort_order, preference);
               }
             }
           } else
@@ -2515,7 +2527,7 @@ protected:
                   m_symbol_file.GetOptionValue().GetCurrentValue();
             if (!module_spec.GetArchitecture().IsValid())
               module_spec.GetArchitecture() = target->GetArchitecture();
-            Status error;
+            Error error;
             ModuleSP module_sp(target->GetSharedModule(module_spec, &error));
             if (!module_sp) {
               const char *error_cstr = error.AsCString();
@@ -2570,12 +2582,6 @@ public:
         m_option_group(),
         m_file_option(LLDB_OPT_SET_1, false, "file", 'f', 0, eArgTypeName,
                       "Fullpath or basename for module to load.", ""),
-        m_load_option(LLDB_OPT_SET_1, false, "load", 'l',
-                      "Write file contents to the memory.", false, true),
-        m_pc_option(LLDB_OPT_SET_1, false, "--set-pc-to-entry", 'p',
-                    "Set PC to the entry point."
-                    " Only applicable with '--load' option.",
-                    false, true),
         m_slide_option(LLDB_OPT_SET_1, false, "slide", 's', 0, eArgTypeOffset,
                        "Set the load address for all sections to be the "
                        "virtual address in the file plus the offset.",
@@ -2583,8 +2589,6 @@ public:
     m_option_group.Append(&m_uuid_option_group, LLDB_OPT_SET_ALL,
                           LLDB_OPT_SET_1);
     m_option_group.Append(&m_file_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
-    m_option_group.Append(&m_load_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
-    m_option_group.Append(&m_pc_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_slide_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
   }
@@ -2596,8 +2600,6 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-    const bool load = m_load_option.GetOptionValue().GetCurrentValue();
-    const bool set_pc = m_pc_option.GetOptionValue().GetCurrentValue();
     if (target == nullptr) {
       result.AppendError("invalid target, create a debug target using the "
                          "'target create' command");
@@ -2607,21 +2609,6 @@ protected:
       const size_t argc = args.GetArgumentCount();
       ModuleSpec module_spec;
       bool search_using_module_spec = false;
-
-      // Allow "load" option to work without --file or --uuid
-      // option.
-      if (load) {
-        if (!m_file_option.GetOptionValue().OptionWasSet() &&
-            !m_uuid_option_group.GetOptionValue().OptionWasSet()) {
-          ModuleList &module_list = target->GetImages();
-          if (module_list.GetSize() == 1) {
-            search_using_module_spec = true;
-            module_spec.GetFileSpec() =
-                module_list.GetModuleAtIndex(0)->GetFileSpec();
-          }
-        }
-      }
-
       if (m_file_option.GetOptionValue().OptionWasSet()) {
         search_using_module_spec = true;
         const char *arg_cstr = m_file_option.GetOptionValue().GetCurrentValue();
@@ -2749,13 +2736,6 @@ protected:
                   if (process)
                     process->Flush();
                 }
-                if (load) {
-                  Status error = module->LoadInMemory(*target, set_pc);
-                  if (error.Fail()) {
-                    result.AppendError(error.AsCString());
-                    return false;
-                  }
-                }
               } else {
                 module->GetFileSpec().GetPath(path, sizeof(path));
                 result.AppendErrorWithFormat(
@@ -2818,8 +2798,6 @@ protected:
   OptionGroupOptions m_option_group;
   OptionGroupUUID m_uuid_option_group;
   OptionGroupString m_file_option;
-  OptionGroupBoolean m_load_option;
-  OptionGroupBoolean m_pc_option;
   OptionGroupUInt64 m_slide_option;
 };
 
@@ -2857,9 +2835,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
 
       const int short_option = m_getopt_table[option_idx].val;
       if (short_option == 'g') {
@@ -3220,9 +3198,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
 
       const int short_option = m_getopt_table[option_idx].val;
 
@@ -3426,23 +3404,6 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (UnwindPlanSP plan_sp =
-              func_unwinders_sp->GetDebugFrameUnwindPlan(*target, 0)) {
-        result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
-        result.GetOutputStream().Printf("\n");
-      }
-
-      if (UnwindPlanSP plan_sp =
-              func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
-                                                                  *thread, 0)) {
-        result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
-        result.GetOutputStream().Printf("\n");
-      }
-
       UnwindPlanSP arm_unwind_sp =
           func_unwinders_sp->GetArmUnwindUnwindPlan(*target, 0);
       if (arm_unwind_sp) {
@@ -3537,9 +3498,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
 
       const int short_option = m_getopt_table[option_idx].val;
 
@@ -3705,7 +3666,7 @@ public:
       break;
     }
 
-    return true;
+    return false;
   }
 
   bool LookupInModule(CommandInterpreter &interpreter, Module *module,
@@ -4131,7 +4092,7 @@ protected:
 
               // Make sure we load any scripting resources that may be embedded
               // in the debug info files in case the platform supports that.
-              Status error;
+              Error error;
               StreamString feedback_stream;
               module_sp->LoadScriptingResourceInTarget(target, error,
                                                        &feedback_stream);
@@ -4156,21 +4117,20 @@ protected:
         module_sp->SetSymbolFileFileSpec(FileSpec());
       }
 
-      namespace fs = llvm::sys::fs;
       if (module_spec.GetUUID().IsValid()) {
         StreamString ss_symfile_uuid;
         module_spec.GetUUID().Dump(&ss_symfile_uuid);
         result.AppendErrorWithFormat(
             "symbol file '%s' (%s) does not match any existing module%s\n",
             symfile_path, ss_symfile_uuid.GetData(),
-            !fs::is_regular_file(symbol_fspec.GetPath())
+            (symbol_fspec.GetFileType() != FileSpec::eFileTypeRegular)
                 ? "\n       please specify the full path to the symbol file"
                 : "");
       } else {
         result.AppendErrorWithFormat(
             "symbol file '%s' does not match any existing module%s\n",
             symfile_path,
-            !fs::is_regular_file(symbol_fspec.GetPath())
+            (symbol_fspec.GetFileType() != FileSpec::eFileTypeRegular)
                 ? "\n       please specify the full path to the symbol file"
                 : "");
       }
@@ -4415,9 +4375,9 @@ public:
       return llvm::makeArrayRef(g_target_stop_hook_add_options);
     }
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {

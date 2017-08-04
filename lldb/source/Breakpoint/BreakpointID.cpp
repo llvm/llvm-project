@@ -15,8 +15,8 @@
 // Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointID.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -98,7 +98,7 @@ BreakpointID::ParseCanonicalReference(llvm::StringRef input) {
   return BreakpointID(bp_id, loc_id);
 }
 
-bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Status &error) {
+bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Error &error) {
   error.Clear();
   if (str.empty())
     return false;

@@ -10,26 +10,11 @@
 #ifndef liblldb_ValueObjectConstResultImpl_h_
 #define liblldb_ValueObjectConstResultImpl_h_
 
-#include "lldb/Utility/ConstString.h"       // for ConstString
-#include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-forward.h"              // for ValueObjectSP
-#include "lldb/lldb-private-enumerations.h" // for AddressType, AddressType...
-#include "lldb/lldb-types.h"                // for addr_t
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, int32_t
-namespace lldb_private {
-class CompilerType;
-}
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
-namespace lldb_private {
-class ValueObject;
-}
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/ValueObject.h"
 
 namespace lldb_private {
 
@@ -45,7 +30,7 @@ public:
 
   virtual ~ValueObjectConstResultImpl() = default;
 
-  lldb::ValueObjectSP Dereference(Status &error);
+  lldb::ValueObjectSP Dereference(Error &error);
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index);
@@ -55,7 +40,7 @@ public:
                             bool can_create,
                             ConstString name_const_str = ConstString());
 
-  lldb::ValueObjectSP AddressOf(Status &error);
+  lldb::ValueObjectSP AddressOf(Error &error);
 
   lldb::addr_t GetLiveAddress() { return m_live_address; }
 

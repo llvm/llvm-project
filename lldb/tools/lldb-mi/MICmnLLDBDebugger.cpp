@@ -17,7 +17,6 @@
 #include "lldb/API/SBTypeCategory.h"
 #include "lldb/API/SBTypeNameSpecifier.h"
 #include "lldb/API/SBTypeSummary.h"
-#include <cassert>
 
 // In-house headers:
 #include "MICmnLLDBDebugSessionInfo.h"

@@ -10,22 +10,9 @@
 #ifndef liblldb_Scalar_h_
 #define liblldb_Scalar_h_
 
-#include "lldb/Utility/Status.h"     // for Status
-#include "lldb/lldb-enumerations.h"  // for Encoding, ByteOrder
-#include "lldb/lldb-private-types.h" // for type128
-
+#include "lldb/lldb-private.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t, int64_t
-
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Stream;
-}
 
 #define NUM_OF_WORDS_INT128 2
 #define BITWIDTH_INT128 128
@@ -146,7 +133,7 @@ public:
   bool GetData(DataExtractor &data, size_t limit_byte_size = UINT32_MAX) const;
 
   size_t GetAsMemoryData(void *dst, size_t dst_len,
-                         lldb::ByteOrder dst_byte_order, Status &error) const;
+                         lldb::ByteOrder dst_byte_order, Error &error) const;
 
   bool IsZero() const;
 
@@ -272,11 +259,11 @@ public:
 
   long double LongDouble(long double fail_value = 0.0) const;
 
-  Status SetValueFromCString(const char *s, lldb::Encoding encoding,
-                             size_t byte_size);
+  Error SetValueFromCString(const char *s, lldb::Encoding encoding,
+                            size_t byte_size);
 
-  Status SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
-                          size_t byte_size);
+  Error SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
+                         size_t byte_size);
 
   static bool UIntValueIsValidForSize(uint64_t uval64, size_t total_byte_size) {
     if (total_byte_size > 8)

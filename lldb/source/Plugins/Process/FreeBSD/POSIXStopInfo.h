@@ -10,9 +10,15 @@
 #ifndef liblldb_POSIXStopInfo_H_
 #define liblldb_POSIXStopInfo_H_
 
-#include "FreeBSDThread.h"
-#include "Plugins/Process/POSIX/CrashReason.h"
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Target/StopInfo.h"
+
+#include "CrashReason.h"
+#include "FreeBSDThread.h"
+
 #include <string>
 
 //===----------------------------------------------------------------------===//

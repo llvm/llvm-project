@@ -10,18 +10,18 @@
 
 #include "NSString.h"
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/ProcessStructReader.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -103,7 +103,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   if (process_sp->GetByteOrder() != lldb::eByteOrderLittle)
     info_bits_location += 3;
 
-  Status error;
+  Error error;
 
   uint8_t info_bits = process_sp->ReadUnsignedIntegerFromMemory(
       info_bits_location, 1, 0, error);
@@ -258,7 +258,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       // in this kind of string, the byte before the string content is a length
       // byte
       // so let's try and use it to handle the embedded NUL case
-      Status error;
+      Error error;
       explicit_length =
           process_sp->ReadUnsignedIntegerFromMemory(location, 1, 0, error);
       if (error.Fail() || explicit_length == 0)
@@ -319,7 +319,7 @@ bool lldb_private::formatters::NSAttributedStringSummaryProvider(
   if (!child_ptr_sp)
     return false;
   DataExtractor data;
-  Status error;
+  Error error;
   child_ptr_sp->GetData(data, error);
   if (error.Fail())
     return false;

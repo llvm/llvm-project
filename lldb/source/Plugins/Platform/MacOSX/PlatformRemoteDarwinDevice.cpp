@@ -15,17 +15,17 @@
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,6 +40,7 @@ PlatformRemoteDarwinDevice::SDKDirectoryInfo::SDKDirectoryInfo(
       ParseVersionBuildDir(dirname_str);
   build.SetString(build_str);
 }
+
 
 //------------------------------------------------------------------
 /// Default Constructor
@@ -75,10 +76,10 @@ void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
   }
 }
 
-Status PlatformRemoteDarwinDevice::ResolveExecutable(
+Error PlatformRemoteDarwinDevice::ResolveExecutable(
     const ModuleSpec &ms, lldb::ModuleSP &exe_module_sp,
     const FileSpecList *module_search_paths_ptr) {
-  Status error;
+  Error error;
   // Nothing special to do here, just use the actual file and architecture
 
   ModuleSpec resolved_module_spec(ms);
@@ -144,7 +145,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
 
 FileSpec::EnumerateDirectoryResult
 PlatformRemoteDarwinDevice::GetContainedFilesIntoVectorOfStringsCallback(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
+    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
   ((PlatformRemoteDarwinDevice::SDKDirectoryInfoCollection *)baton)
       ->push_back(PlatformRemoteDarwinDevice::SDKDirectoryInfo(file_spec));
   return FileSpec::eEnumerateDirectoryResultNext;
@@ -200,9 +201,9 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         }
       }
 
+
       std::vector<std::string>  device_support_dirnames;
       GetDeviceSupportDirectoryNames (device_support_dirnames);
-
       for (std::string &dirname : device_support_dirnames)
       {
         const uint32_t num_installed = m_sdk_directory_infos.size();
@@ -232,7 +233,7 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
                 }
             }
           }
-        }
+   	    }
       }
     }
   }
@@ -377,15 +378,18 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
 
 uint32_t PlatformRemoteDarwinDevice::FindFileInAllSDKs(const char *platform_file_path,
                                               FileSpecList &file_list) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
+                                                    LIBLLDB_LOG_VERBOSE);
   if (platform_file_path && platform_file_path[0] &&
       UpdateSDKDirectoryInfosIfNeeded()) {
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
     lldb_private::FileSpec local_file;
     // First try for an exact match of major, minor and update
     for (uint32_t sdk_idx = 0; sdk_idx < num_sdk_infos; ++sdk_idx) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file_path,
-                m_sdk_directory_infos[sdk_idx].directory);
+      if (log) {
+        log->Printf("Searching for %s in sdk path %s", platform_file_path,
+                    m_sdk_directory_infos[sdk_idx].directory.GetPath().c_str());
+      }
       if (GetFileInSDK(platform_file_path, sdk_idx, local_file)) {
         file_list.Append(local_file);
       }
@@ -429,11 +433,11 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
   return false;
 }
 
-Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
-                                                 const UUID *uuid_ptr,
-                                                 FileSpec &local_file) {
+Error PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
+                                       const UUID *uuid_ptr,
+                                       FileSpec &local_file) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-  Status error;
+  Error error;
   char platform_file_path[PATH_MAX];
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
     char resolved_path[PATH_MAX];
@@ -489,7 +493,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
   return error;
 }
 
-Status PlatformRemoteDarwinDevice::GetSharedModule(
+Error PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
@@ -498,9 +502,10 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // then we attempt to get a shared module for the right architecture
   // with the right UUID.
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
+                                                    LIBLLDB_LOG_VERBOSE);
 
-  Status error;
+  Error error;
   char platform_file_path[PATH_MAX];
 
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
@@ -515,8 +520,12 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     // using the OS build.
     const uint32_t connected_sdk_idx = GetConnectedSDKIndex();
     if (connected_sdk_idx < num_sdk_infos) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[connected_sdk_idx].directory);
+      if (log) {
+        log->Printf("Searching for %s in sdk path %s", platform_file_path,
+                    m_sdk_directory_infos[connected_sdk_idx]
+                        .directory.GetPath()
+                        .c_str());
+      }
       if (GetFileInSDK(platform_file_path, connected_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
@@ -532,8 +541,12 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     // Try the last SDK index if it is set as most files from an SDK
     // will tend to be valid in that same SDK.
     if (m_last_module_sdk_idx < num_sdk_infos) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[m_last_module_sdk_idx].directory);
+      if (log) {
+        log->Printf("Searching for %s in sdk path %s", platform_file_path,
+                    m_sdk_directory_infos[m_last_module_sdk_idx]
+                        .directory.GetPath()
+                        .c_str());
+      }
       if (GetFileInSDK(platform_file_path, m_last_module_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
@@ -554,8 +567,11 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
         GetSDKIndexBySDKDirectoryInfo(current_sdk_info);
     if (current_sdk_idx < num_sdk_infos &&
         current_sdk_idx != m_last_module_sdk_idx) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[current_sdk_idx].directory);
+      if (log) {
+        log->Printf(
+            "Searching for %s in sdk path %s", platform_file_path,
+            m_sdk_directory_infos[current_sdk_idx].directory.GetPath().c_str());
+      }
       if (GetFileInSDK(platform_file_path, current_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
@@ -575,8 +591,10 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
         // it above
         continue;
       }
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[sdk_idx].directory);
+      if (log) {
+        log->Printf("Searching for %s in sdk path %s", platform_file_path,
+                    m_sdk_directory_infos[sdk_idx].directory.GetPath().c_str());
+      }
       if (GetFileInSDK(platform_file_path, sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         // printf ("sdk[%u]: '%s'\n", sdk_idx, local_file.GetPath().c_str());

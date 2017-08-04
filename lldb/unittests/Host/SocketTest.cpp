@@ -7,6 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(_MSC_VER) && (_HAS_EXCEPTIONS == 0)
+// Workaround for MSVC standard library bug, which fails to include <thread>
+// when
+// exceptions are disabled.
+#include <eh.h>
+#endif
+
 #include <cstdio>
 #include <functional>
 #include <thread>
@@ -43,8 +50,9 @@ protected:
   static void AcceptThread(Socket *listen_socket,
                            const char *listen_remote_address,
                            bool child_processes_inherit, Socket **accept_socket,
-                           Status *error) {
-    *error = listen_socket->Accept(*accept_socket);
+                           Error *error) {
+    *error = listen_socket->Accept(listen_remote_address,
+                                   child_processes_inherit, *accept_socket);
   }
 
   template <typename SocketType>
@@ -53,15 +61,15 @@ protected:
       const std::function<std::string(const SocketType &)> &get_connect_addr,
       std::unique_ptr<SocketType> *a_up, std::unique_ptr<SocketType> *b_up) {
     bool child_processes_inherit = false;
-    Status error;
+    Error error;
     std::unique_ptr<SocketType> listen_socket_up(
-        new SocketType(true, child_processes_inherit));
+        new SocketType(child_processes_inherit, error));
     EXPECT_FALSE(error.Fail());
     error = listen_socket_up->Listen(listen_remote_address, 5);
     EXPECT_FALSE(error.Fail());
     EXPECT_TRUE(listen_socket_up->IsValid());
 
-    Status accept_error;
+    Error accept_error;
     Socket *accept_socket;
     std::thread accept_thread(AcceptThread, listen_socket_up.get(),
                               listen_remote_address, child_processes_inherit,
@@ -69,7 +77,7 @@ protected:
 
     std::string connect_remote_address = get_connect_addr(*listen_socket_up);
     std::unique_ptr<SocketType> connect_socket_up(
-        new SocketType(true, child_processes_inherit));
+        new SocketType(child_processes_inherit, error));
     EXPECT_FALSE(error.Fail());
     error = connect_socket_up->Connect(connect_remote_address);
     EXPECT_FALSE(error.Fail());
@@ -94,7 +102,7 @@ TEST_F(SocketTest, DecodeHostAndPort) {
   std::string host_str;
   std::string port_str;
   int32_t port;
-  Status error;
+  Error error;
   EXPECT_TRUE(Socket::DecodeHostAndPort("localhost:1138", host_str, port_str,
                                         port, &error));
   EXPECT_STREQ("localhost", host_str.c_str());
@@ -139,20 +147,6 @@ TEST_F(SocketTest, DecodeHostAndPort) {
   EXPECT_STREQ("*", host_str.c_str());
   EXPECT_STREQ("65535", port_str.c_str());
   EXPECT_EQ(65535, port);
-  EXPECT_TRUE(error.Success());
-
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("[::1]:12345", host_str, port_str, port, &error));
-  EXPECT_STREQ("::1", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
-
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345", host_str, port_str, port, &error));
-  EXPECT_STREQ("abcd:12fg:AF58::1", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
   EXPECT_TRUE(error.Success());
 }
 

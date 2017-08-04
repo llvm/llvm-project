@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Breakpoint/BreakpointID.h"
-#include "lldb/Utility/Status.h"
+#include "lldb/Core/Error.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -18,7 +18,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 TEST(BreakpointIDTest, StringIsBreakpointName) {
-  Status E;
+  Error E;
   EXPECT_FALSE(BreakpointID::StringIsBreakpointName("1breakpoint", E));
   EXPECT_FALSE(BreakpointID::StringIsBreakpointName("-", E));
   EXPECT_FALSE(BreakpointID::StringIsBreakpointName("", E));

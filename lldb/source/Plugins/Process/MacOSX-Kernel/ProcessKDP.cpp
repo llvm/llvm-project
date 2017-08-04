@@ -20,7 +20,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
-#include "lldb/Utility/UUID.h"
+#include "lldb/Core/UUID.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
@@ -38,8 +38,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/StringExtractor.h"
-
-#include "llvm/Support/Threading.h"
 
 #define USEC_PER_SEC 1000000
 
@@ -188,22 +186,22 @@ lldb_private::ConstString ProcessKDP::GetPluginName() {
 
 uint32_t ProcessKDP::GetPluginVersion() { return 1; }
 
-Status ProcessKDP::WillLaunch(Module *module) {
-  Status error;
+Error ProcessKDP::WillLaunch(Module *module) {
+  Error error;
   error.SetErrorString("launching not supported in kdp-remote plug-in");
   return error;
 }
 
-Status ProcessKDP::WillAttachToProcessWithID(lldb::pid_t pid) {
-  Status error;
+Error ProcessKDP::WillAttachToProcessWithID(lldb::pid_t pid) {
+  Error error;
   error.SetErrorString(
       "attaching to a by process ID not supported in kdp-remote plug-in");
   return error;
 }
 
-Status ProcessKDP::WillAttachToProcessWithName(const char *process_name,
-                                               bool wait_for_launch) {
-  Status error;
+Error ProcessKDP::WillAttachToProcessWithName(const char *process_name,
+                                              bool wait_for_launch) {
+  Error error;
   error.SetErrorString(
       "attaching to a by process name not supported in kdp-remote plug-in");
   return error;
@@ -223,8 +221,8 @@ bool ProcessKDP::GetHostArchitecture(ArchSpec &arch) {
   return false;
 }
 
-Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
-  Status error;
+Error ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
+  Error error;
 
   // Don't let any JIT happen when doing KDP as we can't allocate
   // memory and we don't want to be mucking with threads that might
@@ -374,26 +372,23 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
 //----------------------------------------------------------------------
 // Process Control
 //----------------------------------------------------------------------
-Status ProcessKDP::DoLaunch(Module *exe_module,
-                            ProcessLaunchInfo &launch_info) {
-  Status error;
+Error ProcessKDP::DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) {
+  Error error;
   error.SetErrorString("launching not supported in kdp-remote plug-in");
   return error;
 }
 
-Status
-ProcessKDP::DoAttachToProcessWithID(lldb::pid_t attach_pid,
-                                    const ProcessAttachInfo &attach_info) {
-  Status error;
+Error ProcessKDP::DoAttachToProcessWithID(
+    lldb::pid_t attach_pid, const ProcessAttachInfo &attach_info) {
+  Error error;
   error.SetErrorString(
       "attach to process by ID is not suppported in kdp remote debugging");
   return error;
 }
 
-Status
-ProcessKDP::DoAttachToProcessWithName(const char *process_name,
-                                      const ProcessAttachInfo &attach_info) {
-  Status error;
+Error ProcessKDP::DoAttachToProcessWithName(
+    const char *process_name, const ProcessAttachInfo &attach_info) {
+  Error error;
   error.SetErrorString(
       "attach to process by name is not suppported in kdp remote debugging");
   return error;
@@ -420,10 +415,10 @@ lldb_private::DynamicLoader *ProcessKDP::GetDynamicLoader() {
   return m_dyld_ap.get();
 }
 
-Status ProcessKDP::WillResume() { return Status(); }
+Error ProcessKDP::WillResume() { return Error(); }
 
-Status ProcessKDP::DoResume() {
-  Status error;
+Error ProcessKDP::DoResume() {
+  Error error;
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())
@@ -521,7 +516,8 @@ bool ProcessKDP::UpdateThreadList(ThreadList &old_thread_list,
                                   ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD));
-  LLDB_LOGV(log, "pid = {0}", GetID());
+  if (log && log->GetMask().Test(KDP_LOG_VERBOSE))
+    log->Printf("ProcessKDP::%s (pid = %" PRIu64 ")", __FUNCTION__, GetID());
 
   // Even though there is a CPU mask, it doesn't mean we can see each CPU
   // individually, there is really only one. Lets call this thread 1.
@@ -540,8 +536,8 @@ void ProcessKDP::RefreshStateAfterStop() {
   m_thread_list.RefreshStateAfterStop();
 }
 
-Status ProcessKDP::DoHalt(bool &caused_stop) {
-  Status error;
+Error ProcessKDP::DoHalt(bool &caused_stop) {
+  Error error;
 
   if (m_comm.IsRunning()) {
     if (m_destroy_in_process) {
@@ -556,8 +552,8 @@ Status ProcessKDP::DoHalt(bool &caused_stop) {
   return error;
 }
 
-Status ProcessKDP::DoDetach(bool keep_stopped) {
-  Status error;
+Error ProcessKDP::DoDetach(bool keep_stopped) {
+  Error error;
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
   if (log)
     log->Printf("ProcessKDP::DoDetach(keep_stopped = %i)", keep_stopped);
@@ -591,7 +587,7 @@ Status ProcessKDP::DoDetach(bool keep_stopped) {
   return error;
 }
 
-Status ProcessKDP::DoDestroy() {
+Error ProcessKDP::DoDestroy() {
   // For KDP there really is no difference between destroy and detach
   bool keep_stopped = false;
   return DoDetach(keep_stopped);
@@ -609,7 +605,7 @@ bool ProcessKDP::IsAlive() {
 // Process Memory
 //------------------------------------------------------------------
 size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
+                                Error &error) {
   uint8_t *data_buffer = (uint8_t *)buf;
   if (m_comm.IsConnected()) {
     const size_t max_read_size = 512;
@@ -637,7 +633,7 @@ size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
 }
 
 size_t ProcessKDP::DoWriteMemory(addr_t addr, const void *buf, size_t size,
-                                 Status &error) {
+                                 Error &error) {
   if (m_comm.IsConnected())
     return m_comm.SendRequestWriteMemory(addr, buf, size, error);
   error.SetErrorString("not connected");
@@ -645,22 +641,22 @@ size_t ProcessKDP::DoWriteMemory(addr_t addr, const void *buf, size_t size,
 }
 
 lldb::addr_t ProcessKDP::DoAllocateMemory(size_t size, uint32_t permissions,
-                                          Status &error) {
+                                          Error &error) {
   error.SetErrorString(
       "memory allocation not suppported in kdp remote debugging");
   return LLDB_INVALID_ADDRESS;
 }
 
-Status ProcessKDP::DoDeallocateMemory(lldb::addr_t addr) {
-  Status error;
+Error ProcessKDP::DoDeallocateMemory(lldb::addr_t addr) {
+  Error error;
   error.SetErrorString(
       "memory deallocation not suppported in kdp remote debugging");
   return error;
 }
 
-Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
+Error ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (m_comm.LocalBreakpointsAreSupported()) {
-    Status error;
+    Error error;
     if (!bp_site->IsEnabled()) {
       if (m_comm.SendRequestBreakpoint(true, bp_site->GetLoadAddress())) {
         bp_site->SetEnabled(true);
@@ -674,9 +670,9 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
   return EnableSoftwareBreakpoint(bp_site);
 }
 
-Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
+Error ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   if (m_comm.LocalBreakpointsAreSupported()) {
-    Status error;
+    Error error;
     if (bp_site->IsEnabled()) {
       BreakpointSite::Type bp_type = bp_site->GetType();
       if (bp_type == BreakpointSite::eExternal) {
@@ -698,15 +694,15 @@ Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   return DisableSoftwareBreakpoint(bp_site);
 }
 
-Status ProcessKDP::EnableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
+Error ProcessKDP::EnableWatchpoint(Watchpoint *wp, bool notify) {
+  Error error;
   error.SetErrorString(
       "watchpoints are not suppported in kdp remote debugging");
   return error;
 }
 
-Status ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
+Error ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
+  Error error;
   error.SetErrorString(
       "watchpoints are not suppported in kdp remote debugging");
   return error;
@@ -714,22 +710,26 @@ Status ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
 
 void ProcessKDP::Clear() { m_thread_list.Clear(); }
 
-Status ProcessKDP::DoSignal(int signo) {
-  Status error;
+Error ProcessKDP::DoSignal(int signo) {
+  Error error;
   error.SetErrorString(
       "sending signals is not suppported in kdp remote debugging");
   return error;
 }
 
 void ProcessKDP::Initialize() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
+  std::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(), CreateInstance,
                                   DebuggerInitialize);
 
-    ProcessKDPLog::Initialize();
+    Log::Callbacks log_callbacks = {ProcessKDPLog::DisableLog,
+                                    ProcessKDPLog::EnableLog,
+                                    ProcessKDPLog::ListLogCategories};
+
+    Log::RegisterLogChannel(ProcessKDP::GetPluginNameStatic(), log_callbacks);
   });
 }
 
@@ -953,7 +953,7 @@ public:
                   return false;
                 }
               }
-              Status error;
+              Error error;
               DataExtractor reply;
               process->GetCommunication().SendRawRequest(
                   command_byte,

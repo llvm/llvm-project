@@ -13,8 +13,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/OptionValues.h"
-#include "lldb/Utility/StringList.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,10 +42,10 @@ uint64_t OptionValue::GetUInt64Value(uint64_t fail_value, bool *success_ptr) {
   return fail_value;
 }
 
-Status OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
-                                VarSetOperationType op, llvm::StringRef name,
-                                llvm::StringRef value) {
-  Status error;
+Error OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
+                               VarSetOperationType op, llvm::StringRef name,
+  llvm::StringRef value) {
+  Error error;
   error.SetErrorStringWithFormat("SetSubValue is not supported");
   return error;
 }
@@ -507,7 +507,7 @@ const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
 }
 
 lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
-    const char *value_cstr, uint32_t type_mask, Status &error) {
+    const char *value_cstr, uint32_t type_mask, Error &error) {
   // If only 1 bit is set in the type mask for a dictionary or array
   // then we know how to decode a value from a cstring
   lldb::OptionValueSP value_sp;
@@ -582,9 +582,9 @@ size_t OptionValue::AutoComplete(CommandInterpreter &interpreter,
   return matches.GetSize();
 }
 
-Status OptionValue::SetValueFromString(llvm::StringRef value,
-                                       VarSetOperationType op) {
-  Status error;
+Error OptionValue::SetValueFromString(llvm::StringRef value,
+                                      VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationReplace:
     error.SetErrorStringWithFormat(

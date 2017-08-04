@@ -11,7 +11,7 @@
 #define StructuredDataPlugin_h
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Utility/StructuredData.h"
+#include "lldb/Core/StructuredData.h"
 
 namespace lldb_private {
 
@@ -123,8 +123,8 @@ public:
   ///     The error if formatting the object contents failed; otherwise,
   ///     success.
   // -------------------------------------------------------------------------
-  virtual Status GetDescription(const StructuredData::ObjectSP &object_sp,
-                                lldb_private::Stream &stream) = 0;
+  virtual Error GetDescription(const StructuredData::ObjectSP &object_sp,
+                               lldb_private::Stream &stream) = 0;
 
   // -------------------------------------------------------------------------
   /// Returns whether the plugin's features are enabled.

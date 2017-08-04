@@ -10,33 +10,13 @@
 #ifndef liblldb_ValueObjectRegister_h_
 #define liblldb_ValueObjectRegister_h_
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Symbol/CompilerType.h" // for CompilerType
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/lldb-defines.h"        // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h"   // for ValueType, ValueType::eValueTy...
-#include "lldb/lldb-forward.h"        // for RegisterContextSP, ValueObjectSP
-#include "lldb/lldb-private-types.h"  // for RegisterInfo, RegisterSet (ptr...
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t, int32_t
-
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
-namespace lldb_private {
-class ExecutionContextScope;
-}
-namespace lldb_private {
-class Scalar;
-}
-namespace lldb_private {
-class Stream;
-}
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -148,9 +128,9 @@ public:
 
   size_t CalculateNumChildren(uint32_t max) override;
 
-  bool SetValueFromCString(const char *value_str, Status &error) override;
+  bool SetValueFromCString(const char *value_str, Error &error) override;
 
-  bool SetData(DataExtractor &data, Status &error) override;
+  bool SetData(DataExtractor &data, Error &error) override;
 
   bool ResolveValue(Scalar &scalar) override;
 

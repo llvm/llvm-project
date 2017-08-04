@@ -1,4 +1,5 @@
-//===-- ValueObjectConstResultChild.h ----------------------------*- C++-*-===//
+//===-- ValueObjectConstResultChild.h -------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,25 +11,12 @@
 #ifndef liblldb_ValueObjectConstResultChild_h_
 #define liblldb_ValueObjectConstResultChild_h_
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Core/ValueObjectConstResultImpl.h"
-#include "lldb/Symbol/CompilerType.h" // for CompilerType
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/lldb-defines.h"        // for DISALLOW_COPY_AND_...
-#include "lldb/lldb-forward.h"        // for ValueObjectSP
-#include "lldb/lldb-types.h"          // for addr_t
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, int32_t
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
-namespace lldb_private {
-class ValueObject;
-}
 
 namespace lldb_private {
 
@@ -48,7 +36,7 @@ public:
 
   ~ValueObjectConstResultChild() override;
 
-  lldb::ValueObjectSP Dereference(Status &error) override;
+  lldb::ValueObjectSP Dereference(Error &error) override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
@@ -61,7 +49,7 @@ public:
       uint32_t offset, const CompilerType &type, bool can_create,
       ConstString name_const_str = ConstString()) override;
 
-  lldb::ValueObjectSP AddressOf(Status &error) override;
+  lldb::ValueObjectSP AddressOf(Error &error) override;
 
   size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                         uint32_t item_count = 1) override;

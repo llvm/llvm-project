@@ -10,10 +10,10 @@
 #ifndef lldb_NativeRegisterContextLinux_h
 #define lldb_NativeRegisterContextLinux_h
 
+#include "lldb/Host/common/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
 namespace lldb_private {
 namespace process_linux {
@@ -39,24 +39,24 @@ public:
 protected:
   lldb::ByteOrder GetByteOrder() const;
 
-  virtual Status ReadRegisterRaw(uint32_t reg_index, RegisterValue &reg_value);
+  virtual Error ReadRegisterRaw(uint32_t reg_index, RegisterValue &reg_value);
 
-  virtual Status WriteRegisterRaw(uint32_t reg_index,
-                                  const RegisterValue &reg_value);
+  virtual Error WriteRegisterRaw(uint32_t reg_index,
+                                 const RegisterValue &reg_value);
 
-  virtual Status ReadRegisterSet(void *buf, size_t buf_size,
+  virtual Error ReadRegisterSet(void *buf, size_t buf_size,
+                                unsigned int regset);
+
+  virtual Error WriteRegisterSet(void *buf, size_t buf_size,
                                  unsigned int regset);
 
-  virtual Status WriteRegisterSet(void *buf, size_t buf_size,
-                                  unsigned int regset);
+  virtual Error ReadGPR();
 
-  virtual Status ReadGPR();
+  virtual Error WriteGPR();
 
-  virtual Status WriteGPR();
+  virtual Error ReadFPR();
 
-  virtual Status ReadFPR();
-
-  virtual Status WriteFPR();
+  virtual Error WriteFPR();
 
   virtual void *GetGPRBuffer() { return nullptr; }
 
@@ -71,19 +71,19 @@ protected:
   // The Do*** functions are executed on the privileged thread and can perform
   // ptrace
   // operations directly.
-  virtual Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
-                                     uint32_t size, RegisterValue &value);
+  virtual Error DoReadRegisterValue(uint32_t offset, const char *reg_name,
+                                    uint32_t size, RegisterValue &value);
 
-  virtual Status DoWriteRegisterValue(uint32_t offset, const char *reg_name,
-                                      const RegisterValue &value);
+  virtual Error DoWriteRegisterValue(uint32_t offset, const char *reg_name,
+                                     const RegisterValue &value);
 
-  virtual Status DoReadGPR(void *buf, size_t buf_size);
+  virtual Error DoReadGPR(void *buf, size_t buf_size);
 
-  virtual Status DoWriteGPR(void *buf, size_t buf_size);
+  virtual Error DoWriteGPR(void *buf, size_t buf_size);
 
-  virtual Status DoReadFPR(void *buf, size_t buf_size);
+  virtual Error DoReadFPR(void *buf, size_t buf_size);
 
-  virtual Status DoWriteFPR(void *buf, size_t buf_size);
+  virtual Error DoWriteFPR(void *buf, size_t buf_size);
 };
 
 } // namespace process_linux

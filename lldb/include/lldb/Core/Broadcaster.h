@@ -10,33 +10,21 @@
 #ifndef liblldb_Broadcaster_h_
 #define liblldb_Broadcaster_h_
 
-#include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h" // for ListenerSP, EventSP, Broadcast...
-
-#include "llvm/ADT/SmallVector.h"
-
-#include <cstdint> // for uint32_t, UINT32_MAX
+// C Includes
+// C++ Includes
+#include <functional>
+#include <list>
 #include <map>
-#include <memory> // for shared_ptr, operator==, enable...
 #include <mutex>
-#include <set> // for set
 #include <string>
-#include <utility> // for pair
 #include <vector>
 
-namespace lldb_private {
-class Broadcaster;
-}
-namespace lldb_private {
-class EventData;
-}
-namespace lldb_private {
-class Listener;
-}
-namespace lldb_private {
-class Stream;
-}
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/lldb-private.h"
+
+#include "llvm/ADT/SmallVector.h"
 
 namespace lldb_private {
 
@@ -94,8 +82,8 @@ protected:
 
 public:
   // Listeners hold onto weak pointers to their broadcaster managers.  So they
-  // must be made into shared pointers, which you do with
-  // MakeBroadcasterManager.
+  // must be
+  // made into shared pointers, which you do with MakeBroadcasterManager.
 
   static lldb::BroadcasterManagerSP MakeBroadcasterManager();
 

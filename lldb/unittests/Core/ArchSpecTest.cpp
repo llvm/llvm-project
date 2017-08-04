@@ -11,7 +11,7 @@
 
 #include "lldb/Core/ArchSpec.h"
 
-#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/MachO.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -133,23 +133,4 @@ TEST(ArchSpecTest, TestSetTriple) {
 
   AS = ArchSpec();
   EXPECT_FALSE(AS.SetTriple(""));
-}
-
-TEST(ArchSpecTest, MergeFrom) {
-  ArchSpec A;
-  ArchSpec B("x86_64-pc-linux");
-
-  EXPECT_FALSE(A.IsValid());
-  ASSERT_TRUE(B.IsValid());
-  EXPECT_EQ(llvm::Triple::ArchType::x86_64, B.GetTriple().getArch());
-  EXPECT_EQ(llvm::Triple::VendorType::PC, B.GetTriple().getVendor());
-  EXPECT_EQ(llvm::Triple::OSType::Linux, B.GetTriple().getOS());
-  EXPECT_EQ(ArchSpec::eCore_x86_64_x86_64, B.GetCore());
-
-  A.MergeFrom(B);
-  ASSERT_TRUE(A.IsValid());
-  EXPECT_EQ(llvm::Triple::ArchType::x86_64, A.GetTriple().getArch());
-  EXPECT_EQ(llvm::Triple::VendorType::PC, A.GetTriple().getVendor());
-  EXPECT_EQ(llvm::Triple::OSType::Linux, A.GetTriple().getOS());
-  EXPECT_EQ(ArchSpec::eCore_x86_64_x86_64, A.GetCore());
 }

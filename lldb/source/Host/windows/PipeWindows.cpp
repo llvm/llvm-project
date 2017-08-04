@@ -39,7 +39,7 @@ PipeWindows::PipeWindows() {
 
 PipeWindows::~PipeWindows() { Close(); }
 
-Status PipeWindows::CreateNew(bool child_process_inherit) {
+Error PipeWindows::CreateNew(bool child_process_inherit) {
   // Even for anonymous pipes, we open a named pipe.  This is because you cannot
   // get
   // overlapped i/o on Windows without using a named pipe.  So we synthesize a
@@ -54,13 +54,12 @@ Status PipeWindows::CreateNew(bool child_process_inherit) {
   return CreateNew(pipe_name.c_str(), child_process_inherit);
 }
 
-Status PipeWindows::CreateNew(llvm::StringRef name,
-                              bool child_process_inherit) {
+Error PipeWindows::CreateNew(llvm::StringRef name, bool child_process_inherit) {
   if (name.empty())
-    return Status(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
+    return Error(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
 
   if (CanRead() || CanWrite())
-    return Status(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
+    return Error(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
 
   std::string pipe_path = "\\\\.\\Pipe\\";
   pipe_path.append(name);
@@ -72,13 +71,13 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
       pipe_path.c_str(), PIPE_ACCESS_INBOUND | read_mode,
       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 1024, 1024, 120 * 1000, NULL);
   if (INVALID_HANDLE_VALUE == m_read)
-    return Status(::GetLastError(), eErrorTypeWin32);
+    return Error(::GetLastError(), eErrorTypeWin32);
   m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
   ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
   m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
   // Open the write end of the pipe.
-  Status result = OpenNamedPipe(name, child_process_inherit, false);
+  Error result = OpenNamedPipe(name, child_process_inherit, false);
   if (!result.Success()) {
     CloseReadFileDescriptor();
     return result;
@@ -87,11 +86,11 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   return result;
 }
 
-Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
-                                         bool child_process_inherit,
-                                         llvm::SmallVectorImpl<char> &name) {
+Error PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
+                                        bool child_process_inherit,
+                                        llvm::SmallVectorImpl<char> &name) {
   llvm::SmallString<128> pipe_name;
-  Status error;
+  Error error;
   ::UUID unique_id;
   RPC_CSTR unique_string;
   RPC_STATUS status = ::UuidCreate(&unique_id);
@@ -111,28 +110,27 @@ Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
   return error;
 }
 
-Status PipeWindows::OpenAsReader(llvm::StringRef name,
-                                 bool child_process_inherit) {
+Error PipeWindows::OpenAsReader(llvm::StringRef name,
+                                bool child_process_inherit) {
   if (CanRead() || CanWrite())
-    return Status(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
+    return Error(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
 
   return OpenNamedPipe(name, child_process_inherit, true);
 }
 
-Status
-PipeWindows::OpenAsWriterWithTimeout(llvm::StringRef name,
-                                     bool child_process_inherit,
-                                     const std::chrono::microseconds &timeout) {
+Error PipeWindows::OpenAsWriterWithTimeout(
+    llvm::StringRef name, bool child_process_inherit,
+    const std::chrono::microseconds &timeout) {
   if (CanRead() || CanWrite())
-    return Status(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
+    return Error(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
 
   return OpenNamedPipe(name, child_process_inherit, false);
 }
 
-Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
-                                  bool child_process_inherit, bool is_read) {
+Error PipeWindows::OpenNamedPipe(llvm::StringRef name,
+                                 bool child_process_inherit, bool is_read) {
   if (name.empty())
-    return Status(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
+    return Error(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
 
   assert(is_read ? !CanRead() : !CanWrite());
 
@@ -146,7 +144,7 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
     m_read = ::CreateFileA(pipe_path.c_str(), GENERIC_READ, 0, &attributes,
                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
     if (INVALID_HANDLE_VALUE == m_read)
-      return Status(::GetLastError(), eErrorTypeWin32);
+      return Error(::GetLastError(), eErrorTypeWin32);
 
     m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
 
@@ -156,14 +154,14 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
     m_write = ::CreateFileA(pipe_path.c_str(), GENERIC_WRITE, 0, &attributes,
                             OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
     if (INVALID_HANDLE_VALUE == m_write)
-      return Status(::GetLastError(), eErrorTypeWin32);
+      return Error(::GetLastError(), eErrorTypeWin32);
 
     m_write_fd = _open_osfhandle((intptr_t)m_write, _O_WRONLY);
 
     ZeroMemory(&m_write_overlapped, sizeof(m_write_overlapped));
   }
 
-  return Status();
+  return Error();
 }
 
 int PipeWindows::GetReadFileDescriptor() const { return m_read_fd; }
@@ -219,7 +217,7 @@ void PipeWindows::Close() {
   CloseWriteFileDescriptor();
 }
 
-Status PipeWindows::Delete(llvm::StringRef name) { return Status(); }
+Error PipeWindows::Delete(llvm::StringRef name) { return Error(); }
 
 bool PipeWindows::CanRead() const { return (m_read != INVALID_HANDLE_VALUE); }
 
@@ -231,18 +229,18 @@ PipeWindows::GetReadNativeHandle() { return m_read; }
 HANDLE
 PipeWindows::GetWriteNativeHandle() { return m_write; }
 
-Status PipeWindows::ReadWithTimeout(void *buf, size_t size,
-                                    const std::chrono::microseconds &duration,
-                                    size_t &bytes_read) {
+Error PipeWindows::ReadWithTimeout(void *buf, size_t size,
+                                   const std::chrono::microseconds &duration,
+                                   size_t &bytes_read) {
   if (!CanRead())
-    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    return Error(ERROR_INVALID_HANDLE, eErrorTypeWin32);
 
   bytes_read = 0;
   DWORD sys_bytes_read = size;
   BOOL result = ::ReadFile(m_read, buf, sys_bytes_read, &sys_bytes_read,
                            &m_read_overlapped);
   if (!result && GetLastError() != ERROR_IO_PENDING)
-    return Status(::GetLastError(), eErrorTypeWin32);
+    return Error(::GetLastError(), eErrorTypeWin32);
 
   DWORD timeout = (duration == std::chrono::microseconds::zero())
                       ? INFINITE
@@ -265,33 +263,33 @@ Status PipeWindows::ReadWithTimeout(void *buf, size_t size,
         failed = false;
     }
     if (failed)
-      return Status(failure_error, eErrorTypeWin32);
+      return Error(failure_error, eErrorTypeWin32);
   }
 
   // Now we call GetOverlappedResult setting bWait to false, since we've already
   // waited
   // as long as we're willing to.
   if (!GetOverlappedResult(m_read, &m_read_overlapped, &sys_bytes_read, FALSE))
-    return Status(::GetLastError(), eErrorTypeWin32);
+    return Error(::GetLastError(), eErrorTypeWin32);
 
   bytes_read = sys_bytes_read;
-  return Status();
+  return Error();
 }
 
-Status PipeWindows::Write(const void *buf, size_t num_bytes,
-                          size_t &bytes_written) {
+Error PipeWindows::Write(const void *buf, size_t num_bytes,
+                         size_t &bytes_written) {
   if (!CanWrite())
-    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    return Error(ERROR_INVALID_HANDLE, eErrorTypeWin32);
 
   DWORD sys_bytes_written = 0;
   BOOL write_result = ::WriteFile(m_write, buf, num_bytes, &sys_bytes_written,
                                   &m_write_overlapped);
   if (!write_result && GetLastError() != ERROR_IO_PENDING)
-    return Status(::GetLastError(), eErrorTypeWin32);
+    return Error(::GetLastError(), eErrorTypeWin32);
 
   BOOL result = GetOverlappedResult(m_write, &m_write_overlapped,
                                     &sys_bytes_written, TRUE);
   if (!result)
-    return Status(::GetLastError(), eErrorTypeWin32);
-  return Status();
+    return Error(::GetLastError(), eErrorTypeWin32);
+  return Error();
 }

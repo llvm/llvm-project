@@ -11,8 +11,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Utility/Stream.h"
 #include <algorithm>
 
 using namespace lldb;
@@ -509,7 +509,6 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
 
     if (terminate_previous_entry && !sequence.m_entries.empty()) {
       assert(prev_file_addr != LLDB_INVALID_ADDRESS);
-      UNUSED_IF_ASSERT_DISABLED(prev_file_addr);
       sequence.m_entries.push_back(sequence.m_entries.back());
       if (prev_end_entry_linked_file_addr == LLDB_INVALID_ADDRESS)
         prev_end_entry_linked_file_addr =

@@ -30,12 +30,13 @@
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerPlatform.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -98,39 +99,38 @@ static void display_usage(const char *progname, const char *subcommand) {
   exit(0);
 }
 
-static Status save_socket_id_to_file(const std::string &socket_id,
-                                     const FileSpec &file_spec) {
+static Error save_socket_id_to_file(const std::string &socket_id,
+                                    const FileSpec &file_spec) {
   FileSpec temp_file_spec(file_spec.GetDirectory().AsCString(), false);
-  Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
+  auto error = FileSystem::MakeDirectory(temp_file_spec,
+                                         eFilePermissionsDirectoryDefault);
   if (error.Fail())
-    return Status("Failed to create directory %s: %s",
-                  temp_file_spec.GetCString(), error.AsCString());
+    return Error("Failed to create directory %s: %s",
+                 temp_file_spec.GetCString(), error.AsCString());
 
-  llvm::SmallString<64> temp_file_path;
+  llvm::SmallString<PATH_MAX> temp_file_path;
   temp_file_spec.AppendPathComponent("port-file.%%%%%%");
-  int FD;
-  auto err_code = llvm::sys::fs::createUniqueFile(temp_file_spec.GetPath(), FD,
+  auto err_code = llvm::sys::fs::createUniqueFile(temp_file_spec.GetCString(),
                                                   temp_file_path);
   if (err_code)
-    return Status("Failed to create temp file: %s", err_code.message().c_str());
+    return Error("Failed to create temp file: %s", err_code.message().c_str());
 
-  llvm::FileRemover tmp_file_remover(temp_file_path);
+  llvm::FileRemover tmp_file_remover(temp_file_path.c_str());
 
   {
-    llvm::raw_fd_ostream temp_file(FD, true);
+    std::ofstream temp_file(temp_file_path.c_str(), std::ios::out);
+    if (!temp_file.is_open())
+      return Error("Failed to open temp file %s", temp_file_path.c_str());
     temp_file << socket_id;
-    temp_file.close();
-    if (temp_file.has_error())
-      return Status("Failed to write to port file.");
   }
 
-  err_code = llvm::sys::fs::rename(temp_file_path, file_spec.GetPath());
+  err_code = llvm::sys::fs::rename(temp_file_path.c_str(), file_spec.GetPath());
   if (err_code)
-    return Status("Failed to rename file %s to %s: %s", temp_file_path.c_str(),
-                  file_spec.GetPath().c_str(), err_code.message().c_str());
+    return Error("Failed to rename file %s to %s: %s", temp_file_path.c_str(),
+                 file_spec.GetPath().c_str(), err_code.message().c_str());
 
   tmp_file_remover.releaseFile();
-  return Status();
+  return Error();
 }
 
 //----------------------------------------------------------------------
@@ -144,7 +144,7 @@ int main_platform(int argc, char *argv[]) {
   signal(SIGPIPE, SIG_IGN);
   signal(SIGHUP, signal_handler);
   int long_option_index = 0;
-  Status error;
+  Error error;
   std::string listen_host_port;
   int ch;
 
@@ -197,41 +197,46 @@ int main_platform(int argc, char *argv[]) {
       break;
 
     case 'p': {
-      if (!llvm::to_integer(optarg, port_offset)) {
-        llvm::errs() << "error: invalid port offset string " << optarg << "\n";
+      char *end = NULL;
+      long tmp_port_offset = strtoul(optarg, &end, 0);
+      if (end && *end == '\0') {
+        if (LOW_PORT <= tmp_port_offset && tmp_port_offset <= HIGH_PORT) {
+          port_offset = (uint16_t)tmp_port_offset;
+        } else {
+          fprintf(stderr, "error: port offset %li is not in the valid user "
+                          "port range of %u - %u\n",
+                  tmp_port_offset, LOW_PORT, HIGH_PORT);
+          option_error = 5;
+        }
+      } else {
+        fprintf(stderr, "error: invalid port offset string %s\n", optarg);
         option_error = 4;
-        break;
-      }
-      if (port_offset < LOW_PORT || port_offset > HIGH_PORT) {
-        llvm::errs() << llvm::formatv("error: port offset {0} is not in the "
-                                      "valid user port range of {1} - {2}\n",
-                                      port_offset, LOW_PORT, HIGH_PORT);
-        option_error = 5;
       }
     } break;
 
     case 'P':
     case 'm':
     case 'M': {
-      uint16_t portnum;
-      if (!llvm::to_integer(optarg, portnum)) {
-        llvm::errs() << "error: invalid port number string " << optarg << "\n";
+      char *end = NULL;
+      long portnum = strtoul(optarg, &end, 0);
+      if (end && *end == '\0') {
+        if (LOW_PORT <= portnum && portnum <= HIGH_PORT) {
+          if (ch == 'P')
+            gdbserver_portmap[(uint16_t)portnum] = LLDB_INVALID_PROCESS_ID;
+          else if (ch == 'm')
+            min_gdbserver_port = portnum;
+          else
+            max_gdbserver_port = portnum;
+        } else {
+          fprintf(stderr, "error: port number %li is not in the valid user "
+                          "port range of %u - %u\n",
+                  portnum, LOW_PORT, HIGH_PORT);
+          option_error = 1;
+        }
+      } else {
+        fprintf(stderr, "error: invalid port number string %s\n", optarg);
         option_error = 2;
-        break;
       }
-      if (portnum < LOW_PORT || portnum > HIGH_PORT) {
-        llvm::errs() << llvm::formatv("error: port number {0} is not in the "
-                                      "valid user port range of {1} - {2}\n",
-                                      portnum, LOW_PORT, HIGH_PORT);
-        option_error = 1;
-        break;
-      }
-      if (ch == 'P')
-        gdbserver_portmap[portnum] = LLDB_INVALID_PROCESS_ID;
-      else if (ch == 'm')
-        min_gdbserver_port = portnum;
-      else
-        max_gdbserver_port = portnum;
     } break;
 
     case 'h': /* fall-through is intentional */
@@ -345,9 +350,9 @@ int main_platform(int argc, char *argv[]) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
         uint16_t port = 0;
         std::string socket_name;
-        Status error = platform.LaunchGDBServer(inferior_arguments,
-                                                "", // hostname
-                                                pid, port, socket_name);
+        Error error = platform.LaunchGDBServer(inferior_arguments,
+                                               "", // hostname
+                                               pid, port, socket_name);
         if (error.Success())
           platform.SetPendingGdbServer(pid, port, socket_name);
         else

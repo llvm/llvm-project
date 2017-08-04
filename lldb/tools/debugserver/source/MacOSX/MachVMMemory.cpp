@@ -501,7 +501,7 @@ nub_size_t MachVMMemory::Write(task_t task, nub_addr_t address,
         nub_size_t bytes_written =
             WriteRegion(task, curr_addr, curr_data, curr_data_count);
         if (bytes_written <= 0) {
-          // Status should have already be posted by WriteRegion...
+          // Error should have already be posted by WriteRegion...
           break;
         } else {
           total_bytes_written += bytes_written;

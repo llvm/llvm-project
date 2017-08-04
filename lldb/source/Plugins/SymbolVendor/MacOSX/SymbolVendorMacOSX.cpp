@@ -15,12 +15,12 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -113,8 +113,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   if (obj_name != obj_file_macho)
     return NULL;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "SymbolVendorMacOSX::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
   SymbolVendorMacOSX *symbol_vendor = new SymbolVendorMacOSX(module_sp);
@@ -123,10 +122,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
     path[0] = '\0';
 
     // Try and locate the dSYM file on Mac OS X
-    static Timer::Category func_cat2(
-        "SymbolVendorMacOSX::CreateInstance() locate dSYM");
     Timer scoped_timer2(
-        func_cat2,
+        "SymbolVendorMacOSX::CreateInstance () locate dSYM",
         "SymbolVendorMacOSX::CreateInstance (module = %s) locate dSYM",
         module_sp->GetFileSpec().GetPath().c_str());
 

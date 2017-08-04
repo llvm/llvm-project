@@ -21,14 +21,14 @@
 // Project includes
 #include "lldb/Expression/IRDynamicChecks.h"
 
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
 
 using namespace llvm;
 using namespace lldb_private;
@@ -51,7 +51,7 @@ DynamicCheckerFunctions::~DynamicCheckerFunctions() = default;
 
 bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
                                       ExecutionContext &exe_ctx) {
-  Status error;
+  Error error;
   m_valid_pointer_check.reset(
       exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
           g_valid_pointer_check_text, lldb::eLanguageTypeC,

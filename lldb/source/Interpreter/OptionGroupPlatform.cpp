@@ -13,16 +13,16 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Utility/Utils.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
     CommandInterpreter &interpreter, const ArchSpec &arch, bool make_selected,
-    Status &error, ArchSpec &platform_arch) const {
+    Error &error, ArchSpec &platform_arch) const {
   PlatformSP platform_sp;
 
   if (!m_platform_name.empty()) {
@@ -92,11 +92,10 @@ llvm::ArrayRef<OptionDefinition> OptionGroupPlatform::GetDefinitions() {
   return result.drop_front();
 }
 
-Status
-OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
-                                    llvm::StringRef option_arg,
-                                    ExecutionContext *execution_context) {
-  Status error;
+Error OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
+                                          llvm::StringRef option_arg,
+                                          ExecutionContext *execution_context) {
+  Error error;
   if (!m_include_platform_option)
     ++option_idx;
 

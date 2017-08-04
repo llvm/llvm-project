@@ -15,7 +15,9 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/State.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -32,8 +34,6 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StructuredData.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
@@ -43,7 +43,6 @@
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBThreadPlan.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -422,6 +421,24 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 }
 
 SBValue SBThread::GetStopReturnValue() {
+  bool is_swift_error_value = false;
+  SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
+  if (is_swift_error_value)
+    return SBValue();
+  else
+    return return_value;
+}
+
+SBValue SBThread::GetStopErrorValue() {
+  bool is_swift_error_value = false;
+  SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
+  if (!is_swift_error_value)
+    return SBValue();
+  else
+    return return_value;
+}
+
+SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
@@ -432,7 +449,8 @@ SBValue SBThread::GetStopReturnValue() {
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
       if (stop_info_sp) {
-        return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
+        return_valobj_sp =
+            StopInfo::GetReturnValueObject(stop_info_sp, is_swift_error_value);
       }
     } else {
       if (log)
@@ -558,26 +576,26 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
         StructuredData::ObjectSP node =
             info_root_sp->GetObjectForDotSeparatedPath(path);
         if (node) {
-          if (node->GetType() == eStructuredDataTypeString) {
-            strm.Printf("%s", node->GetAsString()->GetValue().str().c_str());
+          if (node->GetType() == StructuredData::Type::eTypeString) {
+            strm.Printf("%s", node->GetAsString()->GetValue().c_str());
             success = true;
           }
-          if (node->GetType() == eStructuredDataTypeInteger) {
+          if (node->GetType() == StructuredData::Type::eTypeInteger) {
             strm.Printf("0x%" PRIx64, node->GetAsInteger()->GetValue());
             success = true;
           }
-          if (node->GetType() == eStructuredDataTypeFloat) {
+          if (node->GetType() == StructuredData::Type::eTypeFloat) {
             strm.Printf("0x%f", node->GetAsFloat()->GetValue());
             success = true;
           }
-          if (node->GetType() == eStructuredDataTypeBoolean) {
+          if (node->GetType() == StructuredData::Type::eTypeBoolean) {
             if (node->GetAsBoolean()->GetValue() == true)
               strm.Printf("true");
             else
               strm.Printf("false");
             success = true;
           }
-          if (node->GetType() == eStructuredDataTypeNull) {
+          if (node->GetType() == StructuredData::Type::eTypeNull) {
             strm.Printf("null");
             success = true;
           }
@@ -592,8 +610,8 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   }
 
   if (log)
-    log->Printf("SBThread(%p)::GetInfoItemByPathAsString (\"%s\") => \"%s\"",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), path, strm.GetData());
+    log->Printf("SBThread(%p)::GetInfoItemByPathAsString () => %s",
+                static_cast<void *>(exe_ctx.GetThreadPtr()), strm.GetData());
 
   return success;
 }
@@ -1034,7 +1052,7 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
 
   Thread *thread = exe_ctx.GetThreadPtr();
 
-  Status err = thread->JumpToLine(file_spec.get(), line, true);
+  Error err = thread->JumpToLine(file_spec.get(), line, true);
   sb_error.SetError(err);
   return sb_error;
 }

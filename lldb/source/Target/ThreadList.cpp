@@ -15,14 +15,15 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/ConvertEnum.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -383,14 +384,18 @@ Vote ThreadList::ShouldReportStop(Event *event_ptr) {
       if (result == eVoteNoOpinion) {
         result = eVoteNo;
       } else {
-        LLDB_LOG(log,
-          "Thread {0:x} voted {1}, but lost out because result was {2}",
-          thread_sp->GetID(), vote, result);
+        if (log)
+          log->Printf("ThreadList::%s thread 0x%4.4" PRIx64
+                      ": voted %s, but lost out because result was %s",
+                      __FUNCTION__, thread_sp->GetID(), GetVoteAsCString(vote),
+                      GetVoteAsCString(result));
       }
       break;
     }
   }
-  LLDB_LOG(log, "Returning {0}", result);
+  if (log)
+    log->Printf("ThreadList::%s returning %s", __FUNCTION__,
+                GetVoteAsCString(result));
   return result;
 }
 

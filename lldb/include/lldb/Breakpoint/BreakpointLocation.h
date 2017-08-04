@@ -19,7 +19,7 @@
 // Project includes
 #include "lldb/Breakpoint/StoppointLocation.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Utility/UserID.h"
+#include "lldb/Core/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -161,7 +161,7 @@ public:
   //------------------------------------------------------------------
   const char *GetConditionText(size_t *hash = nullptr) const;
 
-  bool ConditionSaysStop(ExecutionContext &exe_ctx, Status &error);
+  bool ConditionSaysStop(ExecutionContext &exe_ctx, Error &error);
 
   //------------------------------------------------------------------
   /// Set the valid thread to be checked when the breakpoint is hit.

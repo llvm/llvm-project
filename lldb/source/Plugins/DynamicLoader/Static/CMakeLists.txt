@@ -6,5 +6,4 @@ add_lldb_library(lldbPluginDynamicLoaderStatic PLUGIN
     lldbHost
     lldbSymbol
     lldbTarget
-    lldbUtility
   )

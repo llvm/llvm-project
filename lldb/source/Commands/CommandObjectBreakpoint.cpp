@@ -18,7 +18,9 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -31,8 +33,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -115,11 +115,11 @@ static OptionDefinition g_breakpoint_set_options[] = {
   "options, on throw but not catch.)" },
   { LLDB_OPT_SET_10,               false, "on-throw",               'w', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception throW." },
   { LLDB_OPT_SET_10,               false, "on-catch",               'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception catcH." },
-
-  //  Don't add this option till it actually does something useful...
-  //    { LLDB_OPT_SET_10, false, "exception-typename", 'O', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeTypeName,
-  //        "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop for multiple object types" },
-
+  { LLDB_OPT_SET_10,               false, "exception-typename",     'O', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeTypeName,
+    "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop "
+    "for multiple object types.  If you just specify the type's base name it will match against that type in all modules,"
+    " or you can specify the full type name including modules.  Other submatches are not supported at present."
+    "Only supported for Swift at present."},
   { LLDB_OPT_EXPR_LANGUAGE,        false, "language",               'L', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLanguage,            "Specifies the Language to use when interpreting the breakpoint's expression "
   "(note: currently only implemented for setting breakpoints on identifiers).  "
   "If not set the target.language setting is used." },
@@ -178,9 +178,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -234,6 +234,9 @@ public:
         case eLanguageTypeObjC_plus_plus:
           error.SetErrorStringWithFormat(
               "Set exception breakpoints separately for c++ and objective-c");
+          break;
+        case eLanguageTypeSwift:
+          m_exception_language = eLanguageTypeSwift;
           break;
         case eLanguageTypeUnknown:
           error.SetErrorStringWithFormat(
@@ -435,6 +438,7 @@ public:
       m_catch_bp = false;
       m_throw_bp = true;
       m_hardware = false;
+      m_language = eLanguageTypeUnknown;
       m_exception_language = eLanguageTypeUnknown;
       m_language = lldb::eLanguageTypeUnknown;
       m_skip_prologue = eLazyBoolCalculate;
@@ -662,7 +666,7 @@ protected:
                .get();
     } break;
     case eSetTypeException: {
-      Status precond_error;
+      Error precond_error;
       bp = target
                ->CreateExceptionBreakpoint(
                    m_options.m_exception_language, m_options.m_catch_bp,
@@ -705,7 +709,7 @@ protected:
         bp->GetOptions()->SetCondition(m_options.m_condition.c_str());
 
       if (!m_options.m_breakpoint_names.empty()) {
-        Status name_error;
+        Error name_error;
         for (auto name : m_options.m_breakpoint_names) {
           bp->AddName(name.c_str(), name_error);
           if (name_error.Fail()) {
@@ -844,9 +848,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1305,9 +1309,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1452,9 +1456,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1611,9 +1615,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1751,9 +1755,9 @@ public:
     return llvm::makeArrayRef(g_breakpoint_name_options);
   }
 
-  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                        ExecutionContext *execution_context) override {
-    Status error;
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                       ExecutionContext *execution_context) override {
+    Error error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
 
     switch (short_option) {
@@ -1864,8 +1868,8 @@ protected:
         lldb::break_id_t bp_id =
             valid_bp_ids.GetBreakpointIDAtIndex(index).GetBreakpointID();
         BreakpointSP bp_sp = breakpoints.FindBreakpointByID(bp_id);
-        Status error; // We don't need to check the error here, since the option
-                      // parser checked it...
+        Error error; // We don't need to check the error here, since the option
+                     // parser checked it...
         bp_sp->AddName(m_name_options.m_name.GetCurrentValue(), error);
       }
     }
@@ -2093,9 +2097,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -2103,7 +2107,7 @@ public:
         m_filename.assign(option_arg);
         break;
       case 'N': {
-        Status name_error;
+        Error name_error;
         if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(option_arg),
                                                   name_error)) {
           error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
@@ -2150,8 +2154,8 @@ protected:
 
     FileSpec input_spec(m_options.m_filename, true);
     BreakpointIDList new_bps;
-    Status error = target->CreateBreakpointsFromFile(
-        input_spec, m_options.m_names, new_bps);
+    Error error = target->CreateBreakpointsFromFile(input_spec,
+                                                    m_options.m_names, new_bps);
 
     if (!error.Success()) {
       result.AppendError(error.AsCString());
@@ -2223,9 +2227,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -2281,7 +2285,7 @@ protected:
         return false;
       }
     }
-    Status error = target->SerializeBreakpointsToFile(
+    Error error = target->SerializeBreakpointsToFile(
         FileSpec(m_options.m_filename, true), valid_bp_ids, m_options.m_append);
     if (!error.Success()) {
       result.AppendErrorWithFormat("error serializing breakpoints: %s.",

@@ -24,7 +24,7 @@ FileCache &FileCache::GetInstance() {
 }
 
 lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec, uint32_t flags,
-                                    uint32_t mode, Status &error) {
+                                    uint32_t mode, Error &error) {
   std::string path(file_spec.GetPath());
   if (path.empty()) {
     error.SetErrorString("empty path");
@@ -39,7 +39,7 @@ lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec, uint32_t flags,
   return fd;
 }
 
-bool FileCache::CloseFile(lldb::user_id_t fd, Status &error) {
+bool FileCache::CloseFile(lldb::user_id_t fd, Error &error) {
   if (fd == UINT64_MAX) {
     error.SetErrorString("invalid file descriptor");
     return false;
@@ -60,8 +60,7 @@ bool FileCache::CloseFile(lldb::user_id_t fd, Status &error) {
 }
 
 uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
-                              const void *src, uint64_t src_len,
-                              Status &error) {
+                              const void *src, uint64_t src_len, Error &error) {
   if (fd == UINT64_MAX) {
     error.SetErrorString("invalid file descriptor");
     return UINT64_MAX;
@@ -87,7 +86,7 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
 }
 
 uint64_t FileCache::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                             uint64_t dst_len, Status &error) {
+                             uint64_t dst_len, Error &error) {
   if (fd == UINT64_MAX) {
     error.SetErrorString("invalid file descriptor");
     return UINT64_MAX;

@@ -9,13 +9,13 @@
 
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBError.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
@@ -80,7 +80,7 @@ lldb::thread_t SBHostOS::ThreadCreate(const char *name,
 void SBHostOS::ThreadCreated(const char *name) {}
 
 bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
-  Status error;
+  Error error;
   HostThread host_thread(thread);
   error = host_thread.Cancel();
   if (error_ptr)
@@ -90,7 +90,7 @@ bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
 }
 
 bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
-  Status error;
+  Error error;
 #if defined(_WIN32)
   if (error_ptr)
     error_ptr->SetErrorString("ThreadDetach is not supported on this platform");
@@ -106,7 +106,7 @@ bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
 
 bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
                           SBError *error_ptr) {
-  Status error;
+  Error error;
   HostThread host_thread(thread);
   error = host_thread.Join(result);
   if (error_ptr)

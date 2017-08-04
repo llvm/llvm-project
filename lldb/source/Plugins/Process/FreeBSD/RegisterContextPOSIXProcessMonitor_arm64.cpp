@@ -7,9 +7,9 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataBufferHeap.h"
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
 #include "ProcessFreeBSD.h"
@@ -77,7 +77,7 @@ bool RegisterContextPOSIXProcessMonitor_arm64::WriteRegister(
 
     // Read the full register.
     if (ReadRegister(full_reg_info, full_value)) {
-      lldb_private::Status error;
+      lldb_private::Error error;
       lldb::ByteOrder byte_order = GetByteOrder();
       uint8_t dst[lldb_private::RegisterValue::kMaxRegisterByteSize];
 

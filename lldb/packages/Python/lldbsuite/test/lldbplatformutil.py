@@ -53,12 +53,12 @@ def _run_adb_command(cmd, device_id):
     return p.returncode, stdout, stderr
 
 
-def target_is_android():
-    if not hasattr(target_is_android, 'result'):
+def _target_is_android():
+    if not hasattr(_target_is_android, 'result'):
         triple = lldb.DBG.GetSelectedPlatform().GetTriple()
         match = re.match(".*-.*-.*-android", triple)
-        target_is_android.result = match is not None
-    return target_is_android.result
+        _target_is_android.result = match is not None
+    return _target_is_android.result
 
 
 def android_device_api():
@@ -85,7 +85,7 @@ def android_device_api():
 
 
 def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
-    if not target_is_android():
+    if not _target_is_android():
         return False
     if valid_archs is not None and device_arch not in valid_archs:
         return False
@@ -96,7 +96,7 @@ def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
 
 
 def finalize_build_dictionary(dictionary):
-    if target_is_android():
+    if _target_is_android():
         if dictionary is None:
             dictionary = {}
         dictionary["OS"] = "Android"

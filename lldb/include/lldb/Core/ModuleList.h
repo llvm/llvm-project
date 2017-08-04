@@ -10,67 +10,18 @@
 #ifndef liblldb_ModuleList_h_
 #define liblldb_ModuleList_h_
 
-#include "lldb/Core/Address.h"     // for Address
-#include "lldb/Core/ModuleSpec.h"  // for ModuleSpec
-#include "lldb/Utility/FileSpec.h" // for FileSpec
-#include "lldb/Utility/Iterable.h"
-#include "lldb/Utility/Status.h" // for Status
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-forward.h"
-#include "lldb/lldb-types.h"
-
-#include "llvm/ADT/DenseSet.h"
-
+// C Includes
+// C++ Includes
 #include <functional>
 #include <list>
 #include <mutex>
 #include <vector>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
-
-namespace lldb_private {
-class ConstString;
-}
-namespace lldb_private {
-class FileSpecList;
-}
-namespace lldb_private {
-class Function;
-}
-namespace lldb_private {
-class Log;
-}
-namespace lldb_private {
-class Module;
-}
-namespace lldb_private {
-class RegularExpression;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class SymbolContext;
-}
-namespace lldb_private {
-class SymbolContextList;
-}
-namespace lldb_private {
-class SymbolFile;
-}
-namespace lldb_private {
-class Target;
-}
-namespace lldb_private {
-class TypeList;
-}
-namespace lldb_private {
-class UUID;
-}
-namespace lldb_private {
-class VariableList;
-}
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Utility/Iterable.h"
+#include "lldb/lldb-private.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
 
@@ -530,18 +481,18 @@ public:
   //------------------------------------------------------------------
   size_t GetSize() const;
 
-  bool LoadScriptingResourcesInTarget(Target *target, std::list<Status> &errors,
+  bool LoadScriptingResourcesInTarget(Target *target, std::list<Error> &errors,
                                       Stream *feedback_stream = nullptr,
                                       bool continue_on_error = true);
 
   static bool ModuleIsInCache(const Module *module_ptr);
 
-  static Status GetSharedModule(const ModuleSpec &module_spec,
-                                lldb::ModuleSP &module_sp,
-                                const FileSpecList *module_search_paths_ptr,
-                                lldb::ModuleSP *old_module_sp_ptr,
-                                bool *did_create_ptr,
-                                bool always_create = false);
+  static Error GetSharedModule(const ModuleSpec &module_spec,
+                               lldb::ModuleSP &module_sp,
+                               const FileSpecList *module_search_paths_ptr,
+                               lldb::ModuleSP *old_module_sp_ptr,
+                               bool *did_create_ptr,
+                               bool always_create = false);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -554,6 +505,8 @@ public:
 
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
+
+  void ClearModuleDependentCaches();
 
 protected:
   //------------------------------------------------------------------

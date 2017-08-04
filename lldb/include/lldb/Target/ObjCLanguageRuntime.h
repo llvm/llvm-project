@@ -168,7 +168,7 @@ public:
 
     bool EvaluatePrecondition(StoppointCallbackContext &context) override;
     void GetDescription(Stream &stream, lldb::DescriptionLevel level) override;
-    Status ConfigurePrecondition(Args &args) override;
+    Error ConfigurePrecondition(Args &args) override;
 
   protected:
     void AddClassName(const char *class_name);

@@ -19,8 +19,9 @@ class LibcxxListDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(["libc++"])
-    @expectedFailureAndroid(bugnumber="llvm.org/pr32592")
+    @skipIf(compiler="gcc")
+    @skipIfWindows  # libc++ not ported to Windows yet
+    @add_test_categories(["pyapi"])
     @skipIfDarwin  # rdar://25499635
     def test_with_run_command(self):
         self.build()
@@ -39,6 +40,8 @@ class LibcxxListDataFormatterTestCase(TestBase):
         # Run the program, it should stop at breakpoint 1.
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
+        lldbutil.skip_if_library_missing(
+            self, target, lldbutil.PrintableRegex("libc\+\+"))
         self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
         self.assertEqual(
             len(lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)), 1)

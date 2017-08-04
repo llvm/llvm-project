@@ -9,57 +9,27 @@
 
 #include "lldb/Core/ModuleList.h"
 
-#include "lldb/Core/ArchSpec.h"     // for ArchSpec
-#include "lldb/Core/FileSpecList.h" // for FileSpecList
+// C Includes
+// C++ Includes
+#include <cstdint>
+#include <mutex>
+
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContextList, SymbolCon...
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAnyCategoriesSet
-#include "lldb/Utility/UUID.h"    // for UUID, operator!=, operator==
-#include "lldb/lldb-defines.h"    // for LLDB_INVALID_INDEX32
-
-#if defined(LLVM_ON_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
-#endif
-
-#include "llvm/ADT/StringRef.h" // for StringRef
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
-#include "llvm/Support/raw_ostream.h" // for fs
-
-#include <chrono> // for operator!=, time_point
-#include <memory> // for shared_ptr
-#include <mutex>
-#include <string>  // for string
-#include <utility> // for distance
-
-namespace lldb_private {
-class Function;
-}
-namespace lldb_private {
-class RegularExpression;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class SymbolFile;
-}
-namespace lldb_private {
-class Target;
-}
-namespace lldb_private {
-class TypeList;
-}
 
 using namespace lldb;
 using namespace lldb_private;
+
+static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
 
 ModuleList::ModuleList()
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
@@ -358,16 +328,27 @@ size_t ModuleList::FindFunctionSymbols(const ConstString &name,
 size_t ModuleList::FindFunctions(const RegularExpression &name,
                                  bool include_symbols, bool include_inlines,
                                  bool append, SymbolContextList &sc_list) {
-  const size_t old_size = sc_list.GetSize();
+  const size_t initial_size = sc_list.GetSize();
 
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
+  collection dylinker_modules;
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindFunctions(name, include_symbols, include_inlines, append,
-                          sc_list);
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindFunctions(name, include_symbols, include_inlines, append,
+                            sc_list);
+    else
+      dylinker_modules.push_back(*pos);
   }
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
 
-  return sc_list.GetSize() - old_size;
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; pos++)
+      (*pos)->FindFunctions(name, include_symbols, include_inlines, append,
+                            sc_list);
+  }
+  return sc_list.GetSize() - initial_size;
 }
 
 size_t ModuleList::FindCompileUnits(const FileSpec &path, bool append,
@@ -409,6 +390,36 @@ size_t ModuleList::FindGlobalVariables(const RegularExpression &regex,
   return variable_list.GetSize() - initial_size;
 }
 
+// We don't want to find symbols in the dylinker file if we've found
+// a viable candidate anywhere else.  This function looks at the symbols
+// added to the sc_list since start_idx, and if there's one in there that
+// looks real, returns false, in which case we should terminate the search.
+// If it returns true, we should go on to look in the dylinker.
+
+static bool KeepLookingInDylinker(SymbolContextList &sc_list,
+                                  size_t start_idx) {
+  bool keep_looking = true;
+  if (sc_list.GetSize() == start_idx) {
+    return true;
+  }
+
+  SymbolContext sc;
+  size_t num_symbols = sc_list.GetSize();
+  for (size_t idx = start_idx; idx < num_symbols; idx++) {
+    sc_list.GetContextAtIndex(idx, sc);
+    if (sc.symbol && sc.symbol->GetType() != lldb::eSymbolTypeUndefined) {
+      keep_looking = false;
+      break;
+    }
+    // If we have a function it's not going to be an undefined symbol...
+    if (sc.function) {
+      keep_looking = false;
+      break;
+    }
+  }
+  return keep_looking;
+}
+
 size_t ModuleList::FindSymbolsWithNameAndType(const ConstString &name,
                                               SymbolType symbol_type,
                                               SymbolContextList &sc_list,
@@ -419,8 +430,24 @@ size_t ModuleList::FindSymbolsWithNameAndType(const ConstString &name,
   size_t initial_size = sc_list.GetSize();
 
   collection::const_iterator pos, end = m_modules.end();
-  for (pos = m_modules.begin(); pos != end; ++pos)
-    (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+
+  // Lets see if we found anything but undefined symbols.  If so, then we'll
+  // also look in the dylinker.
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; ++pos)
+      (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+  }
+
   return sc_list.GetSize() - initial_size;
 }
 
@@ -433,8 +460,21 @@ size_t ModuleList::FindSymbolsMatchingRegExAndType(
   size_t initial_size = sc_list.GetSize();
 
   collection::const_iterator pos, end = m_modules.end();
-  for (pos = m_modules.begin(); pos != end; ++pos)
-    (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; ++pos)
+      (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+  }
   return sc_list.GetSize() - initial_size;
 }
 
@@ -676,8 +716,8 @@ size_t ModuleList::GetIndexForModule(const Module *module) const {
 
 static ModuleList &GetSharedModuleList() {
   static ModuleList *g_shared_module_list = nullptr;
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, []() {
     // NOTE: Intentionally leak the module list so a program doesn't have to
     // cleanup all modules and object files as it exits. This just wastes time
     // doing a bunch of cleanup that isn't required.
@@ -704,17 +744,17 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
   return GetSharedModuleList().RemoveOrphans(mandatory);
 }
 
-Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
-                                   ModuleSP &module_sp,
-                                   const FileSpecList *module_search_paths_ptr,
-                                   ModuleSP *old_module_sp_ptr,
-                                   bool *did_create_ptr, bool always_create) {
+Error ModuleList::GetSharedModule(const ModuleSpec &module_spec,
+                                  ModuleSP &module_sp,
+                                  const FileSpecList *module_search_paths_ptr,
+                                  ModuleSP *old_module_sp_ptr,
+                                  bool *did_create_ptr, bool always_create) {
   ModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(
       shared_module_list.m_modules_mutex);
   char path[PATH_MAX];
 
-  Status error;
+  Error error;
 
   module_sp.reset();
 
@@ -796,8 +836,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       auto search_path_spec = module_search_paths_ptr->GetFileSpecAtIndex(idx);
       if (!search_path_spec.ResolvePath())
         continue;
-      namespace fs = llvm::sys::fs;
-      if (!fs::is_directory(search_path_spec.GetPath()))
+      if (!search_path_spec.Exists() || !search_path_spec.IsDirectory())
         continue;
       search_path_spec.AppendPathComponent(
           module_spec.GetFileSpec().GetFilename().AsCString());
@@ -821,7 +860,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
               *did_create_ptr = true;
 
             shared_module_list.ReplaceEquivalent(module_sp);
-            return Status();
+            return Error();
           }
         }
       } else {
@@ -955,14 +994,14 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const Module *module_ptr) {
 }
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
-                                                std::list<Status> &errors,
+                                                std::list<Error> &errors,
                                                 Stream *feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (auto module : m_modules) {
-    Status error;
+    Error error;
     if (module) {
       if (!module->LoadScriptingResourceInTarget(target, error,
                                                  feedback_stream)) {
@@ -992,4 +1031,10 @@ void ModuleList::ForEach(
     if (!callback(module))
       break;
   }
+}
+
+void ModuleList::ClearModuleDependentCaches() {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const auto &module : m_modules)
+    module->ClearModuleDependentCaches();
 }

@@ -11,13 +11,13 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
@@ -33,7 +33,7 @@ using namespace lldb_private;
 static addr_t ResolveRendezvousAddress(Process *process) {
   addr_t info_location;
   addr_t info_addr;
-  Status error;
+  Error error;
 
   info_location = process->GetImageInfoAddress();
 
@@ -222,7 +222,7 @@ bool HexagonDYLDRendezvous::TakeSnapshot(SOEntryList &entry_list) {
 
 addr_t HexagonDYLDRendezvous::ReadWord(addr_t addr, uint64_t *dst,
                                        size_t size) {
-  Status error;
+  Error error;
 
   *dst = m_process->ReadUnsignedIntegerFromMemory(addr, size, 0, error);
   if (error.Fail())
@@ -232,7 +232,7 @@ addr_t HexagonDYLDRendezvous::ReadWord(addr_t addr, uint64_t *dst,
 }
 
 addr_t HexagonDYLDRendezvous::ReadPointer(addr_t addr, addr_t *dst) {
-  Status error;
+  Error error;
 
   *dst = m_process->ReadPointerFromMemory(addr, error);
   if (error.Fail())
@@ -243,7 +243,7 @@ addr_t HexagonDYLDRendezvous::ReadPointer(addr_t addr, addr_t *dst) {
 
 std::string HexagonDYLDRendezvous::ReadStringFromMemory(addr_t addr) {
   std::string str;
-  Status error;
+  Error error;
   size_t size;
   char c;
 
@@ -304,7 +304,7 @@ bool HexagonDYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   if (addr == LLDB_INVALID_ADDRESS)
     return false;
 
-  Status error;
+  Error error;
   value = (uint32_t)m_process->ReadUnsignedIntegerFromMemory(
       addr + field * sizeof(uint32_t), sizeof(uint32_t), 0, error);
   if (error.Fail())
@@ -352,8 +352,9 @@ void HexagonDYLDRendezvous::DumpToLog(Log *log) const {
   log->Printf("   State  : %s",
               (state == eConsistent)
                   ? "consistent"
-                  : (state == eAdd) ? "add" : (state == eDelete) ? "delete"
-                                                                 : "unknown");
+                  : (state == eAdd)
+                        ? "add"
+                        : (state == eDelete) ? "delete" : "unknown");
 
   iterator I = begin();
   iterator E = end();

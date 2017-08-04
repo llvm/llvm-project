@@ -374,7 +374,7 @@ public:
 
   void SetBreakAllKernels(bool do_break, lldb::TargetSP target);
 
-  void DumpStatus(Stream &strm) const;
+  void Status(Stream &strm) const;
 
   void ModulesDidLoad(const ModuleList &module_list) override;
 

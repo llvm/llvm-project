@@ -18,7 +18,6 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_gdb_exit(self):
         """Test that '-gdb-exit' terminates local debug session and exits."""
 
@@ -45,7 +44,6 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_quit(self):
         """Test that 'quit' exits immediately."""
 
@@ -71,7 +69,6 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_q(self):
         """Test that 'q' exits immediately."""
 

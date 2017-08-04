@@ -68,7 +68,7 @@ protected:
       return false;
     }
 
-    Status error;
+    Error error;
 
     FileSpec dylib_fspec(command[0].ref, true);
 

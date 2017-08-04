@@ -14,8 +14,11 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
@@ -29,9 +32,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -145,7 +145,7 @@ void ThreadPlanAssemblyTracer::Log() {
 
   Disassembler *disassembler = GetDisassembler();
   if (disassembler) {
-    Status err;
+    Error err;
     process_sp->ReadMemory(pc, buffer, sizeof(buffer), err);
 
     if (err.Success()) {

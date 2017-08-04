@@ -10,13 +10,16 @@
 #ifndef liblldb_StreamFile_h_
 #define liblldb_StreamFile_h_
 
-#include "lldb/Host/File.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for FilePermissions::eFilePermission...
+// C Includes
+// C++ Includes
 
-#include <stdint.h> // for uint32_t
-#include <stdio.h>  // for size_t, FILE
+#include <string>
+
+// Other libraries and framework includes
+// Project includes
+
+#include "lldb/Core/Stream.h"
+#include "lldb/Host/File.h"
 
 namespace lldb_private {
 

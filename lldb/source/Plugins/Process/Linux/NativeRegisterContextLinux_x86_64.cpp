@@ -11,11 +11,11 @@
 
 #include "NativeRegisterContextLinux_x86_64.h"
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
@@ -385,10 +385,9 @@ NativeRegisterContextLinux_x86_64::GetRegisterSet(uint32_t set_index) const {
   return nullptr;
 }
 
-Status
-NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
-                                                RegisterValue &reg_value) {
-  Status error;
+Error NativeRegisterContextLinux_x86_64::ReadRegister(
+    const RegisterInfo *reg_info, RegisterValue &reg_value) {
+  Error error;
 
   if (!reg_info) {
     error.SetErrorString("reg_info NULL");
@@ -530,15 +529,15 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-Status NativeRegisterContextLinux_x86_64::WriteRegister(
+Error NativeRegisterContextLinux_x86_64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
   assert(reg_info && "reg_info is null");
 
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg_index == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Error("no lldb regnum for %s", reg_info && reg_info->name
+                                              ? reg_info->name
+                                              : "<unknown register>");
 
   if (IsGPR(reg_index))
     return WriteRegisterRaw(reg_index, reg_value);
@@ -567,7 +566,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyYMMtoXSTATE(reg_index, GetByteOrder()))
-          return Status("CopyYMMtoXSTATE() failed");
+          return Error("CopyYMMtoXSTATE() failed");
       }
 
       if (reg_index >= m_reg_info.first_mpxr &&
@@ -575,7 +574,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         ::memcpy(m_mpx_set.mpxr[reg_index - m_reg_info.first_mpxr].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyMPXtoXSTATE(reg_index))
-          return Status("CopyMPXtoXSTATE() failed");
+          return Error("CopyMPXtoXSTATE() failed");
       }
 
       if (reg_index >= m_reg_info.first_mpxc &&
@@ -583,7 +582,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         ::memcpy(m_mpx_set.mpxc[reg_index - m_reg_info.first_mpxc].bytes,
                  reg_value.GetBytes(), reg_value.GetByteSize());
         if (!CopyMPXtoXSTATE(reg_index))
-          return Status("CopyMPXtoXSTATE() failed");
+          return Error("CopyMPXtoXSTATE() failed");
       }
     } else {
       // Get pointer to m_fpr.xstate.fxsave variable and set the data to it.
@@ -617,35 +616,42 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
         break;
       default:
         assert(false && "Unhandled data size.");
-        return Status("unhandled register data size %" PRIu32,
-                      reg_info->byte_size);
+        return Error("unhandled register data size %" PRIu32,
+                     reg_info->byte_size);
       }
     }
 
-    Status error = WriteFPR();
+    Error error = WriteFPR();
     if (error.Fail())
       return error;
 
     if (IsAVX(reg_index)) {
       if (!CopyYMMtoXSTATE(reg_index, GetByteOrder()))
-        return Status("CopyYMMtoXSTATE() failed");
+        return Error("CopyYMMtoXSTATE() failed");
     }
 
     if (IsMPX(reg_index)) {
       if (!CopyMPXtoXSTATE(reg_index))
-        return Status("CopyMPXtoXSTATE() failed");
+        return Error("CopyMPXtoXSTATE() failed");
     }
-    return Status();
+    return Error();
   }
-  return Status("failed - register wasn't recognized to be a GPR or an FPR, "
-                "write strategy unknown");
+  return Error("failed - register wasn't recognized to be a GPR or an FPR, "
+               "write strategy unknown");
 }
 
-Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
+Error NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
-  Status error;
+  Error error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
+  if (!data_sp) {
+    error.SetErrorStringWithFormat(
+        "failed to allocate DataBufferHeap instance of size %" PRIu64,
+        REG_CONTEXT_SIZE);
+    return error;
+  }
+
   error = ReadGPR();
   if (error.Fail())
     return error;
@@ -655,6 +661,13 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
+  if (dst == nullptr) {
+    error.SetErrorStringWithFormat("DataBufferHeap instance of size %" PRIu64
+                                   " returned a null pointer",
+                                   REG_CONTEXT_SIZE);
+    return error;
+  }
+
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
   if (m_xstate_type == XStateType::FXSAVE)
@@ -715,9 +728,9 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
+Error NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  Status error;
+  Error error;
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
@@ -727,9 +740,10 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormatv(
-        "data_sp contained mismatched data size, expected {0}, actual {1}",
-        REG_CONTEXT_SIZE, data_sp->GetByteSize());
+    error.SetErrorStringWithFormat(
+        "NativeRegisterContextLinux_x86_64::%s data_sp contained mismatched "
+        "data size, expected %" PRIu64 ", actual %" PRIu64,
+        __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
   }
 
@@ -843,7 +857,7 @@ bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index) const {
           reg_index <= m_reg_info.last_fpr);
 }
 
-Status NativeRegisterContextLinux_x86_64::WriteFPR() {
+Error NativeRegisterContextLinux_x86_64::WriteFPR() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return WriteRegisterSet(
@@ -853,7 +867,7 @@ Status NativeRegisterContextLinux_x86_64::WriteFPR() {
     return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
                             NT_X86_XSTATE);
   default:
-    return Status("Unrecognized FPR type.");
+    return Error("Unrecognized FPR type.");
   }
 }
 
@@ -940,8 +954,8 @@ size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
   }
 }
 
-Status NativeRegisterContextLinux_x86_64::ReadFPR() {
-  Status error;
+Error NativeRegisterContextLinux_x86_64::ReadFPR() {
+  Error error;
 
   // Probe XSAVE and if it is not supported fall back to FXSAVE.
   if (m_xstate_type != XStateType::FXSAVE) {
@@ -959,7 +973,7 @@ Status NativeRegisterContextLinux_x86_64::ReadFPR() {
     m_xstate_type = XStateType::FXSAVE;
     return error;
   }
-  return Status("Unrecognized FPR type.");
+  return Error("Unrecognized FPR type.");
 }
 
 bool NativeRegisterContextLinux_x86_64::IsMPX(uint32_t reg_index) const {
@@ -999,13 +1013,13 @@ bool NativeRegisterContextLinux_x86_64::CopyMPXtoXSTATE(uint32_t reg) {
   return true;
 }
 
-Status NativeRegisterContextLinux_x86_64::IsWatchpointHit(uint32_t wp_index,
-                                                          bool &is_hit) {
+Error NativeRegisterContextLinux_x86_64::IsWatchpointHit(uint32_t wp_index,
+                                                         bool &is_hit) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Error("Watchpoint index out of range");
 
   RegisterValue reg_value;
-  Status error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
+  Error error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
   if (error.Fail()) {
     is_hit = false;
     return error;
@@ -1018,12 +1032,12 @@ Status NativeRegisterContextLinux_x86_64::IsWatchpointHit(uint32_t wp_index,
   return error;
 }
 
-Status NativeRegisterContextLinux_x86_64::GetWatchpointHitIndex(
+Error NativeRegisterContextLinux_x86_64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
   uint32_t num_hw_wps = NumSupportedHardwareWatchpoints();
   for (wp_index = 0; wp_index < num_hw_wps; ++wp_index) {
     bool is_hit;
-    Status error = IsWatchpointHit(wp_index, is_hit);
+    Error error = IsWatchpointHit(wp_index, is_hit);
     if (error.Fail()) {
       wp_index = LLDB_INVALID_INDEX32;
       return error;
@@ -1032,16 +1046,16 @@ Status NativeRegisterContextLinux_x86_64::GetWatchpointHitIndex(
     }
   }
   wp_index = LLDB_INVALID_INDEX32;
-  return Status();
+  return Error();
 }
 
-Status NativeRegisterContextLinux_x86_64::IsWatchpointVacant(uint32_t wp_index,
-                                                             bool &is_vacant) {
+Error NativeRegisterContextLinux_x86_64::IsWatchpointVacant(uint32_t wp_index,
+                                                            bool &is_vacant) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Error("Watchpoint index out of range");
 
   RegisterValue reg_value;
-  Status error = ReadRegisterRaw(m_reg_info.first_dr + 7, reg_value);
+  Error error = ReadRegisterRaw(m_reg_info.first_dr + 7, reg_value);
   if (error.Fail()) {
     is_vacant = false;
     return error;
@@ -1054,11 +1068,11 @@ Status NativeRegisterContextLinux_x86_64::IsWatchpointVacant(uint32_t wp_index,
   return error;
 }
 
-Status NativeRegisterContextLinux_x86_64::SetHardwareWatchpointWithIndex(
+Error NativeRegisterContextLinux_x86_64::SetHardwareWatchpointWithIndex(
     lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
 
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Error("Watchpoint index out of range");
 
   // Read only watchpoints aren't supported on x86_64. Fall back to read/write
   // waitchpoints instead.
@@ -1068,17 +1082,17 @@ Status NativeRegisterContextLinux_x86_64::SetHardwareWatchpointWithIndex(
     watch_flags = 0x3;
 
   if (watch_flags != 0x1 && watch_flags != 0x3)
-    return Status("Invalid read/write bits for watchpoint");
+    return Error("Invalid read/write bits for watchpoint");
 
   if (size != 1 && size != 2 && size != 4 && size != 8)
-    return Status("Invalid size for watchpoint");
+    return Error("Invalid size for watchpoint");
 
   bool is_vacant;
-  Status error = IsWatchpointVacant(wp_index, is_vacant);
+  Error error = IsWatchpointVacant(wp_index, is_vacant);
   if (error.Fail())
     return error;
   if (!is_vacant)
-    return Status("Watchpoint index not vacant");
+    return Error("Watchpoint index not vacant");
 
   RegisterValue reg_value;
   error = ReadRegisterRaw(m_reg_info.first_dr + 7, reg_value);
@@ -1126,7 +1140,7 @@ bool NativeRegisterContextLinux_x86_64::ClearHardwareWatchpoint(
 
   // for watchpoints 0, 1, 2, or 3, respectively,
   // clear bits 0, 1, 2, or 3 of the debug status register (DR6)
-  Status error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
+  Error error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
   if (error.Fail())
     return false;
   uint64_t bit_mask = 1 << wp_index;
@@ -1147,11 +1161,11 @@ bool NativeRegisterContextLinux_x86_64::ClearHardwareWatchpoint(
       .Success();
 }
 
-Status NativeRegisterContextLinux_x86_64::ClearAllHardwareWatchpoints() {
+Error NativeRegisterContextLinux_x86_64::ClearAllHardwareWatchpoints() {
   RegisterValue reg_value;
 
   // clear bits {0-4} of the debug status register (DR6)
-  Status error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
+  Error error = ReadRegisterRaw(m_reg_info.first_dr + 6, reg_value);
   if (error.Fail())
     return error;
   uint64_t bit_mask = 0xF;
@@ -1175,7 +1189,7 @@ uint32_t NativeRegisterContextLinux_x86_64::SetHardwareWatchpoint(
   const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
   for (uint32_t wp_index = 0; wp_index < num_hw_watchpoints; ++wp_index) {
     bool is_vacant;
-    Status error = IsWatchpointVacant(wp_index, is_vacant);
+    Error error = IsWatchpointVacant(wp_index, is_vacant);
     if (is_vacant) {
       error = SetHardwareWatchpointWithIndex(addr, size, watch_flags, wp_index);
       if (error.Success())

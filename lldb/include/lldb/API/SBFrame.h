@@ -83,6 +83,7 @@ public:
   // guess the language type from the mangled name.
   lldb::LanguageType GuessLanguage() const;
 
+  bool IsSwiftThunk() const;
   /// Return true if this frame represents an inlined function.
   ///
   /// See also GetFunctionName().

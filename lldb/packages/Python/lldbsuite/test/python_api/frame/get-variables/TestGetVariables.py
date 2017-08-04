@@ -44,6 +44,8 @@ class TestGetVariables(TestBase):
             len(copy_names), 0, "%s: we didn't find variables: %s in value list (%s)" %
             (description, copy_names, actual_names))
 
+    @skipUnlessDarwin
+    @expectedFailureAll(oslist=["macosx"], bugnumber="swift.org/SR-1569")
     def test(self):
         self.build()
 
@@ -91,7 +93,7 @@ class TestGetVariables(TestBase):
 
         arg_names = ['argc', 'argv']
         local_names = ['i', 'j', 'k']
-        static_names = ['static_var', 'g_global_var', 'g_static_var']
+        static_names = ['static_var', 'g_global_var', 'static_var']
         breakpoint1_locals = ['i']
         breakpoint1_statics = ['static_var']
         num_args = len(arg_names)

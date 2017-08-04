@@ -2,6 +2,11 @@ LEVEL = ../../../make
 
 C_SOURCES := test.c
 
-CFLAGS_EXTRAS += -O1 -D_FORTIFY_SOURCE=0
+
+$(info OS: $(OS))
+HOST_OS = $(shell uname -s)
+ifeq "$(HOST_OS)" "Darwin"
+	FRAMEWORK_INCLUDES = -isysroot $(shell xcrun -show-sdk-path)
+endif
 
 include $(LEVEL)/Makefile.rules

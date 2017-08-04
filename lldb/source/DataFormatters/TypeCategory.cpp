@@ -36,9 +36,30 @@ TypeCategoryImpl::TypeCategoryImpl(
 static bool IsApplicable(lldb::LanguageType category_lang,
                          lldb::LanguageType valobj_lang) {
   switch (category_lang) {
-  // Unless we know better, allow only exact equality.
-  default:
+  // these are not languages that LLDB would ordinarily deal with
+  // only allow an exact equality here, since we really don't know
+  // any better
+  case eLanguageTypeAda83:
+  case eLanguageTypeCobol74:
+  case eLanguageTypeCobol85:
+  case eLanguageTypeFortran77:
+  case eLanguageTypeFortran90:
+  case eLanguageTypePascal83:
+  case eLanguageTypeModula2:
+  case eLanguageTypeJava:
+  case eLanguageTypeAda95:
+  case eLanguageTypeFortran95:
+  case eLanguageTypePLI:
+  case eLanguageTypeUPC:
+  case eLanguageTypeD:
+  case eLanguageTypePython:
     return category_lang == valobj_lang;
+
+  // Swift knows about itself, and about ObjC++ bridgings
+  case eLanguageTypeSwift:
+    return valobj_lang == eLanguageTypeSwift ||
+           valobj_lang == eLanguageTypeObjC ||
+           valobj_lang == eLanguageTypeObjC_plus_plus;
 
   // the C family, we consider it as one
   case eLanguageTypeC89:
@@ -65,7 +86,7 @@ static bool IsApplicable(lldb::LanguageType category_lang,
            valobj_lang == eLanguageTypeC_plus_plus ||
            valobj_lang == eLanguageTypeObjC;
 
-  // Categories with unspecified language match everything.
+  default:
   case eLanguageTypeUnknown:
     return true;
   }

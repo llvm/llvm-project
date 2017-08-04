@@ -93,3 +93,5 @@ add_lldb_tool(lldb-mi
   LINK_COMPONENTS
     Support
   )
+
+set_target_properties(lldb-mi PROPERTIES VERSION ${LLDB_VERSION})

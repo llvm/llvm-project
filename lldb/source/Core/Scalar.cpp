@@ -9,17 +9,24 @@
 
 #include "lldb/Core/Scalar.h"
 
-#include "lldb/Host/StringConvert.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/lldb-types.h" // for offset_t
+// C Includes
+// C++ Includes
+#include <cinttypes>
+#include <cmath>
+#include <cstdio>
 
+// Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
 
-#include <cinttypes>
-#include <cstdio>
+// Project includes
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Host/Endian.h"
+#include "lldb/Host/StringConvert.h"
+#include "lldb/Interpreter/Args.h"
+
+#include "Plugins/Process/Utility/InstructionUtils.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2460,9 +2467,9 @@ const Scalar lldb_private::operator>>(const Scalar &lhs, const Scalar &rhs) {
   return result;
 }
 
-Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
-                                   size_t byte_size) {
-  Status error;
+Error Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
+                                  size_t byte_size) {
+  Error error;
   if (value_str == nullptr || value_str[0] == '\0') {
     error.SetErrorString("Invalid c-string value string.");
     return error;
@@ -2596,9 +2603,9 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
   return error;
 }
 
-Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
-                                size_t byte_size) {
-  Status error;
+Error Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
+                               size_t byte_size) {
+  Error error;
 
   type128 int128;
   type256 int256;
@@ -2745,7 +2752,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
       if (max_bit_pos == sign_bit_pos)
         return true;
       else if (sign_bit_pos < (max_bit_pos - 1)) {
-        llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
+        llvm::APInt sign_bit = llvm::APInt::getSignBit(sign_bit_pos + 1);
         llvm::APInt bitwize_and = m_integer & sign_bit;
         if (bitwize_and.getBoolValue()) {
           const llvm::APInt mask =
@@ -2762,7 +2769,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
 
 size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
                                lldb::ByteOrder dst_byte_order,
-                               Status &error) const {
+                               Error &error) const {
   // Get a data extractor that points to the native scalar data
   DataExtractor data;
   if (!GetData(data)) {

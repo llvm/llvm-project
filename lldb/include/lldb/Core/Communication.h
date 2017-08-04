@@ -10,31 +10,19 @@
 #ifndef liblldb_Communication_h_
 #define liblldb_Communication_h_
 
-#include "lldb/Core/Broadcaster.h"
-#include "lldb/Host/HostThread.h"
-#include "lldb/Utility/Timeout.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for ConnectionStatus, FLAGS_ANONYMOU...
-#include "lldb/lldb-forward.h"      // for ConnectionSP
-#include "lldb/lldb-types.h"        // for thread_arg_t, thread_result_t
-
+// C Includes
+// C++ Includes
 #include <atomic>
 #include <mutex>
-#include <ratio> // for micro
 #include <string>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint8_t
-
-namespace lldb_private {
-class Connection;
-}
-namespace lldb_private {
-class ConstString;
-}
-namespace lldb_private {
-class Status;
-}
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Broadcaster.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Timeout.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -71,7 +59,7 @@ namespace lldb_private {
 /// reads data and caches any received bytes. To start the read thread
 /// clients call:
 ///
-///     bool Communication::StartReadThread (Status *);
+///     bool Communication::StartReadThread (Error *);
 ///
 /// If true is returned a read thread has been spawned that will
 /// continually execute a call to the pure virtual DoRead function:
@@ -154,10 +142,10 @@ public:
   ///     internal error object should be filled in with an
   ///     appropriate value based on the result of this function.
   ///
-  /// @see Status& Communication::GetError ();
+  /// @see Error& Communication::GetError ();
   /// @see bool Connection::Connect (const char *url);
   //------------------------------------------------------------------
-  lldb::ConnectionStatus Connect(const char *url, Status *error_ptr);
+  lldb::ConnectionStatus Connect(const char *url, Error *error_ptr);
 
   //------------------------------------------------------------------
   /// Disconnect the communications connection if one is currently
@@ -168,10 +156,10 @@ public:
   ///     internal error object should be filled in with an
   ///     appropriate value based on the result of this function.
   ///
-  /// @see Status& Communication::GetError ();
+  /// @see Error& Communication::GetError ();
   /// @see bool Connection::Disconnect ();
   //------------------------------------------------------------------
-  lldb::ConnectionStatus Disconnect(Status *error_ptr = nullptr);
+  lldb::ConnectionStatus Disconnect(Error *error_ptr = nullptr);
 
   //------------------------------------------------------------------
   /// Check if the connection is valid.
@@ -217,7 +205,7 @@ public:
   /// @see size_t Connection::Read (void *, size_t);
   //------------------------------------------------------------------
   size_t Read(void *dst, size_t dst_len, const Timeout<std::micro> &timeout,
-              lldb::ConnectionStatus &status, Status *error_ptr);
+              lldb::ConnectionStatus &status, Error *error_ptr);
 
   //------------------------------------------------------------------
   /// The actual write function that attempts to write to the
@@ -237,7 +225,7 @@ public:
   ///     The number of bytes actually Written.
   //------------------------------------------------------------------
   size_t Write(const void *src, size_t src_len, lldb::ConnectionStatus &status,
-               Status *error_ptr);
+               Error *error_ptr);
 
   //------------------------------------------------------------------
   /// Sets the connection that it to be used by this class.
@@ -280,7 +268,7 @@ public:
   /// @see void Communication::AppendBytesToCache (const uint8_t * bytes, size_t
   /// len, bool broadcast);
   //------------------------------------------------------------------
-  virtual bool StartReadThread(Status *error_ptr = nullptr);
+  virtual bool StartReadThread(Error *error_ptr = nullptr);
 
   //------------------------------------------------------------------
   /// Stops the read thread by cancelling it.
@@ -289,9 +277,9 @@ public:
   ///     \b True if the read thread was successfully canceled, \b
   ///     false otherwise.
   //------------------------------------------------------------------
-  virtual bool StopReadThread(Status *error_ptr = nullptr);
+  virtual bool StopReadThread(Error *error_ptr = nullptr);
 
-  virtual bool JoinReadThread(Status *error_ptr = nullptr);
+  virtual bool JoinReadThread(Error *error_ptr = nullptr);
   //------------------------------------------------------------------
   /// Checks if there is a currently running read thread.
   ///
@@ -361,7 +349,7 @@ protected:
 
   size_t ReadFromConnection(void *dst, size_t dst_len,
                             const Timeout<std::micro> &timeout,
-                            lldb::ConnectionStatus &status, Status *error_ptr);
+                            lldb::ConnectionStatus &status, Error *error_ptr);
 
   //------------------------------------------------------------------
   /// Append new bytes that get read from the read thread into the

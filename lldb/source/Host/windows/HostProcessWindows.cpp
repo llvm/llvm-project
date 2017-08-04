@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/HostProcessWindows.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/windows/windows.h"
-#include "lldb/Utility/FileSpec.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -37,8 +37,8 @@ HostProcessWindows::~HostProcessWindows() { Close(); }
 
 void HostProcessWindows::SetOwnsHandle(bool owns) { m_owns_handle = owns; }
 
-Status HostProcessWindows::Terminate() {
-  Status error;
+Error HostProcessWindows::Terminate() {
+  Error error;
   if (m_process == nullptr)
     error.SetError(ERROR_INVALID_HANDLE, lldb::eErrorTypeWin32);
 
@@ -48,8 +48,8 @@ Status HostProcessWindows::Terminate() {
   return error;
 }
 
-Status HostProcessWindows::GetMainModule(FileSpec &file_spec) const {
-  Status error;
+Error HostProcessWindows::GetMainModule(FileSpec &file_spec) const {
+  Error error;
   if (m_process == nullptr)
     error.SetError(ERROR_INVALID_HANDLE, lldb::eErrorTypeWin32);
 

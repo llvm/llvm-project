@@ -18,7 +18,6 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_tokens(self):
         """Test that 'lldb-mi --interpreter' prints command tokens."""
 
@@ -42,12 +41,15 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_specialchars(self):
         """Test that 'lldb-mi --interpreter' handles complicated strings."""
 
         # Create an alias for myexe
         complicated_myexe = "C--mpl-x file's`s @#$%^&*()_+-={}[]| name"
+        # Make sure to remove a file in case the test suite was cancelled or crashed
+        # when this link was created and before it was removed.
+        if os.path.exists(complicated_myexe):
+            os.unlink(complicated_myexe)
         os.symlink(self.myexe, complicated_myexe)
         self.addTearDownHook(lambda: os.unlink(complicated_myexe))
 
@@ -68,7 +70,6 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="Failing in ~6/600 dosep runs (build 3120-3122)")
@@ -91,7 +92,6 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://28805064")
     def test_lldbmi_output_grammar(self):
         """Test that 'lldb-mi --interpreter' uses standard output syntax."""

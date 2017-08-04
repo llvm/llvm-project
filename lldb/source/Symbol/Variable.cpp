@@ -10,6 +10,8 @@
 #include "lldb/Symbol/Variable.h"
 
 #include "lldb/Core/Module.h"
+#include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/Block.h"
@@ -28,8 +30,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -160,7 +160,7 @@ void Variable::Dump(Stream *s, bool show_context) const {
     if (m_owner_scope) {
       ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
       if (module_sp)
-        abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture()).get();
+        abi = ABI::FindPlugin(module_sp->GetArchitecture()).get();
     }
     m_location.GetDescription(s, lldb::eDescriptionLevelBrief,
                               loclist_base_addr, abi);
@@ -330,11 +330,11 @@ bool Variable::IsInScope(StackFrame *frame) {
   return false;
 }
 
-Status Variable::GetValuesForVariableExpressionPath(
+Error Variable::GetValuesForVariableExpressionPath(
     llvm::StringRef variable_expr_path, ExecutionContextScope *scope,
     GetVariableCallback callback, void *baton, VariableList &variable_list,
     ValueObjectList &valobj_list) {
-  Status error;
+  Error error;
   if (!callback || variable_expr_path.empty()) {
     error.SetErrorString("unknown error");
     return error;
@@ -350,7 +350,7 @@ Status Variable::GetValuesForVariableExpressionPath(
       return error;
     }
     for (uint32_t i = 0; i < valobj_list.GetSize();) {
-      Status tmp_error;
+      Error tmp_error;
       ValueObjectSP valobj_sp(
           valobj_list.GetValueObjectAtIndex(i)->Dereference(tmp_error));
       if (tmp_error.Fail()) {
@@ -368,7 +368,7 @@ Status Variable::GetValuesForVariableExpressionPath(
         valobj_list);
     if (error.Success()) {
       for (uint32_t i = 0; i < valobj_list.GetSize();) {
-        Status tmp_error;
+        Error tmp_error;
         ValueObjectSP valobj_sp(
             valobj_list.GetValueObjectAtIndex(i)->AddressOf(tmp_error));
         if (tmp_error.Fail()) {
@@ -471,7 +471,7 @@ bool Variable::DumpLocationForAddress(Stream *s, const Address &address) {
       if (m_owner_scope) {
         ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
         if (module_sp)
-          abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture()).get();
+          abi = ABI::FindPlugin(module_sp->GetArchitecture()).get();
       }
 
       const addr_t file_addr = address.GetFileAddress();
@@ -737,7 +737,8 @@ static void PrivateAutoComplete(
               continue;
 
             const char *variable_name = variable->GetName().AsCString();
-            if (strstr(variable_name, token.c_str()) == variable_name) {
+            if (variable_name &&
+                strstr(variable_name, token.c_str()) == variable_name) {
               if (strcmp(variable_name, token.c_str()) == 0) {
                 Type *variable_type = variable->GetType();
                 if (variable_type) {

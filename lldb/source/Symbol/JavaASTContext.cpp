@@ -10,9 +10,10 @@
 #include <sstream>
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DWARFExpression.h"
@@ -21,7 +22,6 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Stream.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserJava.h"
 
@@ -137,7 +137,7 @@ public:
     if (m_dynamic_type_id.Evaluate(exe_ctx->GetBestExecutionContextScope(),
                                    nullptr, nullptr, 0, &obj_load_address,
                                    nullptr, result, nullptr)) {
-      Status error;
+      Error error;
 
       lldb::addr_t type_id_addr = result.GetScalar().UInt();
       lldb::ProcessSP process_sp = exe_ctx->GetProcessSP();
@@ -303,7 +303,7 @@ public:
     if (!m_length_expression.IsValid())
       return UINT32_MAX;
 
-    Status error;
+    Error error;
     ValueObjectSP address_obj = value_obj->AddressOf(error);
     if (error.Fail())
       return UINT32_MAX;
@@ -347,7 +347,8 @@ uint32_t JavaASTContext::GetPluginVersion() { return 1; }
 
 lldb::TypeSystemSP JavaASTContext::CreateInstance(lldb::LanguageType language,
                                                   Module *module,
-                                                  Target *target) {
+                                                  Target *target,
+                                                  const char *extra_options) {
   if (language == eLanguageTypeJava) {
     if (module)
       return std::make_shared<JavaASTContext>(module->GetArchitecture());
@@ -518,7 +519,7 @@ bool JavaASTContext::IsIntegerType(lldb::opaque_compiler_type_t type,
 bool JavaASTContext::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                            CompilerType *target_type,
                                            bool check_cplusplus,
-                                           bool check_objc) {
+                                           bool check_objc, bool check_swift) {
   return llvm::isa<JavaReferenceType>(static_cast<JavaType *>(type));
 }
 
@@ -730,6 +731,11 @@ JavaASTContext::GetCanonicalType(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType
+JavaASTContext::GetInstanceType(lldb::opaque_compiler_type_t type) {
+  return CompilerType(this, type);
+}
+
+CompilerType
 JavaASTContext::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
   return CompilerType(this, type);
 }
@@ -744,6 +750,10 @@ JavaASTContext::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 JavaASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
+CompilerType JavaASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
@@ -818,6 +828,10 @@ uint64_t JavaASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     return obj->GetByteSize() * 8;
   }
   return 0;
+}
+
+uint64_t JavaASTContext::GetByteStride(void *type) {
+  return (GetBitSize(type, nullptr) + 7) / 8;
 }
 
 lldb::Encoding JavaASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
@@ -1002,12 +1016,13 @@ bool JavaASTContext::DumpTypeValue(
     lldb::opaque_compiler_type_t type, Stream *s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t data_offset,
     size_t data_byte_size, uint32_t bitfield_bit_size,
-    uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope) {
+    uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
+    bool is_base_class) {
   if (IsScalarType(type)) {
-    return DumpDataExtractor(data, s, data_offset, format, data_byte_size,
-                             1, // count
-                             UINT32_MAX, LLDB_INVALID_ADDRESS,
-                             bitfield_bit_size, bitfield_bit_offset, exe_scope);
+    return data.Dump(s, data_offset, format, data_byte_size,
+                     1, // count
+                     UINT32_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
+                     bitfield_bit_offset, exe_scope);
   }
   return false;
 }

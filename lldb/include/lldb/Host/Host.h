@@ -7,46 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_HOST_H
-#define LLDB_HOST_HOST_H
+#ifndef liblldb_Host_h_
+#define liblldb_Host_h_
+#if defined(__cplusplus)
 
+#include <stdarg.h>
+
+#include <map>
+#include <string>
+
+#include "lldb/Core/StringList.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
-#include <cerrno>
-#include <map>
-#include <stdarg.h>
-#include <string>
-#include <type_traits>
 
 namespace lldb_private {
 
 class FileAction;
 class ProcessLaunchInfo;
-
-//----------------------------------------------------------------------
-// Exit Type for inferior processes
-//----------------------------------------------------------------------
-struct WaitStatus {
-  enum Type : uint8_t {
-    Exit,   // The status represents the return code from normal
-            // program exit (i.e. WIFEXITED() was true)
-    Signal, // The status represents the signal number that caused
-            // the program to exit (i.e. WIFSIGNALED() was true)
-    Stop,   // The status represents the signal number that caused the
-            // program to stop (i.e. WIFSTOPPED() was true)
-  };
-
-  Type type;
-  uint8_t status;
-
-  WaitStatus(Type type, uint8_t status) : type(type), status(status) {}
-
-  static WaitStatus Decode(int wstatus);
-};
 
 //----------------------------------------------------------------------
 /// @class Host Host.h "lldb/Host/Host.h"
@@ -120,6 +100,14 @@ public:
   static void Kill(lldb::pid_t pid, int signo);
 
   //------------------------------------------------------------------
+  /// Get the thread ID for the calling thread in the current process.
+  ///
+  /// @return
+  ///     The thread ID for the calling thread in the current process.
+  //------------------------------------------------------------------
+  static lldb::tid_t GetCurrentThreadID();
+
+  //------------------------------------------------------------------
   /// Get the thread token (the one returned by ThreadCreate when the thread was
   /// created) for the
   /// calling thread in the current process.
@@ -130,6 +118,15 @@ public:
   static lldb::thread_t GetCurrentThread();
 
   static const char *GetSignalAsCString(int signo);
+
+  typedef void (*ThreadLocalStorageCleanupCallback)(void *p);
+
+  static lldb::thread_key_t
+  ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback);
+
+  static void *ThreadLocalStorageGet(lldb::thread_key_t key);
+
+  static void ThreadLocalStorageSet(lldb::thread_key_t key, void *value);
 
   //------------------------------------------------------------------
   /// Given an address in the current process (the process that
@@ -195,9 +192,25 @@ public:
 
   static bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
+#if (defined(__APPLE__) || defined(__linux__) || defined(__FreeBSD__) ||       \
+     defined(__GLIBC__) || defined(__NetBSD__)) &&                             \
+    !defined(__ANDROID__)
+
+  static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info);
+
+  static Error LaunchProcessPosixSpawn(const char *exe_path,
+                                       const ProcessLaunchInfo &launch_info,
+                                       lldb::pid_t &pid);
+
+  static bool AddPosixSpawnFileAction(void *file_actions,
+                                      const FileAction *info, Log *log,
+                                      Error &error);
+
+#endif
+
   static const lldb::UnixSignalsSP &GetUnixSignals();
 
-  static Status LaunchProcess(ProcessLaunchInfo &launch_info);
+  static Error LaunchProcess(ProcessLaunchInfo &launch_info);
 
   //------------------------------------------------------------------
   /// Perform expansion of the command-line for this launch info
@@ -206,10 +219,10 @@ public:
   //  argument magic the platform defines as part of its typical
   //  user experience
   //------------------------------------------------------------------
-  static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
+  static Error ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
   // TODO: Convert this function to take a StringRef.
-  static Status RunShellCommand(
+  static Error RunShellCommand(
       const char *command,         // Shouldn't be NULL
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
@@ -221,7 +234,7 @@ public:
       uint32_t timeout_sec,
       bool run_in_default_shell = true);
 
-  static Status RunShellCommand(
+  static Error RunShellCommand(
       const Args &args,
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
@@ -233,24 +246,17 @@ public:
       uint32_t timeout_sec,
       bool run_in_default_shell = true);
 
+  static lldb::DataBufferSP GetAuxvData(lldb_private::Process *process);
+
+  static lldb::DataBufferSP GetAuxvData(lldb::pid_t pid);
+
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);
 
   static size_t GetEnvironment(StringList &env);
-
-  static std::unique_ptr<Connection>
-  CreateDefaultConnection(llvm::StringRef url);
 };
 
 } // namespace lldb_private
 
-namespace llvm {
-template <> struct format_provider<lldb_private::WaitStatus> {
-  /// Options = "" gives a human readable description of the status
-  /// Options = "g" gives a gdb-remote protocol status (e.g., X09)
-  static void format(const lldb_private::WaitStatus &WS, raw_ostream &OS,
-                     llvm::StringRef Options);
-};
-} // namespace llvm
-
-#endif // LLDB_HOST_HOST_H
+#endif // #if defined(__cplusplus)
+#endif // liblldb_Host_h_

@@ -18,7 +18,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -30,7 +31,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/TargetList.h"
-#include "lldb/Utility/FileSpec.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -59,9 +59,9 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 'l':
@@ -683,9 +683,9 @@ class CommandObjectSourceList : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 'l':

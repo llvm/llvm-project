@@ -14,7 +14,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/UUID.h"
+#include "lldb/Core/UUID.h"
 #include "lldb/Interpreter/OptionValue.h"
 
 namespace lldb_private {
@@ -36,10 +36,10 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  Status
+  Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
+  Error
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 

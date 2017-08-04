@@ -18,12 +18,11 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Flags.h"
-
+#include "lldb/Core/Flags.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

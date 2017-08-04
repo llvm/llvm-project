@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/ExpressionVariable.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Expression/IRExecutionUnit.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 
@@ -29,6 +29,11 @@ uint8_t *ExpressionVariable::GetValueBytes() {
 }
 
 PersistentExpressionState::~PersistentExpressionState() {}
+
+void PersistentExpressionState::RegisterSymbol(const ConstString &name,
+                                               lldb::addr_t addr) {
+  m_symbol_map[name.GetCString()] = addr;
+}
 
 lldb::addr_t PersistentExpressionState::LookupSymbol(const ConstString &name) {
   SymbolMap::iterator si = m_symbol_map.find(name.GetCString());

@@ -13,7 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/Stream.h"
 #include <algorithm>
 
 using namespace lldb;

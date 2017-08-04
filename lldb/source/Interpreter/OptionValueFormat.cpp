@@ -13,9 +13,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Stream.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -31,9 +31,9 @@ void OptionValueFormat::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueFormat::SetValueFromString(llvm::StringRef value,
-                                             VarSetOperationType op) {
-  Status error;
+Error OptionValueFormat::SetValueFromString(llvm::StringRef value,
+                                            VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

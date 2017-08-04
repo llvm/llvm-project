@@ -11,38 +11,10 @@
 #define liblldb_DynamicLoader_h_
 
 // Project includes
+#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Utility/FileSpec.h" // for FileSpec
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/UUID.h"
-#include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-forward.h"              // for ModuleSP, ThreadPlanSP
-#include "lldb/lldb-private-enumerations.h" // for LazyBool, LazyBool::eLaz...
-#include "lldb/lldb-types.h"                // for addr_t
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for int64_t
-namespace lldb_private {
-class ModuleList;
-}
-namespace lldb_private {
-class Process;
-}
-namespace lldb_private {
-class SectionList;
-}
-namespace lldb_private {
-class Symbol;
-}
-namespace lldb_private {
-class SymbolContext;
-}
-namespace lldb_private {
-class SymbolContextList;
-}
-namespace lldb_private {
-class Thread;
-}
+#include "lldb/Core/UUID.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -213,7 +185,7 @@ public:
   ///     \b true if it is currently ok to try and load a shared
   ///     library into the process, \b false otherwise.
   //------------------------------------------------------------------
-  virtual Status CanLoadImage() = 0;
+  virtual Error CanLoadImage() = 0;
 
   //------------------------------------------------------------------
   /// Ask if the eh_frame information for the given SymbolContext should

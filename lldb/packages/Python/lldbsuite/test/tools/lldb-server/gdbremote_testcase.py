@@ -19,6 +19,7 @@ import sys
 import tempfile
 import time
 from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import *
 import logging
@@ -883,13 +884,12 @@ class GdbRemoteTestCaseBase(TestBase):
     def add_set_breakpoint_packets(
             self,
             address,
-            z_packet_type=0,
             do_continue=True,
             breakpoint_kind=1):
         self.test_sequence.add_log_lines(
             [  # Set the breakpoint.
-                "read packet: $Z{2},{0:x},{1}#00".format(
-                    address, breakpoint_kind, z_packet_type),
+                "read packet: $Z0,{0:x},{1}#00".format(
+                    address, breakpoint_kind),
                 # Verify the stub could set it.
                 "send packet: $OK#00",
             ], True)
@@ -905,15 +905,11 @@ class GdbRemoteTestCaseBase(TestBase):
                                  2: "stop_thread_id"}},
                 ], True)
 
-    def add_remove_breakpoint_packets(
-            self,
-            address,
-            z_packet_type=0,
-            breakpoint_kind=1):
+    def add_remove_breakpoint_packets(self, address, breakpoint_kind=1):
         self.test_sequence.add_log_lines(
             [  # Remove the breakpoint.
-                "read packet: $z{2},{0:x},{1}#00".format(
-                    address, breakpoint_kind, z_packet_type),
+                "read packet: $z0,{0:x},{1}#00".format(
+                    address, breakpoint_kind),
                 # Verify the stub could unset it.
                 "send packet: $OK#00",
             ], True)
@@ -934,8 +930,7 @@ class GdbRemoteTestCaseBase(TestBase):
         "qXfer:libraries:read",
         "qXfer:libraries-svr4:read",
         "qXfer:features:read",
-        "qEcho",
-        "QPassSignals"
+        "qEcho"
     ]
 
     def parse_qSupported_response(self, context):

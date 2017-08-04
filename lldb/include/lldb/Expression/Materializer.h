@@ -17,18 +17,26 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Error.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
 namespace lldb_private {
 
 class Materializer {
 public:
+  //----------------------------------------------------------------------
+  // See TypeSystem.h for how to add subclasses to this.
+  //----------------------------------------------------------------------
+  enum LLVMCastKind { eKindBasic, eKindSwiftREPL };
+
+  LLVMCastKind getKind() const { return m_kind; }
+
+  Materializer(LLVMCastKind kind);
   Materializer();
-  ~Materializer();
+  virtual ~Materializer();
 
   class Dematerializer {
   public:
@@ -38,15 +46,12 @@ public:
 
     ~Dematerializer() { Wipe(); }
 
-    void Dematerialize(Status &err, lldb::addr_t frame_top,
+    void Dematerialize(Error &err, lldb::addr_t frame_top,
                        lldb::addr_t frame_bottom);
 
     void Wipe();
 
-    bool IsValid() {
-      return m_materializer && m_map &&
-             (m_process_address != LLDB_INVALID_ADDRESS);
-    }
+    bool IsValid() { return m_materializer && m_map; }
 
   private:
     friend class Materializer;
@@ -72,7 +77,7 @@ public:
   typedef std::weak_ptr<Dematerializer> DematerializerWP;
 
   DematerializerSP Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                               lldb::addr_t process_address, Status &err);
+                               lldb::addr_t process_address, Error &err);
 
   class PersistentVariableDelegate {
   public:
@@ -81,15 +86,16 @@ public:
     virtual void DidDematerialize(lldb::ExpressionVariableSP &variable) = 0;
   };
 
-  uint32_t
+  virtual uint32_t
   AddPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
-                        PersistentVariableDelegate *delegate, Status &err);
-  uint32_t AddVariable(lldb::VariableSP &variable_sp, Status &err);
-  uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
-                             bool keep_in_memory,
-                             PersistentVariableDelegate *delegate, Status &err);
-  uint32_t AddSymbol(const Symbol &symbol_sp, Status &err);
-  uint32_t AddRegister(const RegisterInfo &register_info, Status &err);
+                        PersistentVariableDelegate *delegate, Error &err);
+  virtual uint32_t AddVariable(lldb::VariableSP &variable_sp, Error &err);
+  virtual uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
+                                     bool keep_in_memory,
+                                     PersistentVariableDelegate *delegate,
+                                     Error &err);
+  virtual uint32_t AddSymbol(const Symbol &symbol_sp, Error &err);
+  virtual uint32_t AddRegister(const RegisterInfo &register_info, Error &err);
 
   uint32_t GetStructAlignment() { return m_struct_alignment; }
 
@@ -102,11 +108,11 @@ public:
     virtual ~Entity() = default;
 
     virtual void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                             lldb::addr_t process_address, Status &err) = 0;
+                             lldb::addr_t process_address, Error &err) = 0;
     virtual void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                                lldb::addr_t process_address,
                                lldb::addr_t frame_top,
-                               lldb::addr_t frame_bottom, Status &err) = 0;
+                               lldb::addr_t frame_bottom, Error &err) = 0;
     virtual void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address,
                            Log *log) = 0;
     virtual void Wipe(IRMemoryMap &map, lldb::addr_t process_address) = 0;
@@ -127,12 +133,13 @@ public:
     uint32_t m_offset;
   };
 
-private:
+protected:
   uint32_t AddStructMember(Entity &entity);
 
   typedef std::unique_ptr<Entity> EntityUP;
   typedef std::vector<EntityUP> EntityVector;
 
+  LLVMCastKind m_kind;
   DematerializerWP m_dematerializer_wp;
   EntityVector m_entities;
   uint32_t m_current_offset;

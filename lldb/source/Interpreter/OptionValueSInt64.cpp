@@ -13,8 +13,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Stream.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -34,9 +34,9 @@ void OptionValueSInt64::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueSInt64::SetValueFromString(llvm::StringRef value_ref,
-                                             VarSetOperationType op) {
-  Status error;
+Error OptionValueSInt64::SetValueFromString(llvm::StringRef value_ref,
+                                            VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

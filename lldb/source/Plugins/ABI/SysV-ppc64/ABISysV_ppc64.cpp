@@ -16,6 +16,10 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -29,10 +33,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -223,11 +223,11 @@ size_t ABISysV_ppc64::GetRedZoneSize() const { return 224; }
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_ppc64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
+ABISysV_ppc64::CreateInstance(const ArchSpec &arch) {
   static ABISP g_abi_sp;
   if (arch.GetTriple().getArch() == llvm::Triple::ppc64) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_ppc64(process_sp));
+      g_abi_sp.reset(new ABISysV_ppc64);
     return g_abi_sp;
   }
   return ABISP();
@@ -282,7 +282,7 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   sp -= 8;
 
-  Status error;
+  Error error;
   const RegisterInfo *pc_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   const RegisterInfo *sp_reg_info =
@@ -376,7 +376,7 @@ static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
       scalar.SignExtend(bit_width);
   } else {
     uint32_t byte_size = (bit_width + (8 - 1)) / 8;
-    Status error;
+    Error error;
     if (thread.GetProcess()->ReadScalarIntegerFromMemory(
             current_stack_argument, byte_size, is_signed, scalar, error)) {
       current_stack_argument += byte_size;
@@ -464,9 +464,9 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
   return true;
 }
 
-Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                           lldb::ValueObjectSP &new_value_sp) {
-  Status error;
+Error ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                          lldb::ValueObjectSP &new_value_sp) {
+  Error error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -492,7 +492,7 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r3", 0);
 
     DataExtractor data;
-    Status data_error;
+    Error data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(
@@ -518,7 +518,7 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       size_t bit_width = compiler_type.GetBitSize(frame_sp.get());
       if (bit_width <= 64) {
         DataExtractor data;
-        Status data_error;
+        Error data_error;
         size_t num_bytes = new_value_sp->GetData(data, data_error);
         if (data_error.Fail()) {
           error.SetErrorStringWithFormat(
@@ -663,7 +663,7 @@ ValueObjectSP ABISysV_ppc64::GetReturnValueObjectSimple(
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
             if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
-              Status error;
+              Error error;
               if (reg_value.GetAsMemoryData(
                       altivec_reg, heap_data_ap->GetBytes(),
                       heap_data_ap->GetByteSize(), byte_order, error)) {

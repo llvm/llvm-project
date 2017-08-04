@@ -23,9 +23,9 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "lldb/Core/Error.h"
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StructuredData.h"
+#include "lldb/Core/StructuredData.h"
 
 namespace lldb_private {
 class TypeSummaryOptions {
@@ -286,7 +286,7 @@ private:
 struct StringSummaryFormat : public TypeSummaryImpl {
   std::string m_format_str;
   FormatEntity::Entry m_format;
-  Status m_error;
+  Error m_error;
 
   StringSummaryFormat(const TypeSummaryImpl::Flags &flags, const char *f);
 

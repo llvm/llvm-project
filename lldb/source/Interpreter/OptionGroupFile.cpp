@@ -13,7 +13,6 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,10 +37,10 @@ OptionGroupFile::OptionGroupFile(uint32_t usage_mask, bool required,
 
 OptionGroupFile::~OptionGroupFile() {}
 
-Status OptionGroupFile::SetOptionValue(uint32_t option_idx,
-                                       llvm::StringRef option_arg,
-                                       ExecutionContext *execution_context) {
-  Status error(m_file.SetValueFromString(option_arg));
+Error OptionGroupFile::SetOptionValue(uint32_t option_idx,
+                                      llvm::StringRef option_arg,
+                                      ExecutionContext *execution_context) {
+  Error error(m_file.SetValueFromString(option_arg));
   return error;
 }
 
@@ -69,11 +68,10 @@ OptionGroupFileList::OptionGroupFileList(
 
 OptionGroupFileList::~OptionGroupFileList() {}
 
-Status
-OptionGroupFileList::SetOptionValue(uint32_t option_idx,
-                                    llvm::StringRef option_value,
-                                    ExecutionContext *execution_context) {
-  Status error(m_file_list.SetValueFromString(option_value));
+Error OptionGroupFileList::SetOptionValue(uint32_t option_idx,
+                                          llvm::StringRef option_value,
+                                          ExecutionContext *execution_context) {
+  Error error(m_file_list.SetValueFromString(option_value));
   return error;
 }
 

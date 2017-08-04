@@ -12,6 +12,7 @@
 #include "ASTDumper.h"
 #include "ClangModulesDeclVendor.h"
 
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -23,7 +24,6 @@
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 
@@ -139,7 +139,6 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
   case DeclarationName::CXXConversionFunctionName:
-  case DeclarationName::CXXDeductionGuideName:
     SetNoExternalVisibleDeclsForName(decl_ctx, clang_decl_name);
     return false;
   }
@@ -477,10 +476,13 @@ void ClangASTSource::FindExternalLexicalDecls(
   }
 
   if (TagDecl *original_tag_decl = dyn_cast<TagDecl>(original_decl)) {
-    ExternalASTSource *external_source = original_ctx->getExternalSource();
+    if (original_tag_decl->hasExternalLexicalStorage() ||
+        original_tag_decl->hasExternalVisibleStorage()) {
+      ExternalASTSource *external_source = original_ctx->getExternalSource();
 
-    if (external_source)
-      external_source->CompleteType(original_tag_decl);
+      if (external_source)
+        external_source->CompleteType(original_tag_decl);
+    }
   }
 
   const DeclContext *original_decl_context =

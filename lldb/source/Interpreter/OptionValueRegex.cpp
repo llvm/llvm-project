@@ -13,7 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,9 +32,9 @@ void OptionValueRegex::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueRegex::SetValueFromString(llvm::StringRef value,
-                                            VarSetOperationType op) {
-  Status error;
+Error OptionValueRegex::SetValueFromString(llvm::StringRef value,
+                                           VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationInvalid:
   case eVarSetOperationInsertBefore:

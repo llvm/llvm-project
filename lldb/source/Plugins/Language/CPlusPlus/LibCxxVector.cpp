@@ -13,9 +13,9 @@
 // Project includes
 #include "LibCxx.h"
 
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Utility/ConstString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -127,25 +127,8 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
       m_backend.GetChildMemberWithName(ConstString("__end_cap_"), true));
   if (!data_type_finder_sp)
     return false;
-
-  switch (data_type_finder_sp->GetCompilerType().GetNumDirectBaseClasses()) {
-  case 1:
-    // Assume a pre llvm r300140 __compressed_pair implementation:
-    data_type_finder_sp = data_type_finder_sp->GetChildMemberWithName(
+  data_type_finder_sp = data_type_finder_sp->GetChildMemberWithName(
       ConstString("__first_"), true);
-    break;
-  case 2: {
-    // Assume a post llvm r300140 __compressed_pair implementation:
-    ValueObjectSP first_elem_parent_sp =
-      data_type_finder_sp->GetChildAtIndex(0, true);
-    data_type_finder_sp = first_elem_parent_sp->GetChildMemberWithName(
-      ConstString("__value_"), true);
-    break;
-  }
-  default:
-    return false;
-  }
-
   if (!data_type_finder_sp)
     return false;
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
@@ -209,7 +192,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
     return ValueObjectSP();
   uint8_t byte = 0;
   uint8_t mask = 0;
-  Status err;
+  Error err;
   size_t bytes_read = process_sp->ReadMemory(byte_location, &byte, 1, err);
   if (err.Fail() || bytes_read == 0)
     return ValueObjectSP();

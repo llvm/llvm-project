@@ -12,10 +12,10 @@
 #include <algorithm>
 #include <set>
 
+#include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Stream.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
@@ -430,6 +430,10 @@ static dw_offset_t DumpCallback(SymbolFileDWARF *dwarf2Data,
       } else {
         // See if the DIE is in this compile unit?
         if (cu && dumpInfo->die_offset < cu->GetNextCompileUnitOffset()) {
+          // This DIE is in this compile unit!
+          if (s->GetVerbose())
+            cu->Dump(s); // Dump the compile unit for the DIE in verbose mode
+
           return next_offset;
           //  // We found our compile unit that contains our DIE, just skip to
           //  dumping the requested DIE...

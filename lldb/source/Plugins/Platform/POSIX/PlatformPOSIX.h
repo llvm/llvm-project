@@ -43,30 +43,29 @@ public:
 
   const char *GetGroupName(uint32_t gid) override;
 
-  lldb_private::Status PutFile(const lldb_private::FileSpec &source,
-                               const lldb_private::FileSpec &destination,
-                               uint32_t uid = UINT32_MAX,
-                               uint32_t gid = UINT32_MAX) override;
+  lldb_private::Error PutFile(const lldb_private::FileSpec &source,
+                              const lldb_private::FileSpec &destination,
+                              uint32_t uid = UINT32_MAX,
+                              uint32_t gid = UINT32_MAX) override;
 
   lldb::user_id_t OpenFile(const lldb_private::FileSpec &file_spec,
                            uint32_t flags, uint32_t mode,
-                           lldb_private::Status &error) override;
+                           lldb_private::Error &error) override;
 
-  bool CloseFile(lldb::user_id_t fd, lldb_private::Status &error) override;
+  bool CloseFile(lldb::user_id_t fd, lldb_private::Error &error) override;
 
   uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                    uint64_t dst_len, lldb_private::Status &error) override;
+                    uint64_t dst_len, lldb_private::Error &error) override;
 
   uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset, const void *src,
-                     uint64_t src_len, lldb_private::Status &error) override;
+                     uint64_t src_len, lldb_private::Error &error) override;
 
   lldb::user_id_t GetFileSize(const lldb_private::FileSpec &file_spec) override;
 
-  lldb_private::Status
-  CreateSymlink(const lldb_private::FileSpec &src,
-                const lldb_private::FileSpec &dst) override;
+  lldb_private::Error CreateSymlink(const lldb_private::FileSpec &src,
+                                    const lldb_private::FileSpec &dst) override;
 
-  lldb_private::Status
+  lldb_private::Error
   GetFile(const lldb_private::FileSpec &source,
           const lldb_private::FileSpec &destination) override;
 
@@ -89,7 +88,7 @@ public:
 
   bool IsConnected() const override;
 
-  lldb_private::Status RunShellCommand(
+  lldb_private::Error RunShellCommand(
       const char *command,                       // Shouldn't be nullptr
       const lldb_private::FileSpec &working_dir, // Pass empty FileSpec to use
                                                  // the current working
@@ -102,39 +101,25 @@ public:
       uint32_t timeout_sec)
       override; // Timeout in seconds to wait for shell program to finish
 
-  lldb_private::Status ResolveExecutable(
-      const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-      const lldb_private::FileSpecList *module_search_paths_ptr) override;
+  lldb_private::Error MakeDirectory(const lldb_private::FileSpec &file_spec,
+                                    uint32_t mode) override;
 
-  lldb_private::Status
-  GetFileWithUUID(const lldb_private::FileSpec &platform_file,
-                  const lldb_private::UUID *uuid,
-                  lldb_private::FileSpec &local_file) override;
-
-  bool GetProcessInfo(lldb::pid_t pid, lldb_private::ProcessInstanceInfo &proc_info) override;
-
-  uint32_t FindProcesses(const lldb_private::ProcessInstanceInfoMatch &match_info,
-                         lldb_private::ProcessInstanceInfoList &process_infos) override;
-
-  lldb_private::Status MakeDirectory(const lldb_private::FileSpec &file_spec,
-                                     uint32_t mode) override;
-
-  lldb_private::Status
+  lldb_private::Error
   GetFilePermissions(const lldb_private::FileSpec &file_spec,
                      uint32_t &file_permissions) override;
 
-  lldb_private::Status
+  lldb_private::Error
   SetFilePermissions(const lldb_private::FileSpec &file_spec,
                      uint32_t file_permissions) override;
 
   bool GetFileExists(const lldb_private::FileSpec &file_spec) override;
 
-  lldb_private::Status Unlink(const lldb_private::FileSpec &file_spec) override;
+  lldb_private::Error Unlink(const lldb_private::FileSpec &file_spec) override;
 
-  lldb_private::Status
+  lldb_private::Error
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
-  lldb_private::Status KillProcess(const lldb::pid_t pid) override;
+  lldb_private::Error KillProcess(const lldb::pid_t pid) override;
 
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
                          lldb_private::Debugger &debugger,
@@ -142,7 +127,7 @@ public:
                                                        // nullptr create a new
                                                        // target, else use
                                                        // existing one
-                         lldb_private::Status &error) override;
+                         lldb_private::Error &error) override;
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
@@ -151,7 +136,7 @@ public:
                                                              // create a new
                                                              // target, else use
                                                              // existing one
-                               lldb_private::Status &error) override;
+                               lldb_private::Error &error) override;
 
   std::string GetPlatformSpecificConnectionInformation() override;
 
@@ -160,27 +145,25 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
-  lldb_private::Status ConnectRemote(lldb_private::Args &args) override;
+  lldb_private::Error ConnectRemote(lldb_private::Args &args) override;
 
-  lldb_private::Status DisconnectRemote() override;
+  lldb_private::Error DisconnectRemote() override;
 
   uint32_t DoLoadImage(lldb_private::Process *process,
                        const lldb_private::FileSpec &remote_file,
-                       lldb_private::Status &error) override;
+                       lldb_private::Error &error) override;
 
-  lldb_private::Status UnloadImage(lldb_private::Process *process,
-                                   uint32_t image_token) override;
+  lldb_private::Error UnloadImage(lldb_private::Process *process,
+                                  uint32_t image_token) override;
 
   lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
                                  llvm::StringRef plugin_name,
                                  lldb_private::Debugger &debugger,
                                  lldb_private::Target *target,
-                                 lldb_private::Status &error) override;
+                                 lldb_private::Error &error) override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
-                                   lldb_private::Status &error) override;
-
-  lldb_private::ConstString GetFullNameForDylib(lldb_private::ConstString basename) override;
+                                   lldb_private::Error &error) override;
 
 protected:
   std::unique_ptr<lldb_private::OptionGroupPlatformRSync>
@@ -196,12 +179,12 @@ protected:
   lldb::PlatformSP m_remote_platform_sp; // Allow multiple ways to connect to a
                                          // remote POSIX-compliant OS
 
-  lldb_private::Status
+  lldb_private::Error
   EvaluateLibdlExpression(lldb_private::Process *process, const char *expr_cstr,
-                          llvm::StringRef expr_prefix,
+                          const char *expr_prefix,
                           lldb::ValueObjectSP &result_valobj_sp);
 
-  virtual llvm::StringRef GetLibdlFunctionDeclarations();
+  virtual const char *GetLibdlFunctionDeclarations() const;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformPOSIX);

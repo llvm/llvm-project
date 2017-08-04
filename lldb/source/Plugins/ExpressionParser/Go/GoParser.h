@@ -82,7 +82,7 @@ public:
     return m_lexer.BytesRemaining() == 0 && m_pos == m_tokens.size();
   }
 
-  void GetError(Status &error);
+  void GetError(Error &error);
 
 private:
   class Rule;

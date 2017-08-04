@@ -11,11 +11,11 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Status.h"
 
 #include "llvm/Support/ConvertUTF.h"
 
@@ -417,7 +417,7 @@ bool StringPrinter::ReadStringAndDumpToStream<
     StringPrinter::StringElementType::ASCII>(
     const ReadStringAndDumpToStreamOptions &options) {
   assert(options.GetStream() && "need a Stream to print the string to");
-  Status my_error;
+  Error my_error;
 
   ProcessSP process_sp(options.GetProcessSP());
 
@@ -561,7 +561,7 @@ static bool ReadUTFBufferAndDumpToStream(
   if (!buffer_sp->GetBytes())
     return false;
 
-  Status error;
+  Error error;
   char *buffer = reinterpret_cast<char *>(buffer_sp->GetBytes());
 
   if (needs_zero_terminator)

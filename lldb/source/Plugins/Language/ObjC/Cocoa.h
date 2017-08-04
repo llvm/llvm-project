@@ -11,14 +11,17 @@
 #ifndef liblldb_Cocoa_h_
 #define liblldb_Cocoa_h_
 
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
-#include "lldb/Utility/Stream.h"
 
 namespace lldb_private {
 namespace formatters {
+bool NSStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                             const TypeSummaryOptions &options);
+
 bool NSIndexSetSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
 

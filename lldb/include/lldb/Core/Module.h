@@ -10,84 +10,30 @@
 #ifndef liblldb_Module_h_
 #define liblldb_Module_h_
 
-#include "lldb/Core/Address.h" // for Address
+#include "lldb/Symbol/SymbolContextScope.h"
+
+// Project includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/ModuleSpec.h" // for ModuleSpec
+#include "lldb/Core/UUID.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h" // for Status
-#include "lldb/Utility/UUID.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for LanguageType, SymbolType
 #include "lldb/lldb-forward.h"
-#include "lldb/lldb-types.h" // for addr_t, offset_t
 
+// Other libraries and framework includes
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
+// C Includes
+// C++ Includes
 #include <atomic>
-#include <memory> // for enable_shared_from_this
 #include <mutex>
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
 #include <string>
 #include <vector>
-
-namespace lldb_private {
-class CompilerDeclContext;
-}
-namespace lldb_private {
-class Function;
-}
-namespace lldb_private {
-class Log;
-}
-namespace lldb_private {
-class ObjectFile;
-}
-namespace lldb_private {
-class RegularExpression;
-}
-namespace lldb_private {
-class SectionList;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class Symbol;
-}
-namespace lldb_private {
-class SymbolContext;
-}
-namespace lldb_private {
-class SymbolContextList;
-}
-namespace lldb_private {
-class SymbolFile;
-}
-namespace lldb_private {
-class SymbolVendor;
-}
-namespace lldb_private {
-class Symtab;
-}
-namespace lldb_private {
-class Target;
-}
-namespace lldb_private {
-class TypeList;
-}
-namespace lldb_private {
-class TypeMap;
-}
-namespace lldb_private {
-class VariableList;
-}
 
 namespace lldb_private {
 
@@ -614,8 +560,6 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
-  void PreloadSymbols();
-
   void SetSymbolFileFileSpec(const FileSpec &file);
 
   const llvm::sys::TimePoint<> &GetModificationTime() const {
@@ -652,7 +596,7 @@ public:
   //------------------------------------------------------------------
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
+  bool LoadScriptingResourceInTarget(Target *target, Error &error,
                                      Stream *feedback_stream = nullptr);
 
   //------------------------------------------------------------------
@@ -728,7 +672,7 @@ public:
   ///     failed (see the `error` for more information in that case).
   //------------------------------------------------------------------
   ObjectFile *GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
-                                  lldb::addr_t header_addr, Status &error,
+                                  lldb::addr_t header_addr, Error &error,
                                   size_t size_to_read = 512);
   //------------------------------------------------------------------
   /// Get the symbol vendor interface for the current architecture.
@@ -933,7 +877,23 @@ public:
 
   bool GetIsDynamicLinkEditor();
 
+  // This function must be called immediately after construction of the Module
+  // in the cases where the AST is to be shared.
+  void SetTypeSystemForLanguage(lldb::LanguageType language,
+                                const lldb::TypeSystemSP &type_system_sp);
+
+#ifdef __clang_analyzer__
+  // See GetScratchTypeSystemForLanguage() in Target.h for what this block does
+  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language)
+      __attribute__((always_inline)) {
+    TypeSystem *ret = GetTypeSystemForLanguageImpl(language);
+    return ret ? ret : nullptr;
+  }
+
+  TypeSystem *GetTypeSystemForLanguageImpl(lldb::LanguageType language);
+#else
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language);
+#endif
 
   // Special error functions that can do printf style formatting that will
   // prepend the message with
@@ -1021,19 +981,11 @@ public:
   bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
-  //------------------------------------------------------------------
-  /// Loads this module to memory.
-  ///
-  /// Loads the bits needed to create an executable image to the memory.
-  /// It is useful with bare-metal targets where target does not have the
-  /// ability to start a process itself.
-  ///
-  /// @param[in] target
-  ///     Target where to load the module.
-  ///
-  /// @return
-  //------------------------------------------------------------------
-  Status LoadInMemory(Target &target, bool set_pc);
+  void ClearModuleDependentCaches();
+
+  void SetTypeSystemMap(const TypeSystemMap &type_system_map) {
+    m_type_system_map = type_system_map;
+  }
 
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"
@@ -1097,6 +1049,8 @@ public:
   };
 
 protected:
+  SwiftASTContext *GetSwiftASTContextNoCreate();
+
   //------------------------------------------------------------------
   // Member Variables
   //------------------------------------------------------------------

@@ -12,8 +12,11 @@
 
 // Project includes
 #include "lldb/Expression/LLVMUserExpression.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
@@ -35,9 +38,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 
@@ -49,14 +49,11 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                                        const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options),
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
-      m_stack_frame_top(LLDB_INVALID_ADDRESS),
       m_allow_cxx(false),
       m_allow_objc(false),
-      m_transformed_text(),
+      m_stack_frame_top(LLDB_INVALID_ADDRESS), m_transformed_text(),
       m_execution_unit_sp(), m_materializer_ap(), m_jit_module_wp(),
-      m_enforce_valid_object(true), m_in_cplusplus_method(false),
-      m_in_objectivec_method(false), m_in_static_method(false),
-      m_needs_object_ptr(false), m_target(NULL), m_can_interpret(false),
+      m_language_flags(0), m_target(NULL), m_can_interpret(false),
       m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
 LLVMUserExpression::~LLVMUserExpression() {
@@ -95,6 +92,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS;
     lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS;
 
+    lldb::ValueObjectSP error_backstop_result_sp;
+
     if (m_can_interpret) {
       llvm::Module *module = m_execution_unit_sp->GetModule();
       llvm::Function *function = m_execution_unit_sp->GetFunction();
@@ -106,7 +105,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
         return lldb::eExpressionSetupError;
       }
 
-      Status interpreter_error;
+      Error interpreter_error;
 
       std::vector<lldb::addr_t> args;
 
@@ -230,7 +229,23 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
             "Use \"thread return -x\" to return to the state before expression "
             "evaluation.");
         return execution_result;
-      } else if (execution_result != lldb::eExpressionCompleted) {
+      } else if (execution_result == lldb::eExpressionCompleted) {
+        if (user_expression_plan->HitErrorBackstop()) {
+          // This should only happen in Playground & REPL.  The code threw an
+          // uncaught error, so we already rolled up
+          // the stack past our execution point.  We're not going to be able to
+          // get any or our expression variables
+          // since they've already gone out of scope.  But at least we can
+          // gather the error result...
+          if (user_expression_plan->GetReturnValueObject() &&
+              user_expression_plan->GetReturnValueObject()
+                  ->GetError()
+                  .Success()) {
+            error_backstop_result_sp =
+                user_expression_plan->GetReturnValueObject();
+          }
+        }
+      } else {
         diagnostic_manager.Printf(
             eDiagnosticSeverityError,
             "Couldn't execute function; result was %s",
@@ -239,8 +254,24 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       }
     }
 
-    if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result,
-                             function_stack_bottom, function_stack_top)) {
+    if (error_backstop_result_sp) {
+      // This should only happen in Playground & REPL.  The code threw an
+      // uncaught error, so we already rolled up
+      // the stack past our execution point.  We're not going to be able to get
+      // any or our expression variables
+      // since they've already gone out of scope.  But at least we can gather
+      // the error result...
+      Target *target = exe_ctx.GetTargetPtr();
+      PersistentExpressionState *expression_state =
+          target->GetPersistentExpressionStateForLanguage(Language());
+      if (expression_state)
+        result = expression_state->CreatePersistentVariable(
+            error_backstop_result_sp);
+
+      return lldb::eExpressionCompleted;
+    } else if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result,
+                                    function_stack_bottom,
+                                    function_stack_top)) {
       return lldb::eExpressionCompleted;
     } else {
       return lldb::eExpressionResultUnavailable;
@@ -270,7 +301,7 @@ bool LLVMUserExpression::FinalizeJITExecution(
     return false;
   }
 
-  Status dematerialize_error;
+  Error dematerialize_error;
 
   m_dematerializer_sp->Dematerialize(dematerialize_error, function_stack_bottom,
                                      function_stack_top);
@@ -307,9 +338,25 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     return false;
   }
 
+  if (m_options.GetREPLEnabled()) {
+    Error materialize_error;
+
+    m_dematerializer_sp = m_materializer_ap->Materialize(
+        frame, *m_execution_unit_sp, LLDB_INVALID_ADDRESS, materialize_error);
+
+    if (!materialize_error.Success()) {
+      diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                "Couldn't materialize: %s\n",
+                                materialize_error.AsCString());
+      return false;
+    }
+
+    return true;
+  }
+
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS || m_can_interpret) {
     if (m_materialized_address == LLDB_INVALID_ADDRESS) {
-      Status alloc_error;
+      Error alloc_error;
 
       IRMemoryMap::AllocationPolicy policy =
           m_can_interpret ? IRMemoryMap::eAllocationPolicyHostOnly
@@ -335,7 +382,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     struct_address = m_materialized_address;
 
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
-      Status alloc_error;
+      Error alloc_error;
 
       const size_t stack_frame_size = 512 * 1024;
 
@@ -357,7 +404,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       }
     }
 
-    Status materialize_error;
+    Error materialize_error;
 
     m_dematerializer_sp = m_materializer_ap->Materialize(
         frame, *m_execution_unit_sp, struct_address, materialize_error);

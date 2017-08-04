@@ -22,6 +22,8 @@ add_lldb_library(lldbSymbol
   LineTable.cpp
   ObjectFile.cpp
   OCamlASTContext.cpp
+  SwiftASTContext.cpp
+  SwiftMangledNameVisitor.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp
@@ -38,16 +40,27 @@ add_lldb_library(lldbSymbol
   VerifyDecl.cpp
 
   LINK_LIBS
+    swiftAST
+    swiftASTSectionImporter
+    swiftBasic
+    swiftClangImporter
+    swiftDriver
+    swiftFrontend
+    swiftIDE
+    swiftSIL
+    swiftSerialization
     clangAST
     clangBasic
     clangFrontend
     lldbCore
+    lldbDataFormatters
     lldbExpression
     lldbHost
     lldbTarget
     lldbUtility
     lldbPluginExpressionParserClang
     lldbPluginExpressionParserGo
+    lldbPluginExpressionParserSwift
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginObjectContainerBSDArchive

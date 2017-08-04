@@ -22,15 +22,15 @@
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -56,9 +56,9 @@ const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
 }
 
 BreakpointResolver::ResolverTy
-BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
+BreakpointResolver::NameToResolverTy(const char *name) {
   for (size_t i = 0; i < LastKnownResolverType; i++) {
-    if (name == g_ty_to_name[i])
+    if (strcmp(name, g_ty_to_name[i]) == 0)
       return (ResolverTy)i;
   }
   return UnknownResolver;
@@ -72,14 +72,14 @@ BreakpointResolver::BreakpointResolver(Breakpoint *bkpt,
 BreakpointResolver::~BreakpointResolver() {}
 
 BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
-    const StructuredData::Dictionary &resolver_dict, Status &error) {
+    const StructuredData::Dictionary &resolver_dict, Error &error) {
   BreakpointResolverSP result_sp;
   if (!resolver_dict.IsValid()) {
     error.SetErrorString("Can't deserialize from an invalid data object.");
     return result_sp;
   }
 
-  llvm::StringRef subclass_name;
+  std::string subclass_name;
 
   bool success = resolver_dict.GetValueForKeyAsString(
       GetSerializationSubclassKey(), subclass_name);
@@ -90,10 +90,10 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     return result_sp;
   }
 
-  ResolverTy resolver_type = NameToResolverTy(subclass_name);
+  ResolverTy resolver_type = NameToResolverTy(subclass_name.c_str());
   if (resolver_type == UnknownResolver) {
-    error.SetErrorStringWithFormatv("Unknown resolver type: {0}.",
-                                    subclass_name);
+    error.SetErrorStringWithFormat("Unknown resolver type: %s.",
+                                   subclass_name.c_str());
     return result_sp;
   }
 

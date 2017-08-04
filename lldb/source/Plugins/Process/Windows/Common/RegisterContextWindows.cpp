@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
 #include "ProcessWindowsLog.h"
@@ -113,7 +113,6 @@ bool RegisterContextWindows::ClearHardwareWatchpoint(uint32_t hw_index) {
 bool RegisterContextWindows::HardwareSingleStep(bool enable) { return false; }
 
 bool RegisterContextWindows::CacheAllRegisterValues() {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
   if (!m_context_stale)
     return true;
 
@@ -123,13 +122,14 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
   if (!::GetThreadContext(
           wthread.GetHostThread().GetNativeThread().GetSystemHandle(),
           &m_context)) {
-    LLDB_LOG(
-        log,
-        "GetThreadContext failed with error {0} while caching register values.",
+    WINERR_IFALL(
+        WINDOWS_LOG_REGISTERS,
+        "GetThreadContext failed with error %lu while caching register values.",
         ::GetLastError());
     return false;
   }
-  LLDB_LOG(log, "successfully updated the register values.");
+  WINLOG_IFALL(WINDOWS_LOG_REGISTERS,
+               "GetThreadContext successfully updated the register values.");
   m_context_stale = false;
   return true;
 }

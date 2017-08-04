@@ -18,18 +18,18 @@ class SoftwareBreakpoint : public NativeBreakpoint {
   friend class NativeBreakpointList;
 
 public:
-  static Status CreateSoftwareBreakpoint(NativeProcessProtocol &process,
-                                         lldb::addr_t addr, size_t size_hint,
-                                         NativeBreakpointSP &breakpoint_spn);
+  static Error CreateSoftwareBreakpoint(NativeProcessProtocol &process,
+                                        lldb::addr_t addr, size_t size_hint,
+                                        NativeBreakpointSP &breakpoint_spn);
 
   SoftwareBreakpoint(NativeProcessProtocol &process, lldb::addr_t addr,
                      const uint8_t *saved_opcodes, const uint8_t *trap_opcodes,
                      size_t opcode_size);
 
 protected:
-  Status DoEnable() override;
+  Error DoEnable() override;
 
-  Status DoDisable() override;
+  Error DoDisable() override;
 
   bool IsSoftwareBreakpoint() const override;
 
@@ -42,11 +42,11 @@ private:
   uint8_t m_trap_opcodes[MAX_TRAP_OPCODE_SIZE];
   const size_t m_opcode_size;
 
-  static Status EnableSoftwareBreakpoint(NativeProcessProtocol &process,
-                                         lldb::addr_t addr,
-                                         size_t bp_opcode_size,
-                                         const uint8_t *bp_opcode_bytes,
-                                         uint8_t *saved_opcode_bytes);
+  static Error EnableSoftwareBreakpoint(NativeProcessProtocol &process,
+                                        lldb::addr_t addr,
+                                        size_t bp_opcode_size,
+                                        const uint8_t *bp_opcode_bytes,
+                                        uint8_t *saved_opcode_bytes);
 };
 }
 

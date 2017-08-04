@@ -21,4 +21,5 @@ add_lldb_library(lldbPluginObjCLanguage PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginAppleObjCRuntime
+    lldbPluginSwiftLanguage
 )

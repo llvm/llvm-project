@@ -10,39 +10,17 @@
 #ifndef liblldb_Value_h_
 #define liblldb_Value_h_
 
-#include "lldb/Core/Scalar.h"
-#include "lldb/Symbol/CompilerType.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/lldb-enumerations.h"         // for ByteOrder, ByteOrder::eB...
-#include "lldb/lldb-private-enumerations.h" // for AddressType
-#include "lldb/lldb-private-types.h"        // for type128, RegisterInfo
-
-#include "llvm/ADT/APInt.h" // for APInt
-
+// C Includes
+// C++ Includes
 #include <vector>
 
-#include <stdint.h> // for uint8_t, uint32_t, uint64_t
-#include <string.h> // for size_t, memcpy
-
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class ExecutionContext;
-}
-namespace lldb_private {
-class Module;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class Type;
-}
-namespace lldb_private {
-class Variable;
-}
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Scalar.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -219,11 +197,11 @@ public:
 
   lldb::Format GetValueDefaultFormat();
 
-  uint64_t GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx);
+  uint64_t GetValueByteSize(Error *error_ptr, ExecutionContext *exe_ctx);
 
-  Status GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
-                        uint32_t data_offset,
-                        Module *module); // Can be nullptr
+  Error GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
+                       uint32_t data_offset,
+                       Module *module); // Can be nullptr
 
   static const char *GetValueTypeAsCString(ValueType context_type);
 

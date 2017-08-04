@@ -13,6 +13,7 @@
 
 // Other libraries and framework includes
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
@@ -20,21 +21,19 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Threading.h"
 
 // Project includes
 #include "ClangModulesDeclVendor.h"
 
+#include "lldb/Core/Log.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 
@@ -145,9 +144,9 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
 static FileSpec GetResourceDir() {
   static FileSpec g_cached_resource_dir;
 
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
+  std::call_once(g_once_flag, []() {
     HostInfo::GetLLDBPath(lldb::ePathTypeClangDir, g_cached_resource_dir);
   });
 
@@ -451,16 +450,16 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
           bool first_arg = true;
 
-          for (auto pi = macro_info->param_begin(),
-                    pe = macro_info->param_end();
-               pi != pe; ++pi) {
+          for (clang::MacroInfo::arg_iterator ai = macro_info->arg_begin(),
+                                              ae = macro_info->arg_end();
+               ai != ae; ++ai) {
             if (!first_arg) {
               macro_expansion.append(", ");
             } else {
               first_arg = false;
             }
 
-            macro_expansion.append((*pi)->getName().str());
+            macro_expansion.append((*ai)->getName().str());
           }
 
           if (macro_info->isC99Varargs()) {
@@ -607,7 +606,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   {
     FileSpec clang_resource_dir = GetResourceDir();
 
-    if (llvm::sys::fs::is_directory(clang_resource_dir.GetPath())) {
+    if (clang_resource_dir.IsDirectory()) {
       compiler_invocation_arguments.push_back("-resource-dir");
       compiler_invocation_arguments.push_back(clang_resource_dir.GetPath());
     }
@@ -639,7 +638,14 @@ ClangModulesDeclVendor::Create(Target &target) {
                                                     source_buffer.release());
 
   std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance);
+      new clang::CompilerInstance());
+
+  std::shared_ptr<clang::PCHContainerOperations> pch_operations =
+      instance->getPCHContainerOperations();
+  pch_operations->registerWriter(
+      llvm::make_unique<clang::ObjectFilePCHContainerWriter>());
+  pch_operations->registerReader(
+      llvm::make_unique<clang::ObjectFilePCHContainerReader>());
 
   instance->setDiagnostics(diagnostics_engine.get());
   instance->setInvocation(invocation);

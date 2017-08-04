@@ -15,15 +15,14 @@
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Threading.h"
 
 // Project includes
 #include "GoLanguage.h"
 #include "Plugins/Language/Go/GoFormatterFunctions.h"
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/GoASTContext.h"
-#include "lldb/Utility/ConstString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -63,52 +62,50 @@ Language *GoLanguage::CreateInstance(lldb::LanguageType language) {
 
 HardcodedFormatters::HardcodedSummaryFinder
 GoLanguage::GetHardcodedSummaries() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static HardcodedFormatters::HardcodedSummaryFinder g_formatters;
 
-  llvm::call_once(g_initialize, []() -> void {
-    g_formatters.push_back(
-        [](lldb_private::ValueObject &valobj, lldb::DynamicValueType,
-           FormatManager &) -> TypeSummaryImpl::SharedPointer {
-          static CXXFunctionSummaryFormat::SharedPointer formatter_sp(
-              new CXXFunctionSummaryFormat(
-                  TypeSummaryImpl::Flags().SetDontShowChildren(true),
-                  lldb_private::formatters::GoStringSummaryProvider,
-                  "Go string summary provider"));
-          if (GoASTContext::IsGoString(valobj.GetCompilerType())) {
-            return formatter_sp;
-          }
-          if (GoASTContext::IsGoString(
-                  valobj.GetCompilerType().GetPointeeType())) {
-            return formatter_sp;
-          }
-          return nullptr;
-        });
-    g_formatters.push_back(
-        [](lldb_private::ValueObject &valobj, lldb::DynamicValueType,
-           FormatManager &) -> TypeSummaryImpl::SharedPointer {
-          static lldb::TypeSummaryImplSP formatter_sp(new StringSummaryFormat(
-              TypeSummaryImpl::Flags().SetHideItemNames(true),
-              "(len ${var.len}, cap ${var.cap})"));
-          if (GoASTContext::IsGoSlice(valobj.GetCompilerType())) {
-            return formatter_sp;
-          }
-          if (GoASTContext::IsGoSlice(
-                  valobj.GetCompilerType().GetPointeeType())) {
-            return formatter_sp;
-          }
-          return nullptr;
-        });
+  std::call_once(g_initialize, []() -> void {
+    g_formatters.push_back([](lldb_private::ValueObject &valobj,
+                              lldb::DynamicValueType, FormatManager &)
+                               -> TypeSummaryImpl::SharedPointer {
+      static CXXFunctionSummaryFormat::SharedPointer formatter_sp(
+          new CXXFunctionSummaryFormat(
+              TypeSummaryImpl::Flags().SetDontShowChildren(true),
+              lldb_private::formatters::GoStringSummaryProvider,
+              "Go string summary provider"));
+      if (GoASTContext::IsGoString(valobj.GetCompilerType())) {
+        return formatter_sp;
+      }
+      if (GoASTContext::IsGoString(valobj.GetCompilerType().GetPointeeType())) {
+        return formatter_sp;
+      }
+      return nullptr;
+    });
+    g_formatters.push_back([](lldb_private::ValueObject &valobj,
+                              lldb::DynamicValueType, FormatManager &)
+                               -> TypeSummaryImpl::SharedPointer {
+      static lldb::TypeSummaryImplSP formatter_sp(new StringSummaryFormat(
+          TypeSummaryImpl::Flags().SetHideItemNames(true),
+          "(len ${var.len}, cap ${var.cap})"));
+      if (GoASTContext::IsGoSlice(valobj.GetCompilerType())) {
+        return formatter_sp;
+      }
+      if (GoASTContext::IsGoSlice(valobj.GetCompilerType().GetPointeeType())) {
+        return formatter_sp;
+      }
+      return nullptr;
+    });
   });
   return g_formatters;
 }
 
 HardcodedFormatters::HardcodedSyntheticFinder
 GoLanguage::GetHardcodedSynthetics() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static HardcodedFormatters::HardcodedSyntheticFinder g_formatters;
 
-  llvm::call_once(g_initialize, []() -> void {
+  std::call_once(g_initialize, []() -> void {
     g_formatters.push_back(
         [](lldb_private::ValueObject &valobj, lldb::DynamicValueType,
            FormatManager &fmt_mgr) -> SyntheticChildren::SharedPointer {

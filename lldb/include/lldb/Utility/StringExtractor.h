@@ -10,14 +10,15 @@
 #ifndef utility_StringExtractor_h_
 #define utility_StringExtractor_h_
 
+// C Includes
+// C++ Includes
+#include <stdint.h>
+#include <string>
+
 // Other libraries and framework includes
 // Project includes
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-
-#include <stddef.h> // for size_t
-#include <stdint.h>
-#include <string>
 
 class StringExtractor {
 public:
@@ -110,8 +111,6 @@ public:
   size_t GetHexByteStringFixedLength(std::string &str, uint32_t nibble_length);
 
   size_t GetHexByteStringTerminatedBy(std::string &str, char terminator);
-
-  bool ConsumeFront(const llvm::StringRef &str);
 
   const char *Peek() {
     if (m_index < m_packet.size())

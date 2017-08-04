@@ -5,19 +5,31 @@ add_lldb_library(lldbCore
   AddressResolverFileLine.cpp
   AddressResolverName.cpp
   ArchSpec.cpp
+  Baton.cpp
   Broadcaster.cpp
   Communication.cpp
+  Connection.cpp
+  ConstString.cpp
+  CxaDemangle.cpp
+  DataBufferHeap.cpp
+  DataBufferMemoryMap.cpp
+  DataEncoder.cpp
+  DataExtractor.cpp
   Debugger.cpp
   Disassembler.cpp
-  DumpDataExtractor.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
+  Error.cpp
   Event.cpp
+  FastDemangle.cpp
   FileLineResolver.cpp
   FileSpecList.cpp
   FormatEntity.cpp
+  History.cpp
   IOHandler.cpp
   Listener.cpp
+  Log.cpp
+  Logging.cpp
   Mangled.cpp
   Module.cpp
   ModuleChild.cpp
@@ -25,14 +37,24 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   RegisterValue.cpp
+  RegularExpression.cpp
   Scalar.cpp
   SearchFilter.cpp
   Section.cpp
   SourceManager.cpp
   State.cpp
+  Stream.cpp
   StreamAsynchronousIO.cpp
+  StreamCallback.cpp
   StreamFile.cpp
+  StreamGDBRemote.cpp
+  StreamString.cpp
+  StringList.cpp
+  StructuredData.cpp
+  Timer.cpp
+  UserID.cpp
   UserSettingsController.cpp
+  UUID.cpp
   Value.cpp
   ValueObject.cpp
   ValueObjectCast.cpp
@@ -47,9 +69,12 @@ add_lldb_library(lldbCore
   ValueObjectRegister.cpp
   ValueObjectSyntheticFilter.cpp
   ValueObjectVariable.cpp
+  VMRange.cpp
 
   LINK_LIBS
-    clangAST
+    swiftBasic
+    swiftFrontend
+    swiftSerialization
     lldbBreakpoint
     lldbDataFormatters
     lldbExpression
@@ -62,13 +87,10 @@ add_lldb_library(lldbCore
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginObjectFileJIT
+    lldbPluginExpressionParserClang
 
   LINK_COMPONENTS
-    BinaryFormat
     Support
     Demangle
   )
 
-# Needed to properly resolve references in a debug build.
-# TODO: Remove once we have better layering
-set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 4)

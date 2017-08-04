@@ -9,13 +9,13 @@
 
 #include "ObjectContainerUniversalMachO.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

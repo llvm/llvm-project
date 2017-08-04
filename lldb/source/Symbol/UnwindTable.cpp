@@ -44,64 +44,38 @@ void UnwindTable::Initialize() {
 
   if (m_initialized) // check again once we've acquired the lock
     return;
-  m_initialized = true;
 
   SectionList *sl = m_object_file.GetSectionList();
-  if (!sl)
-    return;
-
-  SectionSP sect = sl->FindSectionByType(eSectionTypeEHFrame, true);
-  if (sect.get()) {
-    m_eh_frame_up.reset(
-        new DWARFCallFrameInfo(m_object_file, sect, DWARFCallFrameInfo::EH));
-  }
-
-  sect = sl->FindSectionByType(eSectionTypeDWARFDebugFrame, true);
-  if (sect) {
-    m_debug_frame_up.reset(
-        new DWARFCallFrameInfo(m_object_file, sect, DWARFCallFrameInfo::DWARF));
-  }
-
-  sect = sl->FindSectionByType(eSectionTypeCompactUnwind, true);
-  if (sect) {
-    m_compact_unwind_up.reset(new CompactUnwindInfo(m_object_file, sect));
-  }
-
-  sect = sl->FindSectionByType(eSectionTypeARMexidx, true);
-  if (sect) {
-    SectionSP sect_extab = sl->FindSectionByType(eSectionTypeARMextab, true);
-    if (sect_extab.get()) {
-      m_arm_unwind_up.reset(new ArmUnwindInfo(m_object_file, sect, sect_extab));
+  if (sl) {
+    SectionSP sect = sl->FindSectionByType(eSectionTypeEHFrame, true);
+    if (sect.get()) {
+      m_eh_frame_up.reset(new DWARFCallFrameInfo(m_object_file, sect,
+                                                 eRegisterKindEHFrame, true));
+    }
+    sect = sl->FindSectionByType(eSectionTypeCompactUnwind, true);
+    if (sect.get()) {
+      m_compact_unwind_up.reset(new CompactUnwindInfo(m_object_file, sect));
+    }
+    sect = sl->FindSectionByType(eSectionTypeARMexidx, true);
+    if (sect.get()) {
+      SectionSP sect_extab = sl->FindSectionByType(eSectionTypeARMextab, true);
+      if (sect_extab.get()) {
+        m_arm_unwind_up.reset(
+            new ArmUnwindInfo(m_object_file, sect, sect_extab));
+      }
     }
   }
+
+  m_initialized = true;
 }
 
 UnwindTable::~UnwindTable() {}
 
-llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
-                                                          SymbolContext &sc) {
-  AddressRange range;
-
-  // First check the symbol context
-  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
-                         false, range) &&
-      range.GetBaseAddress().IsValid())
-    return range;
-
-  // Does the eh_frame unwind info has a function bounds for this addr?
-  if (m_eh_frame_up && m_eh_frame_up->GetAddressRange(addr, range))
-    return range;
-
-  // Try debug_frame as well
-  if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
-    return range;
-
-  return llvm::None;
-}
-
 FuncUnwindersSP
 UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
                                                SymbolContext &sc) {
+  FuncUnwindersSP no_unwind_found;
+
   Initialize();
 
   std::lock_guard<std::mutex> guard(m_mutex);
@@ -122,14 +96,23 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
       return pos->second;
   }
 
-  auto range_or = GetAddressRange(addr, sc);
-  if (!range_or)
-    return nullptr;
+  AddressRange range;
+  if (!sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                          false, range) ||
+      !range.GetBaseAddress().IsValid()) {
+    // Does the eh_frame unwind info has a function bounds for this addr?
+    if (m_eh_frame_up == nullptr ||
+        !m_eh_frame_up->GetAddressRange(addr, range)) {
+      return no_unwind_found;
+    }
+  }
 
-  FuncUnwindersSP func_unwinder_sp(new FuncUnwinders(*this, *range_or));
+  FuncUnwindersSP func_unwinder_sp(new FuncUnwinders(*this, range));
   m_unwinds.insert(insert_pos,
-                   std::make_pair(range_or->GetBaseAddress().GetFileAddress(),
+                   std::make_pair(range.GetBaseAddress().GetFileAddress(),
                                   func_unwinder_sp));
+  //    StreamFile s(stdout, false);
+  //    Dump (s);
   return func_unwinder_sp;
 }
 
@@ -138,16 +121,26 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
 // UnwindTable.  This is intended for use by target modules show-unwind where we
 // want to create
 // new UnwindPlans, not re-use existing ones.
+
 FuncUnwindersSP
 UnwindTable::GetUncachedFuncUnwindersContainingAddress(const Address &addr,
                                                        SymbolContext &sc) {
+  FuncUnwindersSP no_unwind_found;
   Initialize();
 
-  auto range_or = GetAddressRange(addr, sc);
-  if (!range_or)
-    return nullptr;
+  AddressRange range;
+  if (!sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                          false, range) ||
+      !range.GetBaseAddress().IsValid()) {
+    // Does the eh_frame unwind info has a function bounds for this addr?
+    if (m_eh_frame_up == nullptr ||
+        !m_eh_frame_up->GetAddressRange(addr, range)) {
+      return no_unwind_found;
+    }
+  }
 
-  return std::make_shared<FuncUnwinders>(*this, *range_or);
+  FuncUnwindersSP func_unwinder_sp(new FuncUnwinders(*this, range));
+  return func_unwinder_sp;
 }
 
 void UnwindTable::Dump(Stream &s) {
@@ -166,11 +159,6 @@ void UnwindTable::Dump(Stream &s) {
 DWARFCallFrameInfo *UnwindTable::GetEHFrameInfo() {
   Initialize();
   return m_eh_frame_up.get();
-}
-
-DWARFCallFrameInfo *UnwindTable::GetDebugFrameInfo() {
-  Initialize();
-  return m_debug_frame_up.get();
 }
 
 CompactUnwindInfo *UnwindTable::GetCompactUnwindInfo() {

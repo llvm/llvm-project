@@ -15,11 +15,11 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -92,8 +92,8 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (file_spec_list.IsEmpty())
     return NULL;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "SymbolVendorELF::CreateInstance (module = %s)",
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+                     "SymbolVendorELF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
 
   for (size_t idx = 0; idx < file_spec_list.GetSize(); ++idx) {

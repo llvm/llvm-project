@@ -23,7 +23,7 @@ namespace lldb_private {
 class NativeThreadProtocol
     : public std::enable_shared_from_this<NativeThreadProtocol> {
 public:
-  NativeThreadProtocol(NativeProcessProtocol &process, lldb::tid_t tid);
+  NativeThreadProtocol(NativeProcessProtocol *process, lldb::tid_t tid);
 
   virtual ~NativeThreadProtocol() {}
 
@@ -33,38 +33,31 @@ public:
 
   virtual NativeRegisterContextSP GetRegisterContext() = 0;
 
-  virtual Status ReadRegister(uint32_t reg, RegisterValue &reg_value);
+  virtual Error ReadRegister(uint32_t reg, RegisterValue &reg_value);
 
-  virtual Status WriteRegister(uint32_t reg, const RegisterValue &reg_value);
+  virtual Error WriteRegister(uint32_t reg, const RegisterValue &reg_value);
 
-  virtual Status SaveAllRegisters(lldb::DataBufferSP &data_sp);
+  virtual Error SaveAllRegisters(lldb::DataBufferSP &data_sp);
 
-  virtual Status RestoreAllRegisters(lldb::DataBufferSP &data_sp);
+  virtual Error RestoreAllRegisters(lldb::DataBufferSP &data_sp);
 
   virtual bool GetStopReason(ThreadStopInfo &stop_info,
                              std::string &description) = 0;
 
   lldb::tid_t GetID() const { return m_tid; }
 
-  NativeProcessProtocol &GetProcess() { return m_process; }
+  NativeProcessProtocolSP GetProcess();
 
   // ---------------------------------------------------------------------
   // Thread-specific watchpoints
   // ---------------------------------------------------------------------
-  virtual Status SetWatchpoint(lldb::addr_t addr, size_t size,
-                               uint32_t watch_flags, bool hardware) = 0;
+  virtual Error SetWatchpoint(lldb::addr_t addr, size_t size,
+                              uint32_t watch_flags, bool hardware) = 0;
 
-  virtual Status RemoveWatchpoint(lldb::addr_t addr) = 0;
-
-  // ---------------------------------------------------------------------
-  // Thread-specific Hardware Breakpoint routines
-  // ---------------------------------------------------------------------
-  virtual Status SetHardwareBreakpoint(lldb::addr_t addr, size_t size) = 0;
-
-  virtual Status RemoveHardwareBreakpoint(lldb::addr_t addr) = 0;
+  virtual Error RemoveWatchpoint(lldb::addr_t addr) = 0;
 
 protected:
-  NativeProcessProtocol &m_process;
+  NativeProcessProtocolWP m_process_wp;
   lldb::tid_t m_tid;
 };
 }

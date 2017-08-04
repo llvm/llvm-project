@@ -12,22 +12,20 @@
 #include "llvm/Support/MathExtras.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 #include "JITLoaderGDB.h"
 
@@ -103,7 +101,7 @@ bool ReadJITEntry(const addr_t from_addr, Process *process,
   const size_t data_byte_size =
       llvm::alignTo(sizeof(ptr_t) * 3, uint64_align_bytes) + sizeof(uint64_t);
 
-  Status error;
+  Error error;
   DataBufferHeap data(data_byte_size, 0);
   size_t bytes_read = process->ReadMemory(from_addr, data.GetBytes(),
                                           data.GetByteSize(), error);
@@ -277,7 +275,7 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
 
   jit_descriptor<ptr_t> jit_desc;
   const size_t jit_desc_size = sizeof(jit_desc);
-  Status error;
+  Error error;
   size_t bytes_read = m_process->DoReadMemory(m_jit_descriptor_addr, &jit_desc,
                                               jit_desc_size, error);
   if (bytes_read != jit_desc_size || !error.Success()) {

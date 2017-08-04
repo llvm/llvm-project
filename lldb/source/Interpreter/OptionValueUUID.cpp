@@ -14,9 +14,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StringList.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,9 +32,9 @@ void OptionValueUUID::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueUUID::SetValueFromString(llvm::StringRef value,
-                                           VarSetOperationType op) {
-  Status error;
+Error OptionValueUUID::SetValueFromString(llvm::StringRef value,
+                                          VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

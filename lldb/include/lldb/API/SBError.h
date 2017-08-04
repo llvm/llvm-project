@@ -57,29 +57,29 @@ protected:
   friend class SBDebugger;
   friend class SBCommunication;
   friend class SBHostOS;
+  friend class SBModule;
   friend class SBPlatform;
   friend class SBProcess;
   friend class SBStructuredData;
   friend class SBThread;
-  friend class SBTrace;
   friend class SBTarget;
   friend class SBValue;
   friend class SBWatchpoint;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
 
-  lldb_private::Status *get();
+  lldb_private::Error *get();
 
-  lldb_private::Status *operator->();
+  lldb_private::Error *operator->();
 
-  const lldb_private::Status &operator*() const;
+  const lldb_private::Error &operator*() const;
 
-  lldb_private::Status &ref();
+  lldb_private::Error &ref();
 
-  void SetError(const lldb_private::Status &lldb_error);
+  void SetError(const lldb_private::Error &lldb_error);
 
 private:
-  std::unique_ptr<lldb_private::Status> m_opaque_ap;
+  std::unique_ptr<lldb_private::Error> m_opaque_ap;
 
   void CreateIfNeeded();
 };

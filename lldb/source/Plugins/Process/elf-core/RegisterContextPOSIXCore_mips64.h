@@ -15,8 +15,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_mips64.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 
 class RegisterContextCorePOSIX_mips64 : public RegisterContextPOSIX_mips64 {
 public:
@@ -51,9 +51,7 @@ protected:
 
 private:
   lldb::DataBufferSP m_gpr_buffer;
-  lldb::DataBufferSP m_fpr_buffer;
   lldb_private::DataExtractor m_gpr;
-  lldb_private::DataExtractor m_fpr;
 };
 
 #endif // liblldb_RegisterContextCorePOSIX_mips64_h_

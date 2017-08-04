@@ -9,8 +9,8 @@
 
 #include "lldb/Host/common/UDPSocket.h"
 
+#include "lldb/Core/Log.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Utility/Log.h"
 
 #ifndef LLDB_DISABLE_POSIX
 #include <arpa/inet.h>
@@ -30,39 +30,39 @@ const int kType = SOCK_DGRAM;
 static const char *g_not_supported_error = "Not supported";
 }
 
-UDPSocket::UDPSocket(NativeSocket socket) : Socket(ProtocolUdp, true, true) {
-  m_socket = socket;
-}
+UDPSocket::UDPSocket(NativeSocket socket) : Socket(socket, ProtocolUdp, true) {}
 
-UDPSocket::UDPSocket(bool should_close, bool child_processes_inherit)
-    : Socket(ProtocolUdp, should_close, child_processes_inherit) {}
+UDPSocket::UDPSocket(bool child_processes_inherit, Error &error)
+    : UDPSocket(
+          CreateSocket(kDomain, kType, 0, child_processes_inherit, error)) {}
 
 size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
   return ::sendto(m_socket, static_cast<const char *>(buf), num_bytes, 0,
                   m_sockaddr, m_sockaddr.GetLength());
 }
 
-Status UDPSocket::Connect(llvm::StringRef name) {
-  return Status("%s", g_not_supported_error);
+Error UDPSocket::Connect(llvm::StringRef name) {
+  return Error("%s", g_not_supported_error);
 }
 
-Status UDPSocket::Listen(llvm::StringRef name, int backlog) {
-  return Status("%s", g_not_supported_error);
+Error UDPSocket::Listen(llvm::StringRef name, int backlog) {
+  return Error("%s", g_not_supported_error);
 }
 
-Status UDPSocket::Accept(Socket *&socket) {
-  return Status("%s", g_not_supported_error);
+Error UDPSocket::Accept(llvm::StringRef name, bool child_processes_inherit,
+                        Socket *&socket) {
+  return Error("%s", g_not_supported_error);
 }
 
-Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
-                          Socket *&socket) {
+Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
+                         Socket *&socket) {
   std::unique_ptr<UDPSocket> final_socket;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("UDPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
-  Status error;
+  Error error;
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;

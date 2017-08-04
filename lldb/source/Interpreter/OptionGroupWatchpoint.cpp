@@ -13,8 +13,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Utils.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
@@ -56,11 +56,10 @@ OptionGroupWatchpoint::OptionGroupWatchpoint() : OptionGroup() {}
 
 OptionGroupWatchpoint::~OptionGroupWatchpoint() {}
 
-Status
-OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
-                                      llvm::StringRef option_arg,
-                                      ExecutionContext *execution_context) {
-  Status error;
+Error OptionGroupWatchpoint::SetOptionValue(
+    uint32_t option_idx, llvm::StringRef option_arg,
+    ExecutionContext *execution_context) {
+  Error error;
   const int short_option = g_option_table[option_idx].short_option;
   switch (short_option) {
   case 'w': {

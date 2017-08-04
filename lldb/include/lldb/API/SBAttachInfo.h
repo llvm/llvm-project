@@ -86,7 +86,7 @@ public:
   /// This function implies that a call to SBTarget::Attach(...) will
   /// be synchronous.
   ///
-  /// @param[in] b
+  /// @param[in] wait_for
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
   //------------------------------------------------------------------
@@ -99,7 +99,7 @@ public:
   /// Future calls to SBTarget::Attach(...) will be synchronous or
   /// asynchronous depending on the \a async argument.
   ///
-  /// @param[in] b
+  /// @param[in] wait_for
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
   ///
@@ -162,7 +162,7 @@ public:
   /// Get the listener that will be used to receive process events.
   ///
   /// If no listener has been set via a call to
-  /// SBAttachInfo::SetListener(), then an invalid SBListener will be
+  /// SBLaunchInfo::SetListener(), then an invalid SBListener will be
   /// returned (SBListener::IsValid() will return false). If a listener
   /// has been set, then the valid listener object will be returned.
   //----------------------------------------------------------------------

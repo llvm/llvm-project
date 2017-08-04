@@ -14,9 +14,9 @@
 
 #include <algorithm>
 
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/Timer.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/Timer.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
@@ -110,8 +110,7 @@ void DWARFDebugAranges::AppendRange(dw_offset_t offset, dw_addr_t low_pc,
 }
 
 void DWARFDebugAranges::Sort(bool minimize) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s this = %p", LLVM_PRETTY_FUNCTION,
                      static_cast<void *>(this));
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));

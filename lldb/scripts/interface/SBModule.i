@@ -26,7 +26,7 @@ SBModule supports symbol iteration, for example,
         saddr = symbol.GetStartAddress()
         eaddr = symbol.GetEndAddress()
 
-and rich comparison methods which allow the API program to use,
+and rich comparion methods which allow the API program to use,
 
     if thisModule == thatModule:
         print('This module is the same as that module')
@@ -314,6 +314,9 @@ public:
 
     lldb::SBAddress
     GetObjectFileHeaderAddress() const;
+
+    lldb::SBError
+    IsTypeSystemCompatible (lldb::LanguageType language);
 
     bool
     operator == (const lldb::SBModule &rhs) const;

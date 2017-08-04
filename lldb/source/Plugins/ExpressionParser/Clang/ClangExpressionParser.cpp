@@ -20,6 +20,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditedSource.h"
 #include "clang/Edit/EditsReceiver.h"
@@ -30,11 +31,13 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
@@ -67,10 +70,16 @@
 #include "IRForTarget.h"
 
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/StringList.h"
+#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -84,12 +93,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
-#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StringList.h"
 
 using namespace clang;
 using namespace llvm;
@@ -216,6 +220,50 @@ private:
   std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
 };
 
+class LoggingDiagnosticConsumer : public clang::DiagnosticConsumer {
+public:
+  LoggingDiagnosticConsumer() {
+    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    m_passthrough.reset(new clang::TextDiagnosticBuffer);
+  }
+
+  LoggingDiagnosticConsumer(
+      const std::shared_ptr<clang::TextDiagnosticBuffer> &passthrough) {
+    m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    m_passthrough = passthrough;
+  }
+
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const clang::Diagnostic &Info) {
+    if (m_log) {
+      llvm::SmallVector<char, 32> diag_str;
+      Info.FormatDiagnostic(diag_str);
+      diag_str.push_back('\0');
+      const char *data = diag_str.data();
+      m_log->Printf("[clang] COMPILER DIAGNOSTIC: %s", data);
+
+      lldbassert(Info.getID() != clang::diag::err_unsupported_ast_node &&
+                 "'log enable lldb expr' to investigate.");
+    }
+
+    m_passthrough->HandleDiagnostic(DiagLevel, Info);
+  }
+
+  void FlushDiagnostics(DiagnosticsEngine &Diags) {
+    m_passthrough->FlushDiagnostics(Diags);
+  }
+
+  DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
+    return new LoggingDiagnosticConsumer(m_passthrough);
+  }
+
+  clang::TextDiagnosticBuffer *GetPassthrough() { return m_passthrough.get(); }
+
+private:
+  Log *m_log;
+  std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
+};
+
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
@@ -224,7 +272,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
                                              Expression &expr,
                                              bool generate_debug_info)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
-      m_code_generator(), m_pp_callbacks(nullptr) {
+      m_builtin_context(), m_selector_table(), m_code_generator(),
+      m_pp_callbacks(nullptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // We can't compile expressions without a target.  So if the exe_scope is null
@@ -252,6 +301,17 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 1. Create a new compiler instance.
   m_compiler.reset(new CompilerInstance());
+
+  // Register the support for object-file-wrapped Clang modules.
+  std::shared_ptr<clang::PCHContainerOperations> pch_operations =
+      m_compiler->getPCHContainerOperations();
+  pch_operations->registerWriter(
+      llvm::make_unique<ObjectFilePCHContainerWriter>());
+  pch_operations->registerReader(
+      llvm::make_unique<ObjectFilePCHContainerReader>());
+
+  // 2. Install the target.
+
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
   bool overridden_target_opts = false;
@@ -304,6 +364,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       log->Printf("Using default target triple of %s",
                   m_compiler->getTargetOpts().Triple.c_str());
   }
+
+  m_compiler->getTargetOpts().CPU = "";
+
   // Now add some special fixes for known architectures:
   // Any arm32 iOS environment, but not on arm64
   if (m_compiler->getTargetOpts().Triple.find("arm64") == std::string::npos &&
@@ -339,16 +402,16 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
         lang_rt->GetOverrideExprOptions(m_compiler->getTargetOpts());
 
   if (overridden_target_opts)
-    if (log && log->GetVerbose()) {
-      LLDB_LOGV(
-          log, "Using overridden target options for the expression evaluation");
+    if (log) {
+      log->Debug(
+          "Using overridden target options for the expression evaluation");
 
       auto opts = m_compiler->getTargetOpts();
-      LLDB_LOGV(log, "Triple: '{0}'", opts.Triple);
-      LLDB_LOGV(log, "CPU: '{0}'", opts.CPU);
-      LLDB_LOGV(log, "FPMath: '{0}'", opts.FPMath);
-      LLDB_LOGV(log, "ABI: '{0}'", opts.ABI);
-      LLDB_LOGV(log, "LinkerVersion: '{0}'", opts.LinkerVersion);
+      log->Debug("Triple: '%s'", opts.Triple.c_str());
+      log->Debug("CPU: '%s'", opts.CPU.c_str());
+      log->Debug("FPMath: '%s'", opts.FPMath.c_str());
+      log->Debug("ABI: '%s'", opts.ABI.c_str());
+      log->Debug("LinkerVersion: '%s'", opts.LinkerVersion.c_str());
       StringList::LogDump(log, opts.FeaturesAsWritten, "FeaturesAsWritten");
       StringList::LogDump(log, opts.Features, "Features");
       StringList::LogDump(log, opts.Reciprocals, "Reciprocals");
@@ -538,6 +601,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   std::string module_name("$__lldb_module");
 
   m_llvm_context.reset(new LLVMContext());
+
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
       m_compiler->getHeaderSearchOpts(), m_compiler->getPreprocessorOpts(),
@@ -546,7 +610,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
 ClangExpressionParser::~ClangExpressionParser() {}
 
-unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
+unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
+                                      uint32_t first_line, uint32_t last_line,
+                                      uint32_t line_offset) {
   ClangDiagnosticManagerAdapter *adapter =
       static_cast<ClangDiagnosticManagerAdapter *>(
           m_compiler->getDiagnostics().getClient());
@@ -557,34 +623,20 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
 
   const char *expr_text = m_expr.Text();
 
-  clang::SourceManager &source_mgr = m_compiler->getSourceManager();
+  clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
   bool created_main_file = false;
-  if (m_compiler->getCodeGenOpts().getDebugInfo() ==
-      codegenoptions::FullDebugInfo) {
-    int temp_fd = -1;
-    llvm::SmallString<PATH_MAX> result_path;
-    FileSpec tmpdir_file_spec;
-    if (HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir,
-                              tmpdir_file_spec)) {
-      tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
-      std::string temp_source_path = tmpdir_file_spec.GetPath();
-      llvm::sys::fs::createUniqueFile(temp_source_path, temp_fd, result_path);
-    } else {
-      llvm::sys::fs::createTemporaryFile("lldb", "expr", temp_fd, result_path);
-    }
-
-    if (temp_fd != -1) {
-      lldb_private::File file(temp_fd, true);
-      const size_t expr_text_len = strlen(expr_text);
-      size_t bytes_written = expr_text_len;
-      if (file.Write(expr_text, bytes_written).Success()) {
-        if (bytes_written == expr_text_len) {
-          file.Close();
-          source_mgr.setMainFileID(
-              source_mgr.createFileID(m_file_manager->getFile(result_path),
-                                      SourceLocation(), SrcMgr::C_User));
-          created_main_file = true;
-        }
+  if (m_expr.GetOptions() &&
+      m_expr.GetOptions()->GetPoundLineFilePath() == NULL &&
+      m_compiler->getCodeGenOpts().getDebugInfo() ==
+          codegenoptions::FullDebugInfo) {
+    std::string temp_source_path;
+    if (ExpressionSourceCode::SaveExpressionTextToTempFile(
+            expr_text, *m_expr.GetOptions(), temp_source_path)) {
+      auto file = m_file_manager->getFile(temp_source_path);
+      if (file) {
+        SourceMgr.setMainFileID(
+            SourceMgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
+        created_main_file = true;
       }
     }
   }
@@ -592,7 +644,7 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
   if (!created_main_file) {
     std::unique_ptr<MemoryBuffer> memory_buffer =
         MemoryBuffer::getMemBufferCopy(expr_text, __FUNCTION__);
-    source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(memory_buffer)));
   }
 
   diag_buf->BeginSourceFile(m_compiler->getLangOpts(),
@@ -756,7 +808,7 @@ static bool FindFunctionInModule(ConstString &mangled_name,
   return false;
 }
 
-lldb_private::Status ClangExpressionParser::PrepareForExecution(
+lldb_private::Error ClangExpressionParser::PrepareForExecution(
     lldb::addr_t &func_addr, lldb::addr_t &func_end,
     lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
     bool &can_interpret, ExecutionPolicy execution_policy) {
@@ -764,7 +816,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   func_end = LLDB_INVALID_ADDRESS;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  lldb_private::Status err;
+  lldb_private::Error err;
 
   std::unique_ptr<llvm::Module> llvm_module_ap(
       m_code_generator->ReleaseModule());
@@ -773,6 +825,19 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;
+  }
+
+  for (llvm::Function &function : *llvm_module_ap.get()) {
+    llvm::AttributeSet attributes = function.getAttributes();
+    llvm::AttrBuilder attributes_to_remove;
+
+    attributes_to_remove.addAttribute("target-cpu");
+
+    function.setAttributes(attributes.removeAttributes(
+        function.getContext(), llvm::AttributeSet::FunctionIndex,
+        llvm::AttributeSet::get(function.getContext(),
+                                llvm::AttributeSet::FunctionIndex,
+                                attributes_to_remove)));
   }
 
   ConstString function_name;
@@ -857,7 +922,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
     if (execution_policy != eExecutionPolicyAlways &&
         execution_policy != eExecutionPolicyTopLevel) {
-      lldb_private::Status interpret_error;
+      lldb_private::Error interpret_error;
 
       bool interpret_function_calls =
           !process ? false : process->CanInterpretFunctionCalls();
@@ -941,9 +1006,9 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   return err;
 }
 
-lldb_private::Status ClangExpressionParser::RunStaticInitializers(
+lldb_private::Error ClangExpressionParser::RunStaticInitializers(
     lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx) {
-  lldb_private::Status err;
+  lldb_private::Error err;
 
   lldbassert(execution_unit_sp.get());
   lldbassert(exe_ctx.HasThreadScope());

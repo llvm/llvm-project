@@ -9,21 +9,18 @@
 
 #include "lldb/Core/ValueObjectChild.h"
 
-#include "lldb/Core/Scalar.h" // for Scalar
-#include "lldb/Core/Value.h"  // for Value, Value::ValueType::e...
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ValueObjectList.h"
+
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/Variable.h"
+
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Flags.h"  // for Flags
-#include "lldb/Utility/Status.h" // for Status
-#include "lldb/lldb-forward.h"   // for ProcessSP, ModuleSP
-
-#include <functional> // for _Func_impl<>::_Mybase
-#include <memory>     // for shared_ptr
-#include <vector>     // for vector
-
-#include <stdio.h>  // for snprintf, size_t
-#include <string.h> // for strlen
+#include "lldb/Target/Target.h"
 
 using namespace lldb_private;
 

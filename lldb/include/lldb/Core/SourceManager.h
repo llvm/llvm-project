@@ -10,31 +10,18 @@
 #ifndef liblldb_SourceManager_h_
 #define liblldb_SourceManager_h_
 
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h" // for DebuggerSP, DebuggerWP, DataBufferSP
+// Project includes
+#include "lldb/Host/FileSpec.h"
+#include "lldb/lldb-private.h"
 
+// Other libraries and framework includes
 #include "llvm/Support/Chrono.h"
 
-#include <cstdint> // for uint32_t, UINT32_MAX
+// C Includes
+// C++ Includes
 #include <map>
 #include <memory>
-#include <stddef.h> // for size_t
-#include <string>   // for string
 #include <vector>
-
-namespace lldb_private {
-class RegularExpression;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class SymbolContextList;
-}
-namespace lldb_private {
-class Target;
-}
 
 namespace lldb_private {
 

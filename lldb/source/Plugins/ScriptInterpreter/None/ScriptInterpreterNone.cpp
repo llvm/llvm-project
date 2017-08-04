@@ -10,12 +10,10 @@
 #include "ScriptInterpreterNone.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StringList.h"
-
-#include "llvm/Support/Threading.h"
 
 #include <mutex>
 
@@ -41,9 +39,9 @@ void ScriptInterpreterNone::ExecuteInterpreterLoop() {
 }
 
 void ScriptInterpreterNone::Initialize() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
+  std::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguageNone, CreateInstance);

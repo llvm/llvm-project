@@ -10,18 +10,18 @@
 
 #include "CF.h"
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -88,7 +88,7 @@ bool lldb_private::formatters::CFBagSummaryProvider(
 
   if (is_type_ok) {
     lldb::addr_t offset = 2 * ptr_size + 4 + valobj_addr;
-    Status error;
+    Error error;
     count = process_sp->ReadUnsignedIntegerFromMemory(offset, 4, 0, error);
     if (error.Fail())
       return false;
@@ -152,7 +152,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   if (is_type_ok == false)
     return false;
 
-  Status error;
+  Error error;
   count = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + 2 * ptr_size,
                                                     ptr_size, 0, error);
   if (error.Fail())
@@ -281,7 +281,7 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
 
   if (is_type_ok) {
     lldb::addr_t offset = 2 * ptr_size + valobj_addr;
-    Status error;
+    Error error;
     count = process_sp->ReadUnsignedIntegerFromMemory(offset, 4, 0, error);
     if (error.Fail())
       return false;

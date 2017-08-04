@@ -15,10 +15,9 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -182,7 +181,7 @@ bool SBCommandReturnObject::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
   if (m_opaque_ap) {
-    description.Printf("Error:  ");
+    description.Printf("Status:  ");
     lldb::ReturnStatus status = m_opaque_ap->GetStatus();
     if (status == lldb::eReturnStatusStarted)
       strm.PutCString("Started");
@@ -271,7 +270,7 @@ void SBCommandReturnObject::SetError(lldb::SBError &error,
     if (error.IsValid())
       m_opaque_ap->SetError(error.ref(), fallback_error_cstr);
     else if (fallback_error_cstr)
-      m_opaque_ap->SetError(Status(), fallback_error_cstr);
+      m_opaque_ap->SetError(Error(), fallback_error_cstr);
   }
 }
 

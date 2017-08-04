@@ -16,11 +16,11 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 
@@ -43,7 +43,7 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  Status
+  Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
@@ -52,9 +52,9 @@ public:
 
   ConstString GetName() const override { return m_name; }
 
-  virtual Status DumpPropertyValue(const ExecutionContext *exe_ctx,
-                                   Stream &strm, llvm::StringRef property_path,
-                                   uint32_t dump_mask);
+  virtual Error DumpPropertyValue(const ExecutionContext *exe_ctx, Stream &strm,
+    llvm::StringRef property_path,
+                                  uint32_t dump_mask);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
                                    Stream &strm) const;
@@ -110,12 +110,11 @@ public:
                                              bool value_will_be_modified) const;
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
-                                  llvm::StringRef name,
-                                  bool value_will_be_modified,
-                                  Status &error) const override;
+    llvm::StringRef name, bool value_will_be_modified,
+                                  Error &error) const override;
 
-  Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
-                     llvm::StringRef path, llvm::StringRef value) override;
+  Error SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
+    llvm::StringRef path, llvm::StringRef value) override;
 
   virtual bool PredicateMatches(const ExecutionContext *exe_ctx,
     llvm::StringRef predicate) const {

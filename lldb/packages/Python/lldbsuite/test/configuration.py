@@ -66,7 +66,10 @@ categoriesList = None
 # set to true if we are going to use categories for cherry-picking test cases
 useCategories = False
 # Categories we want to skip
-skipCategories = ["darwin-log"]
+skipCategories = ["darwin-log", "frame-diagnose"]
+if platform.system() == 'Linux':
+    skipCategories.append('watchpoints')
+
 # use this to track per-category failures
 failuresPerCategory = {}
 
@@ -76,9 +79,13 @@ lldbFrameworkPath = None
 # Test suite repeat count.  Can be overwritten with '-# count'.
 count = 1
 
-# The 'arch' and 'compiler' can be specified via command line.
-arch = None        # Must be initialized after option parsing
-compiler = None    # Must be initialized after option parsing
+# The 'archs' and 'compilers' can be specified via command line.  The corresponding
+# options can be specified more than once. For example, "-A x86_64 -A i386"
+# => archs=['x86_64', 'i386'] and "-C gcc -C clang" => compilers=['gcc', 'clang'].
+archs = None        # Must be initialized after option parsing
+compilers = None    # Must be initialized after option parsing
+swiftCompiler = None
+swiftLibrary = None
 
 # The arch might dictate some specific CFLAGS to be passed to the toolchain to build
 # the inferior programs.  The global variable cflags_extras provides a hook to do

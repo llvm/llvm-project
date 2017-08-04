@@ -45,22 +45,31 @@ public:
   //------------------------------------------------------------
   // lldb_private::Platform functions
   //------------------------------------------------------------
+  Error ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
+                          lldb::ModuleSP &module_sp,
+                          const FileSpecList *module_search_paths_ptr) override;
+
   const char *GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
   }
 
   void GetStatus(Stream &strm) override;
 
+  Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
+                        FileSpec &local_file) override;
+
+  bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
+
   bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
-  lldb_private::Status
+  lldb_private::Error
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
-                         Target *target, Status &error) override;
+                         Target *target, Error &error) override;
 
   // Kalimba processes can not be launched by spawning and attaching.
   bool CanDebugProcess() override { return false; }

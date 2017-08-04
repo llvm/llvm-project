@@ -132,8 +132,8 @@ DynamicLoaderStatic::GetStepThroughTrampolinePlan(Thread &thread,
   return ThreadPlanSP();
 }
 
-Status DynamicLoaderStatic::CanLoadImage() {
-  Status error;
+Error DynamicLoaderStatic::CanLoadImage() {
+  Error error;
   error.SetErrorString("can't load images on with a static debug session");
   return error;
 }

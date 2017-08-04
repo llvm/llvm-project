@@ -10,6 +10,14 @@
 #define LLDB_TEST_API
 #endif
 
+#if defined(__cplusplus) && defined(_MSC_VER) && (_HAS_EXCEPTIONS == 0)
+// Compiling MSVC libraries with _HAS_EXCEPTIONS=0, eliminates most but not all
+// calls to __uncaught_exception.  Unfortunately, it does seem to eliminate
+// the delcaration of __uncaught_excpeiton.  Including <eh.h> ensures that it is
+// declared.  This may not be necessary after MSVC 12.
+#include <eh.h>
+#endif
+
 #if defined(_WIN32)
 #define LLVM_PRETTY_FUNCTION __FUNCSIG__
 #else
@@ -45,3 +53,34 @@
 #define lldb_enable_attach()
 
 #endif
+
+#if defined(__APPLE__) && defined(LLDB_USING_LIBSTDCPP)              
+
+// on Darwin, libstdc++ is missing <atomic>, so this would cause any test to fail building
+// since this header file is being included in every C-family test case, we need to not include it
+// on Darwin, most tests use libc++ by default, so this will only affect tests that explicitly require libstdc++
+
+#else
+#ifdef __cplusplus
+#include <atomic>
+
+// Note that although hogging the CPU while waiting for a variable to change
+// would be terrible in production code, it's great for testing since it
+// avoids a lot of messy context switching to get multiple threads synchronized.
+
+typedef std::atomic<int> pseudo_barrier_t;
+#define pseudo_barrier_wait(barrier)        \
+    do                                      \
+    {                                       \
+        --(barrier);                        \
+        while ((barrier).load() > 0)        \
+            ;                               \
+    } while (0)
+
+#define pseudo_barrier_init(barrier, count) \
+    do                                      \
+    {                                       \
+        (barrier) = (count);                \
+    } while (0)
+#endif // __cplusplus
+#endif // defined(__APPLE__) && defined(LLDB_USING_LIBSTDCPP)

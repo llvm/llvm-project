@@ -78,9 +78,8 @@ private:
   friend class SBBreakpoint;
 
   void SetLocation(const lldb::BreakpointLocationSP &break_loc_sp);
-  BreakpointLocationSP GetSP() const;
 
-  lldb::BreakpointLocationWP m_opaque_wp;
+  lldb::BreakpointLocationSP m_opaque_sp;
 };
 
 } // namespace lldb

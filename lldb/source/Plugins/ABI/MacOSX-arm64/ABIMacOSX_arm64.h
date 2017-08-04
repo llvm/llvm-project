@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/ConstString.h"
 #include "lldb/Target/ABI.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 class ABIMacOSX_arm64 : public lldb_private::ABI {
@@ -78,7 +78,7 @@ public:
 
   static void Terminate();
 
-  static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
+  static lldb::ABISP CreateInstance(const lldb_private::ArchSpec &arch);
 
   //------------------------------------------------------------------
   // PluginInterface protocol
@@ -92,7 +92,7 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  lldb_private::Status
+  lldb_private::Error
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                        lldb::ValueObjectSP &new_value) override;
 
@@ -102,7 +102,7 @@ protected:
                            lldb_private::CompilerType &ast_type) const override;
 
 private:
-  ABIMacOSX_arm64(lldb::ProcessSP process_sp) : lldb_private::ABI(process_sp) {
+  ABIMacOSX_arm64() : lldb_private::ABI() {
     // Call CreateInstance instead.
   }
 };

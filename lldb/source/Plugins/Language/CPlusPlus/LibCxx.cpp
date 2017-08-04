@@ -13,21 +13,21 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/VectorIterator.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/ProcessStructReader.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -53,7 +53,7 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
     return true;
   } else {
     bool print_pointee = false;
-    Status error;
+    Error error;
     ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
     if (pointee_sp && error.Success()) {
       if (pointee_sp->DumpPrintableRepresentation(
@@ -181,7 +181,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         });
         DataBufferSP buffer_sp(new DataBufferHeap(tree_node_type.GetByteSize(nullptr),0));
         ProcessSP process_sp(target_sp->GetProcessSP());
-        Status error;
+        Error error;
         process_sp->ReadMemory(addr, buffer_sp->GetBytes(), buffer_sp->GetByteSize(), error);
         if (error.Fail())
           return false;
@@ -395,8 +395,7 @@ static bool ExtractLibcxxStringInfo(ValueObject &valobj,
   if (!D)
     return false;
 
-  ValueObjectSP layout_decider(
-    D->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
+  ValueObjectSP layout_decider(D->GetChildAtIndexPath({0, 0}));
 
   // this child should exist
   if (!layout_decider)

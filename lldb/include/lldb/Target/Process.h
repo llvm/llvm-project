@@ -30,10 +30,12 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Communication.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
@@ -46,10 +48,6 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StructuredData.h"
-#include "lldb/Utility/TraceOptions.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -282,8 +280,8 @@ public:
 
   ~ProcessLaunchCommandOptions() override = default;
 
-  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                        ExecutionContext *execution_context) override;
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                       ExecutionContext *execution_context) override;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     launch_info.Clear();
@@ -307,11 +305,11 @@ public:
 class ProcessInstanceInfoMatch {
 public:
   ProcessInstanceInfoMatch()
-      : m_match_info(), m_name_match_type(NameMatch::Ignore),
+      : m_match_info(), m_name_match_type(eNameMatchIgnore),
         m_match_all_users(false) {}
 
   ProcessInstanceInfoMatch(const char *process_name,
-                           NameMatch process_name_match_type)
+                           NameMatchType process_name_match_type)
       : m_match_info(), m_name_match_type(process_name_match_type),
         m_match_all_users(false) {
     m_match_info.GetExecutableFile().SetFile(process_name, false);
@@ -325,9 +323,9 @@ public:
 
   void SetMatchAllUsers(bool b) { m_match_all_users = b; }
 
-  NameMatch GetNameMatchType() const { return m_name_match_type; }
+  NameMatchType GetNameMatchType() const { return m_name_match_type; }
 
-  void SetNameMatchType(NameMatch name_match_type) {
+  void SetNameMatchType(NameMatchType name_match_type) {
     m_name_match_type = name_match_type;
   }
 
@@ -340,7 +338,7 @@ public:
 
 protected:
   ProcessInstanceInfo m_match_info;
-  NameMatch m_name_match_type;
+  NameMatchType m_name_match_type;
   bool m_match_all_users;
 };
 
@@ -534,7 +532,7 @@ public:
   //------------------------------------------------------------------
   /// Process warning types.
   //------------------------------------------------------------------
-  enum Warnings { eWarningsOptimization = 1 };
+  enum Warnings { eWarningsOptimization = 1, eWarningsCantLoadSwift };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to
@@ -792,12 +790,12 @@ public:
   ///     An error object. Call GetID() to get the process ID if
   ///     the error object is success.
   //------------------------------------------------------------------
-  virtual Status Launch(ProcessLaunchInfo &launch_info);
+  virtual Error Launch(ProcessLaunchInfo &launch_info);
 
-  virtual Status LoadCore();
+  virtual Error LoadCore();
 
-  virtual Status DoLoadCore() {
-    Status error;
+  virtual Error DoLoadCore() {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support loading core files.",
         GetPluginName().GetCString());
@@ -869,7 +867,7 @@ public:
   ///     Returns \a pid if attaching was successful, or
   ///     LLDB_INVALID_PROCESS_ID if attaching fails.
   //------------------------------------------------------------------
-  virtual Status Attach(ProcessAttachInfo &attach_info);
+  virtual Error Attach(ProcessAttachInfo &attach_info);
 
   //------------------------------------------------------------------
   /// Attach to a remote system via a URL
@@ -885,7 +883,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status ConnectRemote(Stream *strm, llvm::StringRef remote_url);
+  virtual Error ConnectRemote(Stream *strm, llvm::StringRef remote_url);
 
   bool GetShouldDetach() const { return m_should_detach; }
 
@@ -992,9 +990,9 @@ public:
   /// @see Thread:Step()
   /// @see Thread:Suspend()
   //------------------------------------------------------------------
-  Status Resume();
+  Error Resume();
 
-  Status ResumeSynchronous(Stream *stream);
+  Error ResumeSynchronous(Stream *stream);
 
   //------------------------------------------------------------------
   /// Halts a running process.
@@ -1016,7 +1014,7 @@ public:
   ///     halted.
   ///     otherwise the halt has failed.
   //------------------------------------------------------------------
-  Status Halt(bool clear_thread_plans = false, bool use_run_lock = true);
+  Error Halt(bool clear_thread_plans = false, bool use_run_lock = true);
 
   //------------------------------------------------------------------
   /// Detaches from a running or stopped process.
@@ -1030,7 +1028,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  Status Detach(bool keep_stopped);
+  Error Detach(bool keep_stopped);
 
   //------------------------------------------------------------------
   /// Kills the process and shuts down all threads that were spawned
@@ -1050,7 +1048,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  Status Destroy(bool force_kill);
+  Error Destroy(bool force_kill);
 
   //------------------------------------------------------------------
   /// Sends a process a UNIX signal \a signal.
@@ -1061,7 +1059,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  Status Signal(int signal);
+  Error Signal(int signal);
 
   void SetUnixSignals(lldb::UnixSignalsSP &&signals_sp);
 
@@ -1080,7 +1078,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillAttachToProcessWithID(lldb::pid_t pid) { return Status(); }
+  virtual Error WillAttachToProcessWithID(lldb::pid_t pid) { return Error(); }
 
   //------------------------------------------------------------------
   /// Called before attaching to a process.
@@ -1091,9 +1089,9 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillAttachToProcessWithName(const char *process_name,
-                                             bool wait_for_launch) {
-    return Status();
+  virtual Error WillAttachToProcessWithName(const char *process_name,
+                                            bool wait_for_launch) {
+    return Error();
   }
 
   //------------------------------------------------------------------
@@ -1110,8 +1108,8 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
-    Status error;
+  virtual Error DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
+    Error error;
     error.SetErrorString("remote connections are not supported");
     return error;
   }
@@ -1127,14 +1125,14 @@ public:
   ///     will return the uid to attach as.
   ///
   /// @return
-  ///     Returns a successful Status attaching was successful, or
+  ///     Returns a successful Error attaching was successful, or
   ///     an appropriate (possibly platform-specific) error code if
   ///     attaching fails.
   /// hanming : need flag
   //------------------------------------------------------------------
-  virtual Status DoAttachToProcessWithID(lldb::pid_t pid,
-                                         const ProcessAttachInfo &attach_info) {
-    Status error;
+  virtual Error DoAttachToProcessWithID(lldb::pid_t pid,
+                                        const ProcessAttachInfo &attach_info) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support attaching to a process by pid",
         GetPluginName().GetCString());
@@ -1152,14 +1150,14 @@ public:
   ///     will return the uid to attach as.
   ///
   /// @return
-  ///     Returns a successful Status attaching was successful, or
+  ///     Returns a successful Error attaching was successful, or
   ///     an appropriate (possibly platform-specific) error code if
   ///     attaching fails.
   //------------------------------------------------------------------
-  virtual Status
+  virtual Error
   DoAttachToProcessWithName(const char *process_name,
                             const ProcessAttachInfo &attach_info) {
-    Status error;
+    Error error;
     error.SetErrorString("attach by name is not supported");
     return error;
   }
@@ -1202,7 +1200,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillLaunch(Module *module) { return Status(); }
+  virtual Error WillLaunch(Module *module) { return Error(); }
 
   //------------------------------------------------------------------
   /// Launch a new process.
@@ -1220,11 +1218,11 @@ public:
   ///     requested launch.
   ///
   /// @return
-  ///     An Status instance indicating success or failure of the
+  ///     An Error instance indicating success or failure of the
   ///     operation.
   //------------------------------------------------------------------
-  virtual Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) {
-    Status error;
+  virtual Error DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support launching processes",
         GetPluginName().GetCString());
@@ -1248,7 +1246,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillResume() { return Status(); }
+  virtual Error WillResume() { return Error(); }
 
   //------------------------------------------------------------------
   /// Resumes all of a process's threads as configured using the
@@ -1267,8 +1265,8 @@ public:
   /// @see Thread:Step()
   /// @see Thread:Suspend()
   //------------------------------------------------------------------
-  virtual Status DoResume() {
-    Status error;
+  virtual Error DoResume() {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support resuming processes",
         GetPluginName().GetCString());
@@ -1292,7 +1290,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillHalt() { return Status(); }
+  virtual Error WillHalt() { return Error(); }
 
   //------------------------------------------------------------------
   /// Halts a running process.
@@ -1314,8 +1312,8 @@ public:
   ///     Returns \b true if the process successfully halts, \b false
   ///     otherwise.
   //------------------------------------------------------------------
-  virtual Status DoHalt(bool &caused_stop) {
-    Status error;
+  virtual Error DoHalt(bool &caused_stop) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support halting processes",
         GetPluginName().GetCString());
@@ -1339,7 +1337,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillDetach() { return Status(); }
+  virtual Error WillDetach() { return Error(); }
 
   //------------------------------------------------------------------
   /// Detaches from a running or stopped process.
@@ -1348,8 +1346,8 @@ public:
   ///     Returns \b true if the process successfully detaches, \b
   ///     false otherwise.
   //------------------------------------------------------------------
-  virtual Status DoDetach(bool keep_stopped) {
-    Status error;
+  virtual Error DoDetach(bool keep_stopped) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support detaching from processes",
         GetPluginName().GetCString());
@@ -1377,7 +1375,7 @@ public:
   ///     Process::DoSignal(int), otherwise an error describing what
   ///     prevents the signal from being sent.
   //------------------------------------------------------------------
-  virtual Status WillSignal() { return Status(); }
+  virtual Error WillSignal() { return Error(); }
 
   //------------------------------------------------------------------
   /// Sends a process a UNIX signal \a signal.
@@ -1385,17 +1383,17 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status DoSignal(int signal) {
-    Status error;
+  virtual Error DoSignal(int signal) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support sending signals to processes",
         GetPluginName().GetCString());
     return error;
   }
 
-  virtual Status WillDestroy() { return Status(); }
+  virtual Error WillDestroy() { return Error(); }
 
-  virtual Status DoDestroy() = 0;
+  virtual Error DoDestroy() = 0;
 
   virtual void DidDestroy() {}
 
@@ -1594,6 +1592,21 @@ public:
   //------------------------------------------------------------------
   void PrintWarningOptimization(const SymbolContext &sc);
 
+  //------------------------------------------------------------------
+  /// Print a user-visible warning about a module having Swift settings
+  /// incompatible with the current system
+  ///
+  /// Prints a async warning message to the user one time per Process for a
+  /// Module
+  /// whose Swift AST sections couldn't be loaded because they aren't buildable
+  /// on
+  /// the current machine.
+  ///
+  /// @param [in] module
+  ///     The affected Module.
+  //------------------------------------------------------------------
+  void PrintWarningCantLoadSwift(const Module &module);
+
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
 public:
@@ -1706,7 +1719,7 @@ public:
   ///     The number of bytes that were actually read into \a buf.
   //------------------------------------------------------------------
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                              Status &error) = 0;
+                              Error &error) = 0;
 
   //------------------------------------------------------------------
   /// Read of memory from a process.
@@ -1738,7 +1751,7 @@ public:
   ///     returned to indicate an error.
   //------------------------------------------------------------------
   virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                            Status &error);
+                            Error &error);
 
   //------------------------------------------------------------------
   /// Read a NULL terminated string from memory
@@ -1770,7 +1783,7 @@ public:
   ///     The error status or the number of bytes prior to the null terminator.
   //------------------------------------------------------------------
   size_t ReadStringFromMemory(lldb::addr_t vm_addr, char *str, size_t max_bytes,
-                              Status &error, size_t type_width = 1);
+                              Error &error, size_t type_width = 1);
 
   //------------------------------------------------------------------
   /// Read a NULL terminated C string from memory
@@ -1782,13 +1795,13 @@ public:
   /// terminated (at most cstr_max_len - 1 bytes will be read).
   //------------------------------------------------------------------
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, char *cstr,
-                               size_t cstr_max_len, Status &error);
+                               size_t cstr_max_len, Error &error);
 
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, std::string &out_str,
-                               Status &error);
+                               Error &error);
 
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
-                                Status &error);
+                                Error &error);
 
   //------------------------------------------------------------------
   /// Reads an unsigned integer of the specified byte size from
@@ -1819,15 +1832,15 @@ public:
   //------------------------------------------------------------------
   uint64_t ReadUnsignedIntegerFromMemory(lldb::addr_t load_addr,
                                          size_t byte_size, uint64_t fail_value,
-                                         Status &error);
+                                         Error &error);
 
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
-                                      int64_t fail_value, Status &error);
+                                      int64_t fail_value, Error &error);
 
-  lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+  lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Error &error);
 
   bool WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
-                            Status &error);
+                            Error &error);
 
   //------------------------------------------------------------------
   /// Actually do the writing of memory to a process.
@@ -1850,7 +1863,7 @@ public:
   ///     The number of bytes that were actually written.
   //------------------------------------------------------------------
   virtual size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
-                               size_t size, Status &error) {
+                               size_t size, Error &error) {
     error.SetErrorStringWithFormat(
         "error: %s does not support writing to processes",
         GetPluginName().GetCString());
@@ -1890,11 +1903,11 @@ public:
   ///     The number of bytes that were actually written.
   //------------------------------------------------------------------
   size_t WriteScalarToMemory(lldb::addr_t vm_addr, const Scalar &scalar,
-                             size_t size, Status &error);
+                             size_t size, Error &error);
 
   size_t ReadScalarIntegerFromMemory(lldb::addr_t addr, uint32_t byte_size,
                                      bool is_signed, Scalar &scalar,
-                                     Status &error);
+                                     Error &error);
 
   //------------------------------------------------------------------
   /// Write memory to a process.
@@ -1923,7 +1936,7 @@ public:
   //------------------------------------------------------------------
   // TODO: change this to take an ArrayRef<uint8_t>
   size_t WriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
-                     Status &error);
+                     Error &error);
 
   //------------------------------------------------------------------
   /// Actually allocate memory in the process.
@@ -1941,7 +1954,7 @@ public:
   //------------------------------------------------------------------
 
   virtual lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
-                                        Status &error) {
+                                        Error &error) {
     error.SetErrorStringWithFormat(
         "error: %s does not support allocating in the debug process",
         GetPluginName().GetCString());
@@ -1971,7 +1984,7 @@ public:
   ///     The address of the allocated buffer in the process, or
   ///     LLDB_INVALID_ADDRESS if the allocation failed.
   //------------------------------------------------------------------
-  lldb::addr_t AllocateMemory(size_t size, uint32_t permissions, Status &error);
+  lldb::addr_t AllocateMemory(size_t size, uint32_t permissions, Error &error);
 
   //------------------------------------------------------------------
   /// The public interface to allocating memory in the process, this also
@@ -1998,8 +2011,7 @@ public:
   ///     LLDB_INVALID_ADDRESS if the allocation failed.
   //------------------------------------------------------------------
 
-  lldb::addr_t CallocateMemory(size_t size, uint32_t permissions,
-                               Status &error);
+  lldb::addr_t CallocateMemory(size_t size, uint32_t permissions, Error &error);
 
   //------------------------------------------------------------------
   /// Resolve dynamically loaded indirect functions.
@@ -2015,7 +2027,7 @@ public:
   ///     LLDB_INVALID_ADDRESS if the resolution failed.
   //------------------------------------------------------------------
   virtual lldb::addr_t ResolveIndirectFunction(const Address *address,
-                                               Status &error);
+                                               Error &error);
 
   //------------------------------------------------------------------
   /// Locate the memory region that contains load_addr.
@@ -2043,9 +2055,9 @@ public:
   /// @return
   ///     An error value.
   //------------------------------------------------------------------
-  virtual Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                     MemoryRegionInfo &range_info) {
-    Status error;
+  virtual Error GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                    MemoryRegionInfo &range_info) {
+    Error error;
     error.SetErrorString("Process::GetMemoryRegionInfo() not supported");
     return error;
   }
@@ -2060,18 +2072,18 @@ public:
   /// @return
   ///     An error value.
   //------------------------------------------------------------------
-  virtual Status
+  virtual Error
   GetMemoryRegions(std::vector<lldb::MemoryRegionInfoSP> &region_list);
 
-  virtual Status GetWatchpointSupportInfo(uint32_t &num) {
-    Status error;
+  virtual Error GetWatchpointSupportInfo(uint32_t &num) {
+    Error error;
     num = 0;
     error.SetErrorString("Process::GetWatchpointSupportInfo() not supported");
     return error;
   }
 
-  virtual Status GetWatchpointSupportInfo(uint32_t &num, bool &after) {
-    Status error;
+  virtual Error GetWatchpointSupportInfo(uint32_t &num, bool &after) {
+    Error error;
     num = 0;
     after = true;
     error.SetErrorString("Process::GetWatchpointSupportInfo() not supported");
@@ -2166,8 +2178,8 @@ public:
   /// @return
   ///     \btrue if the memory was deallocated, \bfalse otherwise.
   //------------------------------------------------------------------
-  virtual Status DoDeallocateMemory(lldb::addr_t ptr) {
-    Status error;
+  virtual Error DoDeallocateMemory(lldb::addr_t ptr) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support deallocating in the debug process",
         GetPluginName().GetCString());
@@ -2187,7 +2199,7 @@ public:
   /// @return
   ///     \btrue if the memory was deallocated, \bfalse otherwise.
   //------------------------------------------------------------------
-  Status DeallocateMemory(lldb::addr_t ptr);
+  Error DeallocateMemory(lldb::addr_t ptr);
 
   //------------------------------------------------------------------
   /// Get any available STDOUT.
@@ -2219,7 +2231,7 @@ public:
   ///     equal to \a buf_size, another call to this function should
   ///     be made to retrieve more STDOUT data.
   //------------------------------------------------------------------
-  virtual size_t GetSTDOUT(char *buf, size_t buf_size, Status &error);
+  virtual size_t GetSTDOUT(char *buf, size_t buf_size, Error &error);
 
   //------------------------------------------------------------------
   /// Get any available STDERR.
@@ -2251,7 +2263,7 @@ public:
   ///     equal to \a buf_size, another call to this function should
   ///     be made to retrieve more STDERR data.
   //------------------------------------------------------------------
-  virtual size_t GetSTDERR(char *buf, size_t buf_size, Status &error);
+  virtual size_t GetSTDERR(char *buf, size_t buf_size, Error &error);
 
   //------------------------------------------------------------------
   /// Puts data into this process's STDIN.
@@ -2274,7 +2286,7 @@ public:
   ///     less than \a buf_size, another call to this function should
   ///     be made to write the rest of the data.
   //------------------------------------------------------------------
-  virtual size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) {
+  virtual size_t PutSTDIN(const char *buf, size_t buf_size, Error &error) {
     error.SetErrorString("stdin unsupported");
     return 0;
   }
@@ -2294,23 +2306,23 @@ public:
   ///     equal to \a buf_size, another call to this function should
   ///     be made to retrieve more profile data.
   //------------------------------------------------------------------
-  virtual size_t GetAsyncProfileData(char *buf, size_t buf_size, Status &error);
+  virtual size_t GetAsyncProfileData(char *buf, size_t buf_size, Error &error);
 
   //----------------------------------------------------------------------
   // Process Breakpoints
   //----------------------------------------------------------------------
   size_t GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site);
 
-  virtual Status EnableBreakpointSite(BreakpointSite *bp_site) {
-    Status error;
+  virtual Error EnableBreakpointSite(BreakpointSite *bp_site) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support enabling breakpoints",
         GetPluginName().GetCString());
     return error;
   }
 
-  virtual Status DisableBreakpointSite(BreakpointSite *bp_site) {
-    Status error;
+  virtual Error DisableBreakpointSite(BreakpointSite *bp_site) {
+    Error error;
     error.SetErrorStringWithFormat(
         "error: %s does not support disabling breakpoints",
         GetPluginName().GetCString());
@@ -2321,13 +2333,13 @@ public:
   // don't need to implement this function unless the standard flow of
   // read existing opcode, write breakpoint opcode, verify breakpoint opcode
   // doesn't work for a specific process plug-in.
-  virtual Status EnableSoftwareBreakpoint(BreakpointSite *bp_site);
+  virtual Error EnableSoftwareBreakpoint(BreakpointSite *bp_site);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of
   // restoring original opcode in memory and verifying the restored opcode
   // doesn't work for a specific process plug-in.
-  virtual Status DisableSoftwareBreakpoint(BreakpointSite *bp_site);
+  virtual Error DisableSoftwareBreakpoint(BreakpointSite *bp_site);
 
   BreakpointSiteList &GetBreakpointSiteList();
 
@@ -2335,14 +2347,14 @@ public:
 
   void DisableAllBreakpointSites();
 
-  Status ClearBreakpointSiteByID(lldb::user_id_t break_id);
+  Error ClearBreakpointSiteByID(lldb::user_id_t break_id);
 
   lldb::break_id_t CreateBreakpointSite(const lldb::BreakpointLocationSP &owner,
                                         bool use_hardware);
 
-  Status DisableBreakpointSiteByID(lldb::user_id_t break_id);
+  Error DisableBreakpointSiteByID(lldb::user_id_t break_id);
 
-  Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
+  Error EnableBreakpointSiteByID(lldb::user_id_t break_id);
 
   // BreakpointLocations use RemoveOwnerFromBreakpointSite to remove
   // themselves from the owner's list of this breakpoint sites.
@@ -2353,9 +2365,9 @@ public:
   //----------------------------------------------------------------------
   // Process Watchpoints (optional)
   //----------------------------------------------------------------------
-  virtual Status EnableWatchpoint(Watchpoint *wp, bool notify = true);
+  virtual Error EnableWatchpoint(Watchpoint *wp, bool notify = true);
 
-  virtual Status DisableWatchpoint(Watchpoint *wp, bool notify = true);
+  virtual Error DisableWatchpoint(Watchpoint *wp, bool notify = true);
 
   //------------------------------------------------------------------
   // Thread Queries
@@ -2462,13 +2474,19 @@ public:
   ///     the process
   ///     needs to have its process IOHandler popped.
   ///
+  /// @param[out] pop_command_interpreter
+  ///     This variable will be set to \b true or \b false ot indicate if the
+  ///     process needs
+  ///     to have its command interpreter popped.
+  ///
   /// @return
   ///     \b true if the event describes a process state changed event, \b false
   ///     otherwise.
   //--------------------------------------------------------------------------------------
   static bool HandleProcessStateChangedEvent(const lldb::EventSP &event_sp,
                                              Stream *stream,
-                                             bool &pop_process_io_handler);
+                                             bool &pop_process_io_handler,
+                                             bool &pop_command_interpreter);
 
   Event *PeekAtStateChangedEvents();
 
@@ -2525,6 +2543,9 @@ public:
 
   virtual ObjCLanguageRuntime *
   GetObjCLanguageRuntime(bool retry_if_null = true);
+
+  virtual SwiftLanguageRuntime *
+  GetSwiftLanguageRuntime(bool retry_if_null = true);
 
   bool IsPossibleDynamicValue(ValueObject &in_value);
 
@@ -2609,13 +2630,13 @@ public:
   bool RunPreResumeActions();
 
   void ClearPreResumeActions();
-
+  
   void ClearPreResumeAction(PreResumeActionCallback callback, void *baton);
 
   ProcessRunLock &GetRunLock();
 
-  virtual Status SendEventData(const char *data) {
-    Status return_error("Sending an event is not supported for this process.");
+  virtual Error SendEventData(const char *data) {
+    Error return_error("Sending an event is not supported for this process.");
     return return_error;
   }
 
@@ -2666,9 +2687,9 @@ public:
   ///     The load address of the file if it is loaded into the
   ///     processes address space, LLDB_INVALID_ADDRESS otherwise.
   //------------------------------------------------------------------
-  virtual Status GetFileLoadAddress(const FileSpec &file, bool &is_loaded,
-                                    lldb::addr_t &load_addr) {
-    return Status("Not supported");
+  virtual Error GetFileLoadAddress(const FileSpec &file, bool &is_loaded,
+                                   lldb::addr_t &load_addr) {
+    return Error("Not supported");
   }
 
   size_t AddImageToken(lldb::addr_t image_ptr);
@@ -2730,7 +2751,7 @@ public:
   /// @return
   ///     Returns the result of attempting to configure the feature.
   //------------------------------------------------------------------
-  virtual Status
+  virtual Error
   ConfigureStructuredData(const ConstString &type_name,
                           const StructuredData::ObjectSP &config_sp);
 
@@ -2768,74 +2789,6 @@ public:
   lldb::StructuredDataPluginSP
   GetStructuredDataPlugin(const ConstString &type_name) const;
 
-  //------------------------------------------------------------------
-  /// Starts tracing with the configuration provided in options. To
-  /// enable tracing on the complete process the thread_id in the
-  /// options should be set to LLDB_INVALID_THREAD_ID. The API returns
-  /// a user_id which is needed by other API's that manipulate the
-  /// trace instance.
-  /// The handling of erroneous or unsupported configuration is left
-  /// to the trace technology implementations in the server, as they
-  /// could be returned as an error, or rounded to a valid
-  /// configuration to start tracing. In the later case the
-  /// GetTraceConfig should supply the actual used trace
-  /// configuration.
-  //------------------------------------------------------------------
-  virtual lldb::user_id_t StartTrace(const TraceOptions &options,
-                                     Status &error) {
-    error.SetErrorString("Not implemented");
-    return LLDB_INVALID_UID;
-  }
-
-  //------------------------------------------------------------------
-  /// Stops the tracing instance leading to deletion of the trace
-  /// data. The tracing instance is identified by the user_id which
-  /// is obtained when tracing was started from the StartTrace.
-  /// In case tracing of the complete process needs to be stopped
-  /// the thread_id should be set to LLDB_INVALID_THREAD_ID.
-  /// In the other case that tracing on an individual thread needs
-  /// to be stopped a thread_id can be supplied.
-  //------------------------------------------------------------------
-  virtual Status StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) {
-    return Status("Not implemented");
-  }
-
-  //------------------------------------------------------------------
-  /// Provides the trace data as raw bytes. A buffer needs to be
-  /// supplied to copy the trace data. The exact behavior of this API
-  /// may vary across trace technology, as some may support partial
-  /// reading of the trace data from a specified offset while some
-  /// may not. The thread_id should be used to select a particular
-  /// thread for trace extraction.
-  //------------------------------------------------------------------
-  virtual Status GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                         llvm::MutableArrayRef<uint8_t> &buffer,
-                         size_t offset = 0) {
-    return Status("Not implemented");
-  }
-
-  //------------------------------------------------------------------
-  /// Similar API as above except for obtaining meta data
-  //------------------------------------------------------------------
-  virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                             llvm::MutableArrayRef<uint8_t> &buffer,
-                             size_t offset = 0) {
-    return Status("Not implemented");
-  }
-
-  //------------------------------------------------------------------
-  /// API to obtain the trace configuration used by a trace instance.
-  /// Configurations that may be specific to some trace technology
-  /// should be stored in the custom parameters. The options are
-  /// transported to the server, which shall interpret accordingly.
-  /// The thread_id can be specified in the options to obtain the
-  /// configuration used by a specific thread. The thread_id specified
-  /// should also match the uid otherwise an error will be returned.
-  //------------------------------------------------------------------
-  virtual Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) {
-    return Status("Not implemented");
-  }
-
 protected:
   void SetState(lldb::EventSP &event_sp);
 
@@ -2846,9 +2799,9 @@ protected:
   /// state of m_run_lock, but just causes the process to resume.
   ///
   /// @return
-  ///     An Status object describing the success or failure of the resume.
+  ///     An Error object describing the success or failure of the resume.
   //------------------------------------------------------------------
-  Status PrivateResume();
+  Error PrivateResume();
 
   //------------------------------------------------------------------
   // Called internally
@@ -3118,11 +3071,12 @@ protected:
   bool m_finalize_called; // This is set at the end of Process::Finalize()
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
+  bool m_destroy_in_process;
+  bool m_destroy_complete;
   lldb::StateType m_last_broadcast_state; /// This helps with the Public event
                                           /// coalescing in
                                           /// ShouldBroadcastEvent.
   std::map<lldb::addr_t, lldb::addr_t> m_resolved_indirect_addresses;
-  bool m_destroy_in_process;
   bool m_can_interpret_function_calls;  // Some targets, e.g the OSX kernel,
                                         // don't support the ability to modify
                                         // the stack.
@@ -3175,7 +3129,7 @@ private:
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);
 
-  Status HaltPrivate();
+  Error HaltPrivate();
 
   lldb::StateType WaitForProcessStopPrivate(lldb::EventSP &event_sp,
                                             const Timeout<std::micro> &timeout);
@@ -3192,7 +3146,7 @@ protected:
                                const Timeout<std::micro> &timeout);
 
   size_t WriteMemoryPrivate(lldb::addr_t addr, const void *buf, size_t size,
-                            Status &error);
+                            Error &error);
 
   void AppendSTDOUT(const char *s, size_t len);
 
@@ -3205,7 +3159,7 @@ protected:
 
   bool PushProcessIOHandler();
 
-  bool PopProcessIOHandler();
+  bool PopProcessIOHandler(bool pop_command_interpreter);
 
   bool ProcessIOHandlerIsActive();
 
@@ -3213,9 +3167,7 @@ protected:
     return static_cast<bool>(m_process_input_reader);
   }
 
-  Status StopForDestroyOrDetach(lldb::EventSP &exit_event_sp);
-
-  virtual Status UpdateAutomaticSignalFiltering();
+  Error StopForDestroyOrDetach(lldb::EventSP &exit_event_sp);
 
   bool StateChangedIsExternallyHijacked();
 

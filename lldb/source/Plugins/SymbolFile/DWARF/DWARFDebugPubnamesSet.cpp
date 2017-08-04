@@ -9,8 +9,8 @@
 
 #include "DWARFDebugPubnamesSet.h"
 
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/RegularExpression.h"
 
 #include "SymbolFileDWARF.h"
 

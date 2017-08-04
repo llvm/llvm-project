@@ -9,8 +9,8 @@
 
 #include "DWARFDebugPubnames.h"
 
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/Timer.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/Timer.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDIECollection.h"
@@ -25,8 +25,7 @@ using namespace lldb_private;
 DWARFDebugPubnames::DWARFDebugPubnames() : m_sets() {}
 
 bool DWARFDebugPubnames::Extract(const DWARFDataExtractor &data) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "DWARFDebugPubnames::Extract (byte_size = %" PRIu64 ")",
                      (uint64_t)data.GetByteSize());
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_PUBNAMES));
@@ -53,8 +52,7 @@ bool DWARFDebugPubnames::Extract(const DWARFDataExtractor &data) {
 }
 
 bool DWARFDebugPubnames::GeneratePubnames(SymbolFileDWARF *dwarf2Data) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "DWARFDebugPubnames::GeneratePubnames (data = %p)",
                      static_cast<void *>(dwarf2Data));
 

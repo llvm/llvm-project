@@ -19,12 +19,11 @@ namespace process_gdb_remote {
 class GDBRemoteTest : public testing::Test {
 public:
   static void SetUpTestCase();
-  static void TearDownTestCase();
 
-protected:
-  llvm::Error Connect(GDBRemoteCommunication &client,
-                      GDBRemoteCommunication &server);
+  static void TearDownTestCase();
 };
+
+void Connect(GDBRemoteCommunication &client, GDBRemoteCommunication &server);
 
 struct MockServer : public GDBRemoteCommunicationServer {
   MockServer()

@@ -54,9 +54,6 @@ public:
     bool
     HasDelaySlot ();
 
-    bool
-    CanSetBreakpoint ();
-
     void
     Print (FILE *out);
 

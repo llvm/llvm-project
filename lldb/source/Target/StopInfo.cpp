@@ -18,6 +18,8 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/Process.h"
@@ -26,8 +28,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -269,7 +269,6 @@ protected:
     if (!m_should_perform_action)
       return;
     m_should_perform_action = false;
-    bool internal_breakpoint = true;
 
     ThreadSP thread_sp(m_thread_wp.lock());
 
@@ -435,7 +434,7 @@ protected:
             // shouldn't stop that will win.
 
             if (bp_loc_sp->GetConditionText() != nullptr) {
-              Status condition_error;
+              Error condition_error;
               bool condition_says_stop =
                   bp_loc_sp->ConditionSaysStop(exe_ctx, condition_error);
 
@@ -496,9 +495,6 @@ protected:
             if (callback_says_stop)
               m_should_stop = true;
 
-            if (m_should_stop && !bp_loc_sp->GetBreakpoint().IsInternal())
-              internal_breakpoint = false;
-                  
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
             if (callback_says_stop && bp_loc_sp &&
@@ -530,20 +526,6 @@ protected:
               "Process::%s could not find breakpoint site id: %" PRId64 "...",
               __FUNCTION__, m_value);
       }
-
-      if ((m_should_stop == false || internal_breakpoint)
-          && thread_sp->CompletedPlanOverridesBreakpoint()) {
-        
-        // Override should_stop decision when we have
-        // completed step plan additionally to the breakpoint
-        m_should_stop = true;
-        
-        // Here we clean the preset stop info so the next
-        // GetStopInfo call will find the appropriate stop info,
-        // which should be the stop info related to the completed plan
-        thread_sp->ResetStopInfo();
-      }
-
       if (log)
         log->Printf("Process::%s returning from action with m_should_stop: %d.",
                     __FUNCTION__, m_should_stop);
@@ -796,7 +778,7 @@ protected:
           expr_options.SetUnwindOnError(true);
           expr_options.SetIgnoreBreakpoints(true);
           ValueObjectSP result_value_sp;
-          Status error;
+          Error error;
           result_code = UserExpression::Evaluate(
               exe_ctx, expr_options, wp_sp->GetConditionText(),
               llvm::StringRef(), result_value_sp, error);
@@ -1033,10 +1015,12 @@ public:
 class StopInfoThreadPlan : public StopInfo {
 public:
   StopInfoThreadPlan(ThreadPlanSP &plan_sp, ValueObjectSP &return_valobj_sp,
-                     ExpressionVariableSP &expression_variable_sp)
+                     ExpressionVariableSP &expression_variable_sp,
+                     bool return_is_swift_error_value)
       : StopInfo(plan_sp->GetThread(), LLDB_INVALID_UID), m_plan_sp(plan_sp),
         m_return_valobj_sp(return_valobj_sp),
-        m_expression_variable_sp(expression_variable_sp) {}
+        m_expression_variable_sp(expression_variable_sp),
+        m_return_value_is_swift_error_value(return_is_swift_error_value) {}
 
   ~StopInfoThreadPlan() override = default;
 
@@ -1051,7 +1035,10 @@ public:
     return m_description.c_str();
   }
 
-  ValueObjectSP GetReturnValueObject() { return m_return_valobj_sp; }
+  ValueObjectSP GetReturnValueObject(bool &is_swift_error_result) {
+    is_swift_error_result = m_return_value_is_swift_error_value;
+    return m_return_valobj_sp;
+  }
 
   ExpressionVariableSP GetExpressionVariable() {
     return m_expression_variable_sp;
@@ -1069,6 +1056,7 @@ private:
   ThreadPlanSP m_plan_sp;
   ValueObjectSP m_return_valobj_sp;
   ExpressionVariableSP m_expression_variable_sp;
+  bool m_return_value_is_swift_error_value;
 };
 
 class StopInfoExec : public StopInfo {
@@ -1124,11 +1112,14 @@ StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
   return StopInfoSP(new StopInfoTrace(thread));
 }
 
-StopInfoSP StopInfo::CreateStopReasonWithPlan(
-    ThreadPlanSP &plan_sp, ValueObjectSP return_valobj_sp,
-    ExpressionVariableSP expression_variable_sp) {
+StopInfoSP
+StopInfo::CreateStopReasonWithPlan(ThreadPlanSP &plan_sp,
+                                   ValueObjectSP return_valobj_sp,
+                                   ExpressionVariableSP expression_variable_sp,
+                                   bool return_is_swift_error_value) {
   return StopInfoSP(new StopInfoThreadPlan(plan_sp, return_valobj_sp,
-                                           expression_variable_sp));
+                                           expression_variable_sp,
+                                           return_is_swift_error_value));
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
@@ -1140,12 +1131,13 @@ StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
   return StopInfoSP(new StopInfoExec(thread));
 }
 
-ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
+ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp,
+                                             bool &is_swift_error_result) {
   if (stop_info_sp &&
       stop_info_sp->GetStopReason() == eStopReasonPlanComplete) {
     StopInfoThreadPlan *plan_stop_info =
         static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
-    return plan_stop_info->GetReturnValueObject();
+    return plan_stop_info->GetReturnValueObject(is_swift_error_result);
   } else
     return ValueObjectSP();
 }

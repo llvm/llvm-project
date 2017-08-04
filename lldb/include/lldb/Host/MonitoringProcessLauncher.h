@@ -25,7 +25,7 @@ public:
       std::unique_ptr<ProcessLauncher> delegate_launcher);
 
   HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
-                            Status &error) override;
+                            Error &error) override;
 
 private:
   std::unique_ptr<ProcessLauncher> m_delegate_launcher;

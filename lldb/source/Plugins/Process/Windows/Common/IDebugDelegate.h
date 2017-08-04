@@ -16,7 +16,7 @@
 #include <string>
 
 namespace lldb_private {
-class Status;
+class Error;
 class HostThread;
 
 //----------------------------------------------------------------------
@@ -39,7 +39,7 @@ public:
                          lldb::addr_t module_addr) = 0;
   virtual void OnUnloadDll(lldb::addr_t module_addr) = 0;
   virtual void OnDebugString(const std::string &string) = 0;
-  virtual void OnDebuggerError(const Status &error, uint32_t type) = 0;
+  virtual void OnDebuggerError(const Error &error, uint32_t type) = 0;
 };
 }
 

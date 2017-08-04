@@ -16,12 +16,13 @@
 // Other libraries and framework includes
 // Project includes
 
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -603,6 +604,10 @@ FormatManager::GetCandidateLanguages(ValueObject &valobj) {
 std::vector<lldb::LanguageType>
 FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   switch (lang_type) {
+  case lldb::eLanguageTypeSwift:
+    return {lldb::eLanguageTypeSwift, lldb::eLanguageTypeObjC};
+  case lldb::eLanguageTypeObjC:
+    return {lldb::eLanguageTypeObjC, lldb::eLanguageTypeSwift};
   case lldb::eLanguageTypeC:
   case lldb::eLanguageTypeC89:
   case lldb::eLanguageTypeC99:
@@ -660,9 +665,11 @@ FormatManager::GetFormat(ValueObject &valobj,
       if (log) {
         log->Printf(
             "[FormatManager::GetFormat] Cache search success. Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
+        if (log->GetDebug())
+          log->Printf("[FormatManager::GetFormat] Cache hits: %" PRIu64
+                      " - Cache Misses: %" PRIu64,
+                      m_format_cache.GetCacheHits(),
+                      m_format_cache.GetCacheMisses());
       }
       return retval;
     }
@@ -703,8 +710,10 @@ FormatManager::GetFormat(ValueObject &valobj,
                   match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.SetFormat(match_data.GetTypeForCache(), retval);
   }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
+  if (log && log->GetDebug())
+    log->Printf("[FormatManager::GetFormat] Cache hits: %" PRIu64
+                " - Cache Misses: %" PRIu64,
+                m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval;
 }
 
@@ -738,9 +747,11 @@ FormatManager::GetSummaryFormat(ValueObject &valobj,
       if (log) {
         log->Printf("[FormatManager::GetSummaryFormat] Cache search success. "
                     "Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
+        if (log->GetDebug())
+          log->Printf("[FormatManager::GetSummaryFormat] Cache hits: %" PRIu64
+                      " - Cache Misses: %" PRIu64,
+                      m_format_cache.GetCacheHits(),
+                      m_format_cache.GetCacheMisses());
       }
       return retval;
     }
@@ -781,8 +792,10 @@ FormatManager::GetSummaryFormat(ValueObject &valobj,
                   match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.SetSummary(match_data.GetTypeForCache(), retval);
   }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
+  if (log && log->GetDebug())
+    log->Printf("[FormatManager::GetSummaryFormat] Cache hits: %" PRIu64
+                " - Cache Misses: %" PRIu64,
+                m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval;
 }
 
@@ -817,9 +830,11 @@ FormatManager::GetSyntheticChildren(ValueObject &valobj,
       if (log) {
         log->Printf("[FormatManager::GetSyntheticChildren] Cache search "
                     "success. Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
+        if (log->GetDebug())
+          log->Printf(
+              "[FormatManager::GetSyntheticChildren] Cache hits: %" PRIu64
+              " - Cache Misses: %" PRIu64,
+              m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
       }
       return retval;
     }
@@ -861,8 +876,10 @@ FormatManager::GetSyntheticChildren(ValueObject &valobj,
           match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.SetSynthetic(match_data.GetTypeForCache(), retval);
   }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
+  if (log && log->GetDebug())
+    log->Printf("[FormatManager::GetSyntheticChildren] Cache hits: %" PRIu64
+                " - Cache Misses: %" PRIu64,
+                m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval;
 }
 #endif
@@ -883,9 +900,11 @@ FormatManager::GetValidator(ValueObject &valobj,
       if (log) {
         log->Printf(
             "[FormatManager::GetValidator] Cache search success. Returning.");
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
+        if (log->GetDebug())
+          log->Printf("[FormatManager::GetValidator] Cache hits: %" PRIu64
+                      " - Cache Misses: %" PRIu64,
+                      m_format_cache.GetCacheHits(),
+                      m_format_cache.GetCacheMisses());
       }
       return retval;
     }
@@ -926,8 +945,10 @@ FormatManager::GetValidator(ValueObject &valobj,
                   match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.SetValidator(match_data.GetTypeForCache(), retval);
   }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
+  if (log && log->GetDebug())
+    log->Printf("[FormatManager::GetValidator] Cache hits: %" PRIu64
+                " - Cache Misses: %" PRIu64,
+                m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval;
 }
 
@@ -950,12 +971,20 @@ FormatManager::FormatManager()
       m_language_categories_map(), m_named_summaries_map(this),
       m_categories_map(this), m_default_category_name(ConstString("default")),
       m_system_category_name(ConstString("system")),
-      m_vectortypes_category_name(ConstString("VectorTypes")) {
+      m_vectortypes_category_name(ConstString("VectorTypes")),
+      m_runtime_synths_category_name(ConstString("runtime-synthetics")) {
   LoadSystemFormatters();
   LoadVectorFormatters();
 
+  GetCategory(m_runtime_synths_category_name); // EnableCategory() won't enable
+                                               // a non-existant category, so
+                                               // create this one first even if
+                                               // empty
+
   EnableCategory(m_vectortypes_category_name, TypeCategoryMap::Last,
                  lldb::eLanguageTypeObjC_plus_plus);
+  EnableCategory(m_runtime_synths_category_name, TypeCategoryMap::Last,
+                 {lldb::eLanguageTypeObjC_plus_plus, lldb::eLanguageTypeSwift});
   EnableCategory(m_system_category_name, TypeCategoryMap::Last,
                  lldb::eLanguageTypeObjC_plus_plus);
 }

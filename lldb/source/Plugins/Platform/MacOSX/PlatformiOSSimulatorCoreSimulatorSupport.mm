@@ -16,8 +16,8 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
 // Project includes
-#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/FileAction.h"
+#include "lldb/Utility/PseudoTerminal.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -61,10 +61,10 @@ using namespace lldb_utility;
 
 CoreSimulatorSupport::Process::Process(lldb::pid_t p) : m_pid(p), m_error() {}
 
-CoreSimulatorSupport::Process::Process(Status error)
+CoreSimulatorSupport::Process::Process(Error error)
     : m_pid(LLDB_INVALID_PROCESS_ID), m_error(error) {}
 
-CoreSimulatorSupport::Process::Process(lldb::pid_t p, Status error)
+CoreSimulatorSupport::Process::Process(lldb::pid_t p, Error error)
     : m_pid(p), m_error(error) {}
 
 CoreSimulatorSupport::DeviceType::DeviceType()
@@ -345,7 +345,7 @@ operator!=(const CoreSimulatorSupport::ModelIdentifier &lhs,
   return false;
 }
 
-bool CoreSimulatorSupport::Device::Boot(Status &err) {
+bool CoreSimulatorSupport::Device::Boot(Error &err) {
   if (m_dev == nil) {
     err.SetErrorString("no valid simulator instance");
     return false;
@@ -371,7 +371,7 @@ bool CoreSimulatorSupport::Device::Boot(Status &err) {
   }
 }
 
-bool CoreSimulatorSupport::Device::Shutdown(Status &err) {
+bool CoreSimulatorSupport::Device::Shutdown(Error &err) {
   NSError *nserror;
   if ([m_dev shutdownWithError:&nserror]) {
     err.Clear();
@@ -382,10 +382,10 @@ bool CoreSimulatorSupport::Device::Shutdown(Status &err) {
   }
 }
 
-static Status HandleFileAction(ProcessLaunchInfo &launch_info,
-                               NSMutableDictionary *options, NSString *key,
-                               const int fd, File &file) {
-  Status error;
+static Error HandleFileAction(ProcessLaunchInfo &launch_info,
+                              NSMutableDictionary *options, NSString *key,
+                              const int fd, File &file) {
+  Error error;
   const FileAction *file_action = launch_info.GetFileActionForFD(fd);
   if (file_action) {
     switch (file_action->GetAction()) {
@@ -426,7 +426,7 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
             }
           }
         }
-        Status posix_error;
+        Error posix_error;
         int created_fd =
             open(file_spec.GetPath().c_str(), file_action->GetActionArgument(),
                  S_IRUSR | S_IWUSR);
@@ -499,7 +499,7 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
     [options setObject:env_dict forKey:kSimDeviceSpawnEnvironment];
   }
 
-  Status error;
+  Error error;
   File stdin_file;
   File stdout_file;
   File stderr_file;

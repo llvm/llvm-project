@@ -12,8 +12,8 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Mangled.h"
+#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/SymbolContextScope.h"
-#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -47,7 +47,9 @@ public:
 
   bool Compare(const ConstString &name, lldb::SymbolType type) const;
 
-  void Dump(Stream *s, Target *target, uint32_t index) const;
+  void Dump(Stream *s, Target *target, uint32_t index,
+            Mangled::NamePreference name_preference =
+                Mangled::ePreferDemangled) const;
 
   bool ValueIsAddress() const;
 

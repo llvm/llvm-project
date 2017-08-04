@@ -13,15 +13,15 @@
 // Project includes
 #include "LibCxx.h"
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -83,7 +83,7 @@ lldb::ValueObjectSP lldb_private::formatters::
     if (m_next_element == nullptr)
       return lldb::ValueObjectSP();
 
-    Status error;
+    Error error;
     ValueObjectSP node_sp = m_next_element->Dereference(error);
     if (!node_sp || error.Fail())
       return lldb::ValueObjectSP();
@@ -94,30 +94,9 @@ lldb::ValueObjectSP lldb_private::formatters::
         node_sp->GetChildMemberWithName(ConstString("__hash_"), true);
     if (!hash_sp || !value_sp) {
       if (!m_element_type) {
-        auto p1_sp = m_backend.GetChildAtNamePath({ConstString("__table_"),
-                                                   ConstString("__p1_")});
-        if (!p1_sp)
-          return nullptr;
-
-        ValueObjectSP first_sp = nullptr;
-        switch (p1_sp->GetCompilerType().GetNumDirectBaseClasses()) {
-        case 1:
-          // Assume a pre llvm r300140 __compressed_pair implementation:
-          first_sp = p1_sp->GetChildMemberWithName(ConstString("__first_"),
-                                                   true);
-          break;
-        case 2: {
-          // Assume a post llvm r300140 __compressed_pair implementation:
-          ValueObjectSP first_elem_parent_sp =
-            p1_sp->GetChildAtIndex(0, true);
-          first_sp = p1_sp->GetChildMemberWithName(ConstString("__value_"),
-                                                   true);
-          break;
-        }
-        default:
-          return nullptr;
-        }
-
+        auto first_sp = m_backend.GetChildAtNamePath({ConstString("__table_"),
+                                                      ConstString("__p1_"),
+                                                      ConstString("__first_")});
         if (!first_sp)
           return nullptr;
         m_element_type = first_sp->GetCompilerType();
@@ -153,7 +132,7 @@ lldb::ValueObjectSP lldb_private::formatters::
   StreamString stream;
   stream.Printf("[%" PRIu64 "]", (uint64_t)idx);
   DataExtractor data;
-  Status error;
+  Error error;
   val_hash.first->GetData(data, error);
   if (error.Fail())
     return lldb::ValueObjectSP();
@@ -173,39 +152,22 @@ bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
       m_backend.GetChildMemberWithName(ConstString("__table_"), true);
   if (!table_sp)
     return false;
-
-  ValueObjectSP p2_sp = table_sp->GetChildMemberWithName(
-    ConstString("__p2_"), true);
-  ValueObjectSP num_elements_sp = nullptr;
-  llvm::SmallVector<ConstString, 3> next_path;
-  switch (p2_sp->GetCompilerType().GetNumDirectBaseClasses()) {
-  case 1:
-    // Assume a pre llvm r300140 __compressed_pair implementation:
-    num_elements_sp = p2_sp->GetChildMemberWithName(
-      ConstString("__first_"), true);
-    next_path.append({ConstString("__p1_"), ConstString("__first_"),
-                      ConstString("__next_")});
-    break;
-  case 2: {
-    // Assume a post llvm r300140 __compressed_pair implementation:
-    ValueObjectSP first_elem_parent = p2_sp->GetChildAtIndex(0, true);
-    num_elements_sp = first_elem_parent->GetChildMemberWithName(
-      ConstString("__value_"), true);
-    next_path.append({ConstString("__p1_"), ConstString("__value_"),
-                      ConstString("__next_")});
-    break;
-  }
-  default:
-    return false;
-  }
-
+  ValueObjectSP num_elements_sp = table_sp->GetChildAtNamePath(
+      {ConstString("__p2_"), ConstString("__first_")});
   if (!num_elements_sp)
     return false;
   m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
-  m_tree = table_sp->GetChildAtNamePath(next_path).get();
+  m_tree =
+      table_sp
+          ->GetChildAtNamePath({ConstString("__p1_"), ConstString("__first_"),
+                                ConstString("__next_")})
+          .get();
   if (m_num_elements > 0)
     m_next_element =
-        table_sp->GetChildAtNamePath(next_path).get();
+        table_sp
+            ->GetChildAtNamePath({ConstString("__p1_"), ConstString("__first_"),
+                                  ConstString("__next_")})
+            .get();
   return false;
 }
 

@@ -24,11 +24,11 @@
 // Other libraries and framework includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/Debug.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 
 #include "LaunchFlavor.h"
@@ -37,7 +37,7 @@
 #include "NativeThreadListDarwin.h"
 
 namespace lldb_private {
-class Status;
+class Error;
 class Scalar;
 
 namespace process_darwin {
@@ -50,11 +50,11 @@ namespace process_darwin {
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessDarwin : public NativeProcessProtocol {
-  friend Status NativeProcessProtocol::Launch(
+  friend Error NativeProcessProtocol::Launch(
       ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
       MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
 
-  friend Status NativeProcessProtocol::Attach(
+  friend Error NativeProcessProtocol::Attach(
       lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
       MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
 
@@ -64,34 +64,34 @@ public:
   // -----------------------------------------------------------------
   // NativeProcessProtocol Interface
   // -----------------------------------------------------------------
-  Status Resume(const ResumeActionList &resume_actions) override;
+  Error Resume(const ResumeActionList &resume_actions) override;
 
-  Status Halt() override;
+  Error Halt() override;
 
-  Status Detach() override;
+  Error Detach() override;
 
-  Status Signal(int signo) override;
+  Error Signal(int signo) override;
 
-  Status Interrupt() override;
+  Error Interrupt() override;
 
-  Status Kill() override;
+  Error Kill() override;
 
-  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                             MemoryRegionInfo &range_info) override;
+  Error GetMemoryRegionInfo(lldb::addr_t load_addr,
+                            MemoryRegionInfo &range_info) override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    size_t &bytes_read) override;
+  Error ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                   size_t &bytes_read) override;
 
-  Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
-                               size_t &bytes_read) override;
+  Error ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
+                              size_t &bytes_read) override;
 
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Error WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                    size_t &bytes_written) override;
 
-  Status AllocateMemory(size_t size, uint32_t permissions,
-                        lldb::addr_t &addr) override;
+  Error AllocateMemory(size_t size, uint32_t permissions,
+                       lldb::addr_t &addr) override;
 
-  Status DeallocateMemory(lldb::addr_t addr) override;
+  Error DeallocateMemory(lldb::addr_t addr) override;
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
 
@@ -99,16 +99,15 @@ public:
 
   bool GetArchitecture(ArchSpec &arch) const override;
 
-  Status SetBreakpoint(lldb::addr_t addr, uint32_t size,
-                       bool hardware) override;
+  Error SetBreakpoint(lldb::addr_t addr, uint32_t size, bool hardware) override;
 
   void DoStopIDBumped(uint32_t newBumpId) override;
 
-  Status GetLoadedModuleFileSpec(const char *module_path,
-                                 FileSpec &file_spec) override;
+  Error GetLoadedModuleFileSpec(const char *module_path,
+                                FileSpec &file_spec) override;
 
-  Status GetFileLoadAddress(const llvm::StringRef &file_name,
-                            lldb::addr_t &load_addr) override;
+  Error GetFileLoadAddress(const llvm::StringRef &file_name,
+                           lldb::addr_t &load_addr) override;
 
   NativeThreadDarwinSP GetThreadByID(lldb::tid_t id);
 
@@ -117,9 +116,9 @@ public:
   // -----------------------------------------------------------------
   // Interface used by NativeRegisterContext-derived classes.
   // -----------------------------------------------------------------
-  static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
-                              void *data = nullptr, size_t data_size = 0,
-                              long *result = nullptr);
+  static Error PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
+                             void *data = nullptr, size_t data_size = 0,
+                             long *result = nullptr);
 
   bool SupportHardwareSingleStepping() const;
 
@@ -127,7 +126,7 @@ protected:
   // -----------------------------------------------------------------
   // NativeProcessProtocol protected interface
   // -----------------------------------------------------------------
-  Status
+  Error
   GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
                                   size_t &actual_opcode_size,
                                   const uint8_t *&trap_opcode_bytes) override;
@@ -237,19 +236,19 @@ private:
   ///     operations.  Failure here will force termination of the
   ///     launched process and debugging session.
   // -----------------------------------------------------------------
-  Status FinalizeLaunch(LaunchFlavor launch_flavor, MainLoop &main_loop);
+  Error FinalizeLaunch(LaunchFlavor launch_flavor, MainLoop &main_loop);
 
-  Status SaveExceptionPortInfo();
+  Error SaveExceptionPortInfo();
 
   void ExceptionMessageReceived(const MachException::Message &message);
 
   void MaybeRaiseThreadPriority();
 
-  Status StartExceptionThread();
+  Error StartExceptionThread();
 
-  Status SendInferiorExitStatusToMainLoop(::pid_t pid, int status);
+  Error SendInferiorExitStatusToMainLoop(::pid_t pid, int status);
 
-  Status HandleWaitpidResult();
+  Error HandleWaitpidResult();
 
   bool ProcessUsingSpringBoard() const;
 
@@ -259,7 +258,7 @@ private:
 
   void *DoExceptionThread();
 
-  lldb::addr_t GetDYLDAllImageInfosAddress(Status &error) const;
+  lldb::addr_t GetDYLDAllImageInfosAddress(Error &error) const;
 
   static uint32_t GetCPUTypeForLocalProcess(::pid_t pid);
 
@@ -269,25 +268,25 @@ private:
 
   void StartSTDIOThread();
 
-  Status StartWaitpidThread(MainLoop &main_loop);
+  Error StartWaitpidThread(MainLoop &main_loop);
 
   static void *WaitpidThread(void *arg);
 
   void *DoWaitpidThread();
 
-  task_t TaskPortForProcessID(Status &error, bool force = false) const;
+  task_t TaskPortForProcessID(Error &error, bool force = false) const;
 
   /// Attaches to an existing process.  Forms the
   /// implementation of Process::DoAttach.
-  void AttachToInferior(MainLoop &mainloop, lldb::pid_t pid, Status &error);
+  void AttachToInferior(MainLoop &mainloop, lldb::pid_t pid, Error &error);
 
-  ::pid_t Attach(lldb::pid_t pid, Status &error);
+  ::pid_t Attach(lldb::pid_t pid, Error &error);
 
-  Status PrivateResume();
+  Error PrivateResume();
 
-  Status ReplyToAllExceptions();
+  Error ReplyToAllExceptions();
 
-  Status ResumeTask();
+  Error ResumeTask();
 
   bool IsTaskValid() const;
 
@@ -297,11 +296,11 @@ private:
 
   bool IsExceptionPortValid() const;
 
-  Status GetTaskBasicInfo(task_t task, struct task_basic_info *info) const;
+  Error GetTaskBasicInfo(task_t task, struct task_basic_info *info) const;
 
-  Status SuspendTask();
+  Error SuspendTask();
 
-  static Status SetDefaultPtraceOpts(const lldb::pid_t);
+  static Error SetDefaultPtraceOpts(const lldb::pid_t);
 
   static void *MonitorThread(void *baton);
 
@@ -320,7 +319,7 @@ private:
   void MonitorSignal(const siginfo_t &info, NativeThreadDarwin &thread,
                      bool exited);
 
-  Status SetupSoftwareSingleStepping(NativeThreadDarwin &thread);
+  Error SetupSoftwareSingleStepping(NativeThreadDarwin &thread);
 
 #if 0
             static ::ProcessMessage::CrashReason
@@ -342,22 +341,22 @@ private:
 
   NativeThreadDarwinSP AddThread(lldb::tid_t thread_id);
 
-  Status GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
+  Error GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
 
-  Status FixupBreakpointPCAsNeeded(NativeThreadDarwin &thread);
+  Error FixupBreakpointPCAsNeeded(NativeThreadDarwin &thread);
 
   /// Writes a siginfo_t structure corresponding to the given thread
   /// ID to the memory region pointed to by @p siginfo.
-  Status GetSignalInfo(lldb::tid_t tid, void *siginfo);
+  Error GetSignalInfo(lldb::tid_t tid, void *siginfo);
 
   /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)
   /// corresponding to the given thread ID to the memory pointed to
   /// by @p message.
-  Status GetEventMessage(lldb::tid_t tid, unsigned long *message);
+  Error GetEventMessage(lldb::tid_t tid, unsigned long *message);
 
   void NotifyThreadDeath(lldb::tid_t tid);
 
-  Status Detach(lldb::tid_t tid);
+  Error Detach(lldb::tid_t tid);
 
   // This method is requests a stop on all threads which are still
   // running. It sets up a deferred delegate notification, which will
@@ -371,8 +370,8 @@ private:
   // Resume the given thread, optionally passing it the given signal.
   // The type of resume operation (continue, single-step) depends on
   // the state parameter.
-  Status ResumeThread(NativeThreadDarwin &thread, lldb::StateType state,
-                      int signo);
+  Error ResumeThread(NativeThreadDarwin &thread, lldb::StateType state,
+                     int signo);
 
   void ThreadWasCreated(NativeThreadDarwin &thread);
 

@@ -21,11 +21,14 @@
 
 // C++ Includes
 
+// Other libraries and framework includes
+#include "llvm/ADT/StringRef.h"
 
 #include "Acceptor.h"
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostGetOpt.h"
@@ -33,16 +36,6 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Utility/Status.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Errno.h"
-
-#if defined(__linux__)
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#elif defined(__NetBSD__)
-#include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
-#endif
 
 #ifndef LLGS_PROGRAM_NAME
 #define LLGS_PROGRAM_NAME "lldb-server"
@@ -57,30 +50,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
-
-namespace {
-#if defined(__linux__)
-typedef process_linux::NativeProcessLinux::Factory NativeProcessFactory;
-#elif defined(__NetBSD__)
-typedef process_netbsd::NativeProcessNetBSD::Factory NativeProcessFactory;
-#else
-// Dummy implementation to make sure the code compiles
-class NativeProcessFactory : public NativeProcessProtocol::Factory {
-public:
-  llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-  Launch(ProcessLaunchInfo &launch_info,
-         NativeProcessProtocol::NativeDelegate &delegate,
-         MainLoop &mainloop) const override {
-    llvm_unreachable("Not implemented");
-  }
-  llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-  Attach(lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &delegate,
-         MainLoop &mainloop) const override {
-    llvm_unreachable("Not implemented");
-  }
-};
-#endif
-}
 
 //----------------------------------------------------------------------
 // option descriptors for getopt_long_only()
@@ -143,7 +112,7 @@ static void display_usage(const char *progname, const char *subcommand) {
 
 void handle_attach_to_pid(GDBRemoteCommunicationServerLLGS &gdb_server,
                           lldb::pid_t pid) {
-  Status error = gdb_server.AttachToProcess(pid);
+  Error error = gdb_server.AttachToProcess(pid);
   if (error.Fail()) {
     fprintf(stderr, "error: failed to attach to pid %" PRIu64 ": %s\n", pid,
             error.AsCString());
@@ -176,7 +145,7 @@ void handle_attach(GDBRemoteCommunicationServerLLGS &gdb_server,
 
 void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server, int argc,
                    const char *const argv[]) {
-  Status error;
+  Error error;
   error = gdb_server.SetLaunchArguments(argv, argc);
   if (error.Fail()) {
     fprintf(stderr, "error: failed to set launch args for '%s': %s\n", argv[0],
@@ -201,15 +170,15 @@ void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server, int argc,
   }
 }
 
-Status writeSocketIdToPipe(Pipe &port_pipe, const std::string &socket_id) {
+Error writeSocketIdToPipe(Pipe &port_pipe, const std::string &socket_id) {
   size_t bytes_written = 0;
   // Write the port number as a C string with the NULL terminator.
   return port_pipe.Write(socket_id.c_str(), socket_id.size() + 1,
                          bytes_written);
 }
 
-Status writeSocketIdToPipe(const char *const named_pipe_path,
-                           const std::string &socket_id) {
+Error writeSocketIdToPipe(const char *const named_pipe_path,
+                          const std::string &socket_id) {
   Pipe port_name_pipe;
   // Wait for 10 seconds for pipe to be opened.
   auto error = port_name_pipe.OpenAsWriterWithTimeout(named_pipe_path, false,
@@ -219,9 +188,9 @@ Status writeSocketIdToPipe(const char *const named_pipe_path,
   return writeSocketIdToPipe(port_name_pipe, socket_id);
 }
 
-Status writeSocketIdToPipe(int unnamed_pipe_fd, const std::string &socket_id) {
+Error writeSocketIdToPipe(int unnamed_pipe_fd, const std::string &socket_id) {
 #if defined(_WIN32)
-  return Status("Unnamed pipes are not supported on Windows.");
+  return Error("Unnamed pipes are not supported on Windows.");
 #else
   Pipe port_pipe{Pipe::kInvalidDescriptor, unnamed_pipe_fd};
   return writeSocketIdToPipe(port_pipe, socket_id);
@@ -233,7 +202,7 @@ void ConnectToRemote(MainLoop &mainloop,
                      bool reverse_connect, const char *const host_and_port,
                      const char *const progname, const char *const subcommand,
                      const char *const named_pipe_path, int unnamed_pipe_fd) {
-  Status error;
+  Error error;
 
   if (host_and_port && host_and_port[0]) {
     // Parse out host and port.
@@ -342,7 +311,7 @@ void ConnectToRemote(MainLoop &mainloop,
 // main
 //----------------------------------------------------------------------
 int main_gdbserver(int argc, char *argv[]) {
-  Status error;
+  Error error;
   MainLoop mainloop;
 #ifndef _WIN32
   // Setup signal handlers first thing.
@@ -429,9 +398,10 @@ int main_gdbserver(int argc, char *argv[]) {
       {
         const ::pid_t new_sid = setsid();
         if (new_sid == -1) {
-          llvm::errs() << llvm::formatv(
-              "failed to set new session id for {0} ({1})\n", LLGS_PROGRAM_NAME,
-              llvm::sys::StrError());
+          const char *errno_str = strerror(errno);
+          fprintf(stderr, "failed to set new session id for %s (%s)\n",
+                  LLGS_PROGRAM_NAME,
+                  errno_str ? errno_str : "<no error string>");
         }
       }
       break;
@@ -454,13 +424,11 @@ int main_gdbserver(int argc, char *argv[]) {
     exit(option_error);
   }
 
-  if (!LLDBServerUtilities::SetupLogging(
-          log_file, log_channels,
-          LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
-              LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
+  if (!LLDBServerUtilities::SetupLogging(log_file, log_channels,
+                                         LLDB_LOG_OPTION_PREPEND_TIMESTAMP))
     return -1;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(GDBR_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(GDBR_LOG_VERBOSE));
   if (log) {
     log->Printf("lldb-server launch");
     for (int i = 0; i < argc; i++) {
@@ -477,8 +445,7 @@ int main_gdbserver(int argc, char *argv[]) {
     exit(255);
   }
 
-  NativeProcessFactory factory;
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, factory);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop);
 
   const char *const host_and_port = argv[0];
   argc -= 1;

@@ -39,9 +39,7 @@ public:
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
-  GDBRemoteCommunicationServerLLGS(
-      MainLoop &mainloop,
-      const NativeProcessProtocol::Factory &process_factory);
+  GDBRemoteCommunicationServerLLGS(MainLoop &mainloop);
 
   //------------------------------------------------------------------
   /// Specify the program to launch and its arguments.
@@ -53,10 +51,10 @@ public:
   ///     The number of elements in the args array of cstring pointers.
   ///
   /// @return
-  ///     An Status object indicating the success or failure of making
+  ///     An Error object indicating the success or failure of making
   ///     the setting.
   //------------------------------------------------------------------
-  Status SetLaunchArguments(const char *const args[], int argc);
+  Error SetLaunchArguments(const char *const args[], int argc);
 
   //------------------------------------------------------------------
   /// Specify the launch flags for the process.
@@ -65,10 +63,10 @@ public:
   ///     The launch flags to use when launching this process.
   ///
   /// @return
-  ///     An Status object indicating the success or failure of making
+  ///     An Error object indicating the success or failure of making
   ///     the setting.
   //------------------------------------------------------------------
-  Status SetLaunchFlags(unsigned int launch_flags);
+  Error SetLaunchFlags(unsigned int launch_flags);
 
   //------------------------------------------------------------------
   /// Launch a process with the current launch settings.
@@ -78,10 +76,10 @@ public:
   /// with all the information for a child process to be launched.
   ///
   /// @return
-  ///     An Status object indicating the success or failure of the
+  ///     An Error object indicating the success or failure of the
   ///     launch.
   //------------------------------------------------------------------
-  Status LaunchProcess() override;
+  Error LaunchProcess() override;
 
   //------------------------------------------------------------------
   /// Attach to a process.
@@ -90,10 +88,10 @@ public:
   /// configured Platform.
   ///
   /// @return
-  ///     An Status object indicating the success or failure of the
+  ///     An Error object indicating the success or failure of the
   ///     attach operation.
   //------------------------------------------------------------------
-  Status AttachToProcess(lldb::pid_t pid);
+  Error AttachToProcess(lldb::pid_t pid);
 
   //------------------------------------------------------------------
   // NativeProcessProtocol::NativeDelegate overrides
@@ -105,26 +103,25 @@ public:
 
   void DidExec(NativeProcessProtocol *process) override;
 
-  Status InitializeConnection(std::unique_ptr<Connection> &&connection);
+  Error InitializeConnection(std::unique_ptr<Connection> &&connection);
 
 protected:
   MainLoop &m_mainloop;
   MainLoop::ReadHandleUP m_network_handle_up;
-  const NativeProcessProtocol::Factory &m_process_factory;
-  lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
-  lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t m_current_tid;
+  lldb::tid_t m_continue_tid;
   std::recursive_mutex m_debugged_process_mutex;
-  std::unique_ptr<NativeProcessProtocol> m_debugged_process_up;
+  NativeProcessProtocolSP m_debugged_process_sp;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
 
-  lldb::StateType m_inferior_prev_state = lldb::StateType::eStateInvalid;
-  std::unique_ptr<llvm::MemoryBuffer> m_active_auxv_buffer_up;
+  lldb::StateType m_inferior_prev_state;
+  lldb::DataBufferSP m_active_auxv_buffer_sp;
   std::mutex m_saved_registers_mutex;
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
-  uint32_t m_next_saved_registers_id = 1;
-  bool m_handshake_completed = false;
+  uint32_t m_next_saved_registers_id;
+  bool m_handshake_completed : 1;
 
   PacketResult SendONotification(const char *buffer, uint32_t len);
 
@@ -192,14 +189,6 @@ protected:
 
   PacketResult Handle_QSaveRegisterState(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jTraceStart(StringExtractorGDBRemote &packet);
-
-  PacketResult Handle_jTraceRead(StringExtractorGDBRemote &packet);
-
-  PacketResult Handle_jTraceStop(StringExtractorGDBRemote &packet);
-
-  PacketResult Handle_jTraceConfigRead(StringExtractorGDBRemote &packet);
-
   PacketResult Handle_QRestoreRegisterState(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vAttach(StringExtractorGDBRemote &packet);
@@ -214,8 +203,6 @@ protected:
 
   PacketResult Handle_qFileLoadAddress(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_QPassSignals(StringExtractorGDBRemote &packet);
-
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;
@@ -224,7 +211,7 @@ protected:
 
   lldb::tid_t GetContinueThreadID() const { return m_continue_tid; }
 
-  Status SetSTDIOFileDescriptor(int fd);
+  Error SetSTDIOFileDescriptor(int fd);
 
   FileSpec FindModuleFile(const std::string &module_path,
                           const ArchSpec &arch) override;

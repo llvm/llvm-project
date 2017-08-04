@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextPOSIXCore_x86_64.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb_private;
 
@@ -71,7 +71,7 @@ bool RegisterContextCorePOSIX_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return false;
   }
 
-  Status error;
+  Error error;
   value.SetFromMemoryData(reg_info, src + offset, reg_info->byte_size,
                           lldb::eByteOrderLittle, error);
 

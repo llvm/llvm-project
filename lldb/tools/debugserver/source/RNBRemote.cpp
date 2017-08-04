@@ -1628,7 +1628,7 @@ rnb_err_t RNBRemote::HandlePacket_H(const char *p) {
 }
 
 rnb_err_t RNBRemote::HandlePacket_qLaunchSuccess(const char *p) {
-  if (m_ctx.HasValidProcessID() || m_ctx.LaunchStatus().Status() == 0)
+  if (m_ctx.HasValidProcessID() || m_ctx.LaunchStatus().Error() == 0)
     return SendPacket("OK");
   std::ostringstream ret_str;
   std::string status_str;
@@ -3611,6 +3611,9 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   snprintf(buf, sizeof(buf), "qXfer:features:read+;PacketSize=%x;qEcho+",
            max_packet_size);
 
+  // By default, don't enable compression.  It's only worth doing when we are
+  // working
+  // with a low speed communication channel.
   bool enable_compression = false;
   (void)enable_compression;
 
@@ -6058,7 +6061,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         // need to override the host cpusubtype (which is in the
         // CPU_SUBTYPE_ARM64 subtype namespace)
         // with a reasonable CPU_SUBTYPE_ARMV7 subtype.
-        cpusubtype = 12; // CPU_SUBTYPE_ARM_V7K
+        cpusubtype = 11; // CPU_SUBTYPE_ARM_V7S
       }
     }
     rep << "cpusubtype:" << std::hex << cpusubtype << ';';

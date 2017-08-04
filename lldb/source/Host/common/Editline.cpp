@@ -11,19 +11,16 @@
 #include <iostream>
 #include <limits.h>
 
+#include "lldb/Core/Error.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/SelectHelper.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StringList.h"
-#include "lldb/Utility/Timeout.h"
-
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
 
 using namespace lldb_private;
 using namespace lldb_private::line_editor;
@@ -179,7 +176,9 @@ private:
     if (m_path.empty() && m_history && !m_prefix.empty()) {
       FileSpec parent_path{"~/.lldb", true};
       char history_path[PATH_MAX];
-      if (!llvm::sys::fs::create_directory(parent_path.GetPath())) {
+      if (FileSystem::MakeDirectory(parent_path,
+                                    lldb::eFilePermissionsDirectoryDefault)
+              .Success()) {
         snprintf(history_path, sizeof(history_path), "~/.lldb/%s-history",
                  m_prefix.c_str());
       } else {
@@ -367,7 +366,7 @@ void Editline::MoveCursor(CursorLocation from, CursorLocation to) {
   if (to == CursorLocation::EditingCursor) {
     toColumn =
         editline_cursor_position - (editline_cursor_row * m_terminal_width) + 1;
-  } else if (to == CursorLocation::BlockEnd && !m_input_lines.empty()) {
+  } else if (to == CursorLocation::BlockEnd) {
     toColumn =
         ((m_input_lines[m_input_lines.size() - 1].length() + GetPromptWidth()) %
          80) +
@@ -474,7 +473,7 @@ unsigned char Editline::RecallHistory(bool earlier) {
   return CC_NEWLINE;
 }
 
-int Editline::GetCharacter(EditLineGetCharType *c) {
+int Editline::GetCharacter(EditLineCharType *c) {
   const LineInfoW *info = el_wline(m_editline);
 
   // Paint a faint version of the desired prompt over the version libedit draws
@@ -969,7 +968,7 @@ void Editline::ConfigureEditor(bool multiline) {
          }));
 
   el_wset(m_editline, EL_GETCFN, (EditlineGetCharCallbackType)([](
-                                     EditLine *editline, EditLineGetCharType *c) {
+                                     EditLine *editline, EditLineCharType *c) {
             return Editline::InstanceFor(editline)->GetCharacter(c);
           }));
 
@@ -1152,8 +1151,8 @@ Editline::Editline(const char *editline_name, FILE *input_file,
     if (term_fd != -1) {
       static std::mutex *g_init_terminal_fds_mutex_ptr = nullptr;
       static std::set<int> *g_init_terminal_fds_ptr = nullptr;
-      static llvm::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, [&]() {
+      static std::once_flag g_once_flag;
+      std::call_once(g_once_flag, [&]() {
         g_init_terminal_fds_mutex_ptr =
             new std::mutex(); // NOTE: Leak to avoid C++ destructor chain issues
         g_init_terminal_fds_ptr = new std::set<int>(); // NOTE: Leak to avoid
@@ -1339,7 +1338,8 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   interrupted = m_editor_status == EditorStatus::Interrupted;
   if (!interrupted) {
     // Save the completed entry in history before returning
-    m_history_sp->Enter(CombineLines(m_input_lines).c_str());
+    if (m_input_lines.size() > 1 || !m_input_lines[0].empty())
+      m_history_sp->Enter(CombineLines(m_input_lines).c_str());
 
     lines = GetInputAsStringList();
   }
@@ -1360,12 +1360,12 @@ void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
   }
 }
 
-bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
+bool Editline::CompleteCharacter(char ch, EditLineCharType &out) {
 #if !LLDB_EDITLINE_USE_WCHAR
   if (ch == (char)EOF)
     return false;
 
-  out = (unsigned char)ch;
+  out = ch;
   return true;
 #else
   std::codecvt_utf8<wchar_t> cvt;

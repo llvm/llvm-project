@@ -15,20 +15,20 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
-#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolVendor.h"
-#include "lldb/Utility/FileSpec.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 
 #if defined(_MSC_VER)
 #include "lldb/Host/windows/windows.h"
@@ -36,6 +36,8 @@
 #endif
 
 #include <algorithm>
+
+extern const char *TestMainArgv0;
 
 using namespace lldb_private;
 
@@ -55,8 +57,14 @@ public:
     ClangASTContext::Initialize();
     SymbolFilePDB::Initialize();
 
-    m_pdb_test_exe = GetInputFilePath("test-pdb.exe");
-    m_types_test_exe = GetInputFilePath("test-pdb-types.exe");
+    llvm::StringRef exe_folder = llvm::sys::path::parent_path(TestMainArgv0);
+    llvm::SmallString<128> inputs_folder = exe_folder;
+    llvm::sys::path::append(inputs_folder, "Inputs");
+
+    m_pdb_test_exe = inputs_folder;
+    m_types_test_exe = inputs_folder;
+    llvm::sys::path::append(m_pdb_test_exe, "test-pdb.exe");
+    llvm::sys::path::append(m_types_test_exe, "test-pdb-types.exe");
   }
 
   void TearDown() override {
@@ -72,8 +80,8 @@ public:
   }
 
 protected:
-  std::string m_pdb_test_exe;
-  std::string m_types_test_exe;
+  llvm::SmallString<128> m_pdb_test_exe;
+  llvm::SmallString<128> m_types_test_exe;
 
   bool FileSpecMatchesAsBaseOrFull(const FileSpec &left,
                                    const FileSpec &right) const {
@@ -112,7 +120,7 @@ protected:
     return false;
   }
 
-  uint64_t GetGlobalConstantInteger(llvm::pdb::IPDBSession &session,
+  uint64_t GetGlobalConstantInteger(const llvm::pdb::IPDBSession &session,
                                     llvm::StringRef var) const {
     auto global = session.getGlobalScope();
     auto results =
@@ -363,7 +371,7 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
+  const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
@@ -386,7 +394,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
+  const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
@@ -409,7 +417,7 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
+  const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
@@ -432,7 +440,7 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
+  const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   const char *EnumsToCheck[] = {"Enum", "ShortEnum"};
@@ -479,7 +487,7 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
+  const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;

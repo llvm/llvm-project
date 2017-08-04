@@ -17,9 +17,10 @@
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Core/RegularExpression.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -29,8 +30,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallOnFunctionExit.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegularExpression.h"
 
 #define DARWIN_LOG_TYPE_VALUE "DarwinLog"
 
@@ -209,7 +208,7 @@ public:
 
   using OperationCreationFunc =
       std::function<FilterRuleSP(bool accept, size_t attribute_index,
-                                 const std::string &op_arg, Status &error)>;
+                                 const std::string &op_arg, Error &error)>;
 
   static void RegisterOperation(const ConstString &operation,
                                 const OperationCreationFunc &creation_func) {
@@ -218,7 +217,7 @@ public:
 
   static FilterRuleSP CreateRule(bool match_accepts, size_t attribute,
                                  const ConstString &operation,
-                                 const std::string &op_arg, Status &error) {
+                                 const std::string &op_arg, Error &error) {
     // Find the creation func for this type of filter rule.
     auto map = GetCreationFuncMap();
     auto find_it = map.find(operation);
@@ -304,8 +303,7 @@ protected:
 
 private:
   static FilterRuleSP CreateOperation(bool accept, size_t attribute_index,
-                                      const std::string &op_arg,
-                                      Status &error) {
+                                      const std::string &op_arg, Error &error) {
     // We treat the op_arg as a regex.  Validate it.
     if (op_arg.empty()) {
       error.SetErrorString("regex filter type requires a regex "
@@ -359,8 +357,7 @@ protected:
 
 private:
   static FilterRuleSP CreateOperation(bool accept, size_t attribute_index,
-                                      const std::string &op_arg,
-                                      Status &error) {
+                                      const std::string &op_arg, Error &error) {
     if (op_arg.empty()) {
       error.SetErrorString("exact match filter type requires an "
                            "argument containing the text that must "
@@ -526,9 +523,9 @@ public:
     m_filter_rules.clear();
   }
 
-  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                        ExecutionContext *execution_context) override {
-    Status error;
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                       ExecutionContext *execution_context) override {
+    Error error;
 
     const int short_option = m_getopt_table[option_idx].val;
     switch (short_option) {
@@ -666,8 +663,8 @@ public:
   bool GetBroadcastEvents() const { return m_broadcast_events; }
 
 private:
-  Status ParseFilterRule(llvm::StringRef rule_text) {
-    Status error;
+  Error ParseFilterRule(llvm::StringRef rule_text) {
+    Error error;
 
     if (rule_text.empty()) {
       error.SetErrorString("invalid rule_text");
@@ -749,8 +746,8 @@ private:
 
   int MatchAttributeIndex(llvm::StringRef attribute_name) const {
     for (const auto &Item : llvm::enumerate(s_filter_attributes)) {
-      if (attribute_name == Item.value())
-        return Item.index();
+      if (attribute_name == Item.Value)
+        return Item.Index;
     }
 
     // We didn't match anything.
@@ -901,7 +898,7 @@ protected:
     // Send configuration to the feature by way of the process.
     // Construct the options we will use.
     auto config_sp = m_options_sp->BuildConfigurationData(m_enable);
-    const Status error =
+    const Error error =
         process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
 
     // Report results.
@@ -1042,7 +1039,7 @@ public:
   }
 };
 
-EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
+EnableOptionsSP ParseAutoEnableOptions(Error &error, Debugger &debugger) {
   // We are abusing the options data model here so that we can parse
   // options without requiring the Debugger instance.
 
@@ -1214,7 +1211,7 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
   // to inspect, including showing backtraces.
 }
 
-static void SetErrorWithJSON(Status &error, const char *message,
+static void SetErrorWithJSON(Error &error, const char *message,
                              StructuredData::Object &object) {
   if (!message) {
     error.SetErrorString("Internal error: message not set.");
@@ -1228,9 +1225,9 @@ static void SetErrorWithJSON(Status &error, const char *message,
   error.SetErrorStringWithFormat("%s: %s", message, object_stream.GetData());
 }
 
-Status StructuredDataDarwinLog::GetDescription(
+Error StructuredDataDarwinLog::GetDescription(
     const StructuredData::ObjectSP &object_sp, lldb_private::Stream &stream) {
-  Status error;
+  Error error;
 
   if (!object_sp) {
     error.SetErrorString("No structured data.");
@@ -1485,9 +1482,9 @@ void StructuredDataDarwinLog::DebuggerInitialize(Debugger &debugger) {
   }
 }
 
-Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
-                                                 Target *target) {
-  Status error;
+Error StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
+                                                Target *target) {
+  Error error;
 
   // If we're not debugging this launched process, there's nothing for us
   // to do here.
@@ -1817,7 +1814,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
   }
 
   if (options_sp->GetDisplayActivityChain()) {
-    llvm::StringRef activity_chain;
+    std::string activity_chain;
     if (event.GetValueForKeyAsString("activity-chain", activity_chain) &&
         !activity_chain.empty()) {
       if (header_count > 0)
@@ -1856,7 +1853,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
   }
 
   if (options_sp->GetDisplaySubsystem()) {
-    llvm::StringRef subsystem;
+    std::string subsystem;
     if (event.GetValueForKeyAsString("subsystem", subsystem) &&
         !subsystem.empty()) {
       if (header_count > 0)
@@ -1868,7 +1865,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
   }
 
   if (options_sp->GetDisplayCategory()) {
-    llvm::StringRef category;
+    std::string category;
     if (event.GetValueForKeyAsString("category", category) &&
         !category.empty()) {
       if (header_count > 0)
@@ -1901,16 +1898,16 @@ size_t StructuredDataDarwinLog::HandleDisplayOfEvent(
   size_t total_bytes = 0;
 
   // Grab the message content.
-  llvm::StringRef message;
+  std::string message;
   if (!event.GetValueForKeyAsString("message", message))
     return true;
 
   // Display the log entry.
-  const auto len = message.size();
+  const auto len = message.length();
 
   total_bytes += DumpHeader(stream, event);
 
-  stream.Write(message.data(), len);
+  stream.Write(message.c_str(), len);
   total_bytes += len;
 
   // Add an end of line.
@@ -1993,7 +1990,7 @@ void StructuredDataDarwinLog::EnableNow() {
 
   // We can run it directly.
   // Send configuration to the feature by way of the process.
-  const Status error =
+  const Error error =
       process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
 
   // Report results.

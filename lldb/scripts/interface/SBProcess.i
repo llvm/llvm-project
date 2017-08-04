@@ -408,9 +408,6 @@ public:
     lldb::SBError
     SaveCore(const char *file_name);
 
-    lldb::SBTrace
-    StartTrace(SBTraceOptions &options, lldb::SBError &error);
-
     lldb::SBError
     GetMemoryRegionInfo(lldb::addr_t load_addr, lldb::SBMemoryRegionInfo &region_info);
 

@@ -16,6 +16,8 @@
 #include "lldb/API/SBTarget.h"
 
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Module.h"
@@ -23,8 +25,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
 
 //----------------------------------------------------------------------
 // We recently fixed a leak in one of the Instruction subclasses where
@@ -173,13 +173,6 @@ bool SBInstruction::HasDelaySlot() {
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
     return inst_sp->HasDelaySlot();
-  return false;
-}
-
-bool SBInstruction::CanSetBreakpoint () {
-  lldb::InstructionSP inst_sp(GetOpaque());
-  if (inst_sp)
-    return inst_sp->CanSetBreakpoint();
   return false;
 }
 

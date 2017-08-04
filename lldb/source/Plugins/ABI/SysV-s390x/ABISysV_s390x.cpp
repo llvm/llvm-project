@@ -16,6 +16,10 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -29,10 +33,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -205,11 +205,11 @@ size_t ABISysV_s390x::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_s390x::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
+ABISysV_s390x::CreateInstance(const ArchSpec &arch) {
   static ABISP g_abi_sp;
   if (arch.GetTriple().getArch() == llvm::Triple::systemz) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_s390x(process_sp));
+      g_abi_sp.reset(new ABISysV_s390x);
     return g_abi_sp;
   }
   return ABISP();
@@ -268,7 +268,7 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
       if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
         return false;
     } else {
-      Status error;
+      Error error;
       if (log)
         log->Printf("About to write arg%" PRIu64 " (0x%" PRIx64 ") onto stack",
                     static_cast<uint64_t>(i + 1), args[i]);
@@ -321,7 +321,7 @@ static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
       scalar.SignExtend(bit_width);
   } else {
     uint32_t byte_size = (bit_width + (8 - 1)) / 8;
-    Status error;
+    Error error;
     if (thread.GetProcess()->ReadScalarIntegerFromMemory(
             current_stack_argument + 8 - byte_size, byte_size, is_signed,
             scalar, error)) {
@@ -401,9 +401,9 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
   return true;
 }
 
-Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                           lldb::ValueObjectSP &new_value_sp) {
-  Status error;
+Error ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                          lldb::ValueObjectSP &new_value_sp) {
+  Error error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -429,7 +429,7 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
 
     DataExtractor data;
-    Status data_error;
+    Error data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(
@@ -457,7 +457,7 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
         RegisterValue f0_value;
         DataExtractor data;
-        Status data_error;
+        Error data_error;
         size_t num_bytes = new_value_sp->GetData(data, data_error);
         if (data_error.Fail()) {
           error.SetErrorStringWithFormat(

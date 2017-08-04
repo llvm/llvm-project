@@ -22,8 +22,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Stream.h"
 
 class MappedHash {
 public:
@@ -326,7 +326,7 @@ public:
           1u, // Bucket hash data collision, but key didn't match
       eResultEndOfHashData = 2u, // The chain of items for this hash data in
                                  // this bucket is terminated, search no more
-      eResultError = 3u          // Status parsing the hash data, abort
+      eResultError = 3u          // Error parsing the hash data, abort
     };
 
     struct Pair {
@@ -409,7 +409,7 @@ public:
                   // searching
                   return false;
                 case eResultError:
-                  // Status parsing the hash data, abort
+                  // Error parsing the hash data, abort
                   return false;
                 }
               }

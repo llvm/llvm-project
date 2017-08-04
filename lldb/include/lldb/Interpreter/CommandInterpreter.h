@@ -19,13 +19,13 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/IOHandler.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
@@ -510,7 +510,7 @@ protected:
                                      StringList *matches = nullptr) const;
 
 private:
-  Status PreprocessCommand(std::string &command);
+  Error PreprocessCommand(std::string &command);
 
   // Completely resolves aliases and abbreviations, returning a pointer to the
   // final command object and updating command_line to the fully substituted
@@ -539,7 +539,7 @@ private:
   std::string m_repeat_command; // Stores the command that will be executed for
                                 // an empty command string.
   lldb::ScriptInterpreterSP m_script_interpreter_sp;
-  std::recursive_mutex m_script_interpreter_mutex;
+  std::mutex m_script_interpreter_mutex;
   lldb::IOHandlerSP m_command_io_handler_sp;
   char m_comment_char;
   bool m_batch_command_mode;

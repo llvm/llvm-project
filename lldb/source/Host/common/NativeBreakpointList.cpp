@@ -9,7 +9,7 @@
 
 #include "lldb/Host/common/NativeBreakpointList.h"
 
-#include "lldb/Utility/Log.h"
+#include "lldb/Core/Log.h"
 
 #include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/SoftwareBreakpoint.h"
@@ -19,9 +19,9 @@ using namespace lldb_private;
 
 NativeBreakpointList::NativeBreakpointList() : m_mutex() {}
 
-Status NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
-                                    bool hardware,
-                                    CreateBreakpointFunc create_func) {
+Error NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
+                                   bool hardware,
+                                   CreateBreakpointFunc create_func) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
     log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64
@@ -40,7 +40,7 @@ Status NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
                   __FUNCTION__, addr);
 
     iter->second->AddRef();
-    return Status();
+    return Error();
   }
 
   // Create a new breakpoint using the given create func.
@@ -51,7 +51,7 @@ Status NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
         __FUNCTION__, addr, size_hint, hardware ? "true" : "false");
 
   NativeBreakpointSP breakpoint_sp;
-  Status error = create_func(addr, size_hint, hardware, breakpoint_sp);
+  Error error = create_func(addr, size_hint, hardware, breakpoint_sp);
   if (error.Fail()) {
     if (log)
       log->Printf(
@@ -70,8 +70,8 @@ Status NativeBreakpointList::AddRef(lldb::addr_t addr, size_t size_hint,
   return error;
 }
 
-Status NativeBreakpointList::DecRef(lldb::addr_t addr) {
-  Status error;
+Error NativeBreakpointList::DecRef(lldb::addr_t addr) {
+  Error error;
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
@@ -142,7 +142,7 @@ Status NativeBreakpointList::DecRef(lldb::addr_t addr) {
   return error;
 }
 
-Status NativeBreakpointList::EnableBreakpoint(lldb::addr_t addr) {
+Error NativeBreakpointList::EnableBreakpoint(lldb::addr_t addr) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
     log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__,
@@ -157,14 +157,14 @@ Status NativeBreakpointList::EnableBreakpoint(lldb::addr_t addr) {
     if (log)
       log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64 " -- NOT FOUND",
                   __FUNCTION__, addr);
-    return Status("breakpoint not found");
+    return Error("breakpoint not found");
   }
 
   // Enable it.
   return iter->second->Enable();
 }
 
-Status NativeBreakpointList::DisableBreakpoint(lldb::addr_t addr) {
+Error NativeBreakpointList::DisableBreakpoint(lldb::addr_t addr) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
     log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__,
@@ -179,15 +179,15 @@ Status NativeBreakpointList::DisableBreakpoint(lldb::addr_t addr) {
     if (log)
       log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64 " -- NOT FOUND",
                   __FUNCTION__, addr);
-    return Status("breakpoint not found");
+    return Error("breakpoint not found");
   }
 
   // Disable it.
   return iter->second->Disable();
 }
 
-Status NativeBreakpointList::GetBreakpoint(lldb::addr_t addr,
-                                           NativeBreakpointSP &breakpoint_sp) {
+Error NativeBreakpointList::GetBreakpoint(lldb::addr_t addr,
+                                          NativeBreakpointSP &breakpoint_sp) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
     log->Printf("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__,
@@ -200,16 +200,16 @@ Status NativeBreakpointList::GetBreakpoint(lldb::addr_t addr,
   if (iter == m_breakpoints.end()) {
     // Not found!
     breakpoint_sp.reset();
-    return Status("breakpoint not found");
+    return Error("breakpoint not found");
   }
 
   // Disable it.
   breakpoint_sp = iter->second;
-  return Status();
+  return Error();
 }
 
-Status NativeBreakpointList::RemoveTrapsFromBuffer(lldb::addr_t addr, void *buf,
-                                                   size_t size) const {
+Error NativeBreakpointList::RemoveTrapsFromBuffer(lldb::addr_t addr, void *buf,
+                                                  size_t size) const {
   for (const auto &map : m_breakpoints) {
     lldb::addr_t bp_addr = map.first;
     // Breapoint not in range, ignore
@@ -225,5 +225,5 @@ Status NativeBreakpointList::RemoveTrapsFromBuffer(lldb::addr_t addr, void *buf,
     auto opcode_size = software_bp_sp->m_opcode_size;
     ::memcpy(opcode_addr, saved_opcodes, opcode_size);
   }
-  return Status();
+  return Error();
 }

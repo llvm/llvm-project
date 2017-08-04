@@ -876,8 +876,8 @@ static struct option g_long_options[] = {
      'u'}, // If we need to handshake with our parent process, an option will be
            // passed down that specifies a unix socket name to use
     {"fd", required_argument, NULL,
-     '2'}, // A file descriptor was passed to this process when spawned that
-           // is already open and ready for communication
+     'FDSC'}, // A file descriptor was passed to this process when spawned that
+              // is already open and ready for communication
     {"named-pipe", required_argument, NULL, 'P'},
     {"reverse-connect", no_argument, NULL, 'R'},
     {"env", required_argument, NULL,
@@ -1261,7 +1261,7 @@ int main(int argc, char *argv[]) {
       }
       break;
 
-    case '2':
+    case 'FDSC':
       // File descriptor passed to this process during fork/exec and is already
       // open and ready for communication.
       communication_fd = atoi(optarg);
@@ -1345,18 +1345,10 @@ int main(int argc, char *argv[]) {
       show_usage_and_exit(1);
     }
     // accept 'localhost:' prefix on port number
-    std::string host_specifier = argv[0];
-    auto colon_location = host_specifier.rfind(':');
-    if (colon_location != std::string::npos) {
-      host = host_specifier.substr(0, colon_location);
-      std::string port_str =
-          host_specifier.substr(colon_location + 1, std::string::npos);
-      char *end_ptr;
-      port = strtoul(port_str.c_str(), &end_ptr, 0);
-      if (end_ptr < port_str.c_str() + port_str.size())
-        show_usage_and_exit(2);
-      if (host.front() == '[' && host.back() == ']')
-        host = host.substr(1, host.size() - 2);
+
+    int items_scanned = ::sscanf(argv[0], "%[^:]:%i", str, &port);
+    if (items_scanned == 2) {
+      host = str;
       DNBLogDebug("host = '%s'  port = %i", host.c_str(), port);
     } else {
       // No hostname means "localhost"

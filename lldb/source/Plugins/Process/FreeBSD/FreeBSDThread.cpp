@@ -9,12 +9,6 @@
 
 // C Includes
 #include <errno.h>
-#include <pthread.h>
-#include <pthread_np.h>
-#include <stdlib.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <sys/user.h>
 
 // C++ Includes
 // Other libraries and framework includes
@@ -24,16 +18,16 @@
 // Project includes
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_arm.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
+#include "ProcessPOSIXLog.h"
 #include "RegisterContextPOSIXProcessMonitor_arm.h"
 #include "RegisterContextPOSIXProcessMonitor_arm64.h"
 #include "RegisterContextPOSIXProcessMonitor_mips64.h"
@@ -59,7 +53,8 @@ FreeBSDThread::FreeBSDThread(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_frame_ap(), m_breakpoint(),
       m_thread_name_valid(false), m_thread_name(), m_posix_thread(NULL) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  LLDB_LOGV(log, "tid = {0}", tid);
+  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
+    log->Printf("FreeBSDThread::%s (tid = %" PRIi64 ")", __FUNCTION__, tid);
 
   // Set the current watchpoints for this thread.
   Target &target = GetProcess()->GetTarget();
@@ -119,41 +114,9 @@ void FreeBSDThread::SetName(const char *name) {
 
 const char *FreeBSDThread::GetName() {
   if (!m_thread_name_valid) {
-    m_thread_name.clear();
-    int pid = GetProcess()->GetID();
-
-    struct kinfo_proc *kp = nullptr, *nkp;
-    size_t len = 0;
-    int error;
-    int ctl[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
-                  pid};
-
-    while (1) {
-      error = sysctl(ctl, 4, kp, &len, nullptr, 0);
-      if (kp == nullptr || (error != 0 && errno == ENOMEM)) {
-        // Add extra space in case threads are added before next call.
-        len += sizeof(*kp) + len / 10;
-        nkp = (struct kinfo_proc *)realloc(kp, len);
-        if (nkp == nullptr) {
-          free(kp);
-          return nullptr;
-        }
-        kp = nkp;
-        continue;
-      }
-      if (error != 0)
-        len = 0;
-      break;
-    }
-
-    for (size_t i = 0; i < len / sizeof(*kp); i++) {
-      if (kp[i].ki_tid == (lwpid_t)GetID()) {
-        m_thread_name.append(kp[i].ki_tdname,
-                             kp[i].ki_tdname + strlen(kp[i].ki_tdname));
-        break;
-      }
-    }
-    free(kp);
+    llvm::SmallString<32> thread_name;
+    HostNativeThread::GetName(GetID(), thread_name);
+    m_thread_name = thread_name.c_str();
     m_thread_name_valid = true;
   }
 
@@ -175,7 +138,7 @@ lldb::RegisterContextSP FreeBSDThread::GetRegisterContext() {
       reg_interface = new RegisterInfoPOSIX_arm64(target_arch);
       break;
     case llvm::Triple::arm:
-      reg_interface = new RegisterInfoPOSIX_arm(target_arch);
+      reg_interface = new RegisterContextFreeBSD_arm(target_arch);
       break;
     case llvm::Triple::ppc:
 #ifndef __powerpc64__
@@ -252,7 +215,8 @@ FreeBSDThread::CreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   uint32_t concrete_frame_idx = 0;
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  LLDB_LOGV(log, "called");
+  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
+    log->Printf("FreeBSDThread::%s ()", __FUNCTION__);
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();

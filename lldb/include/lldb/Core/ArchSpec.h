@@ -12,31 +12,13 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-private-enumerations.h"
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "lldb/Core/ConstString.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/Triple.h"
 
-#include <string> // for string
+namespace lldb_private {
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
-
-namespace lldb_private {
-class Platform;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class StringList;
-}
-namespace lldb_private {
-class Thread;
-}
-
-namespace lldb_private {
+struct CoreDefinition;
 
 //----------------------------------------------------------------------
 /// @class ArchSpec ArchSpec.h "lldb/Core/ArchSpec.h"
@@ -325,7 +307,7 @@ public:
   /// @return A string representing target CPU for the current
   ///         architecture.
   //------------------------------------------------------------------
-  std::string GetClangTargetCPU() const;
+  std::string GetClangTargetCPU();
 
   //------------------------------------------------------------------
   /// Return a string representing target application ABI.
@@ -625,7 +607,6 @@ public:
 
 protected:
   bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;
-  void UpdateCore();
 
   llvm::Triple m_triple;
   Core m_core = kCore_invalid;

@@ -18,7 +18,7 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/ConstString.h"
+#include "lldb/Core/ConstString.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {

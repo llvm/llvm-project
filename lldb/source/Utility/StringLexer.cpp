@@ -1,4 +1,5 @@
-//===--------------------- StringLexer.cpp -----------------------*- C++-*-===//
+//===--------------------- StringLexer.cpp -----------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -71,6 +72,10 @@ bool StringLexer::HasAtLeast(Size s) {
 void StringLexer::PutBack(Size s) {
   assert(m_position >= s);
   m_position -= s;
+}
+
+bool StringLexer::HasAny(Character c) {
+  return m_data.find(c, m_position) != std::string::npos;
 }
 
 std::string StringLexer::GetUnlexed() {

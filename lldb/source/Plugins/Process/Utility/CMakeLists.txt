@@ -9,18 +9,19 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   InferiorCallPOSIX.cpp
   LinuxSignals.cpp
   MipsLinuxSignals.cpp
-  NativeRegisterContextRegisterInfo.cpp
   NetBSDSignals.cpp
   RegisterContextDarwin_arm.cpp
   RegisterContextDarwin_arm64.cpp
   RegisterContextDarwin_i386.cpp
   RegisterContextDarwin_x86_64.cpp
   RegisterContextDummy.cpp
+  RegisterContextFreeBSD_arm.cpp
   RegisterContextFreeBSD_i386.cpp
   RegisterContextFreeBSD_mips64.cpp
   RegisterContextFreeBSD_powerpc.cpp
   RegisterContextFreeBSD_x86_64.cpp
   RegisterContextHistory.cpp
+  RegisterContextLinux_arm.cpp
   RegisterContextLinux_i386.cpp
   RegisterContextLinux_x86_64.cpp
   RegisterContextLinux_mips64.cpp
@@ -33,8 +34,6 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   RegisterContextMach_x86_64.cpp
   RegisterContextMemory.cpp
   RegisterContextNetBSD_x86_64.cpp
-  RegisterContextOpenBSD_i386.cpp
-  RegisterContextOpenBSD_x86_64.cpp
   RegisterContextPOSIX_arm.cpp
   RegisterContextPOSIX_arm64.cpp
   RegisterContextPOSIX_mips64.cpp
@@ -42,7 +41,6 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   RegisterContextPOSIX_s390x.cpp
   RegisterContextPOSIX_x86.cpp
   RegisterContextThreadMemory.cpp
-  RegisterInfoPOSIX_arm.cpp
   RegisterInfoPOSIX_arm64.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp

@@ -18,6 +18,8 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -28,8 +30,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -713,13 +713,13 @@ size_t ABIMacOSX_i386::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABIMacOSX_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
+ABIMacOSX_i386::CreateInstance(const ArchSpec &arch) {
   static ABISP g_abi_sp;
   if ((arch.GetTriple().getArch() == llvm::Triple::x86) &&
       (arch.GetTriple().isMacOSX() || arch.GetTriple().isiOS() ||
        arch.GetTriple().isWatchOS())) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABIMacOSX_i386(process_sp));
+      g_abi_sp.reset(new ABIMacOSX_i386);
     return g_abi_sp;
   }
   return ABISP();
@@ -746,7 +746,7 @@ bool ABIMacOSX_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   // Make room for the argument(s) on the stack
 
-  Status error;
+  Error error;
   RegisterValue reg_value;
 
   // Write any arguments onto the stack
@@ -793,7 +793,7 @@ static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
                                 addr_t &current_stack_argument) {
 
   uint32_t byte_size = (bit_width + (8 - 1)) / 8;
-  Status error;
+  Error error;
   if (process->ReadScalarIntegerFromMemory(current_stack_argument, byte_size,
                                            is_signed, scalar, error)) {
     current_stack_argument += byte_size;
@@ -849,9 +849,9 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
   return true;
 }
 
-Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                            lldb::ValueObjectSP &new_value_sp) {
-  Status error;
+Error ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                           lldb::ValueObjectSP &new_value_sp) {
+  Error error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -875,7 +875,7 @@ Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Status data_error;
+    Error data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(

@@ -13,15 +13,15 @@
 // Project includes
 #include "LibCxx.h"
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -291,7 +291,7 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetChildAtIndex(
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_
   DataExtractor data;
-  Status error;
+  Error error;
   current_sp->GetData(data, error);
   if (error.Fail())
     return lldb::ValueObjectSP();
@@ -312,7 +312,7 @@ bool lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::Update() {
   m_slow_runner.SetEntry(nullptr);
   m_fast_runner.SetEntry(nullptr);
 
-  Status err;
+  Error err;
   ValueObjectSP backend_addr(m_backend.AddressOf(err));
   m_list_capping_size = 0;
   if (m_backend.GetTargetSP())

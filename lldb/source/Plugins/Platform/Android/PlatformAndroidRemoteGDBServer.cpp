@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 // Other libraries and framework includes
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/UriParser.h"
 
 #include "PlatformAndroidRemoteGDBServer.h"
+#include "Utility/UriParser.h"
 
 #include <sstream>
 
@@ -25,7 +25,7 @@ using namespace platform_android;
 static const lldb::pid_t g_remote_platform_pid =
     0; // Alias for the process id of lldb-platform
 
-static Status ForwardPortWithAdb(
+static Error ForwardPortWithAdb(
     const uint16_t local_port, const uint16_t remote_port,
     llvm::StringRef remote_socket_name,
     const llvm::Optional<AdbClient::UnixSocketNamespace> &socket_namespace,
@@ -53,21 +53,21 @@ static Status ForwardPortWithAdb(
                 remote_socket_name.str().c_str(), local_port);
 
   if (!socket_namespace)
-    return Status("Invalid socket namespace");
+    return Error("Invalid socket namespace");
 
   return adb.SetPortForwarding(local_port, remote_socket_name,
                                *socket_namespace);
 }
 
-static Status DeleteForwardPortWithAdb(uint16_t local_port,
-                                       const std::string &device_id) {
+static Error DeleteForwardPortWithAdb(uint16_t local_port,
+                                      const std::string &device_id) {
   AdbClient adb(device_id);
   return adb.DeletePortForwarding(local_port);
 }
 
-static Status FindUnusedPort(uint16_t &port) {
-  Status error;
-  std::unique_ptr<TCPSocket> tcp_socket(new TCPSocket(true, false));
+static Error FindUnusedPort(uint16_t &port) {
+  Error error;
+  std::unique_ptr<TCPSocket> tcp_socket(new TCPSocket(false, error));
   if (error.Fail())
     return error;
 
@@ -107,20 +107,19 @@ bool PlatformAndroidRemoteGDBServer::KillSpawnedProcess(lldb::pid_t pid) {
   return m_gdb_client.KillSpawnedProcess(pid);
 }
 
-Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
+Error PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   m_device_id.clear();
 
   if (args.GetArgumentCount() != 1)
-    return Status(
-        "\"platform connect\" takes a single argument: <connect-url>");
+    return Error("\"platform connect\" takes a single argument: <connect-url>");
 
   int remote_port;
   llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
-    return Status("URL is null.");
+    return Error("URL is null.");
   if (!UriParser::Parse(url, scheme, host, remote_port, path))
-    return Status("Invalid URL: %s", url);
+    return Error("Invalid URL: %s", url);
   if (host != "localhost")
     m_device_id = host;
 
@@ -151,7 +150,7 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   return error;
 }
 
-Status PlatformAndroidRemoteGDBServer::DisconnectRemote() {
+Error PlatformAndroidRemoteGDBServer::DisconnectRemote() {
   DeleteForwardPort(g_remote_platform_pid);
   return PlatformRemoteGDBServer::DisconnectRemote();
 }
@@ -174,12 +173,12 @@ void PlatformAndroidRemoteGDBServer::DeleteForwardPort(lldb::pid_t pid) {
   m_port_forwards.erase(it);
 }
 
-Status PlatformAndroidRemoteGDBServer::MakeConnectURL(
+Error PlatformAndroidRemoteGDBServer::MakeConnectURL(
     const lldb::pid_t pid, const uint16_t remote_port,
     llvm::StringRef remote_socket_name, std::string &connect_url) {
   static const int kAttempsNum = 5;
 
-  Status error;
+  Error error;
   // There is a race possibility that somebody will occupy
   // a port while we're in between FindUnusedPort and ForwardPortWithAdb -
   // adding the loop to mitigate such problem.
@@ -206,7 +205,7 @@ Status PlatformAndroidRemoteGDBServer::MakeConnectURL(
 lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
     llvm::StringRef connect_url, llvm::StringRef plugin_name,
     lldb_private::Debugger &debugger, lldb_private::Target *target,
-    lldb_private::Status &error) {
+    lldb_private::Error &error) {
   // We don't have the pid of the remote gdbserver when it isn't started by us
   // but we still want
   // to store the list of port forwards we set up in our port forward map.

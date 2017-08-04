@@ -10,7 +10,10 @@
 #include "DynamicLoaderDarwin.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -29,9 +32,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
-#include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Log.h"
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -440,8 +440,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       Segment segment;
       StructuredData::Dictionary *seg =
           segments->GetItemAtIndex(j)->GetAsDictionary();
-      segment.name =
-          ConstString(seg->GetValueForKey("name")->GetAsString()->GetValue());
+      segment.name = ConstString(
+          seg->GetValueForKey("name")->GetAsString()->GetValue().c_str());
       segment.vmaddr =
           seg->GetValueForKey("vmaddr")->GetAsInteger()->GetValue();
       segment.vmsize =
@@ -478,8 +478,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       image_infos[i].segments.push_back(segment);
     }
 
-    image_infos[i].uuid.SetFromStringRef(
-        image->GetValueForKey("uuid")->GetAsString()->GetValue());
+    image_infos[i].uuid.SetFromCString(
+        image->GetValueForKey("uuid")->GetAsString()->GetValue().c_str());
 
     // All sections listed in the dyld image info structure will all
     // either be fixed up already, or they will all be off by a single
@@ -962,7 +962,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       for (Address address : addresses) {
         Symbol *symbol = address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect()) {
-          Status error;
+          Error error;
           Address symbol_address = symbol->GetAddress();
           addr_t resolved_addr = thread.GetProcess()->ResolveIndirectFunction(
               &symbol_address, error);
@@ -1062,7 +1062,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
   lldb_private::Address tls_addr;
   if (module_sp->ResolveFileAddress(tls_file_addr, tls_addr)) {
-    Status error;
+    Error error;
     const size_t tsl_data_size = addr_size * 3;
     Target &target = m_process->GetTarget();
     if (target.ReadMemory(tls_addr, false, buf, tsl_data_size, error) ==

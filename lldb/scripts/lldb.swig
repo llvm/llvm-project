@@ -31,30 +31,8 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
       and a source file location. SBCompileUnit contains SBLineEntry(s)."
 %enddef
 
-/*
-Since version 3.0.9, swig's logic for importing the native module has changed in
-a way that is incompatible with our usage of the python module as __init__.py
-(See swig bug #769).  Fortunately, since version 3.0.11, swig provides a way for
-us to override the module import logic to suit our needs. This does that.
-
-Older swig versions will simply ignore this setting.
-*/
-%define MODULEIMPORT
-"try:
-    # Try a relative import first
-    from . import $module
-except ImportError:
-    # Maybe absolute import will work (if we're being loaded from lldb, it
-    # should).
-    import $module"
-%enddef
-// These versions will not generate working python modules, so error out early.
-#if SWIG_VERSION >= 0x030009 && SWIG_VERSION < 0x030011
-#error Swig versions 3.0.9 and 3.0.10 are incompatible with lldb.
-#endif
-
 // The name of the module to be created.
-%module(docstring=DOCSTRING, moduleimport=MODULEIMPORT) lldb
+%module(docstring=DOCSTRING) lldb
 
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");
@@ -125,8 +103,6 @@ import six
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBThreadPlan.h"
-#include "lldb/API/SBTrace.h"
-#include "lldb/API/SBTraceOptions.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBTypeCategory.h"
 #include "lldb/API/SBTypeEnumMember.h"
@@ -210,8 +186,6 @@ import six
 %include "./interface/SBThread.i"
 %include "./interface/SBThreadCollection.i"
 %include "./interface/SBThreadPlan.i"
-%include "./interface/SBTrace.i"
-%include "./interface/SBTraceOptions.i"
 %include "./interface/SBType.i"
 %include "./interface/SBTypeCategory.i"
 %include "./interface/SBTypeEnumMember.i"

@@ -33,7 +33,7 @@ public:
   bool GetArgumentValues(lldb_private::Thread &thread,
                          lldb_private::ValueList &values) const override;
 
-  lldb_private::Status
+  lldb_private::Error
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                        lldb::ValueObjectSP &new_value) override;
 
@@ -89,7 +89,7 @@ public:
 
   static void Terminate();
 
-  static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
+  static lldb::ABISP CreateInstance(const lldb_private::ArchSpec &arch);
 
   //------------------------------------------------------------------
   // PluginInterface protocol
@@ -109,7 +109,7 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  ABISysV_i386(lldb::ProcessSP process_sp) : lldb_private::ABI(process_sp) {
+  ABISysV_i386() : lldb_private::ABI() {
     // Call CreateInstance instead.
   }
 };

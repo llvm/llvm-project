@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 // Other libraries and framework includes
-#include "lldb/Utility/ConstString.h"
+#include "lldb/Core/ConstString.h"
 // Project includes
 #include "DWARFDefines.h"
 

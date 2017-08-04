@@ -10,8 +10,7 @@
 
 #include "CoreMedia.h"
 
-#include "lldb/Utility/Flags.h"
-
+#include "lldb/Core/Flags.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
 #include <inttypes.h>

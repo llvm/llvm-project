@@ -10,7 +10,7 @@
 #ifndef liblldb_StreamBuffer_h_
 #define liblldb_StreamBuffer_h_
 
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/Stream.h"
 #include "llvm/ADT/SmallVector.h"
 #include <stdio.h>
 #include <string>

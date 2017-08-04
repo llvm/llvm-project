@@ -62,6 +62,7 @@ CrashReason GetCrashReasonForSIGSEGV(const siginfo_t &info) {
     return CrashReason::eBoundViolation;
   }
 
+  assert(false && "unexpected si_code for SIGSEGV");
   return CrashReason::eInvalidCrashReason;
 }
 
@@ -87,6 +88,7 @@ CrashReason GetCrashReasonForSIGILL(const siginfo_t &info) {
     return CrashReason::eInternalStackError;
   }
 
+  assert(false && "unexpected si_code for SIGILL");
   return CrashReason::eInvalidCrashReason;
 }
 
@@ -112,6 +114,7 @@ CrashReason GetCrashReasonForSIGFPE(const siginfo_t &info) {
     return CrashReason::eFloatSubscriptRange;
   }
 
+  assert(false && "unexpected si_code for SIGFPE");
   return CrashReason::eInvalidCrashReason;
 }
 
@@ -127,6 +130,7 @@ CrashReason GetCrashReasonForSIGBUS(const siginfo_t &info) {
     return CrashReason::eHardwareError;
   }
 
+  assert(false && "unexpected si_code for SIGBUS");
   return CrashReason::eInvalidCrashReason;
 }
 }
@@ -154,7 +158,7 @@ std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr) {
 
   switch (reason) {
   default:
-    str = "unknown crash reason";
+    assert(false && "invalid CrashReason");
     break;
 
   case CrashReason::eInvalidAddress:

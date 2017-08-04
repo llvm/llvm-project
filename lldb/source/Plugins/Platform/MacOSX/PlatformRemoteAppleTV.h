@@ -16,7 +16,7 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/FileSpec.h"
+#include "lldb/Host/FileSpec.h"
 
 #include "llvm/Support/FileSystem.h"
 

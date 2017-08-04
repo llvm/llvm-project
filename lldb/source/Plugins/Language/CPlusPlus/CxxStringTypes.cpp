@@ -11,21 +11,21 @@
 
 #include "llvm/Support/ConvertUTF.h"
 
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Host/Time.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/ProcessStructReader.h"
 
 #include <algorithm>
 
@@ -129,7 +129,7 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
 bool lldb_private::formatters::Char16SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   DataExtractor data;
-  Status error;
+  Error error;
   valobj.GetData(data, error);
 
   if (error.Fail())
@@ -155,7 +155,7 @@ bool lldb_private::formatters::Char16SummaryProvider(
 bool lldb_private::formatters::Char32SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   DataExtractor data;
-  Status error;
+  Error error;
   valobj.GetData(data, error);
 
   if (error.Fail())
@@ -181,7 +181,7 @@ bool lldb_private::formatters::Char32SummaryProvider(
 bool lldb_private::formatters::WCharSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   DataExtractor data;
-  Status error;
+  Error error;
   valobj.GetData(data, error);
 
   if (error.Fail())

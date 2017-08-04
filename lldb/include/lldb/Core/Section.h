@@ -10,39 +10,16 @@
 #ifndef liblldb_Section_h_
 #define liblldb_Section_h_
 
+#include "lldb/Core/AddressRange.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Flags.h"
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Flags.h"
-#include "lldb/Utility/UserID.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for SectionType
-#include "lldb/lldb-forward.h"      // for SectionSP, ModuleSP, SectionWP
-#include "lldb/lldb-types.h"        // for addr_t, offset_t, user_id_t
-
-#include <memory> // for enable_shared_from_this
-#include <vector> // for vector
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, UINT32_MAX
-
-namespace lldb_private {
-class Address;
-}
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class ObjectFile;
-}
-namespace lldb_private {
-class Section;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class Target;
-}
+#include "lldb/Core/RangeMap.h"
+#include "lldb/Core/UserID.h"
+#include "lldb/Core/VMRange.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/lldb-private.h"
+#include <limits.h>
 
 namespace lldb_private {
 
@@ -143,8 +120,7 @@ public:
 
   lldb::addr_t GetLoadBaseAddress(Target *target) const;
 
-  bool ResolveContainedAddress(lldb::addr_t offset, Address &so_addr,
-                               bool allow_section_end = false) const;
+  bool ResolveContainedAddress(lldb::addr_t offset, Address &so_addr) const;
 
   lldb::offset_t GetFileOffset() const { return m_file_offset; }
 

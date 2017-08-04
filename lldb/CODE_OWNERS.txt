@@ -13,7 +13,8 @@ E: scallanan@apple.com
 D: Expression evaluator, IR interpreter, Clang integration
 
 N: Greg Clayton
-E: clayborg@gmail.com
+E: clayborg@gmail.com (Phabricator)
+E: gclayton@apple.com (Direct)
 D: Overall LLDB architecture, Host (common+macosx), Symbol, API, ABI, Mac-specific code, 
 D: DynamicLoader, ObjectFile, IOHandler, EditLine, Core/Value*, Watchpoints, debugserver
 D: Build scripts, Test suite, Platform, gdb-remote, Anything not covered by this file
@@ -34,16 +35,11 @@ D: FreeBSD
 
 N: Jason Molenda
 E: jmolenda@apple.com
-D: ABI, Disassembler, Unwinding, iOS, debugserver, Platform, ObjectFile, SymbolFile, 
-D: SymbolVendor, DWARF, gdb-remote
+D: ABI, Disassembler, Unwinding, iOS, debugserver, Platform
 
 N: Hafiz Abid Qadeer
 E: abidh.haq@gmail.com
 D: lldb-mi
-
-N: Kamil Rytarowski
-E: kamil@netbsd.org
-D: NetBSD
 
 N: Zachary Turner
 E: zturner@google.com

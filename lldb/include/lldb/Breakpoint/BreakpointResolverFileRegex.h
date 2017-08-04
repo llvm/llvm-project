@@ -17,7 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointResolver.h"
-#include "lldb/Utility/ConstString.h"
+#include "lldb/Core/ConstString.h"
 
 namespace lldb_private {
 
@@ -38,7 +38,7 @@ public:
   static BreakpointResolver *
   CreateFromStructuredData(Breakpoint *bkpt,
                            const StructuredData::Dictionary &options_dict,
-                           Status &error);
+                           Error &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 

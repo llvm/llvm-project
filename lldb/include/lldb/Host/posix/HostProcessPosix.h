@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Error.h"
 #include "lldb/Host/HostNativeProcessBase.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {
@@ -28,11 +28,11 @@ public:
   HostProcessPosix(lldb::process_t process);
   ~HostProcessPosix() override;
 
-  virtual Status Signal(int signo) const;
-  static Status Signal(lldb::process_t process, int signo);
+  virtual Error Signal(int signo) const;
+  static Error Signal(lldb::process_t process, int signo);
 
-  Status Terminate() override;
-  Status GetMainModule(FileSpec &file_spec) const override;
+  Error Terminate() override;
+  Error GetMainModule(FileSpec &file_spec) const override;
 
   lldb::pid_t GetProcessId() const override;
   bool IsRunning() const override;

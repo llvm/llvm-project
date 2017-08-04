@@ -34,7 +34,7 @@ public:
 
   void DidAttach() override;
   void DidLaunch() override;
-  Status CanLoadImage() override;
+  Error CanLoadImage() override;
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop) override;
 

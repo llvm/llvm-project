@@ -27,7 +27,6 @@ public:
   ~UnwindTable();
 
   lldb_private::DWARFCallFrameInfo *GetEHFrameInfo();
-  lldb_private::DWARFCallFrameInfo *GetDebugFrameInfo();
 
   lldb_private::CompactUnwindInfo *GetCompactUnwindInfo();
 
@@ -59,8 +58,6 @@ private:
   void Dump(Stream &s);
 
   void Initialize();
-  llvm::Optional<AddressRange> GetAddressRange(const Address &addr,
-                                               SymbolContext &sc);
 
   typedef std::map<lldb::addr_t, lldb::FuncUnwindersSP> collection;
   typedef collection::iterator iterator;
@@ -73,7 +70,6 @@ private:
   std::mutex m_mutex;
 
   std::unique_ptr<DWARFCallFrameInfo> m_eh_frame_up;
-  std::unique_ptr<DWARFCallFrameInfo> m_debug_frame_up;
   std::unique_ptr<CompactUnwindInfo> m_compact_unwind_up;
   std::unique_ptr<ArmUnwindInfo> m_arm_unwind_up;
 

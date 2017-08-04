@@ -10,13 +10,13 @@
 #ifndef liblldb_Host_windows_ConnectionGenericFileWindows_h_
 #define liblldb_Host_windows_ConnectionGenericFileWindows_h_
 
+#include "lldb/Core/Connection.h"
 #include "lldb/Host/windows/windows.h"
-#include "lldb/Utility/Connection.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {
 
-class Status;
+class Error;
 
 class ConnectionGenericFile : public lldb_private::Connection {
 public:
@@ -28,15 +28,15 @@ public:
 
   bool IsConnected() const override;
 
-  lldb::ConnectionStatus Connect(llvm::StringRef s, Status *error_ptr) override;
+  lldb::ConnectionStatus Connect(llvm::StringRef s, Error *error_ptr) override;
 
-  lldb::ConnectionStatus Disconnect(Status *error_ptr) override;
+  lldb::ConnectionStatus Disconnect(Error *error_ptr) override;
 
   size_t Read(void *dst, size_t dst_len, const Timeout<std::micro> &timeout,
-              lldb::ConnectionStatus &status, Status *error_ptr) override;
+              lldb::ConnectionStatus &status, Error *error_ptr) override;
 
   size_t Write(const void *src, size_t src_len, lldb::ConnectionStatus &status,
-               Status *error_ptr) override;
+               Error *error_ptr) override;
 
   std::string GetURI() override;
 

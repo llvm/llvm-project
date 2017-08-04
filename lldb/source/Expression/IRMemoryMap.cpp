@@ -8,15 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRMemoryMap.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb_private;
 
@@ -31,7 +31,7 @@ IRMemoryMap::~IRMemoryMap() {
   if (process_sp) {
     AllocationMap::iterator iter;
 
-    Status err;
+    Error err;
 
     while ((iter = m_allocations.begin()) != m_allocations.end()) {
       err.Clear();
@@ -66,7 +66,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
     return ret;
 
   if (process_is_alive && process_sp->CanJIT()) {
-    Status alloc_error;
+    Error alloc_error;
 
     ret = process_sp->AllocateMemory(size, lldb::ePermissionsReadable |
                                                lldb::ePermissionsWritable,
@@ -104,7 +104,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
                end_of_memory != 0xffffffffull);
 
     MemoryRegionInfo region_info;
-    Status err = process_sp->GetMemoryRegionInfo(ret, region_info);
+    Error err = process_sp->GetMemoryRegionInfo(ret, region_info);
     if (err.Success()) {
       while (true) {
         if (region_info.GetReadable() != MemoryRegionInfo::OptionalBool::eNo ||
@@ -297,7 +297,7 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
 
 lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
                                  uint32_t permissions, AllocationPolicy policy,
-                                 bool zero_memory, Status &error) {
+                                 bool zero_memory, Error &error) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   error.Clear();
@@ -397,7 +397,7 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
                  permissions, alignment, policy);
 
   if (zero_memory) {
-    Status write_error;
+    Error write_error;
     std::vector<uint8_t> zero_buf(size, 0);
     WriteMemory(aligned_address, zero_buf.data(), size, write_error);
   }
@@ -429,7 +429,7 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
   return aligned_address;
 }
 
-void IRMemoryMap::Leak(lldb::addr_t process_address, Status &error) {
+void IRMemoryMap::Leak(lldb::addr_t process_address, Error &error) {
   error.Clear();
 
   AllocationMap::iterator iter = m_allocations.find(process_address);
@@ -445,7 +445,7 @@ void IRMemoryMap::Leak(lldb::addr_t process_address, Status &error) {
   allocation.m_leak = true;
 }
 
-void IRMemoryMap::Free(lldb::addr_t process_address, Status &error) {
+void IRMemoryMap::Free(lldb::addr_t process_address, Error &error) {
   error.Clear();
 
   AllocationMap::iterator iter = m_allocations.find(process_address);
@@ -512,8 +512,7 @@ bool IRMemoryMap::GetAllocSize(lldb::addr_t address, size_t &size) {
 }
 
 void IRMemoryMap::WriteMemory(lldb::addr_t process_address,
-                              const uint8_t *bytes, size_t size,
-                              Status &error) {
+                              const uint8_t *bytes, size_t size, Error &error) {
   error.Clear();
 
   AllocationMap::iterator iter = FindAllocation(process_address, size);
@@ -588,7 +587,7 @@ void IRMemoryMap::WriteMemory(lldb::addr_t process_address,
 
 void IRMemoryMap::WriteScalarToMemory(lldb::addr_t process_address,
                                       Scalar &scalar, size_t size,
-                                      Status &error) {
+                                      Error &error) {
   error.Clear();
 
   if (size == UINT32_MAX)
@@ -613,7 +612,7 @@ void IRMemoryMap::WriteScalarToMemory(lldb::addr_t process_address,
 }
 
 void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
-                                       lldb::addr_t address, Status &error) {
+                                       lldb::addr_t address, Error &error) {
   error.Clear();
 
   Scalar scalar(address);
@@ -622,7 +621,7 @@ void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
 }
 
 void IRMemoryMap::ReadMemory(uint8_t *bytes, lldb::addr_t process_address,
-                             size_t size, Status &error) {
+                             size_t size, Error &error) {
   error.Clear();
 
   AllocationMap::iterator iter = FindAllocation(process_address, size);
@@ -718,7 +717,7 @@ void IRMemoryMap::ReadMemory(uint8_t *bytes, lldb::addr_t process_address,
 
 void IRMemoryMap::ReadScalarFromMemory(Scalar &scalar,
                                        lldb::addr_t process_address,
-                                       size_t size, Status &error) {
+                                       size_t size, Error &error) {
   error.Clear();
 
   if (size > 0) {
@@ -761,7 +760,7 @@ void IRMemoryMap::ReadScalarFromMemory(Scalar &scalar,
 
 void IRMemoryMap::ReadPointerFromMemory(lldb::addr_t *address,
                                         lldb::addr_t process_address,
-                                        Status &error) {
+                                        Error &error) {
   error.Clear();
 
   Scalar pointer_scalar;
@@ -778,7 +777,7 @@ void IRMemoryMap::ReadPointerFromMemory(lldb::addr_t *address,
 
 void IRMemoryMap::GetMemoryData(DataExtractor &extractor,
                                 lldb::addr_t process_address, size_t size,
-                                Status &error) {
+                                Error &error) {
   error.Clear();
 
   if (size > 0) {

@@ -18,10 +18,13 @@
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "Plugins/Process/Utility/ThreadMemory.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -32,9 +35,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -94,7 +94,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
       char python_module_path_cstr[PATH_MAX];
       python_module_path.GetPath(python_module_path_cstr,
                                  sizeof(python_module_path_cstr));
-      Status error;
+      Error error;
       if (m_interpreter->LoadScriptingModule(
               python_module_path_cstr, allow_reload, init_session, error)) {
         // Strip the ".py" extension if there is one
@@ -240,8 +240,8 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
 
   uint32_t core_number;
   addr_t reg_data_addr;
-  llvm::StringRef name;
-  llvm::StringRef queue;
+  std::string name;
+  std::string queue;
 
   thread_dict.GetValueForKeyAsInteger("core", core_number, UINT32_MAX);
   thread_dict.GetValueForKeyAsInteger("register_data_addr", reg_data_addr,
@@ -266,8 +266,8 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
   if (!thread_sp) {
     if (did_create_ptr)
       *did_create_ptr = true;
-    thread_sp.reset(
-        new ThreadMemory(*m_process, tid, name, queue, reg_data_addr));
+    thread_sp.reset(new ThreadMemory(*m_process, tid, name.c_str(),
+                                     queue.c_str(), reg_data_addr));
   }
 
   if (core_number < core_thread_list.GetSize(false)) {

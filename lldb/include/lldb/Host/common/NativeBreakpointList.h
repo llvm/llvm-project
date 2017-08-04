@@ -10,7 +10,7 @@
 #ifndef liblldb_NativeBreakpointList_h_
 #define liblldb_NativeBreakpointList_h_
 
-#include "lldb/Utility/Status.h"
+#include "lldb/Core/Error.h"
 #include "lldb/lldb-private-forward.h"
 // #include "lldb/Host/NativeBreakpoint.h"
 
@@ -19,35 +19,26 @@
 #include <mutex>
 
 namespace lldb_private {
-
-struct HardwareBreakpoint {
-  lldb::addr_t m_addr;
-  size_t m_size;
-};
-
-using HardwareBreakpointMap = std::map<lldb::addr_t, HardwareBreakpoint>;
-
 class NativeBreakpointList {
 public:
-  typedef std::function<Status(lldb::addr_t addr, size_t size_hint,
-                               bool hardware,
-                               NativeBreakpointSP &breakpoint_sp)>
+  typedef std::function<Error(lldb::addr_t addr, size_t size_hint,
+                              bool hardware, NativeBreakpointSP &breakpoint_sp)>
       CreateBreakpointFunc;
 
   NativeBreakpointList();
 
-  Status AddRef(lldb::addr_t addr, size_t size_hint, bool hardware,
-                CreateBreakpointFunc create_func);
+  Error AddRef(lldb::addr_t addr, size_t size_hint, bool hardware,
+               CreateBreakpointFunc create_func);
 
-  Status DecRef(lldb::addr_t addr);
+  Error DecRef(lldb::addr_t addr);
 
-  Status EnableBreakpoint(lldb::addr_t addr);
+  Error EnableBreakpoint(lldb::addr_t addr);
 
-  Status DisableBreakpoint(lldb::addr_t addr);
+  Error DisableBreakpoint(lldb::addr_t addr);
 
-  Status GetBreakpoint(lldb::addr_t addr, NativeBreakpointSP &breakpoint_sp);
+  Error GetBreakpoint(lldb::addr_t addr, NativeBreakpointSP &breakpoint_sp);
 
-  Status RemoveTrapsFromBuffer(lldb::addr_t addr, void *buf, size_t size) const;
+  Error RemoveTrapsFromBuffer(lldb::addr_t addr, void *buf, size_t size) const;
 
 private:
   typedef std::map<lldb::addr_t, NativeBreakpointSP> BreakpointMap;

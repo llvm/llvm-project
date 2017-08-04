@@ -16,35 +16,39 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBWatchpoint::SBWatchpoint() {}
+SBWatchpoint::SBWatchpoint() : m_opaque_sp() {}
 
 SBWatchpoint::SBWatchpoint(const lldb::WatchpointSP &wp_sp)
-    : m_opaque_wp(wp_sp) {
+    : m_opaque_sp(wp_sp) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log) {
     SBStream sstr;
     GetDescription(sstr, lldb::eDescriptionLevelBrief);
-    LLDB_LOG(log, "watchpoint = {0} ({1})", wp_sp.get(), sstr.GetData());
+    log->Printf("SBWatchpoint::SBWatchpoint (const lldb::WatchpointSP &wp_sp"
+                "=%p)  => this.sp = %p (%s)",
+                static_cast<void *>(wp_sp.get()),
+                static_cast<void *>(m_opaque_sp.get()), sstr.GetData());
   }
 }
 
 SBWatchpoint::SBWatchpoint(const SBWatchpoint &rhs)
-    : m_opaque_wp(rhs.m_opaque_wp) {}
+    : m_opaque_sp(rhs.m_opaque_sp) {}
 
 const SBWatchpoint &SBWatchpoint::operator=(const SBWatchpoint &rhs) {
-  m_opaque_wp = rhs.m_opaque_wp;
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
   return *this;
 }
 
@@ -70,7 +74,7 @@ watch_id_t SBWatchpoint::GetID() {
   return watch_id;
 }
 
-bool SBWatchpoint::IsValid() const { return bool(m_opaque_wp.lock()); }
+bool SBWatchpoint::IsValid() const { return (bool)m_opaque_sp; }
 
 SBError SBWatchpoint::GetError() {
   SBError sb_error;
@@ -219,11 +223,11 @@ bool SBWatchpoint::GetDescription(SBStream &description,
   return true;
 }
 
-void SBWatchpoint::Clear() { m_opaque_wp.reset(); }
+void SBWatchpoint::Clear() { m_opaque_sp.reset(); }
 
-lldb::WatchpointSP SBWatchpoint::GetSP() const { return m_opaque_wp.lock(); }
+lldb::WatchpointSP SBWatchpoint::GetSP() const { return m_opaque_sp; }
 
-void SBWatchpoint::SetSP(const lldb::WatchpointSP &sp) { m_opaque_wp = sp; }
+void SBWatchpoint::SetSP(const lldb::WatchpointSP &sp) { m_opaque_sp = sp; }
 
 bool SBWatchpoint::EventIsWatchpointEvent(const lldb::SBEvent &event) {
   return Watchpoint::WatchpointEventData::GetEventDataFromEvent(event.get()) !=
@@ -241,7 +245,7 @@ SBWatchpoint::GetWatchpointEventTypeFromEvent(const SBEvent &event) {
 SBWatchpoint SBWatchpoint::GetWatchpointFromEvent(const lldb::SBEvent &event) {
   SBWatchpoint sb_watchpoint;
   if (event.IsValid())
-    sb_watchpoint =
+    sb_watchpoint.m_opaque_sp =
         Watchpoint::WatchpointEventData::GetWatchpointFromEvent(event.GetSP());
   return sb_watchpoint;
 }

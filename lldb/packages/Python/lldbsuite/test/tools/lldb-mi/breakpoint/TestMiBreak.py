@@ -18,8 +18,11 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFlakeyLinux("llvm.org/pr24717")
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @expectedFailureAll(
+        oslist=[
+            "linux",
+            "macosx"],
+        bugnumber="llvm.org/pr24717")
     def test_lldbmi_break_insert_function_pending(self):
         """Test that 'lldb-mi --interpreter' works for pending function breakpoints."""
 
@@ -46,7 +49,11 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
+    @expectedFailureAll(
+        oslist=[
+            "linux",
+            "macosx"],
+        bugnumber="llvm.org/pr24717")
     def test_lldbmi_break_insert_function(self):
         """Test that 'lldb-mi --interpreter' works for function breakpoints."""
 
@@ -115,7 +122,6 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_file_line_pending(self):
         """Test that 'lldb-mi --interpreter' works for pending file:line breakpoints."""
 
@@ -145,7 +151,6 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_file_line(self):
         """Test that 'lldb-mi --interpreter' works for file:line breakpoints."""
 
@@ -183,7 +188,6 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_file_line_absolute_path(self):
         """Test that 'lldb-mi --interpreter' works for file:line breakpoints."""
 
@@ -211,7 +215,6 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_settings(self):
         """Test that 'lldb-mi --interpreter' can set breakpoints accoridng to global options."""
 
@@ -226,45 +229,36 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd(
             "-interpreter-exec console \"settings set target.move-to-nearest-code off\"")
         self.expect("\^done")
-        line_decl = line_number('main.cpp', '// BP_main_decl')
-        line_in = line_number('main.cpp', '// BP_in_main')
-        self.runCmd("-break-insert -f main.cpp:%d" % line_in)
+        line = line_number('main.cpp', '// BP_before_main')
+        self.runCmd("-break-insert -f main.cpp:%d" % line)
         self.expect("\^done,bkpt={number=\"1\"")
 
         # Test that non-pending BP will not be set on non-existing line if target.move-to-nearest-code=off
         # Note: this increases the BP number by 1 even though BP #2 is invalid.
-        self.runCmd("-break-insert main.cpp:%d" % line_in)
+        self.runCmd("-break-insert main.cpp:%d" % line)
         self.expect(
             "\^error,msg=\"Command 'break-insert'. Breakpoint location 'main.cpp:%d' not found\"" %
-            line_in)
+            line)
 
         # Set target.move-to-nearest-code=on and target.skip-prologue=on and
-        # set BP #3 & #4
+        # set BP #3
         self.runCmd(
             "-interpreter-exec console \"settings set target.move-to-nearest-code on\"")
         self.runCmd(
             "-interpreter-exec console \"settings set target.skip-prologue on\"")
         self.expect("\^done")
-        self.runCmd("-break-insert main.cpp:%d" % line_in)
+        self.runCmd("-break-insert main.cpp:%d" % line)
         self.expect("\^done,bkpt={number=\"3\"")
-        self.runCmd("-break-insert main.cpp:%d" % line_decl)
-        self.expect("\^done,bkpt={number=\"4\"")
 
-        # Set target.skip-prologue=off and set BP #5
+        # Set target.skip-prologue=off and set BP #4
         self.runCmd(
             "-interpreter-exec console \"settings set target.skip-prologue off\"")
         self.expect("\^done")
-        self.runCmd("-break-insert main.cpp:%d" % line_decl)
-        self.expect("\^done,bkpt={number=\"5\"")
+        self.runCmd("-break-insert main.cpp:%d" % line)
+        self.expect("\^done,bkpt={number=\"4\"")
 
-        # Test that BP #5 is located before BP #4
+        # Test that BP #4 is located before BP #3
         self.runCmd("-exec-run")
-        self.expect("\^running")
-        self.expect(
-            "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"5\"")
-
-        # Test that BP #4 is hit
-        self.runCmd("-exec-continue")
         self.expect("\^running")
         self.expect(
             "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"4\"")
@@ -275,7 +269,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect(
             "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"3\"")
 
-        # Test that the target.language=pascal setting works and that BP #6 is
+        # Test that the target.language=pascal setting works and that BP #5 is
         # NOT set
         self.runCmd(
             "-interpreter-exec console \"settings set target.language c\"")
@@ -283,16 +277,16 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-break-insert ns.foo1")
         self.expect("\^error")
 
-        # Test that the target.language=c++ setting works and that BP #7 is hit
+        # Test that the target.language=c++ setting works and that BP #6 is hit
         self.runCmd(
             "-interpreter-exec console \"settings set target.language c++\"")
         self.expect("\^done")
         self.runCmd("-break-insert ns::foo1")
-        self.expect("\^done,bkpt={number=\"7\"")
+        self.expect("\^done,bkpt={number=\"6\"")
         self.runCmd("-exec-continue")
         self.expect("\^running")
         self.expect(
-            "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"7\"")
+            "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"6\"")
 
         # Test that BP #1 and #2 weren't set by running to program exit
         self.runCmd("-exec-continue")
@@ -301,7 +295,6 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_enable_disable(self):
         """Test that 'lldb-mi --interpreter' works for enabling / disabling breakpoints."""
 

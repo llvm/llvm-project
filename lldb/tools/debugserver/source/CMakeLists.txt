@@ -1,12 +1,13 @@
-include(CheckCXXCompilerFlag)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
 include_directories(MacOSX/DarwinLog)
 
-include_directories(MacOSX)
-#include_directories(${CMAKE_CURRENT_BINARY_DIR}/MacOSX)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  include_directories(MacOSX)
+  #include_directories(${CMAKE_CURRENT_BINARY_DIR}/MacOSX)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_SOURCE_DIR}/../resources/lldb-debugserver-Info.plist")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_SOURCE_DIR}/../resources/lldb-debugserver-Info.plist")
+endif()
 
 check_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments"
                         CXX_SUPPORTS_NO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
@@ -26,30 +27,19 @@ if (CXX_SUPPORTS_NO_EXTENDED_OFFSETOF)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-extended-offsetof")
 endif ()
 
-add_subdirectory(MacOSX)
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  add_definitions(
+    -DDEBUGSERVER_VERSION_STR="${LLDB_VERSION}"
+    )
+endif ()
 
-set(generated_mach_interfaces
-  ${CMAKE_CURRENT_BINARY_DIR}/mach_exc.h
-  ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
-  ${CMAKE_CURRENT_BINARY_DIR}/mach_excUser.c
-  )
-add_custom_command(OUTPUT ${generated_mach_interfaces}
-  COMMAND mig ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
-  )
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  find_library(COCOA_LIBRARY Cocoa)
+  add_subdirectory(MacOSX)
+endif()
 
-set(DEBUGSERVER_VERS_GENERATED_FILE ${CMAKE_CURRENT_BINARY_DIR}/debugserver_vers.c)
-set_source_files_properties(${DEBUGSERVER_VERS_GENERATED_FILE} PROPERTIES GENERATED 1)
-
-add_custom_command(OUTPUT ${DEBUGSERVER_VERS_GENERATED_FILE}
-  COMMAND ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
-          ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj debugserver
-          > ${DEBUGSERVER_VERS_GENERATED_FILE}
-  DEPENDS ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
-          ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj
-  )
-
-set(lldbDebugserverCommonSources
+add_lldb_library(lldbDebugserverCommon
+  debugserver.cpp
   DNBArch.cpp
   DNBBreakpoint.cpp
   DNB.cpp
@@ -62,7 +52,6 @@ set(lldbDebugserverCommonSources
   StdStringExtractor.cpp
   # JSON reader depends on the following LLDB-common files
   ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
-  ${LLDB_SOURCE_DIR}/source/Host/common/SocketAddress.cpp
   # end JSON reader dependencies
   libdebugserver.cpp
   PseudoTerminal.cpp
@@ -74,65 +63,11 @@ set(lldbDebugserverCommonSources
   RNBSocket.cpp
   SysSignal.cpp
   TTYState.cpp
-  
-  MacOSX/CFBundle.cpp
-  MacOSX/CFString.cpp
-  MacOSX/Genealogy.cpp
-  MacOSX/MachException.cpp
-  MacOSX/MachProcess.mm
-  MacOSX/MachTask.mm
-  MacOSX/MachThread.cpp
-  MacOSX/MachThreadList.cpp
-  MacOSX/MachVMMemory.cpp
-  MacOSX/MachVMRegion.cpp
-  MacOSX/OsLogger.cpp
-  ${generated_mach_interfaces}
-  ${DEBUGSERVER_VERS_GENERATED_FILE})
-
-add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
-
-
-if (APPLE)
-  if(IOS)
-    find_library(COCOA_LIBRARY UIKit)
-    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY} ${CORE_FOUNDATION_LIBRARY} ${FOUNDATION_LIBRARY})
-  else()
-    find_library(COCOA_LIBRARY Cocoa)
-    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY})
-  endif()
-endif()
-
-target_link_libraries(lldbDebugserverCommon
-                      INTERFACE ${COCOA_LIBRARY}
-                      ${CORE_FOUNDATION_LIBRARY}
-                      ${FOUNDATION_LIBRARY}
-                      lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog)
-
-set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
-add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
-  debugserver.cpp
 
   LINK_LIBS
-    lldbDebugserverCommon
+    ${COCOA_LIBRARY}
   )
 
-set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
-  CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
-if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
-  execute_process(
-    COMMAND xcrun -f codesign_allocate
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE CODESIGN_ALLOCATE
-    )
-  add_custom_command(TARGET debugserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE}
-            codesign --force --sign ${LLDB_CODESIGN_IDENTITY}
-            $<TARGET_FILE:debugserver>
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-  )
-endif()
 
 
 

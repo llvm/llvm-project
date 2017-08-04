@@ -14,25 +14,23 @@
 // Other libraries and framework includes
 // Project includes
 
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileCache.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -88,7 +86,7 @@ bool PlatformPOSIX::IsConnected() const {
   return false;
 }
 
-lldb_private::Status PlatformPOSIX::RunShellCommand(
+lldb_private::Error PlatformPOSIX::RunShellCommand(
     const char *command, // Shouldn't be NULL
     const FileSpec &
         working_dir, // Pass empty FileSpec to use the current working directory
@@ -109,190 +107,20 @@ lldb_private::Status PlatformPOSIX::RunShellCommand(
                                                    status_ptr, signo_ptr,
                                                    command_output, timeout_sec);
     else
-      return Status("unable to run a remote command without a platform");
+      return Error("unable to run a remote command without a platform");
   }
 }
 
-Status
-PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
-                                 lldb::ModuleSP &exe_module_sp,
-                                 const FileSpecList *module_search_paths_ptr) {
-  Status error;
-  // Nothing special to do here, just use the actual file and architecture
-
-  char exe_path[PATH_MAX];
-  ModuleSpec resolved_module_spec(module_spec);
-
-  if (IsHost()) {
-    // If we have "ls" as the exe_file, resolve the executable location based on
-    // the current path variables
-    if (!resolved_module_spec.GetFileSpec().Exists()) {
-      resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true);
-    }
-
-    if (!resolved_module_spec.GetFileSpec().Exists())
-      resolved_module_spec.GetFileSpec().ResolveExecutableLocation();
-
-    // Resolve any executable within a bundle on MacOSX
-    Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
-
-    if (resolved_module_spec.GetFileSpec().Exists())
-      error.Clear();
-    else {
-      const uint32_t permissions =
-          resolved_module_spec.GetFileSpec().GetPermissions();
-      if (permissions && (permissions & eFilePermissionsEveryoneR) == 0)
-        error.SetErrorStringWithFormat(
-            "executable '%s' is not readable",
-            resolved_module_spec.GetFileSpec().GetPath().c_str());
-      else
-        error.SetErrorStringWithFormat(
-            "unable to find executable for '%s'",
-            resolved_module_spec.GetFileSpec().GetPath().c_str());
-    }
-  } else {
-    if (m_remote_platform_sp) {
-      error =
-          GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                              module_search_paths_ptr, *m_remote_platform_sp);
-    } else {
-      // We may connect to a process and use the provided executable (Don't use
-      // local $PATH).
-
-      // Resolve any executable within a bundle on MacOSX
-      Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
-
-      if (resolved_module_spec.GetFileSpec().Exists())
-        error.Clear();
-      else
-        error.SetErrorStringWithFormat("the platform is not currently "
-                                       "connected, and '%s' doesn't exist in "
-                                       "the system root.",
-                                       exe_path);
-    }
-  }
-
-  if (error.Success()) {
-    if (resolved_module_spec.GetArchitecture().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr, nullptr);
-      if (error.Fail()) {
-        // If we failed, it may be because the vendor and os aren't known. If
-	// that is the case, try setting them to the host architecture and give
-	// it another try.
-        llvm::Triple &module_triple =
-            resolved_module_spec.GetArchitecture().GetTriple();
-        bool is_vendor_specified =
-            (module_triple.getVendor() != llvm::Triple::UnknownVendor);
-        bool is_os_specified =
-            (module_triple.getOS() != llvm::Triple::UnknownOS);
-        if (!is_vendor_specified || !is_os_specified) {
-          const llvm::Triple &host_triple =
-              HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple();
-
-          if (!is_vendor_specified)
-            module_triple.setVendorName(host_triple.getVendorName());
-          if (!is_os_specified)
-            module_triple.setOSName(host_triple.getOSName());
-
-          error = ModuleList::GetSharedModule(resolved_module_spec,
-                                              exe_module_sp, module_search_paths_ptr, nullptr, nullptr);
-        }
-      }
-
-      // TODO find out why exe_module_sp might be NULL
-      if (error.Fail() || !exe_module_sp || !exe_module_sp->GetObjectFile()) {
-        exe_module_sp.reset();
-        error.SetErrorStringWithFormat(
-            "'%s' doesn't contain the architecture %s",
-            resolved_module_spec.GetFileSpec().GetPath().c_str(),
-            resolved_module_spec.GetArchitecture().GetArchitectureName());
-      }
-    } else {
-      // No valid architecture was specified, ask the platform for
-      // the architectures that we should be using (in the correct order)
-      // and see if we can find a match that way
-      StreamString arch_names;
-      for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-               idx, resolved_module_spec.GetArchitecture());
-           ++idx) {
-        error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                            module_search_paths_ptr, nullptr, nullptr);
-        // Did we find an executable using one of the
-        if (error.Success()) {
-          if (exe_module_sp && exe_module_sp->GetObjectFile())
-            break;
-          else
-            error.SetErrorToGenericError();
-        }
-
-        if (idx > 0)
-          arch_names.PutCString(", ");
-        arch_names.PutCString(
-            resolved_module_spec.GetArchitecture().GetArchitectureName());
-      }
-
-      if (error.Fail() || !exe_module_sp) {
-        if (resolved_module_spec.GetFileSpec().Readable()) {
-          error.SetErrorStringWithFormat(
-              "'%s' doesn't contain any '%s' platform architectures: %s",
-              resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetData());
-        } else {
-          error.SetErrorStringWithFormat(
-              "'%s' is not readable",
-              resolved_module_spec.GetFileSpec().GetPath().c_str());
-        }
-      }
-    }
-  }
-
-  return error;
-}
-
-Status PlatformPOSIX::GetFileWithUUID(const FileSpec &platform_file,
-                                      const UUID *uuid_ptr,
-                                      FileSpec &local_file) {
-  if (IsRemote() && m_remote_platform_sp)
-      return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
-                                                   local_file);
-
-  // Default to the local case
-  local_file = platform_file;
-  return Status();
-}
-
-bool PlatformPOSIX::GetProcessInfo(lldb::pid_t pid,
-                                     ProcessInstanceInfo &process_info) {
-  if (IsHost())
-    return Platform::GetProcessInfo(pid, process_info);
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  return false;
-}
-
-uint32_t
-PlatformPOSIX::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                               ProcessInstanceInfoList &process_infos) {
-  if (IsHost())
-    return Platform::FindProcesses(match_info, process_infos);
-  if (m_remote_platform_sp)
-    return
-      m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  return 0;
-}
-
-Status PlatformPOSIX::MakeDirectory(const FileSpec &file_spec,
-                                    uint32_t file_permissions) {
+Error PlatformPOSIX::MakeDirectory(const FileSpec &file_spec,
+                                   uint32_t file_permissions) {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->MakeDirectory(file_spec, file_permissions);
   else
     return Platform::MakeDirectory(file_spec, file_permissions);
 }
 
-Status PlatformPOSIX::GetFilePermissions(const FileSpec &file_spec,
-                                         uint32_t &file_permissions) {
+Error PlatformPOSIX::GetFilePermissions(const FileSpec &file_spec,
+                                        uint32_t &file_permissions) {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetFilePermissions(file_spec,
                                                     file_permissions);
@@ -300,8 +128,8 @@ Status PlatformPOSIX::GetFilePermissions(const FileSpec &file_spec,
     return Platform::GetFilePermissions(file_spec, file_permissions);
 }
 
-Status PlatformPOSIX::SetFilePermissions(const FileSpec &file_spec,
-                                         uint32_t file_permissions) {
+Error PlatformPOSIX::SetFilePermissions(const FileSpec &file_spec,
+                                        uint32_t file_permissions) {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->SetFilePermissions(file_spec,
                                                     file_permissions);
@@ -311,7 +139,7 @@ Status PlatformPOSIX::SetFilePermissions(const FileSpec &file_spec,
 
 lldb::user_id_t PlatformPOSIX::OpenFile(const FileSpec &file_spec,
                                         uint32_t flags, uint32_t mode,
-                                        Status &error) {
+                                        Error &error) {
   if (IsHost())
     return FileCache::GetInstance().OpenFile(file_spec, flags, mode, error);
   else if (m_remote_platform_sp)
@@ -320,7 +148,7 @@ lldb::user_id_t PlatformPOSIX::OpenFile(const FileSpec &file_spec,
     return Platform::OpenFile(file_spec, flags, mode, error);
 }
 
-bool PlatformPOSIX::CloseFile(lldb::user_id_t fd, Status &error) {
+bool PlatformPOSIX::CloseFile(lldb::user_id_t fd, Error &error) {
   if (IsHost())
     return FileCache::GetInstance().CloseFile(fd, error);
   else if (m_remote_platform_sp)
@@ -330,7 +158,7 @@ bool PlatformPOSIX::CloseFile(lldb::user_id_t fd, Status &error) {
 }
 
 uint64_t PlatformPOSIX::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                                 uint64_t dst_len, Status &error) {
+                                 uint64_t dst_len, Error &error) {
   if (IsHost())
     return FileCache::GetInstance().ReadFile(fd, offset, dst, dst_len, error);
   else if (m_remote_platform_sp)
@@ -341,7 +169,7 @@ uint64_t PlatformPOSIX::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
 
 uint64_t PlatformPOSIX::WriteFile(lldb::user_id_t fd, uint64_t offset,
                                   const void *src, uint64_t src_len,
-                                  Status &error) {
+                                  Error &error) {
   if (IsHost())
     return FileCache::GetInstance().WriteFile(fd, offset, src, src_len, error);
   else if (m_remote_platform_sp)
@@ -371,7 +199,7 @@ static uint32_t chown_file(Platform *platform, const char *path,
   return status;
 }
 
-lldb_private::Status
+lldb_private::Error
 PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
                        const lldb_private::FileSpec &destination, uint32_t uid,
                        uint32_t gid) {
@@ -379,34 +207,34 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
 
   if (IsHost()) {
     if (FileSpec::Equal(source, destination, true))
-      return Status();
+      return Error();
     // cp src dst
     // chown uid:gid dst
     std::string src_path(source.GetPath());
     if (src_path.empty())
-      return Status("unable to get file path for source");
+      return Error("unable to get file path for source");
     std::string dst_path(destination.GetPath());
     if (dst_path.empty())
-      return Status("unable to get file path for destination");
+      return Error("unable to get file path for destination");
     StreamString command;
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(command.GetData(), NULL, &status, NULL, NULL, 10);
     if (status != 0)
-      return Status("unable to perform copy");
+      return Error("unable to perform copy");
     if (uid == UINT32_MAX && gid == UINT32_MAX)
-      return Status();
+      return Error();
     if (chown_file(this, dst_path.c_str(), uid, gid) != 0)
-      return Status("unable to perform chown");
-    return Status();
+      return Error("unable to perform chown");
+    return Error();
   } else if (m_remote_platform_sp) {
     if (GetSupportsRSync()) {
       std::string src_path(source.GetPath());
       if (src_path.empty())
-        return Status("unable to get file path for source");
+        return Error("unable to get file path for source");
       std::string dst_path(destination.GetPath());
       if (dst_path.empty())
-        return Status("unable to get file path for destination");
+        return Error("unable to get file path for destination");
       StreamString command;
       if (GetIgnoresRemoteHostname()) {
         if (!GetRSyncPrefix())
@@ -425,8 +253,8 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       if (retcode == 0) {
         // Don't chown a local file for a remote system
         //                if (chown_file(this,dst_path.c_str(),uid,gid) != 0)
-        //                    return Status("unable to perform chown");
-        return Status();
+        //                    return Error("unable to perform chown");
+        return Error();
       }
       // if we are still here rsync has failed - let's try the slow way before
       // giving up
@@ -436,18 +264,15 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
 }
 
 lldb::user_id_t PlatformPOSIX::GetFileSize(const FileSpec &file_spec) {
-  if (IsHost()) {
-    uint64_t Size;
-    if (llvm::sys::fs::file_size(file_spec.GetPath(), Size))
-      return 0;
-    return Size;
-  } else if (m_remote_platform_sp)
+  if (IsHost())
+    return FileSystem::GetFileSize(file_spec);
+  else if (m_remote_platform_sp)
     return m_remote_platform_sp->GetFileSize(file_spec);
   else
     return Platform::GetFileSize(file_spec);
 }
 
-Status PlatformPOSIX::CreateSymlink(const FileSpec &src, const FileSpec &dst) {
+Error PlatformPOSIX::CreateSymlink(const FileSpec &src, const FileSpec &dst) {
   if (IsHost())
     return FileSystem::Symlink(src, dst);
   else if (m_remote_platform_sp)
@@ -465,16 +290,16 @@ bool PlatformPOSIX::GetFileExists(const FileSpec &file_spec) {
     return Platform::GetFileExists(file_spec);
 }
 
-Status PlatformPOSIX::Unlink(const FileSpec &file_spec) {
+Error PlatformPOSIX::Unlink(const FileSpec &file_spec) {
   if (IsHost())
-    return llvm::sys::fs::remove(file_spec.GetPath());
+    return FileSystem::Unlink(file_spec);
   else if (m_remote_platform_sp)
     return m_remote_platform_sp->Unlink(file_spec);
   else
     return Platform::Unlink(file_spec);
 }
 
-lldb_private::Status PlatformPOSIX::GetFile(
+lldb_private::Error PlatformPOSIX::GetFile(
     const lldb_private::FileSpec &source,      // remote file path
     const lldb_private::FileSpec &destination) // local file path
 {
@@ -483,22 +308,22 @@ lldb_private::Status PlatformPOSIX::GetFile(
   // Check the args, first.
   std::string src_path(source.GetPath());
   if (src_path.empty())
-    return Status("unable to get file path for source");
+    return Error("unable to get file path for source");
   std::string dst_path(destination.GetPath());
   if (dst_path.empty())
-    return Status("unable to get file path for destination");
+    return Error("unable to get file path for destination");
   if (IsHost()) {
     if (FileSpec::Equal(source, destination, true))
-      return Status("local scenario->source and destination are the same file "
-                    "path: no operation performed");
+      return Error("local scenario->source and destination are the same file "
+                   "path: no operation performed");
     // cp src dst
     StreamString cp_command;
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(cp_command.GetData(), NULL, &status, NULL, NULL, 10);
     if (status != 0)
-      return Status("unable to perform copy");
-    return Status();
+      return Error("unable to perform copy");
+    return Error();
   } else if (m_remote_platform_sp) {
     if (GetSupportsRSync()) {
       StreamString command;
@@ -518,7 +343,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
       int retcode;
       Host::RunShellCommand(command.GetData(), NULL, &retcode, NULL, NULL, 60);
       if (retcode == 0)
-        return Status();
+        return Error();
       // If we are here, rsync has failed - let's try the slow way before giving
       // up
     }
@@ -528,12 +353,12 @@ lldb_private::Status PlatformPOSIX::GetFile(
     // close dst
     if (log)
       log->Printf("[GetFile] Using block by block transfer....\n");
-    Status error;
+    Error error;
     user_id_t fd_src = OpenFile(source, File::eOpenOptionRead,
                                 lldb::eFilePermissionsFileDefault, error);
 
     if (fd_src == UINT64_MAX)
-      return Status("unable to open source file");
+      return Error("unable to open source file");
 
     uint32_t permissions = 0;
     error = GetFilePermissions(source, permissions);
@@ -711,8 +536,8 @@ const char *PlatformPOSIX::GetGroupName(uint32_t gid) {
   return NULL;
 }
 
-Status PlatformPOSIX::ConnectRemote(Args &args) {
-  Status error;
+Error PlatformPOSIX::ConnectRemote(Args &args) {
+  Error error;
   if (IsHost()) {
     error.SetErrorStringWithFormat(
         "can't connect to the host platform '%s', always connected",
@@ -754,8 +579,8 @@ Status PlatformPOSIX::ConnectRemote(Args &args) {
   return error;
 }
 
-Status PlatformPOSIX::DisconnectRemote() {
-  Status error;
+Error PlatformPOSIX::DisconnectRemote() {
+  Error error;
 
   if (IsHost()) {
     error.SetErrorStringWithFormat(
@@ -770,8 +595,8 @@ Status PlatformPOSIX::DisconnectRemote() {
   return error;
 }
 
-Status PlatformPOSIX::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
+Error PlatformPOSIX::LaunchProcess(ProcessLaunchInfo &launch_info) {
+  Error error;
 
   if (IsHost()) {
     error = Platform::LaunchProcess(launch_info);
@@ -784,19 +609,19 @@ Status PlatformPOSIX::LaunchProcess(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-lldb_private::Status PlatformPOSIX::KillProcess(const lldb::pid_t pid) {
+lldb_private::Error PlatformPOSIX::KillProcess(const lldb::pid_t pid) {
   if (IsHost())
     return Platform::KillProcess(pid);
 
   if (m_remote_platform_sp)
     return m_remote_platform_sp->KillProcess(pid);
 
-  return Status("the platform is not currently connected");
+  return Error("the platform is not currently connected");
 }
 
 lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
                                       Debugger &debugger, Target *target,
-                                      Status &error) {
+                                      Error &error) {
   lldb::ProcessSP process_sp;
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
 
@@ -856,7 +681,7 @@ lldb::ProcessSP
 PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
                             Target *target, // Can be NULL, if NULL create a new
                                             // target, else use existing one
-                            Status &error) {
+                            Error &error) {
   ProcessSP process_sp;
 
   if (IsHost()) {
@@ -882,23 +707,23 @@ void PlatformPOSIX::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-Status PlatformPOSIX::EvaluateLibdlExpression(
+Error PlatformPOSIX::EvaluateLibdlExpression(
     lldb_private::Process *process, const char *expr_cstr,
-    llvm::StringRef expr_prefix, lldb::ValueObjectSP &result_valobj_sp) {
+    const char *expr_prefix, lldb::ValueObjectSP &result_valobj_sp) {
   DynamicLoader *loader = process->GetDynamicLoader();
   if (loader) {
-    Status error = loader->CanLoadImage();
+    Error error = loader->CanLoadImage();
     if (error.Fail())
       return error;
   }
 
   ThreadSP thread_sp(process->GetThreadList().GetExpressionExecutionThread());
   if (!thread_sp)
-    return Status("Selected thread isn't valid");
+    return Error("Selected thread isn't valid");
 
   StackFrameSP frame_sp(thread_sp->GetStackFrameAtIndex(0));
   if (!frame_sp)
-    return Status("Frame 0 isn't valid");
+    return Error("Frame 0 isn't valid");
 
   ExecutionContext exe_ctx;
   frame_sp->CalculateExecutionContext(exe_ctx);
@@ -911,7 +736,7 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
                                          // don't do the work to trap them.
   expr_options.SetTimeout(std::chrono::seconds(2));
 
-  Status expr_error;
+  Error expr_error;
   ExpressionResults result =
       UserExpression::Evaluate(exe_ctx, expr_options, expr_cstr, expr_prefix,
                                result_valobj_sp, expr_error);
@@ -920,12 +745,12 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
 
   if (result_valobj_sp->GetError().Fail())
     return result_valobj_sp->GetError();
-  return Status();
+  return Error();
 }
 
 uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                     const lldb_private::FileSpec &remote_file,
-                                    lldb_private::Status &error) {
+                                    lldb_private::Error &error) {
   char path[PATH_MAX];
   remote_file.GetPath(path, sizeof(path));
 
@@ -944,7 +769,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                    the_result;
                   )",
               path);
-  llvm::StringRef prefix = GetLibdlFunctionDeclarations();
+  const char *prefix = GetLibdlFunctionDeclarations();
   lldb::ValueObjectSP result_valobj_sp;
   error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
                                   result_valobj_sp);
@@ -984,18 +809,18 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   return LLDB_INVALID_IMAGE_TOKEN;
 }
 
-Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
-                                  uint32_t image_token) {
+Error PlatformPOSIX::UnloadImage(lldb_private::Process *process,
+                                 uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
   if (image_addr == LLDB_INVALID_ADDRESS)
-    return Status("Invalid image token");
+    return Error("Invalid image token");
 
   StreamString expr;
   expr.Printf("dlclose((void *)0x%" PRIx64 ")", image_addr);
-  llvm::StringRef prefix = GetLibdlFunctionDeclarations();
+  const char *prefix = GetLibdlFunctionDeclarations();
   lldb::ValueObjectSP result_valobj_sp;
-  Status error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
-                                         result_valobj_sp);
+  Error error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
+                                        result_valobj_sp);
   if (error.Fail())
     return error;
 
@@ -1005,17 +830,17 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
   Scalar scalar;
   if (result_valobj_sp->ResolveValue(scalar)) {
     if (scalar.UInt(1))
-      return Status("expression failed: \"%s\"", expr.GetData());
+      return Error("expression failed: \"%s\"", expr.GetData());
     process->ResetImageToken(image_token);
   }
-  return Status();
+  return Error();
 }
 
 lldb::ProcessSP PlatformPOSIX::ConnectProcess(llvm::StringRef connect_url,
                                               llvm::StringRef plugin_name,
                                               lldb_private::Debugger &debugger,
                                               lldb_private::Target *target,
-                                              lldb_private::Status &error) {
+                                              lldb_private::Error &error) {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->ConnectProcess(connect_url, plugin_name,
                                                 debugger, target, error);
@@ -1024,7 +849,7 @@ lldb::ProcessSP PlatformPOSIX::ConnectProcess(llvm::StringRef connect_url,
                                   error);
 }
 
-llvm::StringRef PlatformPOSIX::GetLibdlFunctionDeclarations() {
+const char *PlatformPOSIX::GetLibdlFunctionDeclarations() const {
   return R"(
               extern "C" void* dlopen(const char*, int);
               extern "C" void* dlsym(void*, const char*);
@@ -1034,17 +859,8 @@ llvm::StringRef PlatformPOSIX::GetLibdlFunctionDeclarations() {
 }
 
 size_t PlatformPOSIX::ConnectToWaitingProcesses(Debugger &debugger,
-                                                Status &error) {
+                                                Error &error) {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->ConnectToWaitingProcesses(debugger, error);
   return Platform::ConnectToWaitingProcesses(debugger, error);
-}
-
-ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
-
-  StreamString stream;
-  stream.Printf("lib%s.so", basename.GetCString());
-  return ConstString(stream.GetString());
 }

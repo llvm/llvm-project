@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/ConstString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 
@@ -36,15 +36,15 @@ public:
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
-                        ExecutionContext *execution_context) override;
-  Status SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                       ExecutionContext *execution_context) override;
+  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
   lldb::PlatformSP CreatePlatformWithOptions(CommandInterpreter &interpreter,
                                              const ArchSpec &arch,
-                                             bool make_selected, Status &error,
+                                             bool make_selected, Error &error,
                                              ArchSpec &platform_arch) const;
 
   bool PlatformWasSpecified() const { return !m_platform_name.empty(); }

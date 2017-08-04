@@ -23,6 +23,7 @@ class IncompleteModulesTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
     @skipUnlessDarwin
+    @expectedFailureDarwin("rdar://24543255")
     @unittest2.expectedFailure("rdar://20416388")
     @skipIf(macos_version=["<", "10.12"])
     def test_expr(self):

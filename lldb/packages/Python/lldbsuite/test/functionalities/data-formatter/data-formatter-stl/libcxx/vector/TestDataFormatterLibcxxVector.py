@@ -17,11 +17,15 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(["libc++"])
+    @skipIf(compiler="gcc")
+    @skipIfWindows  # libc++ not ported to Windows yet
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+
+        lldbutil.skip_if_library_missing(
+            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(

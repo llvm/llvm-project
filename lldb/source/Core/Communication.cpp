@@ -7,30 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Communication.h"
+// C Includes
+// C++ Includes
+#include <cstring>
 
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Communication.h"
+#include "lldb/Core/Connection.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Listener.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Timer.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Utility/Connection.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for LogIfAnyCategoriesSet, LIBLLDB...
-#include "lldb/Utility/Status.h"  // for Status
-
-#include "llvm/ADT/None.h"         // for None
-#include "llvm/ADT/Optional.h"     // for Optional
-#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
-
-#include <algorithm> // for min
-#include <chrono>    // for duration, seconds
-#include <cstring>
-#include <memory> // for shared_ptr
-
-#include <errno.h>    // for EIO
-#include <inttypes.h> // for PRIu64
-#include <stdio.h>    // for snprintf
 
 using namespace lldb;
 using namespace lldb_private;
@@ -75,7 +66,7 @@ void Communication::Clear() {
   StopReadThread(nullptr);
 }
 
-ConnectionStatus Communication::Connect(const char *url, Status *error_ptr) {
+ConnectionStatus Communication::Connect(const char *url, Error *error_ptr) {
   Clear();
 
   lldb_private::LogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION,
@@ -90,7 +81,7 @@ ConnectionStatus Communication::Connect(const char *url, Status *error_ptr) {
   return eConnectionStatusNoConnection;
 }
 
-ConnectionStatus Communication::Disconnect(Status *error_ptr) {
+ConnectionStatus Communication::Disconnect(Error *error_ptr) {
   lldb_private::LogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION,
                                       "%p Communication::Disconnect ()", this);
 
@@ -123,12 +114,13 @@ bool Communication::HasConnection() const {
 
 size_t Communication::Read(void *dst, size_t dst_len,
                            const Timeout<std::micro> &timeout,
-                           ConnectionStatus &status, Status *error_ptr) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION);
-  LLDB_LOG(
-      log,
-      "this = {0}, dst = {1}, dst_len = {2}, timeout = {3}, connection = {4}",
-      this, dst, dst_len, timeout, m_connection_sp.get());
+                           ConnectionStatus &status, Error *error_ptr) {
+  lldb_private::LogIfAnyCategoriesSet(
+      LIBLLDB_LOG_COMMUNICATION,
+      "%p Communication::Read (dst = %p, dst_len = %" PRIu64
+      ", timeout = %u usec) connection = %p",
+      this, dst, (uint64_t)dst_len, timeout ? timeout->count() : -1,
+      m_connection_sp.get());
 
   if (m_read_thread_enabled) {
     // We have a dedicated read thread that is getting data for us
@@ -170,7 +162,7 @@ size_t Communication::Read(void *dst, size_t dst_len,
 }
 
 size_t Communication::Write(const void *src, size_t src_len,
-                            ConnectionStatus &status, Status *error_ptr) {
+                            ConnectionStatus &status, Error *error_ptr) {
   lldb::ConnectionSP connection_sp(m_connection_sp);
 
   std::lock_guard<std::mutex> guard(m_write_mutex);
@@ -189,7 +181,7 @@ size_t Communication::Write(const void *src, size_t src_len,
   return 0;
 }
 
-bool Communication::StartReadThread(Status *error_ptr) {
+bool Communication::StartReadThread(Error *error_ptr) {
   if (error_ptr)
     error_ptr->Clear();
 
@@ -212,7 +204,7 @@ bool Communication::StartReadThread(Status *error_ptr) {
   return m_read_thread_enabled;
 }
 
-bool Communication::StopReadThread(Status *error_ptr) {
+bool Communication::StopReadThread(Error *error_ptr) {
   if (!m_read_thread.IsJoinable())
     return true;
 
@@ -225,15 +217,15 @@ bool Communication::StopReadThread(Status *error_ptr) {
 
   // error = m_read_thread.Cancel();
 
-  Status error = m_read_thread.Join(nullptr);
+  Error error = m_read_thread.Join(nullptr);
   return error.Success();
 }
 
-bool Communication::JoinReadThread(Status *error_ptr) {
+bool Communication::JoinReadThread(Error *error_ptr) {
   if (!m_read_thread.IsJoinable())
     return true;
 
-  Status error = m_read_thread.Join(nullptr);
+  Error error = m_read_thread.Join(nullptr);
   return error.Success();
 }
 
@@ -280,7 +272,7 @@ void Communication::AppendBytesToCache(const uint8_t *bytes, size_t len,
 size_t Communication::ReadFromConnection(void *dst, size_t dst_len,
                                          const Timeout<std::micro> &timeout,
                                          ConnectionStatus &status,
-                                         Status *error_ptr) {
+                                         Error *error_ptr) {
   lldb::ConnectionSP connection_sp(m_connection_sp);
   if (connection_sp)
     return connection_sp->Read(dst, dst_len, timeout, status, error_ptr);
@@ -303,7 +295,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
 
   uint8_t buf[1024];
 
-  Status error;
+  Error error;
   ConnectionStatus status = eConnectionStatusSuccess;
   bool done = false;
   while (!done && comm->m_read_thread_enabled) {
@@ -330,9 +322,10 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
         comm->Disconnect();
         done = true;
       }
-      if (error.Fail())
-        LLDB_LOG(log, "error: {0}, status = {1}", error,
-                 Communication::ConnectionStatusAsCString(status));
+      if (log)
+        error.LogIfError(
+            log, "%p Communication::ReadFromConnection () => status = %s", p,
+            Communication::ConnectionStatusAsCString(status));
       break;
     case eConnectionStatusInterrupted: // Synchronization signal from
                                        // SynchronizeWithReadThread()
@@ -347,9 +340,10 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
       done = true;
       LLVM_FALLTHROUGH;
     case eConnectionStatusTimedOut: // Request timed out
-      if (error.Fail())
-        LLDB_LOG(log, "error: {0}, status = {1}", error,
-                 Communication::ConnectionStatusAsCString(status));
+      if (log)
+        error.LogIfError(
+            log, "%p Communication::ReadFromConnection () => status = %s", p,
+            Communication::ConnectionStatusAsCString(status));
       break;
     }
   }

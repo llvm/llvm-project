@@ -1,4 +1,5 @@
-//===-- ValueObjectConstResultChild.cpp --------------------------*- C++-*-===//
+//===-- ValueObjectConstResultChild.cpp ------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,16 +10,10 @@
 
 #include "lldb/Core/ValueObjectConstResultChild.h"
 
-#include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressType
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
-namespace lldb_private {
-class ValueObject;
-}
+#include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Core/ValueObjectList.h"
+
+#include "lldb/Symbol/ClangASTContext.h"
 
 using namespace lldb_private;
 
@@ -37,7 +32,7 @@ ValueObjectConstResultChild::ValueObjectConstResultChild(
 
 ValueObjectConstResultChild::~ValueObjectConstResultChild() {}
 
-lldb::ValueObjectSP ValueObjectConstResultChild::Dereference(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResultChild::Dereference(Error &error) {
   return m_impl.Dereference(error);
 }
 
@@ -48,7 +43,7 @@ lldb::ValueObjectSP ValueObjectConstResultChild::GetSyntheticChildAtOffset(
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Error &error) {
   return m_impl.AddressOf(error);
 }
 

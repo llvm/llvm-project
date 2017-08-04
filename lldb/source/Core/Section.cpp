@@ -8,118 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Address.h" // for Address
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h" // for FileSpec
-#include "lldb/Utility/Stream.h"   // for Stream
-#include "lldb/Utility/VMRange.h"  // for VMRange
+#include "lldb/Utility/ConvertEnum.h"
 
-#include <inttypes.h> // for PRIx64
-#include <limits>     // for numeric_limits
-#include <utility>    // for distance
-
-namespace lldb_private {
-class DataExtractor;
-}
 using namespace lldb;
 using namespace lldb_private;
-
-static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
-  switch (sect_type) {
-  case eSectionTypeInvalid:
-    return "invalid";
-  case eSectionTypeCode:
-    return "code";
-  case eSectionTypeContainer:
-    return "container";
-  case eSectionTypeData:
-    return "data";
-  case eSectionTypeDataCString:
-    return "data-cstr";
-  case eSectionTypeDataCStringPointers:
-    return "data-cstr-ptr";
-  case eSectionTypeDataSymbolAddress:
-    return "data-symbol-addr";
-  case eSectionTypeData4:
-    return "data-4-byte";
-  case eSectionTypeData8:
-    return "data-8-byte";
-  case eSectionTypeData16:
-    return "data-16-byte";
-  case eSectionTypeDataPointers:
-    return "data-ptrs";
-  case eSectionTypeDebug:
-    return "debug";
-  case eSectionTypeZeroFill:
-    return "zero-fill";
-  case eSectionTypeDataObjCMessageRefs:
-    return "objc-message-refs";
-  case eSectionTypeDataObjCCFStrings:
-    return "objc-cfstrings";
-  case eSectionTypeDWARFDebugAbbrev:
-    return "dwarf-abbrev";
-  case eSectionTypeDWARFDebugAddr:
-    return "dwarf-addr";
-  case eSectionTypeDWARFDebugAranges:
-    return "dwarf-aranges";
-  case eSectionTypeDWARFDebugFrame:
-    return "dwarf-frame";
-  case eSectionTypeDWARFDebugInfo:
-    return "dwarf-info";
-  case eSectionTypeDWARFDebugLine:
-    return "dwarf-line";
-  case eSectionTypeDWARFDebugLoc:
-    return "dwarf-loc";
-  case eSectionTypeDWARFDebugMacInfo:
-    return "dwarf-macinfo";
-  case eSectionTypeDWARFDebugMacro:
-    return "dwarf-macro";
-  case eSectionTypeDWARFDebugPubNames:
-    return "dwarf-pubnames";
-  case eSectionTypeDWARFDebugPubTypes:
-    return "dwarf-pubtypes";
-  case eSectionTypeDWARFDebugRanges:
-    return "dwarf-ranges";
-  case eSectionTypeDWARFDebugStr:
-    return "dwarf-str";
-  case eSectionTypeDWARFDebugStrOffsets:
-    return "dwarf-str-offsets";
-  case eSectionTypeELFSymbolTable:
-    return "elf-symbol-table";
-  case eSectionTypeELFDynamicSymbols:
-    return "elf-dynamic-symbols";
-  case eSectionTypeELFRelocationEntries:
-    return "elf-relocation-entries";
-  case eSectionTypeELFDynamicLinkInfo:
-    return "elf-dynamic-link-info";
-  case eSectionTypeDWARFAppleNames:
-    return "apple-names";
-  case eSectionTypeDWARFAppleTypes:
-    return "apple-types";
-  case eSectionTypeDWARFAppleNamespaces:
-    return "apple-namespaces";
-  case eSectionTypeDWARFAppleObjC:
-    return "apple-objc";
-  case eSectionTypeEHFrame:
-    return "eh-frame";
-  case eSectionTypeARMexidx:
-    return "ARM.exidx";
-  case eSectionTypeARMextab:
-    return "ARM.extab";
-  case eSectionTypeCompactUnwind:
-    return "compact-unwind";
-  case eSectionTypeGoSymtab:
-    return "go-symtab";
-  case eSectionTypeAbsoluteAddress:
-    return "absolute";
-  case eSectionTypeOther:
-    return "regular";
-  }
-  return "unknown";
-}
 
 Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
                  user_id_t sect_id, const ConstString &name,
@@ -220,18 +116,18 @@ addr_t Section::GetLoadBaseAddress(Target *target) const {
   return load_base_addr;
 }
 
-bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
-                                      bool allow_section_end) const {
+bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr) const {
   const size_t num_children = m_children.GetSize();
-  for (size_t i = 0; i < num_children; i++) {
-    Section *child_section = m_children.GetSectionAtIndex(i).get();
+  if (num_children > 0) {
+    for (size_t i = 0; i < num_children; i++) {
+      Section *child_section = m_children.GetSectionAtIndex(i).get();
 
-    addr_t child_offset = child_section->GetOffset();
-    if (child_offset <= offset &&
-        offset - child_offset <
-            child_section->GetByteSize() + (allow_section_end ? 1 : 0))
-      return child_section->ResolveContainedAddress(offset - child_offset,
-                                                    so_addr, allow_section_end);
+      addr_t child_offset = child_section->GetOffset();
+      if (child_offset <= offset &&
+          offset - child_offset < child_section->GetByteSize())
+        return child_section->ResolveContainedAddress(offset - child_offset,
+                                                      so_addr);
+    }
   }
   so_addr.SetOffset(offset);
   so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());

@@ -9,6 +9,10 @@
 
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
+#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
+#include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
@@ -17,16 +21,19 @@
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Timer.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/GoASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 
 #if defined(__APPLE__)
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #endif
 
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__linux__)
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #endif
 
@@ -70,14 +77,19 @@ void SystemInitializerCommon::Initialize() {
 #endif
 
   llvm::EnablePrettyStackTrace();
-  InitializeLog();
+  Log::Initialize();
   HostInfo::Initialize();
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
   // Initialize plug-ins
+  ClangASTContext::Initialize();
+  GoASTContext::Initialize();
+  SwiftASTContext::Initialize();
+
+  SwiftREPL::Initialize();
+
   ObjectContainerBSDArchive::Initialize();
   ObjectFileELF::Initialize();
   ObjectFilePECOFF::Initialize();
@@ -94,8 +106,9 @@ void SystemInitializerCommon::Initialize() {
 #if defined(__APPLE__)
   ObjectFileMachO::Initialize();
 #endif
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
-  ProcessPOSIXLog::Initialize();
+#if defined(__linux__)
+  static ConstString g_linux_log_name("linux");
+  ProcessPOSIXLog::Initialize(g_linux_log_name);
 #endif
 #if defined(_MSC_VER)
   ProcessWindowsLog::Initialize();
@@ -103,11 +116,16 @@ void SystemInitializerCommon::Initialize() {
 }
 
 void SystemInitializerCommon::Terminate() {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
   ObjectContainerBSDArchive::Terminate();
   ObjectFileELF::Terminate();
   ObjectFilePECOFF::Terminate();
+
+  ClangASTContext::Terminate();
+  GoASTContext::Terminate();
+  SwiftASTContext::Terminate();
+
+  SwiftREPL::Terminate();
 
   EmulateInstructionARM::Terminate();
   EmulateInstructionMIPS::Terminate();
@@ -123,5 +141,5 @@ void SystemInitializerCommon::Terminate() {
 #endif
 
   HostInfo::Terminate();
-  Log::DisableAllLogChannels();
+  Log::Terminate();
 }

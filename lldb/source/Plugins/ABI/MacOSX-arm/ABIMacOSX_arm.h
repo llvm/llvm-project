@@ -30,7 +30,7 @@ public:
   bool GetArgumentValues(lldb_private::Thread &thread,
                          lldb_private::ValueList &values) const override;
 
-  lldb_private::Status
+  lldb_private::Error
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                        lldb::ValueObjectSP &new_value) override;
 
@@ -66,7 +66,7 @@ public:
   const lldb_private::RegisterInfo *
   GetRegisterInfoArray(uint32_t &count) override;
 
-  bool IsArmv7kProcess() const;
+  bool IsArmv7kProcess(lldb_private::Thread *thread) const;
 
   //------------------------------------------------------------------
   // Static Functions
@@ -76,7 +76,7 @@ public:
 
   static void Terminate();
 
-  static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
+  static lldb::ABISP CreateInstance(const lldb_private::ArchSpec &arch);
 
   static lldb_private::ConstString GetPluginNameStatic();
 
@@ -94,7 +94,7 @@ protected:
                            lldb_private::CompilerType &ast_type) const override;
 
 private:
-  ABIMacOSX_arm(lldb::ProcessSP process_sp) : lldb_private::ABI(process_sp) {
+  ABIMacOSX_arm() : lldb_private::ABI() {
     // Call CreateInstance instead.
   }
 };

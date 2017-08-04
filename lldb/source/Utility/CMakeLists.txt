@@ -1,47 +1,27 @@
 add_lldb_library(lldbUtility
-  Baton.cpp
-  Connection.cpp
-  ConstString.cpp
-  DataBufferHeap.cpp
-  DataBufferLLVM.cpp
-  DataEncoder.cpp
-  DataExtractor.cpp
-  FastDemangle.cpp
-  FileSpec.cpp
-  History.cpp
-  IOObject.cpp
+  ARM_DWARF_Registers.cpp
+  ARM64_DWARF_Registers.cpp
+  ConvertEnum.cpp
   JSON.cpp
   LLDBAssert.cpp
-  Log.cpp
-  Logging.cpp
+  ModuleCache.cpp
   NameMatches.cpp
+  PseudoTerminal.cpp
   Range.cpp
-  RegularExpression.cpp
+  RegisterNumber.cpp
   SelectHelper.cpp
   SharingPtr.cpp
-  Status.cpp
-  Stream.cpp
-  StreamCallback.cpp
-  StreamGDBRemote.cpp
-  StreamString.cpp
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringLexer.cpp
-  StringList.cpp
-  StructuredData.cpp
   TaskPool.cpp
-  TildeExpressionResolver.cpp
-  Timer.cpp
-  UserID.cpp
   UriParser.cpp
-  UUID.cpp
-  VASprintf.cpp
-  VMRange.cpp
 
   LINK_LIBS
-  # lldbUtility cannot have any dependencies
+    lldbCore
+    lldbHost
+    lldbTarget
 
   LINK_COMPONENTS
-    BinaryFormat
     Support
   )

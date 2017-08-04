@@ -19,8 +19,7 @@
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 
-#include "lldb/Utility/Flags.h"
-
+#include "lldb/Core/Flags.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Symbol/CompilerType.h"
 

@@ -28,6 +28,7 @@ class ExecTestCase(TestBase):
 
     @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
+    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
     def test(self):
         if self.getArchitecture() == 'x86_64':
             source = os.path.join(os.getcwd(), "main.cpp")

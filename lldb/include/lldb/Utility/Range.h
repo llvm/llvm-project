@@ -10,6 +10,7 @@
 #ifndef utility_Range_h_
 #define utility_Range_h_
 
+#include <algorithm>
 #include <stdint.h>
 
 namespace lldb_utility {

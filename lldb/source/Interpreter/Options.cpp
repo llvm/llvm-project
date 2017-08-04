@@ -18,13 +18,12 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,8 +41,8 @@ void Options::NotifyOptionParsingStarting(ExecutionContext *execution_context) {
   OptionParsingStarting(execution_context);
 }
 
-Status
-Options::NotifyOptionParsingFinished(ExecutionContext *execution_context) {
+Error Options::NotifyOptionParsingFinished(
+    ExecutionContext *execution_context) {
   return OptionParsingFinished(execution_context);
 }
 
@@ -905,13 +904,13 @@ void OptionGroupOptions::Finalize() {
   m_did_finalize = true;
 }
 
-Status OptionGroupOptions::SetOptionValue(uint32_t option_idx,
-                                          llvm::StringRef option_value,
-                                          ExecutionContext *execution_context) {
+Error OptionGroupOptions::SetOptionValue(uint32_t option_idx,
+                                         llvm::StringRef option_value,
+                                         ExecutionContext *execution_context) {
   // After calling OptionGroupOptions::Append(...), you must finalize the groups
   // by calling OptionGroupOptions::Finlize()
   assert(m_did_finalize);
-  Status error;
+  Error error;
   if (option_idx < m_option_infos.size()) {
     error = m_option_infos[option_idx].option_group->SetOptionValue(
         m_option_infos[option_idx].option_index, option_value,
@@ -935,10 +934,10 @@ void OptionGroupOptions::OptionParsingStarting(
     }
   }
 }
-Status
-OptionGroupOptions::OptionParsingFinished(ExecutionContext *execution_context) {
+Error OptionGroupOptions::OptionParsingFinished(
+    ExecutionContext *execution_context) {
   std::set<OptionGroup *> group_set;
-  Status error;
+  Error error;
   OptionInfos::iterator pos, end = m_option_infos.end();
   for (pos = m_option_infos.begin(); pos != end; ++pos) {
     OptionGroup *group = pos->option_group;

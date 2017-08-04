@@ -10,13 +10,13 @@
 #include "AppleObjCDeclVendor.h"
 
 #include "Plugins/ExpressionParser/Clang/ASTDumper.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
@@ -355,14 +355,9 @@ public:
       }
     }
 
-    clang::IdentifierInfo **identifier_infos = selector_components.data();
-    if (!identifier_infos) {
-      return NULL;
-    }
-
     clang::Selector sel = ast_ctx.Selectors.getSelector(
         is_zero_argument ? 0 : selector_components.size(),
-        identifier_infos);
+        selector_components.data());
 
     clang::QualType ret_type =
         ClangUtil::GetQualType(type_realizer_sp->RealizeType(

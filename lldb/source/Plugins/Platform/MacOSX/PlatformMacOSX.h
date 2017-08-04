@@ -45,7 +45,7 @@ public:
 
   uint32_t GetPluginVersion() override { return 1; }
 
-  lldb_private::Status
+  lldb_private::Error
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,
@@ -56,18 +56,17 @@ public:
     return GetDescriptionStatic(IsHost());
   }
 
-  lldb_private::Status
-  GetSymbolFile(const lldb_private::FileSpec &platform_file,
-                const lldb_private::UUID *uuid_ptr,
-                lldb_private::FileSpec &local_file);
+  lldb_private::Error GetSymbolFile(const lldb_private::FileSpec &platform_file,
+                                    const lldb_private::UUID *uuid_ptr,
+                                    lldb_private::FileSpec &local_file);
 
-  lldb_private::Status
+  lldb_private::Error
   GetFile(const lldb_private::FileSpec &source,
           const lldb_private::FileSpec &destination) override {
     return PlatformDarwin::GetFile(source, destination);
   }
 
-  lldb_private::Status
+  lldb_private::Error
   GetFileWithUUID(const lldb_private::FileSpec &platform_file,
                   const lldb_private::UUID *uuid_ptr,
                   lldb_private::FileSpec &local_file) override;

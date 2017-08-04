@@ -17,10 +17,10 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/RangeMap.h"
+#include "lldb/Core/UUID.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SafeMachO.h"
-#include "lldb/Utility/UUID.h"
 
 //----------------------------------------------------------------------
 // This class needs to be hidden as eventually belongs in a plugin that
@@ -67,7 +67,7 @@ public:
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        const lldb_private::FileSpec &outfile,
-                       lldb_private::Status &error);
+                       lldb_private::Error &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
                               lldb::addr_t length);

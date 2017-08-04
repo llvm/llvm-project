@@ -7,19 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Event.h"
-
-#include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/lldb-enumerations.h"    // for Format::eFormatBytes
-
+// C Includes
+// C++ Includes
 #include <algorithm>
 
-#include <ctype.h> // for isprint
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Broadcaster.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Event.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/State.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Host/Endian.h"
+#include "lldb/Target/Process.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -139,8 +140,8 @@ void EventDataBytes::Dump(Stream *s) const {
   } else if (!m_bytes.empty()) {
     DataExtractor data;
     data.SetData(m_bytes.data(), m_bytes.size(), endian::InlHostByteOrder());
-    DumpDataExtractor(data, s, 0, eFormatBytes, 1, m_bytes.size(), 32,
-                      LLDB_INVALID_ADDRESS, 0, 0);
+    data.Dump(s, 0, eFormatBytes, 1, m_bytes.size(), 32, LLDB_INVALID_ADDRESS,
+              0, 0);
   }
 }
 

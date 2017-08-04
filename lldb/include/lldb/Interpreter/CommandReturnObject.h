@@ -16,8 +16,8 @@
 // Project includes
 #include "lldb/Core/STLUtils.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StreamTee.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/StreamTee.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -129,7 +129,7 @@ public:
     AppendError(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
-  void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
+  void SetError(const Error &error, const char *fallback_error_cstr = nullptr);
 
   void SetError(llvm::StringRef error_cstr);
 

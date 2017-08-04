@@ -17,17 +17,16 @@
 // Other libraries and framework includes
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_mips.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_mips64.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/EmulateInstruction.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 #define NT_MIPS_MSA 0x600
@@ -72,13 +71,156 @@ struct pt_watch_regs {
 
 #define IRW (I | R | W)
 
-#ifndef PTRACE_GETREGSET
-#define PTRACE_GETREGSET 0x4204
-#endif
 struct pt_watch_regs default_watch_regs;
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
+
+// ----------------------------------------------------------------------------
+// Private namespace.
+// ----------------------------------------------------------------------------
+
+namespace {
+// mips general purpose registers.
+const uint32_t g_gp_regnums_mips[] = {
+    gpr_zero_mips,      gpr_r1_mips,    gpr_r2_mips,      gpr_r3_mips,
+    gpr_r4_mips,        gpr_r5_mips,    gpr_r6_mips,      gpr_r7_mips,
+    gpr_r8_mips,        gpr_r9_mips,    gpr_r10_mips,     gpr_r11_mips,
+    gpr_r12_mips,       gpr_r13_mips,   gpr_r14_mips,     gpr_r15_mips,
+    gpr_r16_mips,       gpr_r17_mips,   gpr_r18_mips,     gpr_r19_mips,
+    gpr_r20_mips,       gpr_r21_mips,   gpr_r22_mips,     gpr_r23_mips,
+    gpr_r24_mips,       gpr_r25_mips,   gpr_r26_mips,     gpr_r27_mips,
+    gpr_gp_mips,        gpr_sp_mips,    gpr_r30_mips,     gpr_ra_mips,
+    gpr_sr_mips,        gpr_mullo_mips, gpr_mulhi_mips,   gpr_badvaddr_mips,
+    gpr_cause_mips,     gpr_pc_mips,    gpr_config5_mips,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+
+static_assert((sizeof(g_gp_regnums_mips) / sizeof(g_gp_regnums_mips[0])) - 1 ==
+                  k_num_gpr_registers_mips,
+              "g_gp_regnums_mips has wrong number of register infos");
+
+// mips floating point registers.
+const uint32_t g_fp_regnums_mips[] = {
+    fpr_f0_mips,        fpr_f1_mips,  fpr_f2_mips,      fpr_f3_mips,
+    fpr_f4_mips,        fpr_f5_mips,  fpr_f6_mips,      fpr_f7_mips,
+    fpr_f8_mips,        fpr_f9_mips,  fpr_f10_mips,     fpr_f11_mips,
+    fpr_f12_mips,       fpr_f13_mips, fpr_f14_mips,     fpr_f15_mips,
+    fpr_f16_mips,       fpr_f17_mips, fpr_f18_mips,     fpr_f19_mips,
+    fpr_f20_mips,       fpr_f21_mips, fpr_f22_mips,     fpr_f23_mips,
+    fpr_f24_mips,       fpr_f25_mips, fpr_f26_mips,     fpr_f27_mips,
+    fpr_f28_mips,       fpr_f29_mips, fpr_f30_mips,     fpr_f31_mips,
+    fpr_fcsr_mips,      fpr_fir_mips, fpr_config5_mips,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+
+static_assert((sizeof(g_fp_regnums_mips) / sizeof(g_fp_regnums_mips[0])) - 1 ==
+                  k_num_fpr_registers_mips,
+              "g_fp_regnums_mips has wrong number of register infos");
+
+// mips MSA registers.
+const uint32_t g_msa_regnums_mips[] = {
+    msa_w0_mips,        msa_w1_mips,  msa_w2_mips,   msa_w3_mips,
+    msa_w4_mips,        msa_w5_mips,  msa_w6_mips,   msa_w7_mips,
+    msa_w8_mips,        msa_w9_mips,  msa_w10_mips,  msa_w11_mips,
+    msa_w12_mips,       msa_w13_mips, msa_w14_mips,  msa_w15_mips,
+    msa_w16_mips,       msa_w17_mips, msa_w18_mips,  msa_w19_mips,
+    msa_w20_mips,       msa_w21_mips, msa_w22_mips,  msa_w23_mips,
+    msa_w24_mips,       msa_w25_mips, msa_w26_mips,  msa_w27_mips,
+    msa_w28_mips,       msa_w29_mips, msa_w30_mips,  msa_w31_mips,
+    msa_fcsr_mips,      msa_fir_mips, msa_mcsr_mips, msa_mir_mips,
+    msa_config5_mips,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+
+static_assert((sizeof(g_msa_regnums_mips) / sizeof(g_msa_regnums_mips[0])) -
+                      1 ==
+                  k_num_msa_registers_mips,
+              "g_msa_regnums_mips has wrong number of register infos");
+
+// mips64 general purpose registers.
+const uint32_t g_gp_regnums_mips64[] = {
+    gpr_zero_mips64,    gpr_r1_mips64,    gpr_r2_mips64,
+    gpr_r3_mips64,      gpr_r4_mips64,    gpr_r5_mips64,
+    gpr_r6_mips64,      gpr_r7_mips64,    gpr_r8_mips64,
+    gpr_r9_mips64,      gpr_r10_mips64,   gpr_r11_mips64,
+    gpr_r12_mips64,     gpr_r13_mips64,   gpr_r14_mips64,
+    gpr_r15_mips64,     gpr_r16_mips64,   gpr_r17_mips64,
+    gpr_r18_mips64,     gpr_r19_mips64,   gpr_r20_mips64,
+    gpr_r21_mips64,     gpr_r22_mips64,   gpr_r23_mips64,
+    gpr_r24_mips64,     gpr_r25_mips64,   gpr_r26_mips64,
+    gpr_r27_mips64,     gpr_gp_mips64,    gpr_sp_mips64,
+    gpr_r30_mips64,     gpr_ra_mips64,    gpr_sr_mips64,
+    gpr_mullo_mips64,   gpr_mulhi_mips64, gpr_badvaddr_mips64,
+    gpr_cause_mips64,   gpr_pc_mips64,    gpr_config5_mips64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+
+static_assert((sizeof(g_gp_regnums_mips64) / sizeof(g_gp_regnums_mips64[0])) -
+                      1 ==
+                  k_num_gpr_registers_mips64,
+              "g_gp_regnums_mips64 has wrong number of register infos");
+
+// mips64 floating point registers.
+const uint32_t g_fp_regnums_mips64[] = {
+    fpr_f0_mips64,      fpr_f1_mips64,  fpr_f2_mips64,      fpr_f3_mips64,
+    fpr_f4_mips64,      fpr_f5_mips64,  fpr_f6_mips64,      fpr_f7_mips64,
+    fpr_f8_mips64,      fpr_f9_mips64,  fpr_f10_mips64,     fpr_f11_mips64,
+    fpr_f12_mips64,     fpr_f13_mips64, fpr_f14_mips64,     fpr_f15_mips64,
+    fpr_f16_mips64,     fpr_f17_mips64, fpr_f18_mips64,     fpr_f19_mips64,
+    fpr_f20_mips64,     fpr_f21_mips64, fpr_f22_mips64,     fpr_f23_mips64,
+    fpr_f24_mips64,     fpr_f25_mips64, fpr_f26_mips64,     fpr_f27_mips64,
+    fpr_f28_mips64,     fpr_f29_mips64, fpr_f30_mips64,     fpr_f31_mips64,
+    fpr_fcsr_mips64,    fpr_fir_mips64, fpr_config5_mips64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+
+static_assert((sizeof(g_fp_regnums_mips64) / sizeof(g_fp_regnums_mips64[0])) -
+                      1 ==
+                  k_num_fpr_registers_mips64,
+              "g_fp_regnums_mips64 has wrong number of register infos");
+
+// mips64 MSA registers.
+const uint32_t g_msa_regnums_mips64[] = {
+    msa_w0_mips64,      msa_w1_mips64,  msa_w2_mips64,   msa_w3_mips64,
+    msa_w4_mips64,      msa_w5_mips64,  msa_w6_mips64,   msa_w7_mips64,
+    msa_w8_mips64,      msa_w9_mips64,  msa_w10_mips64,  msa_w11_mips64,
+    msa_w12_mips64,     msa_w13_mips64, msa_w14_mips64,  msa_w15_mips64,
+    msa_w16_mips64,     msa_w17_mips64, msa_w18_mips64,  msa_w19_mips64,
+    msa_w20_mips64,     msa_w21_mips64, msa_w22_mips64,  msa_w23_mips64,
+    msa_w24_mips64,     msa_w25_mips64, msa_w26_mips64,  msa_w27_mips64,
+    msa_w28_mips64,     msa_w29_mips64, msa_w30_mips64,  msa_w31_mips64,
+    msa_fcsr_mips64,    msa_fir_mips64, msa_mcsr_mips64, msa_mir_mips64,
+    msa_config5_mips64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+
+static_assert((sizeof(g_msa_regnums_mips64) / sizeof(g_msa_regnums_mips64[0])) -
+                      1 ==
+                  k_num_msa_registers_mips64,
+              "g_msa_regnums_mips64 has wrong number of register infos");
+
+// Number of register sets provided by this context.
+enum { k_num_register_sets = 3 };
+
+// Register sets for mips.
+static const RegisterSet g_reg_sets_mips[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr", k_num_gpr_registers_mips,
+     g_gp_regnums_mips},
+    {"Floating Point Registers", "fpu", k_num_fpr_registers_mips,
+     g_fp_regnums_mips},
+    {"MSA Registers", "msa", k_num_msa_registers_mips, g_msa_regnums_mips}};
+
+// Register sets for mips64.
+static const RegisterSet g_reg_sets_mips64[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr", k_num_gpr_registers_mips64,
+     g_gp_regnums_mips64},
+    {"Floating Point Registers", "fpu", k_num_fpr_registers_mips64,
+     g_fp_regnums_mips64},
+    {"MSA Registers", "msa", k_num_msa_registers_mips64, g_msa_regnums_mips64},
+};
+
+} // end of anonymous namespace
 
 NativeRegisterContextLinux *
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
@@ -98,12 +240,15 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
-  if ((target_arch.GetMachine() == llvm::Triple::mips) ||
-       (target_arch.GetMachine() == llvm::Triple::mipsel)) {
+  if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
     // 32-bit hosts run with a RegisterContextLinux_mips context.
     return new RegisterContextLinux_mips(
         target_arch, NativeRegisterContextLinux_mips64::IsMSAAvailable());
   } else {
+    assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
+           "Register setting path assumes this is a 64-bit host");
+    // mips64 hosts know how to work with 64-bit and 32-bit EXEs using the
+    // mips64 register context.
     return new RegisterContextLinux_mips64(
         target_arch, NativeRegisterContextLinux_mips64::IsMSAAvailable());
   }
@@ -158,31 +303,20 @@ NativeRegisterContextLinux_mips64::NativeRegisterContextLinux_mips64(
 }
 
 uint32_t NativeRegisterContextLinux_mips64::GetRegisterSetCount() const {
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el: {
-    const auto context = static_cast<const RegisterContextLinux_mips64 &>
-                         (GetRegisterInfoInterface());
-    return context.GetRegisterSetCount();
-  }
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel: {
-    const auto context = static_cast<const RegisterContextLinux_mips &>
-                         (GetRegisterInfoInterface());
-    return context.GetRegisterSetCount();
-  }
-  default:
-    llvm_unreachable("Unhandled target architecture.");
-  }
+  return k_num_register_sets;
 }
 
 lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
     lldb::addr_t fail_value) {
-  Status error;
+  Error error;
   RegisterValue pc_value;
   lldb::addr_t pc = fail_value;
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-  LLDB_LOG(log, "Reading PC from breakpoint location");
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+
+  if (log)
+    log->Printf("NativeRegisterContextLinux_mips64::%s Reading PC from "
+                "breakpoint location",
+                __FUNCTION__);
 
   // PC register is at index 34 of the register array
   const RegisterInfo *const pc_info_p = GetRegisterInfoAtIndex(gpr_pc_mips64);
@@ -199,7 +333,11 @@ lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
     ReadRegister(cause_info_p, cause_value);
 
     uint64_t cause = cause_value.GetAsUInt64();
-    LLDB_LOG(log, "PC {0:x} cause {1:x}", pc, cause);
+
+    if (log)
+      log->Printf("NativeRegisterContextLinux_mips64::%s PC 0x%" PRIx64
+                  " Cause 0x%" PRIx64,
+                  __FUNCTION__, pc, cause);
 
     /*
      * The breakpoint might be in a delay slot. In this case PC points
@@ -214,7 +352,10 @@ lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
       pc = pc + branch_delay;
       pc_value.SetUInt64(pc);
       WriteRegister(pc_info_p, pc_value);
-      LLDB_LOG(log, "New PC {0:x}", pc);
+
+      if (log)
+        log->Printf("NativeRegisterContextLinux_mips64::%s New PC 0x%" PRIx64,
+                    __FUNCTION__, pc);
     }
   }
 
@@ -223,31 +364,28 @@ lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
 
 const RegisterSet *
 NativeRegisterContextLinux_mips64::GetRegisterSet(uint32_t set_index) const {
-  if (set_index >= GetRegisterSetCount())
+  if (set_index >= k_num_register_sets)
     return nullptr;
 
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::mips64:
-  case llvm::Triple::mips64el: {
-    const auto context = static_cast<const RegisterContextLinux_mips64 &>
-                          (GetRegisterInfoInterface());
-    return context.GetRegisterSet(set_index);
-  }
+  case llvm::Triple::mips64el:
+    return &g_reg_sets_mips64[set_index];
   case llvm::Triple::mips:
-  case llvm::Triple::mipsel: {
-    const auto context = static_cast<const RegisterContextLinux_mips &>
-                         (GetRegisterInfoInterface());
-    return context.GetRegisterSet(set_index);
-  }
+  case llvm::Triple::mipsel:
+    return &g_reg_sets_mips[set_index];
   default:
-    llvm_unreachable("Unhandled target architecture.");
+    assert(false && "Unhandled target architecture.");
+    return nullptr;
   }
+
+  return nullptr;
 }
 
-lldb_private::Status
+lldb_private::Error
 NativeRegisterContextLinux_mips64::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &reg_value) {
-  Status error;
+  Error error;
 
   if (!reg_info) {
     error.SetErrorString("reg_info NULL");
@@ -315,18 +453,18 @@ NativeRegisterContextLinux_mips64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-lldb_private::Status NativeRegisterContextLinux_mips64::WriteRegister(
+lldb_private::Error NativeRegisterContextLinux_mips64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  Status error;
+  Error error;
 
   assert(reg_info && "reg_info is null");
 
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg_index == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Error("no lldb regnum for %s", reg_info && reg_info->name
+                                              ? reg_info->name
+                                              : "<unknown register>");
 
   if (IsMSA(reg_index) && !IsMSAAvailable()) {
     error.SetErrorString("MSA not available on this processor");
@@ -383,9 +521,9 @@ lldb_private::Status NativeRegisterContextLinux_mips64::WriteRegister(
   return error;
 }
 
-Status NativeRegisterContextLinux_mips64::ReadAllRegisterValues(
+Error NativeRegisterContextLinux_mips64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
-  Status error;
+  Error error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
   if (!data_sp) {
@@ -426,9 +564,9 @@ Status NativeRegisterContextLinux_mips64::ReadAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextLinux_mips64::WriteAllRegisterValues(
+Error NativeRegisterContextLinux_mips64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  Status error;
+  Error error;
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
@@ -481,8 +619,8 @@ Status NativeRegisterContextLinux_mips64::WriteAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextLinux_mips64::ReadCP1() {
-  Status error;
+Error NativeRegisterContextLinux_mips64::ReadCP1() {
+  Error error;
 
   uint8_t *src = nullptr;
   uint8_t *dst = nullptr;
@@ -529,8 +667,8 @@ NativeRegisterContextLinux_mips64::ReturnFPOffset(uint8_t reg_index,
   return fp_buffer_ptr;
 }
 
-Status NativeRegisterContextLinux_mips64::WriteCP1() {
-  Status error;
+Error NativeRegisterContextLinux_mips64::WriteCP1() {
+  Error error;
 
   uint8_t *src = nullptr;
   uint8_t *dst = nullptr;
@@ -589,64 +727,70 @@ bool NativeRegisterContextLinux_mips64::IsFPR(uint32_t reg_index) const {
 }
 
 static uint32_t GetWatchHi(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watchhi[index];
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watchhi[index];
-  LLDB_LOG(log, "Invalid watch register style");
+  if (log)
+    log->Printf("Invalid watch register style");
   return 0;
 }
 
 static void SetWatchHi(struct pt_watch_regs *regs, uint32_t index,
                        uint16_t value) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     regs->mips32.watchhi[index] = value;
   else if (regs->style == pt_watch_style_mips64)
     regs->mips64.watchhi[index] = value;
-  LLDB_LOG(log, "Invalid watch register style");
+  if (log)
+    log->Printf("Invalid watch register style");
   return;
 }
 
 static lldb::addr_t GetWatchLo(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watchlo[index];
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watchlo[index];
-  LLDB_LOG(log, "Invalid watch register style");
+  if (log)
+    log->Printf("Invalid watch register style");
   return LLDB_INVALID_ADDRESS;
 }
 
 static void SetWatchLo(struct pt_watch_regs *regs, uint32_t index,
                        uint64_t value) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     regs->mips32.watchlo[index] = (uint32_t)value;
   else if (regs->style == pt_watch_style_mips64)
     regs->mips64.watchlo[index] = value;
-  else
-    LLDB_LOG(log, "Invalid watch register style");
+  if (log)
+    log->Printf("Invalid watch register style");
+  return;
 }
 
 static uint32_t GetIRWMask(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watch_masks[index] & IRW;
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watch_masks[index] & IRW;
-  LLDB_LOG(log, "Invalid watch register style");
+  if (log)
+    log->Printf("Invalid watch register style");
   return 0;
 }
 
 static uint32_t GetRegMask(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watch_masks[index] & ~IRW;
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watch_masks[index] & ~IRW;
-  LLDB_LOG(log, "Invalid watch register style");
+  if (log)
+    log->Printf("Invalid watch register style");
   return 0;
 }
 
@@ -740,7 +884,7 @@ bool NativeRegisterContextLinux_mips64::IsMSAAvailable() {
   MSA_linux_mips msa_buf;
   unsigned int regset = NT_MIPS_MSA;
 
-  Status error = NativeProcessLinux::PtraceWrapper(
+  Error error = NativeProcessLinux::PtraceWrapper(
       PTRACE_GETREGSET, Host::GetCurrentProcessID(),
       static_cast<void *>(&regset), &msa_buf, sizeof(MSA_linux_mips));
 
@@ -751,14 +895,14 @@ bool NativeRegisterContextLinux_mips64::IsMSAAvailable() {
   return false;
 }
 
-Status NativeRegisterContextLinux_mips64::IsWatchpointHit(uint32_t wp_index,
-                                                          bool &is_hit) {
+Error NativeRegisterContextLinux_mips64::IsWatchpointHit(uint32_t wp_index,
+                                                         bool &is_hit) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Status("Watchpoint index out of range");
+    return Error("Watchpoint index out of range");
 
   // reading the current state of watch regs
   struct pt_watch_regs watch_readback;
-  Status error = DoReadWatchPointRegisterValue(
+  Error error = DoReadWatchPointRegisterValue(
       m_thread.GetID(), static_cast<void *>(&watch_readback));
 
   if (GetWatchHi(&watch_readback, wp_index) & (IRW)) {
@@ -775,12 +919,12 @@ Status NativeRegisterContextLinux_mips64::IsWatchpointHit(uint32_t wp_index,
   return error;
 }
 
-Status NativeRegisterContextLinux_mips64::GetWatchpointHitIndex(
+Error NativeRegisterContextLinux_mips64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
   uint32_t num_hw_wps = NumSupportedHardwareWatchpoints();
   for (wp_index = 0; wp_index < num_hw_wps; ++wp_index) {
     bool is_hit;
-    Status error = IsWatchpointHit(wp_index, is_hit);
+    Error error = IsWatchpointHit(wp_index, is_hit);
     if (error.Fail()) {
       wp_index = LLDB_INVALID_INDEX32;
     } else if (is_hit) {
@@ -788,15 +932,15 @@ Status NativeRegisterContextLinux_mips64::GetWatchpointHitIndex(
     }
   }
   wp_index = LLDB_INVALID_INDEX32;
-  return Status();
+  return Error();
 }
 
-Status NativeRegisterContextLinux_mips64::IsWatchpointVacant(uint32_t wp_index,
-                                                             bool &is_vacant) {
+Error NativeRegisterContextLinux_mips64::IsWatchpointVacant(uint32_t wp_index,
+                                                            bool &is_vacant) {
   is_vacant = false;
-  return Status("MIPS TODO: "
-                "NativeRegisterContextLinux_mips64::IsWatchpointVacant not "
-                "implemented");
+  return Error("MIPS TODO: "
+               "NativeRegisterContextLinux_mips64::IsWatchpointVacant not "
+               "implemented");
 }
 
 bool NativeRegisterContextLinux_mips64::ClearHardwareWatchpoint(
@@ -821,8 +965,8 @@ bool NativeRegisterContextLinux_mips64::ClearHardwareWatchpoint(
         default_watch_regs.mips64.watch_masks[wp_index];
   }
 
-  Status error = DoWriteWatchPointRegisterValue(m_thread.GetID(),
-                                                static_cast<void *>(&regs));
+  Error error = DoWriteWatchPointRegisterValue(m_thread.GetID(),
+                                               static_cast<void *>(&regs));
   if (!error.Fail()) {
     hw_addr_map[wp_index] = LLDB_INVALID_ADDRESS;
     return true;
@@ -830,14 +974,14 @@ bool NativeRegisterContextLinux_mips64::ClearHardwareWatchpoint(
   return false;
 }
 
-Status NativeRegisterContextLinux_mips64::ClearAllHardwareWatchpoints() {
+Error NativeRegisterContextLinux_mips64::ClearAllHardwareWatchpoints() {
   return DoWriteWatchPointRegisterValue(
       m_thread.GetID(), static_cast<void *>(&default_watch_regs));
 }
 
-Status NativeRegisterContextLinux_mips64::SetHardwareWatchpointWithIndex(
+Error NativeRegisterContextLinux_mips64::SetHardwareWatchpointWithIndex(
     lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
-  Status error;
+  Error error;
   error.SetErrorString("MIPS TODO: "
                        "NativeRegisterContextLinux_mips64::"
                        "SetHardwareWatchpointWithIndex not implemented");
@@ -910,7 +1054,7 @@ static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
       emulator_baton->m_reg_context->GetRegisterInfo(
           lldb::eRegisterKindDWARF, reg_info->kinds[lldb::eRegisterKindDWARF]);
 
-  Status error =
+  Error error =
       emulator_baton->m_reg_context->ReadRegister(full_reg_info, reg_value);
   if (error.Success())
     return true;
@@ -953,7 +1097,7 @@ NativeRegisterContextLinux_mips64::GetWatchpointHitAddress(uint32_t wp_index) {
     return LLDB_INVALID_ADDRESS;
 
   EmulatorBaton baton(
-      static_cast<NativeProcessLinux *>(&m_thread.GetProcess()), this);
+      static_cast<NativeProcessLinux *>(m_thread.GetProcess().get()), this);
   emulator_ap->SetBaton(&baton);
   emulator_ap->SetReadMemCallback(&ReadMemoryCallback);
   emulator_ap->SetReadRegCallback(&ReadRegisterCallback);
@@ -970,7 +1114,7 @@ NativeRegisterContextLinux_mips64::GetWatchpointHitAddress(uint32_t wp_index) {
 }
 
 uint32_t NativeRegisterContextLinux_mips64::NumSupportedHardwareWatchpoints() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   struct pt_watch_regs regs;
   static int num_valid = 0;
   if (!num_valid) {
@@ -984,20 +1128,23 @@ uint32_t NativeRegisterContextLinux_mips64::NumSupportedHardwareWatchpoints() {
     case pt_watch_style_mips64:
       num_valid = regs.mips64.num_valid;
       return num_valid;
+    default:
+      if (log)
+        log->Printf("NativeRegisterContextLinux_mips64::%s Error: Unrecognized "
+                    "watch register style",
+                    __FUNCTION__);
     }
-    LLDB_LOG(log, "Invalid watch register style");
     return 0;
   }
   return num_valid;
 }
 
-Status
-NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
-                                                   RegisterValue &value) {
+Error NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
+                                                         RegisterValue &value) {
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
 
   if (!reg_info)
-    return Status("register %" PRIu32 " not found", reg_index);
+    return Error("register %" PRIu32 " not found", reg_index);
 
   uint32_t offset = reg_info->kinds[lldb::eRegisterKindProcessPlugin];
 
@@ -1009,12 +1156,12 @@ NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
                              value);
 }
 
-Status NativeRegisterContextLinux_mips64::WriteRegisterRaw(
+Error NativeRegisterContextLinux_mips64::WriteRegisterRaw(
     uint32_t reg_index, const RegisterValue &value) {
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
 
   if (!reg_info)
-    return Status("register %" PRIu32 " not found", reg_index);
+    return Error("register %" PRIu32 " not found", reg_index);
 
   if (reg_info->invalidate_regs)
     lldbassert(false && "reg_info->invalidate_regs is unhandled");
@@ -1023,18 +1170,18 @@ Status NativeRegisterContextLinux_mips64::WriteRegisterRaw(
   return DoWriteRegisterValue(offset, reg_info->name, value);
 }
 
-Status NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
-                                                         const char *reg_name,
-                                                         uint32_t size,
-                                                         RegisterValue &value) {
+Error NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
+                                                        const char *reg_name,
+                                                        uint32_t size,
+                                                        RegisterValue &value) {
   GPR_linux_mips regs;
   ::memset(&regs, 0, sizeof(GPR_linux_mips));
 
-  Status error = NativeProcessLinux::PtraceWrapper(
+  Error error = NativeProcessLinux::PtraceWrapper(
       PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
   if (error.Success()) {
     lldb_private::ArchSpec arch;
-    if (m_thread.GetProcess().GetArchitecture(arch)) {
+    if (m_thread.GetProcess()->GetArchitecture(arch)) {
       void *target_address = ((uint8_t *)&regs) + offset +
                              4 * (arch.GetMachine() == llvm::Triple::mips);
       value.SetUInt(*(uint32_t *)target_address, size);
@@ -1044,13 +1191,13 @@ Status NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
   return error;
 }
 
-Status NativeRegisterContextLinux_mips64::DoReadWatchPointRegisterValue(
+Error NativeRegisterContextLinux_mips64::DoReadWatchPointRegisterValue(
     lldb::tid_t tid, void *watch_readback) {
   return NativeProcessLinux::PtraceWrapper(PTRACE_GET_WATCH_REGS,
                                            m_thread.GetID(), watch_readback);
 }
 
-Status NativeRegisterContextLinux_mips64::DoWriteWatchPointRegisterValue(
+Error NativeRegisterContextLinux_mips64::DoWriteWatchPointRegisterValue(
     lldb::tid_t tid, void *watch_reg_value) {
   return NativeProcessLinux::PtraceWrapper(PTRACE_SET_WATCH_REGS,
                                            m_thread.GetID(), watch_reg_value);

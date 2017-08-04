@@ -9,44 +9,29 @@
 
 #include "lldb/Core/ValueObjectVariable.h"
 
-#include "lldb/Core/Address.h"      // for Address
-#include "lldb/Core/AddressRange.h" // for AddressRange
-#include "lldb/Core/ArchSpec.h"     // for ArchSpec
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Flags.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h" // for Scalar, operator!=
 #include "lldb/Core/Value.h"
-#include "lldb/Expression/DWARFExpression.h" // for DWARFExpression
-#include "lldb/Symbol/Declaration.h"         // for Declaration
+#include "lldb/Core/ValueObjectList.h"
+
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
+
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h"     // for DataExtractor
-#include "lldb/Utility/Status.h"            // for Status
-#include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressTy...
-#include "lldb/lldb-types.h"                // for addr_t
+#include "lldb/Target/Thread.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
-
-#include <assert.h> // for assert
-#include <memory>   // for shared_ptr
-
-namespace lldb_private {
-class ExecutionContextScope;
-}
-namespace lldb_private {
-class StackFrame;
-}
-namespace lldb_private {
-struct RegisterInfo;
-}
 using namespace lldb_private;
 
 lldb::ValueObjectSP
@@ -131,12 +116,22 @@ bool ValueObjectVariable::UpdateValue() {
   if (variable->GetLocationIsConstantValueData()) {
     // expr doesn't contain DWARF bytes, it contains the constant variable
     // value bytes themselves...
-    if (expr.GetExpressionData(m_data))
+    if (expr.GetExpressionData(m_data)) {
+      if (m_data.GetDataStart() && m_data.GetByteSize())
+        m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::eContextTypeVariable, variable);
-    else
-      m_error.SetErrorString("empty constant data");
+    } else {
+      CompilerType var_type(GetCompilerTypeImpl());
+      if (var_type.IsValid()) {
+        if (SwiftASTContext::IsPossibleZeroSizeType(var_type))
+          m_value.SetCompilerType(var_type);
+        else
+          m_error.SetErrorString("empty constant data");
+      }
+    }
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::eContextTypeInvalid, NULL);
+    SetAddressTypeOfChildren(eAddressTypeInvalid);
   } else {
     lldb::addr_t loclist_base_load_addr = LLDB_INVALID_ADDRESS;
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -170,7 +165,8 @@ bool ValueObjectVariable::UpdateValue() {
 
       Process *process = exe_ctx.GetProcessPtr();
       const bool process_is_alive = process && process->IsAlive();
-      const uint32_t type_info = compiler_type.GetTypeInfo();
+      const uint32_t type_info =
+          compiler_type.IsValid() ? compiler_type.GetTypeInfo() : 0;
       const bool is_pointer_or_ref =
           (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
 
@@ -344,7 +340,7 @@ const char *ValueObjectVariable::GetLocationAsCString() {
 }
 
 bool ValueObjectVariable::SetValueFromCString(const char *value_str,
-                                              Status &error) {
+                                              Error &error) {
   if (!UpdateValueIfNeeded()) {
     error.SetErrorString("unable to update value before writing");
     return false;
@@ -373,7 +369,7 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
     return ValueObject::SetValueFromCString(value_str, error);
 }
 
-bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
+bool ValueObjectVariable::SetData(DataExtractor &data, Error &error) {
   if (!UpdateValueIfNeeded()) {
     error.SetErrorString("unable to update value before writing");
     return false;

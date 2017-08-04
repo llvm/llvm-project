@@ -42,7 +42,7 @@ REPL::REPL(LLVMCastKind kind, Target &target) : m_target(target), m_kind(kind) {
 
 REPL::~REPL() = default;
 
-lldb::REPLSP REPL::Create(Status &err, lldb::LanguageType language,
+lldb::REPLSP REPL::Create(Error &err, lldb::LanguageType language,
                           Debugger *debugger, Target *target,
                           const char *repl_options) {
   uint32_t idx = 0;
@@ -305,11 +305,18 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       PersistentExpressionState *persistent_state =
           m_target.GetPersistentExpressionStateForLanguage(GetLanguage());
 
+      if (!persistent_state)
+      {
+        error_sp->PutCString("error getting the expression "
+                             "context for the REPL.\n");
+        io_handler.SetIsDone(true);
+        return;
+      }
       const size_t var_count_before = persistent_state->GetSize();
 
       const char *expr_prefix = nullptr;
       lldb::ValueObjectSP result_valobj_sp;
-      Status error;
+      Error error;
       lldb::ModuleSP jit_module_sp;
       lldb::ExpressionResults execution_results =
           UserExpression::Evaluate(exe_ctx, expr_options, code.c_str(),
@@ -518,15 +525,15 @@ bool QuitCommandOverrideCallback(void *baton, const char **argv) {
   return false;
 }
 
-Status REPL::RunLoop() {
-  Status error;
+Error REPL::RunLoop() {
+  Error error;
 
   error = DoInitialization();
   m_repl_source_path = GetSourcePath();
 
   if (!error.Success())
     return error;
-
+    
   Debugger &debugger = m_target.GetDebugger();
 
   lldb::IOHandlerSP io_handler_sp(GetIOHandler());

@@ -9,35 +9,24 @@
 
 #include "lldb/Core/PluginManager.h"
 
-#include "lldb/Core/Debugger.h"
-#include "lldb/Host/HostInfo.h"
-#include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StringList.h" // for StringList
-
-#if defined(LLVM_ON_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
-#endif
-
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/FileSystem.h"  // for file_type, file_...
-#include "llvm/Support/raw_ostream.h" // for fs
-
-#include <map>    // for map<>::const_ite...
-#include <memory> // for shared_ptr
+// C Includes
+// C++ Includes
+#include <climits>
 #include <mutex>
 #include <string>
-#include <utility> // for pair
 #include <vector>
 
-#include <assert.h> // for assert
+// Other libraries and framework includes
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
 
-namespace lldb_private {
-class CommandInterpreter;
-}
+// Project includes
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -90,18 +79,18 @@ template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
 }
 
 static FileSpec::EnumerateDirectoryResult
-LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
+LoadPluginCallback(void *baton, FileSpec::FileType file_type,
                    const FileSpec &file_spec) {
   //    PluginManager *plugin_manager = (PluginManager *)baton;
-  Status error;
+  Error error;
 
-  namespace fs = llvm::sys::fs;
   // If we have a regular file, a symbolic link or unknown file type, try
   // and process the file. We must handle unknown as sometimes the directory
   // enumeration might be enumerating a file system that doesn't have correct
   // file type information.
-  if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
-      ft == fs::file_type::type_unknown) {
+  if (file_type == FileSpec::eFileTypeRegular ||
+      file_type == FileSpec::eFileTypeSymbolicLink ||
+      file_type == FileSpec::eFileTypeUnknown) {
     FileSpec plugin_file_spec(file_spec);
     plugin_file_spec.ResolvePath();
 
@@ -146,8 +135,9 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     }
   }
 
-  if (ft == fs::file_type::directory_file ||
-      ft == fs::file_type::symlink_file || ft == fs::file_type::type_unknown) {
+  if (file_type == FileSpec::eFileTypeUnknown ||
+      file_type == FileSpec::eFileTypeDirectory ||
+      file_type == FileSpec::eFileTypeSymbolicLink) {
     // Try and recurse into anything that a directory or symbolic link.
     // We must also do this for unknown as sometimes the directory enumeration
     // might be enumerating a file system that doesn't have correct file type
@@ -1066,9 +1056,9 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
   return nullptr;
 }
 
-Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile) {
-  Status error;
+Error PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
+                              const FileSpec &outfile) {
+  Error error;
   std::lock_guard<std::recursive_mutex> guard(GetObjectFileMutex());
   ObjectFileInstances &instances = GetObjectFileInstances();
 
@@ -1174,6 +1164,93 @@ PluginManager::GetObjectContainerGetModuleSpecificationsCallbackAtIndex(
   ObjectContainerInstances &instances = GetObjectContainerInstances();
   if (idx < instances.size())
     return instances[idx].get_module_specifications;
+  return nullptr;
+}
+
+#pragma mark LogChannel
+
+struct LogInstance {
+  LogInstance() : name(), description(), create_callback(nullptr) {}
+
+  ConstString name;
+  std::string description;
+  LogChannelCreateInstance create_callback;
+};
+
+typedef std::vector<LogInstance> LogInstances;
+
+static std::recursive_mutex &GetLogMutex() {
+  static std::recursive_mutex g_instances_mutex;
+  return g_instances_mutex;
+}
+
+static LogInstances &GetLogInstances() {
+  static LogInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(const ConstString &name,
+                                   const char *description,
+                                   LogChannelCreateInstance create_callback) {
+  if (create_callback) {
+    LogInstance instance;
+    assert((bool)name);
+    instance.name = name;
+    if (description && description[0])
+      instance.description = description;
+    instance.create_callback = create_callback;
+    std::lock_guard<std::recursive_mutex> gard(GetLogMutex());
+    GetLogInstances().push_back(instance);
+  }
+  return false;
+}
+
+bool PluginManager::UnregisterPlugin(LogChannelCreateInstance create_callback) {
+  if (create_callback) {
+    std::lock_guard<std::recursive_mutex> gard(GetLogMutex());
+    LogInstances &instances = GetLogInstances();
+
+    LogInstances::iterator pos, end = instances.end();
+    for (pos = instances.begin(); pos != end; ++pos) {
+      if (pos->create_callback == create_callback) {
+        instances.erase(pos);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+const char *PluginManager::GetLogChannelCreateNameAtIndex(uint32_t idx) {
+  std::lock_guard<std::recursive_mutex> gard(GetLogMutex());
+  LogInstances &instances = GetLogInstances();
+  if (idx < instances.size())
+    return instances[idx].name.GetCString();
+  return nullptr;
+}
+
+LogChannelCreateInstance
+PluginManager::GetLogChannelCreateCallbackAtIndex(uint32_t idx) {
+  std::lock_guard<std::recursive_mutex> gard(GetLogMutex());
+  LogInstances &instances = GetLogInstances();
+  if (idx < instances.size())
+    return instances[idx].create_callback;
+  return nullptr;
+}
+
+LogChannelCreateInstance
+PluginManager::GetLogChannelCreateCallbackForPluginName(
+    const ConstString &name) {
+  if (name) {
+    std::lock_guard<std::recursive_mutex> gard(GetLogMutex());
+    LogInstances &instances = GetLogInstances();
+
+    LogInstances::iterator pos, end = instances.end();
+    for (pos = instances.begin(); pos != end; ++pos) {
+      if (name == pos->name)
+        return pos->create_callback;
+    }
+  }
   return nullptr;
 }
 
@@ -2326,8 +2403,7 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPlugins(
     OptionValuePropertiesSP plugin_properties_sp =
         parent_properties_sp->GetSubProperty(nullptr, g_property_name);
     if (!plugin_properties_sp && can_create) {
-      plugin_properties_sp =
-          std::make_shared<OptionValueProperties>(g_property_name);
+      plugin_properties_sp.reset(new OptionValueProperties(g_property_name));
       parent_properties_sp->AppendProperty(
           g_property_name, ConstString("Settings specify to plugins."), true,
           plugin_properties_sp);
@@ -2337,8 +2413,8 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPlugins(
       lldb::OptionValuePropertiesSP plugin_type_properties_sp =
           plugin_properties_sp->GetSubProperty(nullptr, plugin_type_name);
       if (!plugin_type_properties_sp && can_create) {
-        plugin_type_properties_sp =
-            std::make_shared<OptionValueProperties>(plugin_type_name);
+        plugin_type_properties_sp.reset(
+            new OptionValueProperties(plugin_type_name));
         plugin_properties_sp->AppendProperty(plugin_type_name, plugin_type_desc,
                                              true, plugin_type_properties_sp);
       }
@@ -2361,8 +2437,7 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
     OptionValuePropertiesSP plugin_properties_sp =
         parent_properties_sp->GetSubProperty(nullptr, plugin_type_name);
     if (!plugin_properties_sp && can_create) {
-      plugin_properties_sp =
-          std::make_shared<OptionValueProperties>(plugin_type_name);
+      plugin_properties_sp.reset(new OptionValueProperties(plugin_type_name));
       parent_properties_sp->AppendProperty(plugin_type_name, plugin_type_desc,
                                            true, plugin_properties_sp);
     }
@@ -2371,8 +2446,8 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
       lldb::OptionValuePropertiesSP plugin_type_properties_sp =
           plugin_properties_sp->GetSubProperty(nullptr, g_property_name);
       if (!plugin_type_properties_sp && can_create) {
-        plugin_type_properties_sp =
-            std::make_shared<OptionValueProperties>(g_property_name);
+        plugin_type_properties_sp.reset(
+            new OptionValueProperties(g_property_name));
         plugin_properties_sp->AppendProperty(
             g_property_name, ConstString("Settings specific to plugins"), true,
             plugin_type_properties_sp);

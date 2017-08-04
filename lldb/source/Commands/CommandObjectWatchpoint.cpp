@@ -20,9 +20,10 @@
 // Project includes
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -30,7 +31,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -197,9 +197,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -245,7 +245,7 @@ protected:
 
     if (target->GetProcessSP() && target->GetProcessSP()->IsAlive()) {
       uint32_t num_supported_hardware_watchpoints;
-      Status error = target->GetProcessSP()->GetWatchpointSupportInfo(
+      Error error = target->GetProcessSP()->GetWatchpointSupportInfo(
           num_supported_hardware_watchpoints);
       if (error.Success())
         result.AppendMessageWithFormat(
@@ -561,9 +561,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -689,9 +689,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -881,7 +881,7 @@ protected:
     }
 
     // Things have checked out ok...
-    Status error;
+    Error error;
     uint32_t expr_path_options =
         StackFrame::eExpressionPathOptionCheckPtrVsMember |
         StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
@@ -895,7 +895,7 @@ protected:
       VariableList variable_list;
       ValueObjectList valobj_list;
 
-      Status error(Variable::GetValuesForVariableExpressionPath(
+      Error error(Variable::GetValuesForVariableExpressionPath(
           command.GetArgumentAtIndex(0),
           m_exe_ctx.GetBestExecutionContextScope(), GetVariableCallback, target,
           variable_list, valobj_list));
@@ -1060,7 +1060,7 @@ protected:
         if (!ParseOptions(args, result))
           return false;
 
-        Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
+        Error error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
         if (error.Fail()) {
           result.AppendError(error.AsCString());
           result.SetStatus(eReturnStatusFailed);
@@ -1135,7 +1135,7 @@ protected:
     /// of the expression, so convert to that if we  found a valid type.
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
-    Status error;
+    Error error;
     Watchpoint *wp =
         target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error)
             .get();

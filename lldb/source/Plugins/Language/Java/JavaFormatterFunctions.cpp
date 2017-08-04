@@ -57,7 +57,7 @@ public:
         valobj->GetAddressOf() +
         JavaASTContext::CalculateArrayElementOffset(type, idx);
 
-    Status error;
+    Error error;
     size_t byte_size = element_type.GetByteSize(nullptr);
     DataBufferSP buffer_sp(new DataBufferHeap(byte_size, 0));
     size_t bytes_read = process_sp->ReadMemory(address, buffer_sp->GetBytes(),
@@ -86,7 +86,7 @@ private:
     if (!m_backend.IsPointerOrReferenceType())
       return m_backend.GetSP();
 
-    Status error;
+    Error error;
     return m_backend.Dereference(error);
   }
 };
@@ -96,7 +96,7 @@ private:
 bool lldb_private::formatters::JavaStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &opts) {
   if (valobj.IsPointerOrReferenceType()) {
-    Status error;
+    Error error;
     ValueObjectSP deref = valobj.Dereference(error);
     if (error.Fail())
       return false;
@@ -145,7 +145,7 @@ bool lldb_private::formatters::JavaStringSummaryProvider(
 bool lldb_private::formatters::JavaArraySummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   if (valobj.IsPointerOrReferenceType()) {
-    Status error;
+    Error error;
     ValueObjectSP deref = valobj.Dereference(error);
     if (error.Fail())
       return false;

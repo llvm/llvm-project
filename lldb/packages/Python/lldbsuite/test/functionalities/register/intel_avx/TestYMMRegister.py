@@ -15,12 +15,12 @@ from lldbsuite.test import lldbutil
 
 class TestYMMRegister(TestBase):
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfFreeBSD
     @skipIfiOSSimulator
     @skipIfTargetAndroid()
     @skipIf(archs=no_match(['i386', 'x86_64']))
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://30523153")
     def test(self):
         self.build()
         self.setTearDownCleanup()

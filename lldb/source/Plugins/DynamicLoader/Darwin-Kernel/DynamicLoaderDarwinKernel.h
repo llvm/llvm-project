@@ -18,10 +18,10 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/UUID.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/UUID.h"
 
 class DynamicLoaderDarwinKernel : public lldb_private::DynamicLoader {
 public:
@@ -61,7 +61,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(lldb_private::Thread &thread,
                                                   bool stop_others) override;
 
-  lldb_private::Status CanLoadImage() override;
+  lldb_private::Error CanLoadImage() override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol

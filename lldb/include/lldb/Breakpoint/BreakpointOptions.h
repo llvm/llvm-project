@@ -17,9 +17,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Baton.h"
-#include "lldb/Utility/StringList.h"
-#include "lldb/Utility/StructuredData.h"
+#include "lldb/Core/Baton.h"
+#include "lldb/Core/StringList.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -50,7 +50,7 @@ public:
 
     static std::unique_ptr<CommandData>
     CreateFromStructuredData(const StructuredData::Dictionary &options_dict,
-                             Status &error);
+                             Error &error);
 
     StringList user_source;
     std::string script_source;
@@ -119,7 +119,7 @@ public:
   static std::unique_ptr<BreakpointOptions>
   CreateFromStructuredData(Target &target,
                            const StructuredData::Dictionary &data_dict,
-                           Status &error);
+                           Error &error);
 
   virtual StructuredData::ObjectSP SerializeToStructuredData();
 

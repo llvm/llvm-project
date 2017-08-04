@@ -15,6 +15,7 @@
 #include "lldb/Host/HostGetOpt.h"
 #include <io.h>
 #if defined(_MSC_VER)
+#include <eh.h>
 #include <signal.h>
 #endif
 #include "lldb/Host/windows/windows.h"

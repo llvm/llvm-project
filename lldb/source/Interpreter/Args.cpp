@@ -12,15 +12,18 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -420,10 +423,10 @@ void Args::SetArguments(const char **argv) {
   SetArguments(ArgvToArgc(argv), argv);
 }
 
-Status Args::ParseOptions(Options &options, ExecutionContext *execution_context,
-                          PlatformSP platform_sp, bool require_validation) {
+Error Args::ParseOptions(Options &options, ExecutionContext *execution_context,
+                         PlatformSP platform_sp, bool require_validation) {
   StreamString sstr;
-  Status error;
+  Error error;
   Option *long_options = options.GetLongOptions();
   if (long_options == nullptr) {
     error.SetErrorStringWithFormat("invalid long options");
@@ -547,7 +550,7 @@ void Args::Clear() {
 
 lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
                                    llvm::StringRef s, lldb::addr_t fail_value,
-                                   Status *error_ptr) {
+                                   Error *error_ptr) {
   bool error_set = false;
   if (s.empty()) {
     if (error_ptr)
@@ -629,8 +632,10 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
           add = str[0] == '+';
 
           if (regex_match.GetMatchAtIndex(s, 3, str)) {
-            if (!llvm::StringRef(str).getAsInteger(0, offset)) {
-              Status error;
+            offset = StringConvert::ToUInt64(str.c_str(), 0, 0, &success);
+
+            if (success) {
+              Error error;
               addr = StringToAddress(exe_ctx, name.c_str(),
                                      LLDB_INVALID_ADDRESS, &error);
               if (addr != LLDB_INVALID_ADDRESS) {
@@ -774,7 +779,7 @@ const char *Args::GetShellSafeArgument(const FileSpec &shell,
 
 int64_t Args::StringToOptionEnum(llvm::StringRef s,
                                  OptionEnumValueElement *enum_values,
-                                 int32_t fail_value, Status &error) {
+                                 int32_t fail_value, Error &error) {
   error.Clear();
   if (!enum_values) {
     error.SetErrorString("invalid enumeration argument");
@@ -819,10 +824,10 @@ Args::StringToScriptLanguage(llvm::StringRef s, lldb::ScriptLanguage fail_value,
   return fail_value;
 }
 
-Status Args::StringToFormat(const char *s, lldb::Format &format,
-                            size_t *byte_size_ptr) {
+Error Args::StringToFormat(const char *s, lldb::Format &format,
+                           size_t *byte_size_ptr) {
   format = eFormatInvalid;
-  Status error;
+  Error error;
 
   if (s && s[0]) {
     if (byte_size_ptr) {
@@ -926,12 +931,12 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
   // Check each arg to see if it matches the env var name.
   for (auto arg : llvm::enumerate(m_entries)) {
     llvm::StringRef name, value;
-    std::tie(name, value) = arg.value().ref.split('=');
+    std::tie(name, value) = arg.Value.ref.split('=');
     if (name != env_var_name)
       continue;
 
     if (argument_index)
-      *argument_index = arg.index();
+      *argument_index = arg.Index;
     return true;
   }
 
@@ -949,9 +954,9 @@ size_t Args::FindArgumentIndexForOption(Option *long_options,
              long_options[long_options_index].definition->long_option);
 
   for (auto entry : llvm::enumerate(m_entries)) {
-    if (entry.value().ref.startswith(short_buffer) ||
-        entry.value().ref.startswith(long_buffer))
-      return entry.index();
+    if (entry.Value.ref.startswith(short_buffer) ||
+        entry.Value.ref.startswith(long_buffer))
+      return entry.Index;
   }
 
   return size_t(-1);
@@ -1315,6 +1320,88 @@ void Args::ParseArgsForCompletion(Options &options,
         OptionArgElement(OptionArgElement::eBareDash, cursor_index,
                          OptionArgElement::eBareDash));
   }
+}
+
+bool Args::GetOptionValueAsString(const char *option, std::string &value) {
+  for (size_t ai = 0, ae = GetArgumentCount(); ai != ae; ++ai) {
+    const char *arg = GetArgumentAtIndex(ai);
+    const char *option_loc = strstr(arg, option);
+
+    const bool is_long_option = (option[0] == '-' && option[1] == '-');
+
+    if (option_loc == arg) {
+      const char *after_option = option_loc + strlen(option);
+
+      switch (*after_option) {
+      default:
+        if (is_long_option) {
+          continue;
+        } else {
+          value = after_option;
+          return true;
+        }
+        break;
+      case '=':
+        value = after_option + 1;
+        return true;
+      case '\0': {
+        const char *next_value = GetArgumentAtIndex(ai + 1);
+        if (next_value) {
+          value = next_value;
+          return true;
+        } else {
+          return false;
+        }
+      }
+      }
+    }
+  }
+
+  return false;
+}
+
+int Args::GetOptionValuesAsStrings(const char *option,
+                                   std::vector<std::string> &value) {
+  int ret = 0;
+
+  for (size_t ai = 0, ae = GetArgumentCount(); ai != ae; ++ai) {
+    const char *arg = GetArgumentAtIndex(ai);
+    const char *option_loc = strstr(arg, option);
+
+    const bool is_long_option = (option[0] == '-' && option[1] == '-');
+
+    if (option_loc == arg) {
+      const char *after_option = option_loc + strlen(option);
+
+      switch (*after_option) {
+      default:
+        if (is_long_option) {
+          continue;
+        } else {
+          value.push_back(after_option);
+          ++ret;
+        }
+        break;
+      case '=':
+        value.push_back(after_option + 1);
+        ++ret;
+        break;
+      case '\0': {
+        const char *next_value = GetArgumentAtIndex(ai + 1);
+        if (next_value) {
+          value.push_back(next_value);
+          ++ret;
+          ++ai;
+          break;
+        } else {
+          return ret;
+        }
+      }
+      }
+    }
+  }
+
+  return ret;
 }
 
 void Args::EncodeEscapeSequences(const char *src, std::string &dst) {

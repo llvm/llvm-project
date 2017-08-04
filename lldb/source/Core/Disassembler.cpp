@@ -9,14 +9,22 @@
 
 #include "lldb/Core/Disassembler.h"
 
-#include "lldb/Core/AddressRange.h" // for AddressRange
+// C Includes
+// C++ Includes
+#include <cstdio>
+#include <cstring>
+
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Mangled.h" // for Mangled, Mangled...
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/SourceManager.h" // for SourceManager
+#include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueArray.h"
@@ -25,31 +33,13 @@
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/Symbol.h"        // for Symbol
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h" // for Thread
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"       // for Stream
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/Utility/Timer.h"
-#include "lldb/lldb-private-enumerations.h" // for InstructionType:...
-#include "lldb/lldb-private-interfaces.h"   // for DisassemblerCrea...
-#include "lldb/lldb-private-types.h"        // for RegisterInfo
-#include "llvm/ADT/Triple.h"                // for Triple, Triple::...
-#include "llvm/Support/Compiler.h"          // for LLVM_PRETTY_FUNC...
-
-#include <cstdint> // for uint32_t, UINT32...
-#include <cstring>
-#include <utility> // for pair
-
-#include <assert.h> // for assert
+#include "lldb/lldb-private.h"
 
 #define DEFAULT_DISASM_BYTE_SIZE 32
 
@@ -59,8 +49,7 @@ using namespace lldb_private;
 DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
                                         const char *flavor,
                                         const char *plugin_name) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                      arch.GetArchitectureName(), plugin_name);
 
@@ -341,7 +330,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   } else {
     TargetSP target_sp = exe_ctx.GetTargetSP();
     if (target_sp) {
-      Status error;
+      Error error;
       OptionValueSP value_sp = target_sp->GetDebugger().GetPropertyValue(
           &exe_ctx, "target.process.thread.step-avoid-regexp", false, error);
       if (value_sp && value_sp->GetType() == OptionValue::eTypeRegex) {
@@ -760,10 +749,6 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
-
 bool Instruction::HasDelaySlot() {
   // Default is false.
   return false;
@@ -774,7 +759,7 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
   bool done = false;
   char buffer[1024];
 
-  auto option_value_sp = std::make_shared<OptionValueArray>(1u << data_type);
+  OptionValueSP option_value_sp(new OptionValueArray(1u << data_type));
 
   int idx = 0;
   while (!done) {
@@ -812,12 +797,12 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
       OptionValueSP data_value_sp;
       switch (data_type) {
       case OptionValue::eTypeUInt64:
-        data_value_sp = std::make_shared<OptionValueUInt64>(0, 0);
+        data_value_sp.reset(new OptionValueUInt64(0, 0));
         data_value_sp->SetValueFromString(value);
         break;
       // Other types can be added later as needed.
       default:
-        data_value_sp = std::make_shared<OptionValueString>(value.c_str(), "");
+        data_value_sp.reset(new OptionValueString(value.c_str(), ""));
         break;
       }
 
@@ -833,7 +818,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   bool done = false;
   char buffer[1024];
 
-  auto option_value_sp = std::make_shared<OptionValueDictionary>();
+  OptionValueSP option_value_sp(new OptionValueDictionary());
   static ConstString encoding_key("data_encoding");
   OptionValue::Type data_type = OptionValue::eTypeInvalid;
 
@@ -906,13 +891,13 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         // We've used the data_type to read an array; re-set the type to Invalid
         data_type = OptionValue::eTypeInvalid;
       } else if ((value[0] == '0') && (value[1] == 'x')) {
-        value_sp = std::make_shared<OptionValueUInt64>(0, 0);
+        value_sp.reset(new OptionValueUInt64(0, 0));
         value_sp->SetValueFromString(value);
       } else {
         size_t len = value.size();
         if ((value[0] == '"') && (value[len - 1] == '"'))
           value = value.substr(1, len - 2);
-        value_sp = std::make_shared<OptionValueString>(value.c_str(), "");
+        value_sp.reset(new OptionValueString(value.c_str(), ""));
       }
 
       if (const_key == encoding_key) {
@@ -1119,7 +1104,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
     while (i > start) {
       --i;
 
-      Status error;
+      Error error;
       uint32_t inst_bytes;
       bool prefer_file_cache = false; // Read from process if process is running
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
@@ -1178,17 +1163,18 @@ size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
         !range.GetBaseAddress().IsValid())
       return 0;
 
-    auto data_sp = std::make_shared<DataBufferHeap>(byte_size, '\0');
+    DataBufferHeap *heap_buffer = new DataBufferHeap(byte_size, '\0');
+    DataBufferSP data_sp(heap_buffer);
 
-    Status error;
+    Error error;
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     const size_t bytes_read = target->ReadMemory(
-        range.GetBaseAddress(), prefer_file_cache, data_sp->GetBytes(),
-        data_sp->GetByteSize(), error, &load_addr);
+        range.GetBaseAddress(), prefer_file_cache, heap_buffer->GetBytes(),
+        heap_buffer->GetByteSize(), error, &load_addr);
 
     if (bytes_read > 0) {
-      if (bytes_read != data_sp->GetByteSize())
-        data_sp->SetByteSize(bytes_read);
+      if (bytes_read != heap_buffer->GetByteSize())
+        heap_buffer->SetByteSize(bytes_read);
       DataExtractor data(data_sp, m_arch.GetByteOrder(),
                          m_arch.GetAddressByteSize());
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
@@ -1225,7 +1211,7 @@ size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
   DataBufferHeap *heap_buffer = new DataBufferHeap(byte_size, '\0');
   DataBufferSP data_sp(heap_buffer);
 
-  Status error;
+  Error error;
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   const size_t bytes_read =
       target->ReadMemory(start, prefer_file_cache, heap_buffer->GetBytes(),
@@ -1461,3 +1447,4 @@ std::function<bool(const Instruction::Operand &)>
 lldb_private::OperandMatchers::MatchOpType(Instruction::Operand::Type type) {
   return [type](const Instruction::Operand &op) { return op.m_type == type; };
 }
+

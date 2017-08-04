@@ -9,7 +9,12 @@
 
 #include "lldb/Core/StreamFile.h"
 
+// C Includes
 #include <stdio.h>
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

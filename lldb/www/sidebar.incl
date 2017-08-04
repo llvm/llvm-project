@@ -8,7 +8,6 @@
       <li><a href="/goals.html">Goals</a></li>
       <li><a href="/features.html">Features</a></li>
       <li><a href="/status.html">Status</a></li>
-      <li><a href="/projects.html">Projects</a></li>
     </ul>
   </div>
   <div class="menu">
@@ -49,7 +48,7 @@
       <li><a href="/build.html">Build</a></li>
       <li><a href="/test.html">Test</a></li>
       <li><a href="/SB-api-coding-rules.html">SB API Coding Rules</a></li>
-      <li><a href="http://bugs.llvm.org">Bug Reports</a></li>
+      <li><a href="http://llvm.org/bugs">Bug Reports</a></li>
       <li><a href="http://llvm.org/svn/llvm-project/lldb/trunk">Browse SVN</a></li>
       <li><a href="http://llvm.org/viewvc/llvm-project/lldb/trunk">Browse ViewVC</a></li>
     </ul>

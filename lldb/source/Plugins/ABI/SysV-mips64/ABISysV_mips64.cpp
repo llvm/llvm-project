@@ -16,6 +16,10 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -29,10 +33,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -559,13 +559,13 @@ size_t ABISysV_mips64::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_mips64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
+ABISysV_mips64::CreateInstance(const ArchSpec &arch) {
   static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   if ((arch_type == llvm::Triple::mips64) ||
       (arch_type == llvm::Triple::mips64el)) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_mips64(process_sp));
+      g_abi_sp.reset(new ABISysV_mips64);
     return g_abi_sp;
   }
   return ABISP();
@@ -617,7 +617,7 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   sp &= ~(0xfull); // 16-byte alignment
 
-  Status error;
+  Error error;
   const RegisterInfo *pc_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   const RegisterInfo *sp_reg_info =
@@ -674,9 +674,9 @@ bool ABISysV_mips64::GetArgumentValues(Thread &thread,
   return false;
 }
 
-Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                            lldb::ValueObjectSP &new_value_sp) {
-  Status error;
+Error ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                           lldb::ValueObjectSP &new_value_sp) {
+  Error error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -696,7 +696,7 @@ Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     error.SetErrorString("no registers are available");
 
   DataExtractor data;
-  Status data_error;
+  Error data_error;
   size_t num_bytes = new_value_sp->GetData(data, data_error);
   if (data_error.Fail()) {
     error.SetErrorStringWithFormat(
@@ -754,7 +754,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
     Thread &thread, CompilerType &return_compiler_type) const {
   ValueObjectSP return_valobj_sp;
   Value value;
-  Status error;
+  Error error;
 
   ExecutionContext exe_ctx(thread.shared_from_this());
   if (exe_ctx.GetTargetPtr() == nullptr || exe_ctx.GetProcessPtr() == nullptr)

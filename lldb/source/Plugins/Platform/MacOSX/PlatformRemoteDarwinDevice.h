@@ -17,7 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "PlatformDarwin.h"
-#include "lldb/Utility/FileSpec.h"
+#include "lldb/Host/FileSpec.h"
 
 #include "llvm/Support/FileSystem.h"
 
@@ -30,18 +30,18 @@ public:
   //------------------------------------------------------------
   // lldb_private::Platform functions
   //------------------------------------------------------------
-  lldb_private::Status ResolveExecutable(
+  lldb_private::Error ResolveExecutable(
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr) override;
 
   void GetStatus(lldb_private::Stream &strm) override;
 
-  virtual lldb_private::Status
+  virtual lldb_private::Error
   GetSymbolFile(const lldb_private::FileSpec &platform_file,
                 const lldb_private::UUID *uuid_ptr,
                 lldb_private::FileSpec &local_file);
 
-  lldb_private::Status
+  lldb_private::Error
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,
@@ -56,6 +56,11 @@ public:
   }
 
 protected:
+  static lldb_private::FileSpec::EnumerateDirectoryResult
+  GetContainedFilesIntoVectorOfStringsCallback(
+      void *baton, lldb_private::FileSpec::FileType file_type,
+      const lldb_private::FileSpec &file_spec);
+
   struct SDKDirectoryInfo {
     SDKDirectoryInfo(const lldb_private::FileSpec &sdk_dir_spec);
     lldb_private::FileSpec directory;

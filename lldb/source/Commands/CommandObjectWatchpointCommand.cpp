@@ -19,7 +19,6 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/State.h"
-#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
@@ -319,9 +318,9 @@ are no syntax errors may indicate that a function was declared but never called.
 
     ~CommandOptions() override = default;
 
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {

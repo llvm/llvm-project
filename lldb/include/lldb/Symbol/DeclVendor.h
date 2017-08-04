@@ -11,7 +11,6 @@
 #define liblldb_DeclVendor_h_
 
 #include "lldb/Core/ClangForward.h"
-#include "lldb/lldb-defines.h"
 
 #include <vector>
 

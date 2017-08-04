@@ -12,18 +12,18 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -91,7 +91,7 @@ RegisterContext::UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
   DWARFExpression dwarf_expr(opcode_ctx, dwarf_data, nullptr, 0,
                              dwarf_opcode_len);
   Value result;
-  Status error;
+  Error error;
   const lldb::offset_t offset = 0;
   if (dwarf_expr.Evaluate(&exe_ctx, nullptr, nullptr, this, opcode_ctx,
                           dwarf_data, nullptr, offset, dwarf_opcode_len,
@@ -299,10 +299,11 @@ bool RegisterContext::ClearHardwareWatchpoint(uint32_t hw_index) {
 
 bool RegisterContext::HardwareSingleStep(bool enable) { return false; }
 
-Status RegisterContext::ReadRegisterValueFromMemory(
-    const RegisterInfo *reg_info, lldb::addr_t src_addr, uint32_t src_len,
-    RegisterValue &reg_value) {
-  Status error;
+Error RegisterContext::ReadRegisterValueFromMemory(const RegisterInfo *reg_info,
+                                                   lldb::addr_t src_addr,
+                                                   uint32_t src_len,
+                                                   RegisterValue &reg_value) {
+  Error error;
   if (reg_info == nullptr) {
     error.SetErrorString("invalid register info argument.");
     return error;
@@ -317,7 +318,7 @@ Status RegisterContext::ReadRegisterValueFromMemory(
   //
   // Case 2: src_len > dst_len
   //
-  //   Status!  (The register should always be big enough to hold the data)
+  //   Error!  (The register should always be big enough to hold the data)
   //
   // Case 3: src_len < dst_len
   //
@@ -370,12 +371,12 @@ Status RegisterContext::ReadRegisterValueFromMemory(
   return error;
 }
 
-Status RegisterContext::WriteRegisterValueToMemory(
+Error RegisterContext::WriteRegisterValueToMemory(
     const RegisterInfo *reg_info, lldb::addr_t dst_addr, uint32_t dst_len,
     const RegisterValue &reg_value) {
   uint8_t dst[RegisterValue::kMaxRegisterByteSize];
 
-  Status error;
+  Error error;
 
   ProcessSP process_sp(m_thread.GetProcess());
   if (process_sp) {

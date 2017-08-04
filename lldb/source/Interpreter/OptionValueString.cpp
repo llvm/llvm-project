@@ -14,9 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -47,9 +46,9 @@ void OptionValueString::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueString::SetValueFromString(llvm::StringRef value,
-                                             VarSetOperationType op) {
-  Status error;
+Error OptionValueString::SetValueFromString(llvm::StringRef value,
+                                            VarSetOperationType op) {
+  Error error;
 
   std::string value_str = value.str();
   value = value.trim();
@@ -127,27 +126,27 @@ lldb::OptionValueSP OptionValueString::DeepCopy() const {
   return OptionValueSP(new OptionValueString(*this));
 }
 
-Status OptionValueString::SetCurrentValue(llvm::StringRef value) {
+Error OptionValueString::SetCurrentValue(llvm::StringRef value) {
   if (m_validator) {
-    Status error(m_validator(value.str().c_str(), m_validator_baton));
+    Error error(m_validator(value.str().c_str(), m_validator_baton));
     if (error.Fail())
       return error;
   }
   m_current_value.assign(value);
-  return Status();
+  return Error();
 }
 
-Status OptionValueString::AppendToCurrentValue(const char *value) {
+Error OptionValueString::AppendToCurrentValue(const char *value) {
   if (value && value[0]) {
     if (m_validator) {
       std::string new_value(m_current_value);
       new_value.append(value);
-      Status error(m_validator(value, m_validator_baton));
+      Error error(m_validator(value, m_validator_baton));
       if (error.Fail())
         return error;
       m_current_value.assign(new_value);
     } else
       m_current_value.append(value);
   }
-  return Status();
+  return Error();
 }

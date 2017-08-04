@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/IOHandler.h"
-
 // C Includes
 #ifndef LLDB_DISABLE_CURSES
 #include <curses.h>
@@ -23,54 +21,35 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/IOHandler.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Host/File.h"            // for File
-#include "lldb/Host/Predicate.h"       // for Predicate, ::eBroad...
-#include "lldb/Utility/Status.h"       // for Status
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/Utility/StringList.h"   // for StringList
-#include "lldb/lldb-forward.h"         // for StreamFileSP
-
+#include "lldb/Core/ValueObjectRegister.h"
 #ifndef LLDB_DISABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
 #endif
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#ifndef LLDB_DISABLE_CURSES
-#include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/State.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadPlan.h"
+#ifndef LLDB_DISABLE_CURSES
+#include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #endif
 
-#include "llvm/ADT/StringRef.h" // for StringRef
-
 #ifdef _MSC_VER
-#include "lldb/Host/windows/windows.h"
+#include <Windows.h>
 #endif
-
-#include <memory> // for shared_ptr
-#include <mutex>  // for recursive_mutex
-
-#include <assert.h>    // for assert
-#include <ctype.h>     // for isspace
-#include <errno.h>     // for EINTR, errno
-#include <stdint.h>    // for uint32_t, UINT32_MAX
-#include <stdio.h>     // for size_t, fprintf, feof
-#include <string.h>    // for strlen
-#include <type_traits> // for move
 
 using namespace lldb;
 using namespace lldb_private;
@@ -314,6 +293,7 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_ap.reset(new Editline(editline_name, GetInputFILE(),
                                      GetOutputFILE(), GetErrorFILE(),
                                      m_color_prompts));
+    SetBaseLineNumber(m_base_line_number);
     m_editline_ap->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
     m_editline_ap->SetAutoCompleteCallback(AutoCompleteCallback, this);
     // See if the delegate supports fixing indentation
@@ -515,7 +495,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
   } else {
 #endif
     bool done = false;
-    Status error;
+    Error error;
 
     while (!done) {
       // Show line numbers if we are asked to
@@ -541,6 +521,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
 #ifndef LLDB_DISABLE_LIBEDIT
   }
 #endif
+  m_current_lines_ptr = NULL;
   return success;
 }
 

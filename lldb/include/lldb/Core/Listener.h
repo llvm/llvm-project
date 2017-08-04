@@ -10,29 +10,20 @@
 #ifndef liblldb_Select_h_
 #define liblldb_Select_h_
 
-#include "lldb/Core/Broadcaster.h" // for Broadcaster::BroadcasterImplWP
-#include "lldb/Utility/Timeout.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h" // for BroadcasterManagerWP, EventSP
-
-#include <condition_variable>
+// C Includes
+// C++ Includes
+#include <chrono>
 #include <list>
 #include <map>
-#include <memory> // for owner_less, enable_shared_from_this
 #include <mutex>
-#include <ratio> // for micro
 #include <string>
 #include <vector>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
-
-namespace lldb_private {
-class ConstString;
-}
-namespace lldb_private {
-class Event;
-}
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Event.h"
+#include "lldb/Utility/Timeout.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -48,7 +39,8 @@ public:
   //------------------------------------------------------------------
   //
   // Listeners have to be constructed into shared pointers - at least if you
-  // want them to listen to Broadcasters,
+  // want them to listen to
+  // Broadcasters,
 protected:
   Listener(const char *name);
 

@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/lldb-private-types.h"
 
 namespace lldb_private {
 

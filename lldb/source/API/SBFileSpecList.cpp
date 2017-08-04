@@ -13,10 +13,9 @@
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Host/PosixApi.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Host/FileSpec.h"
 
 using namespace lldb;
 using namespace lldb_private;

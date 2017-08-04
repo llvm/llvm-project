@@ -26,8 +26,8 @@
 #include "lldb/Breakpoint/Stoppoint.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/StringList.h"
-#include "lldb/Utility/StructuredData.h"
+#include "lldb/Core/StringList.h"
+#include "lldb/Core/StructuredData.h"
 
 namespace lldb_private {
 
@@ -169,7 +169,7 @@ public:
 
     virtual bool EvaluatePrecondition(StoppointCallbackContext &context);
 
-    virtual Status ConfigurePrecondition(Args &options);
+    virtual Error ConfigurePrecondition(Args &options);
 
     virtual void GetDescription(Stream &stream, lldb::DescriptionLevel level);
   };
@@ -178,7 +178,7 @@ public:
 
   // Saving & restoring breakpoints:
   static lldb::BreakpointSP CreateFromStructuredData(
-      Target &target, StructuredData::ObjectSP &data_object_sp, Status &error);
+      Target &target, StructuredData::ObjectSP &data_object_sp, Error &error);
 
   static bool
   SerializedBreakpointMatchesNames(StructuredData::ObjectSP &bkpt_object_sp,
@@ -613,7 +613,7 @@ public:
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
 
-  bool AddName(llvm::StringRef new_name, Status &error);
+  bool AddName(const char *new_name, Error &error);
 
   void RemoveName(const char *name_to_remove) {
     if (name_to_remove)

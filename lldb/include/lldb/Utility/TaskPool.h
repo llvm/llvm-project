@@ -10,13 +10,29 @@
 #ifndef utility_TaskPool_h_
 #define utility_TaskPool_h_
 
-#include "llvm/ADT/STLExtras.h"
-#include <functional> // for bind, function
+#if defined(__cplusplus) && defined(_MSC_VER) && (_HAS_EXCEPTIONS == 0)
+// Compiling MSVC libraries with _HAS_EXCEPTIONS=0, eliminates most but not all
+// calls to __uncaught_exception.  Unfortunately, it does seem to eliminate
+// the delcaration of __uncaught_excpeiton.  Including <eh.h> ensures that it is
+// declared.  This may not be necessary after MSVC 12.
+#include <eh.h>
+#endif
+
+#if defined(_MSC_VER)
+// Due to another bug in MSVC 2013, including <future> will generate hundreds of
+// warnings in the Concurrency Runtime.  This can be removed when we switch to
+// MSVC 2015
+#pragma warning(push)
+#pragma warning(disable : 4062)
+#endif
+
+#include <cassert>
+#include <cstdint>
 #include <future>
 #include <list>
-#include <memory>      // for make_shared
-#include <mutex>       // for mutex, unique_lock, condition_variable
-#include <type_traits> // for forward, result_of, move
+#include <queue>
+#include <thread>
+#include <vector>
 
 // Global TaskPool class for running tasks in parallel on a set of worker thread
 // created the first
@@ -54,6 +70,50 @@ private:
   static void AddTaskImpl(std::function<void()> &&task_fn);
 };
 
+// Wrapper class around the global TaskPool implementation to make it possible
+// to create a set of
+// tasks and then wait for the tasks to be completed by the
+// WaitForNextCompletedTask call. This
+// class should be used when WaitForNextCompletedTask is needed because this
+// class add no other
+// extra functionality to the TaskPool class and it have a very minor
+// performance overhead.
+template <typename T> // The return type of the tasks what will be added to this
+                      // task runner
+                      class TaskRunner {
+public:
+  // Add a task to the task runner what will also add the task to the global
+  // TaskPool. The
+  // function doesn't return the std::future for the task because it will be
+  // supplied by the
+  // WaitForNextCompletedTask after the task is completed.
+  template <typename F, typename... Args> void AddTask(F &&f, Args &&... args);
+
+  // Wait for the next task in this task runner to finish and then return the
+  // std::future what
+  // belongs to the finished task. If there is no task in this task runner
+  // (neither pending nor
+  // comleted) then this function will return an invalid future. Usually this
+  // function should be
+  // called in a loop processing the results of the tasks until it returns an
+  // invalid std::future
+  // what means that all task in this task runner is completed.
+  std::future<T> WaitForNextCompletedTask();
+
+  // Convenience method to wait for all task in this TaskRunner to finish. Do
+  // NOT use this class
+  // just because of this method. Use TaskPool instead and wait for each
+  // std::future returned by
+  // AddTask in a loop.
+  void WaitForAllTasks();
+
+private:
+  std::list<std::future<T>> m_ready;
+  std::list<std::future<T>> m_pending;
+  std::mutex m_mutex;
+  std::condition_variable m_cv;
+};
+
 template <typename F, typename... Args>
 std::future<typename std::result_of<F(Args...)>::type>
 TaskPool::AddTask(F &&f, Args &&... args) {
@@ -83,10 +143,68 @@ template <> struct TaskPool::RunTaskImpl<> {
   static void Run() {}
 };
 
-// Run 'func' on every value from begin .. end-1.  Each worker will grab
-// 'batch_size' numbers at a time to work on, so for very fast functions, batch
-// should be large enough to avoid too much cache line contention.
-void TaskMapOverInt(size_t begin, size_t end,
-                    const llvm::function_ref<void(size_t)> &func);
+template <typename T>
+template <typename F, typename... Args>
+void TaskRunner<T>::AddTask(F &&f, Args &&... args) {
+  std::unique_lock<std::mutex> lock(m_mutex);
+  auto it = m_pending.emplace(m_pending.end());
+  *it = std::move(TaskPool::AddTask(
+      [this, it](F f, Args... args) {
+        T &&r = f(std::forward<Args>(args)...);
+
+        std::unique_lock<std::mutex> lock(this->m_mutex);
+        this->m_ready.splice(this->m_ready.end(), this->m_pending, it);
+        lock.unlock();
+
+        this->m_cv.notify_one();
+        return r;
+      },
+      std::forward<F>(f), std::forward<Args>(args)...));
+}
+
+template <>
+template <typename F, typename... Args>
+void TaskRunner<void>::AddTask(F &&f, Args &&... args) {
+  std::unique_lock<std::mutex> lock(m_mutex);
+  auto it = m_pending.emplace(m_pending.end());
+  *it = std::move(TaskPool::AddTask(
+      [this, it](F f, Args... args) {
+        f(std::forward<Args>(args)...);
+
+        std::unique_lock<std::mutex> lock(this->m_mutex);
+        this->m_ready.emplace_back(std::move(*it));
+        this->m_pending.erase(it);
+        lock.unlock();
+
+        this->m_cv.notify_one();
+      },
+      std::forward<F>(f), std::forward<Args>(args)...));
+}
+
+template <typename T> std::future<T> TaskRunner<T>::WaitForNextCompletedTask() {
+  std::unique_lock<std::mutex> lock(m_mutex);
+  if (m_ready.empty() && m_pending.empty())
+    return std::future<T>(); // No more tasks
+
+  if (m_ready.empty())
+    m_cv.wait(lock, [this]() { return !this->m_ready.empty(); });
+
+  std::future<T> res = std::move(m_ready.front());
+  m_ready.pop_front();
+
+  lock.unlock();
+  res.wait();
+
+  return std::move(res);
+}
+
+template <typename T> void TaskRunner<T>::WaitForAllTasks() {
+  while (WaitForNextCompletedTask().valid())
+    ;
+}
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif // #ifndef utility_TaskPool_h_

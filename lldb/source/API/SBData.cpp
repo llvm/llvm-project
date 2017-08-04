@@ -13,11 +13,10 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 
-#include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -348,7 +347,7 @@ bool SBData::GetDescription(lldb::SBStream &description,
   Stream &strm = description.ref();
 
   if (m_opaque_sp) {
-    DumpDataExtractor(*m_opaque_sp, &strm, 0, lldb::eFormatBytesWithASCII, 1,
+    m_opaque_sp->Dump(&strm, 0, lldb::eFormatBytesWithASCII, 1,
                       m_opaque_sp->GetByteSize(), 16, base_addr, 0, 0);
   } else
     strm.PutCString("No value");
@@ -384,11 +383,7 @@ void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
   if (!m_opaque_sp.get())
     m_opaque_sp.reset(new DataExtractor(buf, size, endian, addr_size));
   else
-  {
     m_opaque_sp->SetData(buf, size, endian);
-    m_opaque_sp->SetAddressByteSize(addr_size);
-  }
-
   if (log)
     log->Printf("SBData::SetData (error=%p,buf=%p,size=%" PRIu64
                 ",endian=%d,addr_size=%c) => "

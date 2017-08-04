@@ -14,9 +14,10 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Utils.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -46,7 +47,7 @@ static OptionDefinition g_option_table[] = {
      nullptr, 0, eArgTypeNone, "Show variable location information."},
     {LLDB_OPT_SET_1, false, "object-description", 'O',
      OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-     "Print as an Objective-C object."},
+     "Display using a language-specific description API, if possible."},
     {LLDB_OPT_SET_1, false, "ptr-depth", 'P', OptionParser::eRequiredArgument,
      nullptr, nullptr, 0, eArgTypeCount, "The number of pointers to be "
                                          "traversed when dumping values "
@@ -75,10 +76,10 @@ OptionGroupValueObjectDisplay::GetDefinitions() {
   return llvm::makeArrayRef(g_option_table);
 }
 
-Status OptionGroupValueObjectDisplay::SetOptionValue(
+Error OptionGroupValueObjectDisplay::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Status error;
+  Error error;
   const int short_option = g_option_table[option_idx].short_option;
   bool success = false;
 

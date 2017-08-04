@@ -24,21 +24,19 @@
 #include "Host/macosx/cfcpp/CFCReleaser.h"
 #include "Host/macosx/cfcpp/CFCString.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/Timer.h"
+#include "lldb/Core/UUID.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/CleanUp.h"
-#include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
-#include "lldb/Utility/UUID.h"
 #include "mach/machine.h"
-
-#include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -103,7 +101,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
             }
             FileSpec dsym_filespec(path, path[0] == '~');
 
-            if (llvm::sys::fs::is_directory(dsym_filespec.GetPath())) {
+            if (dsym_filespec.GetFileType() == FileSpec::eFileTypeDirectory) {
               dsym_filespec =
                   Symbols::FindSymbolFileInBundle(dsym_filespec, uuid, arch);
               ++items_found;
@@ -166,10 +164,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 FileSpec file_spec(path, true);
                 ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
-                using namespace llvm::sys::fs;
-                switch (get_file_type(file_spec.GetPath())) {
-
-                case file_type::directory_file: // Bundle directory?
+                switch (file_spec.GetFileType()) {
+                case FileSpec::eFileTypeDirectory: // Bundle directory?
                 {
                   CFCBundle bundle(path);
                   CFCReleaser<CFURLRef> bundle_exe_url(
@@ -197,17 +193,15 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                   }
                 } break;
 
-                case file_type::fifo_file:      // Forget pipes
-                case file_type::socket_file:    // We can't process socket files
-                case file_type::file_not_found: // File doesn't exist...
-                case file_type::status_error:
+                case FileSpec::eFileTypePipe:   // Forget pipes
+                case FileSpec::eFileTypeSocket: // We can't process socket files
+                case FileSpec::eFileTypeInvalid: // File doesn't exist...
                   break;
 
-                case file_type::type_unknown:
-                case file_type::regular_file:
-                case file_type::symlink_file:
-                case file_type::block_file:
-                case file_type::character_file:
+                case FileSpec::eFileTypeUnknown:
+                case FileSpec::eFileTypeRegular:
+                case FileSpec::eFileTypeSymbolicLink:
+                case FileSpec::eFileTypeOther:
                   if (ObjectFile::GetModuleSpecifications(file_spec, 0, 0,
                                                           module_specs) &&
                       module_specs.FindMatchingModuleSpec(module_spec,
@@ -270,7 +264,6 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
             ModuleSpec spec;
             for (size_t i = 0; i < module_specs.GetSize(); ++i) {
               bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
-              UNUSED_IF_ASSERT_DISABLED(got_spec);
               assert(got_spec);
               if ((uuid == NULL ||
                    (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
@@ -517,10 +510,12 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
 
       StreamString command;
       if (!uuid_str.empty())
-        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
+        command.Printf("%s --ignoreNegativeCache --copyExecutable --databases "
+                       "bursar.apple.com,uuidsymmap.apple.com %s",
                        g_dsym_for_uuid_exe_path, uuid_str.c_str());
       else if (file_path[0] != '\0')
-        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
+        command.Printf("%s --ignoreNegativeCache --copyExecutable --databases "
+                       "bursar.apple.com,uuidsymmap.apple.com %s",
                        g_dsym_for_uuid_exe_path, file_path);
 
       if (!command.GetString().empty()) {
@@ -536,7 +531,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             log->Printf("Calling %s with file %s to find dSYM",
                         g_dsym_for_uuid_exe_path, file_path);
         }
-        Status error = Host::RunShellCommand(
+        Error error = Host::RunShellCommand(
             command.GetData(),
             NULL,            // current working directory
             &exit_status,    // Exit status

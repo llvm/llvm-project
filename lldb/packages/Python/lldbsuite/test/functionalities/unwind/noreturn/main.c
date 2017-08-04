@@ -29,6 +29,8 @@ func_a (void)
 int
 main (int argc, char *argv[])
 {
+    sleep (2);
+
 	func_a ();
 
 	return 0;

@@ -46,7 +46,7 @@ public:
   }
 
   void Clear() {
-    stds::lock_guard<_MutexType> guard(m_mutex);
+    std::lock_guard<_MutexType> guard(m_mutex);
     m_set.clear();
   }
 

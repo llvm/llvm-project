@@ -13,14 +13,14 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/State.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/StreamString.h"
 
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 #include "ProcessKDP.h"
@@ -40,13 +40,15 @@ using namespace lldb_private;
 ThreadKDP::ThreadKDP(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_thread_name(), m_dispatch_queue_name(),
       m_thread_dispatch_qaddr(LLDB_INVALID_ADDRESS) {
-  Log *log = ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD);
-  LLDB_LOG(log, "this = {0}, tid = {1:x}", this, GetID());
+  ProcessKDPLog::LogIf(KDP_LOG_THREAD,
+                       "%p: ThreadKDP::ThreadKDP (tid = 0x%4.4x)", this,
+                       GetID());
 }
 
 ThreadKDP::~ThreadKDP() {
-  Log *log = ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD);
-  LLDB_LOG(log, "this = {0}, tid = {1:x}", this, GetID());
+  ProcessKDPLog::LogIf(KDP_LOG_THREAD,
+                       "%p: ThreadKDP::~ThreadKDP (tid = 0x%4.4x)", this,
+                       GetID());
   DestroyThread();
 }
 

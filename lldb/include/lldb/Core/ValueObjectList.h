@@ -10,16 +10,15 @@
 #ifndef liblldb_ValueObjectList_h_
 #define liblldb_ValueObjectList_h_
 
-#include "lldb/lldb-forward.h" // for ValueObjectSP
-#include "lldb/lldb-types.h"   // for user_id_t
-
+// C Includes
+// C++ Includes
 #include <vector>
 
-#include <stddef.h> // for size_t
-
-namespace lldb_private {
-class ValueObject;
-}
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/UserID.h"
+#include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 

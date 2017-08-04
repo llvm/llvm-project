@@ -41,7 +41,7 @@ void CreateEnvironmentBuffer(const Args &env, std::vector<char> &buffer) {
 
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
-                                      Status &error) {
+                                      Error &error) {
   error.Clear();
 
   std::string executable;

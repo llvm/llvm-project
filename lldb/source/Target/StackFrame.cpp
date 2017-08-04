@@ -17,7 +17,6 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectMemory.h"
@@ -191,10 +190,9 @@ const Address &StackFrame::GetFrameCodeAddress() {
     if (thread_sp) {
       TargetSP target_sp(thread_sp->CalculateTarget());
       if (target_sp) {
-        const bool allow_section_end = true;
         if (m_frame_code_addr.SetOpcodeLoadAddress(
                 m_frame_code_addr.GetOffset(), target_sp.get(),
-                eAddressClassCode, allow_section_end)) {
+                eAddressClassCode)) {
           ModuleSP module_sp(m_frame_code_addr.GetModule());
           if (module_sp) {
             m_sc.module_sp = module_sp;
@@ -429,7 +427,7 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals) {
       m_variable_list_sp.reset(new VariableList());
       frame_block->AppendBlockVariables(can_create, get_child_variables,
                                         stop_if_child_block_is_inlined_function,
-                                        [](Variable *v) { return true; },
+                                        [this](Variable *v) { return true; },
                                         m_variable_list_sp.get());
     }
   }
@@ -489,7 +487,7 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error) {
+    VariableSP &var_sp, Error &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (m_is_history_frame)
@@ -608,10 +606,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     // Calculate the next separator index ahead of time
     ValueObjectSP child_valobj_sp;
     const char separator_type = var_expr[0];
-    bool expr_is_ptr = false;
     switch (separator_type) {
     case '-':
-      expr_is_ptr = true;
       if (var_expr.size() >= 2 && var_expr[1] != '>')
         return ValueObjectSP();
 
@@ -628,32 +624,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           return ValueObjectSP();
         }
       }
-
-      // If we have a non pointer type with a sythetic value then lets check if
-      // we have an sythetic dereference specified.
-      if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
-        Status deref_error;
-        if (valobj_sp->GetCompilerType().IsReferenceType()) {
-          valobj_sp = valobj_sp->GetSyntheticValue()->Dereference(deref_error);
-          if (error.Fail()) {
-            error.SetErrorStringWithFormatv(
-                "Failed to dereference reference type: %s", deref_error);
-            return ValueObjectSP();
-          }
-        }
-
-        valobj_sp = valobj_sp->Dereference(deref_error);
-        if (error.Fail()) {
-          error.SetErrorStringWithFormatv(
-              "Failed to dereference sythetic value: %s", deref_error);
-          return ValueObjectSP();
-        }
-        expr_is_ptr = false;
-      }
-
       var_expr = var_expr.drop_front(); // Remove the '-'
       LLVM_FALLTHROUGH;
     case '.': {
+      const bool expr_is_ptr = var_expr[0] == '>';
+
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
       separator_idx = var_expr.find_first_of(".-[");
       ConstString child_name(var_expr.substr(0, var_expr.find_first_of(".-[")));
@@ -776,7 +751,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // what we have is *ptr[low]. the most similar C++ syntax is to deref
           // ptr and extract bit low out of it. reading array item low would be
           // done by saying ptr[low], without a deref * sign
-          Status error;
+          Error error;
           ValueObjectSP temp(valobj_sp->Dereference(error));
           if (error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -795,7 +770,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // (an operation that is equivalent to deref-ing arr)
           // and extract bit low out of it. reading array item low
           // would be done by saying arr[low], without a deref * sign
-          Status error;
+          Error error;
           ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
           if (error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -978,7 +953,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // deref ptr and extract bits low thru high out of it. reading array
         // items low thru high would be done by saying ptr[low-high], without
         // a deref * sign
-        Status error;
+        Error error;
         ValueObjectSP temp(valobj_sp->Dereference(error));
         if (error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -995,7 +970,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // arr[0] (an operation that is equivalent to deref-ing arr) and extract
         // bits low thru high out of it. reading array items low thru high would
         // be done by saying arr[low-high], without a deref * sign
-        Status error;
+        Error error;
         ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
         if (error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -1066,7 +1041,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   return valobj_sp;
 }
 
-bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
+bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Error *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
     m_frame_base_error.SetErrorString(
@@ -1112,7 +1087,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
   return m_frame_base_error.Success();
 }
 
-DWARFExpression *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
+DWARFExpression *StackFrame::GetFrameBaseExpression(Error *error_ptr) {
   if (!m_sc.function) {
     if (error_ptr) {
       error_ptr->SetErrorString("No function in symbol context.");
@@ -1427,7 +1402,7 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
     return ValueObjectSP();
   }
 
-  Status error;
+  Error error;
   ValueObjectSP pointee = base->Dereference(error);
     
   if (!pointee) {
@@ -1744,7 +1719,7 @@ void StackFrame::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetContext(shared_from_this());
 }
 
-void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
+void StackFrame::DumpUsingSettingsFormat(Stream *strm,
                                          const char *frame_marker) {
   if (strm == nullptr)
     return;
@@ -1758,13 +1733,8 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
-  if (target) {
-    if (show_unique) {
-      frame_format = target->GetDebugger().GetFrameFormatUnique();
-    } else {
-      frame_format = target->GetDebugger().GetFrameFormat();
-    }
-  }
+  if (target)
+    frame_format = target->GetDebugger().GetFrameFormat();
   if (frame_format && FormatEntity::Format(*frame_format, s, &m_sc, &exe_ctx,
                                            nullptr, nullptr, false, false)) {
     strm->PutCString(s.GetString());
@@ -1846,10 +1816,11 @@ bool StackFrame::HasCachedData() const {
 }
 
 bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                           bool show_unique, const char *frame_marker) {
+                           const char *frame_marker) {
+
   if (show_frame_info) {
     strm.Indent();
-    DumpUsingSettingsFormat(&strm, show_unique, frame_marker);
+    DumpUsingSettingsFormat(&strm, frame_marker);
   }
 
   if (show_source) {

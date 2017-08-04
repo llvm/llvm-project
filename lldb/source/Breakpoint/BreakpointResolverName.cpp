@@ -16,13 +16,15 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -92,16 +94,16 @@ BreakpointResolverName::BreakpointResolverName(
 
 BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+    Error &error) {
   LanguageType language = eLanguageTypeUnknown;
-  llvm::StringRef language_name;
+  std::string language_name;
   bool success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::LanguageName), language_name);
   if (success) {
     language = Language::GetLanguageTypeFromString(language_name);
     if (language == eLanguageTypeUnknown) {
-      error.SetErrorStringWithFormatv("BRN::CFSD: Unknown language: {0}.",
-                                      language_name);
+      error.SetErrorStringWithFormat("BRN::CFSD: Unknown language: %s.",
+                                     language_name.c_str());
       return nullptr;
     }
   }
@@ -122,7 +124,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     return nullptr;
   }
 
-  llvm::StringRef regex_text;
+  std::string regex_text;
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
@@ -162,7 +164,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     std::vector<uint32_t> name_masks;
     for (size_t i = 0; i < num_elem; i++) {
       uint32_t name_mask;
-      llvm::StringRef name;
+      std::string name;
 
       success = names_array->GetItemAtIndexAsString(i, name);
       if (!success) {
@@ -233,6 +235,25 @@ void BreakpointResolverName::AddNameLookup(const ConstString &name,
   } else {
     Module::LookupInfo lookup(name, name_type_mask, m_language);
     m_lookups.push_back(lookup);
+
+    // we need to do this because we don't have a proper parser for Swift
+    // function name syntax
+    // so we try to ensure that if we autocomplete to something, we'll look for
+    // its mangled
+    // equivalent and use the mangled version as a lookup as well - to avoid
+    // overhead
+    // only do it for mangled names that start with _T - i.e. Swift mangled
+    // names!
+    ConstString counterpart;
+    if (name.GetMangledCounterpart(counterpart)) {
+      if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetCString())) {
+        Module::LookupInfo lookup;
+        lookup.SetName(counterpart);
+        lookup.SetLookupName(counterpart);
+        lookup.SetNameTypeMask(eFunctionNameTypeAuto);
+        m_lookups.push_back(lookup);
+      }
+    }
   }
 }
 

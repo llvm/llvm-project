@@ -103,8 +103,6 @@ protected:
 
   const lldb_private::Address *operator->() const;
 
-  friend bool operator==(const SBAddress &lhs, const SBAddress &rhs);
-
   lldb_private::Address *get();
 
   lldb_private::Address &ref();
@@ -118,8 +116,6 @@ protected:
 private:
   std::unique_ptr<lldb_private::Address> m_opaque_ap;
 };
-
-bool operator==(const SBAddress &lhs, const SBAddress &rhs);
 
 } // namespace lldb
 

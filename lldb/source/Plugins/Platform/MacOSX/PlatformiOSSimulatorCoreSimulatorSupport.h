@@ -24,10 +24,10 @@
 typedef void *id;
 #endif
 // Project includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/Optional.h"
 
@@ -39,17 +39,17 @@ public:
 
   explicit operator bool() { return m_pid != LLDB_INVALID_PROCESS_ID; }
 
-  lldb_private::Status GetError() { return m_error; }
+  lldb_private::Error GetError() { return m_error; }
 
 private:
   Process(lldb::pid_t p);
 
-  Process(lldb_private::Status error);
+  Process(lldb_private::Error error);
 
-  Process(lldb::pid_t p, lldb_private::Status error);
+  Process(lldb::pid_t p, lldb_private::Error error);
 
   lldb::pid_t m_pid;
-  lldb_private::Status m_error;
+  lldb_private::Error m_error;
 
   friend class Device;
 };
@@ -165,9 +165,9 @@ public:
 
   State GetState();
 
-  bool Boot(lldb_private::Status &err);
+  bool Boot(lldb_private::Error &err);
 
-  bool Shutdown(lldb_private::Status &err);
+  bool Shutdown(lldb_private::Error &err);
 
   std::string GetUDID() const;
 

@@ -18,12 +18,12 @@
 #include <mutex>
 
 // Other libraries and framework includes
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {
-class Status;
+class Error;
 class Module;
 class Scalar;
 } // End lldb_private namespace.
@@ -54,10 +54,10 @@ public:
                  const lldb_private::FileSpec &stderr_file_spec,
                  const lldb_private::FileSpec &working_dir,
                  const lldb_private::ProcessLaunchInfo &launch_info,
-                 lldb_private::Status &error);
+                 lldb_private::Error &error);
 
   ProcessMonitor(ProcessFreeBSD *process, lldb::pid_t pid,
-                 lldb_private::Status &error);
+                 lldb_private::Error &error);
 
   ~ProcessMonitor();
 
@@ -86,14 +86,14 @@ public:
   ///
   /// This method is provided to implement Process::DoReadMemory.
   size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                    lldb_private::Status &error);
+                    lldb_private::Error &error);
 
   /// Writes @p size bytes from address @p vm_adder in the inferior process
   /// address space.
   ///
   /// This method is provided to implement Process::DoWriteMemory.
   size_t WriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
-                     lldb_private::Status &error);
+                     lldb_private::Error &error);
 
   /// Reads the contents from the register identified by the given (architecture
   /// dependent) offset.
@@ -178,7 +178,7 @@ public:
   /// Terminate the traced process.
   bool Kill();
 
-  lldb_private::Status Detach(lldb::tid_t tid);
+  lldb_private::Error Detach(lldb::tid_t tid);
 
   void StopMonitor();
 
@@ -210,7 +210,7 @@ private:
 
     ProcessMonitor *m_monitor;   // The monitor performing the attach.
     sem_t m_semaphore;           // Posted to once operation complete.
-    lldb_private::Status m_error; // Set if process operation failed.
+    lldb_private::Error m_error; // Set if process operation failed.
   };
 
   /// @class LauchArgs
@@ -238,7 +238,7 @@ private:
     const lldb_private::FileSpec m_working_dir; // Working directory or empty.
   };
 
-  void StartLaunchOpThread(LaunchArgs *args, lldb_private::Status &error);
+  void StartLaunchOpThread(LaunchArgs *args, lldb_private::Error &error);
 
   static void *LaunchOpThread(void *arg);
 
@@ -252,7 +252,7 @@ private:
     lldb::pid_t m_pid; // pid of the process to be attached.
   };
 
-  void StartAttachOpThread(AttachArgs *args, lldb_private::Status &error);
+  void StartAttachOpThread(AttachArgs *args, lldb_private::Error &error);
 
   static void *AttachOpThread(void *args);
 

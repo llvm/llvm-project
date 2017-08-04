@@ -11,13 +11,13 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Mangled.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeSystem.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APSInt.h"
 
@@ -131,6 +131,18 @@ bool SBType::IsVectorType() {
 bool SBType::IsReferenceType() {
   if (!IsValid())
     return false;
+  // FIXME: Swift class types are really like references, they are
+  // accessed by the same operator as Values, but their value is the
+  // location of the type.  But reporting true from the Compiler Type
+  // was causing problems that I couldn't unwind this time around.  So
+  // I'll work around that here.  The only Swift types that have a value
+  // are reference types.  All other Swift types are complex.  So use that
+  // as the discriminator.
+  CompilerType type = m_opaque_sp->GetCompilerType(true); 
+  uint32_t flags = type.GetTypeInfo();
+  if (flags & eTypeIsSwift)
+    return flags & eTypeHasValue;
+
   return m_opaque_sp->GetCompilerType(true).IsReferenceType();
 }
 

@@ -10,27 +10,25 @@
 #include "ObjectFilePECOFF.h"
 #include "WindowsMiniDump.h"
 
-#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Support/COFF.h"
 
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/Timer.h"
+#include "lldb/Core/UUID.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
-#include "lldb/Utility/UUID.h"
-
-#include "llvm/Support/MemoryBuffer.h"
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
 #define IMAGE_NT_SIGNATURE 0x00004550 // PE00
@@ -67,30 +65,20 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
                                              lldb::offset_t file_offset,
                                              lldb::offset_t length) {
   if (!data_sp) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
-    if (!data_sp)
-      return nullptr;
+    data_sp = file->MemoryMapFileContentsIfLocal(file_offset, length);
     data_offset = 0;
   }
 
-  if (!ObjectFilePECOFF::MagicBytesMatch(data_sp))
-    return nullptr;
-
-  // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
-    if (!data_sp)
-      return nullptr;
+  if (ObjectFilePECOFF::MagicBytesMatch(data_sp)) {
+    // Update the data to contain the entire file if it doesn't already
+    if (data_sp->GetByteSize() < length)
+      data_sp = file->MemoryMapFileContentsIfLocal(file_offset, length);
+    std::unique_ptr<ObjectFile> objfile_ap(new ObjectFilePECOFF(
+        module_sp, data_sp, data_offset, file, file_offset, length));
+    if (objfile_ap.get() && objfile_ap->ParseHeader())
+      return objfile_ap.release();
   }
-
-  auto objfile_ap = llvm::make_unique<ObjectFilePECOFF>(
-      module_sp, data_sp, data_offset, file, file_offset, length);
-  if (!objfile_ap || !objfile_ap->ParseHeader())
-    return nullptr;
-
-  return objfile_ap.release();
+  return NULL;
 }
 
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
@@ -145,7 +133,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
                                 const lldb_private::FileSpec &outfile,
-                                lldb_private::Status &error) {
+                                lldb_private::Error &error) {
   return SaveMiniDump(process_sp, outfile, error);
 }
 
@@ -430,17 +418,14 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
 
 DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (m_file) {
-    // A bit of a hack, but we intend to write to this buffer, so we can't 
-    // mmap it.
-    auto buffer_sp =
-        DataBufferLLVM::CreateSliceFromPath(m_file.GetPath(), size, offset, true);
+    DataBufferSP buffer_sp(m_file.ReadFileContents(offset, size));
     return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
   }
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;
   if (process_sp) {
     auto data_ap = llvm::make_unique<DataBufferHeap>(size, 0);
-    Status readmem_error;
+    Error readmem_error;
     size_t bytes_read =
         process_sp->ReadMemory(m_image_base + offset, data_ap->GetBytes(),
                                data_ap->GetByteSize(), readmem_error);
@@ -696,6 +681,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
         static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
         static ConstString g_sect_name_dwarf_debug_str(".debug_str");
         static ConstString g_sect_name_eh_frame(".eh_frame");
+        static ConstString g_sect_name_swift_ast(".swift_ast");
         static ConstString g_sect_name_go_symtab(".gosymtab");
         SectionType section_type = eSectionTypeOther;
         if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
@@ -745,6 +731,8 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           section_type = eSectionTypeDWARFDebugStr;
         else if (const_sect_name == g_sect_name_eh_frame)
           section_type = eSectionTypeEHFrame;
+        else if (const_sect_name == g_sect_name_swift_ast)
+          section_type = eSectionTypeSwiftModules;
         else if (const_sect_name == g_sect_name_go_symtab)
           section_type = eSectionTypeGoSymtab;
         else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {

@@ -1,6 +1,10 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import lldb
+from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
+import lldbsuite.test.test_categories as test_categories
 # System modules
 import os
 
@@ -22,7 +26,8 @@ def source_type(filename):
         '.cxx': 'CXX_SOURCES',
         '.cc': 'CXX_SOURCES',
         '.m': 'OBJC_SOURCES',
-        '.mm': 'OBJCXX_SOURCES'
+        '.mm': 'OBJCXX_SOURCES',
+        '.swift': 'SWIFT_SOURCES'
     }.get(extension, None)
 
 
@@ -226,19 +231,19 @@ def MakeInlineTest(__file, __globals, decorators=None):
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
     if test_categories.is_supported_on_platform(
-            "dsym", target_platform, configuration.compiler):
+            "dsym", target_platform, configuration.compilers):
         test.test_with_dsym = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dsym, decorators)
     if test_categories.is_supported_on_platform(
-            "dwarf", target_platform, configuration.compiler):
+            "dwarf", target_platform, configuration.compilers):
         test.test_with_dwarf = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dwarf, decorators)
     if test_categories.is_supported_on_platform(
-            "dwo", target_platform, configuration.compiler):
+            "dwo", target_platform, configuration.compilers):
         test.test_with_dwo = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_dwo, decorators)
     if test_categories.is_supported_on_platform(
-            "gmodules", target_platform, configuration.compiler):
+            "gmodules", target_platform, configuration.compilers):
         test.test_with_gmodules = ApplyDecoratorsToFunction(
             test._InlineTest__test_with_gmodules, decorators)
 

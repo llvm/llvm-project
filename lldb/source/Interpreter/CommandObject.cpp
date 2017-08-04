@@ -24,9 +24,9 @@
 // FIXME: Make a separate file for the completers.
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h"
 
 #include "lldb/Target/Language.h"
 
@@ -99,7 +99,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
   // See if the subclass has options?
   Options *options = GetOptions();
   if (options != nullptr) {
-    Status error;
+    Error error;
 
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);
@@ -977,10 +977,10 @@ bool CommandObjectParsed::Execute(const char *args_string,
   }
   if (!handled) {
     for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!entry.value().ref.empty() && entry.value().ref.front() == '`') {
+      if (!entry.Value.ref.empty() && entry.Value.ref.front() == '`') {
         cmd_args.ReplaceArgumentAtIndex(
-            entry.index(),
-            m_interpreter.ProcessEmbeddedScriptCommands(entry.value().c_str()));
+            entry.Index,
+            m_interpreter.ProcessEmbeddedScriptCommands(entry.Value.c_str()));
       }
     }
 

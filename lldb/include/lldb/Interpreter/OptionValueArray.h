@@ -36,10 +36,10 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  Status
+  Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
+  Error
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
@@ -55,7 +55,7 @@ public:
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                   llvm::StringRef name, bool will_modify,
-                                  Status &error) const override;
+                                  Error &error) const override;
 
   //---------------------------------------------------------------------
   // Subclass specific functions
@@ -122,7 +122,7 @@ public:
 
   size_t GetArgs(Args &args) const;
 
-  Status SetArgs(const Args &args, VarSetOperationType op);
+  Error SetArgs(const Args &args, VarSetOperationType op);
 
 protected:
   typedef std::vector<lldb::OptionValueSP> collection;

@@ -9,6 +9,7 @@
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
@@ -20,7 +21,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/Log.h"
 
 #include "DynamicLoaderDarwin.h"
 #include "DynamicLoaderMacOS.h"
@@ -270,7 +270,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
           if (header_array != static_cast<uint64_t>(-1)) {
             std::vector<addr_t> image_load_addresses;
             for (uint64_t i = 0; i < image_infos_count; i++) {
-              Status error;
+              Error error;
               addr_t addr = process->ReadUnsignedIntegerFromMemory(
                   header_array + (8 * i), 8, LLDB_INVALID_ADDRESS, error);
               if (addr != LLDB_INVALID_ADDRESS) {
@@ -397,8 +397,8 @@ DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule(Module *module) {
 //  0;
 //
 //  in libdyld.dylib.
-Status DynamicLoaderMacOS::CanLoadImage() {
-  Status error;
+Error DynamicLoaderMacOS::CanLoadImage() {
+  Error error;
   addr_t symbol_address = LLDB_INVALID_ADDRESS;
   Target &target = m_process->GetTarget();
   const ModuleList &target_modules = target.GetImages();

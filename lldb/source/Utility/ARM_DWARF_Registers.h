@@ -205,4 +205,9 @@ enum {
   dwarf_q15
 };
 
+const char *GetARMDWARFRegisterName(unsigned reg_num);
+
+bool GetARMDWARFRegisterInfo(unsigned reg_num,
+                             lldb_private::RegisterInfo &reg_info);
+
 #endif // utility_ARM_DWARF_Registers_h_

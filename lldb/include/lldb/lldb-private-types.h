@@ -27,7 +27,7 @@ class Platform;
 class ExecutionContext;
 
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
-    const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
+    const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Error &error);
 
 //----------------------------------------------------------------------
 // Every register is described in detail including its name, alternate

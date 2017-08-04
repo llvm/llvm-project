@@ -9,30 +9,33 @@
 
 #include "lldb/Core/FormatEntity.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+
+// Project includes
 #include "lldb/Core/Address.h"
-#include "lldb/Core/AddressRange.h" // for AddressRange
-#include "lldb/Core/ArchSpec.h"     // for ArchSpec
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegisterValue.h" // for RegisterValue
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
-#include "lldb/DataFormatters/FormatClasses.h" // for TypeNameSpecifier...
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/DataFormatters/TypeSummary.h" // for TypeSummaryImpl::...
+#include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Expression/ExpressionVariable.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/CompilerType.h" // for CompilerType
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextS...
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -42,37 +45,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/ConstString.h" // for ConstString, oper...
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"        // for Log
-#include "lldb/Utility/Logging.h"    // for GetLogIfAllCatego...
-#include "lldb/Utility/SharingPtr.h" // for SharingPtr
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StringList.h"     // for StringList
-#include "lldb/Utility/StructuredData.h" // for StructuredData::O...
-#include "lldb/lldb-defines.h"           // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-forward.h"           // for ValueObjectSP
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"       // for Triple, Triple::O...
-#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
-
-#include <ctype.h>     // for isxdigit
-#include <inttypes.h>  // for PRIu64, PRIx64
-#include <memory>      // for shared_ptr, opera...
-#include <stdio.h>     // for sprintf
-#include <stdlib.h>    // for strtoul
-#include <string.h>    // for size_t, strchr
-#include <type_traits> // for move
-#include <utility>     // for pair
-
-namespace lldb_private {
-class ScriptInterpreter;
-}
-namespace lldb_private {
-struct RegisterInfo;
-}
 
 using namespace lldb;
 using namespace lldb_private;
@@ -303,7 +275,7 @@ void FormatEntity::Entry::AppendText(const char *cstr) {
   return AppendText(llvm::StringRef(cstr));
 }
 
-Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
+Error FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
   entry.Clear();
   entry.type = Entry::Type::Root;
   llvm::StringRef modifiable_format(format_str);
@@ -408,7 +380,7 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
     ScriptInterpreter *script_interpreter =
         target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
     if (script_interpreter) {
-      Status error;
+      Error error;
       std::string script_output;
 
       if (script_interpreter->RunScriptFormatKeyword(script_function_name, t,
@@ -778,7 +750,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
                        var_name_final_if_array_range, index_lower,
                        index_higher);
 
-    Status error;
+    Error error;
 
     const std::string &expr_path = entry.string;
 
@@ -824,7 +796,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     // this happens when we are not going through
     // GetValueForVariableExpressionPath
     // to get to the target ValueObject
-    Status error;
+    Error error;
     target = target->Dereference(error).get();
     if (error.Fail()) {
       if (log)
@@ -850,8 +822,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     StreamString bitfield_name;
     bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
                          target->GetBitfieldBitSize());
-    auto type_sp = std::make_shared<TypeNameSpecifierImpl>(
-        bitfield_name.GetString(), false);
+    lldb::TypeNameSpecifierImplSP type_sp(
+        new TypeNameSpecifierImpl(bitfield_name.GetString(), false));
     if (val_obj_display ==
             ValueObject::eValueObjectRepresentationStyleSummary &&
         !DataVisualization::GetSummaryForType(type_sp))
@@ -1040,24 +1012,24 @@ static bool FormatThreadExtendedInfoRecurse(
       thread_info_dictionary->GetObjectForDotSeparatedPath(path);
 
   if (value) {
-    if (value->GetType() == eStructuredDataTypeInteger) {
+    if (value->GetType() == StructuredData::Type::eTypeInteger) {
       const char *token_format = "0x%4.4" PRIx64;
       if (!entry.printf_format.empty())
         token_format = entry.printf_format.c_str();
       s.Printf(token_format, value->GetAsInteger()->GetValue());
       return true;
-    } else if (value->GetType() == eStructuredDataTypeFloat) {
+    } else if (value->GetType() == StructuredData::Type::eTypeFloat) {
       s.Printf("%f", value->GetAsFloat()->GetValue());
       return true;
-    } else if (value->GetType() == eStructuredDataTypeString) {
-      s.Format("{0}", value->GetAsString()->GetValue());
+    } else if (value->GetType() == StructuredData::Type::eTypeString) {
+      s.Printf("%s", value->GetAsString()->GetValue().c_str());
       return true;
-    } else if (value->GetType() == eStructuredDataTypeArray) {
+    } else if (value->GetType() == StructuredData::Type::eTypeArray) {
       if (value->GetAsArray()->GetSize() > 0) {
         s.Printf("%zu", value->GetAsArray()->GetSize());
         return true;
       }
-    } else if (value->GetType() == eStructuredDataTypeDictionary) {
+    } else if (value->GetType() == StructuredData::Type::eTypeDictionary) {
       s.Printf("%zu",
                value->GetAsDictionary()->GetKeys()->GetAsArray()->GetSize());
       return true;
@@ -1079,7 +1051,7 @@ bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    bool initial_function) {
   if (!format_str.empty()) {
     FormatEntity::Entry root;
-    Status error = FormatEntity::Parse(format_str, root);
+    Error error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
       return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
                                   function_changed, initial_function);
@@ -1096,7 +1068,7 @@ bool FormatEntity::FormatCString(const char *format, Stream &s,
   if (format && format[0]) {
     FormatEntity::Entry root;
     llvm::StringRef format_str(format);
-    Status error = FormatEntity::Parse(format_str, root);
+    Error error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
       return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
                                   function_changed, initial_function);
@@ -1215,8 +1187,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                                               ? arch.GetTriple().getOS()
                                               : llvm::Triple::UnknownOS;
             if ((ostype == llvm::Triple::FreeBSD) ||
-                (ostype == llvm::Triple::Linux) ||
-                (ostype == llvm::Triple::NetBSD)) {
+                (ostype == llvm::Triple::Linux)) {
               format = "%" PRIu64;
             }
           } else {
@@ -1303,10 +1274,16 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
-          ValueObjectSP return_valobj_sp =
-              StopInfo::GetReturnValueObject(stop_info_sp);
+          bool is_swift_error_return = false;
+          ValueObjectSP return_valobj_sp = StopInfo::GetReturnValueObject(
+              stop_info_sp, is_swift_error_return);
           if (return_valobj_sp) {
-            return_valobj_sp->Dump(s);
+            DumpValueObjectOptions options;
+            if (return_valobj_sp->IsDynamic())
+              options.SetUseDynamicType(eDynamicCanRunTarget);
+            if (return_valobj_sp->DoesProvideSyntheticValue())
+              options.SetUseSyntheticValue(true);
+            return_valobj_sp->Dump(s, options);
             return true;
           }
         }
@@ -1346,7 +1323,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (thread) {
         StructuredData::ObjectSP object_sp = thread->GetExtendedInfo();
         if (object_sp &&
-            object_sp->GetType() == eStructuredDataTypeDictionary) {
+            object_sp->GetType() == StructuredData::Type::eTypeDictionary) {
           if (FormatThreadExtendedInfoRecurse(entry, object_sp, sc, exe_ctx, s))
             return true;
         }
@@ -1866,10 +1843,10 @@ static bool DumpCommaSeparatedChildEntryNames(
   return false;
 }
 
-static Status ParseEntry(const llvm::StringRef &format_str,
-                         const FormatEntity::Entry::Definition *parent,
-                         FormatEntity::Entry &entry) {
-  Status error;
+static Error ParseEntry(const llvm::StringRef &format_str,
+                        const FormatEntity::Entry::Definition *parent,
+                        FormatEntity::Entry &entry) {
+  Error error;
 
   const size_t sep_pos = format_str.find_first_of(".[:");
   const char sep_char =
@@ -1956,7 +1933,7 @@ static const FormatEntity::Entry::Definition *
 FindEntry(const llvm::StringRef &format_str,
           const FormatEntity::Entry::Definition *parent,
           llvm::StringRef &remainder) {
-  Status error;
+  Error error;
 
   std::pair<llvm::StringRef, llvm::StringRef> p = format_str.split('.');
   const size_t n = parent->num_children;
@@ -1983,9 +1960,9 @@ FindEntry(const llvm::StringRef &format_str,
   return parent;
 }
 
-Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
-                                   uint32_t depth) {
-  Status error;
+Error FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
+                                  uint32_t depth) {
+  Error error;
   while (!format.empty() && error.Success()) {
     const size_t non_special_chars = format.find_first_of("${}\\");
 
@@ -2279,10 +2256,10 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
   return error;
 }
 
-Status FormatEntity::ExtractVariableInfo(llvm::StringRef &format_str,
-                                         llvm::StringRef &variable_name,
-                                         llvm::StringRef &variable_format) {
-  Status error;
+Error FormatEntity::ExtractVariableInfo(llvm::StringRef &format_str,
+                                        llvm::StringRef &variable_name,
+                                        llvm::StringRef &variable_format) {
+  Error error;
   variable_name = llvm::StringRef();
   variable_format = llvm::StringRef();
 

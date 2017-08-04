@@ -9,40 +9,21 @@
 
 #include "lldb/Core/SourceManager.h"
 
-#include "lldb/Core/Address.h"      // for Address
-#include "lldb/Core/AddressRange.h" // for AddressRange
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/FormatEntity.h" // for FormatEntity
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/LineEntry.h" // for LineEntry
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/PathMappingList.h" // for PathMappingList
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/lldb-enumerations.h" // for StopShowColumn::eStopSho...
-
-#include "llvm/ADT/Twine.h" // for Twine
-
-#include <memory>
-#include <utility> // for pair
-
-#include <assert.h> // for assert
-#include <stdio.h>  // for size_t, NULL, snprintf
-
-namespace lldb_private {
-class ExecutionContext;
-}
-namespace lldb_private {
-class ValueObject;
-}
+#include "lldb/Utility/AnsiTerminal.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -93,9 +74,9 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   // If file_sp is no good or it points to a non-existent file, reset it.
   if (!file_sp || !file_sp->GetFileSpec().Exists()) {
     if (target_sp)
-      file_sp = std::make_shared<File>(file_spec, target_sp.get());
+      file_sp.reset(new File(file_spec, target_sp.get()));
     else
-      file_sp = std::make_shared<File>(file_spec, debugger_sp);
+      file_sp.reset(new File(file_spec, debugger_sp));
 
     if (debugger_sp)
       debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);
@@ -289,6 +270,57 @@ bool SourceManager::SetDefaultFileAndLine(const FileSpec &file_spec,
   }
 }
 
+// this is a vector of pairs that each represent a legitimate interesting
+// entry point to the user program. the bool argument means whether
+// we want to skip the prologue code or not when trying to resolve
+// this name to a line entry
+// FindEntryPoint() will attempt to resolve these to a valid line entry in the
+// order
+// in which they are provided. This could probably be extended with a notion
+// of "main language", i.e. the language in which the main executable module is
+// coded
+static const std::vector<std::pair<ConstString, bool>> &GetEntryPointNames() {
+  static std::vector<std::pair<ConstString, bool>> g_entry_point_names;
+  if (g_entry_point_names.size() == 0) {
+    g_entry_point_names.push_back({ConstString("main"), false});
+    g_entry_point_names.push_back({ConstString("top_level_code"), true});
+  }
+  return g_entry_point_names;
+}
+
+static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
+  if (!exe_module)
+    return LineEntry();
+  const std::vector<std::pair<ConstString, bool>> &entry_points(
+      GetEntryPointNames());
+  for (std::pair<ConstString, bool> entry_point : entry_points) {
+    const ConstString entry_point_name = entry_point.first;
+    const bool skip_prologue = entry_point.second;
+    SymbolContextList sc_list;
+    bool symbols_okay = false; // Force it to be a debug symbol.
+    bool inlines_okay = true;
+    bool append = false;
+    size_t num_matches = exe_module->FindFunctions(
+        entry_point_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
+        symbols_okay, append, sc_list);
+    for (size_t idx = 0; idx < num_matches; idx++) {
+      SymbolContext sc;
+      sc_list.GetContextAtIndex(idx, sc);
+      if (sc.function) {
+        lldb_private::LineEntry line_entry;
+        Address base_address = sc.function->GetAddressRange().GetBaseAddress();
+        if (skip_prologue)
+          base_address.SetOffset(sc.function->GetPrologueByteSize() +
+                                 base_address.GetOffset());
+        if (base_address.CalculateSymbolContextLineEntry(line_entry)) {
+          return line_entry;
+        }
+      }
+    }
+  }
+  return LineEntry();
+}
+
 bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
   if (m_last_file_sp) {
     file_spec = m_last_file_sp->GetFileSpec();
@@ -305,28 +337,12 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       // somebody will have to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
-        SymbolContextList sc_list;
-        ConstString main_name("main");
-        bool symbols_okay = false; // Force it to be a debug symbol.
-        bool inlines_okay = true;
-        bool append = false;
-        size_t num_matches = executable_ptr->FindFunctions(
-            main_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
-            symbols_okay, append, sc_list);
-        for (size_t idx = 0; idx < num_matches; idx++) {
-          SymbolContext sc;
-          sc_list.GetContextAtIndex(idx, sc);
-          if (sc.function) {
-            lldb_private::LineEntry line_entry;
-            if (sc.function->GetAddressRange()
-                    .GetBaseAddress()
-                    .CalculateSymbolContextLineEntry(line_entry)) {
-              SetDefaultFileAndLine(line_entry.file, line_entry.line);
-              file_spec = m_last_file_sp->GetFileSpec();
-              line = m_last_line;
-              return true;
-            }
-          }
+        lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
+        if (line_entry.IsValid()) {
+          SetDefaultFileAndLine(line_entry.file, line_entry.line);
+          file_spec = m_last_file_sp->GetFileSpec();
+          line = m_last_line;
+          return true;
         }
       }
     }
@@ -423,7 +439,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
   }
 
   if (m_mod_time != llvm::sys::TimePoint<>())
-    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
+    m_data_sp = m_file_spec.ReadFileContents();
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -501,7 +517,7 @@ void SourceManager::File::UpdateIfNeeded() {
   if (curr_mod_time != llvm::sys::TimePoint<>() &&
       m_mod_time != curr_mod_time) {
     m_mod_time = curr_mod_time;
-    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
+    m_data_sp = m_file_spec.ReadFileContents();
     m_offsets.clear();
   }
 }

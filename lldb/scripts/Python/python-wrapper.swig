@@ -929,8 +929,7 @@ void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton);
 void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton) {
     if (baton != Py_None) {
       SWIG_PYTHON_THREAD_BEGIN_BLOCK;
-      PyObject *result = PyObject_CallFunction(reinterpret_cast<PyObject*>(baton), const_cast<char*>("s"), str);
-	  Py_XDECREF(result);
+      PyObject_CallFunction(reinterpret_cast<PyObject*>(baton), const_cast<char*>("s"), str);
       SWIG_PYTHON_THREAD_END_BLOCK;
     }
 }

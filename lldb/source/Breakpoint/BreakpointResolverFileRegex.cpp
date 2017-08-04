@@ -14,11 +14,11 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,10 +37,10 @@ BreakpointResolverFileRegex::~BreakpointResolverFileRegex() {}
 
 BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
     Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+    Error &error) {
   bool success;
 
-  llvm::StringRef regex_string;
+  std::string regex_string;
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_string);
   if (!success) {
@@ -65,7 +65,7 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
   if (success && names_array) {
     size_t num_names = names_array->GetSize();
     for (size_t i = 0; i < num_names; i++) {
-      llvm::StringRef name;
+      std::string name;
       success = names_array->GetItemAtIndexAsString(i, name);
       if (!success) {
         error.SetErrorStringWithFormat(

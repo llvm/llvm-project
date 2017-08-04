@@ -124,6 +124,9 @@ public:
   /// @param[in] envp
   ///     The environment array.
   ///
+  /// @param[in] launch_flags
+  ///     Flags to modify the launch (@see lldb::LaunchFlags)
+  ///
   /// @param[in] stdin_path
   ///     The path to use when re-directing the STDIN of the new
   ///     process. If all stdXX_path arguments are nullptr, a pseudo
@@ -477,7 +480,6 @@ public:
   /// Resolve a current file address into a section offset address.
   ///
   /// @param[in] file_addr
-  ///     The file address to resolve.
   ///
   /// @return
   ///     An SBAddress which will be valid if...
@@ -544,7 +546,7 @@ public:
   ///     into this call
   ///
   /// @param[out] error
-  ///     Status information is written here if the memory read fails.
+  ///     Error information is written here if the memory read fails.
   ///
   /// @return
   ///     The amount of data read in host bytes.
@@ -569,12 +571,14 @@ public:
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
-  // This version uses name_type_mask = eFunctionNameTypeAuto
+  // This version uses name_type_mask = eFunctionNameTypeAuto, symbol_language =
+  // eLanguageTypeUnknown
   lldb::SBBreakpoint
   BreakpointCreateByName(const char *symbol_name,
                          const SBFileSpecList &module_list,
                          const SBFileSpecList &comp_unit_list);
 
+  // symbol_language = eLanguageTypeUnknown.
   lldb::SBBreakpoint BreakpointCreateByName(
       const char *symbol_name,
       uint32_t
@@ -640,6 +644,15 @@ public:
   lldb::SBBreakpoint BreakpointCreateForException(lldb::LanguageType language,
                                                   bool catch_bp, bool throw_bp);
 
+  // The extra_args parameter will hold any number of pairs, the first element
+  // is the extra
+  // argument type, and the second the value.
+  // The argument types all follow the option long name from "breakpoint set -E
+  // <Language>".
+  lldb::SBBreakpoint BreakpointCreateForException(lldb::LanguageType language,
+                                                  bool catch_bp, bool throw_bp,
+                                                  SBStringList &extra_args);
+
   lldb::SBBreakpoint BreakpointCreateByAddress(addr_t address);
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
@@ -651,7 +664,7 @@ public:
   /// @param[in] source_file
   ///    The file from which to read the breakpoints.
   ///
-  /// @param[out] new_bps
+  /// @param[out] bkpt_list
   ///    A list of the newly created breakpoints.
   ///
   /// @return
@@ -671,7 +684,7 @@ public:
   ///    Only read in breakpoints whose names match one of the names in this
   ///    list.
   ///
-  /// @param[out] new_bps
+  /// @param[out] bkpt_list
   ///    A list of the newly created breakpoints.
   ///
   /// @return

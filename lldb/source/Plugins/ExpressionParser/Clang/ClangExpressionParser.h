@@ -12,9 +12,9 @@
 
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"
 
 #include <string>
@@ -55,7 +55,6 @@ public:
 
   //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~ClangExpressionParser() override;
 
   //------------------------------------------------------------------
@@ -69,7 +68,9 @@ public:
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
   //------------------------------------------------------------------
-  unsigned Parse(DiagnosticManager &diagnostic_manager) override;
+  unsigned Parse(DiagnosticManager &diagnostic_manager, uint32_t first_line = 0,
+                 uint32_t last_line = UINT32_MAX,
+                 uint32_t line_offset = 0) override;
 
   bool RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 
@@ -110,7 +111,7 @@ public:
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
   //------------------------------------------------------------------
-  Status
+  virtual Error
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       lldb::IRExecutionUnitSP &execution_unit_sp,
                       ExecutionContext &exe_ctx, bool &can_interpret,
@@ -128,8 +129,8 @@ public:
   /// @return
   ///     The error code indicating the
   //------------------------------------------------------------------
-  Status RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
-                               ExecutionContext &exe_ctx);
+  Error RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
+                              ExecutionContext &exe_ctx);
 
   //------------------------------------------------------------------
   /// Returns a string representing current ABI.

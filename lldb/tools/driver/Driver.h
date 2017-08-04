@@ -11,7 +11,7 @@
 #define lldb_Driver_h_
 
 #include "Platform.h"
-#include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Utility/PseudoTerminal.h"
 
 #include <bitset>
 #include <set>

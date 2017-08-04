@@ -14,6 +14,7 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
@@ -22,7 +23,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -286,7 +286,7 @@ void Watchpoint::SetCondition(const char *condition) {
       m_condition_ap.reset();
   } else {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
-    Status error;
+    Error error;
     m_condition_ap.reset(m_target.GetUserExpressionForLanguage(
         condition, llvm::StringRef(), lldb::eLanguageTypeUnknown,
         UserExpression::eResultTypeAny, EvaluateExpressionOptions(), error));

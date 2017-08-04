@@ -39,7 +39,7 @@ public:
   static BreakpointResolver *
   CreateFromStructuredData(Breakpoint *bkpt,
                            const StructuredData::Dictionary &options_dict,
-                           Status &error);
+                           Error &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 

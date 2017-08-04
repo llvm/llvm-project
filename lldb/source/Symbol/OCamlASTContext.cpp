@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/OCamlASTContext.h"
-#include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
@@ -19,7 +19,6 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserOCaml.h"
 
@@ -113,9 +112,9 @@ ConstString OCamlASTContext::GetPluginName() {
 
 uint32_t OCamlASTContext::GetPluginVersion() { return 1; }
 
-lldb::TypeSystemSP OCamlASTContext::CreateInstance(lldb::LanguageType language,
-                                                   Module *module,
-                                                   Target *target) {
+lldb::TypeSystemSP
+OCamlASTContext::CreateInstance(lldb::LanguageType language, Module *module,
+                                Target *target, const char *compiler_options) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
   if (language == lldb::eLanguageTypeOCaml) {
@@ -292,7 +291,7 @@ bool OCamlASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
 bool OCamlASTContext::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                             CompilerType *target_type,
                                             bool check_cplusplus,
-                                            bool check_objc) {
+                                            bool check_objc, bool check_swift) {
   return false;
 }
 
@@ -409,6 +408,11 @@ OCamlASTContext::GetCanonicalType(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType
+OCamlASTContext::GetInstanceType(lldb::opaque_compiler_type_t type) {
+  return CompilerType(this, type);
+}
+
+CompilerType
 OCamlASTContext::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
   return CompilerType(this, type);
 }
@@ -459,6 +463,15 @@ OCamlASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+CompilerType
+OCamlASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
+CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
 CompilerType OCamlASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
   return CompilerType();
 }
@@ -477,6 +490,16 @@ uint64_t OCamlASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     case OCamlPrimitiveType::eTypeInt:
       return ptype->GetByteSize() * 8;
     }
+  }
+  return 0;
+}
+
+uint64_t OCamlASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
+  if (OCamlPrimitiveType *ptype =
+          llvm::dyn_cast<OCamlPrimitiveType>(static_cast<OCamlType *>(type))) {
+    // This is very likely insufficient as it doesn't take any kind of
+    // post-structure packing into account.
+    return ptype->GetByteSize();
   }
   return 0;
 }
@@ -615,16 +638,16 @@ bool OCamlASTContext::DumpTypeValue(
     lldb::opaque_compiler_type_t type, Stream *s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t byte_offset, size_t byte_size,
     uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-    ExecutionContextScope *exe_scope) {
+    ExecutionContextScope *exe_scope, bool is_base_class) {
   if (!type) {
     s->Printf("no type value\n");
     return false;
   }
 
   if (IsScalarType(type)) {
-    return DumpDataExtractor(data, s, byte_offset, format, byte_size, 1,
-                             SIZE_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
-                             bitfield_bit_offset, exe_scope);
+    return data.Dump(s, byte_offset, format, byte_size, 1, SIZE_MAX,
+                     LLDB_INVALID_ADDRESS, bitfield_bit_size,
+                     bitfield_bit_offset, exe_scope);
   }
 
   return false;

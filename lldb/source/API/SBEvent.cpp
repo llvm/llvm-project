@@ -12,12 +12,12 @@
 #include "lldb/API/SBStream.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/Event.h"
+#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -109,9 +109,13 @@ bool SBEvent::BroadcasterMatchesRef(const SBBroadcaster &broadcaster) {
 
   // For logging, this gets a little chatty so only enable this when verbose
   // logging is on
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  LLDB_LOGV(log, "({0}) (SBBroadcaster({1}): {2}) => {3}", get(),
-            broadcaster.get(), broadcaster.GetName(), success);
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API |
+                                                  LIBLLDB_LOG_VERBOSE));
+  if (log)
+    log->Printf(
+        "SBEvent(%p)::BroadcasterMatchesRef (SBBroadcaster(%p): %s) => %i",
+        static_cast<void *>(get()), static_cast<void *>(broadcaster.get()),
+        broadcaster.GetName(), success);
 
   return success;
 }

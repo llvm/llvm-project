@@ -14,9 +14,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -77,8 +77,8 @@ public:
                                            bool persistent = true) const;
 
   // Set the Return value object in the current frame as though a function with
-  virtual Status SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                      lldb::ValueObjectSP &new_value) = 0;
+  virtual Error SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                     lldb::ValueObjectSP &new_value) = 0;
 
 protected:
   // This is the method the ABI will call to actually calculate the return
@@ -91,16 +91,6 @@ protected:
   // specialized to work with llvm IR types
   virtual lldb::ValueObjectSP
   GetReturnValueObjectImpl(Thread &thread, llvm::Type &ir_type) const;
-
-  //------------------------------------------------------------------
-  /// Request to get a Process shared pointer.
-  ///
-  /// This ABI object may not have been created with a Process object,
-  /// or the Process object may no longer be alive.  Be sure to handle
-  /// the case where the shared pointer returned does not have an
-  /// object inside it.
-  //------------------------------------------------------------------
-  lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
 
 public:
   virtual bool CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) = 0;
@@ -141,18 +131,13 @@ public:
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
-  static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
+  static lldb::ABISP FindPlugin(const ArchSpec &arch);
 
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from ABI can see and modify these
   //------------------------------------------------------------------
-  ABI(lldb::ProcessSP process_sp) {
-    if (process_sp.get())
-        m_process_wp = process_sp;
-  }
-
-  lldb::ProcessWP m_process_wp;
+  ABI();
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ABI);

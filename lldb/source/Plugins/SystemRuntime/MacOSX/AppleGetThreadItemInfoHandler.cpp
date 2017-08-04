@@ -15,7 +15,10 @@
 // Other libraries and framework includes
 // Project includes
 
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"
@@ -28,9 +31,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;
@@ -147,7 +147,7 @@ void AppleGetThreadItemInfoHandler::Detach() {
 lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
     Thread &thread, ValueList &get_thread_item_info_arglist) {
   ThreadSP thread_sp(thread.shared_from_this());
-  ExecutionContext exe_ctx(thread_sp);
+  ExecutionContext exe_ctx(thread.shared_from_this());
   Address impl_code_address;
   DiagnosticManager diagnostics;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
@@ -161,7 +161,7 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
     // First stage is to make the ClangUtility to hold our injected function:
 
     if (!m_get_thread_item_info_impl_code.get()) {
-      Status error;
+      Error error;
       if (g_get_thread_item_info_function_code != NULL) {
         m_get_thread_item_info_impl_code.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
@@ -243,7 +243,7 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
                                                  tid_t thread_id,
                                                  addr_t page_to_free,
                                                  uint64_t page_to_free_size,
-                                                 Status &error) {
+                                                 Error &error) {
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());

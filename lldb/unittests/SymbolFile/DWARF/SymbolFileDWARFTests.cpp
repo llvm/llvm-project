@@ -15,20 +15,22 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
-#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolVendor.h"
-#include "lldb/Utility/FileSpec.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
+
+extern const char *TestMainArgv0;
 
 using namespace lldb_private;
 
@@ -44,7 +46,12 @@ public:
     ClangASTContext::Initialize();
     SymbolFilePDB::Initialize();
 
-    m_dwarf_test_exe = GetInputFilePath("test-dwarf.exe");
+    llvm::StringRef exe_folder = llvm::sys::path::parent_path(TestMainArgv0);
+    llvm::SmallString<128> inputs_folder = exe_folder;
+    llvm::sys::path::append(inputs_folder, "Inputs");
+
+    m_dwarf_test_exe = inputs_folder;
+    llvm::sys::path::append(m_dwarf_test_exe, "test-dwarf.exe");
   }
 
   void TearDown() override {
@@ -56,12 +63,12 @@ public:
   }
 
 protected:
-  std::string m_dwarf_test_exe;
+  llvm::SmallString<128> m_dwarf_test_exe;
 };
 
 TEST_F(SymbolFileDWARFTests, TestAbilitiesForDWARF) {
   // Test that when we have Dwarf debug info, SymbolFileDWARF is used.
-  FileSpec fspec(m_dwarf_test_exe, false);
+  FileSpec fspec(m_dwarf_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 

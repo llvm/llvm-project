@@ -11,18 +11,9 @@
 #define liblldb_Mangled_h_
 #if defined(__cplusplus)
 
-#include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-enumerations.h" // for LanguageType
-#include "llvm/ADT/StringRef.h"     // for StringRef
-
-#include <stddef.h> // for size_t
-
-namespace lldb_private {
-class RegularExpression;
-}
-namespace lldb_private {
-class Stream;
-}
+#include "lldb/Core/ConstString.h"
+#include "lldb/lldb-private.h"
+#include <vector>
 
 namespace lldb_private {
 

@@ -10,6 +10,7 @@
 
 #if defined(_MSC_VER)
 
+#include <eh.h>
 #include <inttypes.h>
 #include <io.h>
 #include <signal.h>

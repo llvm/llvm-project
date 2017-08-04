@@ -16,8 +16,8 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
@@ -133,7 +133,8 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonWithPlan(lldb::ThreadPlanSP &plan,
                            lldb::ValueObjectSP return_valobj_sp,
-                           lldb::ExpressionVariableSP expression_variable_sp);
+                           lldb::ExpressionVariableSP expression_variable_sp,
+                           bool return_is_swift_error_value = false);
 
   static lldb::StopInfoSP
   CreateStopReasonWithException(Thread &thread, const char *description);
@@ -141,7 +142,8 @@ public:
   static lldb::StopInfoSP CreateStopReasonWithExec(Thread &thread);
 
   static lldb::ValueObjectSP
-  GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);
+  GetReturnValueObject(lldb::StopInfoSP &stop_info_sp,
+                       bool &is_swift_error_result);
 
   static lldb::ExpressionVariableSP
   GetExpressionVariable(lldb::StopInfoSP &stop_info_sp);

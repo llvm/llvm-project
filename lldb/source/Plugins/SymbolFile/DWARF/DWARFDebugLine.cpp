@@ -13,10 +13,10 @@
 #include <assert.h>
 
 #include "lldb/Core/FileSpecList.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Timer.h"
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
@@ -484,9 +484,9 @@ bool DWARFDebugLine::ParseStatementTable(
 
   const dw_offset_t debug_line_offset = *offset_ptr;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      func_cat, "DWARFDebugLine::ParseStatementTable (.debug_line[0x%8.8x])",
+      LLVM_PRETTY_FUNCTION,
+      "DWARFDebugLine::ParseStatementTable (.debug_line[0x%8.8x])",
       debug_line_offset);
 
   if (!ParsePrologue(debug_line_data, offset_ptr, prologue.get())) {

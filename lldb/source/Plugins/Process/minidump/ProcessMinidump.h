@@ -15,11 +15,11 @@
 #include "MinidumpTypes.h"
 
 // Other libraries and framework includes
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Status.h"
 
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -53,7 +53,7 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
-  Status DoLoadCore() override;
+  Error DoLoadCore() override;
 
   DynamicLoader *GetDynamicLoader() override;
 
@@ -61,7 +61,7 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  Status DoDestroy() override;
+  Error DoDestroy() override;
 
   void RefreshStateAfterStop() override;
 
@@ -70,15 +70,15 @@ public:
   bool WarnBeforeDetach() const override;
 
   size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    Status &error) override;
+                    Error &error) override;
 
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      Status &error) override;
+                      Error &error) override;
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                             MemoryRegionInfo &range_info) override;
+  Error GetMemoryRegionInfo(lldb::addr_t load_addr,
+                            MemoryRegionInfo &range_info) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 

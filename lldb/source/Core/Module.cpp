@@ -9,72 +9,52 @@
 
 #include "lldb/Core/Module.h"
 
-#include "lldb/Core/AddressRange.h" // for AddressRange
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_os_ostream.h"
+
+// Project includes
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/AddressResolverFileLine.h"
-#include "lldb/Core/Debugger.h"     // for Debugger
-#include "lldb/Core/FileSpecList.h" // for FileSpecList
-#include "lldb/Core/Mangled.h"      // for Mangled
+#include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/SearchFilter.h" // for SearchFilt...
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/Timer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Host/Symbols.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/Function.h" // for Function
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/Symbol.h" // for Symbol
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
-#include "lldb/Symbol/Symtab.h"   // for Symtab
-#include "lldb/Symbol/Type.h"     // for Type
-#include "lldb/Symbol/TypeList.h" // for TypeList
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Platform.h" // for Platform
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAn...
-#include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h" // for Stream
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/Timer.h"
 
-#if defined(LLVM_ON_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
-#endif
-
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
-#include "llvm/ADT/STLExtras.h"    // for make_unique
-#include "llvm/Support/Compiler.h" // for LLVM_PRETT...
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h" // for raw_string...
-
-#include <assert.h>    // for assert
-#include <cstdint>     // for uint32_t
-#include <inttypes.h>  // for PRIx64
-#include <map>         // for map
-#include <stdarg.h>    // for va_end
-#include <string.h>    // for size_t
-#include <type_traits> // for move
-#include <utility>     // for find, pair
-
-namespace lldb_private {
-class CompilerDeclContext;
-}
-namespace lldb_private {
-class VariableList;
-}
+#include "swift/Basic/LangOptions.h"
+#include "swift/Frontend/Frontend.h"
+#include "swift/Serialization/Validation.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -322,7 +302,7 @@ Module::~Module() {
 }
 
 ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
-                                        lldb::addr_t header_addr, Status &error,
+                                        lldb::addr_t header_addr, Error &error,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
     error.SetErrorString("object file already exists");
@@ -330,8 +310,9 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (process_sp) {
       m_did_load_objfile = true;
-      auto data_ap = llvm::make_unique<DataBufferHeap>(size_to_read, 0);
-      Status readmem_error;
+      std::unique_ptr<DataBufferHeap> data_ap(
+          new DataBufferHeap(size_to_read, 0));
+      Error readmem_error;
       const size_t bytes_read =
           process_sp->ReadMemory(header_addr, data_ap->GetBytes(),
                                  data_ap->GetByteSize(), readmem_error);
@@ -378,8 +359,20 @@ const lldb_private::UUID &Module::GetUUID() {
   return m_uuid;
 }
 
-TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language) {
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h for what this block does
+TypeSystem *Module::GetTypeSystemForLanguageImpl(LanguageType language)
+#else
+TypeSystem *Module::GetTypeSystemForLanguage(LanguageType language)
+#endif
+{
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
+}
+
+SwiftASTContext *Module::GetSwiftASTContextNoCreate() {
+  return llvm::dyn_cast_or_null<SwiftASTContext>(
+      m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this,
+                                                 false));
 }
 
 void Module::ParseAllDebugSymbols() {
@@ -429,8 +422,8 @@ void Module::DumpSymbolContext(Stream *s) {
 
 size_t Module::GetNumCompileUnits() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "Module::GetNumCompileUnits (module = %p)",
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+                     "Module::GetNumCompileUnits (module = %p)",
                      static_cast<void *>(this));
   SymbolVendor *symbols = GetSymbolVendor();
   if (symbols)
@@ -453,8 +446,7 @@ CompUnitSP Module::GetCompileUnitAtIndex(size_t index) {
 
 bool Module::ResolveFileAddress(lldb::addr_t vm_addr, Address &so_addr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "Module::ResolveFileAddress (vm_addr = 0x%" PRIx64 ")",
                      vm_addr);
   SectionList *section_list = GetSectionList();
@@ -617,8 +609,7 @@ uint32_t Module::ResolveSymbolContextsForFileSpec(const FileSpec &file_spec,
                                                   uint32_t resolve_scope,
                                                   SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "Module::ResolveSymbolContextForFilePath (%s:%u, "
                      "check_inlines = %s, resolve_scope = 0x%8.8x)",
                      file_spec.GetPath().c_str(), line,
@@ -689,6 +680,8 @@ Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask,
               Language::LanguageIsObjC(language)) &&
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(name_cstr))
+      m_name_type_mask = eFunctionNameTypeFull;
     else if (Language::LanguageIsC(language)) {
       m_name_type_mask = eFunctionNameTypeFull;
     } else {
@@ -698,7 +691,19 @@ Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask,
         m_name_type_mask |= eFunctionNameTypeSelector;
 
       CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+
+      if ((language == eLanguageTypeUnknown ||
+           language == eLanguageTypeSwift) &&
+          swift_method.IsValid())
+        basename = swift_method.GetBasename();
+      else if ((language == eLanguageTypeUnknown ||
+                Language::LanguageIsCPlusPlus(language) ||
+                Language::LanguageIsC(language) ||
+                language == eLanguageTypeObjC_plus_plus) &&
+               cpp_method.IsValid())
+        basename = cpp_method.GetBasename();
+
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
                                                            basename))
@@ -717,9 +722,12 @@ Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask,
       // that, we don't
       // even need to search for CPP methods or names.
       CPlusPlusLanguage::MethodName cpp_method(name);
-      if (cpp_method.IsValid()) {
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+      if (swift_method.IsValid())
+        basename = swift_method.GetBasename();
+      if (cpp_method.IsValid())
         basename = cpp_method.GetBasename();
-
+      if (!basename.empty()) {
         if (!cpp_method.GetQualifiers().empty()) {
           // There is a "const" or other qualifier following the end of the
           // function parens,
@@ -989,8 +997,7 @@ size_t Module::FindTypes_Impl(
     const CompilerDeclContext *parent_decl_ctx, bool append, size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
   if (!sc.module_sp || sc.module_sp.get() == this) {
     SymbolVendor *symbols = GetSymbolVendor();
     if (symbols)
@@ -1081,8 +1088,7 @@ SymbolVendor *Module::GetSymbolVendor(bool can_create,
     if (!m_did_load_symbol_vendor.load() && can_create) {
       ObjectFile *obj_file = GetObjectFile();
       if (obj_file != nullptr) {
-        static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-        Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+        Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
         m_symfile_ap.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symbol_vendor = true;
@@ -1282,8 +1288,8 @@ ObjectFile *Module::GetObjectFile() {
   if (!m_did_load_objfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_objfile.load()) {
-      static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-      Timer scoped_timer(func_cat, "Module::GetObjectFile () module = %s",
+      Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+                         "Module::GetObjectFile () module = %s",
                          GetFileSpec().GetFilename().AsCString(""));
       DataBufferSP data_sp;
       lldb::offset_t data_offset = 0;
@@ -1336,15 +1342,15 @@ void Module::SectionFileAddressesChanged() {
 SectionList *Module::GetUnifiedSectionList() {
   // Populate m_unified_sections_ap with sections from objfile.
   if (!m_sections_ap)
-    m_sections_ap = llvm::make_unique<SectionList>();
+    m_sections_ap.reset(new SectionList());
   return m_sections_ap.get();
 }
 
 const Symbol *Module::FindFirstSymbolWithNameAndType(const ConstString &name,
                                                      SymbolType symbol_type) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      func_cat, "Module::FindFirstSymbolWithNameAndType (name = %s, type = %i)",
+      LLVM_PRETTY_FUNCTION,
+      "Module::FindFirstSymbolWithNameAndType (name = %s, type = %i)",
       name.AsCString(), symbol_type);
   SymbolVendor *sym_vendor = GetSymbolVendor();
   if (sym_vendor) {
@@ -1376,8 +1382,7 @@ void Module::SymbolIndicesToSymbolContextList(
 size_t Module::FindFunctionSymbols(const ConstString &name,
                                    uint32_t name_type_mask,
                                    SymbolContextList &sc_list) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
+  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
                      name.AsCString(), name_type_mask);
   SymbolVendor *sym_vendor = GetSymbolVendor();
@@ -1395,9 +1400,9 @@ size_t Module::FindSymbolsWithNameAndType(const ConstString &name,
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      func_cat, "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
+      LLVM_PRETTY_FUNCTION,
+      "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
       name.AsCString(), symbol_type);
   const size_t initial_size = sc_list.GetSize();
   SymbolVendor *sym_vendor = GetSymbolVendor();
@@ -1418,9 +1423,8 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      func_cat,
+      LLVM_PRETTY_FUNCTION,
       "Module::FindSymbolsMatchingRegExAndType (regex = %s, type = %i)",
       regex.GetText().str().c_str(), symbol_type);
   const size_t initial_size = sc_list.GetSize();
@@ -1436,22 +1440,6 @@ size_t Module::FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
     }
   }
   return sc_list.GetSize() - initial_size;
-}
-
-void Module::PreloadSymbols() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  SymbolVendor * sym_vendor = GetSymbolVendor();
-  if (!sym_vendor) {
-    return;
-  }
-  // Prime the symbol file first, since it adds symbols to the symbol table.
-  if (SymbolFile *symbol_file = sym_vendor->GetSymbolFile()) {
-    symbol_file->PreloadSymbols();
-  }
-  // Now we can prime the symbol table.
-  if (Symtab * symtab = sym_vendor->GetSymtab()) {
-    symtab->PreloadSymbols();
-  }
 }
 
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
@@ -1487,7 +1475,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         // ("/tmp/a.out.dSYM/Contents/Resources/DWARF/a.out"). So we need to
         // check this
 
-        if (llvm::sys::fs::is_directory(file.GetPath())) {
+        if (file.IsDirectory()) {
           std::string new_path(file.GetPath());
           std::string old_path(obj_file->GetFileSpec().GetPath());
           if (old_path.find(new_path) == 0) {
@@ -1543,7 +1531,7 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
-bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
+bool Module::LoadScriptingResourceInTarget(Target *target, Error &error,
                                            Stream *feedback_stream) {
   if (!target) {
     error.SetErrorString("invalid destination Target");
@@ -1615,6 +1603,8 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
+    if (SwiftASTContext *swift_ast = GetSwiftASTContextNoCreate())
+      swift_ast->SetTriple(new_arch.GetTriple().str().c_str());
     return true;
   }
   return m_arch.IsCompatibleMatch(new_arch);
@@ -1701,8 +1691,7 @@ Module::CreateJITModule(const lldb::ObjectFileJITDelegateSP &delegate_sp) {
     // to the module, so we need to control the creation carefully in
     // this static function
     ModuleSP module_sp(new Module());
-    module_sp->m_objfile_sp =
-        std::make_shared<ObjectFileJIT>(module_sp, delegate_sp);
+    module_sp->m_objfile_sp.reset(new ObjectFileJIT(module_sp, delegate_sp));
     if (module_sp->m_objfile_sp) {
       // Once we get the object file, update our module with the object file's
       // architecture since it might differ in vendor/os if some parts were
@@ -1714,6 +1703,11 @@ Module::CreateJITModule(const lldb::ObjectFileJITDelegateSP &delegate_sp) {
   return ModuleSP();
 }
 
+void Module::ClearModuleDependentCaches() {
+  if (SwiftASTContext *swift_ast = GetSwiftASTContextNoCreate())
+    swift_ast->ClearModuleDependentCaches();
+}
+
 bool Module::GetIsDynamicLinkEditor() {
   ObjectFile *obj_file = GetObjectFile();
 
@@ -1721,8 +1715,4 @@ bool Module::GetIsDynamicLinkEditor() {
     return obj_file->GetIsDynamicLinkEditor();
 
   return false;
-}
-
-Status Module::LoadInMemory(Target &target, bool set_pc) {
-  return m_objfile_sp->LoadInMemory(target, set_pc);
 }

@@ -51,35 +51,35 @@ public:
   // lldb_private::Platform functions
   //------------------------------------------------------------
 
-  Status ConnectRemote(Args &args) override;
+  Error ConnectRemote(Args &args) override;
 
-  Status GetFile(const FileSpec &source, const FileSpec &destination) override;
+  Error GetFile(const FileSpec &source, const FileSpec &destination) override;
 
-  Status PutFile(const FileSpec &source, const FileSpec &destination,
-                 uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX) override;
+  Error PutFile(const FileSpec &source, const FileSpec &destination,
+                uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX) override;
 
   uint32_t GetSdkVersion();
 
   bool GetRemoteOSVersion() override;
 
-  Status DisconnectRemote() override;
+  Error DisconnectRemote() override;
 
   uint32_t GetDefaultMemoryCacheLineSize() override;
 
 protected:
   const char *GetCacheHostname() override;
 
-  Status DownloadModuleSlice(const FileSpec &src_file_spec,
-                             const uint64_t src_offset, const uint64_t src_size,
-                             const FileSpec &dst_file_spec) override;
-
-  Status DownloadSymbolFile(const lldb::ModuleSP &module_sp,
+  Error DownloadModuleSlice(const FileSpec &src_file_spec,
+                            const uint64_t src_offset, const uint64_t src_size,
                             const FileSpec &dst_file_spec) override;
 
-  llvm::StringRef GetLibdlFunctionDeclarations() override;
+  Error DownloadSymbolFile(const lldb::ModuleSP &module_sp,
+                           const FileSpec &dst_file_spec) override;
+
+  const char *GetLibdlFunctionDeclarations() const override;
 
 private:
-  AdbClient::SyncService *GetSyncService(Status &error);
+  AdbClient::SyncService *GetSyncService(Error &error);
 
   std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
   std::string m_device_id;

@@ -14,8 +14,10 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContextList.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -24,9 +26,8 @@
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,8 +38,8 @@ SBModule::SBModule(const lldb::ModuleSP &module_sp) : m_opaque_sp(module_sp) {}
 
 SBModule::SBModule(const SBModuleSpec &module_spec) : m_opaque_sp() {
   ModuleSP module_sp;
-  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_ap,
-                                             module_sp, NULL, NULL, NULL);
+  Error error = ModuleList::GetSharedModule(*module_spec.m_opaque_ap, module_sp,
+                                            NULL, NULL, NULL);
   if (module_sp)
     SetSP(module_sp);
 }
@@ -564,4 +565,22 @@ lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
       sb_addr.ref() = objfile_ptr->GetHeaderAddress();
   }
   return sb_addr;
+}
+
+lldb::SBError SBModule::IsTypeSystemCompatible(lldb::LanguageType language) {
+  SBError sb_error;
+  ModuleSP module_sp(GetSP());
+  if (module_sp) {
+    TypeSystem *type_system = module_sp->GetTypeSystemForLanguage(language);
+    if (type_system) {
+      sb_error.SetError(type_system->IsCompatible());
+    } else {
+      sb_error.SetErrorStringWithFormat(
+          "no type system for language %s",
+          Language::GetNameForLanguageType(language));
+    }
+  } else {
+    sb_error.SetErrorString("invalid module");
+  }
+  return sb_error;
 }

@@ -10,10 +10,6 @@
 #ifndef LLDB_lldb_private_enumerations_h_
 #define LLDB_lldb_private_enumerations_h_
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatProviders.h"
-#include "llvm/Support/raw_ostream.h"
-
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -116,6 +112,19 @@ typedef enum LazyBool {
 } LazyBool;
 
 //------------------------------------------------------------------
+/// Name matching
+//------------------------------------------------------------------
+typedef enum NameMatchType {
+  eNameMatchIgnore,
+  eNameMatchEquals,
+  eNameMatchContains,
+  eNameMatchStartsWith,
+  eNameMatchEndsWith,
+  eNameMatchRegularExpression
+
+} NameMatchType;
+
+//------------------------------------------------------------------
 /// Instruction types
 //------------------------------------------------------------------
 typedef enum InstructionType {
@@ -205,11 +214,23 @@ typedef enum MemoryModuleLoadLevel {
 enum class LineStatus {
   Success, // The line that was just edited if good and should be added to the
            // lines
-  Status,  // There is an error with the current line and it needs to be
-           // re-edited
-           // before it can be accepted
-  Done     // Lines are complete
+  Error, // There is an error with the current line and it needs to be re-edited
+         // before it can be accepted
+  Done   // Lines are complete
 };
+
+//----------------------------------------------------------------------
+// Exit Type for inferior processes
+//----------------------------------------------------------------------
+typedef enum ExitType {
+  eExitTypeInvalid,
+  eExitTypeExit,   // The exit status represents the return code from normal
+                   // program exit (i.e. WIFEXITED() was true)
+  eExitTypeSignal, // The exit status represents the signal number that caused
+                   // the program to exit (i.e. WIFSIGNALED() was true)
+  eExitTypeStop,   // The exit status represents the stop signal that caused the
+                   // program to exit (i.e. WIFSTOPPED() was true)
+} ExitType;
 
 //----------------------------------------------------------------------
 // Boolean result of running a Type Validator
@@ -235,25 +256,5 @@ enum class CompilerContextKind {
 };
 
 } // namespace lldb_private
-
-namespace llvm {
-template <> struct format_provider<lldb_private::Vote> {
-  static void format(const lldb_private::Vote &V, llvm::raw_ostream &Stream,
-                     StringRef Style) {
-    switch (V) {
-    case lldb_private::eVoteNo:
-      Stream << "no";
-      return;
-    case lldb_private::eVoteNoOpinion:
-      Stream << "no opinion";
-      return;
-    case lldb_private::eVoteYes:
-      Stream << "yes";
-      return;
-    }
-    Stream << "invalid";
-  }
-};
-}
 
 #endif // LLDB_lldb_private_enumerations_h_

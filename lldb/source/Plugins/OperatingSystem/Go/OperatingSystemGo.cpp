@@ -18,11 +18,13 @@
 #include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "Plugins/Process/Utility/ThreadMemory.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
@@ -38,8 +40,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -47,7 +47,7 @@ using namespace lldb_private;
 namespace {
 
 static PropertyDefinition g_properties[] = {
-    {"enable", OptionValue::eTypeBoolean, true, true, nullptr, nullptr,
+    {"enable", OptionValue::eTypeBoolean, true, false, nullptr, nullptr,
      "Specify whether goroutines should be treated as threads."},
     {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
 
@@ -315,11 +315,11 @@ bool OperatingSystemGo::UpdateThreadList(ThreadList &old_thread_list,
   // the
   // lldb_private::Process subclass, no memory threads will be in this list.
 
-  Status err;
+  Error err;
   for (uint64_t i = 0; i < allglen; ++i) {
     goroutines.push_back(CreateGoroutineAtIndex(i, err));
     if (err.Fail()) {
-      LLDB_LOG(log, "error: {0}", err);
+      err.PutToLog(log, "OperatingSystemGo::UpdateThreadList");
       return new_thread_list.GetSize(false) > 0;
     }
   }
@@ -340,8 +340,8 @@ bool OperatingSystemGo::UpdateThreadList(ThreadList &old_thread_list,
         memory_thread->IsValid()) {
       memory_thread->ClearBackingThread();
     } else {
-      memory_thread.reset(new ThreadMemory(*m_process, goroutine.m_goid, "", "",
-                                           goroutine.m_gobuf));
+      memory_thread.reset(new ThreadMemory(
+          *m_process, goroutine.m_goid, nullptr, nullptr, goroutine.m_gobuf));
     }
     // Search for the backing thread if the goroutine is running.
     if (2 == (goroutine.m_status & 0xfff)) {
@@ -448,11 +448,17 @@ TypeSP OperatingSystemGo::FindType(TargetSP target_sp, const char *name) {
 }
 
 OperatingSystemGo::Goroutine
-OperatingSystemGo::CreateGoroutineAtIndex(uint64_t idx, Status &err) {
+OperatingSystemGo::CreateGoroutineAtIndex(uint64_t idx, Error &err) {
   err.Clear();
   Goroutine result = {};
-  ValueObjectSP g =
-      m_allg_sp->GetSyntheticArrayMember(idx, true)->Dereference(err);
+  ValueObjectSP child_sp = m_allg_sp->GetSyntheticArrayMember(idx, true);
+  if (!child_sp) {
+    err.SetErrorToGenericError();
+    err.SetErrorString("unable to find goroutines in array");
+    return result;
+  }
+
+  ValueObjectSP g = child_sp->Dereference(err);
   if (err.Fail()) {
     return result;
   }

@@ -13,7 +13,7 @@
 // Project includes
 
 // Other libraries and framework includes
-#include "lldb/Utility/Status.h"
+#include "lldb/Core/Error.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -158,8 +158,8 @@ enum class MinidumpMiscInfoFlags : uint32_t {
 };
 
 template <typename T>
-Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
-  Status error;
+Error consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
+  Error error;
   if (Buffer.size() < sizeof(T)) {
     error.SetErrorString("Insufficient buffer!");
     return error;

@@ -10,15 +10,78 @@
 #include "lldb/API/SBStructuredData.h"
 
 #include "lldb/API/SBStream.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Stream.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/StructuredDataPlugin.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+#pragma mark--
+#pragma mark StructuredDataImpl
+
+class StructuredDataImpl {
+public:
+  StructuredDataImpl() : m_plugin_wp(), m_data_sp() {}
+
+  StructuredDataImpl(const StructuredDataImpl &rhs) = default;
+
+  StructuredDataImpl(const EventSP &event_sp)
+      : m_plugin_wp(
+            EventDataStructuredData::GetPluginFromEvent(event_sp.get())),
+        m_data_sp(EventDataStructuredData::GetObjectFromEvent(event_sp.get())) {
+  }
+
+  ~StructuredDataImpl() = default;
+
+  StructuredDataImpl &operator=(const StructuredDataImpl &rhs) = default;
+
+  bool IsValid() const { return m_data_sp.get() != nullptr; }
+
+  void Clear() {
+    m_plugin_wp.reset();
+    m_data_sp.reset();
+  }
+
+  SBError GetAsJSON(lldb_private::Stream &stream) const {
+    SBError sb_error;
+
+    if (!m_data_sp) {
+      sb_error.SetErrorString("No structured data.");
+      return sb_error;
+    }
+
+    m_data_sp->Dump(stream);
+    return sb_error;
+  }
+
+  Error GetDescription(lldb_private::Stream &stream) const {
+    Error error;
+
+    if (!m_data_sp) {
+      error.SetErrorString("Cannot pretty print structured data: "
+                           "no data to print.");
+      return error;
+    }
+
+    // Grab the plugin.
+    auto plugin_sp = StructuredDataPluginSP(m_plugin_wp);
+    if (!plugin_sp) {
+      error.SetErrorString("Cannot pretty print structured data: "
+                           "plugin doesn't exist.");
+      return error;
+    }
+
+    // Get the data's description.
+    return plugin_sp->GetDescription(m_data_sp, stream);
+  }
+
+private:
+  StructuredDataPluginWP m_plugin_wp;
+  StructuredData::ObjectSP m_data_sp;
+};
 
 #pragma mark--
 #pragma mark SBStructuredData
@@ -39,73 +102,17 @@ operator=(const lldb::SBStructuredData &rhs) {
   return *this;
 }
 
-lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
-  lldb::SBError error;
-  std::string json_str(stream.GetData());
-
-  StructuredData::ObjectSP json_obj = StructuredData::ParseJSON(json_str);
-  m_impl_up->SetObjectSP(json_obj);
-
-  if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)
-    error.SetErrorString("Invalid Syntax");
-  return error;
-}
-
 bool SBStructuredData::IsValid() const { return m_impl_up->IsValid(); }
 
 void SBStructuredData::Clear() { m_impl_up->Clear(); }
 
 SBError SBStructuredData::GetAsJSON(lldb::SBStream &stream) const {
-  SBError error;
-  error.SetError(m_impl_up->GetAsJSON(stream.ref()));
-  return error;
+  return m_impl_up->GetAsJSON(stream.ref());
 }
 
 lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
-  Status error = m_impl_up->GetDescription(stream.ref());
+  Error error = m_impl_up->GetDescription(stream.ref());
   SBError sb_error;
   sb_error.SetError(error);
   return sb_error;
-}
-
-StructuredDataType SBStructuredData::GetType() const {
-  return (m_impl_up ? m_impl_up->GetType() : eStructuredDataTypeInvalid);
-}
-
-size_t SBStructuredData::GetSize() const {
-  return (m_impl_up ? m_impl_up->GetSize() : 0);
-}
-
-lldb::SBStructuredData SBStructuredData::GetValueForKey(const char *key) const {
-  if (!m_impl_up)
-    return SBStructuredData();
-
-  SBStructuredData result;
-  result.m_impl_up->SetObjectSP(m_impl_up->GetValueForKey(key));
-  return result;
-}
-
-lldb::SBStructuredData SBStructuredData::GetItemAtIndex(size_t idx) const {
-  if (!m_impl_up)
-    return SBStructuredData();
-
-  SBStructuredData result;
-  result.m_impl_up->SetObjectSP(m_impl_up->GetItemAtIndex(idx));
-  return result;
-}
-
-uint64_t SBStructuredData::GetIntegerValue(uint64_t fail_value) const {
-  return (m_impl_up ? m_impl_up->GetIntegerValue(fail_value) : fail_value);
-}
-
-double SBStructuredData::GetFloatValue(double fail_value) const {
-  return (m_impl_up ? m_impl_up->GetFloatValue(fail_value) : fail_value);
-}
-
-bool SBStructuredData::GetBooleanValue(bool fail_value) const {
-  return (m_impl_up ? m_impl_up->GetBooleanValue(fail_value) : fail_value);
-}
-
-size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
-  return (m_impl_up ? m_impl_up->GetStringValue(dst, dst_len) : 0);
 }

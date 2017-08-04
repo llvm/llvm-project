@@ -15,20 +15,18 @@
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
-
-#include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -171,10 +169,10 @@ void PlatformAppleTVSimulator::GetStatus(Stream &strm) {
     strm.PutCString("  SDK Path: error: unable to locate SDK\n");
 }
 
-Status PlatformAppleTVSimulator::ResolveExecutable(
+Error PlatformAppleTVSimulator::ResolveExecutable(
     const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
     const FileSpecList *module_search_paths_ptr) {
-  Status error;
+  Error error;
   // Nothing special to do here, just use the actual file and architecture
 
   ModuleSpec resolved_module_spec(module_spec);
@@ -248,9 +246,9 @@ Status PlatformAppleTVSimulator::ResolveExecutable(
 }
 
 static FileSpec::EnumerateDirectoryResult
-EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
+EnumerateDirectoryCallback(void *baton, FileSpec::FileType file_type,
                            const FileSpec &file_spec) {
-  if (ft == llvm::sys::fs::file_type::directory_file) {
+  if (file_type == FileSpec::eFileTypeDirectory) {
     const char *filename = file_spec.GetFilename().GetCString();
     if (filename &&
         strncmp(filename, "AppleTVSimulator", strlen("AppleTVSimulator")) ==
@@ -301,10 +299,10 @@ const char *PlatformAppleTVSimulator::GetSDKDirectoryAsCString() {
   return NULL;
 }
 
-Status PlatformAppleTVSimulator::GetSymbolFile(const FileSpec &platform_file,
-                                               const UUID *uuid_ptr,
-                                               FileSpec &local_file) {
-  Status error;
+Error PlatformAppleTVSimulator::GetSymbolFile(const FileSpec &platform_file,
+                                              const UUID *uuid_ptr,
+                                              FileSpec &local_file) {
+  Error error;
   char platform_file_path[PATH_MAX];
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
     char resolved_path[PATH_MAX];
@@ -333,7 +331,7 @@ Status PlatformAppleTVSimulator::GetSymbolFile(const FileSpec &platform_file,
   return error;
 }
 
-Status PlatformAppleTVSimulator::GetSharedModule(
+Error PlatformAppleTVSimulator::GetSharedModule(
     const ModuleSpec &module_spec, lldb_private::Process *process,
     ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
     ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
@@ -341,7 +339,7 @@ Status PlatformAppleTVSimulator::GetSharedModule(
   // system. So first we ask for the file in the cached SDK,
   // then we attempt to get a shared module for the right architecture
   // with the right UUID.
-  Status error;
+  Error error;
   ModuleSpec platform_module_spec(module_spec);
   const FileSpec &platform_file = module_spec.GetFileSpec();
   error = GetSymbolFile(platform_file, module_spec.GetUUIDPtr(),

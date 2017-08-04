@@ -15,16 +15,15 @@
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Threading.h"
 
 // Project includes
 #include "JavaFormatterFunctions.h"
 #include "JavaLanguage.h"
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/JavaASTContext.h"
-#include "lldb/Utility/ConstString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -65,10 +64,10 @@ bool JavaLanguage::IsNilReference(ValueObject &valobj) {
 }
 
 lldb::TypeCategoryImplSP JavaLanguage::GetFormatters() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
 
-  llvm::call_once(g_initialize, [this]() -> void {
+  std::call_once(g_initialize, [this]() -> void {
     DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
     if (g_category) {
       llvm::StringRef array_regexp("^.*\\[\\]&?$");

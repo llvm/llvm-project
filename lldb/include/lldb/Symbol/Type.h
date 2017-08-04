@@ -11,11 +11,11 @@
 #define liblldb_Type_h_
 
 #include "lldb/Core/ClangForward.h"
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/APSInt.h"
@@ -23,6 +23,7 @@
 #include <set>
 
 namespace lldb_private {
+
 //----------------------------------------------------------------------
 // CompilerContext allows an array of these items to be passed to
 // perform detailed lookups in SymbolVendor and SymbolFile functions.
@@ -365,6 +366,9 @@ protected:
   CompilerType compiler_type;
   lldb::TypeSP type_sp;
 };
+
+// the two classes here are used by the public API as a backend to
+// the SBType and SBTypeList classes
 
 // the two classes here are used by the public API as a backend to
 // the SBType and SBTypeList classes

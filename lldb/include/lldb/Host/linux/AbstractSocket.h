@@ -15,7 +15,7 @@
 namespace lldb_private {
 class AbstractSocket : public DomainSocket {
 public:
-  AbstractSocket(bool child_processes_inherit);
+  AbstractSocket(bool child_processes_inherit, Error &error);
 
 protected:
   size_t GetNameOffset() const override;

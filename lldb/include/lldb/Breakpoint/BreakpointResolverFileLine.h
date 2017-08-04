@@ -36,7 +36,7 @@ public:
   static BreakpointResolver *
   CreateFromStructuredData(Breakpoint *bkpt,
                            const StructuredData::Dictionary &data_dict,
-                           Status &error);
+                           Error &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
@@ -63,8 +63,6 @@ public:
   lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
 
 protected:
-  void FilterContexts(SymbolContextList &sc_list);
-
   friend class Breakpoint;
   FileSpec m_file_spec;   // This is the file spec we are looking for.
   uint32_t m_line_number; // This is the line number that we are looking for.

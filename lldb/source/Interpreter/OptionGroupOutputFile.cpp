@@ -13,7 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
+#include "lldb/Utility/Utils.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,11 +38,10 @@ llvm::ArrayRef<OptionDefinition> OptionGroupOutputFile::GetDefinitions() {
   return llvm::makeArrayRef(g_option_table);
 }
 
-Status
-OptionGroupOutputFile::SetOptionValue(uint32_t option_idx,
-                                      llvm::StringRef option_arg,
-                                      ExecutionContext *execution_context) {
-  Status error;
+Error OptionGroupOutputFile::SetOptionValue(
+    uint32_t option_idx, llvm::StringRef option_arg,
+    ExecutionContext *execution_context) {
+  Error error;
   const int short_option = g_option_table[option_idx].short_option;
 
   switch (short_option) {

@@ -33,30 +33,29 @@ public:
 
   uint32_t GetUserRegisterCount() const override;
 
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
+  Error ReadRegister(const RegisterInfo *reg_info,
+                     RegisterValue &reg_value) override;
 
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  Error WriteRegister(const RegisterInfo *reg_info,
+                      const RegisterValue &reg_value) override;
 
-  Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  Error ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
 
-  Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
+  Error WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
+  Error IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
 
-  Status GetWatchpointHitIndex(uint32_t &wp_index,
-                               lldb::addr_t trap_addr) override;
+  Error GetWatchpointHitIndex(uint32_t &wp_index,
+                              lldb::addr_t trap_addr) override;
 
-  Status IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
+  Error IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
 
   bool ClearHardwareWatchpoint(uint32_t wp_index) override;
 
-  Status ClearAllHardwareWatchpoints() override;
+  Error ClearAllHardwareWatchpoints() override;
 
-  Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags,
-                                        uint32_t wp_index);
+  Error SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
+                                       uint32_t watch_flags, uint32_t wp_index);
 
   uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
                                  uint32_t watch_flags) override;
@@ -72,9 +71,9 @@ protected:
 
   size_t GetFPRSize() override;
 
-  Status ReadFPR() override;
+  Error ReadFPR() override;
 
-  Status WriteFPR() override;
+  Error WriteFPR() override;
 
 private:
   // Private member types.

@@ -13,7 +13,6 @@ add_lldb_library(lldbTarget
   LanguageRuntime.cpp
   Memory.cpp
   MemoryHistory.cpp
-  ModuleCache.cpp
   ObjCLanguageRuntime.cpp
   OperatingSystem.cpp
   PathMappingList.cpp
@@ -25,7 +24,6 @@ add_lldb_library(lldbTarget
   QueueItem.cpp
   QueueList.cpp
   RegisterContext.cpp
-  RegisterNumber.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
   StackFrame.cpp
@@ -33,6 +31,7 @@ add_lldb_library(lldbTarget
   StackID.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp
+  SwiftLanguageRuntime.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp
@@ -62,6 +61,10 @@ add_lldb_library(lldbTarget
   UnwindAssembly.cpp
 
   LINK_LIBS
+    swiftAST
+    swiftBasic
+    swiftFrontend
+    swiftRemoteAST
     lldbBreakpoint
     lldbCore
     lldbExpression
@@ -70,7 +73,10 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbPluginExpressionParserClang
+    lldbPluginExpressionParserSwift
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
+    lldbPluginSwiftLanguage
     lldbPluginProcessUtility
 
   LINK_COMPONENTS

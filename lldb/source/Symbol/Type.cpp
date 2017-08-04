@@ -13,11 +13,11 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/StreamString.h"
+#include "lldb/Core/StreamString.h"
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -410,7 +410,7 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
       if (exe_ctx) {
         Process *process = exe_ctx->GetProcessPtr();
         if (process) {
-          Status error;
+          Error error;
           return exe_ctx->GetProcessPtr()->ReadMemory(addr, dst, byte_size,
                                                       error) == byte_size;
         }

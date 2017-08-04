@@ -13,7 +13,6 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/OptionParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -39,10 +38,10 @@ OptionGroupString::OptionGroupString(uint32_t usage_mask, bool required,
 
 OptionGroupString::~OptionGroupString() {}
 
-Status OptionGroupString::SetOptionValue(uint32_t option_idx,
-                                         llvm::StringRef option_arg,
-                                         ExecutionContext *execution_context) {
-  Status error(m_value.SetValueFromString(option_arg));
+Error OptionGroupString::SetOptionValue(uint32_t option_idx,
+                                        llvm::StringRef option_arg,
+                                        ExecutionContext *execution_context) {
+  Error error(m_value.SetValueFromString(option_arg));
   return error;
 }
 

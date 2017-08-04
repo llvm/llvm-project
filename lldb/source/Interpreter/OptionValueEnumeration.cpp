@@ -13,7 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/StringList.h"
+#include "lldb/Core/StringList.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,9 +45,9 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
-                                                  VarSetOperationType op) {
-  Status error;
+Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
+                                                 VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

@@ -10,8 +10,8 @@
 #ifndef lldb_Host_HostThread_h_
 #define lldb_Host_HostThread_h_
 
+#include "lldb/Core/Error.h"
 #include "lldb/Host/HostNativeThreadForward.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 
 #include <memory>
@@ -34,8 +34,8 @@ public:
   HostThread();
   HostThread(lldb::thread_t thread);
 
-  Status Join(lldb::thread_result_t *result);
-  Status Cancel();
+  Error Join(lldb::thread_result_t *result);
+  Error Cancel();
   void Reset();
   lldb::thread_t Release();
 

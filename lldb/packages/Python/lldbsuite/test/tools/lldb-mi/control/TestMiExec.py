@@ -260,7 +260,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^running")
         # Depending on compiler, it can stop at different line
         self.expect(
-            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(28|29|30|31)\"")
+            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(29|30|31)\"")
 
         # Test that an invalid --thread is handled
         self.runCmd("-exec-next-instruction --thread 0")
@@ -319,16 +319,8 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         # -exec-step can keep us in the g_MyFunction for gcc
         self.runCmd("-exec-finish --frame 0")
         self.expect("\^running")
-        it = self.expect(["\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"30\"",
-                         "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"29\""])
-
-        if it == 1:
-            # Call to s_MyFunction may not follow immediately after g_MyFunction.
-            # There might be some instructions in between to restore caller-saved registers.
-            # We need to get past these instructions with a next to reach call to s_MyFunction.
-            self.runCmd("-exec-next --thread 1")
-            self.expect("\^running")
-            self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"30\"")
+        self.expect(
+            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"30\"")
 
         # Test that -exec-step steps into s_MyFunction
         # (and that --frame is optional)
@@ -390,17 +382,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test that -exec-step-instruction steps into g_MyFunction
         # instruction (and that --thread is optional)
-
-        # In case of MIPS, there might be more than one instruction
-        # before actual call instruction (like load, move and call instructions).
-        # The -exec-step-instruction would step one assembly instruction.
-        # Thus we may not enter into g_MyFunction function. The -exec-step would definitely
-        # step into the function.
-
-        if self.isMIPS():
-            self.runCmd("-exec-step --frame 0")
-        else:
-            self.runCmd("-exec-step-instruction --frame 0")
+        self.runCmd("-exec-step-instruction --frame 0")
         self.expect("\^running")
         self.expect(
             "\*stopped,reason=\"end-stepping-range\".+?func=\"g_MyFunction.*?\"")

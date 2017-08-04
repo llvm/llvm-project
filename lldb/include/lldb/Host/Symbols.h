@@ -16,13 +16,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/FileSpec.h"
+#include "lldb/Host/FileSpec.h"
 
 namespace lldb_private {
-
-class ArchSpec;
-class ModuleSpec;
-class UUID;
 
 class Symbols {
 public:

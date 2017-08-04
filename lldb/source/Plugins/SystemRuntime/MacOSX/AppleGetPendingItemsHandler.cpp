@@ -15,7 +15,10 @@
 // Other libraries and framework includes
 // Project includes
 
+#include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -26,9 +29,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -140,7 +140,7 @@ void AppleGetPendingItemsHandler::Detach() {
 lldb::addr_t AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(
     Thread &thread, ValueList &get_pending_items_arglist) {
   ThreadSP thread_sp(thread.shared_from_this());
-  ExecutionContext exe_ctx(thread_sp);
+  ExecutionContext exe_ctx(thread.shared_from_this());
   DiagnosticManager diagnostics;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
@@ -155,7 +155,7 @@ lldb::addr_t AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(
 
     if (!m_get_pending_items_impl_code.get()) {
       if (g_get_pending_items_function_code != NULL) {
-        Status error;
+        Error error;
         m_get_pending_items_impl_code.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
                 g_get_pending_items_function_code, eLanguageTypeObjC,
@@ -183,7 +183,7 @@ lldb::addr_t AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(
       }
 
       // Next make the runner function for our implementation utility function.
-      Status error;
+      Error error;
       ClangASTContext *clang_ast_context =
           thread.GetProcess()->GetTarget().GetScratchClangASTContext();
       CompilerType get_pending_items_return_type =
@@ -234,7 +234,7 @@ AppleGetPendingItemsHandler::GetPendingItemsReturnInfo
 AppleGetPendingItemsHandler::GetPendingItems(Thread &thread, addr_t queue,
                                              addr_t page_to_free,
                                              uint64_t page_to_free_size,
-                                             Status &error) {
+                                             Error &error) {
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());

@@ -9,15 +9,10 @@
 
 #include "lldb/Core/ValueObjectConstResultCast.h"
 
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
-namespace lldb_private {
-class ValueObject;
-}
+#include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Core/ValueObjectList.h"
+
+#include "lldb/Symbol/ClangASTContext.h"
 
 using namespace lldb_private;
 
@@ -30,7 +25,7 @@ ValueObjectConstResultCast::ValueObjectConstResultCast(
 
 ValueObjectConstResultCast::~ValueObjectConstResultCast() {}
 
-lldb::ValueObjectSP ValueObjectConstResultCast::Dereference(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResultCast::Dereference(Error &error) {
   return m_impl.Dereference(error);
 }
 
@@ -41,7 +36,7 @@ lldb::ValueObjectSP ValueObjectConstResultCast::GetSyntheticChildAtOffset(
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultCast::AddressOf(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResultCast::AddressOf(Error &error) {
   return m_impl.AddressOf(error);
 }
 

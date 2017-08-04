@@ -17,7 +17,6 @@ endif ()
 if ( CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
 include_directories(
   ../../../../llvm/include
-  ../../source/Plugins/Process/NetBSD
   ../../source/Plugins/Process/POSIX
   )
 endif ()
@@ -59,16 +58,6 @@ if (LLVM_BUILD_STATIC)
   endif()
 endif()
 
-set(LLDB_PLUGINS)
-
-if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
-  list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
-endif()
-
-if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-  list(APPEND LLDB_PLUGINS lldbPluginProcessNetBSD)
-endif()
-
 add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
     Acceptor.cpp
     lldb-gdbserver.cpp
@@ -82,7 +71,7 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
       lldbHost
       lldbInitialization
       lldbInterpreter
-      ${LLDB_PLUGINS}
+      ${EXTRA_LLDB_LIBS}
       ${LLDB_SYSTEM_LIBS}
 
     LINK_COMPONENTS
@@ -90,3 +79,5 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
 )
 
 target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
+
+set_target_properties(lldb-server PROPERTIES VERSION ${LLDB_VERSION})

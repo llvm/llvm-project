@@ -13,7 +13,7 @@
 #include <libproc.h>
 
 // LLDB includes
-#include "lldb/Utility/Stream.h"
+#include "lldb/Core/Stream.h"
 
 #include "NativeProcessDarwin.h"
 
@@ -94,15 +94,15 @@ NativeRegisterContextSP NativeThreadDarwin::GetRegisterContext() {
   return NativeRegisterContextSP();
 }
 
-Status NativeThreadDarwin::SetWatchpoint(lldb::addr_t addr, size_t size,
-                                         uint32_t watch_flags, bool hardware) {
-  Status error;
+Error NativeThreadDarwin::SetWatchpoint(lldb::addr_t addr, size_t size,
+                                        uint32_t watch_flags, bool hardware) {
+  Error error;
   error.SetErrorString("not yet implemented");
   return error;
 }
 
-Status NativeThreadDarwin::RemoveWatchpoint(lldb::addr_t addr) {
-  Status error;
+Error NativeThreadDarwin::RemoveWatchpoint(lldb::addr_t addr) {
+  Error error;
   error.SetErrorString("not yet implemented");
   return error;
 }

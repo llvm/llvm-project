@@ -1,4 +1,5 @@
-//===-- ValueObjectConstResultImpl.cpp ---------------------------*- C++-*-===//
+//===-- ValueObjectConstResultImpl.cpp ---------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,26 +10,24 @@
 
 #include "lldb/Core/ValueObjectConstResultImpl.h"
 
-#include "lldb/Core/Scalar.h"      // for Scalar
-#include "lldb/Core/Value.h"       // for Value, Value::Val...
-#include "lldb/Core/ValueObject.h" // for ValueObject
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectConstResultCast.h"
 #include "lldb/Core/ValueObjectConstResultChild.h"
+#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Core/ValueObjectMemory.h"
+
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/Variable.h"
+
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
-#include "lldb/Utility/Endian.h"         // for InlHostByteOrder
-#include "lldb/Utility/SharingPtr.h"     // for SharingPtr
-
-#include <string> // for string
-
-namespace lldb_private {
-class DataExtractor;
-}
-namespace lldb_private {
-class Status;
-}
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -39,7 +38,7 @@ ValueObjectConstResultImpl::ValueObjectConstResultImpl(
       m_live_address_type(eAddressTypeLoad), m_load_addr_backend(),
       m_address_of_backend() {}
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Error &error) {
   if (m_impl_backend == NULL)
     return lldb::ValueObjectSP();
 
@@ -108,7 +107,7 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::GetSyntheticChildAtOffset(
       offset, type, can_create, name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Error &error) {
   if (m_address_of_backend.get() != NULL)
     return m_address_of_backend;
 

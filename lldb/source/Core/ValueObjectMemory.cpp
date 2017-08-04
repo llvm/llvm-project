@@ -9,24 +9,25 @@
 
 #include "lldb/Core/ValueObjectMemory.h"
 
-#include "lldb/Core/ArchSpec.h" // for ArchSpec
-#include "lldb/Core/Scalar.h"   // for Scalar, operator!=
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Core/ValueObjectList.h"
+
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/Variable.h"
+
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Status.h"        // for Status
-#include "lldb/lldb-types.h"            // for addr_t
-#include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
-
-#include <assert.h> // for assert
-#include <memory>   // for shared_ptr
-
-namespace lldb_private {
-class ExecutionContextScope;
-}
+#include "lldb/Target/Thread.h"
 
 using namespace lldb;
 using namespace lldb_private;

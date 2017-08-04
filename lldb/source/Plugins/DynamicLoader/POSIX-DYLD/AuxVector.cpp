@@ -7,11 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AuxVector.h"
+// C Includes
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+// C++ Includes
+// Other libraries and framework includes
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
+
+#if defined(__linux__) || defined(__FreeBSD__)
+#include "Plugins/Process/elf-core/ProcessElfCore.h"
+#endif
+
+#include "AuxVector.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -51,10 +63,10 @@ void AuxVector::ParseAuxv(DataExtractor &data) {
     if (!ParseAuxvEntry(data, entry, &offset, byte_size))
       break;
 
-    if (entry.type == AUXV_AT_NULL)
+    if (entry.type == AT_NULL)
       break;
 
-    if (entry.type == AUXV_AT_IGNORE)
+    if (entry.type == AT_IGNORE)
       continue;
 
     m_auxv.push_back(entry);
@@ -98,43 +110,43 @@ void AuxVector::DumpToLog(Log *log) const {
 const char *AuxVector::GetEntryName(EntryType type) {
   const char *name = "AT_???";
 
-#define ENTRY_NAME(_type) \
-  _type:                  \
-  name = #_type + 5
+#define ENTRY_NAME(_type)                                                      \
+  _type:                                                                       \
+  name = #_type
   switch (type) {
-    case ENTRY_NAME(AUXV_AT_NULL);           break;
-    case ENTRY_NAME(AUXV_AT_IGNORE);         break;
-    case ENTRY_NAME(AUXV_AT_EXECFD);         break;
-    case ENTRY_NAME(AUXV_AT_PHDR);           break;
-    case ENTRY_NAME(AUXV_AT_PHENT);          break;
-    case ENTRY_NAME(AUXV_AT_PHNUM);          break;
-    case ENTRY_NAME(AUXV_AT_PAGESZ);         break;
-    case ENTRY_NAME(AUXV_AT_BASE);           break;
-    case ENTRY_NAME(AUXV_AT_FLAGS);          break;
-    case ENTRY_NAME(AUXV_AT_ENTRY);          break;
-    case ENTRY_NAME(AUXV_AT_NOTELF);         break;
-    case ENTRY_NAME(AUXV_AT_UID);            break;
-    case ENTRY_NAME(AUXV_AT_EUID);           break;
-    case ENTRY_NAME(AUXV_AT_GID);            break;
-    case ENTRY_NAME(AUXV_AT_EGID);           break;
-    case ENTRY_NAME(AUXV_AT_CLKTCK);         break;
-    case ENTRY_NAME(AUXV_AT_PLATFORM);       break;
-    case ENTRY_NAME(AUXV_AT_HWCAP);          break;
-    case ENTRY_NAME(AUXV_AT_FPUCW);          break;
-    case ENTRY_NAME(AUXV_AT_DCACHEBSIZE);    break;
-    case ENTRY_NAME(AUXV_AT_ICACHEBSIZE);    break;
-    case ENTRY_NAME(AUXV_AT_UCACHEBSIZE);    break;
-    case ENTRY_NAME(AUXV_AT_IGNOREPPC);      break;
-    case ENTRY_NAME(AUXV_AT_SECURE);         break;
-    case ENTRY_NAME(AUXV_AT_BASE_PLATFORM);  break;
-    case ENTRY_NAME(AUXV_AT_RANDOM);         break;
-    case ENTRY_NAME(AUXV_AT_EXECFN);         break;
-    case ENTRY_NAME(AUXV_AT_SYSINFO);        break;
-    case ENTRY_NAME(AUXV_AT_SYSINFO_EHDR);   break;
-    case ENTRY_NAME(AUXV_AT_L1I_CACHESHAPE); break;
-    case ENTRY_NAME(AUXV_AT_L1D_CACHESHAPE); break;
-    case ENTRY_NAME(AUXV_AT_L2_CACHESHAPE);  break;
-    case ENTRY_NAME(AUXV_AT_L3_CACHESHAPE);  break;
+    case ENTRY_NAME(AT_NULL);           break;
+    case ENTRY_NAME(AT_IGNORE);         break;
+    case ENTRY_NAME(AT_EXECFD);         break;
+    case ENTRY_NAME(AT_PHDR);           break;
+    case ENTRY_NAME(AT_PHENT);          break;
+    case ENTRY_NAME(AT_PHNUM);          break;
+    case ENTRY_NAME(AT_PAGESZ);         break;
+    case ENTRY_NAME(AT_BASE);           break;
+    case ENTRY_NAME(AT_FLAGS);          break;
+    case ENTRY_NAME(AT_ENTRY);          break;
+    case ENTRY_NAME(AT_NOTELF);         break;
+    case ENTRY_NAME(AT_UID);            break;
+    case ENTRY_NAME(AT_EUID);           break;
+    case ENTRY_NAME(AT_GID);            break;
+    case ENTRY_NAME(AT_EGID);           break;
+    case ENTRY_NAME(AT_CLKTCK);         break;
+    case ENTRY_NAME(AT_PLATFORM);       break;
+    case ENTRY_NAME(AT_HWCAP);          break;
+    case ENTRY_NAME(AT_FPUCW);          break;
+    case ENTRY_NAME(AT_DCACHEBSIZE);    break;
+    case ENTRY_NAME(AT_ICACHEBSIZE);    break;
+    case ENTRY_NAME(AT_UCACHEBSIZE);    break;
+    case ENTRY_NAME(AT_IGNOREPPC);      break;
+    case ENTRY_NAME(AT_SECURE);         break;
+    case ENTRY_NAME(AT_BASE_PLATFORM);  break;
+    case ENTRY_NAME(AT_RANDOM);         break;
+    case ENTRY_NAME(AT_EXECFN);         break;
+    case ENTRY_NAME(AT_SYSINFO);        break;
+    case ENTRY_NAME(AT_SYSINFO_EHDR);   break;
+    case ENTRY_NAME(AT_L1I_CACHESHAPE); break;
+    case ENTRY_NAME(AT_L1D_CACHESHAPE); break;
+    case ENTRY_NAME(AT_L2_CACHESHAPE);  break;
+    case ENTRY_NAME(AT_L3_CACHESHAPE);  break;
     }
 #undef ENTRY_NAME
 

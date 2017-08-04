@@ -7,6 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(_MSC_VER) && (_HAS_EXCEPTIONS == 0)
+// Workaround for MSVC standard library bug, which fails to include <thread>
+// when
+// exceptions are disabled.
+#include <eh.h>
+#endif
+
 #include "GDBRemoteTestUtils.h"
 
 #include "lldb/Host/common/TCPSocket.h"
@@ -30,33 +37,32 @@ void GDBRemoteTest::TearDownTestCase() {
 #endif
 }
 
-llvm::Error GDBRemoteTest::Connect(GDBRemoteCommunication &client,
-                                   GDBRemoteCommunication &server) {
+void Connect(GDBRemoteCommunication &client, GDBRemoteCommunication &server) {
   bool child_processes_inherit = false;
-  TCPSocket listen_socket(true, child_processes_inherit);
-  if (llvm::Error error = listen_socket.Listen("127.0.0.1:0", 5).ToError())
-    return error;
+  Error error;
+  TCPSocket listen_socket(child_processes_inherit, error);
+  ASSERT_FALSE(error.Fail());
+  error = listen_socket.Listen("127.0.0.1:0", 5);
+  ASSERT_FALSE(error.Fail());
 
   Socket *accept_socket;
-  std::future<Status> accept_status = std::async(
-      std::launch::async, [&] { return listen_socket.Accept(accept_socket); });
+  std::future<Error> accept_error = std::async(std::launch::async, [&] {
+    return listen_socket.Accept("127.0.0.1:0", child_processes_inherit,
+                                accept_socket);
+  });
 
-  llvm::SmallString<32> remote_addr;
-  llvm::raw_svector_ostream(remote_addr)
-      << "connect://localhost:" << listen_socket.GetLocalPortNumber();
+  char connect_remote_address[64];
+  snprintf(connect_remote_address, sizeof(connect_remote_address),
+           "connect://localhost:%u", listen_socket.GetLocalPortNumber());
 
-  std::unique_ptr<ConnectionFileDescriptor> conn_up(
+  std::unique_ptr<ConnectionFileDescriptor> conn_ap(
       new ConnectionFileDescriptor());
-  if (conn_up->Connect(remote_addr, nullptr) != lldb::eConnectionStatusSuccess)
-    return llvm::make_error<llvm::StringError>("Unable to connect",
-                                               llvm::inconvertibleErrorCode());
+  ASSERT_EQ(conn_ap->Connect(connect_remote_address, nullptr),
+            lldb::eConnectionStatusSuccess);
 
-  client.SetConnection(conn_up.release());
-  if (llvm::Error error = accept_status.get().ToError())
-    return error;
-
+  client.SetConnection(conn_ap.release());
+  ASSERT_TRUE(accept_error.get().Success());
   server.SetConnection(new ConnectionFileDescriptor(accept_socket));
-  return llvm::Error::success();
 }
 
 } // namespace process_gdb_remote

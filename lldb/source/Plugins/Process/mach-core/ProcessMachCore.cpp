@@ -14,11 +14,12 @@
 
 // C++ Includes
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Threading.h"
 #include <mutex>
 
 // Other libraries and framework includes
+#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -29,9 +30,6 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/Log.h"
 
 // Project includes
 #include "ProcessMachCore.h"
@@ -67,8 +65,7 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
   lldb::ProcessSP process_sp;
   if (crash_file) {
     const size_t header_size = sizeof(llvm::MachO::mach_header);
-    auto data_sp =
-        DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), header_size, 0);
+    lldb::DataBufferSP data_sp(crash_file->ReadFileContents(0, header_size));
     if (data_sp && data_sp->GetByteSize() == header_size) {
       DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
 
@@ -97,8 +94,8 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     // ModuleSpecList::FindMatchingModuleSpec
     // enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
-    Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             NULL, NULL, NULL));
+    Error error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
+                                            NULL, NULL, NULL));
 
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
@@ -143,7 +140,7 @@ bool ProcessMachCore::GetDynamicLoaderAddress(lldb::addr_t addr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
                                                   LIBLLDB_LOG_PROCESS));
   llvm::MachO::mach_header header;
-  Status error;
+  Error error;
   if (DoReadMemory(addr, &header, sizeof(header), error) != sizeof(header))
     return false;
   if (header.magic == llvm::MachO::MH_CIGAM ||
@@ -200,10 +197,10 @@ bool ProcessMachCore::GetDynamicLoaderAddress(lldb::addr_t addr) {
 //----------------------------------------------------------------------
 // Process Control
 //----------------------------------------------------------------------
-Status ProcessMachCore::DoLoadCore() {
+Error ProcessMachCore::DoLoadCore() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
                                                   LIBLLDB_LOG_PROCESS));
-  Status error;
+  Error error;
   if (!m_core_module_sp) {
     error.SetErrorString("invalid core module");
     return error;
@@ -514,7 +511,7 @@ void ProcessMachCore::RefreshStateAfterStop() {
   // SetThreadStopInfo (m_last_stop_packet);
 }
 
-Status ProcessMachCore::DoDestroy() { return Status(); }
+Error ProcessMachCore::DoDestroy() { return Error(); }
 
 //------------------------------------------------------------------
 // Process Queries
@@ -528,14 +525,14 @@ bool ProcessMachCore::WarnBeforeDetach() const { return false; }
 // Process Memory
 //------------------------------------------------------------------
 size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
-                                   Status &error) {
+                                   Error &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does
   // since in core files we have it all cached our our core file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
 size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+                                     Error &error) {
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   size_t bytes_read = 0;
 
@@ -589,8 +586,8 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
   return bytes_read;
 }
 
-Status ProcessMachCore::GetMemoryRegionInfo(addr_t load_addr,
-                                            MemoryRegionInfo &region_info) {
+Error ProcessMachCore::GetMemoryRegionInfo(addr_t load_addr,
+                                           MemoryRegionInfo &region_info) {
   region_info.Clear();
   const VMRangeToPermissions::Entry *permission_entry =
       m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
@@ -617,7 +614,7 @@ Status ProcessMachCore::GetMemoryRegionInfo(addr_t load_addr,
       region_info.SetExecutable(MemoryRegionInfo::eNo);
       region_info.SetMapped(MemoryRegionInfo::eNo);
     }
-    return Status();
+    return Error();
   }
 
   region_info.GetRange().SetRangeBase(load_addr);
@@ -626,15 +623,15 @@ Status ProcessMachCore::GetMemoryRegionInfo(addr_t load_addr,
   region_info.SetWritable(MemoryRegionInfo::eNo);
   region_info.SetExecutable(MemoryRegionInfo::eNo);
   region_info.SetMapped(MemoryRegionInfo::eNo);
-  return Status();
+  return Error();
 }
 
 void ProcessMachCore::Clear() { m_thread_list.Clear(); }
 
 void ProcessMachCore::Initialize() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
+  std::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(), CreateInstance);
   });

@@ -38,9 +38,9 @@ void OptionValueArch::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Status OptionValueArch::SetValueFromString(llvm::StringRef value,
-                                           VarSetOperationType op) {
-  Status error;
+Error OptionValueArch::SetValueFromString(llvm::StringRef value,
+                                          VarSetOperationType op) {
+  Error error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

@@ -9,15 +9,10 @@
 
 #include "lldb/Utility/JSON.h"
 
-#include "lldb/Utility/Stream.h" // for Stream
-#include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/StringRef.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/StringConvert.h"
 #include "llvm/Support/ErrorHandling.h"
-
-#include <inttypes.h> // for PRIu64, PRId64
 #include <limits.h>
-#include <stddef.h> // for size_t
-#include <utility>  // for pair
 
 using namespace lldb_private;
 
@@ -191,7 +186,7 @@ JSONValue::SP JSONArray::GetObject(Index i) {
 
 JSONArray::Size JSONArray::GetNumElements() { return m_elements.size(); }
 
-JSONParser::JSONParser(llvm::StringRef data) : StringExtractor(data) {}
+JSONParser::JSONParser(const char *cstr) : StringExtractor(cstr) {}
 
 JSONParser::Token JSONParser::GetToken(std::string &value) {
   StreamString error;
@@ -246,7 +241,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
             "error: an error occurred getting a character from offset %" PRIu64,
             start_index);
         value = std::move(error.GetString());
-        return Token::Status;
+        return Token::Error;
 
       } else {
         const bool is_end_quote = escaped_ch == '"';
@@ -259,13 +254,13 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
                          "character 0x%4.4x at offset %" PRIu64,
                          escaped_ch, start_index);
             value = std::move(error.GetString());
-            return Token::Status;
+            return Token::Error;
           }
         } else if (is_end_quote) {
           return Token::String;
         } else if (is_null) {
           value = "error: missing end quote for string";
-          return Token::Status;
+          return Token::Error;
         }
       }
     }
@@ -316,7 +311,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
           error.Printf("error: extra decimal point found at offset %" PRIu64,
                        start_index);
           value = std::move(error.GetString());
-          return Token::Status;
+          return Token::Error;
         } else {
           got_decimal_point = true;
           ++m_index; // Skip this character
@@ -330,7 +325,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
               "error: extra exponent character found at offset %" PRIu64,
               start_index);
           value = std::move(error.GetString());
-          return Token::Status;
+          return Token::Error;
         } else {
           exp_index = m_index;
           ++m_index; // Skip this character
@@ -346,7 +341,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
           error.Printf("error: unexpected %c character at offset %" PRIu64,
                        next_ch, start_index);
           value = std::move(error.GetString());
-          return Token::Status;
+          return Token::Error;
         }
         break;
 
@@ -368,7 +363,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
                          "at offset in float value \"%s\"",
                          value.c_str());
             value = std::move(error.GetString());
-            return Token::Status;
+            return Token::Error;
           }
         } else {
           // No exponent, but we need at least one decimal after the decimal
@@ -379,7 +374,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
             error.Printf("error: no digits after decimal point \"%s\"",
                          value.c_str());
             value = std::move(error.GetString());
-            return Token::Status;
+            return Token::Error;
           }
         }
       } else {
@@ -390,14 +385,14 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
         } else {
           error.Printf("error: no digits negate sign \"%s\"", value.c_str());
           value = std::move(error.GetString());
-          return Token::Status;
+          return Token::Error;
         }
       }
     } else {
       error.Printf("error: invalid number found at offset %" PRIu64,
                    start_index);
       value = std::move(error.GetString());
-      return Token::Status;
+      return Token::Error;
     }
   } break;
   default:
@@ -407,7 +402,7 @@ JSONParser::Token JSONParser::GetToken(std::string &value) {
                " (around character '%c')",
                start_index, ch);
   value = std::move(error.GetString());
-  return Token::Status;
+  return Token::Error;
 }
 
 int JSONParser::GetEscapedChar(bool &was_escaped) {
@@ -517,20 +512,23 @@ JSONValue::SP JSONParser::ParseJSONValue() {
 
   case JSONParser::Token::Integer: {
     if (value.front() == '-') {
-      int64_t sval = 0;
-      if (!llvm::StringRef(value).getAsInteger(0, sval))
+      bool success = false;
+      int64_t sval = StringConvert::ToSInt64(value.c_str(), 0, 0, &success);
+      if (success)
         return JSONValue::SP(new JSONNumber(sval));
     } else {
-      uint64_t uval = 0;
-      if (!llvm::StringRef(value).getAsInteger(0, uval))
+      bool success = false;
+      uint64_t uval = StringConvert::ToUInt64(value.c_str(), 0, 0, &success);
+      if (success)
         return JSONValue::SP(new JSONNumber(uval));
     }
   } break;
 
   case JSONParser::Token::Float: {
-    double D;
-    if (!llvm::StringRef(value).getAsDouble(D))
-      return JSONValue::SP(new JSONNumber(D));
+    bool success = false;
+    double val = StringConvert::ToDouble(value.c_str(), 0.0, &success);
+    if (success)
+      return JSONValue::SP(new JSONNumber(val));
   } break;
 
   case JSONParser::Token::String:

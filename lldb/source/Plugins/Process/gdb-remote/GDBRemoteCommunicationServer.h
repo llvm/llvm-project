@@ -31,8 +31,8 @@ class GDBRemoteCommunicationServer : public GDBRemoteCommunication {
 public:
   using PortMap = std::map<uint16_t, lldb::pid_t>;
   using PacketHandler =
-      std::function<PacketResult(StringExtractorGDBRemote &packet,
-                                 Status &error, bool &interrupt, bool &quit)>;
+      std::function<PacketResult(StringExtractorGDBRemote &packet, Error &error,
+                                 bool &interrupt, bool &quit)>;
 
   GDBRemoteCommunicationServer(const char *comm_name,
                                const char *listener_name);
@@ -44,7 +44,7 @@ public:
                         PacketHandler handler);
 
   PacketResult GetPacketAndSendResponse(Timeout<std::micro> timeout,
-                                        Status &error, bool &interrupt,
+                                        Error &error, bool &interrupt,
                                         bool &quit);
 
   // After connecting, do a little handshake with the client to make sure
@@ -56,13 +56,6 @@ protected:
       m_packet_handlers;
   bool m_exit_now; // use in asynchronous handling to indicate process should
                    // exit.
-
-  bool m_send_error_strings; // If the client enables this then
-                             // we will send error strings as well.
-
-  PacketResult Handle_QErrorStringEnable(StringExtractorGDBRemote &packet);
-
-  PacketResult SendErrorResponse(const Status &error);
 
   PacketResult SendUnimplementedResponse(const char *packet);
 

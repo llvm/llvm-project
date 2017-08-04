@@ -10,21 +10,12 @@
 
 // C Includes
 #include <errno.h>
-#include <pthread.h>
-#include <pthread_np.h>
-#include <stdlib.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <sys/user.h>
-#include <machine/elf.h>
 
 // C++ Includes
 #include <mutex>
-#include <unordered_map>
 
 // Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -32,11 +23,11 @@
 #include "lldb/Target/Target.h"
 
 #include "FreeBSDThread.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
+#include "ProcessPOSIXLog.h"
 
 // Other libraries and framework includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -45,18 +36,14 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/FileSpec.h"
 
 #include "lldb/Host/posix/Fcntl.h"
-
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -83,11 +70,12 @@ ProcessFreeBSD::CreateInstance(lldb::TargetSP target_sp,
 }
 
 void ProcessFreeBSD::Initialize() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
+  std::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(), CreateInstance);
+    ProcessPOSIXLog::Initialize(GetPluginNameStatic());
   });
 }
 
@@ -111,8 +99,8 @@ uint32_t ProcessFreeBSD::GetPluginVersion() { return 1; }
 
 void ProcessFreeBSD::Terminate() {}
 
-Status ProcessFreeBSD::DoDetach(bool keep_stopped) {
-  Status error;
+Error ProcessFreeBSD::DoDetach(bool keep_stopped) {
+  Error error;
   if (keep_stopped) {
     error.SetErrorString("Detaching with keep_stopped true is not currently "
                          "supported on FreeBSD.");
@@ -127,14 +115,13 @@ Status ProcessFreeBSD::DoDetach(bool keep_stopped) {
   return error;
 }
 
-Status ProcessFreeBSD::DoResume() {
+Error ProcessFreeBSD::DoResume() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
   SetPrivateState(eStateRunning);
 
   std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
   bool do_step = false;
-  bool software_single_step = !SupportHardwareSingleStepping();
 
   for (tid_collection::const_iterator t_pos = m_run_tids.begin(),
                                       t_end = m_run_tids.end();
@@ -146,11 +133,6 @@ Status ProcessFreeBSD::DoResume() {
        t_pos != t_end; ++t_pos) {
     m_monitor->ThreadSuspend(*t_pos, false);
     do_step = true;
-    if (software_single_step) {
-      Status error = SetupSoftwareSingleStepping(*t_pos);
-      if (error.Fail())
-        return error;
-    }
   }
   for (tid_collection::const_iterator t_pos = m_suspend_tids.begin(),
                                       t_end = m_suspend_tids.end();
@@ -163,12 +145,12 @@ Status ProcessFreeBSD::DoResume() {
   if (log)
     log->Printf("process %" PRIu64 " resuming (%s)", GetID(),
                 do_step ? "step" : "continue");
-  if (do_step && !software_single_step)
+  if (do_step)
     m_monitor->SingleStep(GetID(), m_resume_signo);
   else
     m_monitor->Resume(GetID(), m_resume_signo);
 
-  return Status();
+  return Error();
 }
 
 bool ProcessFreeBSD::UpdateThreadList(ThreadList &old_thread_list,
@@ -209,7 +191,7 @@ bool ProcessFreeBSD::UpdateThreadList(ThreadList &old_thread_list,
   return true;
 }
 
-Status ProcessFreeBSD::WillResume() {
+Error ProcessFreeBSD::WillResume() {
   m_resume_signo = 0;
   m_suspend_tids.clear();
   m_run_tids.clear();
@@ -293,14 +275,14 @@ bool ProcessFreeBSD::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-Status
-ProcessFreeBSD::DoAttachToProcessWithID(lldb::pid_t pid,
-                                        const ProcessAttachInfo &attach_info) {
-  Status error;
+Error ProcessFreeBSD::DoAttachToProcessWithID(
+    lldb::pid_t pid, const ProcessAttachInfo &attach_info) {
+  Error error;
   assert(m_monitor == NULL);
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  LLDB_LOGV(log, "pid = {0}", GetID());
+  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
+    log->Printf("ProcessFreeBSD::%s(pid = %" PRIi64 ")", __FUNCTION__, GetID());
 
   m_monitor = new ProcessMonitor(this, pid, error);
 
@@ -344,8 +326,8 @@ ProcessFreeBSD::DoAttachToProcessWithID(lldb::pid_t pid,
   return error;
 }
 
-Status ProcessFreeBSD::WillLaunch(Module *module) {
-  Status error;
+Error ProcessFreeBSD::WillLaunch(Module *module) {
+  Error error;
   return error;
 }
 
@@ -367,15 +349,14 @@ ProcessFreeBSD::GetFileSpec(const lldb_private::FileAction *file_action,
   return file_spec;
 }
 
-Status ProcessFreeBSD::DoLaunch(Module *module,
-                                ProcessLaunchInfo &launch_info) {
-  Status error;
+Error ProcessFreeBSD::DoLaunch(Module *module, ProcessLaunchInfo &launch_info) {
+  Error error;
   assert(m_monitor == NULL);
 
   FileSpec working_dir = launch_info.GetWorkingDirectory();
-  namespace fs = llvm::sys::fs;
-  if (working_dir && (!working_dir.ResolvePath() ||
-                      !fs::is_directory(working_dir.GetPath()))) {
+  if (working_dir &&
+      (!working_dir.ResolvePath() ||
+       working_dir.GetFileType() != FileSpec::eFileTypeDirectory)) {
     error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
     return error;
@@ -458,8 +439,8 @@ addr_t ProcessFreeBSD::GetImageInfoAddress() {
   return LLDB_INVALID_ADDRESS;
 }
 
-Status ProcessFreeBSD::DoHalt(bool &caused_stop) {
-  Status error;
+Error ProcessFreeBSD::DoHalt(bool &caused_stop) {
+  Error error;
 
   if (IsStopped()) {
     caused_stop = false;
@@ -472,8 +453,8 @@ Status ProcessFreeBSD::DoHalt(bool &caused_stop) {
   return error;
 }
 
-Status ProcessFreeBSD::DoSignal(int signal) {
-  Status error;
+Error ProcessFreeBSD::DoSignal(int signal) {
+  Error error;
 
   if (kill(GetID(), signal))
     error.SetErrorToErrno();
@@ -481,8 +462,8 @@ Status ProcessFreeBSD::DoSignal(int signal) {
   return error;
 }
 
-Status ProcessFreeBSD::DoDestroy() {
-  Status error;
+Error ProcessFreeBSD::DoDestroy() {
+  Error error;
 
   if (!HasExited()) {
     assert(m_monitor);
@@ -515,7 +496,7 @@ void ProcessFreeBSD::DoDidExec() {
                                  target->GetArchitecture());
       FileSpecList executable_search_paths(
           Target::GetDefaultExecutableSearchPaths());
-      Status error = platform_sp->ResolveExecutable(
+      Error error = platform_sp->ResolveExecutable(
           exe_module_spec, exe_module_sp,
           executable_search_paths.GetSize() ? &executable_search_paths : NULL);
       if (!error.Success())
@@ -547,7 +528,9 @@ ProcessFreeBSD::CreateNewFreeBSDThread(lldb_private::Process &process,
 
 void ProcessFreeBSD::RefreshStateAfterStop() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  LLDB_LOGV(log, "message_queue size = {0}", m_message_queue.size());
+  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
+    log->Printf("ProcessFreeBSD::%s(), message_queue size = %d", __FUNCTION__,
+                (int)m_message_queue.size());
 
   std::lock_guard<std::recursive_mutex> guard(m_message_mutex);
 
@@ -559,8 +542,10 @@ void ProcessFreeBSD::RefreshStateAfterStop() {
 
     // Resolve the thread this message corresponds to and pass it along.
     lldb::tid_t tid = message.GetTID();
-    LLDB_LOGV(log, " message_queue size = {0}, pid = {1}",
-              m_message_queue.size(), tid);
+    if (log)
+      log->Printf(
+          "ProcessFreeBSD::%s(), message_queue size = %d, pid = %" PRIi64,
+          __FUNCTION__, (int)m_message_queue.size(), tid);
 
     m_thread_list.RefreshStateAfterStop();
 
@@ -572,7 +557,10 @@ void ProcessFreeBSD::RefreshStateAfterStop() {
     if (message.GetKind() == ProcessMessage::eExitMessage) {
       // FIXME: We should tell the user about this, but the limbo message is
       // probably better for that.
-      LLDB_LOG(log, "removing thread, tid = {0}", tid);
+      if (log)
+        log->Printf("ProcessFreeBSD::%s() removing thread, tid = %" PRIi64,
+                    __FUNCTION__, tid);
+
       std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
 
       ThreadSP thread_sp = m_thread_list.RemoveThreadByID(tid, false);
@@ -591,19 +579,19 @@ bool ProcessFreeBSD::IsAlive() {
 }
 
 size_t ProcessFreeBSD::DoReadMemory(addr_t vm_addr, void *buf, size_t size,
-                                    Status &error) {
+                                    Error &error) {
   assert(m_monitor);
   return m_monitor->ReadMemory(vm_addr, buf, size, error);
 }
 
 size_t ProcessFreeBSD::DoWriteMemory(addr_t vm_addr, const void *buf,
-                                     size_t size, Status &error) {
+                                     size_t size, Error &error) {
   assert(m_monitor);
   return m_monitor->WriteMemory(vm_addr, buf, size, error);
 }
 
 addr_t ProcessFreeBSD::DoAllocateMemory(size_t size, uint32_t permissions,
-                                        Status &error) {
+                                        Error &error) {
   addr_t allocated_addr = LLDB_INVALID_ADDRESS;
 
   unsigned prot = 0;
@@ -628,8 +616,8 @@ addr_t ProcessFreeBSD::DoAllocateMemory(size_t size, uint32_t permissions,
   return allocated_addr;
 }
 
-Status ProcessFreeBSD::DoDeallocateMemory(lldb::addr_t addr) {
-  Status error;
+Error ProcessFreeBSD::DoDeallocateMemory(lldb::addr_t addr) {
+  Error error;
   MMapMap::iterator pos = m_addr_to_mmap_size.find(addr);
   if (pos != m_addr_to_mmap_size.end() &&
       InferiorCallMunmap(this, addr, pos->second))
@@ -693,16 +681,16 @@ ProcessFreeBSD::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
   return opcode_size;
 }
 
-Status ProcessFreeBSD::EnableBreakpointSite(BreakpointSite *bp_site) {
+Error ProcessFreeBSD::EnableBreakpointSite(BreakpointSite *bp_site) {
   return EnableSoftwareBreakpoint(bp_site);
 }
 
-Status ProcessFreeBSD::DisableBreakpointSite(BreakpointSite *bp_site) {
+Error ProcessFreeBSD::DisableBreakpointSite(BreakpointSite *bp_site) {
   return DisableSoftwareBreakpoint(bp_site);
 }
 
-Status ProcessFreeBSD::EnableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
+Error ProcessFreeBSD::EnableWatchpoint(Watchpoint *wp, bool notify) {
+  Error error;
   if (wp) {
     user_id_t watchID = wp->GetID();
     addr_t addr = wp->GetLoadAddress();
@@ -756,8 +744,8 @@ Status ProcessFreeBSD::EnableWatchpoint(Watchpoint *wp, bool notify) {
   return error;
 }
 
-Status ProcessFreeBSD::DisableWatchpoint(Watchpoint *wp, bool notify) {
-  Status error;
+Error ProcessFreeBSD::DisableWatchpoint(Watchpoint *wp, bool notify) {
+  Error error;
   if (wp) {
     user_id_t watchID = wp->GetID();
     addr_t addr = wp->GetLoadAddress();
@@ -799,8 +787,8 @@ Status ProcessFreeBSD::DisableWatchpoint(Watchpoint *wp, bool notify) {
   return error;
 }
 
-Status ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num) {
-  Status error;
+Error ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num) {
+  Error error;
   std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
   FreeBSDThread *thread = static_cast<FreeBSDThread *>(
       m_thread_list.GetThreadAtIndex(0, false).get());
@@ -811,8 +799,8 @@ Status ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num) {
   return error;
 }
 
-Status ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num, bool &after) {
-  Status error = GetWatchpointSupportInfo(num);
+Error ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num, bool &after) {
+  Error error = GetWatchpointSupportInfo(num);
   // Watchpoints trigger and halt the inferior after
   // the corresponding instruction has been executed.
   after = true;
@@ -857,7 +845,7 @@ ByteOrder ProcessFreeBSD::GetByteOrder() const {
   return m_byte_order;
 }
 
-size_t ProcessFreeBSD::PutSTDIN(const char *buf, size_t len, Status &error) {
+size_t ProcessFreeBSD::PutSTDIN(const char *buf, size_t len, Error &error) {
   ssize_t status;
   if ((status = write(m_monitor->GetTerminalFD(), buf, len)) < 0) {
     error.SetErrorToErrno();
@@ -915,207 +903,13 @@ bool ProcessFreeBSD::IsAThreadRunning() {
 const DataBufferSP ProcessFreeBSD::GetAuxvData() {
   // If we're the local platform, we can ask the host for auxv data.
   PlatformSP platform_sp = GetTarget().GetPlatform();
-  assert(platform_sp && platform_sp->IsHost());
+  if (platform_sp && platform_sp->IsHost())
+    return lldb_private::Host::GetAuxvData(this);
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_AUXV, (int)m_process->GetID()};
-  size_t auxv_size = AT_COUNT * sizeof(Elf_Auxinfo);
-  DataBufferSP buf_sp(new DataBufferHeap(auxv_size, 0));
-
-  if (::sysctl(mib, 4, buf_sp->GetBytes(), &auxv_size, NULL, 0) != 0) {
-    perror("sysctl failed on auxv");
-    buf_sp.reset();
-  }
-
-  return buf_sp;
-}
-
-struct EmulatorBaton {
-  ProcessFreeBSD *m_process;
-  RegisterContext *m_reg_context;
-
-  // eRegisterKindDWARF -> RegisterValue
-  std::unordered_map<uint32_t, RegisterValue> m_register_values;
-
-  EmulatorBaton(ProcessFreeBSD *process, RegisterContext *reg_context)
-      : m_process(process), m_reg_context(reg_context) {}
-};
-
-static size_t ReadMemoryCallback(EmulateInstruction *instruction, void *baton,
-                                 const EmulateInstruction::Context &context,
-                                 lldb::addr_t addr, void *dst, size_t length) {
-  EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
-
-  Status error;
-  size_t bytes_read =
-      emulator_baton->m_process->DoReadMemory(addr, dst, length, error);
-  if (!error.Success())
-    bytes_read = 0;
-  return bytes_read;
-}
-
-static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                 const RegisterInfo *reg_info,
-                                 RegisterValue &reg_value) {
-  EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
-
-  auto it = emulator_baton->m_register_values.find(
-      reg_info->kinds[eRegisterKindDWARF]);
-  if (it != emulator_baton->m_register_values.end()) {
-    reg_value = it->second;
-    return true;
-  }
-
-  // The emulator only fills in the dwarf register numbers (and in some cases
-  // the generic register numbers). Get the full register info from the
-  // register context based on the dwarf register numbers.
-  const RegisterInfo *full_reg_info =
-      emulator_baton->m_reg_context->GetRegisterInfo(
-          eRegisterKindDWARF, reg_info->kinds[eRegisterKindDWARF]);
-
-  bool error =
-      emulator_baton->m_reg_context->ReadRegister(full_reg_info, reg_value);
-  return error;
-}
-
-static bool WriteRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                  const EmulateInstruction::Context &context,
-                                  const RegisterInfo *reg_info,
-                                  const RegisterValue &reg_value) {
-  EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
-  emulator_baton->m_register_values[reg_info->kinds[eRegisterKindDWARF]] =
-      reg_value;
-  return true;
-}
-
-static size_t WriteMemoryCallback(EmulateInstruction *instruction, void *baton,
-                                  const EmulateInstruction::Context &context,
-                                  lldb::addr_t addr, const void *dst,
-                                  size_t length) {
-  return length;
-}
-
-bool ProcessFreeBSD::SingleStepBreakpointHit(
-    void *baton, lldb_private::StoppointCallbackContext *context,
-    lldb::user_id_t break_id, lldb::user_id_t break_loc_id) {
-  return false;
-}
-
-Status ProcessFreeBSD::SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
-                                                       lldb::addr_t addr) {
-  Status error;
-
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  if (log) {
-    log->Printf("ProcessFreeBSD::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
-    log->Printf("SoftwareBreakpoint::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
-  }
-
-  // Validate the address.
-  if (addr == LLDB_INVALID_ADDRESS)
-    return Status("ProcessFreeBSD::%s invalid load address specified.",
-                  __FUNCTION__);
-
-  Breakpoint *const sw_step_break =
-      m_process->GetTarget().CreateBreakpoint(addr, true, false).get();
-  sw_step_break->SetCallback(SingleStepBreakpointHit, this, true);
-  sw_step_break->SetBreakpointKind("software-signle-step");
-
-  if (log)
-    log->Printf("ProcessFreeBSD::%s addr = 0x%" PRIx64 " -- SUCCESS",
-                __FUNCTION__, addr);
-
-  m_threads_stepping_with_breakpoint.insert({tid, sw_step_break->GetID()});
-  return Status();
-}
-
-bool ProcessFreeBSD::IsSoftwareStepBreakpoint(lldb::tid_t tid) {
-  ThreadSP thread = GetThreadList().FindThreadByID(tid);
-  if (!thread)
-    return false;
-
-  assert(thread->GetRegisterContext());
-  lldb::addr_t stop_pc = thread->GetRegisterContext()->GetPC();
-
-  const auto &iter = m_threads_stepping_with_breakpoint.find(tid);
-  if (iter == m_threads_stepping_with_breakpoint.end())
-    return false;
-
-  lldb::break_id_t bp_id = iter->second;
-  BreakpointSP bp = GetTarget().GetBreakpointByID(bp_id);
-  if (!bp)
-    return false;
-
-  BreakpointLocationSP bp_loc = bp->FindLocationByAddress(stop_pc);
-  if (!bp_loc)
-    return false;
-
-  GetTarget().RemoveBreakpointByID(bp_id);
-  m_threads_stepping_with_breakpoint.erase(tid);
-  return true;
-}
-
-bool ProcessFreeBSD::SupportHardwareSingleStepping() const {
-  lldb_private::ArchSpec arch = GetTarget().GetArchitecture();
-  if (arch.GetMachine() == llvm::Triple::arm ||
-      arch.GetMachine() == llvm::Triple::mips64 ||
-      arch.GetMachine() == llvm::Triple::mips64el ||
-      arch.GetMachine() == llvm::Triple::mips ||
-      arch.GetMachine() == llvm::Triple::mipsel)
-    return false;
-  return true;
-}
-
-Status ProcessFreeBSD::SetupSoftwareSingleStepping(lldb::tid_t tid) {
-  std::unique_ptr<EmulateInstruction> emulator_ap(
-      EmulateInstruction::FindPlugin(GetTarget().GetArchitecture(),
-                                     eInstructionTypePCModifying, nullptr));
-
-  if (emulator_ap == nullptr)
-    return Status("Instruction emulator not found!");
-
-  FreeBSDThread *thread = static_cast<FreeBSDThread *>(
-      m_thread_list.FindThreadByID(tid, false).get());
-  if (thread == NULL)
-    return Status("Thread not found not found!");
-
-  lldb::RegisterContextSP register_context_sp = thread->GetRegisterContext();
-
-  EmulatorBaton baton(this, register_context_sp.get());
-  emulator_ap->SetBaton(&baton);
-  emulator_ap->SetReadMemCallback(&ReadMemoryCallback);
-  emulator_ap->SetReadRegCallback(&ReadRegisterCallback);
-  emulator_ap->SetWriteMemCallback(&WriteMemoryCallback);
-  emulator_ap->SetWriteRegCallback(&WriteRegisterCallback);
-
-  if (!emulator_ap->ReadInstruction())
-    return Status("Read instruction failed!");
-
-  bool emulation_result =
-      emulator_ap->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
-  const RegisterInfo *reg_info_pc = register_context_sp->GetRegisterInfo(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  auto pc_it =
-      baton.m_register_values.find(reg_info_pc->kinds[eRegisterKindDWARF]);
-
-  lldb::addr_t next_pc;
-  if (emulation_result) {
-    assert(pc_it != baton.m_register_values.end() &&
-           "Emulation was successful but PC wasn't updated");
-    next_pc = pc_it->second.GetAsUInt64();
-  } else if (pc_it == baton.m_register_values.end()) {
-    // Emulate instruction failed and it haven't changed PC. Advance PC
-    // with the size of the current opcode because the emulation of all
-    // PC modifying instruction should be successful. The failure most
-    // likely caused by a not supported instruction which don't modify PC.
-    next_pc =
-        register_context_sp->GetPC() + emulator_ap->GetOpcode().GetByteSize();
-  } else {
-    // The instruction emulation failed after it modified the PC. It is an
-    // unknown error where we can't continue because the next instruction is
-    // modifying the PC but we don't  know how.
-    return Status("Instruction emulation failed unexpectedly");
-  }
-
-  SetSoftwareSingleStepBreakpoint(tid, next_pc);
-  return Status();
+  // Somewhat unexpected - the process is not running locally or we don't have a
+  // platform.
+  assert(
+      false &&
+      "no platform or not the host - how did we get here with ProcessFreeBSD?");
+  return DataBufferSP();
 }

@@ -46,7 +46,7 @@ function(add_lldb_library name)
                                 ${PARAM_LINK_LIBS}
                                 DEPENDS ${PARAM_DEPENDS})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")
+    if (${name} STREQUAL "liblldb")
       if (PARAM_SHARED)
         set(out_dir lib${LLVM_LIBDIR_SUFFIX})
         if(${name} STREQUAL "liblldb" AND LLDB_BUILD_FRAMEWORK)
@@ -135,6 +135,10 @@ function(add_lldb_executable name)
                                 -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     endif()
   endif()
+
+  # Might need the following in an else clause for above to cover non-Apple
+  # set(rpath_prefix "$ORIGIN")
+  # set_target_properties(${name} PROPERTIES INSTALL_RPATH "${rpath_prefix}/../lib")
 
   if(ARG_INCLUDE_IN_FRAMEWORK AND LLDB_BUILD_FRAMEWORK)
     add_llvm_tool_symlink(${name} ${name} ALWAYS_GENERATE SKIP_INSTALL

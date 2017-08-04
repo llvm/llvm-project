@@ -26,19 +26,22 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/Endian.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/Utility/CleanUp.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/Host.h"
 
@@ -49,56 +52,64 @@ extern char **environ;
 using namespace lldb;
 using namespace lldb_private;
 
+size_t Host::GetEnvironment(StringList &env) {
+  char *v;
+  char **var = environ;
+  for (; var != NULL && *var != NULL; ++var) {
+    v = strchr(*var, (int)'-');
+    if (v == NULL)
+      continue;
+    env.AppendString(v);
+  }
+  return env.GetSize();
+}
+
 static bool
 GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                       ProcessInstanceInfo &process_info) {
-  if (!process_info.ProcessIDIsValid())
-    return false;
+  if (process_info.ProcessIDIsValid()) {
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ARGS,
+                  (int)process_info.GetProcessID()};
 
-  int pid = process_info.GetProcessID();
+    char arg_data[8192];
+    size_t arg_data_size = sizeof(arg_data);
+    if (::sysctl(mib, 4, arg_data, &arg_data_size, NULL, 0) == 0) {
+      DataExtractor data(arg_data, arg_data_size, endian::InlHostByteOrder(),
+                         sizeof(void *));
+      lldb::offset_t offset = 0;
+      const char *cstr;
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ARGS, pid};
+      cstr = data.GetCStr(&offset);
+      if (cstr) {
+        process_info.GetExecutableFile().SetFile(cstr, false);
 
-  char arg_data[8192];
-  size_t arg_data_size = sizeof(arg_data);
-  if (::sysctl(mib, 4, arg_data, &arg_data_size, NULL, 0) != 0)
-    return false;
+        if (!(match_info_ptr == NULL ||
+              NameMatches(
+                  process_info.GetExecutableFile().GetFilename().GetCString(),
+                  match_info_ptr->GetNameMatchType(),
+                  match_info_ptr->GetProcessInfo().GetName())))
+          return false;
 
-  DataExtractor data(arg_data, arg_data_size, endian::InlHostByteOrder(),
-                     sizeof(void *));
-  lldb::offset_t offset = 0;
-  const char *cstr;
+        Args &proc_args = process_info.GetArguments();
+        while (1) {
+          const uint8_t *p = data.PeekData(offset, 1);
+          while ((p != NULL) && (*p == '\0') && offset < arg_data_size) {
+            ++offset;
+            p = data.PeekData(offset, 1);
+          }
+          if (p == NULL || offset >= arg_data_size)
+            return true;
 
-  cstr = data.GetCStr(&offset);
-  if (!cstr)
-    return false;
-
-  process_info.GetExecutableFile().SetFile(cstr, false);
-
-  if (!(match_info_ptr == NULL ||
-        NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),
-                    match_info_ptr->GetNameMatchType(),
-                    match_info_ptr->GetProcessInfo().GetName())))
-    return false;
-
-  Args &proc_args = process_info.GetArguments();
-  while (1) {
-    const uint8_t *p = data.PeekData(offset, 1);
-    while ((p != NULL) && (*p == '\0') && offset < arg_data_size) {
-      ++offset;
-      p = data.PeekData(offset, 1);
+          cstr = data.GetCStr(&offset);
+          if (cstr)
+            proc_args.AppendArgument(llvm::StringRef(cstr));
+          else
+            return true;
+        }
+      }
     }
-    if (p == NULL || offset >= arg_data_size)
-      break;
-
-    cstr = data.GetCStr(&offset);
-    if (!cstr)
-      break;
-
-    proc_args.AppendArgument(llvm::StringRef(cstr));
   }
-
-  return true;
+  return false;
 }
 
 static bool GetFreeBSDProcessCPUType(ProcessInstanceInfo &process_info) {
@@ -114,31 +125,26 @@ static bool GetFreeBSDProcessCPUType(ProcessInstanceInfo &process_info) {
 static bool GetFreeBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   struct kinfo_proc proc_kinfo;
   size_t proc_kinfo_size;
-  const int pid = process_info.GetProcessID();
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
 
-  if (!process_info.ProcessIDIsValid())
-    goto error;
+  if (process_info.ProcessIDIsValid()) {
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID,
+                  (int)process_info.GetProcessID()};
+    proc_kinfo_size = sizeof(struct kinfo_proc);
 
-  proc_kinfo_size = sizeof(struct kinfo_proc);
-
-  if (::sysctl(mib, 4, &proc_kinfo, &proc_kinfo_size, NULL, 0) != 0)
-    goto error;
-
-  if (proc_kinfo_size == 0)
-    goto error;
-
-  process_info.SetParentProcessID(proc_kinfo.ki_ppid);
-  process_info.SetUserID(proc_kinfo.ki_ruid);
-  process_info.SetGroupID(proc_kinfo.ki_rgid);
-  process_info.SetEffectiveUserID(proc_kinfo.ki_uid);
-  if (proc_kinfo.ki_ngroups > 0)
-    process_info.SetEffectiveGroupID(proc_kinfo.ki_groups[0]);
-  else
-    process_info.SetEffectiveGroupID(UINT32_MAX);
-  return true;
-
-error:
+    if (::sysctl(mib, 4, &proc_kinfo, &proc_kinfo_size, NULL, 0) == 0) {
+      if (proc_kinfo_size > 0) {
+        process_info.SetParentProcessID(proc_kinfo.ki_ppid);
+        process_info.SetUserID(proc_kinfo.ki_ruid);
+        process_info.SetGroupID(proc_kinfo.ki_rgid);
+        process_info.SetEffectiveUserID(proc_kinfo.ki_uid);
+        if (proc_kinfo.ki_ngroups > 0)
+          process_info.SetEffectiveGroupID(proc_kinfo.ki_groups[0]);
+        else
+          process_info.SetEffectiveGroupID(UINT32_MAX);
+        return true;
+      }
+    }
+  }
   process_info.SetParentProcessID(LLDB_INVALID_PROCESS_ID);
   process_info.SetUserID(UINT32_MAX);
   process_info.SetGroupID(UINT32_MAX);
@@ -149,11 +155,7 @@ error:
 
 uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
                              ProcessInstanceInfoList &process_infos) {
-  const ::pid_t our_pid = ::getpid();
-  const ::uid_t our_uid = ::getuid();
   std::vector<struct kinfo_proc> kinfos;
-  // Special case, if lldb is being run as root we can attach to anything.
-  bool all_users = match_info.GetMatchAllUsers() || (our_uid == 0);
 
   int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
 
@@ -173,24 +175,29 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
 
   const size_t actual_pid_count = (pid_data_size / sizeof(struct kinfo_proc));
 
+  bool all_users = match_info.GetMatchAllUsers();
+  const ::pid_t our_pid = getpid();
+  const uid_t our_uid = getuid();
   for (size_t i = 0; i < actual_pid_count; i++) {
     const struct kinfo_proc &kinfo = kinfos[i];
+    const bool kinfo_user_matches = (all_users || (kinfo.ki_ruid == our_uid) ||
+                                     // Special case, if lldb is being run as
+                                     // root we can attach to anything.
+                                     (our_uid == 0));
 
-    /* Make sure the user is acceptable */
-    if (!all_users && kinfo.ki_ruid != our_uid)
-      continue;
-
-    if (kinfo.ki_pid == our_pid ||  // Skip this process
-        kinfo.ki_pid == 0 ||        // Skip kernel (kernel pid is 0)
-        kinfo.ki_stat == SZOMB ||   // Zombies are bad
-        kinfo.ki_flag & P_TRACED || // Being debugged?
-        kinfo.ki_flag & P_WEXIT)    // Working on exiting
+    if (kinfo_user_matches == false || // Make sure the user is acceptable
+        kinfo.ki_pid == our_pid ||     // Skip this process
+        kinfo.ki_pid == 0 ||           // Skip kernel (kernel pid is zero)
+        kinfo.ki_stat == SZOMB ||      // Zombies are bad, they like brains...
+        kinfo.ki_flag & P_TRACED ||    // Being debugged?
+        kinfo.ki_flag & P_WEXIT)       // Working on exiting
       continue;
 
     // Every thread is a process in FreeBSD, but all the threads of a single
-    // process have the same pid. Do not store the process info in the
-    // result list if a process with given identifier is already registered
-    // there.
+    // process
+    // have the same pid. Do not store the process info in the result list if a
+    // process
+    // with given identifier is already registered there.
     bool already_registered = false;
     for (uint32_t pi = 0;
          !already_registered && (const int)kinfo.ki_numthreads > 1 &&
@@ -236,15 +243,23 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-size_t Host::GetEnvironment(StringList &env) {
-  char **host_env = environ;
-  char *env_entry;
-  size_t i;
-  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-    env.AppendString(env_entry);
-  return i;
+lldb::DataBufferSP Host::GetAuxvData(lldb_private::Process *process) {
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_AUXV, 0};
+  size_t auxv_size = AT_COUNT * sizeof(Elf_Auxinfo);
+  DataBufferSP buf_sp;
+
+  std::unique_ptr<DataBufferHeap> buf_ap(new DataBufferHeap(auxv_size, 0));
+
+  mib[3] = process->GetID();
+  if (::sysctl(mib, 4, buf_ap->GetBytes(), &auxv_size, NULL, 0) == 0) {
+    buf_sp.reset(buf_ap.release());
+  } else {
+    perror("sysctl failed on auxv");
+  }
+
+  return buf_sp;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+  return Error("unimplemented");
 }

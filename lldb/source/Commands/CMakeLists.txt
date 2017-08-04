@@ -31,7 +31,8 @@ add_lldb_library(lldbCommands
   CommandObjectLanguage.cpp
 
   LINK_LIBS
-    lldbBase
+    swiftAST
+    swiftIDE
     lldbBreakpoint
     lldbCore
     lldbDataFormatters

@@ -35,3 +35,6 @@ endif()
 if ( LLDB_CAN_USE_DEBUGSERVER )
   add_dependencies(lldb debugserver)
 endif()
+
+set_target_properties(lldb PROPERTIES VERSION ${LLDB_VERSION})
+

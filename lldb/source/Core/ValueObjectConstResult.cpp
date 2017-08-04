@@ -9,19 +9,22 @@
 
 #include "lldb/Core/ValueObjectConstResult.h"
 
-#include "lldb/Core/Scalar.h" // for Scalar
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ValueObjectChild.h"
+#include "lldb/Core/ValueObjectConstResultChild.h"
 #include "lldb/Core/ValueObjectDynamicValue.h"
-#include "lldb/Symbol/CompilerType.h"
-#include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextScope
-#include "lldb/Target/Process.h"
-#include "lldb/Utility/DataBuffer.h"     // for DataBuffer
-#include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
-#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Core/ValueObjectList.h"
 
-namespace lldb_private {
-class Module;
-}
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/Variable.h"
+
+#include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -163,12 +166,12 @@ ValueObjectConstResult::ValueObjectConstResult(
 }
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
-                                             const Status &error) {
+                                             const Error &error) {
   return (new ValueObjectConstResult(exe_scope, error))->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
-                                               const Status &error)
+                                               const Error &error)
     : ValueObject(exe_scope), m_type_name(), m_byte_size(0), m_impl(this) {
   m_error = error;
   SetIsConstant();
@@ -234,7 +237,7 @@ bool ValueObjectConstResult::IsInScope() {
   return true;
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::Dereference(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResult::Dereference(Error &error) {
   return m_impl.Dereference(error);
 }
 
@@ -245,7 +248,7 @@ lldb::ValueObjectSP ValueObjectConstResult::GetSyntheticChildAtOffset(
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Status &error) {
+lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Error &error) {
   return m_impl.AddressOf(error);
 }
 

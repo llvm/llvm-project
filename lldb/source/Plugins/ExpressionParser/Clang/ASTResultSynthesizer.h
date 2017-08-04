@@ -109,7 +109,7 @@ public:
   /// @param[in] S
   ///     The Sema to use.  Because Sema isn't externally visible, this class
   ///     casts it to an Action for actual use.
-  //----------------------------------------------------------------------
+  ///     //----------------------------------------------------------------------
   void InitializeSema(clang::Sema &S) override;
 
   //----------------------------------------------------------------------

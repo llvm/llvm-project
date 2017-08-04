@@ -15,18 +15,19 @@
 namespace lldb_private {
 class UDPSocket : public Socket {
 public:
-  UDPSocket(bool should_close, bool child_processes_inherit);
+  UDPSocket(bool child_processes_inherit, Error &error);
 
-  static Status Connect(llvm::StringRef name, bool child_processes_inherit,
-                        Socket *&socket);
+  static Error Connect(llvm::StringRef name, bool child_processes_inherit,
+                       Socket *&socket);
 
 private:
   UDPSocket(NativeSocket socket);
 
   size_t Send(const void *buf, const size_t num_bytes) override;
-  Status Connect(llvm::StringRef name) override;
-  Status Listen(llvm::StringRef name, int backlog) override;
-  Status Accept(Socket *&socket) override;
+  Error Connect(llvm::StringRef name) override;
+  Error Listen(llvm::StringRef name, int backlog) override;
+  Error Accept(llvm::StringRef name, bool child_processes_inherit,
+               Socket *&socket) override;
 
   SocketAddress m_sockaddr;
 };

@@ -17,16 +17,15 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Flags.h"
-
+#include "lldb/Core/Error.h"
+#include "lldb/Core/Flags.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Core/UserID.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/UserID.h"
 
 namespace lldb_private {
 
@@ -201,7 +200,7 @@ public:
   ///   Returns true if the CFA value was successfully set in value.  Some
   ///   frames may be unable to provide this value; they will return false.
   //------------------------------------------------------------------
-  bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
+  bool GetFrameBaseValue(Scalar &value, Error *error_ptr);
 
   //------------------------------------------------------------------
   /// Get the DWARFExpression corresponding to the Canonical Frame Address.
@@ -215,7 +214,7 @@ public:
   /// @return
   ///   Returns the corresponding DWARF expression, or NULL.
   //------------------------------------------------------------------
-  DWARFExpression *GetFrameBaseExpression(Status *error_ptr);
+  DWARFExpression *GetFrameBaseExpression(Error *error_ptr);
 
   //------------------------------------------------------------------
   /// Get the current lexical scope block for this StackFrame, if possible.
@@ -315,7 +314,7 @@ public:
   //------------------------------------------------------------------
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Error &error);
 
   //------------------------------------------------------------------
   /// Determine whether this StackFrame has debug information available or not
@@ -342,13 +341,10 @@ public:
   /// @param [in] strm
   ///   The Stream to print the description to.
   ///
-  /// @param [in] show_unique
-  ///   Whether to print the function arguments or not for backtrace unique.
-  ///
   /// @param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
   //------------------------------------------------------------------
-  void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
+  void DumpUsingSettingsFormat(Stream *strm,
                                const char *frame_marker = nullptr);
 
   //------------------------------------------------------------------
@@ -378,10 +374,6 @@ public:
   /// @param[in] show_source
   ///   If true, print source or disassembly as per the user's settings.
   ///
-  /// @param[in] show_unique
-  ///   If true, print using backtrace unique style, without function
-  ///            arguments as per the user's settings.
-  ///
   /// @param[in] frame_marker
   ///   Passed to DumpUsingSettingsFormat() for the frame info printing.
   ///
@@ -389,7 +381,7 @@ public:
   ///   Returns true if successful.
   //------------------------------------------------------------------
   bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                 bool show_unique = false, const char *frame_marker = nullptr);
+                 const char *frame_marker = nullptr);
 
   //------------------------------------------------------------------
   /// Query whether this frame is a concrete frame on the call stack,
@@ -542,7 +534,7 @@ private:
   SymbolContext m_sc;
   Flags m_flags;
   Scalar m_frame_base;
-  Status m_frame_base_error;
+  Error m_frame_base_error;
   bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
                        // LLDB_INVALID_ADDRESS
   uint32_t m_stop_id;
