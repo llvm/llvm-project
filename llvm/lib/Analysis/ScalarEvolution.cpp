@@ -4168,10 +4168,21 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
       }
 
       case Intrinsic::ssub_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
-                        CI->getArgOperand(1));
+      case Intrinsic::usub_with_overflow: {
+        if (!isOverflowIntrinsicNoWrap(cast<IntrinsicInst>(CI), DT))
+          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
+                          CI->getArgOperand(1));
 
+        // The same reasoning as sadd/uadd above.
+        if (F->getIntrinsicID() == Intrinsic::ssub_with_overflow)
+          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
+                          CI->getArgOperand(1), /* IsNSW = */ true,
+                          /* IsNUW = */ false);
+        else
+          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
+                          CI->getArgOperand(1), /* IsNSW = */ false,
+                          /* IsNUW = */ true);
+      }
       case Intrinsic::smul_with_overflow:
       case Intrinsic::umul_with_overflow:
         return BinaryOp(Instruction::Mul, CI->getArgOperand(0),
@@ -5952,6 +5963,21 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     return getZeroExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::SExt:
+    if (auto BO = MatchBinaryOp(U->getOperand(0), DT)) {
+      // The NSW flag of a subtract does not always survive the conversion to
+      // A + (-1)*B.  By pushing sign extension onto its operands we are much
+      // more likely to preserve NSW and allow later AddRec optimisations.
+      //
+      // NOTE: This is effectively duplicating this logic from getSignExtend:
+      //   sext((A + B + ...)<nsw>) --> (sext(A) + sext(B) + ...)<nsw>
+      // but by that point the NSW information has potentially been lost.
+      if (BO->Opcode == Instruction::Sub && BO->IsNSW) {
+        Type *Ty = U->getType();
+        auto *V1 = getSignExtendExpr(getSCEV(BO->LHS), Ty);
+        auto *V2 = getSignExtendExpr(getSCEV(BO->RHS), Ty);
+        return getMinusSCEV(V1, V2, SCEV::FlagNSW);
+      }
+    }
     return getSignExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::BitCast:

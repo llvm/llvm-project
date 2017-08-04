@@ -2,9 +2,9 @@
 // printing a stack trace repeatedly
 UNSUPPORTED: darwin
 
-RUN: %cpp_compiler %S/TraceMallocTest.cpp -o %t-LLVMFuzzer-TraceMallocTest
+RUN: %cpp_compiler %S/TraceMallocTest.cpp -o %t-TraceMallocTest
 
-RUN: %t-LLVMFuzzer-TraceMallocTest -seed=1 -trace_malloc=2 -runs=1000 2>&1 | FileCheck %s --check-prefix=TRACE2
+RUN: %t-TraceMallocTest -seed=1 -trace_malloc=2 -runs=1000 2>&1 | FileCheck %s --check-prefix=TRACE2
 TRACE2-DAG: FREE[0]
 TRACE2-DAG: MALLOC[0]
 TRACE2-DAG: in LLVMFuzzerTestOneInput

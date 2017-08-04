@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include <algorithm>
 #include <array>
 #include <cassert>

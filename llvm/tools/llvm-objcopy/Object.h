@@ -58,6 +58,7 @@ private:
   };
 
   std::set<const SectionBase *, SectionCompare> Sections;
+  llvm::ArrayRef<uint8_t> Contents;
 
 public:
   uint64_t Align;
@@ -70,6 +71,7 @@ public:
   uint64_t Type;
   uint64_t VAddr;
 
+  Segment(llvm::ArrayRef<uint8_t> Data) : Contents(Data) {}
   void finalize();
   const SectionBase *firstSection() const {
     if (!Sections.empty())
@@ -78,6 +80,7 @@ public:
   }
   void addSection(const SectionBase *sec) { Sections.insert(sec); }
   template <class ELFT> void writeHeader(llvm::FileOutputBuffer &Out) const;
+  void writeSegment(llvm::FileOutputBuffer &Out) const;
 };
 
 class Section : public SectionBase {
@@ -117,16 +120,16 @@ private:
   typedef typename ELFT::Ehdr Elf_Ehdr;
   typedef typename ELFT::Phdr Elf_Phdr;
 
-  StringTableSection *SectionNames;
-  std::vector<SecPtr> Sections;
-  std::vector<SegPtr> Segments;
-
-  void sortSections();
-  void assignOffsets();
   SecPtr makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
                      const Elf_Shdr &Shdr);
   void readProgramHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
   void readSectionHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
+
+protected:
+  StringTableSection *SectionNames;
+  std::vector<SecPtr> Sections;
+  std::vector<SegPtr> Segments;
+
   void writeHeader(llvm::FileOutputBuffer &Out) const;
   void writeProgramHeaders(llvm::FileOutputBuffer &Out) const;
   void writeSectionData(llvm::FileOutputBuffer &Out) const;
@@ -142,9 +145,43 @@ public:
   uint32_t Flags;
 
   Object(const llvm::object::ELFObjectFile<ELFT> &Obj);
-  size_t totalSize() const;
-  void finalize();
-  void write(llvm::FileOutputBuffer &Out);
+  virtual size_t totalSize() const = 0;
+  virtual void finalize() = 0;
+  virtual void write(llvm::FileOutputBuffer &Out) const = 0;
+  virtual ~Object() = default;
 };
 
+template <class ELFT> class ELFObject : public Object<ELFT> {
+private:
+  typedef std::unique_ptr<SectionBase> SecPtr;
+  typedef std::unique_ptr<Segment> SegPtr;
+
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
+  typedef typename ELFT::Phdr Elf_Phdr;
+
+  void sortSections();
+  void assignOffsets();
+
+public:
+  ELFObject(const llvm::object::ELFObjectFile<ELFT> &Obj) : Object<ELFT>(Obj) {}
+  void finalize() override;
+  size_t totalSize() const override;
+  void write(llvm::FileOutputBuffer &Out) const override;
+};
+
+template <class ELFT> class BinaryObject : public Object<ELFT> {
+private:
+  typedef std::unique_ptr<SectionBase> SecPtr;
+  typedef std::unique_ptr<Segment> SegPtr;
+
+  uint64_t TotalSize;
+
+public:
+  BinaryObject(const llvm::object::ELFObjectFile<ELFT> &Obj)
+      : Object<ELFT>(Obj) {}
+  void finalize() override;
+  size_t totalSize() const override;
+  void write(llvm::FileOutputBuffer &Out) const override;
+};
 #endif

@@ -533,3 +533,25 @@ define <8 x i8> @wide_lengthening_splat(<4 x i16> %v) {
   ret <8 x i8> %tr
 }
 
+define <2 x i8> @narrow_add_vec_constant(<2 x i32> %x) {
+; CHECK-LABEL: @narrow_add_vec_constant(
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> %x, <i32 256, i32 -129>
+; CHECK-NEXT:    [[TR:%.*]] = trunc <2 x i32> [[ADD]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %add = add <2 x i32> %x, <i32 256, i32 -129>
+  %tr = trunc <2 x i32> %add to <2 x i8>
+  ret <2 x i8> %tr
+}
+
+define <2 x i8> @narrow_sub_vec_constant(<2 x i32> %x) {
+; CHECK-LABEL: @narrow_sub_vec_constant(
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 256, i32 -129>, %x
+; CHECK-NEXT:    [[TR:%.*]] = trunc <2 x i32> [[SUB]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %sub = sub <2 x i32> <i32 256, i32 -129>, %x
+  %tr = trunc <2 x i32> %sub to <2 x i8>
+  ret <2 x i8> %tr
+}
+

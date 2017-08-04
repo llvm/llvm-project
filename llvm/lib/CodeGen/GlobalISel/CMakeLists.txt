@@ -1,6 +1,3 @@
-# In LLVMBuild.txt files, it is not possible to mark a dependency to a
-# library as optional. So instead, generate an empty library if we did
-# not ask for it.
 add_llvm_library(LLVMGlobalISel
         CallLowering.cpp
         GlobalISel.cpp

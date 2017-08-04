@@ -1,9 +1,9 @@
 
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
+// RUN: %clang_cc1 -debug-info-kind=limited -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-64
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
+// RUN: %clang_cc1 -debug-info-kind=limited -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -24,13 +24,15 @@ int foo(int n, double *ptr) {
   double c[5][10];
   TT<long long, char> d;
   
-  #pragma omp target firstprivate(a)
+  #pragma omp target firstprivate(a) map(tofrom: b)
   {
+    b[a] = a;
   }
   
-  // TCHECK:  define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]])
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}([10 x float] addrspace(1)* noalias [[B_IN:%.+]], i{{[0-9]+}} [[A_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK-NOT:  alloca i{{[0-9]+}},
+  // TCHECK-64:  call void @llvm.dbg.declare(metadata [10 x float] addrspace(1)** %{{.+}}, metadata !{{[0-9]+}}, metadata ![[LOCAL:[0-9]+]])
   // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
   // TCHECK:  ret void  
 
@@ -45,7 +47,7 @@ int foo(int n, double *ptr) {
   
   // make sure that firstprivate variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A2_IN:%.+]], [10 x float]* {{.+}} [[B_IN:%.+]], [5 x [10 x double]]* {{.+}} [[C_IN:%.+]], [[TT]]* {{.+}} [[D_IN:%.+]])
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}}{{.*}} [[A2_IN:%.+]], [10 x float]*{{.*}} [[B_IN:%.+]], [5 x [10 x double]]*{{.*}} [[C_IN:%.+]], [[TT]]*{{.*}} [[D_IN:%.+]])
   // TCHECK:  [[A2_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x float]*,
   // TCHECK:  [[C_ADDR:%.+]] = alloca [5 x [10 x double]]*,
@@ -58,10 +60,12 @@ int foo(int n, double *ptr) {
   // TCHECK:  store [10 x float]* [[B_IN]], [10 x float]** [[B_ADDR]],
   // TCHECK:  store [5 x [10 x double]]* [[C_IN]], [5 x [10 x double]]** [[C_ADDR]],
   // TCHECK:  store [[TT]]* [[D_IN]], [[TT]]** [[D_ADDR]],
-  // TCHECK:  [[CONV_A2ADDR:%.+]] = bitcast i{{[0-9]+}}* [[A2_ADDR]] to i{{[0-9]+}}*
   // TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x float]*, [10 x float]** [[B_ADDR]],
+  // TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x float]*, [10 x float]** %
   // TCHECK:  [[C_ADDR_REF:%.+]] = load [5 x [10 x double]]*, [5 x [10 x double]]** [[C_ADDR]],
+  // TCHECK:  [[C_ADDR_REF:%.+]] = load [5 x [10 x double]]*, [5 x [10 x double]]** %
   // TCHECK:  [[D_ADDR_REF:%.+]] = load [[TT]]*, [[TT]]** [[D_ADDR]],
+  // TCHECK:  [[D_ADDR_REF:%.+]] = load [[TT]]*, [[TT]]** %
 
   // firstprivate(aa): a_priv = a_in
 
@@ -80,7 +84,7 @@ int foo(int n, double *ptr) {
   // TCHECK:  [[D_IN_BCAST:%.+]] = bitcast [[TT]]* [[D_ADDR_REF]] to i8*
   // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[D_PRIV_BCAST]], i8* [[D_IN_BCAST]],{{.+}})
 
-  // TCHECK: load i16, i16* [[CONV_A2ADDR]],
+  // TCHECK: load i16, i16* [[A2_ADDR]],
 
   
   #pragma omp target firstprivate(ptr)
@@ -129,7 +133,7 @@ int fstatic(int n) {
   return a;
 }
 
-// TCHECK: define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], i{{[0-9]+}} [[A3_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
+// TCHECK: define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}}{{.*}} [[A_IN:%.+]], i{{[0-9]+}}{{.*}} [[A3_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
@@ -138,9 +142,8 @@ int fstatic(int n) {
 // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
 // TCHECK:  store i{{[0-9]+}} [[A3_IN]], i{{[0-9]+}}* [[A3_ADDR]],
 // TCHECK:  store [10 x i{{[0-9]+}}]* [[B_IN]], [10 x i{{[0-9]+}}]** [[B_ADDR]],
-// TCHECK-64:  [[A_CONV:%.+]] = bitcast i{{[0-9]+}}* [[A_ADDR]] to i{{[0-9]+}}*
-// TCHECK:  [[A3_CONV:%.+]] = bitcast i{{[0-9]+}}* [[A3_ADDR]] to i8*
 // TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x i{{[0-9]+}}]*, [10 x i{{[0-9]+}}]** [[B_ADDR]],
+// TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x i{{[0-9]+}}]*, [10 x i{{[0-9]+}}]** %
 
 // firstprivate(a): a_priv = a_in
 
@@ -169,7 +172,7 @@ struct S1 {
     return (int)b;
   }
 
-  // TCHECK: define void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[B_IN:%.+]])
+  // TCHECK: define internal void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[B_IN:%.+]])
   // TCHECK:  [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK:  [[B_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK-NOT: alloca i{{[0-9]+}},
@@ -200,15 +203,15 @@ int bar(int n, double *ptr){
 
 // template
 
-// TCHECK: define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
+// TCHECK: define internal void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
 // TCHECK-NOT: alloca i{{[0-9]+}},
 // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x i{{[0-9]+}}],
 // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
 // TCHECK:  store [10 x i{{[0-9]+}}]* [[B_IN]], [10 x i{{[0-9]+}}]** [[B_ADDR]],
-// TCHECK-64:  [[A_ADDR_CONV:%.+]] = bitcast i{{[0-9]+}}* [[A_ADDR]] to i{{[0-9]+}}*
 // TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x i{{[0-9]+}}]*, [10 x i{{[0-9]+}}]** [[B_ADDR]],
+// TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x i{{[0-9]+}}]*, [10 x i{{[0-9]+}}]** %
 
 // firstprivate(a)
 // TCHECK-NOT:  store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}*

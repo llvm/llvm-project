@@ -518,6 +518,9 @@ cl::opt<bool> DumpSectionContribs("section-contribs",
                                   cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpSectionHeaders("section-headers",
+                                 cl::desc("Dump image section headers"),
+                                 cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
@@ -1092,6 +1095,7 @@ int main(int argc_, const char *argv_[]) {
       opts::dump::DumpStreams = true;
       opts::dump::DumpStreamBlocks = true;
       opts::dump::DumpStringTable = true;
+      opts::dump::DumpSectionHeaders = true;
       opts::dump::DumpSummary = true;
       opts::dump::DumpSymbols = true;
       opts::dump::DumpIds = true;

@@ -268,6 +268,32 @@ public:
   /// \return Specified function.
   llvm::Constant *createNVPTXRuntimeFunction(unsigned Function);
 
+  /// Translates argument of outlined function if this is required for target.
+  /// \param FD A field for the corresponding captured variable in the captured
+  /// record.
+  /// \param NativeParam Native parameter of the outlined function.
+  const VarDecl *translateParameter(const FieldDecl *FD,
+                                    const VarDecl *NativeParam) const override;
+
+  /// Maps the native argument to the address of the target-specific argument.
+  /// \param FD A field for the corresponding captured variable in the captured
+  /// record.
+  /// \param NativeParam Native parameter of the outlined function.
+  /// \param TargetParam Target-specific parameter of the outlined function
+  /// (provided by the \a CGOpenMPRuntime::translateParameter).
+  /// \param MapFn Mapping function that maps the address of the \p NativeParam
+  /// to the address of the \p TargetParam.
+  void mapParameterAddress(CodeGenFunction &CGF, const FieldDecl *FD,
+                           const VarDecl *NativeParam,
+                           const VarDecl *TargetParam,
+                           const MappingFnType MapFn) const override;
+
+  /// Emits call of the outlined function with the provided arguments,
+  /// translating these arguments to correct target-specific arguments.
+  void emitOutlinedFunctionCall(
+      CodeGenFunction &CGF, llvm::Value *OutlinedFn,
+      ArrayRef<llvm::Value *> Args = llvm::None) const override;
+
   /// Target codegen is specialized based on two programming models: the
   /// 'generic' fork-join model of OpenMP, and a more GPU efficient 'spmd'
   /// model for constructs like 'target parallel' that support it.

@@ -119,6 +119,13 @@ static cl::opt<int>
                cl::desc("Minimal number of compute statements to run on GPU."),
                cl::Hidden, cl::init(10 * 512 * 512));
 
+/// Return  a unique name for a Scop, which is the scop region with the
+/// function name.
+std::string getUniqueScopName(const Scop *S) {
+  return "Scop Region: " + S->getNameStr() +
+         " | Function: " + std::string(S->getFunction().getName());
+}
+
 /// Used to store information PPCG wants for kills. This information is
 /// used by live range reordering.
 ///
@@ -2090,13 +2097,19 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
     Arg++;
   }
 
-  if (StoredScalar)
+  if (StoredScalar) {
     /// In case more than one thread contains scalar stores, the generated
     /// code might be incorrect, if we only store at the end of the kernel.
     /// To support this case we need to store these scalars back at each
     /// memory store or at least before each kernel barrier.
-    if (Kernel->n_block != 0 || Kernel->n_grid != 0)
+    if (Kernel->n_block != 0 || Kernel->n_grid != 0) {
       BuildSuccessful = 0;
+      DEBUG(
+          dbgs() << getUniqueScopName(&S)
+                 << " has a store to a scalar value that"
+                    " would be undefined to run in parallel. Bailing out.\n";);
+    }
+  }
 }
 
 void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
@@ -3093,6 +3106,8 @@ public:
 
     if (!has_permutable || has_permutable < 0) {
       Schedule = isl_schedule_free(Schedule);
+      DEBUG(dbgs() << getUniqueScopName(S)
+                   << " does not have permutable bands. Bailing out\n";);
     } else {
       Schedule = map_to_device(PPCGGen, Schedule);
       PPCGGen->tree = generate_code(PPCGGen, isl_schedule_copy(Schedule));
@@ -3379,9 +3394,9 @@ public:
     if (containsInvalidKernelFunction(CurrentScop,
                                       Architecture == GPUArch::NVPTX64)) {
       DEBUG(
-          dbgs()
-              << "Scop contains function which cannot be materialised in a GPU "
-                 "kernel. Bailing out.\n";);
+          dbgs() << getUniqueScopName(S)
+                 << " contains function which cannot be materialised in a GPU "
+                    "kernel. Bailing out.\n";);
       return false;
     }
 
@@ -3392,6 +3407,9 @@ public:
     if (PPCGGen->tree) {
       generateCode(isl_ast_node_copy(PPCGGen->tree), PPCGProg);
       CurrentScop.markAsToBeSkipped();
+    } else {
+      DEBUG(dbgs() << getUniqueScopName(S)
+                   << " has empty PPCGGen->tree. Bailing out.\n");
     }
 
     freeOptions(PPCGScop);
