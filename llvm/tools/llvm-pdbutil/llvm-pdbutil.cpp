@@ -293,6 +293,13 @@ cl::opt<bool>
                       cl::desc("Print a column with the result status"),
                       cl::Optional, cl::sub(DiffSubcommand));
 
+cl::list<std::string>
+    RawModiEquivalences("modi-equivalence", cl::ZeroOrMore,
+                        cl::value_desc("left,right"),
+                        cl::desc("Modules with the specified indices will be "
+                                 "treated as referring to the same module"),
+                        cl::sub(DiffSubcommand));
+
 cl::opt<std::string> LeftRoot(
     "left-bin-root", cl::Optional,
     cl::desc("Treats the specified path as the root of the tree containing "
@@ -310,6 +317,8 @@ cl::opt<std::string> Left(cl::Positional, cl::desc("<left>"),
                           cl::sub(DiffSubcommand));
 cl::opt<std::string> Right(cl::Positional, cl::desc("<right>"),
                            cl::sub(DiffSubcommand));
+
+llvm::DenseMap<uint32_t, uint32_t> Equivalences;
 }
 
 cl::OptionCategory FileOptions("Module & File Options");
@@ -494,6 +503,10 @@ cl::opt<bool> DumpXme(
     cl::desc(
         "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
     cl::cat(FileOptions), cl::sub(DumpSubcommand));
+cl::opt<uint32_t> DumpModi("modi", cl::Optional,
+                           cl::desc("For all options that iterate over "
+                                    "modules, limit to the specified module"),
+                           cl::cat(FileOptions), cl::sub(DumpSubcommand));
 
 // MISCELLANEOUS OPTIONS
 cl::opt<bool> DumpStringTable("string-table", cl::desc("dump PDB String Table"),
@@ -1175,6 +1188,19 @@ int main(int argc_, const char *argv_[]) {
     std::for_each(opts::bytes::InputFilenames.begin(),
                   opts::bytes::InputFilenames.end(), dumpBytes);
   } else if (opts::DiffSubcommand) {
+    for (StringRef S : opts::diff::RawModiEquivalences) {
+      StringRef Left;
+      StringRef Right;
+      std::tie(Left, Right) = S.split(',');
+      uint32_t X, Y;
+      if (!to_integer(Left, X) || !to_integer(Right, Y)) {
+        errs() << formatv("invalid value {0} specified for modi equivalence\n",
+                          S);
+        exit(1);
+      }
+      opts::diff::Equivalences[X] = Y;
+    }
+
     diff(opts::diff::Left, opts::diff::Right);
   } else if (opts::MergeSubcommand) {
     if (opts::merge::InputFilenames.size() < 2) {

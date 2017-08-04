@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-function-calls -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -amdgpu-function-calls -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -amdgpu-function-calls -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
 ; Make sure to run a GPU with the SGPR allocation bug.
 

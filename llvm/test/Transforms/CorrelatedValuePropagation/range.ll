@@ -462,3 +462,144 @@ then:
 else:
   ret i1 false
 }
+
+define i32 @test16(i8 %a) {
+entry:
+  %b = zext i8 %a to i32
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %target93, label %dispatch
+
+; CHECK-LABEL: @test16(
+; CHECK: target93:
+; CHECK-NEXT: ret i32 93
+target93:
+  ret i32 %b
+}
+
+define i32 @test16_i1(i1 %a) {
+entry:
+  %b = zext i1 %a to i32
+  br label %dispatch
+
+dispatch:
+  br i1 %a, label %true, label %dispatch
+
+; CHECK-LABEL: @test16_i1(
+; CHECK: true:
+; CHECK-NEXT: ret i32 1
+true:
+  ret i32 %b
+}
+
+define i8 @test17(i8 %a) {
+entry:
+  %c = add i8 %a, 3
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %target93, label %dispatch
+
+; CHECK-LABEL: @test17(
+; CHECK: target93:
+; CHECK-NEXT: ret i8 96
+target93:
+  ret i8 %c
+}
+
+define i8 @test17_2(i8 %a) {
+entry:
+  %c = add i8 %a, %a
+  br label %dispatch
+
+dispatch:
+  %cmp = icmp eq i8 %a, 93
+  br i1 %cmp, label %target93, label %dispatch
+
+; CHECK-LABEL: @test17_2(
+; CHECK: target93:
+; CHECK-NEXT: ret i8 -70
+target93:
+  ret i8 %c
+}
+
+define i1 @test17_i1(i1 %a) {
+entry:
+  %c = and i1 %a, true
+  br label %dispatch
+
+dispatch:
+  br i1 %a, label %true, label %dispatch
+
+; CHECK-LABEL: @test17_i1(
+; CHECK: true:
+; CHECK-NEXT: ret i1 true
+true:
+  ret i1 %c
+}
+
+define i32 @test18(i8 %a) {
+entry:
+  %b = zext i8 %a to i32
+  br label %dispatch
+
+dispatch:
+  switch i8 %a, label %dispatch [
+    i8 93, label %target93
+    i8 -111, label %dispatch
+  ]
+
+; CHECK-LABEL: @test18(
+; CHECK: target93:
+; CHECK-NEXT: ret i32 93
+target93:
+  ret i32 %b
+}
+
+define i8 @test19(i8 %a) {
+entry:
+  %c = add i8 %a, 3
+  br label %dispatch
+
+dispatch:
+  switch i8 %a, label %dispatch [
+    i8 93, label %target93
+    i8 -111, label %dispatch
+  ]
+
+; CHECK-LABEL: @test19(
+; CHECK: target93:
+; CHECK-NEXT: ret i8 96
+target93:
+  ret i8 %c
+}
+
+define i1 @test20(i64 %a) {
+entry:
+  %b = and i64 %a, 7
+  br label %dispatch
+
+dispatch:
+  switch i64 %a, label %default [
+    i64 0, label %exit2
+    i64 -2147483647, label %exit2
+  ]
+
+default:
+  %c = icmp eq i64 %b, 0
+  br label %exit
+
+exit:
+; Negative test. Shouldn't be incorrectly optimized to "ret i1 false".
+; CHECK-LABEL: @test20(
+; CHECK: exit:
+; CHECK-NOT: ret i1 false
+; CHECK: exit2:
+  ret i1 %c
+
+exit2:
+  ret i1 false
+}

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -amdgpu-function-calls -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -144,6 +144,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   store volatile i32 %mul, i32 addrspace(3)* undef
   ret void
 }
+
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32_vcc_live:
 ; GCN: s_sub_u32 [[DIFF:s[0-9]+]], s5, s4
 ; GCN-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[DIFF]], 6

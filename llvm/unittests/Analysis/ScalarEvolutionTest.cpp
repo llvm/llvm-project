@@ -994,17 +994,21 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   auto *Loop = LI->getLoopFor(L);
   const SCEV *EC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
+  EXPECT_TRUE(isa<SCEVConstant>(EC));
+  EXPECT_EQ(cast<SCEVConstant>(EC)->getAPInt().getLimitedValue(), 999u);
 
   SE.forgetLoop(Loop);
   Br->eraseFromParent();
   Cond->eraseFromParent();
 
   Builder.SetInsertPoint(L);
-  Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000),
-                     "new.cond");
-  Builder.CreateCondBr(Cond, L, Post);
+  auto *NewCond = Builder.CreateICmp(
+      ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
+  Builder.CreateCondBr(NewCond, L, Post);
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
-  EXPECT_NE(EC, NewEC);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
+  EXPECT_TRUE(isa<SCEVConstant>(NewEC));
+  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
 }
 
 // Make sure that SCEV invalidates exit limits after invalidating the values it
@@ -1074,6 +1078,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   auto *Loop = LI->getLoopFor(L);
   const SCEV *EC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
+  EXPECT_FALSE(isa<SCEVConstant>(EC));
 
   SE.forgetValue(Load);
   Br->eraseFromParent();
@@ -1081,11 +1086,13 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   Load->eraseFromParent();
 
   Builder.SetInsertPoint(L);
-  Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000),
-                     "new.cond");
-  Builder.CreateCondBr(Cond, L, Post);
+  auto *NewCond = Builder.CreateICmp(
+      ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
+  Builder.CreateCondBr(NewCond, L, Post);
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
-  EXPECT_NE(EC, NewEC);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
+  EXPECT_TRUE(isa<SCEVConstant>(NewEC));
+  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
 }
 
 }  // end anonymous namespace

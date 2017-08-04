@@ -916,7 +916,6 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
   unsigned WorkGroupSize = MFI->getMaxFlatWorkGroupSize();
   unsigned WavefrontSize = ST.getWavefrontSize();
@@ -936,13 +935,13 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
         WorkGroupSize > WavefrontSize) {
 
       unsigned TIDIGXReg
-        = TRI->getPreloadedValue(*MF, SIRegisterInfo::WORKGROUP_ID_X);
+        = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
       unsigned TIDIGYReg
-        = TRI->getPreloadedValue(*MF, SIRegisterInfo::WORKGROUP_ID_Y);
+        = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
       unsigned TIDIGZReg
-        = TRI->getPreloadedValue(*MF, SIRegisterInfo::WORKGROUP_ID_Z);
+        = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
       unsigned InputPtrReg =
-          TRI->getPreloadedValue(*MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
+          MFI->getPreloadedReg(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
       for (unsigned Reg : {TIDIGXReg, TIDIGYReg, TIDIGZReg}) {
         if (!Entry.isLiveIn(Reg))
           Entry.addLiveIn(Reg);

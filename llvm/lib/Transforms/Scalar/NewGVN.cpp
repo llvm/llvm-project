@@ -471,8 +471,8 @@ class NewGVN {
   DenseSet<const Instruction *> PHINodeUses;
   // Map a temporary instruction we created to a parent block.
   DenseMap<const Value *, BasicBlock *> TempToBlock;
-  // Map between the temporary phis we created and the real instructions they
-  // are known equivalent to.
+  // Map between the already in-program instructions and the temporary phis we
+  // created that they are known equivalent to.
   DenseMap<const Value *, PHINode *> RealToTemp;
   // In order to know when we should re-process instructions that have
   // phi-of-ops, we track the set of expressions that they needed as
@@ -486,10 +486,14 @@ class NewGVN {
   DenseMap<const Expression *, SmallPtrSet<Instruction *, 2>>
       ExpressionToPhiOfOps;
   // Map from basic block to the temporary operations we created
-  DenseMap<const BasicBlock *, SmallVector<PHINode *, 8>> PHIOfOpsPHIs;
+  DenseMap<const BasicBlock *, SmallPtrSet<PHINode *, 2>> PHIOfOpsPHIs;
   // Map from temporary operation to MemoryAccess.
   DenseMap<const Instruction *, MemoryUseOrDef *> TempToMemory;
   // Set of all temporary instructions we created.
+  // Note: This will include instructions that were just created during value
+  // numbering.  The way to test if something is using them is to check
+  // RealToTemp.
+
   DenseSet<Instruction *> AllTempInstructions;
 
   // Mapping from predicate info we used to the instructions we used it with.
@@ -634,6 +638,7 @@ private:
   const Expression *makePossiblePhiOfOps(Instruction *,
                                          SmallPtrSetImpl<Value *> &);
   void addPhiOfOps(PHINode *Op, BasicBlock *BB, Instruction *ExistingValue);
+  void removePhiOfOps(Instruction *I, PHINode *PHITemp);
 
   // Value number an Instruction or MemoryPhi.
   void valueNumberMemoryPhi(MemoryPhi *);
@@ -986,7 +991,7 @@ const Expression *NewGVN::createExpression(Instruction *I) const {
       E->swapOperands(0, 1);
   }
 
-  // Perform simplificaiton
+  // Perform simplification.
   // TODO: Right now we only check to see if we get a constant result.
   // We may get a less than constant, but still better, result for
   // some operations.
@@ -1276,7 +1281,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   if (auto *DepSI = dyn_cast<StoreInst>(DepInst)) {
     // Can't forward from non-atomic to atomic without violating memory model.
     // Also don't need to coerce if they are the same type, we will just
-    // propogate..
+    // propagate.
     if (LI->isAtomic() > DepSI->isAtomic() ||
         LoadType == DepSI->getValueOperand()->getType())
       return nullptr;
@@ -1297,7 +1302,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
       return nullptr;
     int Offset = analyzeLoadFromClobberingLoad(LoadType, LoadPtr, DepLI, DL);
     if (Offset >= 0) {
-      // We can coerce a constant load into a load
+      // We can coerce a constant load into a load.
       if (auto *C = dyn_cast<Constant>(lookupOperandLeader(DepLI)))
         if (auto *PossibleConstant =
                 getConstantLoadValueForLoad(C, Offset, LoadType, DL)) {
@@ -1400,7 +1405,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
   auto *Cond = PWC->Condition;
 
   // If this a copy of the condition, it must be either true or false depending
-  // on the predicate info type and edge
+  // on the predicate info type and edge.
   if (CopyOf == Cond) {
     // We should not need to add predicate users because the predicate info is
     // already a use of this operand.
@@ -1436,7 +1441,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
   Value *FirstOp = lookupOperandLeader(Cmp->getOperand(0));
   Value *SecondOp = lookupOperandLeader(Cmp->getOperand(1));
   bool SwappedOps = false;
-  // Sort the ops
+  // Sort the ops.
   if (shouldSwapOperands(FirstOp, SecondOp)) {
     std::swap(FirstOp, SecondOp);
     SwappedOps = true;
@@ -1582,7 +1587,7 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
   return true;
 }
 
-// Evaluate PHI nodes symbolically, and create an expression result.
+// Evaluate PHI nodes symbolically and create an expression result.
 const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   // True if one of the incoming phi edges is a backedge.
   bool HasBackedge = false;
@@ -1717,7 +1722,7 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
     OurPredicate = CI->getSwappedPredicate();
   }
 
-  // Avoid processing the same info twice
+  // Avoid processing the same info twice.
   const PredicateBase *LastPredInfo = nullptr;
   // See if we know something about the comparison itself, like it is the target
   // of an assume.
@@ -1751,7 +1756,7 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
   // %operands are considered users of the icmp.
 
   // *Currently* we only check one level of comparisons back, and only mark one
-  // level back as touched when changes appen .  If you modify this code to look
+  // level back as touched when changes happen.  If you modify this code to look
   // back farther through comparisons, you *must* mark the appropriate
   // comparisons as users in PredicateInfo.cpp, or you will cause bugs.  See if
   // we know something just from the operands themselves
@@ -2414,11 +2419,22 @@ void NewGVN::processOutgoingEdges(TerminatorInst *TI, BasicBlock *B) {
   }
 }
 
+// Remove the PHI of Ops PHI for I
+void NewGVN::removePhiOfOps(Instruction *I, PHINode *PHITemp) {
+  InstrDFS.erase(PHITemp);
+  // It's still a temp instruction. We keep it in the array so it gets erased.
+  // However, it's no longer used by I, or in the block/
+  PHIOfOpsPHIs[getBlockForValue(PHITemp)].erase(PHITemp);
+  TempToBlock.erase(PHITemp);
+  RealToTemp.erase(I);
+}
+
+// Add PHI Op in BB as a PHI of operations version of ExistingValue.
 void NewGVN::addPhiOfOps(PHINode *Op, BasicBlock *BB,
                          Instruction *ExistingValue) {
   InstrDFS[Op] = InstrToDFSNum(ExistingValue);
   AllTempInstructions.insert(Op);
-  PHIOfOpsPHIs[BB].push_back(Op);
+  PHIOfOpsPHIs[BB].insert(Op);
   TempToBlock[Op] = BB;
   RealToTemp[ExistingValue] = Op;
 }
@@ -2783,8 +2799,13 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
       if (Symbolized && !isa<ConstantExpression>(Symbolized) &&
           !isa<VariableExpression>(Symbolized) && PHINodeUses.count(I)) {
         auto *PHIE = makePossiblePhiOfOps(I, Visited);
-        if (PHIE)
+        // If we created a phi of ops, use it.
+        // If we couldn't create one, make sure we don't leave one lying around
+        if (PHIE) {
           Symbolized = PHIE;
+        } else if (auto *Op = RealToTemp.lookup(I)) {
+          removePhiOfOps(I, Op);
+        }
       }
 
     } else {
@@ -3626,7 +3647,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
       CC->swap(MembersLeft);
     } else {
       // If this is a singleton, we can skip it.
-      if (CC->size() != 1 || RealToTemp.lookup(Leader)) {
+      if (CC->size() != 1 || RealToTemp.count(Leader)) {
         // This is a stack because equality replacement/etc may place
         // constants in the middle of the member list, and we want to use
         // those constant values in preference to the current leader, over

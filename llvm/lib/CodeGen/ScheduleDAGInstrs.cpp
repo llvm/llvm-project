@@ -1348,7 +1348,7 @@ static bool hasDataSucc(const SUnit *SU) {
 /// search from this root.
 void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
   if (!IsBottomUp)
-    llvm_unreachable("Top-down ILP metric is unimplemnted");
+    llvm_unreachable("Top-down ILP metric is unimplemented");
 
   SchedDFSImpl Impl(*this);
   for (const SUnit &SU : SUnits) {

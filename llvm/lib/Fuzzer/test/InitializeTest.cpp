@@ -20,7 +20,7 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size == strlen(argv0) &&
-      !strncmp(reinterpret_cast<const char *>(Data), argv0, Size)) {
+      !memmem(Data, Size, argv0, Size)) {
     fprintf(stderr, "BINGO %s\n", argv0);
     exit(1);
   }

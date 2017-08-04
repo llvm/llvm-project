@@ -140,6 +140,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeR600PacketizerPass(*PR);
   initializeR600ExpandSpecialInstrsPassPass(*PR);
   initializeR600VectorRegMergerPass(*PR);
+  initializeAMDGPUDAGToDAGISelPass(*PR);
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
@@ -152,6 +153,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
+  initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -287,11 +289,6 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 }
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
-
-bool AMDGPUTargetMachine::enableFunctionCalls() const {
-  return EnableAMDGPUFunctionCalls &&
-         getTargetTriple().getArch() == Triple::amdgcn;
-}
 
 StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
   Attribute GPUAttr = F.getFnAttribute("target-cpu");
@@ -501,8 +498,10 @@ class GCNPassConfig final : public AMDGPUPassConfig {
 public:
   GCNPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
     : AMDGPUPassConfig(TM, PM) {
-    // It is necessary to know the register usage of the entire call graph.
-    setRequiresCodeGenSCCOrder(EnableAMDGPUFunctionCalls);
+    // It is necessary to know the register usage of the entire call graph.  We
+    // allow calls without EnableAMDGPUFunctionCalls if they are marked
+    // noinline, so this is always required.
+    setRequiresCodeGenSCCOrder(true);
   }
 
   GCNTargetMachine &getGCNTargetMachine() const {
@@ -516,12 +515,10 @@ public:
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   bool addInstSelector() override;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-#endif
   void addFastRegAlloc(FunctionPass *RegAllocPass) override;
   void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
   void addPreRegAlloc() override;
@@ -571,15 +568,18 @@ void AMDGPUPassConfig::addIRPasses() {
 
   addPass(createAMDGPULowerIntrinsicsPass());
 
-  // Function calls are not supported, so make sure we inline everything.
-  addPass(createAMDGPUAlwaysInlinePass());
-  addPass(createAlwaysInlinerLegacyPass());
-  // We need to add the barrier noop pass, otherwise adding the function
-  // inlining pass will cause all of the PassConfigs passes to be run
-  // one function at a time, which means if we have a nodule with two
-  // functions, then we will generate code for the first function
-  // without ever running any passes on the second.
-  addPass(createBarrierNoopPass());
+  if (TM.getTargetTriple().getArch() == Triple::r600 ||
+      !EnableAMDGPUFunctionCalls) {
+    // Function calls are not supported, so make sure we inline everything.
+    addPass(createAMDGPUAlwaysInlinePass());
+    addPass(createAlwaysInlinerLegacyPass());
+    // We need to add the barrier noop pass, otherwise adding the function
+    // inlining pass will cause all of the PassConfigs passes to be run
+    // one function at a time, which means if we have a nodule with two
+    // functions, then we will generate code for the first function
+    // without ever running any passes on the second.
+    addPass(createBarrierNoopPass());
+  }
 
   if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
     // TODO: May want to move later or split into an early and late one.
@@ -640,7 +640,7 @@ bool AMDGPUPassConfig::addPreISel() {
 }
 
 bool AMDGPUPassConfig::addInstSelector() {
-  addPass(createAMDGPUISelDag(getAMDGPUTargetMachine(), getOptLevel()));
+  addPass(createAMDGPUISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
   return false;
 }
 
@@ -756,7 +756,6 @@ bool GCNPassConfig::addInstSelector() {
   return false;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool GCNPassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -776,8 +775,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
-
-#endif
 
 void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {

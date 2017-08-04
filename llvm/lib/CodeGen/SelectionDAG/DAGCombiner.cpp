@@ -12719,12 +12719,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
   if (!IsConstantSrc && !IsLoadSrc && !IsExtractVecSrc)
     return false;
 
-  // Don't merge vectors into wider vectors if the source data comes from loads.
-  // TODO: This restriction can be lifted by using logic similar to the
-  // ExtractVecSrc case.
-  if (MemVT.isVector() && IsLoadSrc)
-    return false;
-
   SmallVector<MemOpLink, 8> StoreNodes;
   // Find potential store merge candidates by searching through chain sub-DAG
   getStoreMergeCandidates(St, StoreNodes);

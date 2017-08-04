@@ -21,6 +21,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DataLayout.h"
@@ -134,7 +135,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
-    Optional<bool> UserUpperBound) {
+    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling) {
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
@@ -201,6 +202,8 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     UP.Runtime = *UserRuntime;
   if (UserUpperBound.hasValue())
     UP.UpperBound = *UserUpperBound;
+  if (UserAllowPeeling.hasValue())
+    UP.AllowPeeling = *UserAllowPeeling;
 
   return UP;
 }
@@ -927,15 +930,13 @@ static bool computeUnrollCount(
   return ExplicitUnroll;
 }
 
-static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
-                            ScalarEvolution &SE, const TargetTransformInfo &TTI,
-                            AssumptionCache &AC, OptimizationRemarkEmitter &ORE,
-                            bool PreserveLCSSA, int OptLevel,
-                            Optional<unsigned> ProvidedCount,
-                            Optional<unsigned> ProvidedThreshold,
-                            Optional<bool> ProvidedAllowPartial,
-                            Optional<bool> ProvidedRuntime,
-                            Optional<bool> ProvidedUpperBound) {
+static bool tryToUnrollLoop(
+    Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
+    const TargetTransformInfo &TTI, AssumptionCache &AC,
+    OptimizationRemarkEmitter &ORE, bool PreserveLCSSA, int OptLevel,
+    Optional<unsigned> ProvidedCount, Optional<unsigned> ProvidedThreshold,
+    Optional<bool> ProvidedAllowPartial, Optional<bool> ProvidedRuntime,
+    Optional<bool> ProvidedUpperBound, Optional<bool> ProvidedAllowPeeling) {
   DEBUG(dbgs() << "Loop Unroll: F[" << L->getHeader()->getParent()->getName()
                << "] Loop %" << L->getHeader()->getName() << "\n");
   if (HasUnrollDisablePragma(L)) 
@@ -951,7 +952,8 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   bool Convergent;
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
       L, SE, TTI, OptLevel, ProvidedThreshold, ProvidedCount,
-      ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound);
+      ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
+      ProvidedAllowPeeling);
   // Exit early if unrolling is disabled.
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
     return false;
@@ -1053,10 +1055,12 @@ public:
   LoopUnroll(int OptLevel = 2, Optional<unsigned> Threshold = None,
              Optional<unsigned> Count = None,
              Optional<bool> AllowPartial = None, Optional<bool> Runtime = None,
-             Optional<bool> UpperBound = None)
+             Optional<bool> UpperBound = None,
+             Optional<bool> AllowPeeling = None)
       : LoopPass(ID), OptLevel(OptLevel), ProvidedCount(std::move(Count)),
         ProvidedThreshold(Threshold), ProvidedAllowPartial(AllowPartial),
-        ProvidedRuntime(Runtime), ProvidedUpperBound(UpperBound) {
+        ProvidedRuntime(Runtime), ProvidedUpperBound(UpperBound),
+        ProvidedAllowPeeling(AllowPeeling) {
     initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1066,6 +1070,7 @@ public:
   Optional<bool> ProvidedAllowPartial;
   Optional<bool> ProvidedRuntime;
   Optional<bool> ProvidedUpperBound;
+  Optional<bool> ProvidedAllowPeeling;
 
   bool runOnLoop(Loop *L, LPPassManager &) override {
     if (skipLoop(L))
@@ -1088,7 +1093,7 @@ public:
     return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel,
                            ProvidedCount, ProvidedThreshold,
                            ProvidedAllowPartial, ProvidedRuntime,
-                           ProvidedUpperBound);
+                           ProvidedUpperBound, ProvidedAllowPeeling);
   }
 
   /// This transformation requires natural loop information & requires that
@@ -1112,8 +1117,8 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 
 Pass *llvm::createLoopUnrollPass(int OptLevel, int Threshold, int Count,
-                                 int AllowPartial, int Runtime,
-                                 int UpperBound) {
+                                 int AllowPartial, int Runtime, int UpperBound,
+                                 int AllowPeeling) {
   // TODO: It would make more sense for this function to take the optionals
   // directly, but that's dangerous since it would silently break out of tree
   // callers.
@@ -1122,11 +1127,12 @@ Pass *llvm::createLoopUnrollPass(int OptLevel, int Threshold, int Count,
       Count == -1 ? None : Optional<unsigned>(Count),
       AllowPartial == -1 ? None : Optional<bool>(AllowPartial),
       Runtime == -1 ? None : Optional<bool>(Runtime),
-      UpperBound == -1 ? None : Optional<bool>(UpperBound));
+      UpperBound == -1 ? None : Optional<bool>(UpperBound),
+      AllowPeeling == -1 ? None : Optional<bool>(AllowPeeling));
 }
 
 Pass *llvm::createSimpleLoopUnrollPass(int OptLevel) {
-  return llvm::createLoopUnrollPass(OptLevel, -1, -1, 0, 0, 0);
+  return llvm::createLoopUnrollPass(OptLevel, -1, -1, 0, 0, 0, 0);
 }
 
 PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
@@ -1156,7 +1162,8 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
                       /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
                       /*Threshold*/ None, /*AllowPartial*/ false,
-                      /*Runtime*/ false, /*UpperBound*/ false);
+                      /*Runtime*/ false, /*UpperBound*/ false,
+                      /*AllowPeeling*/ false);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1246,6 +1253,11 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
+  const ModuleAnalysisManager &MAM =
+      AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  ProfileSummaryInfo *PSI =
+      MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+
   bool Changed = false;
 
   // The unroller requires loops to be in simplified form, and also needs LCSSA.
@@ -1274,11 +1286,18 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // states we support: partial and full (or "simple") unrolling. However, to
     // enable these things we actually pass "None" in for the optional to avoid
     // providing an explicit choice.
-    Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam;
-    bool CurChanged = tryToUnrollLoop(
-        &L, DT, &LI, SE, TTI, AC, ORE,
-        /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
-        /*Threshold*/ None, AllowPartialParam, RuntimeParam, UpperBoundParam);
+    Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam,
+        AllowPeeling;
+    // Check if the profile summary indicates that the profiled application
+    // has a huge working set size, in which case we disable peeling to avoid
+    // bloating it further.
+    if (PSI && PSI->hasHugeWorkingSetSize())
+      AllowPeeling = false;
+    bool CurChanged =
+        tryToUnrollLoop(&L, DT, &LI, SE, TTI, AC, ORE,
+                        /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
+                        /*Threshold*/ None, AllowPartialParam, RuntimeParam,
+                        UpperBoundParam, AllowPeeling);
     Changed |= CurChanged;
 
     // The parent must not be damaged by unrolling!

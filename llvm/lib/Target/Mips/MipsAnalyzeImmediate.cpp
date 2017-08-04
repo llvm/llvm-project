@@ -1,4 +1,4 @@
-//===-- MipsAnalyzeImmediate.cpp - Analyze Immediates ---------------------===//
+//===- MipsAnalyzeImmediate.cpp - Analyze Immediates ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,9 +6,13 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "MipsAnalyzeImmediate.h"
 #include "Mips.h"
 #include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
