@@ -1,4 +1,9 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++1z -verify %s -DERRORS
+// RUN: %clang_cc1 -std=c++1z -verify %s -UERRORS
+
+// This test is split into two because we only produce "undefined internal"
+// warnings if we didn't produce any errors.
+#if ERRORS
 
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -280,3 +285,21 @@ namespace tuple_tests {
     scoped_lock l = {};
   }
 }
+
+#else
+
+// expected-no-diagnostics
+namespace undefined_warnings {
+  // Make sure we don't get an "undefined but used internal symbol" warning for the deduction guide here.
+  namespace {
+    template <typename T>
+    struct TemplDObj {
+      explicit TemplDObj(T func) noexcept {}
+    };
+    auto test1 = TemplDObj(0);
+
+    TemplDObj(float) -> TemplDObj<double>;
+    auto test2 = TemplDObj(.0f);
+  }
+}
+#endif

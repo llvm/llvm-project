@@ -282,7 +282,7 @@ def warn_target_unsupported_compact_branches : Warning<
   " support it">, InGroup<UnsupportedCB>;
 def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
-  " usage of}0-mabicalls">,
+  " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<

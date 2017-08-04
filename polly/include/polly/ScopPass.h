@@ -127,11 +127,6 @@ public:
   AnalysisManagerT &getManager() { return InnerAM; }
 
 private:
-  friend AnalysisInfoMixin<
-      OwningInnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>>;
-
-  static AnalysisKey Key;
-
   AnalysisManagerT InnerAM;
 };
 

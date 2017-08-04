@@ -8,6 +8,7 @@ int foo(int i) { // CHECK-NEXT: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
   default:       // CHECK-NEXT: File 0, [[@LINE]]:3 -> {{[0-9]+}}:11 = #2
     if (i == 1)  // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:15 = #2
       return 0;  // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:15 = #3
+                 // CHECK-NEXT: File 0, [[@LINE-1]]:15 -> [[@LINE+3]]:5 = (#2 - #3)
     // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:5 -> [[@LINE+2]]:8 = (#2 - #3) (Expanded file = 1)
     // CHECK-NEXT: File 0, [[@LINE+1]]:8 -> {{[0-9]+}}:11 = (#2 - #3)
     FOO(1);
