@@ -96,6 +96,20 @@ CoroutineBodyStmt *CoroutineBodyStmt::Create(
   return new (Mem) CoroutineBodyStmt(Args);
 }
 
+CoroutineBodyStmt *CoroutineBodyStmt::Create(const ASTContext &C, EmptyShell,
+                                             unsigned NumParams) {
+  std::size_t Size = totalSizeToAlloc<Stmt *>(
+      CoroutineBodyStmt::FirstParamMove + NumParams);
+
+  void *Mem = C.Allocate(Size, alignof(CoroutineBodyStmt));
+  auto *Result = new (Mem) CoroutineBodyStmt(CtorArgs());
+  Result->NumParams = NumParams;
+  auto *ParamBegin = Result->getStoredStmts() + SubStmt::FirstParamMove;
+  std::uninitialized_fill(ParamBegin, ParamBegin + NumParams,
+                          static_cast<Stmt *>(nullptr));
+  return Result;
+}
+
 CoroutineBodyStmt::CoroutineBodyStmt(CoroutineBodyStmt::CtorArgs const &Args)
     : Stmt(CoroutineBodyStmtClass), NumParams(Args.ParamMoves.size()) {
   Stmt **SubStmts = getStoredStmts();
