@@ -1,16 +1,23 @@
 // FIXME: Support for sanitizer hooks for memcmp and strcmp needs to
 // be implemented in the sanitizer runtime for this test
 UNSUPPORTED: windows
+RUN: %cpp_compiler %S/MemcmpTest.cpp -o %t-LLVMFuzzer-MemcmpTest
+RUN: %cpp_compiler %S/StrncmpTest.cpp -o %t-LLVMFuzzer-StrncmpTest
+RUN: %cpp_compiler %S/StrcmpTest.cpp -o %t-LLVMFuzzer-StrcmpTest
+RUN: %cpp_compiler %S/StrstrTest.cpp -o %t-LLVMFuzzer-StrstrTest
+RUN: %cpp_compiler %S/Memcmp64BytesTest.cpp -o %t-LLVMFuzzer-Memcmp64BytesTest
+RUN: %cpp_compiler %S/RepeatedMemcmp.cpp -o %t-LLVMFuzzer-RepeatedMemcmp
+
 CHECK: BINGO
 
-RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=10000000   2>&1 | FileCheck %s
-RUN: not LLVMFuzzer-StrncmpTest              -seed=1 -runs=2000000   2>&1 | FileCheck %s
-RUN: not LLVMFuzzer-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
-RUN: not LLVMFuzzer-StrstrTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-MemcmpTest               -seed=1 -runs=10000000   2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-StrncmpTest              -seed=2 -runs=2000000   2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-StrstrTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-Memcmp64BytesTest        -seed=1 -runs=1000000   2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-Memcmp64BytesTest        -seed=1 -runs=1000000   2>&1 | FileCheck %s
 
-RUN: LLVMFuzzer-RepeatedMemcmp -seed=11 -runs=100000 -max_len=20 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
+RUN: %t-LLVMFuzzer-RepeatedMemcmp -seed=11 -runs=100000 -max_len=20 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
 RECOMMENDED_DICT:###### Recommended dictionary. ######
 RECOMMENDED_DICT-DAG: "foo"
 RECOMMENDED_DICT-DAG: "bar"

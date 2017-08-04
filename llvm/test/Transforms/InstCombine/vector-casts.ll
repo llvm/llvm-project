@@ -61,7 +61,7 @@ define <2 x i64> @test5(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <4 x float> %a, zeroinitializer
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp ult <4 x float> %b, zeroinitializer
-; CHECK-NEXT:    [[NARROW:%.*]] = and <4 x i1> [[CMP4]], [[CMP]]
+; CHECK-NEXT:    [[NARROW:%.*]] = and <4 x i1> [[CMP]], [[CMP4]]
 ; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[NARROW]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]

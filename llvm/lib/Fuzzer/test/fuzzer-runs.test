@@ -1,8 +1,9 @@
 RUN: mkdir -p %t
+RUN: %cpp_compiler %S/NthRunCrashTest.cpp -o %t-LLVMFuzzer-NthRunCrashTest
 RUN: echo abcd > %t/NthRunCrashTest.in
-RUN: LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in
-RUN: LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in -runs=10
-RUN: not LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in -runs=10000 2>&1 | FileCheck %s
+RUN: %t-LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in
+RUN: %t-LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in -runs=10
+RUN: not %t-LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in -runs=10000 2>&1 | FileCheck %s
 RUN: rm %t/NthRunCrashTest.in
 CHECK: BINGO
 

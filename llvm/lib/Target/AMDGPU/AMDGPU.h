@@ -50,6 +50,7 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
 FunctionPass *createSIInsertWaitcntsPass();
+FunctionPass *createSIFixWWMLivenessPass();
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
@@ -119,6 +120,9 @@ extern char &SIInsertSkipsPassID;
 
 void initializeSIOptimizeExecMaskingPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingID;
+
+void initializeSIFixWWMLivenessPass(PassRegistry &);
+extern char &SIFixWWMLivenessID;
 
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();

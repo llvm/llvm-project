@@ -222,6 +222,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i32, Custom);
 
+  // Even though i128 is not a legal type, we still need to custom lower
+  // the atomic operations in order to exploit SystemZ instructions.
+  setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
+  setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
+
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
   // Traps are legal, as we will convert them to "j .+2".
@@ -3348,28 +3354,28 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
-// Op is an atomic load.  Lower it into a serialization followed
-// by a normal volatile load.
+// Op is an atomic load.  Lower it into a normal volatile load.
 SDValue SystemZTargetLowering::lowerATOMIC_LOAD(SDValue Op,
                                                 SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
-  SDValue Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
-                                             MVT::Other, Node->getChain()), 0);
   return DAG.getExtLoad(ISD::EXTLOAD, SDLoc(Op), Op.getValueType(),
-                        Chain, Node->getBasePtr(),
+                        Node->getChain(), Node->getBasePtr(),
                         Node->getMemoryVT(), Node->getMemOperand());
 }
 
-// Op is an atomic store.  Lower it into a normal volatile store followed
-// by a serialization.
+// Op is an atomic store.  Lower it into a normal volatile store.
 SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
   SDValue Chain = DAG.getTruncStore(Node->getChain(), SDLoc(Op), Node->getVal(),
                                     Node->getBasePtr(), Node->getMemoryVT(),
                                     Node->getMemOperand());
-  return SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op), MVT::Other,
-                                    Chain), 0);
+  // We have to enforce sequential consistency by performing a
+  // serialization operation after the store.
+  if (Node->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+    Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
+                                       MVT::Other, Chain), 0);
+  return Chain;
 }
 
 // Op is an 8-, 16-bit or 32-bit ATOMIC_LOAD_* operation.  Lower the first
@@ -4789,6 +4795,88 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+// Lower operations with invalid operand or result types (currently used
+// only for 128-bit integer types).
+
+static SDValue lowerI128ToGR128(SelectionDAG &DAG, SDValue In) {
+  SDLoc DL(In);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
+                           DAG.getIntPtrConstant(0, DL));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
+                           DAG.getIntPtrConstant(1, DL));
+  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, DL,
+                                    MVT::Untyped, Hi, Lo);
+  return SDValue(Pair, 0);
+}
+
+static SDValue lowerGR128ToI128(SelectionDAG &DAG, SDValue In) {
+  SDLoc DL(In);
+  SDValue Hi = DAG.getTargetExtractSubreg(SystemZ::subreg_h64,
+                                          DL, MVT::i64, In);
+  SDValue Lo = DAG.getTargetExtractSubreg(SystemZ::subreg_l64,
+                                          DL, MVT::i64, In);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128, Lo, Hi);
+}
+
+void
+SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
+                                             SmallVectorImpl<SDValue> &Results,
+                                             SelectionDAG &DAG) const {
+  switch (N->getOpcode()) {
+  case ISD::ATOMIC_LOAD: {
+    SDLoc DL(N);
+    SDVTList Tys = DAG.getVTList(MVT::Untyped, MVT::Other);
+    SDValue Ops[] = { N->getOperand(0), N->getOperand(1) };
+    MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
+    SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_LOAD_128,
+                                          DL, Tys, Ops, MVT::i128, MMO);
+    Results.push_back(lowerGR128ToI128(DAG, Res));
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_STORE: {
+    SDLoc DL(N);
+    SDVTList Tys = DAG.getVTList(MVT::Other);
+    SDValue Ops[] = { N->getOperand(0),
+                      lowerI128ToGR128(DAG, N->getOperand(2)),
+                      N->getOperand(1) };
+    MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
+    SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_STORE_128,
+                                          DL, Tys, Ops, MVT::i128, MMO);
+    // We have to enforce sequential consistency by performing a
+    // serialization operation after the store.
+    if (cast<AtomicSDNode>(N)->getOrdering() ==
+        AtomicOrdering::SequentiallyConsistent)
+      Res = SDValue(DAG.getMachineNode(SystemZ::Serialize, DL,
+                                       MVT::Other, Res), 0);
+    Results.push_back(Res);
+    break;
+  }
+  case ISD::ATOMIC_CMP_SWAP: {
+    SDLoc DL(N);
+    SDVTList Tys = DAG.getVTList(MVT::Untyped, MVT::Other);
+    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
+                      lowerI128ToGR128(DAG, N->getOperand(2)),
+                      lowerI128ToGR128(DAG, N->getOperand(3)) };
+    MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
+    SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_CMP_SWAP_128,
+                                          DL, Tys, Ops, MVT::i128, MMO);
+    Results.push_back(lowerGR128ToI128(DAG, Res));
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  default:
+    llvm_unreachable("Unexpected node to lower");
+  }
+}
+
+void
+SystemZTargetLowering::ReplaceNodeResults(SDNode *N,
+                                          SmallVectorImpl<SDValue> &Results,
+                                          SelectionDAG &DAG) const {
+  return LowerOperationWrapper(N, Results, DAG);
+}
+
 const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
 #define OPCODE(NAME) case SystemZISD::NAME: return "SystemZISD::" #NAME
   switch ((SystemZISD::NodeType)Opcode) {
@@ -4889,6 +4977,9 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(ATOMIC_LOADW_UMIN);
     OPCODE(ATOMIC_LOADW_UMAX);
     OPCODE(ATOMIC_CMP_SWAPW);
+    OPCODE(ATOMIC_LOAD_128);
+    OPCODE(ATOMIC_STORE_128);
+    OPCODE(ATOMIC_CMP_SWAP_128);
     OPCODE(LRV);
     OPCODE(STRV);
     OPCODE(PREFETCH);
@@ -5916,6 +6007,32 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   return DoneMBB;
 }
 
+// Emit a move from two GR64s to a GR128.
+MachineBasicBlock *
+SystemZTargetLowering::emitPair128(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Hi = MI.getOperand(1).getReg();
+  unsigned Lo = MI.getOperand(2).getReg();
+  unsigned Tmp1 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+  unsigned Tmp2 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
+
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Tmp1);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Tmp2)
+    .addReg(Tmp1).addReg(Hi).addImm(SystemZ::subreg_h64);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Dest)
+    .addReg(Tmp2).addReg(Lo).addImm(SystemZ::subreg_l64);
+
+  MI.eraseFromParent();
+  return MBB;
+}
+
 // Emit an extension from a GR64 to a GR128.  ClearEven is true
 // if the high register of the GR128 value must be cleared or false if
 // it's "don't care".
@@ -6309,6 +6426,8 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::CondStoreF64Inv:
     return emitCondStore(MI, MBB, SystemZ::STD, 0, true);
 
+  case SystemZ::PAIR128:
+    return emitPair128(MI, MBB);
   case SystemZ::AEXT128:
     return emitExt128(MI, MBB, false);
   case SystemZ::ZEXT128:

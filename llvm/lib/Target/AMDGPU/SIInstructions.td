@@ -116,7 +116,40 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 // pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
+
+// Pseudoinstruction for @llvm.amdgcn.wqm. It is turned into a copy after the
+// WQM pass processes it.
+def WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+
+// Pseudoinstruction for @llvm.amdgcn.wwm. It is turned into a copy post-RA, so
+// that the @earlyclobber is respected. The @earlyclobber is to make sure that
+// the instruction that defines $src0 (which is run in WWM) doesn't
+// accidentally clobber inactive channels of $vdst.
+let Constraints = "@earlyclobber $vdst" in {
+def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+}
+
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
+
+def EXIT_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins SReg_64:$src0)> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+// Invert the exec mask and overwrite the inactive lanes of dst with inactive,
+// restoring it after we're done.
+def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32: $src, VSrc_b32:$inactive),
+  [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
+  let Constraints = "$src = $vdst";
+}
+
+def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
+  (ins VReg_64: $src, VSrc_b64:$inactive),
+  [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
+  let Constraints = "$src = $vdst";
+}
 
 let usesCustomInserter = 1, SALU = 1 in {
 def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),

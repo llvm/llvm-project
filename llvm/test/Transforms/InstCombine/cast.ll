@@ -761,9 +761,9 @@ define i64 @test59(i8 %A, i8 %B) nounwind {
 ; CHECK-NEXT:    [[C:%.*]] = zext i8 %A to i64
 ; CHECK-NEXT:    [[D:%.*]] = shl nuw nsw i64 [[C]], 4
 ; CHECK-NEXT:    [[E:%.*]] = and i64 [[D]], 48
-; CHECK-NEXT:    [[F:%.*]] = zext i8 %B to i64
-; CHECK-NEXT:    [[G:%.*]] = lshr i64 [[F]], 4
-; CHECK-NEXT:    [[H:%.*]] = or i64 [[G]], [[E]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 %B, 4
+; CHECK-NEXT:    [[G:%.*]] = zext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[H:%.*]] = or i64 [[E]], [[G]]
 ; CHECK-NEXT:    ret i64 [[H]]
 ;
   %C = zext i8 %A to i32

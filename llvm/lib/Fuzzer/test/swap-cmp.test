@@ -1,2 +1,3 @@
+RUN: %cpp_compiler %S/SwapCmpTest.cpp -o %t-LLVMFuzzer-SwapCmpTest
 CHECK: BINGO
-RUN: not LLVMFuzzer-SwapCmpTest -seed=1 -runs=10000000 2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-SwapCmpTest -seed=1 -runs=10000000 2>&1 | FileCheck %s

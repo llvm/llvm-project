@@ -1,29 +1,44 @@
 CHECK: BINGO
 Done1000000: Done 1000000 runs in
+RUN: %cpp_compiler %S/BogusInitializeTest.cpp -o %t-LLVMFuzzer-BogusInitializeTest
+RUN: %cpp_compiler %S/BufferOverflowOnInput.cpp -o %t-LLVMFuzzer-BufferOverflowOnInput
+RUN: %cpp_compiler %S/CounterTest.cpp -o %t-LLVMFuzzer-CounterTest
+RUN: %cpp_compiler %S/DSO1.cpp -fPIC -shared -o %t-LLVMFuzzer-DSO1.so
+RUN: %cpp_compiler %S/DSO2.cpp -fPIC -shared -o %t-LLVMFuzzer-DSO2.so
+RUN: %cpp_compiler %S/DSOTestMain.cpp %S/DSOTestExtra.cpp -L. %t-LLVMFuzzer-DSO1.so %t-LLVMFuzzer-DSO2.so -o %t-LLVMFuzzer-DSOTest
+RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-LLVMFuzzer-FullCoverageSetTest
+RUN: %cpp_compiler %S/InitializeTest.cpp -o %t-LLVMFuzzer-InitializeTest
+RUN: %cpp_compiler %S/NotinstrumentedTest.cpp -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters,trace-pc-guard -o %t-LLVMFuzzer-NotinstrumentedTest-NoCoverage
+RUN: %cpp_compiler %S/NullDerefOnEmptyTest.cpp -o %t-LLVMFuzzer-NullDerefOnEmptyTest
+RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-LLVMFuzzer-NullDerefTest
+RUN: %cpp_compiler %S/ShrinkControlFlowTest.cpp -o %t-LLVMFuzzer-ShrinkControlFlowTest
+RUN: %cpp_compiler %S/SimpleCmpTest.cpp -o %t-LLVMFuzzer-SimpleCmpTest
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-LLVMFuzzer-SimpleTest
+RUN: %cpp_compiler %S/StrncmpOOBTest.cpp -o %t-LLVMFuzzer-StrncmpOOBTest
 
-RUN: not LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
 
 # only_ascii mode. Will perform some minimal self-validation.
-RUN: not LLVMFuzzer-SimpleTest -only_ascii=1 2>&1
+RUN: not %t-LLVMFuzzer-SimpleTest -only_ascii=1 2>&1
 
-RUN: LLVMFuzzer-SimpleCmpTest -max_total_time=1 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
+RUN: %t-LLVMFuzzer-SimpleCmpTest -max_total_time=1 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
 MaxTotalTime: Done {{.*}} runs in {{.}} second(s)
 
-RUN: not LLVMFuzzer-NullDerefTest                  2>&1 | FileCheck %s --check-prefix=NullDerefTest
-RUN: not LLVMFuzzer-NullDerefTest -close_fd_mask=3 2>&1 | FileCheck %s --check-prefix=NullDerefTest
+RUN: not %t-LLVMFuzzer-NullDerefTest                  2>&1 | FileCheck %s --check-prefix=NullDerefTest
+RUN: not %t-LLVMFuzzer-NullDerefTest -close_fd_mask=3 2>&1 | FileCheck %s --check-prefix=NullDerefTest
 NullDerefTest: ERROR: AddressSanitizer: {{SEGV|access-violation}} on unknown address
 NullDerefTest: Test unit written to ./crash-
-RUN: not LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ 2>&1 | FileCheck %s --check-prefix=NullDerefTestPrefix
+RUN: not %t-LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ 2>&1 | FileCheck %s --check-prefix=NullDerefTestPrefix
 NullDerefTestPrefix: Test unit written to ZZZcrash-
-RUN: not LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ -exact_artifact_path=FOOBAR 2>&1 | FileCheck %s --check-prefix=NullDerefTestExactPath
+RUN: not %t-LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ -exact_artifact_path=FOOBAR 2>&1 | FileCheck %s --check-prefix=NullDerefTestExactPath
 NullDerefTestExactPath: Test unit written to FOOBAR
 
-RUN: not LLVMFuzzer-NullDerefOnEmptyTest -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=NULL_DEREF_ON_EMPTY
+RUN: not %t-LLVMFuzzer-NullDerefOnEmptyTest -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=NULL_DEREF_ON_EMPTY
 NULL_DEREF_ON_EMPTY: stat::number_of_executed_units:
 
-#not LLVMFuzzer-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
+#not %t-LLVMFuzzer-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-CounterTest  -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
+RUN: not %t-LLVMFuzzer-CounterTest  -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
 
 COUNTERS: INITED {{.*}} {{bits:|ft:}}
 COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
@@ -31,30 +46,30 @@ COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
 COUNTERS: BINGO
 
 # Don't run UninstrumentedTest for now since we build libFuzzer itself with asan.
-DISABLED: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
+DISABLED: not %t-LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
 UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.
 
-RUN: not LLVMFuzzer-NotinstrumentedTest-NoCoverage 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE
+RUN: not %t-LLVMFuzzer-NotinstrumentedTest-NoCoverage 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE
 NO_COVERAGE: ERROR: no interesting inputs were found. Is the code instrumented for coverage? Exiting
 
-RUN: not LLVMFuzzer-BufferOverflowOnInput 2>&1 | FileCheck %s --check-prefix=OOB
+RUN: not %t-LLVMFuzzer-BufferOverflowOnInput 2>&1 | FileCheck %s --check-prefix=OOB
 OOB: AddressSanitizer: heap-buffer-overflow
 OOB: is located 0 bytes to the right of 3-byte region
 
-RUN: not LLVMFuzzer-InitializeTest -use_value_profile=1 2>&1 | FileCheck %s
+RUN: not %t-LLVMFuzzer-InitializeTest -use_value_profile=1 2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-DSOTest 2>&1 | FileCheck %s --check-prefix=DSO
+RUN: not %t-LLVMFuzzer-DSOTest 2>&1 | FileCheck %s --check-prefix=DSO
 DSO: INFO: Loaded 3 modules
 DSO: BINGO
 
-RUN: LLVMFuzzer-SimpleTest  -exit_on_src_pos=SimpleTest.cpp:18                 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
-RUN: LLVMFuzzer-ShrinkControlFlowTest  -exit_on_src_pos=ShrinkControlFlowTest.cpp:23 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
+RUN: %t-LLVMFuzzer-SimpleTest  -exit_on_src_pos=SimpleTest.cpp:18                 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
+RUN: %t-LLVMFuzzer-ShrinkControlFlowTest  -exit_on_src_pos=ShrinkControlFlowTest.cpp:23 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
 EXIT_ON_SRC_POS: INFO: found line matching '{{.*}}', exiting.
 
-RUN: env ASAN_OPTIONS=strict_string_checks=1 not LLVMFuzzer-StrncmpOOBTest -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=STRNCMP
+RUN: env ASAN_OPTIONS=strict_string_checks=1 not %t-LLVMFuzzer-StrncmpOOBTest -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=STRNCMP
 STRNCMP: AddressSanitizer: heap-buffer-overflow
 STRNCMP-NOT: __sanitizer_weak_hook_strncmp
 STRNCMP: in LLVMFuzzerTestOneInput
 
-RUN: not LLVMFuzzer-BogusInitializeTest 2>&1 | FileCheck %s --check-prefix=BOGUS_INITIALIZE
+RUN: not %t-LLVMFuzzer-BogusInitializeTest 2>&1 | FileCheck %s --check-prefix=BOGUS_INITIALIZE
 BOGUS_INITIALIZE: argv[0] has been modified in LLVMFuzzerInitialize

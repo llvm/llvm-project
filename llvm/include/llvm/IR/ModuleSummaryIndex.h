@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -287,10 +288,23 @@ public:
     std::vector<uint64_t> Args;
   };
 
+  /// Function attribute flags. Used to track if a function accesses memory,
+  /// recurses or aliases.
+  struct FFlags {
+    unsigned ReadNone : 1;
+    unsigned ReadOnly : 1;
+    unsigned NoRecurse : 1;
+    unsigned ReturnDoesNotAlias : 1;
+  };
+
 private:
   /// Number of instructions (ignoring debug instructions, e.g.) computed
   /// during the initial compile step when the summary index is first built.
   unsigned InstCount;
+
+  /// Function attribute flags. Used to track if a function accesses memory,
+  /// recurses or aliases.
+  FFlags FunFlags;
 
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
   std::vector<EdgeTy> CallGraphEdgeList;
@@ -317,15 +331,16 @@ private:
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
 public:
-  FunctionSummary(GVFlags Flags, unsigned NumInsts, std::vector<ValueInfo> Refs,
-                  std::vector<EdgeTy> CGEdges,
+  FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
+                  std::vector<ValueInfo> Refs, std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
                   std::vector<ConstVCall> TypeCheckedLoadConstVCalls)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
-        InstCount(NumInsts), CallGraphEdgeList(std::move(CGEdges)) {
+        InstCount(NumInsts), FunFlags(FunFlags),
+        CallGraphEdgeList(std::move(CGEdges)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
         !TypeCheckedLoadConstVCalls.empty())
@@ -340,6 +355,9 @@ public:
   static bool classof(const GlobalValueSummary *GVS) {
     return GVS->getSummaryKind() == FunctionKind;
   }
+
+  /// Get function attribute flags.
+  FFlags &fflags() { return FunFlags; }
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }

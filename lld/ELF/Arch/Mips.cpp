@@ -28,7 +28,7 @@ namespace {
 template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isPicRel(uint32_t Type) const override;
@@ -71,6 +71,7 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
 
 template <class ELFT>
 RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
+                               const InputFile &File,
                                const uint8_t *Loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || Config->MipsN32Abi)

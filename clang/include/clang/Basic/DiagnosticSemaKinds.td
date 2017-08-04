@@ -6995,8 +6995,8 @@ def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
 def err_atomic_op_needs_non_const_atomic : Error<
-  "address argument to atomic operation must be a pointer to non-const _Atomic "
-  "type (%0 invalid)">;
+  "address argument to atomic operation must be a pointer to non-%select{const|constant}0 _Atomic "
+  "type (%1 invalid)">;
 def err_atomic_op_needs_non_const_pointer : Error<
   "address argument to atomic operation must be a pointer to non-const "
   "type (%0 invalid)">;
@@ -7012,6 +7012,10 @@ def err_atomic_op_bitwise_needs_atomic_int : Error<
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
+def err_atomic_op_has_invalid_synch_scope : Error<
+  "synchronization scope argument to atomic operation is invalid">;
+def err_atomic_op_has_non_constant_synch_scope : Error<
+  "non-constant synchronization scope argument to atomic operation is not supported">;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to overflow builtin must be an integer (%0 invalid)">;

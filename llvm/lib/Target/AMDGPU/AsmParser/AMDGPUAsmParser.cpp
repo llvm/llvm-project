@@ -2530,24 +2530,22 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   if (ResTy == MatchOperand_Success)
     return ResTy;
 
-  if (getLexer().getKind() == AsmToken::Identifier) {
-    // If this identifier is a symbol, we want to create an expression for it.
-    // It is a little difficult to distinguish between a symbol name, and
-    // an instruction flag like 'gds'.  In order to do this, we parse
-    // all tokens as expressions and then treate the symbol name as the token
-    // string when we want to interpret the operand as a token.
-    const auto &Tok = Parser.getTok();
-    SMLoc S = Tok.getLoc();
-    const MCExpr *Expr = nullptr;
-    if (!Parser.parseExpression(Expr)) {
-      Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
-      return MatchOperand_Success;
-    }
+  const auto &Tok = Parser.getTok();
+  SMLoc S = Tok.getLoc();
 
-    Operands.push_back(AMDGPUOperand::CreateToken(this, Tok.getString(), Tok.getLoc()));
+  const MCExpr *Expr = nullptr;
+  if (!Parser.parseExpression(Expr)) {
+    Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
+    return MatchOperand_Success;
+  }
+
+  // Possibly this is an instruction flag like 'gds'.
+  if (Tok.getKind() == AsmToken::Identifier) {
+    Operands.push_back(AMDGPUOperand::CreateToken(this, Tok.getString(), S));
     Parser.Lex();
     return MatchOperand_Success;
   }
+
   return MatchOperand_NoMatch;
 }
 

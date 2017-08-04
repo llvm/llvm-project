@@ -13141,13 +13141,14 @@ void __ovld __conv barrier(cl_mem_fence_flags flags);
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
-typedef enum memory_scope
-{
-  memory_scope_work_item,
-  memory_scope_work_group,
-  memory_scope_device,
-  memory_scope_all_svm_devices,
-  memory_scope_sub_group
+typedef enum memory_scope {
+  memory_scope_work_item = __OPENCL_MEMORY_SCOPE_WORK_ITEM,
+  memory_scope_work_group = __OPENCL_MEMORY_SCOPE_WORK_GROUP,
+  memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
+  memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+  memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
+#endif
 } memory_scope;
 
 void __ovld __conv work_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
@@ -13952,11 +13953,11 @@ unsigned long __ovld atom_xor(volatile __local unsigned long *p, unsigned long v
 // enum values aligned with what clang uses in EmitAtomicExpr()
 typedef enum memory_order
 {
-  memory_order_relaxed,
-  memory_order_acquire,
-  memory_order_release,
-  memory_order_acq_rel,
-  memory_order_seq_cst
+  memory_order_relaxed = __ATOMIC_RELAXED,
+  memory_order_acquire = __ATOMIC_ACQUIRE,
+  memory_order_release = __ATOMIC_RELEASE,
+  memory_order_acq_rel = __ATOMIC_ACQ_REL,
+  memory_order_seq_cst = __ATOMIC_SEQ_CST
 } memory_order;
 
 // double atomics support requires extensions cl_khr_int64_base_atomics and cl_khr_int64_extended_atomics

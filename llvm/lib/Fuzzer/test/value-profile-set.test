@@ -1,3 +1,4 @@
 CHECK: BINGO
-RUN: not LLVMFuzzer-FourIndependentBranchesTest -seed=1 -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s
+RUN: %cpp_compiler %S/FourIndependentBranchesTest.cpp -o %t-LLVMFuzzer-FourIndependentBranchesTest
+RUN: not %t-LLVMFuzzer-FourIndependentBranchesTest -seed=1 -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s
 

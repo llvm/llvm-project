@@ -106,7 +106,7 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol>(Body);
-    if (SS.NeedsCopy)
+    if (SS.CopyRelSec)
       return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff +
              SS.CopyRelSecOff;
     if (SS.NeedsPltAddr)
@@ -125,7 +125,7 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
 
 SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), NeedsCopy(false), NeedsPltAddr(false), IsLocal(IsLocal),
+    : SymbolKind(K), NeedsPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
       IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
 
@@ -138,8 +138,8 @@ bool SymbolBody::isPreemptible() const {
   // Shared symbols resolve to the definition in the DSO. The exceptions are
   // symbols with copy relocations (which resolve to .bss) or preempt plt
   // entries (which resolve to that plt entry).
-  if (isShared())
-    return !NeedsCopy && !NeedsPltAddr;
+  if (auto *SS = dyn_cast<SharedSymbol>(this))
+    return !SS->CopyRelSec && !NeedsPltAddr;
 
   // Only symbols that appear in dynsym can be preempted.
   if (!symbol()->includeInDynsym())
@@ -220,7 +220,7 @@ OutputSection *SymbolBody::getOutputSection() const {
   }
 
   if (auto *S = dyn_cast<SharedSymbol>(this)) {
-    if (S->NeedsCopy)
+    if (S->CopyRelSec)
       return S->CopyRelSec->getParent();
     return nullptr;
   }

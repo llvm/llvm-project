@@ -242,6 +242,12 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("var interface = 2;");
   verifyFormat("interface = 2;");
   verifyFormat("x = interface instanceof y;");
+  verifyFormat("interface Test {\n"
+               "  x: string;\n"
+               "  switch: string;\n"
+               "  case: string;\n"
+               "  default: string;\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReservedWordsMethods) {

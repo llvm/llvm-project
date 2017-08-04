@@ -283,10 +283,10 @@ define i32 @test66(i64 %x) {
 
 define i32 @test67(i16 %x) {
 ; CHECK-LABEL: @test67(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 %x, 4
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 %x, 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i16 [[TMP2]], 42
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %1 = and i16 %x, 4

@@ -151,7 +151,7 @@ public:
 
   Optional<APInt> asConstantInteger() const {
     if (isConstant() && isa<ConstantInt>(Val)) {
-      return Val->getUniqueInteger();
+      return cast<ConstantInt>(Val)->getValue();
     } else if (isConstantRange() && Range.isSingleElement()) {
       return *Range.getSingleElement();
     }
@@ -1384,7 +1384,7 @@ static LVILatticeVal constantFoldUser(Value *Val, Value *Op,
     if (auto *C = dyn_cast_or_null<ConstantInt>(
             SimplifyCastInst(CI->getOpcode(), OpConst,
                              CI->getDestTy(), DL))) {
-      return LVILatticeVal::getRange(ConstantRange(C->getUniqueInteger()));
+      return LVILatticeVal::getRange(ConstantRange(C->getValue()));
     }
   } else if (auto *BO = dyn_cast<BinaryOperator>(Val)) {
     bool Op0Match = BO->getOperand(0) == Op;
@@ -1395,7 +1395,7 @@ static LVILatticeVal constantFoldUser(Value *Val, Value *Op,
     Value *RHS = Op1Match ? OpConst : BO->getOperand(1);
     if (auto *C = dyn_cast_or_null<ConstantInt>(
             SimplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
-      return LVILatticeVal::getRange(ConstantRange(C->getUniqueInteger()));
+      return LVILatticeVal::getRange(ConstantRange(C->getValue()));
     }
   }
   return LVILatticeVal::getOverdefined();

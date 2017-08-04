@@ -91,9 +91,9 @@ define i32 @test6(i64 %A) {
 
 define i92 @test7(i64 %A) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[B:%.*]] = zext i64 %A to i92
-; CHECK-NEXT:    [[C:%.*]] = lshr i92 [[B]], 32
-; CHECK-NEXT:    ret i92 [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 %A, 32
+; CHECK-NEXT:    [[D:%.*]] = zext i64 [[TMP1]] to i92
+; CHECK-NEXT:    ret i92 [[D]]
 ;
   %B = zext i64 %A to i128
   %C = lshr i128 %B, 32

@@ -447,8 +447,7 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
     IntrinsicInst *II = cast<IntrinsicInst>(Count);
     // Explicitly clear the 'undef_on_zero' flag.
     IntrinsicInst *NewI = cast<IntrinsicInst>(II->clone());
-    Type *Ty = NewI->getArgOperand(1)->getType();
-    NewI->setArgOperand(1, Constant::getNullValue(Ty));
+    NewI->setArgOperand(1, ConstantInt::getFalse(NewI->getContext()));
     Builder.Insert(NewI);
     return Builder.CreateZExtOrTrunc(NewI, ValueOnZero->getType());
   }

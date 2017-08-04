@@ -1,1 +1,2 @@
-RUN: LLVMFuzzer-BadStrcmpTest -runs=100000
+RUN: %cpp_compiler %S/BadStrcmpTest.cpp -o %t-LLVMFuzzer-BadStrcmpTest
+RUN: %t-LLVMFuzzer-BadStrcmpTest -runs=100000
