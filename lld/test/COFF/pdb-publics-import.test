@@ -37,5 +37,5 @@ CHECK-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_R
     .rdata debug directory data chunks
 CHECK-NEXT:   SC  | mod = 1, 0002:0000, size = 28, data crc = 0, reloc crc = 0
 CHECK-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
-CHECK-NEXT:   SC  | mod = 1, 0002:0028, size = 110, data crc = 0, reloc crc = 0
+CHECK-NEXT:   SC  | mod = 1, 0002:0028, size = {{.*}}, data crc = 0, reloc crc = 0
 CHECK-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ

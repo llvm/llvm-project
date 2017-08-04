@@ -306,12 +306,10 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-#endif
   bool addILPOpts() override;
   bool addPreISel() override;
   void addPreRegAlloc() override;
@@ -361,7 +359,6 @@ bool X86PassConfig::addInstSelector() {
   return false;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool X86PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -381,7 +378,6 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
-#endif
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);

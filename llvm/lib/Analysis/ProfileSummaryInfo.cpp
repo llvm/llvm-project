@@ -44,10 +44,16 @@ static cl::opt<bool> AccurateSampleProfile(
     cl::desc("If the sample profile is accurate, we will mark all un-sampled "
              "callsite as cold. Otherwise, treat un-sampled callsites as if "
              "we have no profile."));
+static cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold(
+    "profile-summary-huge-working-set-size-threshold", cl::Hidden,
+    cl::init(15000), cl::ZeroOrMore,
+    cl::desc("The code working set size is considered huge if the number of"
+             " blocks required to reach the -profile-summary-cutoff-hot"
+             " percentile exceeds this count."));
 
-// Find the minimum count to reach a desired percentile of counts.
-static uint64_t getMinCountForPercentile(SummaryEntryVector &DS,
-                                         uint64_t Percentile) {
+// Find the summary entry for a desired percentile of counts.
+static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
+                                                        uint64_t Percentile) {
   auto Compare = [](const ProfileSummaryEntry &Entry, uint64_t Percentile) {
     return Entry.Cutoff < Percentile;
   };
@@ -56,7 +62,7 @@ static uint64_t getMinCountForPercentile(SummaryEntryVector &DS,
   // detailed summary.
   if (It == DS.end())
     report_fatal_error("Desired percentile exceeds the maximum cutoff");
-  return It->MinCount;
+  return *It;
 }
 
 // The profile summary metadata may be attached either by the frontend or by
@@ -169,10 +175,20 @@ void ProfileSummaryInfo::computeThresholds() {
   if (!computeSummary())
     return;
   auto &DetailedSummary = Summary->getDetailedSummary();
-  HotCountThreshold =
-      getMinCountForPercentile(DetailedSummary, ProfileSummaryCutoffHot);
-  ColdCountThreshold =
-      getMinCountForPercentile(DetailedSummary, ProfileSummaryCutoffCold);
+  auto &HotEntry =
+      getEntryForPercentile(DetailedSummary, ProfileSummaryCutoffHot);
+  HotCountThreshold = HotEntry.MinCount;
+  auto &ColdEntry =
+      getEntryForPercentile(DetailedSummary, ProfileSummaryCutoffCold);
+  ColdCountThreshold = ColdEntry.MinCount;
+  HasHugeWorkingSetSize =
+      HotEntry.NumCounts > ProfileSummaryHugeWorkingSetSizeThreshold;
+}
+
+bool ProfileSummaryInfo::hasHugeWorkingSetSize() {
+  if (!HasHugeWorkingSetSize)
+    computeThresholds();
+  return HasHugeWorkingSetSize && HasHugeWorkingSetSize.getValue();
 }
 
 bool ProfileSummaryInfo::isHotCount(uint64_t C) {

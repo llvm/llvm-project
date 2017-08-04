@@ -994,6 +994,8 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   auto *Loop = LI->getLoopFor(L);
   const SCEV *EC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
+  EXPECT_TRUE(isa<SCEVConstant>(EC));
+  EXPECT_EQ(cast<SCEVConstant>(EC)->getAPInt().getLimitedValue(), 999);
 
   SE.forgetLoop(Loop);
   Br->eraseFromParent();
@@ -1004,7 +1006,9 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
       ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
   Builder.CreateCondBr(NewCond, L, Post);
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
-  EXPECT_NE(EC, NewEC);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
+  EXPECT_TRUE(isa<SCEVConstant>(NewEC));
+  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999);
 }
 
 // Make sure that SCEV invalidates exit limits after invalidating the values it
@@ -1074,6 +1078,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   auto *Loop = LI->getLoopFor(L);
   const SCEV *EC = SE.getBackedgeTakenCount(Loop);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
+  EXPECT_FALSE(isa<SCEVConstant>(EC));
 
   SE.forgetValue(Load);
   Br->eraseFromParent();
@@ -1085,7 +1090,9 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
       ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
   Builder.CreateCondBr(NewCond, L, Post);
   const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
-  EXPECT_NE(EC, NewEC);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
+  EXPECT_TRUE(isa<SCEVConstant>(NewEC));
+  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999);
 }
 
 }  // end anonymous namespace

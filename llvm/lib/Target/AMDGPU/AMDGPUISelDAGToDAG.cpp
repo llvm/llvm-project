@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUISelLowering.h" // For AMDGPUISD
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterInfo.h"
@@ -70,11 +71,17 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   AMDGPUAS AMDGPUASI;
 
 public:
-  explicit AMDGPUDAGToDAGISel(TargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel){
-    AMDGPUASI = AMDGPU::getAMDGPUAS(TM);
+  explicit AMDGPUDAGToDAGISel(TargetMachine *TM = nullptr,
+                              CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
+    : SelectionDAGISel(*TM, OptLevel) {
+    AMDGPUASI = AMDGPU::getAMDGPUAS(*TM);
   }
   ~AMDGPUDAGToDAGISel() override = default;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AMDGPUArgumentUsageInfo>();
+    SelectionDAGISel::getAnalysisUsage(AU);
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void Select(SDNode *N) override;
@@ -206,9 +213,15 @@ private:
 
 }  // end anonymous namespace
 
+INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "isel",
+                      "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
+INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
+INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "isel",
+                    "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
+
 /// \brief This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
-FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
+FunctionPass *llvm::createAMDGPUISelDag(TargetMachine *TM,
                                         CodeGenOpt::Level OptLevel) {
   return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }

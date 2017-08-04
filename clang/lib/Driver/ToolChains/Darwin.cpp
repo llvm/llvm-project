@@ -1844,8 +1844,8 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
-bool MachO::IsUnwindTablesDefault() const {
-  return getArch() == llvm::Triple::x86_64;
+bool MachO::IsUnwindTablesDefault(const ArgList &Args) const {
+  return !UseSjLjExceptions(Args);
 }
 
 bool MachO::UseDwarfDebugFlags() const {

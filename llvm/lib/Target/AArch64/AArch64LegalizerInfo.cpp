@@ -23,10 +23,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 AArch64LegalizerInfo::AArch64LegalizerInfo() {
   using namespace TargetOpcode;
   const LLT p0 = LLT::pointer(0, 64);

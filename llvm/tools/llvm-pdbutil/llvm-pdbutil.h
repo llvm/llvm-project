@@ -144,6 +144,7 @@ extern llvm::cl::opt<bool> DumpIds;
 extern llvm::cl::opt<bool> DumpIdData;
 extern llvm::cl::opt<bool> DumpIdExtras;
 extern llvm::cl::list<uint32_t> DumpIdIndex;
+extern llvm::cl::opt<uint32_t> DumpModi;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpGlobals;

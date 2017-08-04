@@ -21,6 +21,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DataLayout.h"
@@ -1252,6 +1253,11 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
+  const ModuleAnalysisManager &MAM =
+      AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  ProfileSummaryInfo *PSI =
+      MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+
   bool Changed = false;
 
   // The unroller requires loops to be in simplified form, and also needs LCSSA.
@@ -1280,12 +1286,18 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // states we support: partial and full (or "simple") unrolling. However, to
     // enable these things we actually pass "None" in for the optional to avoid
     // providing an explicit choice.
-    Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam;
-    bool CurChanged = tryToUnrollLoop(
-        &L, DT, &LI, SE, TTI, AC, ORE,
-        /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
-        /*Threshold*/ None, AllowPartialParam, RuntimeParam, UpperBoundParam,
-        /*AllowPeeling*/ None);
+    Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam,
+        AllowPeeling;
+    // Check if the profile summary indicates that the profiled application
+    // has a huge working set size, in which case we disable peeling to avoid
+    // bloating it further.
+    if (PSI && PSI->hasHugeWorkingSetSize())
+      AllowPeeling = false;
+    bool CurChanged =
+        tryToUnrollLoop(&L, DT, &LI, SE, TTI, AC, ORE,
+                        /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
+                        /*Threshold*/ None, AllowPartialParam, RuntimeParam,
+                        UpperBoundParam, AllowPeeling);
     Changed |= CurChanged;
 
     // The parent must not be damaged by unrolling!

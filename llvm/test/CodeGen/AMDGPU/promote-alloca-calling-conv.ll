@@ -1,5 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=ASM %s
+; RUN: llc -march=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=ASM %s
 
 ; IR-LABEL: define amdgpu_vs void @promote_alloca_shaders(i32 addrspace(1)* inreg %out, i32 addrspace(1)* inreg %in) #0 {
 ; IR: alloca [5 x i32]
@@ -71,6 +71,26 @@ entry:
   %3 = load i32, i32* %arrayidx12
   %arrayidx13 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 1
   store i32 %3, i32 addrspace(1)* %arrayidx13
+  ret void
+}
+
+declare i32 @foo(i32*) #0
+
+; ASM-LABEL: {{^}}call_private:
+; ASM: buffer_store_dword
+; ASM: buffer_store_dword
+; ASM: s_swappc_b64
+; ASM: ScratchSize: 16396
+define amdgpu_kernel void @call_private(i32 addrspace(1)* %out, i32 %in) #0 {
+entry:
+  %tmp = alloca [2 x i32]
+  %tmp1 = getelementptr [2 x i32], [2 x i32]* %tmp, i32 0, i32 0
+  %tmp2 = getelementptr [2 x i32], [2 x i32]* %tmp, i32 0, i32 1
+  store i32 0, i32* %tmp1
+  store i32 1, i32* %tmp2
+  %tmp3 = getelementptr [2 x i32], [2 x i32]* %tmp, i32 0, i32 %in
+  %val = call i32 @foo(i32* %tmp3)
+  store i32 %val, i32 addrspace(1)* %out
   ret void
 }
 

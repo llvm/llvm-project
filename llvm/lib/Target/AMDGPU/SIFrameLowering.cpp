@@ -38,6 +38,7 @@ void SIFrameLowering::emitFlatScratchInit(const SISubtarget &ST,
                                           MachineBasicBlock &MBB) const {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo* TRI = &TII->getRegisterInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // We don't need this if we only have spills since there is no user facing
   // scratch.
@@ -55,7 +56,7 @@ void SIFrameLowering::emitFlatScratchInit(const SISubtarget &ST,
   MachineBasicBlock::iterator I = MBB.begin();
 
   unsigned FlatScratchInitReg
-    = TRI->getPreloadedValue(MF, SIRegisterInfo::FLAT_SCRATCH_INIT);
+    = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.addLiveIn(FlatScratchInitReg);
@@ -64,7 +65,6 @@ void SIFrameLowering::emitFlatScratchInit(const SISubtarget &ST,
   unsigned FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
   unsigned FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
 
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();
 
   // Do a 64-bit pointer add.
@@ -283,13 +283,13 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 
   // We need to insert initialization of the scratch resource descriptor.
-  unsigned PreloadedScratchWaveOffsetReg = TRI->getPreloadedValue(
-    MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
+  unsigned PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
+    AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
   if (ST.isAmdCodeObjectV2(MF)) {
-    PreloadedPrivateBufferReg = TRI->getPreloadedValue(
-      MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
+    PreloadedPrivateBufferReg = MFI->getPreloadedReg(
+      AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
   }
 
   bool OffsetRegUsed = MRI.isPhysRegUsed(ScratchWaveOffsetReg);

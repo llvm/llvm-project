@@ -6,19 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_MIPS_MIPSSEFRAMELOWERING_H
 #define LLVM_LIB_TARGET_MIPS_MIPSSEFRAMELOWERING_H
 
 #include "MipsFrameLowering.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include <vector>
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineFunction;
+class MipsSubtarget;
 
 class MipsSEFrameLowering : public MipsFrameLowering {
 public:
