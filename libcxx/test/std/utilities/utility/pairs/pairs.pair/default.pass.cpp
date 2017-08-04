@@ -15,7 +15,7 @@
 
 // This test doesn't pass due to a constexpr bug in GCC 4.9 that fails
 // to initialize any type without a user provided constructor in a constant
-// expression (ie float).
+// expression (e.g. float).
 // XFAIL: gcc-4.9
 
 // NOTE: The SFINAE on the default constructor is tested in
@@ -49,7 +49,7 @@ int main()
         using P = std::pair<int, NoDefault>;
         static_assert(!std::is_default_constructible<P>::value, "");
         using P2 = std::pair<NoDefault, int>;
-        static_assert(!std::is_default_constructible<P>::value, "");
+        static_assert(!std::is_default_constructible<P2>::value, "");
     }
 #endif
 }

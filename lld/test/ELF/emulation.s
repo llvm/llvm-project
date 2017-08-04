@@ -274,7 +274,8 @@
 # MIPSEL-NEXT:     EF_MIPS_CPIC
 # MIPSEL-NEXT:   ]
 
-# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %tmips64
+# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux -position-independent \
+# RUN:         %s -o %tmips64
 # RUN: ld.lld -m elf64btsmip -e _start %tmips64 -o %t2mips64
 # RUN: llvm-readobj -file-headers %t2mips64 | FileCheck --check-prefix=MIPS64 %s
 # RUN: ld.lld %tmips64 -e _start -o %t3mips64
@@ -301,7 +302,8 @@
 # MIPS64-NEXT:     EF_MIPS_PIC
 # MIPS64-NEXT:   ]
 
-# RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux %s -o %tmips64el
+# RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux \
+# RUN:         -position-independent %s -o %tmips64el
 # RUN: ld.lld -m elf64ltsmip -e _start %tmips64el -o %t2mips64el
 # RUN: llvm-readobj -file-headers %t2mips64el | FileCheck --check-prefix=MIPS64EL %s
 # RUN: ld.lld %tmips64el -e _start -o %t3mips64el

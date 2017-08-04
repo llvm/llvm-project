@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <random>
 #include <set>
 
 using namespace __sanitizer;
@@ -61,20 +62,21 @@ void Print(const BV &bv) {
   t.copyFrom(bv);
   while (!t.empty()) {
     uptr idx = t.getAndClearFirstOne();
-    fprintf(stderr, "%zd ", idx);
+    fprintf(stderr, "%lu ", idx);
   }
   fprintf(stderr, "\n");
 }
 
 void Print(const set<uptr> &s) {
   for (set<uptr>::iterator it = s.begin(); it != s.end(); ++it) {
-    fprintf(stderr, "%zd ", *it);
+    fprintf(stderr, "%lu ", *it);
   }
   fprintf(stderr, "\n");
 }
 
 template <class BV>
 void TestBitVector(uptr expected_size) {
+  std::mt19937 r;
   BV bv, bv1, t_bv;
   EXPECT_EQ(expected_size, BV::kSize);
   bv.clear();
@@ -112,7 +114,7 @@ void TestBitVector(uptr expected_size) {
   for (uptr it = 0; it < 30; it++) {
     // iota
     for (size_t j = 0; j < bits.size(); j++) bits[j] = j;
-    random_shuffle(bits.begin(), bits.end());
+    std::shuffle(bits.begin(), bits.end(), r);
     set<uptr> s, s1, t_s;
     bv.clear();
     bv1.clear();

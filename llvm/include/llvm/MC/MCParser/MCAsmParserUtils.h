@@ -1,4 +1,4 @@
-//===------ llvm/MC/MCAsmParserUtils.h - Asm Parser Utilities ---*- C++ -*-===//
+//===- llvm/MC/MCAsmParserUtils.h - Asm Parser Utilities --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,6 +28,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                const MCExpr *&Value);
 
 } // namespace MCParserUtils
+
 } // namespace llvm
 
-#endif
+#endif // LLVM_MC_MCPARSER_MCASMPARSERUTILS_H

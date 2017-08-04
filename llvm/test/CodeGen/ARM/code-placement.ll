@@ -38,9 +38,8 @@ entry:
   br i1 %0, label %bb5, label %bb.nph15
 
 bb1:                                              ; preds = %bb2.preheader, %bb1
-; CHECK: LBB1_[[BB3:.]]: @ %bb3
 ; CHECK: LBB1_[[PREHDR:.]]: @ %bb2.preheader
-; CHECK: blt LBB1_[[BB3]]
+; CHECK: blt LBB1_[[BB3:.]]
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %bb2.preheader ] ; <i32> [#uses=2]
   %sum.08 = phi i32 [ %2, %bb1 ], [ %sum.110, %bb2.preheader ] ; <i32> [#uses=1]
   %tmp17 = sub i32 %i.07, %indvar                 ; <i32> [#uses=1]
@@ -54,7 +53,7 @@ bb1:                                              ; preds = %bb2.preheader, %bb1
 bb3:                                              ; preds = %bb1, %bb2.preheader
 ; CHECK: LBB1_[[BB1:.]]: @ %bb1
 ; CHECK: bne LBB1_[[BB1]]
-; CHECK: b LBB1_[[BB3]]
+; CHECK: LBB1_[[BB3]]: @ %bb3
   %sum.0.lcssa = phi i32 [ %sum.110, %bb2.preheader ], [ %2, %bb1 ] ; <i32> [#uses=2]
   %3 = add i32 %pass.011, 1                       ; <i32> [#uses=2]
   %exitcond18 = icmp eq i32 %3, %passes           ; <i1> [#uses=1]

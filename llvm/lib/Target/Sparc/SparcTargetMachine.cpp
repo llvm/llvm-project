@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcTargetMachine.h"
-#include "SparcTargetObjectFile.h"
-#include "Sparc.h"
 #include "LeonPasses.h"
+#include "Sparc.h"
+#include "SparcTargetObjectFile.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -114,7 +114,7 @@ namespace {
 /// Sparc Code Generator Pass Configuration Options.
 class SparcPassConfig : public TargetPassConfig {
 public:
-  SparcPassConfig(SparcTargetMachine *TM, PassManagerBase &PM)
+  SparcPassConfig(SparcTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   SparcTargetMachine &getSparcTargetMachine() const {
@@ -128,11 +128,11 @@ public:
 } // namespace
 
 TargetPassConfig *SparcTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new SparcPassConfig(this, PM);
+  return new SparcPassConfig(*this, PM);
 }
 
 void SparcPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass(&getSparcTargetMachine()));
+  addPass(createAtomicExpandPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -143,26 +143,26 @@ bool SparcPassConfig::addInstSelector() {
 }
 
 void SparcPassConfig::addPreEmitPass(){
-  addPass(createSparcDelaySlotFillerPass(getSparcTargetMachine()));
+  addPass(createSparcDelaySlotFillerPass());
 
   if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())
   {
-    addPass(new InsertNOPLoad(getSparcTargetMachine()));
+    addPass(new InsertNOPLoad());
   }
   if (this->getSparcTargetMachine().getSubtargetImpl()->fixFSMULD())
   {
-    addPass(new FixFSMULD(getSparcTargetMachine()));
+    addPass(new FixFSMULD());
   }
   if (this->getSparcTargetMachine().getSubtargetImpl()->replaceFMULS())
   {
-    addPass(new ReplaceFMULS(getSparcTargetMachine()));
+    addPass(new ReplaceFMULS());
   }
   if (this->getSparcTargetMachine().getSubtargetImpl()->detectRoundChange()) {
-    addPass(new DetectRoundChange(getSparcTargetMachine()));
+    addPass(new DetectRoundChange());
   }
   if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT())
   {
-    addPass(new FixAllFDIVSQRT(getSparcTargetMachine()));
+    addPass(new FixAllFDIVSQRT());
   }
 }
 

@@ -595,7 +595,6 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
         break;
       }
     }
-    CheckForIntOverflow(ValueExpr);
     // FIXME:  Do I need to do anything special with BoolTy expressions?
     
     // Look for the appropriate method within NSNumber.
@@ -1984,13 +1983,24 @@ ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
     }
   }
 
+  Selector GetterSel;
+  Selector SetterSel;
+  if (auto PD = IFace->FindPropertyDeclaration(
+          &propertyName, ObjCPropertyQueryKind::OBJC_PR_query_class)) {
+    GetterSel = PD->getGetterName();
+    SetterSel = PD->getSetterName();
+  } else {
+    GetterSel = PP.getSelectorTable().getNullarySelector(&propertyName);
+    SetterSel = SelectorTable::constructSetterSelector(
+        PP.getIdentifierTable(), PP.getSelectorTable(), &propertyName);
+  }
+
   // Search for a declared property first.
-  Selector Sel = PP.getSelectorTable().getNullarySelector(&propertyName);
-  ObjCMethodDecl *Getter = IFace->lookupClassMethod(Sel);
+  ObjCMethodDecl *Getter = IFace->lookupClassMethod(GetterSel);
 
   // If this reference is in an @implementation, check for 'private' methods.
   if (!Getter)
-    Getter = IFace->lookupPrivateClassMethod(Sel);
+    Getter = IFace->lookupPrivateClassMethod(GetterSel);
 
   if (Getter) {
     // FIXME: refactor/share with ActOnMemberReference().
@@ -2000,11 +2010,6 @@ ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
   }
 
   // Look for the matching setter, in case it is needed.
-  Selector SetterSel =
-    SelectorTable::constructSetterSelector(PP.getIdentifierTable(),
-                                            PP.getSelectorTable(),
-                                           &propertyName);
-
   ObjCMethodDecl *Setter = IFace->lookupClassMethod(SetterSel);
   if (!Setter) {
     // If this reference is in an @implementation, also check for 'private'
@@ -4236,8 +4241,7 @@ void Sema::diagnoseARCUnbridgedCast(Expr *e) {
     castType = cast->getTypeAsWritten();
     CCK = CCK_OtherCast;
   } else {
-    castType = cast->getType();
-    CCK = CCK_ImplicitConversion;
+    llvm_unreachable("Unexpected ImplicitCastExpr");
   }
 
   ARCConversionTypeClass castACTC =

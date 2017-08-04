@@ -17,9 +17,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include "llvm/Pass.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "elim-avail-extern"

@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gtest/gtest.h"
 #include <cstdint>
 #include <memory>
-#include <system_error>
 #include <string>
+#include <system_error>
 
 using llvm::StringRef;
 using llvm::MemoryBuffer;

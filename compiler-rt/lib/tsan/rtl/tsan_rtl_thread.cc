@@ -142,6 +142,10 @@ void ThreadContext::OnFinished() {
 
   if (common_flags()->detect_deadlocks)
     ctx->dd->DestroyLogicalThread(thr->dd_lt);
+  thr->clock.ResetCached(&thr->proc()->clock_cache);
+#if !SANITIZER_GO
+  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
+#endif
   thr->~ThreadState();
 #if TSAN_COLLECT_STATS
   StatAggregate(ctx->stat, thr->stat);
@@ -236,7 +240,7 @@ int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   return tid;
 }
 
-void ThreadStart(ThreadState *thr, int tid, uptr os_id, bool workerthread) {
+void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;
@@ -248,19 +252,7 @@ void ThreadStart(ThreadState *thr, int tid, uptr os_id, bool workerthread) {
     if (stk_addr && stk_size)
       MemoryRangeImitateWrite(thr, /*pc=*/ 1, stk_addr, stk_size);
 
-    if (tls_addr && tls_size) {
-      // Check that the thr object is in tls;
-      const uptr thr_beg = (uptr)thr;
-      const uptr thr_end = (uptr)thr + sizeof(*thr);
-      CHECK_GE(thr_beg, tls_addr);
-      CHECK_LE(thr_beg, tls_addr + tls_size);
-      CHECK_GE(thr_end, tls_addr);
-      CHECK_LE(thr_end, tls_addr + tls_size);
-      // Since the thr object is huge, skip it.
-      MemoryRangeImitateWrite(thr, /*pc=*/ 2, tls_addr, thr_beg - tls_addr);
-      MemoryRangeImitateWrite(thr, /*pc=*/ 2,
-          thr_end, tls_addr + tls_size - thr_end);
-    }
+    if (tls_addr && tls_size) ImitateTlsWrite(thr, tls_addr, tls_size);
   }
 #endif
 
@@ -357,6 +349,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   StatInc(thr, StatMopRange);
 
   if (*shadow_mem == kShadowRodata) {
+    DCHECK(!is_write);
     // Access to .rodata section, no races here.
     // Measurements show that it can be 10-20% of all memory accesses.
     StatInc(thr, StatMopRangeRodata);

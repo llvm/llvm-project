@@ -48,6 +48,15 @@ public:
     return true;
   }
 
+  bool hasReservedCallFrame(const MachineFunction &MF) const override {
+    // We always reserve call frame as a part of the initial stack allocation.
+    return true;
+  }
+  bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override {
+    // Override this function to avoid calling hasFP before CSI is set
+    // (the default implementation calls hasFP).
+    return true;
+  }
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
@@ -94,6 +103,8 @@ private:
       unsigned SP, unsigned CF) const;
   void insertPrologueInBlock(MachineBasicBlock &MBB, bool PrologueStubs) const;
   void insertEpilogueInBlock(MachineBasicBlock &MBB) const;
+  void insertAllocframe(MachineBasicBlock &MBB,
+      MachineBasicBlock::iterator InsertPt, unsigned NumBytes) const;
   bool insertCSRSpillsInBlock(MachineBasicBlock &MBB, const CSIVect &CSI,
       const HexagonRegisterInfo &HRI, bool &PrologueStubs) const;
   bool insertCSRRestoresInBlock(MachineBasicBlock &MBB, const CSIVect &CSI,
@@ -148,9 +159,9 @@ private:
 
   void addCalleeSaveRegistersAsImpOperand(MachineInstr *MI, const CSIVect &CSI,
       bool IsDef, bool IsKill) const;
-  bool shouldInlineCSR(MachineFunction &MF, const CSIVect &CSI) const;
-  bool useSpillFunction(MachineFunction &MF, const CSIVect &CSI) const;
-  bool useRestoreFunction(MachineFunction &MF, const CSIVect &CSI) const;
+  bool shouldInlineCSR(const MachineFunction &MF, const CSIVect &CSI) const;
+  bool useSpillFunction(const MachineFunction &MF, const CSIVect &CSI) const;
+  bool useRestoreFunction(const MachineFunction &MF, const CSIVect &CSI) const;
   bool mayOverflowFrameOffset(MachineFunction &MF) const;
 };
 

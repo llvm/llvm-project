@@ -15,18 +15,21 @@
 #define LLVM_MC_MCSYMBOL_H
 
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCFragment.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
+
 class MCAsmInfo;
-class MCExpr;
-class MCSymbol;
-class MCFragment;
-class MCSection;
 class MCContext;
+class MCExpr;
+class MCSection;
 class raw_ostream;
 
 /// MCSymbol - Instances of this class represent a symbol name in the MC file,
@@ -45,6 +48,7 @@ protected:
     SymbolKindCOFF,
     SymbolKindELF,
     SymbolKindMachO,
+    SymbolKindWasm,
   };
 
   /// A symbol can contain an Offset, or Value, or be Common, but never more
@@ -97,7 +101,7 @@ protected:
 
   /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
   /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
-  unsigned Kind : 2;
+  unsigned Kind : 3;
 
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
@@ -133,7 +137,7 @@ protected:
     const MCExpr *Value;
   };
 
-protected: // MCContext creates and uniques these.
+  // MCContext creates and uniques these.
   friend class MCExpr;
   friend class MCContext;
 
@@ -141,10 +145,10 @@ protected: // MCContext creates and uniques these.
   /// MCSymbol contains a uint64_t so is probably aligned to 8.  On a 32-bit
   /// system, the name is a pointer so isn't going to satisfy the 8 byte
   /// alignment of uint64_t.  Account for that here.
-  typedef union {
+  using NameEntryStorageTy = union {
     const StringMapEntry<bool> *NameEntry;
     uint64_t AlignmentPadding;
-  } NameEntryStorageTy;
+  };
 
   MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
@@ -163,7 +167,6 @@ protected: // MCContext creates and uniques these.
                      MCContext &Ctx);
 
 private:
-
   void operator delete(void *);
   /// \brief Placement delete - required by std, but never called.
   void operator delete(void*, unsigned) {
@@ -174,8 +177,6 @@ private:
     llvm_unreachable("Constructor throws?");
   }
 
-  MCSymbol(const MCSymbol &) = delete;
-  void operator=(const MCSymbol &) = delete;
   MCSection *getSectionPtr(bool SetUsed = true) const {
     if (MCFragment *F = getFragment(SetUsed)) {
       assert(F != AbsolutePseudoFragment);
@@ -195,6 +196,9 @@ private:
   }
 
 public:
+  MCSymbol(const MCSymbol &) = delete;
+  MCSymbol &operator=(const MCSymbol &) = delete;
+
   /// getName - Get the symbol name.
   StringRef getName() const {
     if (!FragmentAndHasName.getInt())
@@ -280,6 +284,8 @@ public:
   bool isCOFF() const { return Kind == SymbolKindCOFF; }
 
   bool isMachO() const { return Kind == SymbolKindMachO; }
+
+  bool isWasm() const { return Kind == SymbolKindWasm; }
 
   /// @}
   /// \name Variable Symbols
@@ -416,6 +422,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCSymbol &Sym) {
   Sym.print(OS, nullptr);
   return OS;
 }
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCSYMBOL_H

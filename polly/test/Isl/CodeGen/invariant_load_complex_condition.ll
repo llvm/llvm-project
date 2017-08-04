@@ -63,8 +63,8 @@ land.end:                                         ; preds = %land.rhs, %entry.sp
   br i1 %5, label %for.cond104.preheader, label %for.cond34.preheader
 
 for.cond34.preheader:                             ; preds = %land.end
-  unreachable
+  ret void
 
 for.cond104.preheader:                            ; preds = %land.end
-  unreachable
+  ret void
 }

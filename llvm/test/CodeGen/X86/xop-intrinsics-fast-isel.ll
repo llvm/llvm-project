@@ -499,12 +499,22 @@ declare <2 x i64> @llvm.x86.xop.vpcmov(<2 x i64>, <2 x i64>, <2 x i64>) nounwind
 define <4 x i64> @test_mm256_cmov_si256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2) {
 ; X32-LABEL: test_mm256_cmov_si256:
 ; X32:       # BB#0:
-; X32-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vxorps %ymm3, %ymm3, %ymm3
+; X32-NEXT:    vcmptrueps %ymm3, %ymm3, %ymm3
+; X32-NEXT:    vxorps %ymm3, %ymm2, %ymm3
+; X32-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; X32-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; X32-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_cmov_si256:
 ; X64:       # BB#0:
-; X64-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vxorps %ymm3, %ymm3, %ymm3
+; X64-NEXT:    vcmptrueps %ymm3, %ymm3, %ymm3
+; X64-NEXT:    vxorps %ymm3, %ymm2, %ymm3
+; X64-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; X64-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; X64-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2)
   ret <4 x i64> %res

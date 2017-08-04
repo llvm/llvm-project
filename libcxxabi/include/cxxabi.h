@@ -21,7 +21,7 @@
 #include <__cxxabi_config.h>
 
 #define _LIBCPPABI_VERSION 1002
-#define LIBCXXABI_NORETURN  __attribute__((noreturn))
+#define _LIBCXXABI_NORETURN  __attribute__((noreturn))
 
 #ifdef __cplusplus
 
@@ -45,7 +45,7 @@ extern _LIBCXXABI_FUNC_VIS void
 __cxa_free_exception(void *thrown_exception) throw();
 
 // 2.4.3 Throwing the Exception Object
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void
 __cxa_throw(void *thrown_exception, std::type_info *tinfo,
             void (*dest)(void *));
 
@@ -55,7 +55,7 @@ __cxa_get_exception_ptr(void *exceptionObject) throw();
 extern _LIBCXXABI_FUNC_VIS void *
 __cxa_begin_catch(void *exceptionObject) throw();
 extern _LIBCXXABI_FUNC_VIS void __cxa_end_catch();
-#if LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
 extern _LIBCXXABI_FUNC_VIS bool
 __cxa_begin_cleanup(void *exceptionObject) throw();
 extern _LIBCXXABI_FUNC_VIS void __cxa_end_cleanup();
@@ -63,19 +63,19 @@ extern _LIBCXXABI_FUNC_VIS void __cxa_end_cleanup();
 extern _LIBCXXABI_FUNC_VIS std::type_info *__cxa_current_exception_type();
 
 // 2.5.4 Rethrowing Exceptions
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_rethrow();
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void __cxa_rethrow();
 
 // 2.6 Auxiliary Runtime APIs
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_bad_cast(void);
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_bad_typeid(void);
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void __cxa_bad_cast(void);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void __cxa_bad_typeid(void);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void
 __cxa_throw_bad_array_new_length(void);
 
 // 3.2.6 Pure Virtual Function API
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_pure_virtual(void);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void __cxa_pure_virtual(void);
 
 // 3.2.7 Deleted Virtual Function API
-extern _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_deleted_virtual(void);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void __cxa_deleted_virtual(void);
 
 // 3.3.2 One-time Construction API
 #ifdef __arm__

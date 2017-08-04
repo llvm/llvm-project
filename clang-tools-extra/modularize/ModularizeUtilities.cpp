@@ -120,8 +120,9 @@ std::error_code ModularizeUtilities::doCoverageCheck(
   std::error_code EC;
   for (ModuleMapIndex = 0; ModuleMapIndex < ModuleMapCount; ++ModuleMapIndex) {
     std::unique_ptr<clang::ModuleMap> &ModMap = ModuleMaps[ModuleMapIndex];
-    CoverageChecker *Checker = CoverageChecker::createCoverageChecker(
-      InputFilePaths[ModuleMapIndex], IncludePaths, CommandLine, ModMap.get());
+    auto Checker = CoverageChecker::createCoverageChecker(
+        InputFilePaths[ModuleMapIndex], IncludePaths, CommandLine,
+        ModMap.get());
     std::error_code LocalEC = Checker->doChecks();
     if (LocalEC.value() > 0)
       EC = LocalEC;

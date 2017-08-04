@@ -1,6 +1,9 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll)' -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll)' -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
+
 ; This tests that setting the unroll count works
 
 

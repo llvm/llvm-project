@@ -28,6 +28,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
@@ -45,6 +46,11 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     "unroll-force-peel-count", cl::init(0), cl::Hidden,
     cl::desc("Force a peel count regardless of profiling information."));
 
+// Designates that a Phi is estimated to become invariant after an "infinite"
+// number of loop iterations (i.e. only may become an invariant if the loop is
+// fully unrolled).
+static const unsigned InfiniteIterationsToInvariance = UINT_MAX;
+
 // Check whether we are capable of peeling this loop.
 static bool canPeel(Loop *L) {
   // Make sure the loop is in simplified form
@@ -55,18 +61,118 @@ static bool canPeel(Loop *L) {
   if (!L->getExitingBlock() || !L->getUniqueExitBlock())
     return false;
 
+  // Don't try to peel loops where the latch is not the exiting block.
+  // This can be an indication of two different things:
+  // 1) The loop is not rotated.
+  // 2) The loop contains irreducible control flow that involves the latch.
+  if (L->getLoopLatch() != L->getExitingBlock())
+    return false;
+
   return true;
+}
+
+// This function calculates the number of iterations after which the given Phi
+// becomes an invariant. The pre-calculated values are memorized in the map. The
+// function (shortcut is I) is calculated according to the following definition:
+// Given %x = phi <Inputs from above the loop>, ..., [%y, %back.edge].
+//   If %y is a loop invariant, then I(%x) = 1.
+//   If %y is a Phi from the loop header, I(%x) = I(%y) + 1.
+//   Otherwise, I(%x) is infinite.
+// TODO: Actually if %y is an expression that depends only on Phi %z and some
+//       loop invariants, we can estimate I(%x) = I(%z) + 1. The example
+//       looks like:
+//         %x = phi(0, %a),  <-- becomes invariant starting from 3rd iteration.
+//         %y = phi(0, 5),
+//         %a = %y + 1.
+static unsigned calculateIterationsToInvariance(
+    PHINode *Phi, Loop *L, BasicBlock *BackEdge,
+    SmallDenseMap<PHINode *, unsigned> &IterationsToInvariance) {
+  assert(Phi->getParent() == L->getHeader() &&
+         "Non-loop Phi should not be checked for turning into invariant.");
+  assert(BackEdge == L->getLoopLatch() && "Wrong latch?");
+  // If we already know the answer, take it from the map.
+  auto I = IterationsToInvariance.find(Phi);
+  if (I != IterationsToInvariance.end())
+    return I->second;
+
+  // Otherwise we need to analyze the input from the back edge.
+  Value *Input = Phi->getIncomingValueForBlock(BackEdge);
+  // Place infinity to map to avoid infinite recursion for cycled Phis. Such
+  // cycles can never stop on an invariant.
+  IterationsToInvariance[Phi] = InfiniteIterationsToInvariance;
+  unsigned ToInvariance = InfiniteIterationsToInvariance;
+
+  if (L->isLoopInvariant(Input))
+    ToInvariance = 1u;
+  else if (PHINode *IncPhi = dyn_cast<PHINode>(Input)) {
+    // Only consider Phis in header block.
+    if (IncPhi->getParent() != L->getHeader())
+      return InfiniteIterationsToInvariance;
+    // If the input becomes an invariant after X iterations, then our Phi
+    // becomes an invariant after X + 1 iterations.
+    unsigned InputToInvariance = calculateIterationsToInvariance(
+        IncPhi, L, BackEdge, IterationsToInvariance);
+    if (InputToInvariance != InfiniteIterationsToInvariance)
+      ToInvariance = InputToInvariance + 1u;
+  }
+
+  // If we found that this Phi lies in an invariant chain, update the map.
+  if (ToInvariance != InfiniteIterationsToInvariance)
+    IterationsToInvariance[Phi] = ToInvariance;
+  return ToInvariance;
 }
 
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
-                            TargetTransformInfo::UnrollingPreferences &UP) {
+                            TargetTransformInfo::UnrollingPreferences &UP,
+                            unsigned &TripCount) {
+  assert(LoopSize > 0 && "Zero loop size is not allowed!");
   UP.PeelCount = 0;
   if (!canPeel(L))
     return;
 
   // Only try to peel innermost loops.
   if (!L->empty())
+    return;
+
+  // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
+  // iterations of the loop. For this we compute the number for iterations after
+  // which every Phi is guaranteed to become an invariant, and try to peel the
+  // maximum number of iterations among these values, thus turning all those
+  // Phis into invariants.
+  // First, check that we can peel at least one iteration.
+  if (2 * LoopSize <= UP.Threshold && UnrollPeelMaxCount > 0) {
+    // Store the pre-calculated values here.
+    SmallDenseMap<PHINode *, unsigned> IterationsToInvariance;
+    // Now go through all Phis to calculate their the number of iterations they
+    // need to become invariants.
+    unsigned DesiredPeelCount = 0;
+    BasicBlock *BackEdge = L->getLoopLatch();
+    assert(BackEdge && "Loop is not in simplified form?");
+    for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
+      PHINode *Phi = cast<PHINode>(&*BI);
+      unsigned ToInvariance = calculateIterationsToInvariance(
+          Phi, L, BackEdge, IterationsToInvariance);
+      if (ToInvariance != InfiniteIterationsToInvariance)
+        DesiredPeelCount = std::max(DesiredPeelCount, ToInvariance);
+    }
+    if (DesiredPeelCount > 0) {
+      // Pay respect to limitations implied by loop size and the max peel count.
+      unsigned MaxPeelCount = UnrollPeelMaxCount;
+      MaxPeelCount = std::min(MaxPeelCount, UP.Threshold / LoopSize - 1);
+      DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
+      // Consider max peel count limitation.
+      assert(DesiredPeelCount > 0 && "Wrong loop size estimation?");
+      DEBUG(dbgs() << "Peel " << DesiredPeelCount << " iteration(s) to turn"
+                   << " some Phis into invariants.\n");
+      UP.PeelCount = DesiredPeelCount;
+      return;
+    }
+  }
+
+  // Bail if we know the statically calculated trip count.
+  // In this case we rather prefer partial unrolling.
+  if (TripCount)
     return;
 
   // If the user provided a peel count, use that.
@@ -164,7 +270,8 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
                             BasicBlock *InsertBot, BasicBlock *Exit,
                             SmallVectorImpl<BasicBlock *> &NewBlocks,
                             LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
-                            ValueToValueMapTy &LVMap, LoopInfo *LI) {
+                            ValueToValueMapTy &LVMap, DominatorTree *DT,
+                            LoopInfo *LI) {
 
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -185,6 +292,17 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
       ParentLoop->addBasicBlockToLoop(NewBB, *LI);
 
     VMap[*BB] = NewBB;
+
+    // If dominator tree is available, insert nodes to represent cloned blocks.
+    if (DT) {
+      if (Header == *BB)
+        DT->addNewBlock(NewBB, InsertTop);
+      else {
+        DomTreeNode *IDom = DT->getNode(*BB)->getIDom();
+        // VMap must contain entry for IDom, as the iteration order is RPO.
+        DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
+      }
+    }
   }
 
   // Hook-up the control flow for the newly inserted blocks.
@@ -198,11 +316,13 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
   // The backedge now goes to the "bottom", which is either the loop's real
   // header (for the last peeled iteration) or the copied header of the next
   // iteration (for every other iteration)
-  BranchInst *LatchBR =
-      cast<BranchInst>(cast<BasicBlock>(VMap[Latch])->getTerminator());
+  BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
+  BranchInst *LatchBR = cast<BranchInst>(NewLatch->getTerminator());
   unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
   LatchBR->setSuccessor(HeaderIdx, InsertBot);
   LatchBR->setSuccessor(1 - HeaderIdx, Exit);
+  if (DT)
+    DT->changeImmediateDominator(InsertBot, NewLatch);
 
   // The new copy of the loop body starts with a bunch of PHI nodes
   // that pick an incoming value from either the preheader, or the previous
@@ -257,7 +377,7 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree *DT,
-                    bool PreserveLCSSA) {
+                    AssumptionCache *AC, bool PreserveLCSSA) {
   if (!canPeel(L))
     return false;
 
@@ -358,7 +478,24 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
       CurHeaderWeight = 1;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, Exit,
-                    NewBlocks, LoopBlocks, VMap, LVMap, LI);
+                    NewBlocks, LoopBlocks, VMap, LVMap, DT, LI);
+
+    // Remap to use values from the current iteration instead of the
+    // previous one.
+    remapInstructionsInBlocks(NewBlocks, VMap);
+
+    if (DT) {
+      // Latches of the cloned loops dominate over the loop exit, so idom of the
+      // latter is the first cloned loop body, as original PreHeader dominates
+      // the original loop body.
+      if (Iter == 0)
+        DT->changeImmediateDominator(Exit, cast<BasicBlock>(LVMap[Latch]));
+#ifndef NDEBUG
+      if (VerifyDomInfo)
+        DT->verifyDomTree();
+#endif
+    }
+
     updateBranchWeights(InsertBot, cast<BranchInst>(VMap[LatchBR]), Iter,
                         PeelCount, ExitWeight);
 
@@ -369,10 +506,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     F->getBasicBlockList().splice(InsertTop->getIterator(),
                                   F->getBasicBlockList(),
                                   NewBlocks[0]->getIterator(), F->end());
-
-    // Remap to use values from the current iteration instead of the
-    // previous one.
-    remapInstructionsInBlocks(NewBlocks, VMap);
   }
 
   // Now adjust the phi nodes in the loop header to get their initial values
@@ -405,8 +538,15 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   }
 
   // If the loop is nested, we changed the parent loop, update SE.
-  if (Loop *ParentLoop = L->getParentLoop())
+  if (Loop *ParentLoop = L->getParentLoop()) {
     SE->forgetLoop(ParentLoop);
+
+    // FIXME: Incrementally update loop-simplify
+    simplifyLoop(ParentLoop, DT, LI, SE, AC, PreserveLCSSA);
+  } else {
+    // FIXME: Incrementally update loop-simplify
+    simplifyLoop(L, DT, LI, SE, AC, PreserveLCSSA);
+  }
 
   NumPeeled++;
 

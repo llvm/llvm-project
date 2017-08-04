@@ -10,7 +10,7 @@
 ; SI: s_sub_i32 [[SDST:s[0-9]+]], 32, {{[s][0-9]+}}
 ; SI: v_mov_b32_e32 [[VDST:v[0-9]+]], [[SDST]]
 ; SI: v_alignbit_b32 {{v[0-9]+, [s][0-9]+, s[0-9]+}}, [[VDST]]
-define void @rotl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y) {
+define amdgpu_kernel void @rotl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y) {
 entry:
   %0 = shl i32 %x, %y
   %1 = sub i32 32, %y
@@ -26,7 +26,7 @@ entry:
 ; SI-DAG: v_alignbit_b32
 ; SI-DAG: v_alignbit_b32
 ; SI: s_endpgm
-define void @rotl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @rotl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
 entry:
   %0 = shl <2 x i32> %x, %y
   %1 = sub <2 x i32> <i32 32, i32 32>, %y
@@ -46,7 +46,7 @@ entry:
 ; SI-DAG: s_sub_i32
 ; SI-DAG: v_alignbit_b32
 ; SI: s_endpgm
-define void @rotl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @rotl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
 entry:
   %0 = shl <4 x i32> %x, %y
   %1 = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %y

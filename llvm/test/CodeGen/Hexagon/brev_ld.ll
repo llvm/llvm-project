@@ -29,7 +29,7 @@ entry:
   %1 = bitcast i64* %inputLR to i8*
   %sub = sub i32 13, %shr1
   %shl = shl i32 1, %sub
-; CHECK: = memd(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: = memd(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %2 = call i8* @llvm.hexagon.brev.ldd(i8* %0, i8* %1, i32 %shl)
   %3 = bitcast i8* %1 to i64*
   %4 = load i64, i64* %3, align 8, !tbaa !0
@@ -49,7 +49,7 @@ entry:
   %1 = bitcast i32* %inputLR to i8*
   %sub = sub i32 14, %shr1
   %shl = shl i32 1, %sub
-; CHECK: = memw(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: = memw(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %2 = call i8* @llvm.hexagon.brev.ldw(i8* %0, i8* %1, i32 %shl)
   %3 = bitcast i8* %1 to i32*
   %4 = load i32, i32* %3, align 4, !tbaa !2
@@ -69,7 +69,7 @@ entry:
   %1 = bitcast i16* %inputLR to i8*
   %sub = sub i32 15, %shr1
   %shl = shl i32 1, %sub
-; CHECK: = memh(r{{[0-9]*}} ++ m0:brev)
+; CHECK: = memh(r{{[0-9]*}}++m0:brev)
   %2 = call i8* @llvm.hexagon.brev.ldh(i8* %0, i8* %1, i32 %shl)
   %3 = bitcast i8* %1 to i16*
   %4 = load i16, i16* %3, align 2, !tbaa !3
@@ -89,7 +89,7 @@ entry:
   %1 = bitcast i16* %inputLR to i8*
   %sub = sub i32 15, %shr1
   %shl = shl i32 1, %sub
-; CHECK: = memuh(r{{[0-9]*}} ++ m0:brev)
+; CHECK: = memuh(r{{[0-9]*}}++m0:brev)
   %2 = call i8* @llvm.hexagon.brev.lduh(i8* %0, i8* %1, i32 %shl)
   %3 = bitcast i8* %1 to i16*
   %4 = load i16, i16* %3, align 2, !tbaa !3
@@ -108,7 +108,7 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub nsw i32 16, %shr1
   %shl = shl i32 1, %sub
-; CHECK: = memub(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: = memub(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %1 = call i8* @llvm.hexagon.brev.ldub(i8* %0, i8* %inputLR, i32 %shl)
   %2 = load i8, i8* %inputLR, align 1, !tbaa !0
   ret i8 %2
@@ -126,7 +126,7 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub nsw i32 16, %shr1
   %shl = shl i32 1, %sub
-; CHECK: = memb(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: = memb(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %1 = call i8* @llvm.hexagon.brev.ldb(i8* %0, i8* %inputLR, i32 %shl)
   %2 = load i8, i8* %inputLR, align 1, !tbaa !0
   ret i8 %2

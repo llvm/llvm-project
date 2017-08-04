@@ -9,7 +9,7 @@
 ; CHECK: store <4 x float>
 
 ; Function Attrs: nounwind
-define void @store_vectorize_with_alias(i8 addrspace(1)* %a, i8 addrspace(1)* %b) #0 {
+define amdgpu_kernel void @store_vectorize_with_alias(i8 addrspace(1)* %a, i8 addrspace(1)* %b) #0 {
 bb:
   %tmp = bitcast i8 addrspace(1)* %b to float addrspace(1)*
   %tmp1 = load float, float addrspace(1)* %tmp, align 4

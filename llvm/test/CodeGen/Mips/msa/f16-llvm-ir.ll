@@ -1,21 +1,21 @@
 ; RUN: llc -relocation-model=pic -march=mipsel -mcpu=mips32r5 \
-; RUN:     -mattr=+fp64,+msa < %s | FileCheck %s \
+; RUN:     -mattr=+fp64,+msa -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=ALL,MIPS32,MIPSR5,MIPS32-O32,MIPS32R5-O32
 ; RUN: llc -relocation-model=pic -march=mips64el -mcpu=mips64r5 \
-; RUN:     -mattr=+fp64,+msa -target-abi n32 < %s | FileCheck %s \
+; RUN:     -mattr=+fp64,+msa -verify-machineinstrs -target-abi n32 < %s | FileCheck %s \
 ; RUN:     --check-prefixes=ALL,MIPS64,MIPSR5,MIPS64-N32,MIPS64R5-N32
 ; RUN: llc -relocation-model=pic -march=mips64el -mcpu=mips64r5 \
-; RUN:     -mattr=+fp64,+msa -target-abi n64 < %s | FileCheck %s \
+; RUN:     -mattr=+fp64,+msa -verify-machineinstrs -target-abi n64 < %s | FileCheck %s \
 ; RUN:     --check-prefixes=ALL,MIPS64,MIPSR5,MIPS64-N64,MIPS64R5-N64
 
 ; RUN: llc -relocation-model=pic -march=mipsel -mcpu=mips32r6 \
-; RUN:     -mattr=+fp64,+msa < %s | FileCheck %s \
+; RUN:     -mattr=+fp64,+msa -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=ALL,MIPS32,MIPSR6,MIPSR6-O32
 ; RUN: llc -relocation-model=pic -march=mips64el -mcpu=mips64r6 \
-; RUN:     -mattr=+fp64,+msa -target-abi n32 < %s | FileCheck %s \
+; RUN:     -mattr=+fp64,+msa -verify-machineinstrs -target-abi n32 < %s | FileCheck %s \
 ; RUN:     --check-prefixes=ALL,MIPS64,MIPSR6,MIPS64-N32,MIPSR6-N32
 ; RUN: llc -relocation-model=pic -march=mips64el -mcpu=mips64r6 \
-; RUN:     -mattr=+fp64,+msa -target-abi n64 < %s | FileCheck %s \
+; RUN:     -mattr=+fp64,+msa -verify-machineinstrs -target-abi n64 < %s | FileCheck %s \
 ; RUN:     --check-prefixes=ALL,MIPS64,MIPSR6,MIPS64-N64,MIPSR6-N64
 
 
@@ -234,15 +234,15 @@ entry:
 ; MIPS32:     insert.w $w[[W0]][1], $[[R1]]
 ; MIPS32:     insert.w $w[[W0]][3], $[[R1]]
 
-; MIPS64-N64: ld $[[R3:[0-9]+]], %got_disp(h)
-; MIPS64-N32: lw $[[R3:[0-9]+]], %got_disp(h)
-; MIPS64:     dmfc1 $[[R1:[0-9]+]], $f[[F2]]
-; MIPS64:     fill.d $w[[W0:[0-9]+]], $[[R1]]
+; MIPS64-N64-DAG: ld $[[R3:[0-9]+]], %got_disp(h)
+; MIPS64-N32-DAG: lw $[[R3:[0-9]+]], %got_disp(h)
+; MIPS64-DAG:     dmfc1 $[[R1:[0-9]+]], $f[[F2]]
+; MIPS64-DAG:     fill.d $w[[W0:[0-9]+]], $[[R1]]
 
-; ALL:        fexdo.w $w[[W1:[0-9]+]], $w[[W0]], $w[[W0]]
-; ALL:        fexdo.h $w[[W2:[0-9]+]], $w[[W1]], $w[[W1]]
+; ALL-DAG:        fexdo.w $w[[W1:[0-9]+]], $w[[W0]], $w[[W0]]
+; ALL-DAG:        fexdo.h $w[[W2:[0-9]+]], $w[[W1]], $w[[W1]]
 
-; MIPS32:     lw $[[R3:[0-9]+]], %got(h)
+; MIPS32-DAG:     lw $[[R3:[0-9]+]], %got(h)
 
 ; ALL:        copy_u.h $[[R2:[0-9]+]], $w[[W2]]
 ; ALL:        sh $[[R2]], 0($[[R3]])

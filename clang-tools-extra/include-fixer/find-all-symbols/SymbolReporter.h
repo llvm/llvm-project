@@ -20,8 +20,8 @@ class SymbolReporter {
 public:
   virtual ~SymbolReporter() = default;
 
-  virtual void reportSymbol(llvm::StringRef FileName,
-                            const SymbolInfo &Symbol) = 0;
+  virtual void reportSymbols(llvm::StringRef FileName,
+                             const SymbolInfo::SignalMap &Symbols) = 0;
 };
 
 } // namespace find_all_symbols

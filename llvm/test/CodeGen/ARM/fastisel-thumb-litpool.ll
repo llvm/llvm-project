@@ -5,6 +5,7 @@
 ; hence the CHECK-NOT.
 
 define i32 @test_thumb_ldrlit() minsize {
+; CHECK-LABEL: test_thumb_ldrlit:
 ; CHECK: ldr r0, LCPI0_0
 ; CHECK-NOT: ldr
   ret i32 12345678

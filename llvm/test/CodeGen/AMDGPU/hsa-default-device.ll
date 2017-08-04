@@ -4,7 +4,7 @@
 ; unsupported device.
 
 ; CHECK: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
-define void @test_kernel(float addrspace(1)* %out0, double addrspace(1)* %out1) nounwind {
+define amdgpu_kernel void @test_kernel(float addrspace(1)* %out0, double addrspace(1)* %out1) nounwind {
   store float 0.0, float addrspace(1)* %out0
   ret void
 }

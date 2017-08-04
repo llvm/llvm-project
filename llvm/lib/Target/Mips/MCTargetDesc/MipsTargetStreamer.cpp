@@ -13,16 +13,17 @@
 
 #include "MipsTargetStreamer.h"
 #include "InstPrinter/MipsInstPrinter.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"
 #include "MipsTargetObjectFile.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 
@@ -49,6 +50,8 @@ void MipsTargetStreamer::emitDirectiveSetMacro() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoMacro() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetMsa() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoMsa() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetMt() {}
+void MipsTargetStreamer::emitDirectiveSetNoMt() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetAt() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetAtWithArg(unsigned RegNo) {
   forbidModuleDirective();
@@ -117,6 +120,7 @@ void MipsTargetStreamer::emitDirectiveModuleOddSPReg() {
 }
 void MipsTargetStreamer::emitDirectiveModuleSoftFloat() {}
 void MipsTargetStreamer::emitDirectiveModuleHardFloat() {}
+void MipsTargetStreamer::emitDirectiveModuleMT() {}
 void MipsTargetStreamer::emitDirectiveSetFp(
     MipsABIFlagsSection::FpABIKind Value) {
   forbidModuleDirective();
@@ -391,6 +395,16 @@ void MipsTargetAsmStreamer::emitDirectiveSetNoMsa() {
   MipsTargetStreamer::emitDirectiveSetNoMsa();
 }
 
+void MipsTargetAsmStreamer::emitDirectiveSetMt() {
+  OS << "\t.set\tmt\n";
+  MipsTargetStreamer::emitDirectiveSetMt();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetNoMt() {
+  OS << "\t.set\tnomt\n";
+  MipsTargetStreamer::emitDirectiveSetNoMt();
+}
+
 void MipsTargetAsmStreamer::emitDirectiveSetAt() {
   OS << "\t.set\tat\n";
   MipsTargetStreamer::emitDirectiveSetAt();
@@ -655,6 +669,10 @@ void MipsTargetAsmStreamer::emitDirectiveModuleHardFloat() {
   OS << "\t.module\thardfloat\n";
 }
 
+void MipsTargetAsmStreamer::emitDirectiveModuleMT() {
+  OS << "\t.module\tmt\n";
+}
+
 // This part is for ELF object output.
 MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
@@ -684,6 +702,17 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // the ABI, but this is fraught with wide ranging dependency
   // issues as well.
   unsigned EFlags = MCA.getELFHeaderEFlags();
+
+  // FIXME: Fix a dependency issue by instantiating the ABI object to some
+  // default based off the triple. The triple doesn't describe the target
+  // fully, but any external user of the API that uses the MCTargetStreamer
+  // would otherwise crash on assertion failure.
+
+  ABI = MipsABIInfo(
+      STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
+              STI.getTargetTriple().getArch() == Triple::ArchType::mips
+          ? MipsABIInfo::O32()
+          : MipsABIInfo::N64());
 
   // Architecture
   if (Features[Mips::FeatureMips64r6])
@@ -721,23 +750,18 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   if (Features[Mips::FeatureNaN2008])
     EFlags |= ELF::EF_MIPS_NAN2008;
 
-  // -mabicalls and -mplt are not implemented but we should act as if they were
-  // given.
-  EFlags |= ELF::EF_MIPS_CPIC;
-
   MCA.setELFHeaderEFlags(EFlags);
 }
 
 void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  if (!isMicroMipsEnabled())
-    return;
   getStreamer().getAssembler().registerSymbol(*Symbol);
   uint8_t Type = Symbol->getType();
   if (Type != ELF::STT_FUNC)
     return;
 
-  Symbol->setOther(ELF::STO_MIPS_MICROMIPS);
+  if (isMicroMipsEnabled())
+    Symbol->setOther(ELF::STO_MIPS_MICROMIPS);
 }
 
 void MipsTargetELFStreamer::finish() {
@@ -795,10 +819,13 @@ void MipsTargetELFStreamer::finish() {
   } else if (Features[Mips::FeatureMips64r2] || Features[Mips::FeatureMips64])
     EFlags |= ELF::EF_MIPS_32BITMODE;
 
-  // If we've set the cpic eflag and we're n64, go ahead and set the pic
-  // one as well.
-  if (EFlags & ELF::EF_MIPS_CPIC && getABI().IsN64())
-    EFlags |= ELF::EF_MIPS_PIC;
+  // -mplt is not implemented but we should act as if it was
+  // given.
+  if (!Features[Mips::FeatureNoABICalls])
+    EFlags |= ELF::EF_MIPS_CPIC;
+
+  if (Pic)
+    EFlags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
 
   MCA.setELFHeaderEFlags(EFlags);
 
@@ -904,10 +931,10 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   const MCExpr *Size = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
       ExprRef, Context);
-  int64_t AbsSize;
-  if (!Size->evaluateAsAbsolute(AbsSize, MCA))
-    llvm_unreachable("Function size must be evaluatable as absolute");
-  Size = MCConstantExpr::create(AbsSize, Context);
+
+  // The ELFObjectWriter can determine the absolute size as it has access to
+  // the layout information of the assembly file, so a size expression rather
+  // than an absolute value is ok here.
   static_cast<MCSymbolELF *>(Sym)->setSize(Size);
 }
 

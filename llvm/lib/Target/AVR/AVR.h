@@ -15,8 +15,8 @@
 #ifndef LLVM_AVR_H
 #define LLVM_AVR_H
 
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 

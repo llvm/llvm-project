@@ -1,6 +1,11 @@
 # RUN: llvm-mc -triple hexagon -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 # Hexagon Programmer's Reference Manual 11.5 LD
 
+# Load doubleword
+# CHECK: 90 ff d5 3a
+r17:16 = memd(r21 + r31<<#3)
+# CHECK: b0 c2 c0 49
+r17:16 = memd(gp+#168)
 # CHECK: 02 40 00 00
 # CHECK-NEXT: 10 c5 c0 49
 r17:16 = memd(##168)
@@ -62,7 +67,7 @@ if (!p3) r17:16 = memd(r21++#40)
 # CHECK: 91 ff 15 3a
 r17 = memb(r21 + r31<<#3)
 # CHECK: b1 c2 00 49
-r17 = memb(#21)
+r17 = memb(gp+#21)
 # CHECK: 00 40 00 00
 # CHECK-NEXT: b1 c2 00 49
 r17 = memb(##21)
@@ -140,7 +145,7 @@ r17:16 = memh_fifo(r21 ++ I:circ(m1))
 # CHECK: 91 ff 55 3a
 r17 = memh(r21 + r31<<#3)
 # CHECK: b1 c2 40 49
-r17 = memh(#42)
+r17 = memh(gp+#42)
 # CHECK: 00 40 00 00
 # CHECK-NEXT: 51 c5 40 49
 r17 = memh(##42)
@@ -202,7 +207,7 @@ if (!p3) r17 = memh(r21 + #62)
 # CHECK: 91 ff 35 3a
 r17 = memub(r21 + r31<<#3)
 # CHECK: b1 c2 20 49
-r17 = memub(#21)
+r17 = memub(gp+#21)
 # CHECK: 00 40 00 00
 # CHECK-NEXT: b1 c2 20 49
 r17 = memub(##21)
@@ -264,7 +269,7 @@ if (!p3) r17 = memub(r21++#5)
 # CHECK: 91 ff 75 3a
 r17 = memuh(r21 + r31<<#3)
 # CHECK: b1 c2 60 49
-r17 = memuh(#42)
+r17 = memuh(gp+#42)
 # CHECK: 00 40 00 00
 # CHECK-NEXT: 51 c5 60 49
 r17 = memuh(##42)
@@ -326,7 +331,7 @@ if (!p3) r17 = memuh(r21++#10)
 # CHECK: 91 ff 95 3a
 r17 = memw(r21 + r31<<#3)
 # CHECK: b1 c2 80 49
-r17 = memw(#84)
+r17 = memw(gp+#84)
 # CHECK: 01 40 00 00
 # CHECK-NEXT: 91 c2 80 49
 r17 = memw(##84)

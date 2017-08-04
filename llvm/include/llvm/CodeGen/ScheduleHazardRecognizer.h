@@ -29,10 +29,10 @@ protected:
   /// state. Important to restore the state after backtracking. Additionally,
   /// MaxLookAhead=0 identifies a fake recognizer, allowing the client to
   /// bypass virtual calls. Currently the PostRA scheduler ignores it.
-  unsigned MaxLookAhead;
+  unsigned MaxLookAhead = 0;
 
 public:
-  ScheduleHazardRecognizer(): MaxLookAhead(0) {}
+  ScheduleHazardRecognizer() = default;
   virtual ~ScheduleHazardRecognizer();
 
   enum HazardType {
@@ -117,6 +117,6 @@ public:
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SCHEDULEHAZARDRECOGNIZER_H

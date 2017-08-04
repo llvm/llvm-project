@@ -12,15 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCCodeView.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/COFF.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
@@ -145,7 +145,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
   MCSymbol *StringBegin = Ctx.createTempSymbol("strtab_begin", false),
            *StringEnd = Ctx.createTempSymbol("strtab_end", false);
 
-  OS.EmitIntValue(unsigned(ModuleSubstreamKind::StringTable), 4);
+  OS.EmitIntValue(unsigned(DebugSubsectionKind::StringTable), 4);
   OS.emitAbsoluteSymbolDiff(StringEnd, StringBegin, 4);
   OS.EmitLabel(StringBegin);
 
@@ -172,7 +172,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
   MCSymbol *FileBegin = Ctx.createTempSymbol("filechecksums_begin", false),
            *FileEnd = Ctx.createTempSymbol("filechecksums_end", false);
 
-  OS.EmitIntValue(unsigned(ModuleSubstreamKind::FileChecksums), 4);
+  OS.EmitIntValue(unsigned(DebugSubsectionKind::FileChecksums), 4);
   OS.emitAbsoluteSymbolDiff(FileEnd, FileBegin, 4);
   OS.EmitLabel(FileBegin);
 
@@ -197,7 +197,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   MCSymbol *LineBegin = Ctx.createTempSymbol("linetable_begin", false),
            *LineEnd = Ctx.createTempSymbol("linetable_end", false);
 
-  OS.EmitIntValue(unsigned(ModuleSubstreamKind::Lines), 4);
+  OS.EmitIntValue(unsigned(DebugSubsectionKind::Lines), 4);
   OS.emitAbsoluteSymbolDiff(LineEnd, LineBegin, 4);
   OS.EmitLabel(LineBegin);
   OS.EmitCOFFSecRel32(FuncBegin, /*Offset=*/0);
@@ -208,7 +208,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   bool HaveColumns = any_of(Locs, [](const MCCVLineEntry &LineEntry) {
     return LineEntry.getColumn() != 0;
   });
-  OS.EmitIntValue(HaveColumns ? int(LineFlags::HaveColumns) : 0, 2);
+  OS.EmitIntValue(HaveColumns ? int(LF_HaveColumns) : 0, 2);
   OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 4);
 
   for (auto I = Locs.begin(), E = Locs.end(); I != E;) {

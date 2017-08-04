@@ -9,6 +9,11 @@
  */
 int test_omp_nested()
 {
+#ifdef _OPENMP
+  if (omp_get_max_threads() > 4)
+    omp_set_num_threads(4);
+#endif
+
   int counter = 0;
 #ifdef _OPENMP
   omp_set_nested(1);

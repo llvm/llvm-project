@@ -46,7 +46,7 @@ entry:
   %agg.tmp.sroa.3 = alloca [20 x i8], align 4
   tail call void @llvm.dbg.declare(metadata [20 x i8]* %agg.tmp.sroa.3, metadata !25, metadata !30), !dbg !31
   %agg.tmp.sroa.0.0.copyload = load i32, i32* getelementptr inbounds (%struct.A, %struct.A* @b, i64 0, i32 0), align 8, !dbg !33
-  tail call void @llvm.dbg.value(metadata i32 %agg.tmp.sroa.0.0.copyload, i64 0, metadata !25, metadata !34), !dbg !31
+  tail call void @llvm.dbg.value(metadata i32 %agg.tmp.sroa.0.0.copyload, metadata !25, metadata !34), !dbg !31
   %agg.tmp.sroa.3.0..sroa_idx = getelementptr inbounds [20 x i8], [20 x i8]* %agg.tmp.sroa.3, i64 0, i64 0, !dbg !33
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.3.0..sroa_idx, i8* getelementptr (i8, i8* bitcast (%struct.A* @b to i8*), i64 4), i64 20, i32 4, i1 false), !dbg !33
   tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !25, metadata !35) #0, !dbg !31
@@ -74,7 +74,7 @@ while.body:                                       ; preds = %while.body, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

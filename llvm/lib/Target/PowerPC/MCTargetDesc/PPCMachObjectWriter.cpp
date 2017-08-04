@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -18,7 +19,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MachO.h"
 
 using namespace llvm;
 
@@ -151,7 +151,7 @@ static void makeRelocationInfo(MachO::any_relocation_info &MRE,
   // The bitfield offsets that work (as determined by trial-and-error)
   // are different than what is documented in the mach-o manuals.
   // This appears to be an endianness issue; reversing the order of the
-  // documented bitfields in <llvm/Support/MachO.h> fixes this (but
+  // documented bitfields in <llvm/BinaryFormat/MachO.h> fixes this (but
   // breaks x86/ARM assembly).
   MRE.r_word1 = ((Index << 8) |    // was << 0
                  (IsPCRel << 7) |  // was << 24
@@ -219,11 +219,11 @@ bool PPCMachObjectWriter::recordScatteredRelocation(
     const MCSymbol *SB = &B->getSymbol();
 
     if (!SB->getFragment())
-      report_fatal_error("symbol '" + B->getSymbol().getName() +
+      report_fatal_error("symbol '" + SB->getName() +
                          "' can not be undefined in a subtraction expression");
 
-    // FIXME: is Type correct? see include/llvm/Support/MachO.h
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Layout);
+    // FIXME: is Type correct? see include/llvm/BinaryFormat/MachO.h
+    Value2 = Writer->getSymbolAddress(*SB, Layout);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
   // FIXME: does FixedValue get used??

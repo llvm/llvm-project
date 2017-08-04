@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 

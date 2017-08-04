@@ -18,14 +18,20 @@
 
 #ifdef GENERIC
 #define AS generic
+#define AS_COMP local
+#define AS_INCOMP constant
 #endif
 
 #ifdef GLOBAL
 #define AS global
+#define AS_COMP global
+#define AS_INCOMP local
 #endif
 
 #ifdef CONSTANT
 #define AS constant
+#define AS_COMP constant
+#define AS_INCOMP global
 #endif
 
 void f_glob(global int *arg_glob) {}
@@ -263,12 +269,16 @@ void test_ternary() {
   var_void_gen = 0 ? var_cond : var_glob_ch;
 #ifdef CONSTANT
 // expected-error@-2{{conditional operator with the second and third operands of type  ('__constant int *' and '__global char *') which are pointers to non-overlapping address spaces}}
+#else
+// expected-warning-re@-4{{pointer type mismatch ('__{{global|generic}} int *' and '__global char *')}}
 #endif
 
   local char *var_loc_ch;
   var_void_gen = 0 ? var_cond : var_loc_ch;
 #ifndef GENERIC
 // expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|constant}} int *' and '__local char *') which are pointers to non-overlapping address spaces}}
+#else
+// expected-warning@-4{{pointer type mismatch ('__generic int *' and '__local char *')}}
 #endif
 
   constant void *var_void_const;
@@ -276,18 +286,45 @@ void test_ternary() {
   var_void_const = 0 ? var_cond : var_const_ch;
 #ifndef CONSTANT
 // expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|generic}} int *' and '__constant char *') which are pointers to non-overlapping address spaces}}
+#else
+// expected-warning@-4{{pointer type mismatch ('__constant int *' and '__constant char *')}}
 #endif
 
   private char *var_priv_ch;
   var_void_gen = 0 ? var_cond : var_priv_ch;
 #ifndef GENERIC
 // expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|constant}} int *' and 'char *') which are pointers to non-overlapping address spaces}}
+#else
+// expected-warning@-4{{pointer type mismatch ('__generic int *' and 'char *')}}
 #endif
 
   generic char *var_gen_ch;
   var_void_gen = 0 ? var_cond : var_gen_ch;
 #ifdef CONSTANT
 // expected-error@-2{{conditional operator with the second and third operands of type  ('__constant int *' and '__generic char *') which are pointers to non-overlapping address spaces}}
+#else
+// expected-warning-re@-4{{pointer type mismatch ('__{{global|generic}} int *' and '__generic char *')}}
 #endif
 }
 
+void test_pointer_chains() {
+  AS int *AS *var_as_as_int;
+  AS int *AS_COMP *var_asc_as_int;
+  AS_INCOMP int *AS_COMP *var_asc_asn_int;
+  AS_COMP int *AS_COMP *var_asc_asc_int;
+
+  // Case 1:
+  //  * address spaces of corresponded most outer pointees overlaps, their canonical types are equal
+  //  * CVR, address spaces and canonical types of the rest of pointees are equivalent.
+  var_as_as_int = 0 ? var_as_as_int : var_asc_as_int;
+
+  // Case 2: Corresponded inner pointees has non-overlapping address spaces.
+  var_as_as_int = 0 ? var_as_as_int : var_asc_asn_int;
+// expected-warning-re@-1{{pointer type mismatch ('__{{(generic|global|constant)}} int *__{{(generic|global|constant)}} *' and '__{{(local|global|constant)}} int *__{{(constant|local|global)}} *')}}
+
+  // Case 3: Corresponded inner pointees has overlapping but not equivalent address spaces.
+#ifdef GENERIC
+  var_as_as_int = 0 ? var_as_as_int : var_asc_asc_int;
+// expected-warning-re@-1{{pointer type mismatch ('__{{(generic|global|constant)}} int *__{{(generic|global|constant)}} *' and '__{{(local|global|constant)}} int *__{{(local|global|constant)}} *')}}
+#endif
+}

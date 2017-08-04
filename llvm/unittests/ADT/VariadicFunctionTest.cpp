@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/VariadicFunction.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "gtest/gtest.h"
 
 using namespace llvm;
 namespace {

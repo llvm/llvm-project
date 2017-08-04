@@ -30,6 +30,14 @@ public:
     return Error::success();
   }
 
+  Error visitSymbolBegin(CVSymbol &Record, uint32_t Offset) override {
+    for (auto Visitor : Pipeline) {
+      if (auto EC = Visitor->visitSymbolBegin(Record, Offset))
+        return EC;
+    }
+    return Error::success();
+  }
+
   Error visitSymbolBegin(CVSymbol &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitSymbolBegin(Record))
@@ -59,7 +67,7 @@ public:
     return Error::success();                                                   \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "llvm/DebugInfo/CodeView/CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
   std::vector<SymbolVisitorCallbacks *> Pipeline;

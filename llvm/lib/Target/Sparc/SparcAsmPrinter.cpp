@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Sparc.h"
 #include "InstPrinter/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "Sparc.h"
 #include "SparcInstrInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetStreamer.h"

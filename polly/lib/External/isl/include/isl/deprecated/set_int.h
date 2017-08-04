@@ -17,7 +17,7 @@ __isl_give isl_set *isl_set_upper_bound(__isl_take isl_set *set,
 __isl_give isl_set *isl_set_fix(__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos, isl_int value);
 
-int isl_set_plain_is_fixed(__isl_keep isl_set *set,
+isl_bool isl_set_plain_is_fixed(__isl_keep isl_set *set,
 	enum isl_dim_type type, unsigned pos, isl_int *val);
 
 #if defined(__cplusplus)

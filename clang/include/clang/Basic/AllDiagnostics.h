@@ -24,11 +24,12 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
+#include "clang/Tooling/Core/RefactoringDiagnostic.h"
 
 namespace clang {
 template <size_t SizeOfStr, typename FieldType>
 class StringSizerHelper {
-  char FIELD_TOO_SMALL[SizeOfStr <= FieldType(~0U) ? 1 : -1];
+  static_assert(SizeOfStr <= FieldType(~0U), "Field too small!");
 public:
   enum { Size = SizeOfStr };
 };

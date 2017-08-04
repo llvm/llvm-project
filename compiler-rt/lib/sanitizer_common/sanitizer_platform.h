@@ -13,7 +13,7 @@
 #ifndef SANITIZER_PLATFORM_H
 #define SANITIZER_PLATFORM_H
 
-#if !defined(__linux__) && !defined(__FreeBSD__) && \
+#if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
   !defined(__APPLE__) && !defined(_WIN32)
 # error "This operating system is not supported"
 #endif
@@ -28,6 +28,12 @@
 # define SANITIZER_FREEBSD 1
 #else
 # define SANITIZER_FREEBSD 0
+#endif
+
+#if defined(__NetBSD__)
+# define SANITIZER_NETBSD 1
+#else
+# define SANITIZER_NETBSD 0
 #endif
 
 #if defined(__APPLE__)
@@ -79,7 +85,8 @@
 # define SANITIZER_ANDROID 0
 #endif
 
-#define SANITIZER_POSIX (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC)
+#define SANITIZER_POSIX \
+  (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || SANITIZER_NETBSD)
 
 #if __LP64__ || defined(_WIN64)
 #  define SANITIZER_WORDSIZE 64
@@ -160,6 +167,12 @@
 # define SANITIZER_PPC64 0
 # define SANITIZER_PPC64V1 0
 # define SANITIZER_PPC64V2 0
+#endif
+
+#if defined(__arm__)
+# define SANITIZER_ARM 1
+#else
+# define SANITIZER_ARM 0
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
@@ -252,5 +265,16 @@
 #if SANITIZER_GO == 0
 # define SANITIZER_GO 0
 #endif
+
+// On PowerPC and ARM Thumb, calling pthread_exit() causes LSan to detect leaks.
+// pthread_exit() performs unwinding that leads to dlopen'ing libgcc_s.so.
+// dlopen mallocs "libgcc_s.so" string which confuses LSan, it fails to realize
+// that this allocation happens in dynamic linker and should be ignored.
+#if SANITIZER_PPC || defined(__thumb__)
+# define SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT 1
+#else
+# define SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT 0
+#endif
+
 
 #endif // SANITIZER_PLATFORM_H

@@ -15,7 +15,9 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 #define LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
 
 namespace llvm {
 class MCSymbol;

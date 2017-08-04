@@ -58,9 +58,6 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   case BuiltinType::OCLQueue:
     return llvm::PointerType::get(
         llvm::StructType::create(Ctx, "opencl.queue_t"), 0);
-  case BuiltinType::OCLNDRange:
-    return llvm::PointerType::get(
-        llvm::StructType::create(Ctx, "opencl.ndrange_t"), 0);
   case BuiltinType::OCLReserveID:
     return llvm::PointerType::get(
         llvm::StructType::create(Ctx, "opencl.reserve_id_t"), 0);

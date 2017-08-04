@@ -4,10 +4,18 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   android-cloexec-creat
+   android-cloexec-fopen
+   android-cloexec-open
+   android-cloexec-socket
    boost-use-to-string
+   bugprone-suspicious-memset-usage
+   bugprone-undefined-memory-manipulation
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
+   cert-dcl21-cpp
    cert-dcl50-cpp
    cert-dcl54-cpp (redirects to misc-new-delete-overloads) <cert-dcl54-cpp>
+   cert-dcl58-cpp
    cert-dcl59-cpp (redirects to google-build-namespaces) <cert-dcl59-cpp>
    cert-env33-c
    cert-err09-cpp (redirects to misc-throw-by-value-catch-by-reference) <cert-err09-cpp>
@@ -49,9 +57,21 @@ Clang-Tidy Checks
    google-readability-todo
    google-runtime-int
    google-runtime-member-string-references
-   google-runtime-memset
    google-runtime-operator
    google-runtime-references
+   hicpp-explicit-conversions
+   hicpp-function-size
+   hicpp-invalid-access-moved
+   hicpp-member-init
+   hicpp-named-parameter
+   hicpp-new-delete-operators
+   hicpp-no-assembler
+   hicpp-noexcept-move
+   hicpp-special-member-functions
+   hicpp-undelegated-constructor
+   hicpp-use-equals-default
+   hicpp-use-equals-delete
+   hicpp-use-override
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -63,9 +83,11 @@ Clang-Tidy Checks
    misc-definitions-in-headers
    misc-fold-init-type
    misc-forward-declaration-namespace
+   misc-forwarding-reference-overload
    misc-inaccurate-erase
    misc-incorrect-roundings
    misc-inefficient-algorithm
+   misc-lambda-function-name
    misc-macro-parentheses
    misc-macro-repeated-side-effects
    misc-misplaced-const
@@ -109,13 +131,17 @@ Clang-Tidy Checks
    modernize-raw-string-literal
    modernize-redundant-void-arg
    modernize-replace-auto-ptr
+   modernize-replace-random-shuffle
+   modernize-return-braced-init-list
    modernize-shrink-to-fit
+   modernize-unary-static-assert
    modernize-use-auto
    modernize-use-bool-literals
    modernize-use-default-member-init
    modernize-use-emplace
    modernize-use-equals-default
    modernize-use-equals-delete
+   modernize-use-noexcept
    modernize-use-nullptr
    modernize-use-override
    modernize-use-transparent-functors
@@ -126,6 +152,7 @@ Clang-Tidy Checks
    performance-for-range-copy
    performance-implicit-cast-in-loop
    performance-inefficient-string-concatenation
+   performance-inefficient-vector-operation
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param
@@ -139,6 +166,7 @@ Clang-Tidy Checks
    readability-identifier-naming
    readability-implicit-bool-cast
    readability-inconsistent-declaration-parameter-name
+   readability-misleading-indentation
    readability-misplaced-array-index
    readability-named-parameter
    readability-non-const-parameter

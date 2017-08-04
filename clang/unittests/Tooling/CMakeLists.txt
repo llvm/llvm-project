@@ -11,9 +11,11 @@ if (MSVC)
 endif()
 
 add_clang_unittest(ToolingTests
+  CastExprTest.cpp
   CommentHandlerTest.cpp
   CompilationDatabaseTest.cpp
-  FixItTest.cpp  
+  DiagnosticsYamlTest.cpp
+  FixItTest.cpp
   LookupTest.cpp
   QualTypeNamesTest.cpp
   RecursiveASTVisitorTest.cpp
@@ -38,4 +40,5 @@ target_link_libraries(ToolingTests
   clangRewrite
   clangTooling
   clangToolingCore
+  clangToolingRefactor
   )

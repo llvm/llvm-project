@@ -120,6 +120,18 @@ entity.
 It operates on the current, potentially unsaved buffer and does not create
 or save any files. To revert a formatting, just undo.
 
+An alternative option is to format changes when saving a file and thus to
+have a zero-effort integration into the coding workflow. To do this, add this to
+your `.vimrc`:
+
+.. code-block:: vim
+
+  function! Formatonsave()
+    let l:formatdiff = 1
+    pyf ~/llvm/tools/clang/tools/clang-format/clang-format.py
+  endfunction
+  autocmd BufWritePre *.h,*.cc,*.cpp call Formatonsave()
+
 
 Emacs Integration
 =================
@@ -162,8 +174,9 @@ Download the latest Visual Studio extension from the `alpha build site
 Script for patch reformatting
 =============================
 
-The python script `clang/tools/clang-format-diff.py` parses the output of
-a unified diff and reformats all contained lines with :program:`clang-format`.
+The python script `clang/tools/clang-format/clang-format-diff.py` parses the
+output of a unified diff and reformats all contained lines with
+:program:`clang-format`.
 
 .. code-block:: console
 

@@ -33,10 +33,10 @@ define i8 @global8_load() {
 
 define void @array8_store() {
 ; CHECK-LABEL: array8_store:
-; CHECK: ldi [[REG1:r[0-9]+]], 1
-; CHECK: sts char.array, [[REG1]]
 ; CHECK: ldi [[REG2:r[0-9]+]], 2
 ; CHECK: sts char.array+1, [[REG2]]
+; CHECK: ldi [[REG1:r[0-9]+]], 1
+; CHECK: sts char.array, [[REG1]]
 ; CHECK: ldi [[REG:r[0-9]+]], 3
 ; CHECK: sts char.array+2, [[REG]]
   store i8 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 0)
@@ -83,14 +83,18 @@ define i16 @global16_load() {
 
 define void @array16_store() {
 ; CHECK-LABEL: array16_store:
-; CHECK: ldi [[REG1:r[0-9]+]], 187
-; CHECK: ldi [[REG2:r[0-9]+]], 170
-; CHECK: sts int.array+1, [[REG2]]
-; CHECK: sts int.array, [[REG1]]
+
 ; CHECK: ldi [[REG1:r[0-9]+]], 204
 ; CHECK: ldi [[REG2:r[0-9]+]], 170
 ; CHECK: sts int.array+3, [[REG2]]
 ; CHECK: sts int.array+2, [[REG1]]
+
+; CHECK: ldi [[REG1:r[0-9]+]], 187
+; CHECK: ldi [[REG2:r[0-9]+]], 170
+; CHECK: sts int.array+1, [[REG2]]
+; CHECK: sts int.array, [[REG1]]
+
+
 ; CHECK: ldi [[REG1:r[0-9]+]], 221
 ; CHECK: ldi [[REG2:r[0-9]+]], 170
 ; CHECK: sts int.array+5, [[REG2]]
@@ -148,14 +152,6 @@ define i32 @global32_load() {
 
 define void @array32_store() {
 ; CHECK-LABEL: array32_store:
-; CHECK: ldi [[REG1:r[0-9]+]], 27
-; CHECK: ldi [[REG2:r[0-9]+]], 172
-; CHECK: sts long.array+3, [[REG2]]
-; CHECK: sts long.array+2, [[REG1]]
-; CHECK: ldi [[REG1:r[0-9]+]], 68
-; CHECK: ldi [[REG2:r[0-9]+]], 13
-; CHECK: sts long.array+1, [[REG2]]
-; CHECK: sts long.array, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 102
 ; CHECK: ldi [[REG2:r[0-9]+]], 85
 ; CHECK: sts long.array+7, [[REG2]]
@@ -164,6 +160,14 @@ define void @array32_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 119
 ; CHECK: sts long.array+5, [[REG2]]
 ; CHECK: sts long.array+4, [[REG1]]
+; CHECK: ldi [[REG1:r[0-9]+]], 27
+; CHECK: ldi [[REG2:r[0-9]+]], 172
+; CHECK: sts long.array+3, [[REG2]]
+; CHECK: sts long.array+2, [[REG1]]
+; CHECK: ldi [[REG1:r[0-9]+]], 68
+; CHECK: ldi [[REG2:r[0-9]+]], 13
+; CHECK: sts long.array+1, [[REG2]]
+; CHECK: sts long.array, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 170
 ; CHECK: ldi [[REG2:r[0-9]+]], 153
 ; CHECK: sts long.array+11, [[REG2]]

@@ -7,12 +7,12 @@ declare void @llvm.va_end(i8*)
 define i16 @varargs1(i8* nocapture %x, ...) {
 ; CHECK-LABEL: varargs1:
 ; CHECK: movw r20, r28
-; CHECK: subi r20, 215
+; CHECK: subi r20, 217
 ; CHECK: sbci r21, 255
 ; CHECK: movw r24, r28
 ; CHECK: adiw r24, 3
-; CHECK: ldd r22, Y+39
-; CHECK: ldd r23, Y+40
+; CHECK: ldd r22, Y+37
+; CHECK: ldd r23, Y+38
 ; CHECK: call
   %buffer = alloca [32 x i8]
   %ap = alloca i8*
@@ -40,12 +40,12 @@ define i16 @varargs2(i8* nocapture %x, ...) {
 declare void @var1223(i16, ...)
 define void @varargcall() {
 ; CHECK-LABEL: varargcall:
-; CHECK: ldi [[REG1:r[0-9]+]], 191
-; CHECK: ldi [[REG2:r[0-9]+]], 223
-; CHECK: push [[REG2]]
-; CHECK: push [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 189
 ; CHECK: ldi [[REG2:r[0-9]+]], 205
+; CHECK: push [[REG2]]
+; CHECK: push [[REG1]]
+; CHECK: ldi [[REG1:r[0-9]+]], 191
+; CHECK: ldi [[REG2:r[0-9]+]], 223
 ; CHECK: push [[REG2]]
 ; CHECK: push [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 205

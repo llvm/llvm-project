@@ -1,27 +1,35 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECKNOP
 
-; CHECK: test01.cl:2:{{[0-9]+}}
-; CHECK-NEXT: s_nop 0
+; This test expects that we have one instance for each line in some order with "s_nop 0" instances after each.
 
-; CHECK: test01.cl:3:{{[0-9]+}}
-; CHECK-NEXT: s_nop 0
+; Check that each line appears at least once
+; CHECK-DAG: test01.cl:2:3
+; CHECK-DAG: test01.cl:3:3
+; CHECK-DAG: test01.cl:4:3
 
-; CHECK: test01.cl:4:{{[0-9]+}}
-; CHECK-NEXT: s_nop 0
+
+; Check that each of each of the lines consists of the line output, followed by "s_nop 0"
+; CHECKNOP: test01.cl:{{[234]}}:3
+; CHECKNOP-NEXT: s_nop 0
+; CHECKNOP: test01.cl:{{[234]}}:3
+; CHECKNOP-NEXT: s_nop 0
+; CHECKNOP: test01.cl:{{[234]}}:3
+; CHECKNOP-NEXT: s_nop 0
 
 ; CHECK: test01.cl:5:{{[0-9]+}}
 ; CHECK-NEXT: s_nop 0
 ; CHECK-NEXT: s_endpgm
 
 ; Function Attrs: nounwind
-define void @test(i32 addrspace(1)* %A) #0 !dbg !12 {
+define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !12 {
 entry:
   %A.addr = alloca i32 addrspace(1)*, align 4
   store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4
   call void @llvm.dbg.declare(metadata i32 addrspace(1)** %A.addr, metadata !17, metadata !18), !dbg !19
   %0 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4, !dbg !20
   %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %0, i32 0, !dbg !20
-  store i32 1, i32 addrspace(1)* %arrayidx, align 4, !dbg !21
+  store i32 1, i32 addrspace(1)* %arrayidx, align 4, !dbg !20
   %1 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4, !dbg !22
   %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %1, i32 1, !dbg !22
   store i32 2, i32 addrspace(1)* %arrayidx1, align 4, !dbg !23

@@ -23,18 +23,14 @@ define i32 @knownbits_mask_extract_sext(<8 x i16> %a0) nounwind {
 define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_extract_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
+; X32-NEXT:    pushl %eax
 ; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3],xmm0[4,5,6,7]
-; X32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fstps {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    vmovd %xmm0, %eax
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X32-NEXT:    vmovss %xmm0, (%esp)
+; X32-NEXT:    flds (%esp)
+; X32-NEXT:    popl %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_extract_uitofp:
@@ -42,7 +38,7 @@ define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3],xmm0[4,5,6,7]
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    vcvtsi2ssq %rax, %xmm2, %xmm0
+; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
 ; X64-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 65535, i64 -1>
   %2 = extractelement <2 x i64> %1, i32 0
@@ -83,15 +79,15 @@ define <4 x i32> @knownbits_mask_shuffle_sext(<8 x i16> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_shuffle_sext:
 ; X32:       # BB#0:
 ; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_shuffle_sext:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-NEXT:    retq
   %1 = and <8 x i16> %a0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 15, i16 15, i16 15, i16 15>
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -103,15 +99,15 @@ define <4 x i32> @knownbits_mask_shuffle_shuffle_sext(<8 x i16> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_shuffle_shuffle_sext:
 ; X32:       # BB#0:
 ; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_shuffle_shuffle_sext:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-NEXT:    retq
   %1 = and <8 x i16> %a0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 15, i16 15, i16 15, i16 15>
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -476,38 +472,45 @@ define <4 x float> @knownbits_smax_smin_shuffle_uitofp(<4 x i32> %a0) {
 declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
 declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
 
-define <4 x float> @knownbits_umax_umin_shuffle_uitofp(<4 x i32> %a0) {
-; X32-LABEL: knownbits_umax_umin_shuffle_uitofp:
+define <4 x float> @knownbits_umin_shuffle_uitofp(<4 x i32> %a0) {
+; X32-LABEL: knownbits_umin_shuffle_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    vpmaxud {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    vpminud {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,3,3]
-; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X32-NEXT:    vpsrld $16, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X32-NEXT:    vaddps {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: knownbits_umax_umin_shuffle_uitofp:
+; X64-LABEL: knownbits_umin_shuffle_uitofp:
 ; X64:       # BB#0:
-; X64-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,3,3]
-; X64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X64-NEXT:    vpsrld $16, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X64-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 255, i32 -1, i32 -1, i32 1023>)
-  %2 = call <4 x i32> @llvm.x86.sse41.pminud(<4 x i32> %1, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
-  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
-  %4 = uitofp <4 x i32> %3 to <4 x float>
-  ret <4 x float> %4
+  %1 = call <4 x i32> @llvm.x86.sse41.pminud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
+  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %3 = uitofp <4 x i32> %2 to <4 x float>
+  ret <4 x float> %3
 }
 declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
 declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
+
+define <4 x i32> @knownbits_umax_shuffle_ashr(<4 x i32> %a0) {
+; X32-LABEL: knownbits_umax_shuffle_ashr:
+; X32:       # BB#0:
+; X32-NEXT:    vpmaxud {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_umax_shuffle_ashr:
+; X64:       # BB#0:
+; X64-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
+; X64-NEXT:    retq
+  %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
+  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
+  %3 = ashr <4 x i32> %2, <i32 31, i32 31, i32 31, i32 31>
+  ret <4 x i32> %3
+}
 
 define <4 x float> @knownbits_mask_umax_shuffle_uitofp(<4 x i32> %a0) {
 ; X32-LABEL: knownbits_mask_umax_shuffle_uitofp:
@@ -530,4 +533,74 @@ define <4 x float> @knownbits_mask_umax_shuffle_uitofp(<4 x i32> %a0) {
   %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
   %4 = uitofp <4 x i32> %3 to <4 x float>
   ret <4 x float> %4
+}
+
+define <4 x i32> @knownbits_mask_bitreverse_ashr(<4 x i32> %a0) {
+; X32-LABEL: knownbits_mask_bitreverse_ashr:
+; X32:       # BB#0:
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_bitreverse_ashr:
+; X64:       # BB#0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 -2, i32 -2, i32 -2, i32 -2>
+  %2 = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %1)
+  %3 = ashr <4 x i32> %2, <i32 31, i32 31, i32 31, i32 31>
+  ret <4 x i32> %3
+}
+declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) nounwind readnone
+
+; If we don't know that the input isn't INT_MIN we can't combine to sitofp
+define <4 x float> @knownbits_abs_uitofp(<4 x i32> %a0) {
+; X32-LABEL: knownbits_abs_uitofp:
+; X32:       # BB#0:
+; X32-NEXT:    vpabsd %xmm0, %xmm0
+; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X32-NEXT:    vpsrld $16, %xmm0, %xmm0
+; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X32-NEXT:    vaddps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_abs_uitofp:
+; X64:       # BB#0:
+; X64-NEXT:    vpabsd %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X64-NEXT:    vpsrld $16, %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X64-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X64-NEXT:    retq
+  %1 = sub <4 x i32> zeroinitializer, %a0
+  %2 = icmp slt <4 x i32> %a0, zeroinitializer
+  %3 = select <4 x i1> %2, <4 x i32> %1, <4 x i32> %a0
+  %4 = uitofp <4 x i32> %3 to <4 x float>
+  ret <4 x float> %4
+}
+
+define <4 x float> @knownbits_or_abs_uitofp(<4 x i32> %a0) {
+; X32-LABEL: knownbits_or_abs_uitofp:
+; X32:       # BB#0:
+; X32-NEXT:    vpor {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; X32-NEXT:    vpabsd %xmm0, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_or_abs_uitofp:
+; X64:       # BB#0:
+; X64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; X64-NEXT:    vpabsd %xmm0, %xmm0
+; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = or <4 x i32> %a0, <i32 1, i32 0, i32 3, i32 0>
+  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 0, i32 2>
+  %3 = sub <4 x i32> zeroinitializer, %2
+  %4 = icmp slt <4 x i32> %2, zeroinitializer
+  %5 = select <4 x i1> %4, <4 x i32> %3, <4 x i32> %2
+  %6 = uitofp <4 x i32> %5 to <4 x float>
+  ret <4 x float> %6
 }

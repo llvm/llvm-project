@@ -15,13 +15,13 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOCAL_H
 #define LLVM_TRANSFORMS_UTILS_LOCAL_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {
 
@@ -71,6 +71,12 @@ bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
 /// instruction has no side effects.
 bool isInstructionTriviallyDead(Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
+
+/// Return true if the result produced by the instruction would have no side
+/// effects if it was not used. This is equivalent to checking whether
+/// isInstructionTriviallyDead would be true if the use count was 0.
+bool wouldInstructionBeTriviallyDead(Instruction *I,
+                                     const TargetLibraryInfo *TLI = nullptr);
 
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
@@ -136,7 +142,8 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 /// eliminate.
 bool SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                  unsigned BonusInstThreshold, AssumptionCache *AC = nullptr,
-                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
+                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr,
+                 bool LateSimplifyCFG = false);
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
@@ -349,6 +356,10 @@ void combineMetadata(Instruction *K, const Instruction *J, ArrayRef<unsigned> Kn
 /// Unknown metadata is removed.
 void combineMetadataForCSE(Instruction *K, const Instruction *J);
 
+// Replace each use of 'From' with 'To', if that use does not belong to basic
+// block where 'From' is defined. Returns the number of replacements made.
+unsigned replaceNonLocalUsesWith(Instruction *From, Value *To);
+
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge.  Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
@@ -368,6 +379,19 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 /// Most passes can and should ignore this information, and it is only used
 /// during lowering by the GC infrastructure.
 bool callsGCLeafFunction(ImmutableCallSite CS);
+
+/// Copy a nonnull metadata node to a new load instruction.
+///
+/// This handles mapping it to range metadata if the new load is an integer
+/// load instead of a pointer load.
+void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N, LoadInst &NewLI);
+
+/// Copy a range metadata node to a new load instruction.
+///
+/// This handles mapping it to nonnull metadata if the new load is a pointer
+/// load instead of an integer load and the range doesn't cover null.
+void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
+                       LoadInst &NewLI);
 
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching
@@ -398,6 +422,14 @@ bool recognizeBSwapOrBitReverseIdiom(
 /// specific instructions.
 void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
                                             const TargetLibraryInfo *TLI);
+
+//===----------------------------------------------------------------------===//
+//  Transform predicates
+//
+
+/// Given an instruction, is it legal to set operand OpIdx to a non-constant
+/// value?
+bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 
 } // End llvm namespace
 

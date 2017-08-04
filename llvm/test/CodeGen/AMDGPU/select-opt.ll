@@ -11,7 +11,7 @@
 ; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @opt_select_i32_and_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_and_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %and = and i1 %icmp0, %icmp1
@@ -27,7 +27,7 @@ define void @opt_select_i32_and_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, 
 ; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @opt_select_i32_and_cmp_f32(i32 addrspace(1)* %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_and_cmp_f32(i32 addrspace(1)* %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %and = and i1 %fcmp0, %fcmp1
@@ -43,7 +43,7 @@ define void @opt_select_i32_and_cmp_f32(i32 addrspace(1)* %out, float %a, float 
 ; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT0]]:[[RESULT1]]{{\]}}
-define void @opt_select_i64_and_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_and_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %and = and i1 %icmp0, %icmp1
@@ -59,7 +59,7 @@ define void @opt_select_i64_and_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, 
 ; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT0]]:[[RESULT1]]{{\]}}
-define void @opt_select_i64_and_cmp_f32(i64 addrspace(1)* %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_and_cmp_f32(i64 addrspace(1)* %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %and = and i1 %fcmp0, %fcmp1
@@ -76,7 +76,7 @@ define void @opt_select_i64_and_cmp_f32(i64 addrspace(1)* %out, float %a, float 
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 ; GCN: s_endpgm
-define void @opt_select_i32_or_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_or_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %or = or i1 %icmp0, %icmp1
@@ -92,7 +92,7 @@ define void @opt_select_i32_or_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i
 ; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @opt_select_i32_or_cmp_f32(i32 addrspace(1)* %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @opt_select_i32_or_cmp_f32(i32 addrspace(1)* %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %or = or i1 %fcmp0, %fcmp1
@@ -108,7 +108,7 @@ define void @opt_select_i32_or_cmp_f32(i32 addrspace(1)* %out, float %a, float %
 ; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT0]]:[[RESULT1]]{{\]}}
-define void @opt_select_i64_or_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_or_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
   %or = or i1 %icmp0, %icmp1
@@ -124,7 +124,7 @@ define void @opt_select_i64_or_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i
 ; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT0]]:[[RESULT1]]{{\]}}
-define void @opt_select_i64_or_cmp_f32(i64 addrspace(1)* %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @opt_select_i64_or_cmp_f32(i64 addrspace(1)* %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
   %or = or i1 %fcmp0, %fcmp1
@@ -138,7 +138,7 @@ define void @opt_select_i64_or_cmp_f32(i64 addrspace(1)* %out, float %a, float %
 ; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 0
 ; GCN: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
 
-define void @regression(float addrspace(1)* %out, float %c0, float %c1) #0 {
+define amdgpu_kernel void @regression(float addrspace(1)* %out, float %c0, float %c1) #0 {
 entry:
   %cmp0 = fcmp oeq float %c0, 1.0
   br i1 %cmp0, label %if0, label %endif

@@ -409,6 +409,7 @@ void html::SyntaxHighlight(Rewriter &R, FileID FID, const Preprocessor &PP) {
       ++TokOffs;
       --TokLen;
       // FALL THROUGH to chop the 8
+      LLVM_FALLTHROUGH;
     case tok::wide_string_literal:
     case tok::utf16_string_literal:
     case tok::utf32_string_literal:

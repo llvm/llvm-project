@@ -9,13 +9,22 @@
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
 //
+// RUN: %clang_cc1 -x c++ -std=c++2a -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
+//
+// CXX2A:#define __GNUG__ {{.*}}
+// CXX2A:#define __GXX_EXPERIMENTAL_CXX0X__ 1
+// CXX2A:#define __GXX_RTTI 1
+// CXX2A:#define __GXX_WEAK__ 1
+// CXX2A:#define __cplusplus 201707L
+// CXX2A:#define __private_extern__ extern
+//
 // RUN: %clang_cc1 -x c++ -std=c++1z -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX1Z %s
 //
 // CXX1Z:#define __GNUG__ {{.*}}
 // CXX1Z:#define __GXX_EXPERIMENTAL_CXX0X__ 1
 // CXX1Z:#define __GXX_RTTI 1
 // CXX1Z:#define __GXX_WEAK__ 1
-// CXX1Z:#define __cplusplus 201406L
+// CXX1Z:#define __cplusplus 201703L
 // CXX1Z:#define __private_extern__ extern
 //
 //
@@ -110,12 +119,19 @@
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
 //
+// RUN: %clang_cc1 -x c++ -std=gnu++2a -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
+//
+// GXX2A:#define __GNUG__ {{.*}}
+// GXX2A:#define __GXX_WEAK__ 1
+// GXX2A:#define __cplusplus 201707L
+// GXX2A:#define __private_extern__ extern
+//
 //
 // RUN: %clang_cc1 -x c++ -std=gnu++1z -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX1Z %s
 //
 // GXX1Z:#define __GNUG__ {{.*}}
 // GXX1Z:#define __GXX_WEAK__ 1
-// GXX1Z:#define __cplusplus 201406L
+// GXX1Z:#define __cplusplus 201703L
 // GXX1Z:#define __private_extern__ extern
 //
 //
@@ -2185,13 +2201,13 @@
 // ARMV6-CLOUDABI:#define __CloudABI__ 1
 // ARMV6-CLOUDABI:#define __arm__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-netbsd-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NETBSD %s
-//
+// RUN: %clang -E -dM -ffreestanding -target arm-netbsd-eabi %s -o - | FileCheck -match-full-lines -check-prefix ARM-NETBSD %s
+
 // ARM-NETBSD-NOT:#define _LP64
 // ARM-NETBSD:#define __APCS_32__ 1
 // ARM-NETBSD-NOT:#define __ARMEB__ 1
 // ARM-NETBSD:#define __ARMEL__ 1
-// ARM-NETBSD:#define __ARM_ARCH_4T__ 1
+// ARM-NETBSD:#define __ARM_ARCH_5TE__ 1
 // ARM-NETBSD:#define __ARM_DWARF_EH__ 1
 // ARM-NETBSD:#define __ARM_EABI__ 1
 // ARM-NETBSD-NOT:#define __ARM_BIG_ENDIAN 1
@@ -2333,6 +2349,7 @@
 // ARM-NETBSD:#define __SIZE_MAX__ 4294967295UL
 // ARM-NETBSD:#define __SIZE_TYPE__ long unsigned int
 // ARM-NETBSD:#define __SIZE_WIDTH__ 32
+// ARM-NETBSD:#define __SOFTFP__ 1
 // ARM-NETBSD:#define __UINT16_C_SUFFIX__
 // ARM-NETBSD:#define __UINT16_MAX__ 65535
 // ARM-NETBSD:#define __UINT16_TYPE__ unsigned short
@@ -2377,7 +2394,15 @@
 // ARM-NETBSD:#define __arm 1
 // ARM-NETBSD:#define __arm__ 1
 
+// RUN: %clang -E -dM -ffreestanding -target arm-netbsd-eabihf %s -o - | FileCheck -match-full-lines -check-prefix ARMHF-NETBSD %s
+// ARMHF-NETBSD:#define __SIZE_WIDTH__ 32
+// ARMHF-NETBSD-NOT:#define __SOFTFP__ 1
+// ARMHF-NETBSD:#define __UINT16_C_SUFFIX__
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
 // ARM-NONE-EABI: #define __ELF__ 1
 
 // No MachO targets use the full EABI, even if AAPCS is used.
@@ -3232,6 +3257,7 @@
 // MIPS32BE:#define __llvm__ 1
 // MIPS32BE:#define __mips 32
 // MIPS32BE:#define __mips__ 1
+// MIPS32BE:#define __mips_abicalls 1
 // MIPS32BE:#define __mips_fpr 32
 // MIPS32BE:#define __mips_hard_float 1
 // MIPS32BE:#define __mips_o32 1
@@ -3438,6 +3464,7 @@
 // MIPS32EL:#define __llvm__ 1
 // MIPS32EL:#define __mips 32
 // MIPS32EL:#define __mips__ 1
+// MIPS32EL:#define __mips_abicalls 1
 // MIPS32EL:#define __mips_fpr 32
 // MIPS32EL:#define __mips_hard_float 1
 // MIPS32EL:#define __mips_o32 1
@@ -3747,6 +3774,7 @@
 // MIPSN32BE: #define __mips64 1
 // MIPSN32BE: #define __mips64__ 1
 // MIPSN32BE: #define __mips__ 1
+// MIPSN32BE: #define __mips_abicalls 1
 // MIPSN32BE: #define __mips_fpr 64
 // MIPSN32BE: #define __mips_hard_float 1
 // MIPSN32BE: #define __mips_isa_rev 2
@@ -4053,6 +4081,7 @@
 // MIPSN32EL: #define __mips64 1
 // MIPSN32EL: #define __mips64__ 1
 // MIPSN32EL: #define __mips__ 1
+// MIPSN32EL: #define __mips_abicalls 1
 // MIPSN32EL: #define __mips_fpr 64
 // MIPSN32EL: #define __mips_hard_float 1
 // MIPSN32EL: #define __mips_isa_rev 2
@@ -4265,6 +4294,7 @@
 // MIPS64BE:#define __mips64 1
 // MIPS64BE:#define __mips64__ 1
 // MIPS64BE:#define __mips__ 1
+// MIPS64BE:#define __mips_abicalls 1
 // MIPS64BE:#define __mips_fpr 64
 // MIPS64BE:#define __mips_hard_float 1
 // MIPS64BE:#define __mips_n64 1
@@ -4474,6 +4504,7 @@
 // MIPS64EL:#define __mips64 1
 // MIPS64EL:#define __mips64__ 1
 // MIPS64EL:#define __mips__ 1
+// MIPS64EL:#define __mips_abicalls 1
 // MIPS64EL:#define __mips_fpr 64
 // MIPS64EL:#define __mips_hard_float 1
 // MIPS64EL:#define __mips_n64 1
@@ -4704,6 +4735,45 @@
 // MIPS-XXR6:#define _MIPS_FPSET 32
 // MIPS-XXR6:#define __mips_fpr 64
 // MIPS-XXR6:#define __mips_nan2008 1
+//
+// RUN: %clang_cc1 -target-cpu mips32 \
+// RUN:   -E -dM -triple=mips-unknown-netbsd -mrelocation-model pic < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-NETBSD %s
+// MIPS-ABICALLS-NETBSD-NOT: #define __ABICALLS__ 1
+// MIPS-ABICALLS-NETBSD: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips64 \
+// RUN:   -E -dM -triple=mips64-unknown-netbsd -mrelocation-model pic < \
+// RUN:   /dev/null | FileCheck -match-full-lines \
+// RUN:   -check-prefix MIPS-ABICALLS-NETBSD64 %s
+// MIPS-ABICALLS-NETBSD64-NOT: #define __ABICALLS__ 1
+// MIPS-ABICALLS-NETBSD64: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips32 \
+// RUN:   -E -dM -triple=mips-unknown-freebsd -mrelocation-model pic < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-FREEBSD %s
+// MIPS-ABICALLS-FREEBSD: #define __ABICALLS__ 1
+// MIPS-ABICALLS-FREEBSD: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips64 \
+// RUN:   -E -dM -triple=mips64-unknown-freebsd -mrelocation-model pic < \
+// RUN:   /dev/null | FileCheck -match-full-lines \
+// RUN:   -check-prefix MIPS-ABICALLS-FREEBSD64 %s
+// MIPS-ABICALLS-FREEBSD64: #define __ABICALLS__ 1
+// MIPS-ABICALLS-FREEBSD64: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips32 \
+// RUN:   -E -dM -triple=mips-unknown-openbsd -mrelocation-model pic < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-OPENBSD %s
+// MIPS-ABICALLS-OPENBSD: #define __ABICALLS__ 1
+// MIPS-ABICALLS-OPENBSD: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips64 \
+// RUN:   -E -dM -triple=mips64-unknown-openbsd -mrelocation-model pic < \
+// RUN:   /dev/null | FileCheck -match-full-lines \
+// RUN:   -check-prefix MIPS-ABICALLS-OPENBSD64 %s
+// MIPS-ABICALLS-OPENBSD64: #define __ABICALLS__ 1
+// MIPS-ABICALLS-OPENBSD64: #define __mips_abicalls 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=msp430-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MSP430 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=msp430-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MSP430 -check-prefix MSP430-CXX %s
@@ -5279,7 +5349,7 @@
 // PPC603E:#define _ARCH_PPCGR 1
 // PPC603E:#define _BIG_ENDIAN 1
 // PPC603E-NOT:#define _LP64
-// PPC603E:#define __BIGGEST_ALIGNMENT__ 8
+// PPC603E:#define __BIGGEST_ALIGNMENT__ 16
 // PPC603E:#define __BIG_ENDIAN__ 1
 // PPC603E:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC603E:#define __CHAR16_TYPE__ unsigned short
@@ -5391,6 +5461,7 @@
 // PPC603E:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC603E:#define __LDBL_MIN_EXP__ (-968)
 // PPC603E:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC603E:#define __LONGDOUBLE128 1
 // PPC603E:#define __LONG_DOUBLE_128__ 1
 // PPC603E:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC603E:#define __LONG_MAX__ 2147483647L
@@ -5479,7 +5550,7 @@
 // PPC64:#define _ARCH_PWR7 1
 // PPC64:#define _BIG_ENDIAN 1
 // PPC64:#define _LP64 1
-// PPC64:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64:#define __BIG_ENDIAN__ 1
 // PPC64:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC64:#define __CHAR16_TYPE__ unsigned short
@@ -5515,6 +5586,7 @@
 // PPC64:#define __FLT_MIN_EXP__ (-125)
 // PPC64:#define __FLT_MIN__ 1.17549435e-38F
 // PPC64:#define __FLT_RADIX__ 2
+// PPC64:#define __HAVE_BSWAP__ 1
 // PPC64:#define __INT16_C_SUFFIX__
 // PPC64:#define __INT16_FMTd__ "hd"
 // PPC64:#define __INT16_FMTi__ "hi"
@@ -5592,6 +5664,7 @@
 // PPC64:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC64:#define __LDBL_MIN_EXP__ (-968)
 // PPC64:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC64:#define __LONGDOUBLE128 1
 // PPC64:#define __LONG_DOUBLE_128__ 1
 // PPC64:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC64:#define __LONG_MAX__ 9223372036854775807L
@@ -5683,7 +5756,7 @@
 // PPC64LE:#define _CALL_ELF 2
 // PPC64LE:#define _LITTLE_ENDIAN 1
 // PPC64LE:#define _LP64 1
-// PPC64LE:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64LE:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64LE:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // PPC64LE:#define __CHAR16_TYPE__ unsigned short
 // PPC64LE:#define __CHAR32_TYPE__ unsigned int
@@ -5718,6 +5791,7 @@
 // PPC64LE:#define __FLT_MIN_EXP__ (-125)
 // PPC64LE:#define __FLT_MIN__ 1.17549435e-38F
 // PPC64LE:#define __FLT_RADIX__ 2
+// PPC64LE:#define __HAVE_BSWAP__ 1
 // PPC64LE:#define __INT16_C_SUFFIX__
 // PPC64LE:#define __INT16_FMTd__ "hd"
 // PPC64LE:#define __INT16_FMTi__ "hi"
@@ -5796,6 +5870,7 @@
 // PPC64LE:#define __LDBL_MIN_EXP__ (-968)
 // PPC64LE:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
 // PPC64LE:#define __LITTLE_ENDIAN__ 1
+// PPC64LE:#define __LONGDOUBLE128 1
 // PPC64LE:#define __LONG_DOUBLE_128__ 1
 // PPC64LE:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC64LE:#define __LONG_MAX__ 9223372036854775807L
@@ -5827,6 +5902,7 @@
 // PPC64LE:#define __SIZE_MAX__ 18446744073709551615UL
 // PPC64LE:#define __SIZE_TYPE__ long unsigned int
 // PPC64LE:#define __SIZE_WIDTH__ 64
+// PPC64LE:#define __STRUCT_PARM_ALIGN__ 16
 // PPC64LE:#define __UINT16_C_SUFFIX__
 // PPC64LE:#define __UINT16_MAX__ 65535
 // PPC64LE:#define __UINT16_TYPE__ unsigned short
@@ -6047,6 +6123,9 @@
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power8 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER8 %s
 //
+// ppc64le also defaults to power8.
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-none-none -target-cpu ppc64le -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER8 %s
+//
 // PPCPOWER8:#define _ARCH_PPC 1
 // PPCPOWER8:#define _ARCH_PPC64 1
 // PPCPOWER8:#define _ARCH_PPCGR 1
@@ -6095,8 +6174,9 @@
 // PPC64-LINUX:#define _ARCH_PPC 1
 // PPC64-LINUX:#define _ARCH_PPC64 1
 // PPC64-LINUX:#define _BIG_ENDIAN 1
+// PPC64-LINUX:#define _CALL_LINUX 1
 // PPC64-LINUX:#define _LP64 1
-// PPC64-LINUX:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64-LINUX:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64-LINUX:#define __BIG_ENDIAN__ 1
 // PPC64-LINUX:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC64-LINUX:#define __CHAR16_TYPE__ unsigned short
@@ -6132,6 +6212,7 @@
 // PPC64-LINUX:#define __FLT_MIN_EXP__ (-125)
 // PPC64-LINUX:#define __FLT_MIN__ 1.17549435e-38F
 // PPC64-LINUX:#define __FLT_RADIX__ 2
+// PPC64-LINUX:#define __HAVE_BSWAP__ 1
 // PPC64-LINUX:#define __INT16_C_SUFFIX__
 // PPC64-LINUX:#define __INT16_FMTd__ "hd"
 // PPC64-LINUX:#define __INT16_FMTi__ "hi"
@@ -6209,6 +6290,7 @@
 // PPC64-LINUX:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC64-LINUX:#define __LDBL_MIN_EXP__ (-968)
 // PPC64-LINUX:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC64-LINUX:#define __LONGDOUBLE128 1
 // PPC64-LINUX:#define __LONG_DOUBLE_128__ 1
 // PPC64-LINUX:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC64-LINUX:#define __LONG_MAX__ 9223372036854775807L
@@ -6297,12 +6379,17 @@
 // PPC64-ELFv1:#define _CALL_ELF 1
 // PPC64-ELFv2:#define _CALL_ELF 2
 //
+// Most of this is encompassed in other places.
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-linux-gnu -target-abi elfv2 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64LE-LINUX %s
+//
+// PPC64LE-LINUX:#define _CALL_LINUX 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-none-none -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC %s
 //
 // PPC:#define _ARCH_PPC 1
 // PPC:#define _BIG_ENDIAN 1
 // PPC-NOT:#define _LP64
-// PPC:#define __BIGGEST_ALIGNMENT__ 8
+// PPC:#define __BIGGEST_ALIGNMENT__ 16
 // PPC:#define __BIG_ENDIAN__ 1
 // PPC:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC:#define __CHAR16_TYPE__ unsigned short
@@ -6338,6 +6425,7 @@
 // PPC:#define __FLT_MIN_EXP__ (-125)
 // PPC:#define __FLT_MIN__ 1.17549435e-38F
 // PPC:#define __FLT_RADIX__ 2
+// PPC:#define __HAVE_BSWAP__ 1
 // PPC:#define __INT16_C_SUFFIX__
 // PPC:#define __INT16_FMTd__ "hd"
 // PPC:#define __INT16_FMTi__ "hi"
@@ -6415,6 +6503,7 @@
 // PPC:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC:#define __LDBL_MIN_EXP__ (-968)
 // PPC:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC:#define __LONGDOUBLE128 1
 // PPC:#define __LONG_DOUBLE_128__ 1
 // PPC:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC:#define __LONG_MAX__ 2147483647L
@@ -6493,7 +6582,7 @@
 // PPC-LINUX:#define _ARCH_PPC 1
 // PPC-LINUX:#define _BIG_ENDIAN 1
 // PPC-LINUX-NOT:#define _LP64
-// PPC-LINUX:#define __BIGGEST_ALIGNMENT__ 8
+// PPC-LINUX:#define __BIGGEST_ALIGNMENT__ 16
 // PPC-LINUX:#define __BIG_ENDIAN__ 1
 // PPC-LINUX:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC-LINUX:#define __CHAR16_TYPE__ unsigned short
@@ -6529,6 +6618,7 @@
 // PPC-LINUX:#define __FLT_MIN_EXP__ (-125)
 // PPC-LINUX:#define __FLT_MIN__ 1.17549435e-38F
 // PPC-LINUX:#define __FLT_RADIX__ 2
+// PPC-LINUX:#define __HAVE_BSWAP__ 1
 // PPC-LINUX:#define __INT16_C_SUFFIX__
 // PPC-LINUX:#define __INT16_FMTd__ "hd"
 // PPC-LINUX:#define __INT16_FMTi__ "hi"
@@ -6606,6 +6696,7 @@
 // PPC-LINUX:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC-LINUX:#define __LDBL_MIN_EXP__ (-968)
 // PPC-LINUX:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC-LINUX:#define __LONGDOUBLE128 1
 // PPC-LINUX:#define __LONG_DOUBLE_128__ 1
 // PPC-LINUX:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC-LINUX:#define __LONG_MAX__ 2147483647L
@@ -6681,6 +6772,10 @@
 // PPC-LINUX:#define __powerpc__ 1
 // PPC-LINUX:#define __ppc__ 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC32-LINUX %s
+//
+// PPC32-LINUX-NOT: _CALL_LINUX
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-apple-darwin8 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-DARWIN %s
 //
 // PPC-DARWIN:#define _ARCH_PPC 1
@@ -6720,6 +6815,7 @@
 // PPC-DARWIN:#define __FLT_MIN_EXP__ (-125)
 // PPC-DARWIN:#define __FLT_MIN__ 1.17549435e-38F
 // PPC-DARWIN:#define __FLT_RADIX__ 2
+// PPC-DARWIN:#define __HAVE_BSWAP__ 1
 // PPC-DARWIN:#define __INT16_C_SUFFIX__
 // PPC-DARWIN:#define __INT16_FMTd__ "hd"
 // PPC-DARWIN:#define __INT16_FMTi__ "hi"
@@ -6797,6 +6893,7 @@
 // PPC-DARWIN:#define __LDBL_MIN_10_EXP__ (-291)
 // PPC-DARWIN:#define __LDBL_MIN_EXP__ (-968)
 // PPC-DARWIN:#define __LDBL_MIN__ 2.00416836000897277799610805135016e-292L
+// PPC-DARWIN:#define __LONGDOUBLE128 1
 // PPC-DARWIN:#define __LONG_DOUBLE_128__ 1
 // PPC-DARWIN:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // PPC-DARWIN:#define __LONG_MAX__ 2147483647L
@@ -6876,7 +6973,10 @@
 // PPC-DARWIN:#define __WINT_WIDTH__ 32
 // PPC-DARWIN:#define __powerpc__ 1
 // PPC-DARWIN:#define __ppc__ 1
-//
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-apple-darwin8 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-DARWIN %s
+// PPC64-DARWIN:#define __STRUCT_PARM_ALIGN__ 16
+
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgcn < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=r600 -target-cpu caicos < /dev/null | FileCheck -match-full-lines --check-prefix AMDGPU %s
 //
@@ -8658,6 +8758,7 @@
 // PS4:#define __unix__ 1
 // PS4:#define __x86_64 1
 // PS4:#define __x86_64__ 1
+// PS4:#define unix 1
 //
 // RUN: %clang_cc1 -E -dM -triple=x86_64-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
 // RUN: %clang_cc1 -E -dM -fms-extensions -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
@@ -8718,6 +8819,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-unknown-openbsd6.1-gnueabi < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64el-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
@@ -8766,6 +8868,16 @@
 // WEBASSEMBLY32-NEXT:#define __CHAR32_TYPE__ unsigned int
 // WEBASSEMBLY32-NEXT:#define __CHAR_BIT__ 8
 // WEBASSEMBLY32-NOT:#define __CHAR_UNSIGNED__
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_LONG_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+// WEBASSEMBLY32-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
 // WEBASSEMBLY32-NEXT:#define __CONSTANT_CFSTRINGS__ 1
 // WEBASSEMBLY32-NEXT:#define __DBL_DECIMAL_DIG__ 17
 // WEBASSEMBLY32-NEXT:#define __DBL_DENORM_MIN__ 4.9406564584124654e-324
@@ -8805,7 +8917,7 @@
 // WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
 // WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_CHAR_LOCK_FREE 2
 // WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_INT_LOCK_FREE 2
-// WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_LLONG_LOCK_FREE 2
 // WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_LONG_LOCK_FREE 2
 // WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_POINTER_LOCK_FREE 2
 // WEBASSEMBLY32-NEXT:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
@@ -9082,6 +9194,16 @@
 // WEBASSEMBLY64-NEXT:#define __CHAR32_TYPE__ unsigned int
 // WEBASSEMBLY64-NEXT:#define __CHAR_BIT__ 8
 // WEBASSEMBLY64-NOT:#define __CHAR_UNSIGNED__
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_LONG_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+// WEBASSEMBLY64-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
 // WEBASSEMBLY64-NEXT:#define __CONSTANT_CFSTRINGS__ 1
 // WEBASSEMBLY64-NEXT:#define __DBL_DECIMAL_DIG__ 17
 // WEBASSEMBLY64-NEXT:#define __DBL_DENORM_MIN__ 4.9406564584124654e-324
@@ -9557,6 +9679,39 @@
 // AVR:#define __WCHAR_MAX__ 32767
 // AVR:#define __WCHAR_TYPE__ int
 // AVR:#define __WINT_TYPE__ int
+
+
+// RUN: %clang_cc1 -E -dM -ffreestanding \
+// RUN:    -triple i686-windows-msvc -fms-compatibility < /dev/null \
+// RUN:  | FileCheck -match-full-lines -check-prefix MSVC-X32 %s
+
+// RUN: %clang_cc1 -E -dM -ffreestanding \
+// RUN:    -triple x86_64-windows-msvc -fms-compatibility < /dev/null \
+// RUN:  | FileCheck -match-full-lines -check-prefix MSVC-X64 %s
+
+// MSVC-X32:#define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_LONG_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+// MSVC-X32-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+// MSVC-X32-NOT:#define __GCC_ATOMIC{{.*}}
+
+// MSVC-X64:#define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_LONG_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+// MSVC-X64-NEXT:#define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+// MSVC-X86-NOT:#define __GCC_ATOMIC{{.*}}
 
 // RUN: %clang_cc1 -E -dM -ffreestanding                \
 // RUN:   -triple=aarch64-apple-ios9 < /dev/null        \

@@ -53,7 +53,7 @@ entry:
 }
 ; MOD1: define weak void @linkoncefunc()
 ; MOD1-INT: define weak void @linkoncefunc()
-; MOD2: define linkonce void @linkoncefunc()
+; MOD2: declare void @linkoncefunc()
 define linkonce void @linkoncefunc() #0 {
 entry:
   ret void
@@ -65,7 +65,7 @@ entry:
   ret void
 }
 ; MOD1: define weak void @weakfunc()
-; MOD2: define weak void @weakfunc()
+; MOD2: declare void @weakfunc()
 define weak void @weakfunc() #0 {
 entry:
   ret void

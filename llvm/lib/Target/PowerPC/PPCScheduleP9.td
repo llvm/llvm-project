@@ -260,8 +260,8 @@ let SchedModel = P9Model in {
 
   // ***************** Defining Itinerary Class Resources *****************
 
-  def : ItinRW<[P9_DFU_76C, IP_EXEC_1C, DISP_1C, DISP_1C], [IIC_IntSimple,
-                                         IIC_IntGeneral]>;
+  def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
+               [IIC_IntSimple, IIC_IntGeneral]>;
 
   def : ItinRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
                [IIC_IntISEL, IIC_IntRotate, IIC_IntShift]>;

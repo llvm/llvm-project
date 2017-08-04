@@ -34,19 +34,21 @@ struct some_comp
 
 int main()
 {
+#if defined(_LIBCPP_VERSION)
     typedef std::pair<const MoveOnly, MoveOnly> V;
     {
         typedef std::multimap<MoveOnly, MoveOnly> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, test_allocator<V>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::multimap<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <forward_list>
 
 // forward_list(initializer_list<value_type> il, const allocator_type& a);
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         typedef int T;
         typedef test_allocator<T> A;
@@ -31,7 +32,6 @@ int main()
         assert(n == 10);
         assert(c.get_allocator() == A(14));
     }
-#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef min_allocator<T> A;
@@ -43,6 +43,4 @@ int main()
         assert(n == 10);
         assert(c.get_allocator() == A());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

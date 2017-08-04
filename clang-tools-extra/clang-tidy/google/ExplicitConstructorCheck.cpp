@@ -24,12 +24,15 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
     return;
-  Finder->addMatcher(cxxConstructorDecl(unless(isInstantiated())).bind("ctor"),
-                     this);
+  Finder->addMatcher(
+      cxxConstructorDecl(unless(anyOf(isImplicit(), // Compiler-generated.
+                                      isDeleted(), isInstantiated())))
+          .bind("ctor"),
+      this);
   Finder->addMatcher(
       cxxConversionDecl(unless(anyOf(isExplicit(), // Already marked explicit.
                                      isImplicit(), // Compiler-generated.
-                                     isInstantiated())))
+                                     isDeleted(), isInstantiated())))
 
           .bind("conversion"),
       this);
@@ -88,6 +91,8 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Conversion =
       Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
+    if (Conversion->isOutOfLine())
+      return;
     SourceLocation Loc = Conversion->getLocation();
     // Ignore all macros until we learn to ignore specific ones (e.g. used in
     // gmock to define matchers).
@@ -99,10 +104,8 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  // Do not be confused: isExplicit means 'explicit' keyword is present,
-  // isImplicit means that it's a compiler-generated constructor.
-  if (Ctor->isOutOfLine() || Ctor->isImplicit() || Ctor->isDeleted() ||
-      Ctor->getNumParams() == 0 || Ctor->getMinRequiredArguments() > 1)
+  if (Ctor->isOutOfLine() || Ctor->getNumParams() == 0 ||
+      Ctor->getMinRequiredArguments() > 1)
     return;
 
   bool takesInitializerList = isStdInitializerList(

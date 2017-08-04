@@ -1,0 +1,132 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
+
+--- |
+
+  define void @test_mul_vec512() {
+    ret void
+  }
+
+  define void @test_add_vec512() {
+    ret void
+  }
+
+  define void @test_sub_vec512() {
+    ret void
+  }
+
+  define <16 x i32> @test_load_v16i32_noalign(<16 x i32>* %p1) {
+    %r = load <16 x i32>, <16 x i32>* %p1, align 1
+    ret <16 x i32> %r
+  }
+
+  define void @test_store_v16i32_noalign(<16 x i32> %val, <16 x i32>* %p1) {
+    store <16 x i32> %val, <16 x i32>* %p1, align 1
+    ret void
+  }
+
+...
+---
+name:            test_mul_vec512
+# CHECK-LABEL: name:  test_mul_vec512
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_MUL %0, %0
+    RET 0
+
+...
+---
+name:            test_add_vec512
+# CHECK-LABEL: name:  test_add_vec512
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_ADD %0, %0
+    RET 0
+
+...
+---
+name:            test_sub_vec512
+# CHECK-LABEL: name:  test_sub_vec512
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_SUB %0, %0
+    RET 0
+...
+---
+
+name:            test_load_v16i32_noalign
+# CHECK-LABEL: name:  test_load_v16i32_noalign
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(<16 x s32>) = G_LOAD %0(p0) :: (load 64 from %ir.p1, align 1)
+    %zmm0 = COPY %1(<16 x s32>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_store_v16i32_noalign
+# CHECK-LABEL: name:  test_store_v16i32_noalign
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %zmm0
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(p0) = COPY %rdi
+    G_STORE %0(<16 x s32>), %1(p0) :: (store 64 into %ir.p1, align 1)
+    RET 0
+
+...

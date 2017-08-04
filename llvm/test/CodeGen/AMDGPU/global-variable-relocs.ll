@@ -19,7 +19,7 @@
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[ADDR_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[ADDR_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @private_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @private_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @private, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -33,7 +33,7 @@ define void @private_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[ADDR_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[ADDR_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @internal_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @internal_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @internal, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -50,7 +50,7 @@ define void @internal_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @available_externally_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @available_externally_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @available_externally, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -67,7 +67,7 @@ define void @available_externally_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @linkonce_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @linkonce_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @linkonce, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -84,7 +84,7 @@ define void @linkonce_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @weak_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @weak_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @weak, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -101,7 +101,7 @@ define void @weak_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @common_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @common_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @common, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -118,7 +118,7 @@ define void @common_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @extern_weak_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @extern_weak_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @extern_weak, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -135,7 +135,7 @@ define void @extern_weak_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @linkonce_odr_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @linkonce_odr_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @linkonce_odr, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -152,7 +152,7 @@ define void @linkonce_odr_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @weak_odr_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @weak_odr_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @weak_odr, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -169,7 +169,7 @@ define void @weak_odr_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @external_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @external_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @external, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out
@@ -186,7 +186,7 @@ define void @external_test(i32 addrspace(1)* %out) {
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[GEP_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[GEP_HI]]
 ; CHECK: flat_load_dword v{{[0-9]+}}, v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
-define void @external_w_init_test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @external_w_init_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(1)* @external_w_init, i32 0, i32 1
   %val = load i32, i32 addrspace(1)* %ptr
   store i32 %val, i32 addrspace(1)* %out

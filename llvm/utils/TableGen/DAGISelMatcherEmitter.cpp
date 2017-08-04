@@ -957,7 +957,7 @@ void llvm::EmitMatcherTable(const Matcher *TheMatcher,
   formatted_raw_ostream OS(O);
 
   OS << "// The main instruction selector code.\n";
-  OS << "SDNode *SelectCode(SDNode *N) {\n";
+  OS << "void SelectCode(SDNode *N) {\n";
 
   MatcherTableEmitter MatcherEmitter(CGP);
 
@@ -972,7 +972,6 @@ void llvm::EmitMatcherTable(const Matcher *TheMatcher,
 
   OS << "  #undef TARGET_VAL\n";
   OS << "  SelectCodeCommon(N, MatcherTable,sizeof(MatcherTable));\n";
-  OS << "  return nullptr;\n";
   OS << "}\n";
 
   // Next up, emit the function for node and pattern predicates:

@@ -4,17 +4,27 @@
 set(CLANG_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/clang)
 set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/${CLANG_INSTALL_PACKAGE_DIR}")
 
+# Keep this in sync with llvm/cmake/CMakeLists.txt!
+set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
+set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+
 get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
 export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
 
 # Generate ClangConfig.cmake for the build tree.
 set(CLANG_CONFIG_CMAKE_DIR "${clang_cmake_builddir}")
+set(CLANG_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
 set(CLANG_CONFIG_EXPORTS_FILE "${clang_cmake_builddir}/ClangTargets.cmake")
+set(CLANG_CONFIG_INCLUDE_DIRS
+  "${CLANG_SOURCE_DIR}/include"
+  "${CLANG_BINARY_DIR}/include"
+  )
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${clang_cmake_builddir}/ClangConfig.cmake
   @ONLY)
 set(CLANG_CONFIG_CMAKE_DIR)
+set(CLANG_CONFIG_LLVM_CMAKE_DIR)
 set(CLANG_CONFIG_EXPORTS_FILE)
 
 # Generate ClangConfig.cmake for the install tree.
@@ -29,7 +39,11 @@ foreach(p ${_count})
 get_filename_component(CLANG_INSTALL_PREFIX \"\${CLANG_INSTALL_PREFIX}\" PATH)")
 endforeach(p)
 set(CLANG_CONFIG_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${CLANG_INSTALL_PACKAGE_DIR}")
+set(CLANG_CONFIG_LLVM_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 set(CLANG_CONFIG_EXPORTS_FILE "\${CLANG_CMAKE_DIR}/ClangTargets.cmake")
+set(CLANG_CONFIG_INCLUDE_DIRS
+  "\${CLANG_INSTALL_PREFIX}/include"
+  )
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake

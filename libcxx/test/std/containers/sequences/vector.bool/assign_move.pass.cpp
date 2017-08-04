@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <vector>
 
 // vector& operator=(vector&& c);
@@ -18,7 +20,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         std::vector<bool, test_allocator<bool> > l(test_allocator<bool>(5));
         std::vector<bool, test_allocator<bool> > lo(test_allocator<bool>(5));
@@ -61,7 +62,6 @@ int main()
         assert(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
     }
-#if TEST_STD_VER >= 11
     {
         std::vector<bool, min_allocator<bool> > l(min_allocator<bool>{});
         std::vector<bool, min_allocator<bool> > lo(min_allocator<bool>{});
@@ -76,6 +76,4 @@ int main()
         assert(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

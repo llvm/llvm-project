@@ -17,12 +17,14 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
@@ -59,9 +61,11 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   TargetLibraryInfo *TLI;
   LazyValueInfo *LVI;
+  AliasAnalysis *AA;
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   bool HasProfileData = false;
+  bool HasGuards = false;
 #ifdef NDEBUG
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #else
@@ -88,7 +92,8 @@ public:
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI_, LazyValueInfo *LVI_,
-               bool HasProfileData_, std::unique_ptr<BlockFrequencyInfo> BFI_,
+               AliasAnalysis *AA_, bool HasProfileData_,
+               std::unique_ptr<BlockFrequencyInfo> BFI_,
                std::unique_ptr<BranchProbabilityInfo> BPI_);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -121,6 +126,9 @@ public:
   bool SimplifyPartiallyRedundantLoad(LoadInst *LI);
   bool TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB);
   bool TryToUnfoldSelectInCurrBB(BasicBlock *BB);
+
+  bool ProcessGuards(BasicBlock *BB);
+  bool ThreadGuard(BasicBlock *BB, IntrinsicInst *Guard, BranchInst *BI);
 
 private:
   BasicBlock *SplitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,

@@ -1,4 +1,4 @@
-//===-- llvm/InstrTypes.h - Important Instruction subclasses ----*- C++ -*-===//
+//===- llvm/InstrTypes.h - Important Instruction subclasses -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,19 +17,21 @@
 #define LLVM_IR_INSTRTYPES_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -60,36 +62,21 @@ protected:
                  Use *Ops, unsigned NumOps, BasicBlock *InsertAtEnd)
     : Instruction(Ty, iType, Ops, NumOps, InsertAtEnd) {}
 
-  // Out of line virtual method, so the vtable, etc has a home.
-  ~TerminatorInst() override;
-
-  /// Virtual methods - Terminators should overload these and provide inline
-  /// overrides of non-V methods.
-  virtual BasicBlock *getSuccessorV(unsigned idx) const = 0;
-  virtual unsigned getNumSuccessorsV() const = 0;
-  virtual void setSuccessorV(unsigned idx, BasicBlock *B) = 0;
-
 public:
   /// Return the number of successors that this terminator has.
-  unsigned getNumSuccessors() const {
-    return getNumSuccessorsV();
-  }
+  unsigned getNumSuccessors() const;
 
   /// Return the specified successor.
-  BasicBlock *getSuccessor(unsigned idx) const {
-    return getSuccessorV(idx);
-  }
+  BasicBlock *getSuccessor(unsigned idx) const;
 
   /// Update the specified successor to point at the provided block.
-  void setSuccessor(unsigned idx, BasicBlock *B) {
-    setSuccessorV(idx, B);
-  }
+  void setSuccessor(unsigned idx, BasicBlock *B);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->isTerminator();
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
@@ -114,17 +101,17 @@ public:
   template <class Term, class BB> // Successor Iterator
   class SuccIterator : public std::iterator<std::random_access_iterator_tag, BB,
                                             int, BB *, BB *> {
-    typedef std::iterator<std::random_access_iterator_tag, BB, int, BB *, BB *>
-        super;
+    using super =
+        std::iterator<std::random_access_iterator_tag, BB, int, BB *, BB *>;
 
   public:
-    typedef typename super::pointer pointer;
-    typedef typename super::reference reference;
+    using pointer = typename super::pointer;
+    using reference = typename super::reference;
 
   private:
     Term TermInst;
     unsigned idx;
-    typedef SuccIterator<Term, BB> Self;
+    using Self = SuccIterator<Term, BB>;
 
     inline bool index_is_valid(unsigned idx) {
       return idx < TermInst->getNumSuccessors();
@@ -260,11 +247,11 @@ public:
     }
   };
 
-  typedef SuccIterator<TerminatorInst *, BasicBlock> succ_iterator;
-  typedef SuccIterator<const TerminatorInst *, const BasicBlock>
-      succ_const_iterator;
-  typedef iterator_range<succ_iterator> succ_range;
-  typedef iterator_range<succ_const_iterator> succ_const_range;
+  using succ_iterator = SuccIterator<TerminatorInst *, BasicBlock>;
+  using succ_const_iterator =
+      SuccIterator<const TerminatorInst *, const BasicBlock>;
+  using succ_range = iterator_range<succ_iterator>;
+  using succ_const_range = iterator_range<succ_const_iterator>;
 
 private:
   inline succ_iterator succ_begin() { return succ_iterator(this); }
@@ -307,23 +294,18 @@ public:
     return User::operator new(s, 1);
   }
 
-  void *operator new(size_t, unsigned) = delete;
-
-  // Out of line virtual method, so the vtable, etc has a home.
-  ~UnaryInstruction() override;
-
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Alloca ||
            I->getOpcode() == Instruction::Load ||
            I->getOpcode() == Instruction::VAArg ||
            I->getOpcode() == Instruction::ExtractValue ||
            (I->getOpcode() >= CastOpsBegin && I->getOpcode() < CastOpsEnd);
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -340,8 +322,9 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryInstruction, Value)
 //===----------------------------------------------------------------------===//
 
 class BinaryOperator : public Instruction {
+  void AssertOK();
+
 protected:
-  void init(BinaryOps iType);
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
                  const Twine &Name, Instruction *InsertBefore);
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
@@ -349,6 +332,7 @@ protected:
 
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
+
   BinaryOperator *cloneImpl() const;
 
 public:
@@ -356,8 +340,6 @@ public:
   void *operator new(size_t s) {
     return User::operator new(s, 2);
   }
-
-  void *operator new(size_t, unsigned) = delete;
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -550,10 +532,10 @@ public:
   bool swapOperands();
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->isBinaryOp();
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -576,8 +558,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryOperator, Value)
 /// if (isa<CastInst>(Instr)) { ... }
 /// @brief Base class of casting instructions.
 class CastInst : public UnaryInstruction {
-  void anchor() override;
-
 protected:
   /// @brief Constructor with insert-before-instruction semantics for subclasses
   CastInst(Type *Ty, unsigned iType, Value *S,
@@ -853,10 +833,10 @@ public:
   static bool castIsValid(Instruction::CastOps op, Value *S, Type *DstTy);
 
   /// @brief Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->isCast();
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -922,17 +902,11 @@ protected:
           Value *LHS, Value *RHS, const Twine &Name,
           BasicBlock *InsertAtEnd);
 
-  void anchor() override; // Out of line virtual method.
-
 public:
-  CmpInst() = delete;
-
   // allocate space for exactly two operands
   void *operator new(size_t s) {
     return User::operator new(s, 2);
   }
-
-  void *operator new(size_t, unsigned) = delete;
 
   /// Construct a compare instruction, given the opcode, the predicate and
   /// the two operands.  Optionally (if InstBefore is specified) insert the
@@ -1059,18 +1033,6 @@ public:
     return isFalseWhenEqual(getPredicate());
   }
 
-  /// @brief Determine if Pred1 implies Pred2 is true when two compares have
-  /// matching operands.
-  bool isImpliedTrueByMatchingCmp(Predicate Pred2) {
-    return isImpliedTrueByMatchingCmp(getPredicate(), Pred2);
-  }
-
-  /// @brief Determine if Pred1 implies Pred2 is false when two compares have
-  /// matching operands.
-  bool isImpliedFalseByMatchingCmp(Predicate Pred2) {
-    return isImpliedFalseByMatchingCmp(getPredicate(), Pred2);
-  }
-
   /// @returns true if the predicate is unsigned, false otherwise.
   /// @brief Determine if the predicate is an unsigned operation.
   static bool isUnsigned(Predicate predicate);
@@ -1100,11 +1062,11 @@ public:
   static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
 
   /// @brief Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::ICmp ||
            I->getOpcode() == Instruction::FCmp;
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
@@ -1137,8 +1099,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CmpInst, Value)
 //===----------------------------------------------------------------------===//
 class FuncletPadInst : public Instruction {
 private:
-  void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
-
   FuncletPadInst(const FuncletPadInst &CPI);
 
   explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
@@ -1148,11 +1108,14 @@ private:
                           ArrayRef<Value *> Args, unsigned Values,
                           const Twine &NameStr, BasicBlock *InsertAtEnd);
 
+  void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
+
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
   friend class CatchPadInst;
   friend class CleanupPadInst;
+
   FuncletPadInst *cloneImpl() const;
 
 public:
@@ -1189,8 +1152,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) { return I->isFuncletPad(); }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Instruction *I) { return I->isFuncletPad(); }
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -1273,7 +1236,8 @@ public:
 
   ArrayRef<InputTy> inputs() const { return Inputs; }
 
-  typedef typename std::vector<InputTy>::const_iterator input_iterator;
+  using input_iterator = typename std::vector<InputTy>::const_iterator;
+
   size_t input_size() const { return Inputs.size(); }
   input_iterator input_begin() const { return Inputs.begin(); }
   input_iterator input_end() const { return Inputs.end(); }
@@ -1281,8 +1245,8 @@ public:
   StringRef getTag() const { return Tag; }
 };
 
-typedef OperandBundleDefT<Value *> OperandBundleDef;
-typedef OperandBundleDefT<const Value *> ConstOperandBundleDef;
+using OperandBundleDef = OperandBundleDefT<Value *>;
+using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 
 /// \brief A mixin to add operand bundle functionality to llvm instruction
 /// classes.
@@ -1565,8 +1529,8 @@ protected:
     return OperandBundleUse(BOI.Tag, Inputs);
   }
 
-  typedef BundleOpInfo *bundle_op_iterator;
-  typedef const BundleOpInfo *const_bundle_op_iterator;
+  using bundle_op_iterator = BundleOpInfo *;
+  using const_bundle_op_iterator = const BundleOpInfo *;
 
   /// \brief Return the start of the list of BundleOpInfo instances associated
   /// with this OperandBundleUser.
@@ -1666,6 +1630,6 @@ protected:
   }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 #endif // LLVM_IR_INSTRTYPES_H

@@ -1,5 +1,3 @@
-# REQUIRES: winres
-
 # RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2 \
 # RUN:   /export:mangled

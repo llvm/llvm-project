@@ -11,19 +11,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "X86.h"
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "X86CallLowering.h"
+#include "X86LegalizerInfo.h"
+#include "X86RegisterBankInfo.h"
+#endif
 #include "X86Subtarget.h"
-#include "X86InstrInfo.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86TargetMachine.h"
+#include "llvm/ADT/Triple.h"
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#endif
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
+#include <cassert>
+#include <string>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -93,8 +110,17 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     return X86II::MO_NO_FLAG;
 
   // Absolute symbols can be referenced directly.
-  if (GV && GV->isAbsoluteSymbolRef())
-    return X86II::MO_NO_FLAG;
+  if (GV) {
+    if (Optional<ConstantRange> CR = GV->getAbsoluteSymbolRange()) {
+      // See if we can use the 8-bit immediate form. Note that some instructions
+      // will sign extend the immediate operand, so to be conservative we only
+      // accept the range [0,128).
+      if (CR->getUnsignedMax().ult(128))
+        return X86II::MO_ABS8;
+      else
+        return X86II::MO_NO_FLAG;
+    }
+  }
 
   if (TM.shouldAssumeDSOLocal(M, GV))
     return classifyLocalReference(GV);
@@ -126,12 +152,18 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
     return X86II::MO_NO_FLAG;
 
   assert(!isTargetCOFF());
+  const Function *F = dyn_cast_or_null<Function>(GV);
 
-  if (isTargetELF())
+  if (isTargetELF()) {
+    if (is64Bit() && F && (CallingConv::X86_RegCall == F->getCallingConv()))
+      // According to psABI, PLT stub clobbers XMM8-XMM15.
+      // In Regcall calling convention those registers are used for passing
+      // parameters. Thus we need to prevent lazy binding in Regcall.
+      return X86II::MO_GOTPCREL;
     return X86II::MO_PLT;
+  }
 
   if (is64Bit()) {
-    auto *F = dyn_cast_or_null<Function>(GV);
     if (F && F->hasFnAttribute(Attribute::NonLazyBind))
       // If the function is marked as non-lazy, generate an indirect call
       // which loads from the GOT directly. This avoids runtime overhead
@@ -195,7 +227,6 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       FullFS = "+sahf";
   }
 
-
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPUName, FullFS);
 
@@ -253,6 +284,7 @@ void X86Subtarget::initializeEnvironment() {
   HasFMA4 = false;
   HasXOP = false;
   HasTBM = false;
+  HasLWP = false;
   HasMOVBE = false;
   HasRDRAND = false;
   HasF16C = false;
@@ -263,11 +295,11 @@ void X86Subtarget::initializeEnvironment() {
   HasVBMI = false;
   HasIFMA = false;
   HasRTM = false;
-  HasHLE = false;
   HasERI = false;
   HasCDI = false;
   HasPFI = false;
   HasDQI = false;
+  HasVPOPCNTDQ = false;
   HasBWI = false;
   HasVLX = false;
   HasADX = false;
@@ -277,7 +309,11 @@ void X86Subtarget::initializeEnvironment() {
   HasRDSEED = false;
   HasLAHFSAHF = false;
   HasMWAITX = false;
+  HasCLZERO = false;
   HasMPX = false;
+  HasSGX = false;
+  HasCLFLUSHOPT = false;
+  HasCLWB = false;
   IsBTMemSlow = false;
   IsPMULLDSlow = false;
   IsSHLDSlow = false;
@@ -286,16 +322,19 @@ void X86Subtarget::initializeEnvironment() {
   HasSSEUnalignedMem = false;
   HasCmpxchg16b = false;
   UseLeaForSP = false;
-  HasFastPartialYMMWrite = false;
+  HasFastPartialYMMorZMMWrite = false;
   HasFastScalarFSQRT = false;
   HasFastVectorFSQRT = false;
   HasFastLZCNT = false;
+  HasFastSHLDRotate = false;
+  HasERMSB = false;
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;
   CallRegIndirect = false;
   LEAUsesAG = false;
   SlowLEA = false;
+  Slow3OpsLEA = false;
   SlowIncDec = false;
   stackAlignment = 4;
   // FIXME: this is a known good value for Yonah. How about others?
@@ -310,6 +349,35 @@ X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+namespace {
+
+struct X86GISelActualAccessor : public GISelAccessor {
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+
+  const CallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+
+  const InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+};
+
+} // end anonymous namespace
+#endif
+
 X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                            const X86TargetMachine &TM,
                            unsigned StackAlignOverride)
@@ -321,8 +389,8 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                   TargetTriple.getEnvironment() != Triple::CODE16),
       In16BitMode(TargetTriple.getArch() == Triple::x86 &&
                   TargetTriple.getEnvironment() == Triple::CODE16),
-      TSInfo(), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
+      FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
   if (!isPositionIndependent())
     setPICStyle(PICStyles::None);
@@ -334,6 +402,19 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
     setPICStyle(PICStyles::StubPIC);
   else if (isTargetELF())
     setPICStyle(PICStyles::GOT);
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+  GISelAccessor *GISel = new GISelAccessor();
+#else
+  X86GISelActualAccessor *GISel = new X86GISelActualAccessor();
+
+  GISel->CallLoweringInfo.reset(new X86CallLowering(*getTargetLowering()));
+  GISel->Legalizer.reset(new X86LegalizerInfo(*this, TM));
+
+  auto *RBI = new X86RegisterBankInfo(*getRegisterInfo());
+  GISel->RegBankInfo.reset(RBI);
+  GISel->InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
+#endif
+  setGISelAccessor(*GISel);
 }
 
 const CallLowering *X86Subtarget::getCallLowering() const {
@@ -359,4 +440,3 @@ const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
 bool X86Subtarget::enableEarlyIfConversion() const {
   return hasCMov() && X86EarlyIfConv;
 }
-

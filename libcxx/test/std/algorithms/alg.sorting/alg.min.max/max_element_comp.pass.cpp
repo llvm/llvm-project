@@ -16,10 +16,13 @@
 
 #include <algorithm>
 #include <functional>
+#include <random>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+
+std::mt19937 randomness;
 
 template <class Iter>
 void
@@ -42,7 +45,7 @@ test(int N)
     int* a = new int[N];
     for (int i = 0; i < N; ++i)
         a[i] = i;
-    std::random_shuffle(a, a+N);
+    std::shuffle(a, a+N, randomness);
     test(Iter(a), Iter(a+N));
     delete [] a;
 }

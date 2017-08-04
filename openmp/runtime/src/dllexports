@@ -351,7 +351,7 @@ kmpc_set_defaults                           224
     %ifdef OMP_30
         __kmpc_omp_taskyield                235
     %endif # OMP_30
-    __kmpc_place_threads                    236
+#    __kmpc_place_threads                    236
 %endif
 
 # OpenMP 4.0 entry points
@@ -396,6 +396,15 @@ kmpc_set_defaults                           224
 %endif
 kmpc_aligned_malloc                         265
 kmpc_set_disp_num_buffers                   267
+
+# OpenMP 5.0 entry points
+# TODO: change to OMP_50 once it is implemented
+%ifndef stub
+    %ifdef OMP_45
+        __kmpc_task_reduction_init          268
+        __kmpc_task_reduction_get_th_data   269
+    %endif
+%endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
 # Number for lowercase version is indicated.  Number for uppercase is obtained by adding 1000.
@@ -1108,15 +1117,19 @@ kmp_set_disp_num_buffers                    890
 
             %ifdef HAVE_QUAD
             __kmpc_atomic_fixed1_sub_rev_fp
+            __kmpc_atomic_fixed1u_sub_rev_fp
             __kmpc_atomic_fixed1_div_rev_fp
             __kmpc_atomic_fixed1u_div_rev_fp
             __kmpc_atomic_fixed2_sub_rev_fp
+            __kmpc_atomic_fixed2u_sub_rev_fp
             __kmpc_atomic_fixed2_div_rev_fp
             __kmpc_atomic_fixed2u_div_rev_fp
             __kmpc_atomic_fixed4_sub_rev_fp
+            __kmpc_atomic_fixed4u_sub_rev_fp
             __kmpc_atomic_fixed4_div_rev_fp
             __kmpc_atomic_fixed4u_div_rev_fp
             __kmpc_atomic_fixed8_sub_rev_fp
+            __kmpc_atomic_fixed8u_sub_rev_fp
             __kmpc_atomic_fixed8_div_rev_fp
             __kmpc_atomic_fixed8u_div_rev_fp
             __kmpc_atomic_float4_sub_rev_fp

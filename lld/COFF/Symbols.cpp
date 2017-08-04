@@ -30,7 +30,7 @@ namespace lld {
 namespace coff {
 
 StringRef SymbolBody::getName() {
-  // DefinedCOFF names are read lazily for a performance reason.
+  // COFF symbol names are read lazily for a performance reason.
   // Non-external symbol names are never used by the linker except for logging
   // or debugging. Their internal references are resolved not by name but by
   // symbol index. And because they are not external, no one can refer them by
@@ -39,7 +39,7 @@ StringRef SymbolBody::getName() {
   // is a waste of time.
   if (Name.empty()) {
     auto *D = cast<DefinedCOFF>(this);
-    D->File->getCOFFObj()->getSymbolName(D->Sym, Name);
+    cast<ObjectFile>(D->File)->getCOFFObj()->getSymbolName(D->Sym, Name);
   }
   return Name;
 }
@@ -47,31 +47,37 @@ StringRef SymbolBody::getName() {
 InputFile *SymbolBody::getFile() {
   if (auto *Sym = dyn_cast<DefinedCOFF>(this))
     return Sym->File;
-  if (auto *Sym = dyn_cast<DefinedBitcode>(this))
-    return Sym->File;
   if (auto *Sym = dyn_cast<Lazy>(this))
     return Sym->File;
   return nullptr;
 }
 
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
-  size_t SymSize = File->getCOFFObj()->getSymbolTableEntrySize();
+  size_t SymSize =
+      cast<ObjectFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))
     return COFFSymbolRef(reinterpret_cast<const coff_symbol16 *>(Sym));
   assert(SymSize == sizeof(coff_symbol32));
   return COFFSymbolRef(reinterpret_cast<const coff_symbol32 *>(Sym));
 }
 
+uint16_t DefinedAbsolute::OutputSectionIndex = 0;
+
+static Chunk *makeImportThunk(DefinedImportData *S, uint16_t Machine) {
+  if (Machine == AMD64)
+    return make<ImportThunkChunkX64>(S);
+  if (Machine == I386)
+    return make<ImportThunkChunkX86>(S);
+  if (Machine == ARM64)
+    return make<ImportThunkChunkARM64>(S);
+  assert(Machine == ARMNT);
+  return make<ImportThunkChunkARM>(S);
+}
+
 DefinedImportThunk::DefinedImportThunk(StringRef Name, DefinedImportData *S,
                                        uint16_t Machine)
-    : Defined(DefinedImportThunkKind, Name) {
-  switch (Machine) {
-  case AMD64: Data = make<ImportThunkChunkX64>(S); return;
-  case I386:  Data = make<ImportThunkChunkX86>(S); return;
-  case ARMNT: Data = make<ImportThunkChunkARM>(S); return;
-  default:    llvm_unreachable("unknown machine type");
-  }
-}
+    : Defined(DefinedImportThunkKind, Name), WrappedSym(S),
+      Data(makeImportThunk(S, Machine)) {}
 
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.

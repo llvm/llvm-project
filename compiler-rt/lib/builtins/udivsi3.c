@@ -18,8 +18,6 @@
 
 /* Translated from Figure 3-40 of The PowerPC Compiler Writer's Guide */
 
-ARM_EABI_FNALIAS(uidiv, udivsi3)
-
 /* This function should not call __divsi3! */
 COMPILER_RT_ABI su_int
 __udivsi3(su_int n, su_int d)
@@ -64,3 +62,10 @@ __udivsi3(su_int n, su_int d)
     q = (q << 1) | carry;
     return q;
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI su_int __aeabi_uidiv(su_int n, su_int d) {
+  return __udivsi3(n, d);
+}
+#endif
+

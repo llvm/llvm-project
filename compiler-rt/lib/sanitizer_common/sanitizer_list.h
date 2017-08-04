@@ -70,6 +70,17 @@ struct IntrusiveList {
     size_--;
   }
 
+  void extract(Item *prev, Item *x) {
+    CHECK(!empty());
+    CHECK_NE(prev, nullptr);
+    CHECK_NE(x, nullptr);
+    CHECK_EQ(prev->next, x);
+    prev->next = x->next;
+    if (last_ == x)
+      last_ = prev;
+    size_--;
+  }
+
   Item *front() { return first_; }
   const Item *front() const { return first_; }
   Item *back() { return last_; }

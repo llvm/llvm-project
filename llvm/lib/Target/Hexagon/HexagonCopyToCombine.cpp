@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
-#include "llvm/PassSupport.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/PassSupport.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -440,22 +440,28 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
 
     // Put instructions that last defined integer or double registers into the
     // map.
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (!Op.isReg() || !Op.isDef() || !Op.getReg())
-        continue;
-      unsigned Reg = Op.getReg();
-      if (Hexagon::DoubleRegsRegClass.contains(Reg)) {
-        for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-          LastDef[*SubRegs] = &MI;
-        }
-      } else if (Hexagon::IntRegsRegClass.contains(Reg))
-        LastDef[Reg] = &MI;
+    for (MachineOperand &Op : MI.operands()) {
+      if (Op.isReg()) {
+        if (!Op.isDef() || !Op.getReg())
+          continue;
+        unsigned Reg = Op.getReg();
+        if (Hexagon::DoubleRegsRegClass.contains(Reg)) {
+          for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
+            LastDef[*SubRegs] = &MI;
+        } else if (Hexagon::IntRegsRegClass.contains(Reg))
+          LastDef[Reg] = &MI;
+      } else if (Op.isRegMask()) {
+        for (unsigned Reg : Hexagon::IntRegsRegClass)
+          if (Op.clobbersPhysReg(Reg))
+            LastDef[Reg] = &MI;
+      }
     }
   }
 }
 
 bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
 
   if (IsCombinesDisabled) return false;
 

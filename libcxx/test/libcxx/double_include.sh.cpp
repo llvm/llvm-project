@@ -137,6 +137,9 @@
 #include <experimental/algorithm>
 #include <experimental/any>
 #include <experimental/chrono>
+#if defined(__cpp_coroutines)
+#include <experimental/coroutine>
+#endif
 #include <experimental/deque>
 #include <experimental/dynarray>
 #include <experimental/filesystem>

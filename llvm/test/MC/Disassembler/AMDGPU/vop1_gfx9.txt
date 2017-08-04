@@ -1,0 +1,4 @@
+# RUN: llvm-mc -arch=amdgcn -mcpu=gfx901 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX9
+
+# GFX9: v_swap_b32 v1, v2 ; encoding: [0x02,0xa3,0x02,0x7e]
+0x02 0xa3 0x02 0x7e

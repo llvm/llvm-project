@@ -48,7 +48,6 @@ int main()
         assert(X::dtor_called == false);
         assert(static_cast<bool>(opt) == false);
     }
-    assert(X::dtor_called == false); // TRANSITION, Clang/C2 VSO#239997
     {
         optional<X> opt(X{});
         X::dtor_called = false;
@@ -57,5 +56,4 @@ int main()
         assert(static_cast<bool>(opt) == false);
         X::dtor_called = false;
     }
-    assert(X::dtor_called == false); // TRANSITION, Clang/C2 VSO#239997
 }

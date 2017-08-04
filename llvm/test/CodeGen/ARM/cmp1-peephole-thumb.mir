@@ -1,0 +1,75 @@
+# RUN: llc -run-pass=peephole-opt %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumb-none--eabi"
+
+  define i32 @f(i32 %a, i32 %b) {
+  entry:
+    %mul = mul nsw i32 %b, %a
+    %cmp = icmp eq i32 %mul, 0
+    %conv = zext i1 %cmp to i32
+    ret i32 %conv
+  }
+
+...
+---
+name:            f
+# CHECK-LABEL: name: f
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr }
+  - { id: 1, class: tgpr }
+  - { id: 2, class: tgpr }
+  - { id: 3, class: tgpr }
+  - { id: 4, class: tgpr }
+  - { id: 5, class: tgpr }
+liveins:
+  - { reg: '%r0', virtual-reg: '%0' }
+  - { reg: '%r1', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+
+# CHECK:  tMOVi8 1, 14, _
+# CHECK:  tMOVi8 0, 14, _
+# CHECK:  tMUL %1, %0, 14, _
+# CHECK-NOT: tCMPi8
+body:             |
+  bb.0.entry:
+    liveins: %r0, %r1
+
+    %1 = COPY %r1
+    %0 = COPY %r0
+    %2, %cpsr = tMUL %1, %0, 14, _
+    %3, %cpsr = tMOVi8 1, 14, _
+    %4, %cpsr = tMOVi8 0, 14, _
+    tCMPi8 killed %2, 0, 14, _, implicit-def %cpsr
+    tBcc %bb.2.entry, 0, %cpsr
+
+  bb.1.entry:
+
+  bb.2.entry:
+    %5 = PHI %4, %bb.1.entry, %3, %bb.0.entry
+    %r0 = COPY %5
+    tBX_RET 14, _, implicit %r0
+
+...

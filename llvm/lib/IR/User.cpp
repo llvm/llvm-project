@@ -19,8 +19,6 @@ class BasicBlock;
 //                                 User Class
 //===----------------------------------------------------------------------===//
 
-void User::anchor() {}
-
 void User::replaceUsesOfWith(Value *From, Value *To) {
   if (From == To) return;   // Duh what?
 
@@ -191,14 +189,6 @@ void User::operator delete(void *Usr) {
              /* Delete */ false);
     ::operator delete(Storage);
   }
-}
-
-//===----------------------------------------------------------------------===//
-//                             Operator Class
-//===----------------------------------------------------------------------===//
-
-Operator::~Operator() {
-  llvm_unreachable("should never destroy an Operator");
 }
 
 } // End llvm namespace

@@ -58,4 +58,23 @@ int main()
     test(u16string_view{u"123"});
     test(u32string_view{U"123"});
 #endif
+
+#if TEST_STD_VER > 14
+    {
+    constexpr string_view       sv { "123", 3 };
+    constexpr u16string_view u16sv {u"123", 3 };
+    constexpr u32string_view u32sv {U"123", 3 };
+    constexpr wstring_view     wsv {L"123", 3 };
+
+    static_assert (    *sv.rbegin() ==    sv[2], "" );
+    static_assert ( *u16sv.rbegin() == u16sv[2], "" );
+    static_assert ( *u32sv.rbegin() == u32sv[2], "" );
+    static_assert (   *wsv.rbegin() ==   wsv[2], "" );
+
+    static_assert (    *sv.crbegin() ==    sv[2], "" );
+    static_assert ( *u16sv.crbegin() == u16sv[2], "" );
+    static_assert ( *u32sv.crbegin() == u32sv[2], "" );
+    static_assert (   *wsv.crbegin() ==   wsv[2], "" );
+    }
+#endif
 }

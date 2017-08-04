@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// The Cortex-A57 is a traditional superscaler microprocessor with a
+// The Cortex-A57 is a traditional superscalar microprocessor with a
 // conservative 3-wide in-order stage for decode and dispatch. Combined with the
 // much wider out-of-order issue stage, this produced a need to carefully
 // schedule micro-ops so that all three decoded each cycle are successfully
@@ -162,7 +162,9 @@ def : InstRW<[A57Write_2cyc_1M],    (instregex "BFM")>;
 // Cryptography Extensions
 // -----------------------------------------------------------------------------
 
-def : InstRW<[A57Write_3cyc_1W], (instregex "^AES")>;
+def A57ReadAES  : SchedReadAdvance<3, [A57Write_3cyc_1W]>;
+def : InstRW<[A57Write_3cyc_1W], (instregex "^AES[DE]")>;
+def : InstRW<[A57Write_3cyc_1W, A57ReadAES], (instregex "^AESI?MC")>;
 def : InstRW<[A57Write_6cyc_2V], (instregex "^SHA1SU0")>;
 def : InstRW<[A57Write_3cyc_1W], (instregex "^SHA1(H|SU1)")>;
 def : InstRW<[A57Write_6cyc_2W], (instregex "^SHA1[CMP]")>;

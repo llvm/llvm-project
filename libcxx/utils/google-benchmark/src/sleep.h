@@ -1,14 +1,12 @@
 #ifndef BENCHMARK_SLEEP_H_
 #define BENCHMARK_SLEEP_H_
 
-#include <cstdint>
-
 namespace benchmark {
-const int64_t kNumMillisPerSecond = 1000LL;
-const int64_t kNumMicrosPerMilli = 1000LL;
-const int64_t kNumMicrosPerSecond = kNumMillisPerSecond * 1000LL;
-const int64_t kNumNanosPerMicro = 1000LL;
-const int64_t kNumNanosPerSecond = kNumNanosPerMicro * kNumMicrosPerSecond;
+const int kNumMillisPerSecond = 1000;
+const int kNumMicrosPerMilli = 1000;
+const int kNumMicrosPerSecond = kNumMillisPerSecond * 1000;
+const int kNumNanosPerMicro = 1000;
+const int kNumNanosPerSecond = kNumNanosPerMicro * kNumMicrosPerSecond;
 
 void SleepForMilliseconds(int milliseconds);
 void SleepForSeconds(double seconds);

@@ -2,18 +2,32 @@
 
 namespace std {
 template <typename T> struct vec_iterator {
-  T *ptr;
+  T ptr;
   vec_iterator operator++(int);
+
+  template <typename X>
+  vec_iterator(const vec_iterator<X> &); // Omit enable_if<...>.
 };
 
 template <typename T> struct vector {
-  typedef vec_iterator<T> iterator;
+  typedef vec_iterator<T*> iterator;
 
   iterator begin();
   iterator end();
 
   void erase(iterator);
   void erase(iterator, iterator);
+};
+
+template <typename T> struct vector_with_const_iterator {
+  typedef vec_iterator<T*> iterator;
+  typedef vec_iterator<const T*> const_iterator;
+
+  iterator begin();
+  iterator end();
+
+  void erase(const_iterator);
+  void erase(const_iterator, const_iterator);
 };
 
 template <typename FwIt, typename T>
@@ -55,6 +69,16 @@ int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one item even when multiple items should be removed [misc-inaccurate-erase]
   // CHECK-FIXES: {{^  }}v.erase(remove(v.begin(), v.end(), 10), v.end());{{$}}
   v.erase(remove(v.begin(), v.end(), 20), v.end());
+
+  auto *p = &v;
+  p->erase(remove(p->begin(), p->end(), 11));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
+  // CHECK-FIXES: {{^  }}p->erase(remove(p->begin(), p->end(), 11), p->end());{{$}}
+
+  std::vector_with_const_iterator<int> v2;
+  v2.erase(remove(v2.begin(), v2.end(), 12));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
+  // CHECK-FIXES: {{^  }}v2.erase(remove(v2.begin(), v2.end(), 12), v2.end());{{$}}
 
   // Fix is not trivial.
   auto it = v.end();

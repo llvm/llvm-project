@@ -7,30 +7,75 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Dominators.h"
+#include <random>
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/SourceMgr.h"
+#include "CFGBuilder.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
-namespace llvm {
-  void initializeDPassPass(PassRegistry&);
+struct PostDomTree : PostDomTreeBase<BasicBlock> {
+  PostDomTree(Function &F) { recalculate(F); }
+};
 
-  namespace {
-    struct DPass : public FunctionPass {
-      static char ID;
-      bool runOnFunction(Function &F) override {
-        DominatorTree *DT =
-            &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-        PostDominatorTree *PDT =
-            &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+/// Build the dominator tree for the function and run the Test.
+static void runWithDomTree(
+    Module &M, StringRef FuncName,
+    function_ref<void(Function &F, DominatorTree *DT, PostDomTree *PDT)> Test) {
+  auto *F = M.getFunction(FuncName);
+  ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
+  // Compute the dominator tree for the function.
+  DominatorTree DT(*F);
+  PostDomTree PDT(*F);
+  Test(*F, &DT, &PDT);
+}
+
+static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
+                                              StringRef ModuleStr) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(ModuleStr, Err, Context);
+  assert(M && "Bad assembly?");
+  return M;
+}
+
+TEST(DominatorTree, Unreachable) {
+  StringRef ModuleString =
+      "declare i32 @g()\n"
+      "define void @f(i32 %x) personality i32 ()* @g {\n"
+      "bb0:\n"
+      "  %y1 = add i32 %x, 1\n"
+      "  %y2 = add i32 %x, 1\n"
+      "  %y3 = invoke i32 @g() to label %bb1 unwind label %bb2\n"
+      "bb1:\n"
+      "  %y4 = add i32 %x, 1\n"
+      "  br label %bb4\n"
+      "bb2:\n"
+      "  %y5 = landingpad i32\n"
+      "          cleanup\n"
+      "  br label %bb4\n"
+      "bb3:\n"
+      "  %y6 = add i32 %x, 1\n"
+      "  %y7 = add i32 %x, 1\n"
+      "  ret void\n"
+      "bb4:\n"
+      "  %y8 = phi i32 [0, %bb2], [%y4, %bb1]\n"
+      "  %y9 = phi i32 [0, %bb2], [%y4, %bb1]\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(
+      *M, "f", [&](Function &F, DominatorTree *DT, PostDomTree *PDT) {
         Function::iterator FI = F.begin();
 
         BasicBlock *BB0 = &*FI++;
@@ -177,6 +222,7 @@ namespace llvm {
         EXPECT_EQ(PostDominatedBBs.size(), 0UL);
 
         // Check DFS Numbers before
+        DT->updateDFSNumbers();
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumIn(), 0UL);
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 7UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumIn(), 1UL);
@@ -186,12 +232,19 @@ namespace llvm {
         EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 3UL);
         EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 4UL);
 
+        // Check levels before
+        EXPECT_EQ(DT->getNode(BB0)->getLevel(), 0U);
+        EXPECT_EQ(DT->getNode(BB1)->getLevel(), 1U);
+        EXPECT_EQ(DT->getNode(BB2)->getLevel(), 1U);
+        EXPECT_EQ(DT->getNode(BB4)->getLevel(), 1U);
+
         // Reattach block 3 to block 1 and recalculate
         BB1->getTerminator()->eraseFromParent();
         BranchInst::Create(BB4, BB3, ConstantInt::getTrue(F.getContext()), BB1);
         DT->recalculate(F);
 
         // Check DFS Numbers after
+        DT->updateDFSNumbers();
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumIn(), 0UL);
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 9UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumIn(), 1UL);
@@ -203,68 +256,349 @@ namespace llvm {
         EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 5UL);
         EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 6UL);
 
+        // Check levels after
+        EXPECT_EQ(DT->getNode(BB0)->getLevel(), 0U);
+        EXPECT_EQ(DT->getNode(BB1)->getLevel(), 1U);
+        EXPECT_EQ(DT->getNode(BB2)->getLevel(), 1U);
+        EXPECT_EQ(DT->getNode(BB3)->getLevel(), 2U);
+        EXPECT_EQ(DT->getNode(BB4)->getLevel(), 1U);
+
         // Change root node
         DT->verifyDomTree();
-        BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "new_entry",
-                                                  &F, BB0);
+        BasicBlock *NewEntry =
+            BasicBlock::Create(F.getContext(), "new_entry", &F, BB0);
         BranchInst::Create(BB0, NewEntry);
         EXPECT_EQ(F.begin()->getName(), NewEntry->getName());
         EXPECT_TRUE(&F.getEntryBlock() == NewEntry);
         DT->setNewRoot(NewEntry);
         DT->verifyDomTree();
+      });
+}
 
-        return false;
-      }
-      void getAnalysisUsage(AnalysisUsage &AU) const override {
-        AU.addRequired<DominatorTreeWrapperPass>();
-        AU.addRequired<PostDominatorTreeWrapperPass>();
-      }
-      DPass() : FunctionPass(ID) {
-        initializeDPassPass(*PassRegistry::getPassRegistry());
-      }
-    };
-    char DPass::ID = 0;
+TEST(DominatorTree, NonUniqueEdges) {
+  StringRef ModuleString =
+      "define i32 @f(i32 %i, i32 *%p) {\n"
+      "bb0:\n"
+      "   store i32 %i, i32 *%p\n"
+      "   switch i32 %i, label %bb2 [\n"
+      "     i32 0, label %bb1\n"
+      "     i32 1, label %bb1\n"
+      "   ]\n"
+      " bb1:\n"
+      "   ret i32 1\n"
+      " bb2:\n"
+      "   ret i32 4\n"
+      "}\n";
 
-    std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context, DPass *P) {
-      const char *ModuleStrig =
-        "declare i32 @g()\n" \
-        "define void @f(i32 %x) personality i32 ()* @g {\n" \
-        "bb0:\n" \
-        "  %y1 = add i32 %x, 1\n" \
-        "  %y2 = add i32 %x, 1\n" \
-        "  %y3 = invoke i32 @g() to label %bb1 unwind label %bb2\n" \
-        "bb1:\n" \
-        "  %y4 = add i32 %x, 1\n" \
-        "  br label %bb4\n" \
-        "bb2:\n" \
-        "  %y5 = landingpad i32\n" \
-        "          cleanup\n" \
-        "  br label %bb4\n" \
-        "bb3:\n" \
-        "  %y6 = add i32 %x, 1\n" \
-        "  %y7 = add i32 %x, 1\n" \
-        "  ret void\n" \
-        "bb4:\n" \
-        "  %y8 = phi i32 [0, %bb2], [%y4, %bb1]\n"
-        "  %y9 = phi i32 [0, %bb2], [%y4, %bb1]\n"
-        "  ret void\n" \
-        "}\n";
-      SMDiagnostic Err;
-      return parseAssemblyString(ModuleStrig, Err, Context);
-    }
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
-    TEST(DominatorTree, Unreachable) {
-      DPass *P = new DPass();
-      LLVMContext Context;
-      std::unique_ptr<Module> M = makeLLVMModule(Context, P);
-      legacy::PassManager Passes;
-      Passes.add(P);
-      Passes.run(*M);
+  runWithDomTree(
+      *M, "f", [&](Function &F, DominatorTree *DT, PostDomTree *PDT) {
+        Function::iterator FI = F.begin();
+
+        BasicBlock *BB0 = &*FI++;
+        BasicBlock *BB1 = &*FI++;
+        BasicBlock *BB2 = &*FI++;
+
+        const TerminatorInst *TI = BB0->getTerminator();
+        assert(TI->getNumSuccessors() == 3 && "Switch has three successors");
+
+        BasicBlockEdge Edge_BB0_BB2(BB0, TI->getSuccessor(0));
+        assert(Edge_BB0_BB2.getEnd() == BB2 &&
+               "Default label is the 1st successor");
+
+        BasicBlockEdge Edge_BB0_BB1_a(BB0, TI->getSuccessor(1));
+        assert(Edge_BB0_BB1_a.getEnd() == BB1 && "BB1 is the 2nd successor");
+
+        BasicBlockEdge Edge_BB0_BB1_b(BB0, TI->getSuccessor(2));
+        assert(Edge_BB0_BB1_b.getEnd() == BB1 && "BB1 is the 3rd successor");
+
+        EXPECT_TRUE(DT->dominates(Edge_BB0_BB2, BB2));
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB2, BB1));
+
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_a, BB1));
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_b, BB1));
+
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_a, BB2));
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_b, BB2));
+      });
+}
+
+namespace {
+const auto Insert = CFGBuilder::ActionKind::Insert;
+const auto Delete = CFGBuilder::ActionKind::Delete;
+
+bool CompUpdates(const CFGBuilder::Update &A, const CFGBuilder::Update &B) {
+  return std::tie(A.Action, A.Edge.From, A.Edge.To) <
+         std::tie(B.Action, B.Edge.From, B.Edge.To);
+}
+}  // namespace
+
+TEST(DominatorTree, InsertReachable) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"}, {"3", "4"},  {"4", "5"},  {"5", "6"},  {"5", "7"},
+      {"3", "8"}, {"8", "9"}, {"9", "10"}, {"8", "11"}, {"11", "12"}};
+
+  std::vector<CFGBuilder::Update> Updates = {{Insert, {"12", "10"}},
+                                             {Insert, {"10", "9"}},
+                                             {Insert, {"7", "6"}},
+                                             {Insert, {"7", "5"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate;
+  while ((LastUpdate = B.applyUpdate())) {
+    EXPECT_EQ(LastUpdate->Action, Insert);
+    BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+    BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+    DT.insertEdge(From, To);
+    EXPECT_TRUE(DT.verify());
+    PDT.insertEdge(From, To);
+    EXPECT_TRUE(PDT.verify());
+  }
+}
+
+TEST(DominatorTree, InsertReachable2) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"}, {"3", "4"},  {"4", "5"},  {"5", "6"},  {"5", "7"},
+      {"7", "5"}, {"2", "8"}, {"8", "11"}, {"11", "12"}, {"12", "10"},
+      {"10", "9"}, {"9", "10"}};
+
+  std::vector<CFGBuilder::Update> Updates = {{Insert, {"10", "7"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
+  EXPECT_TRUE(LastUpdate);
+
+  EXPECT_EQ(LastUpdate->Action, Insert);
+  BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+  BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+  DT.insertEdge(From, To);
+  EXPECT_TRUE(DT.verify());
+  PDT.insertEdge(From, To);
+  EXPECT_TRUE(PDT.verify());
+}
+
+TEST(DominatorTree, InsertUnreachable) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {{"1", "2"},  {"2", "3"},  {"3", "4"},
+                                       {"5", "6"},  {"5", "7"},  {"3", "8"},
+                                       {"9", "10"}, {"11", "12"}};
+
+  std::vector<CFGBuilder::Update> Updates = {{Insert, {"4", "5"}},
+                                             {Insert, {"8", "9"}},
+                                             {Insert, {"10", "12"}},
+                                             {Insert, {"10", "11"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate;
+  while ((LastUpdate = B.applyUpdate())) {
+    EXPECT_EQ(LastUpdate->Action, Insert);
+    BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+    BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+    DT.insertEdge(From, To);
+    EXPECT_TRUE(DT.verify());
+    PDT.insertEdge(From, To);
+    EXPECT_TRUE(PDT.verify());
+  }
+}
+
+TEST(DominatorTree, InsertMixed) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"},  {"3", "4"},  {"5", "6"},   {"5", "7"},
+      {"8", "9"}, {"9", "10"}, {"8", "11"}, {"11", "12"}, {"7", "3"}};
+
+  std::vector<CFGBuilder::Update> Updates = {
+      {Insert, {"4", "5"}},   {Insert, {"2", "5"}},   {Insert, {"10", "9"}},
+      {Insert, {"12", "10"}}, {Insert, {"12", "10"}}, {Insert, {"7", "8"}},
+      {Insert, {"7", "5"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate;
+  while ((LastUpdate = B.applyUpdate())) {
+    EXPECT_EQ(LastUpdate->Action, Insert);
+    BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+    BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+    DT.insertEdge(From, To);
+    EXPECT_TRUE(DT.verify());
+    PDT.insertEdge(From, To);
+    EXPECT_TRUE(PDT.verify());
+  }
+}
+
+TEST(DominatorTree, InsertPermut) {
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"},  {"3", "4"},  {"5", "6"},   {"5", "7"},
+      {"8", "9"}, {"9", "10"}, {"8", "11"}, {"11", "12"}, {"7", "3"}};
+
+  std::vector<CFGBuilder::Update> Updates = {{Insert, {"4", "5"}},
+                                             {Insert, {"2", "5"}},
+                                             {Insert, {"10", "9"}},
+                                             {Insert, {"12", "10"}}};
+
+  while (std::next_permutation(Updates.begin(), Updates.end(), CompUpdates)) {
+    CFGHolder Holder;
+    CFGBuilder B(Holder.F, Arcs, Updates);
+    DominatorTree DT(*Holder.F);
+    EXPECT_TRUE(DT.verify());
+    PostDomTree PDT(*Holder.F);
+    EXPECT_TRUE(PDT.verify());
+
+    Optional<CFGBuilder::Update> LastUpdate;
+    while ((LastUpdate = B.applyUpdate())) {
+      EXPECT_EQ(LastUpdate->Action, Insert);
+      BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+      BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+      DT.insertEdge(From, To);
+      EXPECT_TRUE(DT.verify());
+      PDT.insertEdge(From, To);
+      EXPECT_TRUE(PDT.verify());
     }
   }
 }
 
-INITIALIZE_PASS_BEGIN(DPass, "dpass", "dpass", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(DPass, "dpass", "dpass", false, false)
+TEST(DominatorTree, DeleteReachable) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"}, {"2", "4"}, {"3", "4"}, {"4", "5"},  {"5", "6"},
+      {"5", "7"}, {"7", "8"}, {"3", "8"}, {"8", "9"}, {"9", "10"}, {"10", "2"}};
+
+  std::vector<CFGBuilder::Update> Updates = {
+      {Delete, {"2", "4"}}, {Delete, {"7", "8"}}, {Delete, {"10", "2"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate;
+  while ((LastUpdate = B.applyUpdate())) {
+    EXPECT_EQ(LastUpdate->Action, Delete);
+    BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+    BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+    DT.deleteEdge(From, To);
+    EXPECT_TRUE(DT.verify());
+    PDT.deleteEdge(From, To);
+    EXPECT_TRUE(PDT.verify());
+  }
+}
+
+TEST(DominatorTree, DeleteUnreachable) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"}, {"3", "4"}, {"4", "5"},  {"5", "6"}, {"5", "7"},
+      {"7", "8"}, {"3", "8"}, {"8", "9"}, {"9", "10"}, {"10", "2"}};
+
+  std::vector<CFGBuilder::Update> Updates = {
+      {Delete, {"8", "9"}}, {Delete, {"7", "8"}}, {Delete, {"3", "4"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate;
+  while ((LastUpdate = B.applyUpdate())) {
+    EXPECT_EQ(LastUpdate->Action, Delete);
+    BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+    BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+    DT.deleteEdge(From, To);
+    EXPECT_TRUE(DT.verify());
+    PDT.deleteEdge(From, To);
+    EXPECT_TRUE(PDT.verify());
+  }
+}
+
+TEST(DominatorTree, InsertDelete) {
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"}, {"3", "4"},  {"4", "5"},  {"5", "6"},  {"5", "7"},
+      {"3", "8"}, {"8", "9"}, {"9", "10"}, {"8", "11"}, {"11", "12"}};
+
+  std::vector<CFGBuilder::Update> Updates = {
+      {Insert, {"2", "4"}},  {Insert, {"12", "10"}}, {Insert, {"10", "9"}},
+      {Insert, {"7", "6"}},  {Insert, {"7", "5"}},   {Delete, {"3", "8"}},
+      {Insert, {"10", "7"}}, {Insert, {"2", "8"}},   {Delete, {"3", "4"}},
+      {Delete, {"8", "9"}},  {Delete, {"11", "12"}}};
+
+  CFGHolder Holder;
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate;
+  while ((LastUpdate = B.applyUpdate())) {
+    BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+    BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+    if (LastUpdate->Action == Insert) {
+      DT.insertEdge(From, To);
+      PDT.insertEdge(From, To);
+    } else {
+      DT.deleteEdge(From, To);
+      PDT.deleteEdge(From, To);
+    }
+
+    EXPECT_TRUE(DT.verify());
+    EXPECT_TRUE(PDT.verify());
+  }
+}
+
+TEST(DominatorTree, InsertDeleteExhaustive) {
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"1", "2"}, {"2", "3"}, {"3", "4"},  {"4", "5"},  {"5", "6"},  {"5", "7"},
+      {"3", "8"}, {"8", "9"}, {"9", "10"}, {"8", "11"}, {"11", "12"}};
+
+  std::vector<CFGBuilder::Update> Updates = {
+      {Insert, {"2", "4"}},  {Insert, {"12", "10"}}, {Insert, {"10", "9"}},
+      {Insert, {"7", "6"}},  {Insert, {"7", "5"}},   {Delete, {"3", "8"}},
+      {Insert, {"10", "7"}}, {Insert, {"2", "8"}},   {Delete, {"3", "4"}},
+      {Delete, {"8", "9"}},  {Delete, {"11", "12"}}};
+
+  std::mt19937 Generator(0);
+  for (unsigned i = 0; i < 16; ++i) {
+    std::shuffle(Updates.begin(), Updates.end(), Generator);
+    CFGHolder Holder;
+    CFGBuilder B(Holder.F, Arcs, Updates);
+    DominatorTree DT(*Holder.F);
+    EXPECT_TRUE(DT.verify());
+    PostDomTree PDT(*Holder.F);
+    EXPECT_TRUE(PDT.verify());
+
+    Optional<CFGBuilder::Update> LastUpdate;
+    while ((LastUpdate = B.applyUpdate())) {
+      BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+      BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+      if (LastUpdate->Action == Insert) {
+        DT.insertEdge(From, To);
+        PDT.insertEdge(From, To);
+      } else {
+        DT.deleteEdge(From, To);
+        PDT.deleteEdge(From, To);
+      }
+
+      EXPECT_TRUE(DT.verify());
+      EXPECT_TRUE(PDT.verify());
+    }
+  }
+}

@@ -47,4 +47,4 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !14 = !DILocation(line: 4, column: 3, scope: !4)
 
 ; CHECK: ![[CALL2]] = !DILocation(line: 4, column: 10, scope: ![[CALL2BLOCK:[0-9]+]])
-; CHECK: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 1)
+; CHECK: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 2)

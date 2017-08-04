@@ -69,9 +69,9 @@ define void @dynalloca2(i16 %x) {
 ; SP restore
 ; CHECK: in r0, 63
 ; CHECK-NEXT: cli
-; CHECK-NEXT: out 62, r29
+; CHECK-NEXT: out 62, r7
 ; CHECK-NEXT: out 63, r0
-; CHECK-NEXT: out 61, r28
+; CHECK-NEXT: out 61, r6
   %vla = alloca i16, i16 %x
   call void @foo2(i16* %vla, i64 0, i64 0, i64 0)
   ret void

@@ -2,6 +2,9 @@
 Driver
 ======
 
+Note: this document discuss Mach-O port of LLD. For ELF and COFF,
+see :doc:`index`.
+
 .. contents::
    :local:
 

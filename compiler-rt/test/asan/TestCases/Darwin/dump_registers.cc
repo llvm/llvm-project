@@ -18,7 +18,7 @@ int main() {
     assert(0 && "Your computer is weird.");
 
   char c = *ptr;  // BOOM
-  // CHECK: ERROR: AddressSanitizer: SEGV
+  // CHECK: ERROR: AddressSanitizer: {{SEGV|BUS}}
   // CHECK: Register values:
   // CHECK: {{0x55555555|0x6666666666666666}}
   fprintf(stderr, "World\n");

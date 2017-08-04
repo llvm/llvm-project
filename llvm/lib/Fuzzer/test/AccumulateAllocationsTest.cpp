@@ -2,8 +2,8 @@
 // License. See LICENSE.TXT for details.
 
 // Test with a more mallocs than frees, but no leak.
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 const int kAllocatedPointersSize = 10000;
 int NumAllocatedPointers = 0;

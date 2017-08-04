@@ -3,7 +3,7 @@ RUN:   | FileCheck %s
 
 CHECK: DynamicSection [ (24 entries)
 CHECK:   Tag                Type                 Name/Value
-CHECK:   0x0000000000000001 NEEDED               SharedLibrary (libc.so.6)
+CHECK:   0x0000000000000001 NEEDED               Shared library: [libc.so.6]
 CHECK:   0x000000000000000C INIT                 0x4B8
 CHECK:   0x000000000000000D FINI                 0x618
 CHECK:   0x0000000000000019 INIT_ARRAY           0x2006C0

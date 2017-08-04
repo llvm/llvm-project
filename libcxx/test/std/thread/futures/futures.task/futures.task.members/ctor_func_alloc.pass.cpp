@@ -69,7 +69,7 @@ int main()
         p(3, 'a');
         assert(f.get() == 105.0);
         assert(A::n_copies > 0);
-        assert(A::n_moves > 0);
+        assert(A::n_moves >= 0);
     }
     assert(test_alloc_base::alloc_count == 0);
     A::n_copies = 0;

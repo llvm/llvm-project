@@ -18,6 +18,7 @@ struct is_trivially_constructible {
 };
 
 struct __is_abstract {};  // expected-warning {{made available}}
+struct __is_aggregate {}; // expected-warning {{made available}}
 struct __is_arithmetic {};  // expected-warning {{made available}}
 struct __is_array {};  // expected-warning {{made available}}
 struct __is_assignable {};  // expected-warning {{made available}}

@@ -22,7 +22,7 @@
 #include "Interpreter.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Config/config.h"     // Detect libffi
+#include "llvm/Config/config.h" // Detect libffi
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -33,8 +33,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/UniqueLock.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cmath>
 #include <csignal>

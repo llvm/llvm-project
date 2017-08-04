@@ -30,13 +30,32 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
         push {r0-r3, lr}
         bl __aeabi_cfcmpeq_check_nan
         cmp r0, #1
+#if __ARM_ARCH_ISA_THUMB == 1
+        beq 1f
+        // NaN has been ruled out, so __aeabi_cfcmple can't trap
+        mov r0, sp
+        ldm r0, {r0-r3}
+        bl __aeabi_cfcmple
+        pop {r0-r3, pc}
+1:
+        // Z = 0, C = 1
+        movs r0, #0xF
+        lsls r0, r0, #31
+        pop {r0-r3, pc}
+#else
         pop {r0-r3, lr}
 
         // NaN has been ruled out, so __aeabi_cfcmple can't trap
         bne __aeabi_cfcmple
 
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+        mov ip, #APSR_C
+        msr APSR_nzcvq, ip
+#else
         msr CPSR_f, #APSR_C
+#endif
         JMP(lr)
+#endif
 END_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
 
 
@@ -59,19 +78,48 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmple)
 
         bl __aeabi_fcmplt
         cmp r0, #1
+#if __ARM_ARCH_ISA_THUMB == 1
+        bne 1f
+        // Z = 0, C = 0
+        movs r0, #1
+        lsls r0, r0, #1
+        pop {r0-r3, pc}
+1:
+        mov r0, sp
+        ldm r0, {r0-r3}
+        bl __aeabi_fcmpeq
+        cmp r0, #1
+        bne 2f
+        // Z = 1, C = 1
+        movs r0, #2
+        lsls r0, r0, #31
+        pop {r0-r3, pc}
+2:
+        // Z = 0, C = 1
+        movs r0, #0xF
+        lsls r0, r0, #31
+        pop {r0-r3, pc}
+#else
+        ITT(eq)
         moveq ip, #0
         beq 1f
 
         ldm sp, {r0-r3}
         bl __aeabi_fcmpeq
         cmp r0, #1
+        ITE(eq)
         moveq ip, #(APSR_C | APSR_Z)
         movne ip, #(APSR_C)
 
 1:
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+        msr APSR_nzcvq, ip
+#else
         msr CPSR_f, ip
+#endif
         pop {r0-r3}
         POP_PC()
+#endif
 END_COMPILERRT_FUNCTION(__aeabi_cfcmple)
 
 // int __aeabi_cfrcmple(float a, float b) {

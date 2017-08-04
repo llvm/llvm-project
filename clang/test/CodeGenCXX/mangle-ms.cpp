@@ -399,6 +399,13 @@ template void fn_tmpl<extern_c_func>();
 extern "C" void __attribute__((overloadable)) overloaded_fn() {}
 // CHECK-DAG: @"\01?overloaded_fn@@$$J0YAXXZ"
 
+extern "C" void overloaded_fn2() {}
+// CHECK-DAG: @overloaded_fn2
+//
+extern "C" void __attribute__((overloadable)) overloaded_fn3();
+extern "C" void overloaded_fn3() {}
+// CHECK-DAG: @overloaded_fn3
+
 namespace UnnamedType {
 struct S {
   typedef struct {} *T1[1];

@@ -5,4 +5,5 @@ add_llvm_library(LLVMWebAssemblyDesc
   WebAssemblyMCCodeEmitter.cpp
   WebAssemblyMCTargetDesc.cpp
   WebAssemblyTargetStreamer.cpp
+  WebAssemblyWasmObjectWriter.cpp
 )

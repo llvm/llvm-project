@@ -9,7 +9,7 @@ main_:
   %i32T = alloca i32, align 4
   %i32F = alloca i32, align 4
   %i32X = alloca i32, align 4
-  store i32 0, i32* %tmp
+  store i32 %argc, i32* %tmp
   store i32 15, i32* %i32T, align 4
   store i32 5, i32* %i32F, align 4
   %tmp6 = load i32, i32* %tmp, align 4

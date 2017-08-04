@@ -25,7 +25,6 @@ test3(unsigned n, Allocator const &alloc = Allocator())
 {
 #if TEST_STD_VER > 11
     typedef std::list<T, Allocator> C;
-    typedef typename C::const_iterator const_iterator;
     {
     C d(n, alloc);
     assert(d.size() == n);

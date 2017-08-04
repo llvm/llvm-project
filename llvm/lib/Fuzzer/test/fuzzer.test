@@ -11,7 +11,7 @@ MaxTotalTime: Done {{.*}} runs in {{.}} second(s)
 
 RUN: not LLVMFuzzer-NullDerefTest                  2>&1 | FileCheck %s --check-prefix=NullDerefTest
 RUN: not LLVMFuzzer-NullDerefTest -close_fd_mask=3 2>&1 | FileCheck %s --check-prefix=NullDerefTest
-NullDerefTest: ERROR: AddressSanitizer: SEGV on unknown address
+NullDerefTest: ERROR: AddressSanitizer: {{SEGV|access-violation}} on unknown address
 NullDerefTest: Test unit written to ./crash-
 RUN: not LLVMFuzzer-NullDerefTest  -artifact_prefix=ZZZ 2>&1 | FileCheck %s --check-prefix=NullDerefTestPrefix
 NullDerefTestPrefix: Test unit written to ZZZcrash-
@@ -34,7 +34,7 @@ COUNTERS: BINGO
 DISABLED: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
 UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.
 
-RUN: not LLVMFuzzer-UninstrumentedTest-NoCoverage 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE
+RUN: not LLVMFuzzer-NotinstrumentedTest-NoCoverage 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE
 NO_COVERAGE: ERROR: no interesting inputs were found. Is the code instrumented for coverage? Exiting
 
 RUN: not LLVMFuzzer-BufferOverflowOnInput 2>&1 | FileCheck %s --check-prefix=OOB
@@ -51,7 +51,10 @@ RUN: LLVMFuzzer-SimpleTest  -exit_on_src_pos=SimpleTest.cpp:17                 2
 RUN: LLVMFuzzer-ShrinkControlFlowTest  -exit_on_src_pos=ShrinkControlFlowTest.cpp:23 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
 EXIT_ON_SRC_POS: INFO: found line matching '{{.*}}', exiting.
 
-RUN: ASAN_OPTIONS=strict_string_checks=1 not LLVMFuzzer-StrncmpOOBTest -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=STRNCMP
+RUN: env ASAN_OPTIONS=strict_string_checks=1 not LLVMFuzzer-StrncmpOOBTest -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=STRNCMP
 STRNCMP: AddressSanitizer: heap-buffer-overflow
 STRNCMP-NOT: __sanitizer_weak_hook_strncmp
 STRNCMP: in LLVMFuzzerTestOneInput
+
+RUN: not LLVMFuzzer-BogusInitializeTest 2>&1 | FileCheck %s --check-prefix=BOGUS_INITIALIZE
+BOGUS_INITIALIZE: argv[0] has been modified in LLVMFuzzerInitialize

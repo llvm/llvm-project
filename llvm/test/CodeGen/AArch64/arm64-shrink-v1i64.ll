@@ -3,7 +3,7 @@
 ; The DAGCombiner tries to do following shrink:
 ;     Convert x+y to (VT)((SmallVT)x+(SmallVT)y)
 ; But currently it can't handle vector type and will trigger an assertion failure
-; when it tries to generate an add mixed using vector type and scaler type.
+; when it tries to generate an add mixed using vector type and scalar type.
 ; This test checks that such assertion failur should not happen.
 define <1 x i64> @dotest(<1 x i64> %in0) {
 entry:

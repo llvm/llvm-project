@@ -175,9 +175,19 @@ class InstrItineraryData;
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
 
+      SMULWB,       // Signed multiply word by half word, bottom
+      SMULWT,       // Signed multiply word by half word, top
       UMLAL,        // 64bit Unsigned Accumulate Multiply
       SMLAL,        // 64bit Signed Accumulate Multiply
       UMAAL,        // 64-bit Unsigned Accumulate Accumulate Multiply
+      SMLALBB,      // 64-bit signed accumulate multiply bottom, bottom 16
+      SMLALBT,      // 64-bit signed accumulate multiply bottom, top 16
+      SMLALTB,      // 64-bit signed accumulate multiply top, bottom 16
+      SMLALTT,      // 64-bit signed accumulate multiply top, top 16
+      SMLALD,       // Signed multiply accumulate long dual
+      SMLALDX,      // Signed multiply accumulate long dual exchange
+      SMLSLD,       // Signed multiply subtract long dual
+      SMLSLDX,      // Signed multiply subtract long dual exchange
 
       // Operands of the standard BUILD_VECTOR node are not legalized, which
       // is fine if BUILD_VECTORs are always lowered to shuffles or other
@@ -344,8 +354,8 @@ class InstrItineraryData;
                                     SDValue &Offset, ISD::MemIndexedMode &AM,
                                     SelectionDAG &DAG) const override;
 
-    void computeKnownBitsForTargetNode(const SDValue Op, APInt &KnownZero,
-                                       APInt &KnownOne,
+    void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                       const APInt &DemandedElts,
                                        const SelectionDAG &DAG,
                                        unsigned Depth) const override;
 
@@ -473,10 +483,10 @@ class InstrItineraryData;
 
     void emitAtomicCmpXchgNoStoreLLBalance(IRBuilder<> &Builder) const override;
 
-    Instruction* emitLeadingFence(IRBuilder<> &Builder, AtomicOrdering Ord,
-                          bool IsStore, bool IsLoad) const override;
-    Instruction* emitTrailingFence(IRBuilder<> &Builder, AtomicOrdering Ord,
-                           bool IsStore, bool IsLoad) const override;
+    Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+                                  AtomicOrdering Ord) const override;
+    Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
+                                   AtomicOrdering Ord) const override;
 
     unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
@@ -500,8 +510,18 @@ class InstrItineraryData;
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
 
+    bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
+                          const SelectionDAG &DAG) const override {
+      // Do not merge to larger than i32.
+      return (MemVT.getSizeInBits() <= 32);
+    }
+
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
+
+    bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+      return VT.isScalarInteger();
+    }
 
     bool supportSwiftError() const override {
       return true;
@@ -513,6 +533,19 @@ class InstrItineraryData;
 
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
+
+    /// Returns true if \p VecTy is a legal interleaved access type. This
+    /// function checks the vector element type and the overall width of the
+    /// vector.
+    bool isLegalInterleavedAccessType(VectorType *VecTy,
+                                      const DataLayout &DL) const;
+
+    /// Returns the number of interleaved accesses that will be generated when
+    /// lowering accesses of the given type.
+    unsigned getNumInterleavedAccesses(VectorType *VecTy,
+                                       const DataLayout &DL) const;
+
+    void finalizeLowering(MachineFunction &MF) const override;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
@@ -569,6 +602,8 @@ class InstrItineraryData;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
                                     const ARMSubtarget *Subtarget) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddressELF(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddressWindows(SDValue Op, SelectionDAG &DAG) const;
@@ -690,7 +725,7 @@ class InstrItineraryData;
 
     bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
-    bool mayBeEmittedAsTailCall(CallInst *CI) const override;
+    bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
                     SDValue ARMcc, SDValue CCR, SDValue Cmp,
@@ -698,7 +733,7 @@ class InstrItineraryData;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
-                      const SDLoc &dl) const;
+                      const SDLoc &dl, bool InvalidOnQNaN) const;
     SDValue duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const;
 
     SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;

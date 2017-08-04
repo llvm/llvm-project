@@ -725,3 +725,42 @@ define <8 x i16> @test_int_x86_xop_vpcomtruew(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %res
 }
 declare <8 x i16> @llvm.x86.xop.vpcomtruew(<8 x i16>, <8 x i16>) nounwind readnone
+
+define <2 x i64> @test_int_x86_xop_vpcmov(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2) {
+; CHECK-LABEL: test_int_x86_xop_vpcmov:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x i64> @llvm.x86.xop.vpcmov(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2) ;
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.xop.vpcmov(<2 x i64>, <2 x i64>, <2 x i64>) nounwind readnone
+
+define <4 x i64> @test_int_x86_xop_vpcmov_256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2) {
+; CHECK-LABEL: test_int_x86_xop_vpcmov_256:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2) ;
+  ret <4 x i64> %res
+}
+define <4 x i64> @test_int_x86_xop_vpcmov_256_mr(<4 x i64> %a0, <4 x i64>* %a1, <4 x i64> %a2) {
+; CHECK-LABEL: test_int_x86_xop_vpcmov_256_mr:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpcmov %ymm1, (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %vec = load <4 x i64>, <4 x i64>* %a1
+  %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %vec, <4 x i64> %a2) ;
+  ret <4 x i64> %res
+}
+define <4 x i64> @test_int_x86_xop_vpcmov_256_rm(<4 x i64> %a0, <4 x i64> %a1, <4 x i64>* %a2) {
+; CHECK-LABEL: test_int_x86_xop_vpcmov_256_rm:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpcmov (%rdi), %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+ %vec = load <4 x i64>, <4 x i64>* %a2
+ %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %vec) ;
+  ret <4 x i64> %res
+}
+declare <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64>, <4 x i64>, <4 x i64>) nounwind readnone
+

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/DenseMap.h"
+#include "gtest/gtest.h"
 #include <map>
 #include <set>
 
@@ -579,5 +579,19 @@ TEST(DenseMapCustomTest, TryEmplaceTest) {
   EXPECT_FALSE(Try2.second);
   EXPECT_EQ(Try1.first, Try2.first);
   EXPECT_NE(nullptr, P);
+}
+
+TEST(DenseMapCustomTest, ConstTest) {
+  // Test that const pointers work okay for count and find, even when the
+  // underlying map is a non-const pointer.
+  DenseMap<int *, int> Map;
+  int A;
+  int *B = &A;
+  const int *C = &A;
+  Map.insert({B, 0});
+  EXPECT_EQ(Map.count(B), 1u);
+  EXPECT_EQ(Map.count(C), 1u);
+  EXPECT_NE(Map.find(B), Map.end());
+  EXPECT_NE(Map.find(C), Map.end());
 }
 }

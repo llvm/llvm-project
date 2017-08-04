@@ -50,12 +50,12 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
 # CHECK: fixedStack:
-# CHECK-NEXT: , callee-saved-register: '%rbx' }
+# CHECK: , callee-saved-register: '%rbx' }
 fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%rbx' }
 # CHECK: stack:
 # CHECK-NEXT: - { id: 0
-# CHECK-NEXT: , callee-saved-register: '%edi' }
+# CHECK: callee-saved-register: '%edi'
 stack:
   - { id: 0, name: b, offset: -20, size: 4, alignment: 4 }
   - { id: 1, offset: -24, size: 4, alignment: 4, callee-saved-register: '%edi' }

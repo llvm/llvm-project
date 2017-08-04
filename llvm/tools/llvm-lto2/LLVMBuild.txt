@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-lto2
 parent = Tools
-required_libraries = Core Linker LTO MC Object Support all-targets
+required_libraries = BitReader Core Linker LTO MC Object Support all-targets

@@ -17,6 +17,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
 #include <map>
+#include <tuple>
 
 namespace clang {
   class LangOptions;
@@ -41,9 +42,21 @@ class EditedSource {
   typedef std::map<FileOffset, FileEdit> FileEditsTy;
   FileEditsTy FileEdits;
 
-  llvm::DenseMap<unsigned, llvm::TinyPtrVector<IdentifierInfo*>>
-    ExpansionToArgMap;
-  SmallVector<std::pair<SourceLocation, IdentifierInfo*>, 2>
+  struct MacroArgUse {
+    IdentifierInfo *Identifier;
+    SourceLocation ImmediateExpansionLoc;
+    // Location of argument use inside the top-level macro
+    SourceLocation UseLoc;
+
+    bool operator==(const MacroArgUse &Other) const {
+      return std::tie(Identifier, ImmediateExpansionLoc, UseLoc) ==
+             std::tie(Other.Identifier, Other.ImmediateExpansionLoc,
+                      Other.UseLoc);
+    }
+  };
+
+  llvm::DenseMap<unsigned, SmallVector<MacroArgUse, 2>> ExpansionToArgMap;
+  SmallVector<std::pair<SourceLocation, MacroArgUse>, 2>
     CurrCommitMacroArgExps;
 
   IdentifierTable IdentTable;
@@ -84,7 +97,7 @@ private:
   FileEditsTy::iterator getActionForOffset(FileOffset Offs);
   void deconstructMacroArgLoc(SourceLocation Loc,
                               SourceLocation &ExpansionLoc,
-                              IdentifierInfo *&II);
+                              MacroArgUse &ArgUse);
 
   void startingCommit();
   void finishedCommit();

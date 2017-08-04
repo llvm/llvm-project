@@ -1,12 +1,21 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-waits  %s -o - | FileCheck %s
 
 --- |
-  define void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
+  define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
                                  <4 x i32> addrspace(1)* %global16,
                                  i32 addrspace(4)* %flat4,
                                  <4 x i32> addrspace(4)* %flat16) {
     ret void
   }
+
+  define amdgpu_kernel void @single_fallthrough_successor_no_end_block_wait() {
+    ret void
+  }
+
+  define amdgpu_kernel void @single_branch_successor_not_next_block() {
+    ret void
+  }
+
 ...
 ---
 
@@ -21,18 +30,21 @@
 
 # CHECK-LABEL: bb.1:
 # CHECK: FLAT_LOAD_DWORD
+# CHECK: S_WAITCNT 3952
 # CHECK: FLAT_LOAD_DWORDX4
 # The first load has no mem operand, so we should assume it accesses the flat
 # address space.
 # s_waitcnt vmcnt(0) lgkmcnt(0)
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT 127
 
 # CHECK-LABEL: bb.2:
 # CHECK: FLAT_LOAD_DWORD
+# CHECK: S_WAITCNT 3952
 # CHECK: FLAT_LOAD_DWORDX4
+
 # One outstand loads access the flat address space.
 # s_waitcnt vmcnt(0) lgkmcnt(0)
-# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: S_WAITCNT 127
 
 name: flat_zero_waitcnt
 
@@ -55,5 +67,62 @@ body: |
     %vgpr0 = FLAT_LOAD_DWORD %vgpr1_vgpr2, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4 from %ir.flat4)
     %vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 %vgpr7_vgpr8, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 16 from %ir.flat16)
     %vgpr0 = V_MOV_B32_e32 %vgpr1, implicit %exec
+    S_ENDPGM
+...
+---
+# There is only a single fallthrough successor block, so there's no
+# need to wait immediately.
+
+# CHECK-LABEL: name: single_fallthrough_successor_no_end_block_wait
+# CHECK:   %vgpr0 = FLAT_LOAD_DWORD %vgpr1_vgpr2
+# CHECK-NOT: S_WAITCNT
+
+# CHECK: bb.1:
+# CHECK-NEXT: V_LSHLREV_B64
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD
+name: single_fallthrough_successor_no_end_block_wait
+
+body: |
+  bb.0:
+    successors: %bb.1
+    %vgpr0 = FLAT_LOAD_DWORD %vgpr1_vgpr2, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+  bb.1:
+    %vgpr3_vgpr4 = V_LSHLREV_B64 4, %vgpr7_vgpr8, implicit %exec
+    FLAT_STORE_DWORD %vgpr3_vgpr4, %vgpr0, 0, 0, 0, implicit %exec, implicit %flat_scr
+    S_ENDPGM
+...
+---
+# The block has a single predecessor with a single successor, but it
+# is not the next block so it's non-obvious that the wait is not needed.
+
+
+# CHECK-LABEL: name: single_branch_successor_not_next_block
+# CHECK:   %vgpr0 = FLAT_LOAD_DWORD %vgpr1_vgpr2
+# CHECK-NEXT: S_WAITCNT 112
+
+# CHECK: bb.1
+# CHECK-NEXT: FLAT_STORE_DWORD
+# CHECK-NEXT: S_ENDPGM
+
+# CHECK: bb.2:
+# CHECK-NEXT: V_LSHLREV_B64
+# CHECK-NEXT: FLAT_STORE_DWORD
+name: single_branch_successor_not_next_block
+
+body: |
+  bb.0:
+    successors: %bb.2
+    %vgpr0 = FLAT_LOAD_DWORD %vgpr1_vgpr2, 0, 0, 0, implicit %exec, implicit %flat_scr
+   S_BRANCH %bb.2
+
+  bb.1:
+    FLAT_STORE_DWORD %vgpr8_vgpr9, %vgpr10, 0, 0, 0, implicit %exec, implicit %flat_scr
+    S_ENDPGM
+
+  bb.2:
+     %vgpr3_vgpr4 = V_LSHLREV_B64 4, %vgpr7_vgpr8, implicit %exec
+    FLAT_STORE_DWORD %vgpr3_vgpr4, %vgpr0, 0, 0, 0, implicit %exec, implicit %flat_scr
     S_ENDPGM
 ...

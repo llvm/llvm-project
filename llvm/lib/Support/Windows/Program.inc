@@ -29,7 +29,6 @@
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-using namespace sys;
 
 ProcessInfo::ProcessInfo() : ProcessHandle(0), Pid(0), ReturnCode(0) {}
 

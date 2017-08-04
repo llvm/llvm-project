@@ -13,7 +13,7 @@ define %BigInt @test_moved_jumptable(i1 %tst, i32 %sw, %BigInt %l) {
 ; CHECK:   .long LBB{{[0-9]+_[0-9]+}}-[[JUMP_TABLE]]
 
 ; CHECK: [[SKIP_TABLE]]:
-; CHECK:   add pc, {{r[0-9]+}}, {{r[0-9]+}}
+; CHECK:   add pc, {{r[0-9]+|lr}}, {{r[0-9]+|lr}}
   br i1 %tst, label %simple, label %complex
 
 simple:

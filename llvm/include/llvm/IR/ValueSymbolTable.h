@@ -1,4 +1,4 @@
-//===-- llvm/ValueSymbolTable.h - Implement a Value Symtab ------*- C++ -*-===//
+//===- llvm/ValueSymbolTable.h - Implement a Value Symtab -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,54 +15,59 @@
 #define LLVM_IR_VALUESYMBOLTABLE_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/DataTypes.h"
+#include <cstdint>
 
 namespace llvm {
-  template <typename ValueSubClass> class SymbolTableListTraits;
-  template <unsigned InternalLen> class SmallString;
-  class BasicBlock;
-  class Function;
-  class NamedMDNode;
-  class Module;
-  class StringRef;
+
+class Argument;
+class BasicBlock;
+class Function;
+class GlobalAlias;
+class GlobalIFunc;
+class GlobalVariable;
+class Instruction;
+template <unsigned InternalLen> class SmallString;
+template <typename ValueSubClass> class SymbolTableListTraits;
 
 /// This class provides a symbol table of name/value pairs. It is essentially
 /// a std::map<std::string,Value*> but has a controlled interface provided by
 /// LLVM as well as ensuring uniqueness of names.
 ///
 class ValueSymbolTable {
-  friend class Value;
   friend class SymbolTableListTraits<Argument>;
   friend class SymbolTableListTraits<BasicBlock>;
-  friend class SymbolTableListTraits<Instruction>;
   friend class SymbolTableListTraits<Function>;
-  friend class SymbolTableListTraits<GlobalVariable>;
   friend class SymbolTableListTraits<GlobalAlias>;
   friend class SymbolTableListTraits<GlobalIFunc>;
+  friend class SymbolTableListTraits<GlobalVariable>;
+  friend class SymbolTableListTraits<Instruction>;
+  friend class Value;
+
 /// @name Types
 /// @{
 public:
   /// @brief A mapping of names to values.
-  typedef StringMap<Value*> ValueMap;
+  using ValueMap = StringMap<Value*>;
 
   /// @brief An iterator over a ValueMap.
-  typedef ValueMap::iterator iterator;
+  using iterator = ValueMap::iterator;
 
   /// @brief A const_iterator over a ValueMap.
-  typedef ValueMap::const_iterator const_iterator;
+  using const_iterator = ValueMap::const_iterator;
 
 /// @}
 /// @name Constructors
 /// @{
-public:
-  ValueSymbolTable() : vmap(0), LastUnique(0) {}
+
+  ValueSymbolTable() : vmap(0) {}
   ~ValueSymbolTable();
 
 /// @}
 /// @name Accessors
 /// @{
-public:
+
   /// This method finds the value with the given \p Name in the
   /// the symbol table.
   /// @returns the value associated with the \p Name
@@ -84,7 +89,7 @@ public:
 /// @}
 /// @name Iteration
 /// @{
-public:
+
   /// @brief Get an iterator that from the beginning of the symbol table.
   inline iterator begin() { return vmap.begin(); }
 
@@ -122,13 +127,13 @@ private:
   /// @}
   /// @name Internal Data
   /// @{
-private:
+
   ValueMap vmap;                    ///< The map that holds the symbol table.
-  mutable uint32_t LastUnique; ///< Counter for tracking unique names
+  mutable uint32_t LastUnique = 0;  ///< Counter for tracking unique names
 
 /// @}
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_VALUESYMBOLTABLE_H

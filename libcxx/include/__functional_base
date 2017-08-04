@@ -16,19 +16,13 @@
 #include <typeinfo>
 #include <exception>
 #include <new>
+#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Arg, class _Result>
-struct _LIBCPP_TEMPLATE_VIS unary_function
-{
-    typedef _Arg    argument_type;
-    typedef _Result result_type;
-};
 
 template <class _Arg1, class _Arg2, class _Result>
 struct _LIBCPP_TEMPLATE_VIS binary_function
@@ -257,7 +251,7 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1) const volatile>
 };
 
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 // 3 or more arguments
 
 template <class _Rp, class _A1, class _A2, class _A3, class ..._A4>
@@ -302,10 +296,6 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const volatile>
     typedef _Rp result_type;
 };
 
-#endif // _LIBCPP_HAS_NO_VARIADICS
-
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Tp, class ..._Args>
 struct __invoke_return
 {
@@ -322,7 +312,7 @@ struct __invoke_return
 template <class _Ret>
 struct __invoke_void_return_wrapper
 {
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     template <class ..._Args>
     static _Ret __call(_Args&&... __args) {
         return __invoke(_VSTD::forward<_Args>(__args)...);
@@ -353,7 +343,7 @@ struct __invoke_void_return_wrapper
 template <>
 struct __invoke_void_return_wrapper<void>
 {
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     template <class ..._Args>
     static void __call(_Args&&... __args) {
         __invoke(_VSTD::forward<_Args>(__args)...);
@@ -395,7 +385,7 @@ public:
     // construct/copy/destroy
     _LIBCPP_INLINE_VISIBILITY reference_wrapper(type& __f) _NOEXCEPT
         : __f_(_VSTD::addressof(__f)) {}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     private: reference_wrapper(type&&); public: // = delete; // do not bind to temps
 #endif
 
@@ -403,7 +393,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY operator type&    () const _NOEXCEPT {return *__f_;}
     _LIBCPP_INLINE_VISIBILITY          type& get() const _NOEXCEPT {return *__f_;}
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     // invoke
     template <class... _ArgTypes>
     _LIBCPP_INLINE_VISIBILITY
@@ -516,7 +506,7 @@ public:
     operator() (_A0 const& __a0, _A1 const& __a1, _A2 const& __a2) const {
         return __invoke(get(), __a0, __a1, __a2);
     }
-#endif // _LIBCPP_HAS_NO_VARIADICS
+#endif // _LIBCPP_CXX03_LANG
 };
 
 
@@ -558,23 +548,20 @@ template <class _Tp> void cref(const _Tp&&) = delete;
 #endif
 
 #if _LIBCPP_STD_VER > 11
-template <class _Tp1, class _Tp2 = void>
-struct __is_transparent
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::is_transparent* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp1>(0)) == 1;
-};
+template <class _Tp, class, class = void>
+struct __is_transparent : false_type {};
+
+template <class _Tp, class _Up>
+struct __is_transparent<_Tp, _Up,  
+                        typename __void_t<typename _Tp::is_transparent>::type>
+   : true_type {};
 #endif
 
 // allocator_arg_t
 
 struct _LIBCPP_TEMPLATE_VIS allocator_arg_t { };
 
-#if defined(_LIBCPP_HAS_NO_CONSTEXPR) || defined(_LIBCPP_BUILDING_MEMORY)
+#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_MEMORY)
 extern const allocator_arg_t allocator_arg;
 #else
 constexpr allocator_arg_t allocator_arg = allocator_arg_t();
@@ -617,7 +604,7 @@ template <class _Tp, class _Alloc>
 constexpr size_t uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
 #endif
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 // allocator construction
 
@@ -669,7 +656,7 @@ void __user_alloc_construct (_Tp *__storage, const _Allocator &__a, _Args &&... 
              __storage, __a, _VSTD::forward<_Args>(__args)...
         );
 }
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

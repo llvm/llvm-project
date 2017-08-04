@@ -186,8 +186,8 @@ CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
   Sets the build type for ``make``-based generators. Possible values are
   Release, Debug, RelWithDebInfo and MinSizeRel. If you are using an IDE such as
   Visual Studio, you should use the IDE settings to set the build type.
-  Be aware that Release and RelWithDebInfo are not using the same optimization
-  level on most platform.
+  Be aware that Release and RelWithDebInfo use different optimization levels on
+  most platforms.
 
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed if "make install" is invoked or the
@@ -247,9 +247,10 @@ LLVM-specific variables
   tests.
 
 **LLVM_APPEND_VC_REV**:BOOL
-  Append version control revision info (svn revision number or Git revision id)
-  to LLVM version string (stored in the PACKAGE_VERSION macro). For this to work
-  cmake must be invoked before the build. Defaults to OFF.
+  Embed version control revision info (svn revision number or Git revision id).
+  This is used among other things in the LLVM version string (stored in the
+  PACKAGE_VERSION macro). For this to work cmake must be invoked before the
+  build. Defaults to ON.
 
 **LLVM_ENABLE_THREADS**:BOOL
   Build with threads support, if available. Defaults to ON.
@@ -382,6 +383,18 @@ LLVM-specific variables
   lines, enabling link-time optimization. Possible values are ``Off``,
   ``On``, ``Thin`` and ``Full``. Defaults to OFF.
 
+**LLVM_USE_LINKER**:STRING
+  Add ``-fuse-ld={name}`` to the link invocation. The possible value depend on
+  your compiler, for clang the value can be an absolute path to your custom
+  linker, otherwise clang will prefix the name with ``ld.`` and apply its usual
+  search. For example to link LLVM with the Gold linker, cmake can be invoked
+  with ``-DLLVM_USE_LINKER=gold``.
+
+**LLVM_ENABLE_LLD**:BOOL
+  This option is equivalent to `-DLLVM_USE_LINKER=lld`, except during a 2-stage
+  build where a dependency is added from the first stage to the second ensuring
+  that lld is built before stage2 begins.
+
 **LLVM_PARALLEL_COMPILE_JOBS**:STRING
   Define the maximum number of concurrent compilation jobs.
 
@@ -457,6 +470,8 @@ LLVM-specific variables
 
 **SPHINX_EXECUTABLE**:STRING
   The path to the ``sphinx-build`` executable detected by CMake.
+  For installation instructions, see
+  http://www.sphinx-doc.org/en/latest/install.html
 
 **SPHINX_OUTPUT_HTML**:BOOL
   If enabled (and ``LLVM_ENABLE_SPHINX`` is enabled) then the targets for
@@ -520,6 +535,11 @@ LLVM-specific variables
   generate a Release build tree to build a fully optimized tablegen for use
   during the build. Enabling this option can significantly speed up build times
   especially when building LLVM in Debug configurations.
+
+**LLVM_REVERSE_ITERATION**:BOOL
+  If enabled, all supported unordered llvm containers would be iterated in
+  reverse order. This is useful for uncovering non-determinism caused by
+  iteration of unordered containers.
 
 CMake Caches
 ============

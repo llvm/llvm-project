@@ -10,7 +10,7 @@
 // This file is part of the X86 Disassembler Emitter.
 // It contains the implementation of the disassembler tables.
 // Documentation for the disassembler emitter in general can be found in
-//  X86DisasemblerEmitter.h.
+//  X86DisassemblerEmitter.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -878,6 +878,10 @@ void DisassemblerTables::setTableFields(ModRMDecision     &decision,
                                            newInfo.name == "XCHG32ar64" ||
                                            newInfo.name == "XCHG64ar"))
           continue; // special case for XCHG*ar and NOOP
+
+        if (previousInfo.name == "DATA16_PREFIX" &&
+            newInfo.name == "DATA32_PREFIX")
+          continue; // special case for data16 and data32
 
         if (outranks(previousInfo.insnContext, newInfo.insnContext))
           continue;

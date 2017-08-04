@@ -146,12 +146,12 @@ private:
 };
 
 struct ParenState {
-  ParenState(unsigned Indent, unsigned IndentLevel, unsigned LastSpace,
-             bool AvoidBinPacking, bool NoLineBreak)
-      : Indent(Indent), IndentLevel(IndentLevel), LastSpace(LastSpace),
-        NestedBlockIndent(Indent), BreakBeforeClosingBrace(false),
-        AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
-        NoLineBreak(NoLineBreak), LastOperatorWrapped(true),
+  ParenState(unsigned Indent, unsigned LastSpace, bool AvoidBinPacking,
+             bool NoLineBreak)
+      : Indent(Indent), LastSpace(LastSpace), NestedBlockIndent(Indent),
+        BreakBeforeClosingBrace(false), AvoidBinPacking(AvoidBinPacking),
+        BreakBeforeParameter(false), NoLineBreak(NoLineBreak),
+        NoLineBreakInOperand(false), LastOperatorWrapped(true),
         ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
         AlignColons(true), ObjCSelectorNameFound(false),
         HasMultipleNestedBlocks(false), NestedBlockInlined(false) {}
@@ -159,9 +159,6 @@ struct ParenState {
   /// \brief The position to which a specific parenthesis level needs to be
   /// indented.
   unsigned Indent;
-
-  /// \brief The number of indentation levels of the block.
-  unsigned IndentLevel;
 
   /// \brief The position of the last space on each level.
   ///
@@ -223,6 +220,10 @@ struct ParenState {
 
   /// \brief Line breaking in this context would break a formatting rule.
   bool NoLineBreak : 1;
+
+  /// \brief Same as \c NoLineBreak, but is restricted until the end of the
+  /// operand (including the next ",").
+  bool NoLineBreakInOperand : 1;
 
   /// \brief True if the last binary operator on this level was wrapped to the
   /// next line.

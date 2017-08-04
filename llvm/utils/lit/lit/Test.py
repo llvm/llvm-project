@@ -2,6 +2,8 @@ import os
 from xml.sax.saxutils import escape
 from json import JSONEncoder
 
+from lit.BooleanExpression import BooleanExpression
+
 # Test result codes.
 
 class ResultCode(object):
@@ -180,10 +182,24 @@ class Test:
         self.path_in_suite = path_in_suite
         self.config = config
         self.file_path = file_path
-        # A list of conditions under which this test is expected to fail. These
-        # can optionally be provided by test format handlers, and will be
-        # honored when the test result is supplied.
+
+        # A list of conditions under which this test is expected to fail.
+        # Each condition is a boolean expression of features and target
+        # triple parts. These can optionally be provided by test format
+        # handlers, and will be honored when the test result is supplied.
         self.xfails = []
+
+        # A list of conditions that must be satisfied before running the test.
+        # Each condition is a boolean expression of features. All of them
+        # must be True for the test to run.
+        # FIXME should target triple parts count here too?
+        self.requires = []
+
+        # A list of conditions that prevent execution of the test.
+        # Each condition is a boolean expression of features and target
+        # triple parts. All of them must be False for the test to run.
+        self.unsupported = []
+
         # The test result, once complete.
         self.result = None
 
@@ -196,11 +212,16 @@ class Test:
         self.result = result
 
         # Apply the XFAIL handling to resolve the result exit code.
-        if self.isExpectedToFail():
-            if self.result.code == PASS:
-                self.result.code = XPASS
-            elif self.result.code == FAIL:
-                self.result.code = XFAIL
+        try:
+            if self.isExpectedToFail():
+                if self.result.code == PASS:
+                    self.result.code = XPASS
+                elif self.result.code == FAIL:
+                    self.result.code = XFAIL
+        except ValueError as e:
+            # Syntax error in an XFAIL line.
+            self.result.code = UNRESOLVED
+            self.result.output = str(e)
         
     def getFullName(self):
         return self.suite.config.name + ' :: ' + '/'.join(self.path_in_suite)
@@ -224,7 +245,11 @@ class Test:
         configuration. This check relies on the test xfails property which by
         some test formats may not be computed until the test has first been
         executed.
+        Throws ValueError if an XFAIL line has a syntax error.
         """
+
+        features = self.config.available_features
+        triple = getattr(self.suite.config, 'target_triple', "")
 
         # Check if any of the xfails match an available feature or the target.
         for item in self.xfails:
@@ -232,15 +257,78 @@ class Test:
             if item == '*':
                 return True
 
-            # If this is an exact match for one of the features, it fails.
-            if item in self.config.available_features:
-                return True
-
-            # If this is a part of the target triple, it fails.
-            if item and item in self.suite.config.target_triple:
-                return True
+            # If this is a True expression of features and target triple parts,
+            # it fails.
+            try:
+                if BooleanExpression.evaluate(item, features, triple):
+                    return True
+            except ValueError as e:
+                raise ValueError('Error in XFAIL list:\n%s' % str(e))
 
         return False
+
+    def isWithinFeatureLimits(self):
+        """
+        isWithinFeatureLimits() -> bool
+
+        A test is within the feature limits set by run_only_tests if
+        1. the test's requirements ARE satisfied by the available features
+        2. the test's requirements ARE NOT satisfied after the limiting
+           features are removed from the available features
+
+        Throws ValueError if a REQUIRES line has a syntax error.
+        """
+
+        if not self.config.limit_to_features:
+            return True  # No limits. Run it.
+
+        # Check the requirements as-is (#1)
+        if self.getMissingRequiredFeatures():
+            return False
+
+        # Check the requirements after removing the limiting features (#2)
+        featuresMinusLimits = [f for f in self.config.available_features
+                               if not f in self.config.limit_to_features]
+        if not self.getMissingRequiredFeaturesFromList(featuresMinusLimits):
+            return False
+
+        return True
+
+    def getMissingRequiredFeaturesFromList(self, features):
+        try:
+            return [item for item in self.requires
+                    if not BooleanExpression.evaluate(item, features)]
+        except ValueError as e:
+            raise ValueError('Error in REQUIRES list:\n%s' % str(e))
+
+    def getMissingRequiredFeatures(self):
+        """
+        getMissingRequiredFeatures() -> list of strings
+
+        Returns a list of features from REQUIRES that are not satisfied."
+        Throws ValueError if a REQUIRES line has a syntax error.
+        """
+
+        features = self.config.available_features
+        return self.getMissingRequiredFeaturesFromList(features)
+
+    def getUnsupportedFeatures(self):
+        """
+        getUnsupportedFeatures() -> list of strings
+
+        Returns a list of features from UNSUPPORTED that are present
+        in the test configuration's features or target triple.
+        Throws ValueError if an UNSUPPORTED line has a syntax error.
+        """
+
+        features = self.config.available_features
+        triple = getattr(self.suite.config, 'target_triple', "")
+
+        try:
+            return [item for item in self.unsupported
+                    if BooleanExpression.evaluate(item, features, triple)]
+        except ValueError as e:
+            raise ValueError('Error in UNSUPPORTED list:\n%s' % str(e))
 
     def isEarlyTest(self):
         """

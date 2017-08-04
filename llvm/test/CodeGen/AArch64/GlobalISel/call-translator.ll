@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: name: test_trivial_call
-; CHECK: ADJCALLSTACKDOWN 0, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def %sp, implicit %sp
 ; CHECK: BL @trivial_callee, csr_aarch64_aapcs, implicit-def %lr
 ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def %sp, implicit %sp
 declare void @trivial_callee()
@@ -35,7 +35,7 @@ define void @test_simple_arg(i32 %in) {
 ; CHECK-LABEL: name: test_indirect_call
 ; CHECK: registers:
 ; Make sure the register feeding the indirect call is properly constrained.
-; CHECK: - { id: [[FUNC:[0-9]+]], class: gpr64 }
+; CHECK: - { id: [[FUNC:[0-9]+]], class: gpr64, preferred-register: '' }
 ; CHECK: %[[FUNC]](p0) = COPY %x0
 ; CHECK: BLR %[[FUNC]](p0), csr_aarch64_aapcs, implicit-def %lr, implicit %sp
 ; CHECK: RET_ReallyLR
@@ -64,7 +64,7 @@ define void @test_multiple_args(i64 %in) {
 ; CHECK: [[I8:%[0-9]+]](s8) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 
-; CHECK: [[UNDEF:%[0-9]+]](s192) = IMPLICIT_DEF
+; CHECK: [[UNDEF:%[0-9]+]](s192) = G_IMPLICIT_DEF
 ; CHECK: [[ARG0:%[0-9]+]](s192) = G_INSERT [[UNDEF]], [[DBL]](s64), 0
 ; CHECK: [[ARG1:%[0-9]+]](s192) = G_INSERT [[ARG0]], [[I64]](s64), 64
 ; CHECK: [[ARG2:%[0-9]+]](s192) = G_INSERT [[ARG1]], [[I8]](s8), 128
@@ -113,7 +113,7 @@ define {double, i64, i32} @test_struct_return({double, i64, i32}* %addr) {
 ; CHECK: [[E1:%[0-9]+]](s64) = COPY %x1
 ; CHECK: [[E2:%[0-9]+]](s64) = COPY %x2
 ; CHECK: [[E3:%[0-9]+]](s64) = COPY %x3
-; CHECK: [[RES:%[0-9]+]](s256) = G_SEQUENCE [[E0]](s64), 0, [[E1]](s64), 64, [[E2]](s64), 128, [[E3]](s64), 192
+; CHECK: [[RES:%[0-9]+]](s256) = G_MERGE_VALUES [[E0]](s64), [[E1]](s64), [[E2]](s64), [[E3]](s64)
 ; CHECK: G_EXTRACT [[RES]](s256), 64
 declare [4 x i64] @arr_callee([4 x i64])
 define i64 @test_arr_call([4 x i64]* %addr) {
@@ -165,9 +165,9 @@ define zeroext i8 @test_abi_zext_ret(i8* %addr) {
 
 ; CHECK-LABEL: name: test_stack_slots
 ; CHECK: fixedStack:
-; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], offset: 0, size: 8
-; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], offset: 8, size: 8
-; CHECK-DAG:  - { id: [[STACK16:[0-9]+]], offset: 16, size: 8
+; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], type: default, offset: 0, size: 8,
+; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], type: default, offset: 8, size: 8,
+; CHECK-DAG:  - { id: [[STACK16:[0-9]+]], type: default, offset: 16, size: 8,
 ; CHECK: [[LHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
 ; CHECK: [[LHS:%[0-9]+]](s64) = G_LOAD [[LHS_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK0]], align 0)
 ; CHECK: [[RHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
@@ -186,7 +186,7 @@ define void @test_stack_slots([8 x i64], i64 %lhs, i64 %rhs, i64* %addr) {
 ; CHECK: [[C42:%[0-9]+]](s64) = G_CONSTANT i64 42
 ; CHECK: [[C12:%[0-9]+]](s64) = G_CONSTANT i64 12
 ; CHECK: [[PTR:%[0-9]+]](p0) = G_CONSTANT i64 0
-; CHECK: ADJCALLSTACKDOWN 24, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 24, 0, implicit-def %sp, implicit %sp
 ; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
 ; CHECK: [[C42_OFFS:%[0-9]+]](s64) = G_CONSTANT i64 0
 ; CHECK: [[C42_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C42_OFFS]](s64)
@@ -208,7 +208,7 @@ define void @test_call_stack() {
 
 ; CHECK-LABEL: name: test_mem_i1
 ; CHECK: fixedStack:
-; CHECK-NEXT: - { id: [[SLOT:[0-9]+]], offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false }
+; CHECK-NEXT: - { id: [[SLOT:[0-9]+]], type: default, offset: 0, size: 1, alignment: 16, isImmutable: true,
 ; CHECK: [[ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[SLOT]]
 ; CHECK: {{%[0-9]+}}(s1) = G_LOAD [[ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[SLOT]], align 0)
 define void @test_mem_i1([8 x i64], i1 %in) {

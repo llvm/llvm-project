@@ -13,12 +13,12 @@
 
 #include "X86MCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ELF.h"
 using namespace llvm;
 
 enum AsmWriterFlavorTy {
@@ -43,7 +43,7 @@ void X86MCAsmInfoDarwin::anchor() { }
 X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   bool is64Bit = T.getArch() == Triple::x86_64;
   if (is64Bit)
-    PointerSize = CalleeSaveStackSlotSize = 8;
+    CodePointerSize = CalleeSaveStackSlotSize = 8;
 
   AssemblerDialect = AsmWriterFlavor;
 
@@ -92,7 +92,7 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   // For ELF, x86-64 pointer size depends on the ABI.
   // For x86-64 without the x32 ABI, pointer size is 8. For x86 and for x86-64
   // with the x32 ABI, pointer size remains the default 4.
-  PointerSize = (is64Bit && !isX32) ? 8 : 4;
+  CodePointerSize = (is64Bit && !isX32) ? 8 : 4;
 
   // OTOH, stack slot size is always 8 for x86-64, even with the x32 ABI.
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
@@ -129,7 +129,7 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   if (Triple.getArch() == Triple::x86_64) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";
-    PointerSize = 8;
+    CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
   } else {
     // 32-bit X86 doesn't use CFI, so this isn't a real encoding type. It's just
@@ -156,7 +156,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   if (Triple.getArch() == Triple::x86_64) {
     PrivateGlobalPrefix = ".L";
     PrivateLabelPrefix = ".L";
-    PointerSize = 8;
+    CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
     ExceptionsType = ExceptionHandling::WinEH;
   } else {

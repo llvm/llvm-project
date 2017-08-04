@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCInstrInfo.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCInstrBuilder.h"
+#include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"

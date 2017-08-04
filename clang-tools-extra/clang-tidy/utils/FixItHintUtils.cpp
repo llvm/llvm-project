@@ -18,7 +18,7 @@ namespace fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
-  auto Token = utils::lexer::getPreviousNonCommentToken(Context, AmpLocation);
+  auto Token = utils::lexer::getPreviousToken(Context, AmpLocation);
   if (!Token.is(tok::unknown))
     AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
                                              Context.getSourceManager(),

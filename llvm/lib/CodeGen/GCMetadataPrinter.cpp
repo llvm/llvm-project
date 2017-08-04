@@ -1,4 +1,4 @@
-//===-- GCMetadataPrinter.cpp - Garbage collection infrastructure ---------===//
+//===- GCMetadataPrinter.cpp - Garbage collection infrastructure ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,10 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+
 using namespace llvm;
 
 LLVM_INSTANTIATE_REGISTRY(GCMetadataPrinterRegistry)
 
-GCMetadataPrinter::GCMetadataPrinter() {}
+GCMetadataPrinter::GCMetadataPrinter() = default;
 
-GCMetadataPrinter::~GCMetadataPrinter() {}
+GCMetadataPrinter::~GCMetadataPrinter() = default;

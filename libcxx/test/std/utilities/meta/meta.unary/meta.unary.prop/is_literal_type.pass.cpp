@@ -77,7 +77,7 @@ int main()
 #endif
 
 // Before C++14, void was not a literal type
-// In C++14, cv-void is is a literal type
+// In C++14, cv-void is a literal type
 #if TEST_STD_VER < 14
     test_is_not_literal_type<void>();
 #else

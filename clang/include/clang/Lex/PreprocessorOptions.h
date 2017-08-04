@@ -80,13 +80,30 @@ public:
   /// The boolean indicates whether the preamble ends at the start of a new
   /// line.
   std::pair<unsigned, bool> PrecompiledPreambleBytes;
-  
+
+  /// \brief True indicates that a preamble is being generated.
+  ///
+  /// When the lexer is done, one of the things that need to be preserved is the
+  /// conditional #if stack, so the ASTWriter/ASTReader can save/restore it when
+  /// processing the rest of the file.
+  bool GeneratePreamble;
+
   /// The implicit PTH input included at the start of the translation unit, or
   /// empty.
   std::string ImplicitPTHInclude;
 
   /// If given, a PTH cache file to use for speeding up header parsing.
   std::string TokenCache;
+
+  /// When enabled, preprocessor is in a mode for parsing a single file only.
+  ///
+  /// Disables #includes of other files and if there are unresolved identifiers
+  /// in preprocessor directive conditions it causes all blocks to be parsed so
+  /// that the client can get the maximum amount of information from the parser.
+  bool SingleFileParseMode = false;
+
+  /// When enabled, the preprocessor will construct editor placeholder tokens.
+  bool LexEditorPlaceholders = true;
 
   /// \brief True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
@@ -144,6 +161,7 @@ public:
                           AllowPCHWithCompilerErrors(false),
                           DumpDeserializedPCHDecls(false),
                           PrecompiledPreambleBytes(0, true),
+                          GeneratePreamble(false),
                           RemappedFilesKeepOriginalName(true),
                           RetainRemappedFileBuffers(false),
                           ObjCXXARCStandardLibrary(ARCXX_nolib) { }
@@ -173,6 +191,8 @@ public:
     ImplicitPCHInclude.clear();
     ImplicitPTHInclude.clear();
     TokenCache.clear();
+    SingleFileParseMode = false;
+    LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = 0;

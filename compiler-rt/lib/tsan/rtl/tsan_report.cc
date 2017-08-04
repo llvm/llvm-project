@@ -53,7 +53,8 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
 };
 
 ReportDesc::ReportDesc()
-    : stacks(MBlockReportStack)
+    : tag(kExternalTagNone)
+    , stacks(MBlockReportStack)
     , mops(MBlockReportMop)
     , locs(MBlockReportLoc)
     , mutexes(MBlockReportMutex)
@@ -81,7 +82,7 @@ const char *thread_name(char *buf, int tid) {
   return buf;
 }
 
-static const char *ReportTypeString(ReportType typ) {
+static const char *ReportTypeString(ReportType typ, uptr tag) {
   if (typ == ReportTypeRace)
     return "data race";
   if (typ == ReportTypeVptrRace)
@@ -90,8 +91,10 @@ static const char *ReportTypeString(ReportType typ) {
     return "heap-use-after-free";
   if (typ == ReportTypeVptrUseAfterFree)
     return "heap-use-after-free (virtual call vs free)";
-  if (typ == ReportTypeExternalRace)
-    return "race on a library object";
+  if (typ == ReportTypeExternalRace) {
+    const char *str = GetReportHeaderFromTag(tag);
+    return str ? str : "race on external object";
+  }
   if (typ == ReportTypeThreadLeak)
     return "thread leak";
   if (typ == ReportTypeMutexDestroyLocked)
@@ -155,21 +158,23 @@ static const char *MopDesc(bool first, bool write, bool atomic) {
 }
 
 static const char *ExternalMopDesc(bool first, bool write) {
-  return first ? (write ? "Mutating" : "Read-only")
-               : (write ? "Previous mutating" : "Previous read-only");
+  return first ? (write ? "Modifying" : "Read-only")
+               : (write ? "Previous modifying" : "Previous read-only");
 }
 
 static void PrintMop(const ReportMop *mop, bool first) {
   Decorator d;
   char thrbuf[kThreadBufSize];
   Printf("%s", d.Access());
-  const char *object_type = GetObjectTypeFromTag(mop->external_tag);
-  if (!object_type) {
+  if (mop->external_tag == kExternalTagNone) {
     Printf("  %s of size %d at %p by %s",
            MopDesc(first, mop->write, mop->atomic), mop->size,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));
   } else {
-    Printf("  %s access of object %s at %p by %s",
+    const char *object_type = GetObjectTypeFromTag(mop->external_tag);
+    if (object_type == nullptr)
+        object_type = "external object";
+    Printf("  %s access of %s at %p by %s",
            ExternalMopDesc(first, mop->write), object_type,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));
   }
@@ -202,7 +207,7 @@ static void PrintLocation(const ReportLocation *loc) {
              loc->heap_chunk_size, loc->heap_chunk_start,
              thread_name(thrbuf, loc->tid));
     } else {
-      Printf("  Location is %s object of size %zu at %p allocated by %s:\n",
+      Printf("  Location is %s of size %zu at %p allocated by %s:\n",
              object_type, loc->heap_chunk_size, loc->heap_chunk_start,
              thread_name(thrbuf, loc->tid));
     }
@@ -315,7 +320,7 @@ static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
 void PrintReport(const ReportDesc *rep) {
   Decorator d;
   Printf("==================\n");
-  const char *rep_typ_str = ReportTypeString(rep->typ);
+  const char *rep_typ_str = ReportTypeString(rep->typ, rep->tag);
   Printf("%s", d.Warning());
   Printf("WARNING: ThreadSanitizer: %s (pid=%d)\n", rep_typ_str,
          (int)internal_getpid());

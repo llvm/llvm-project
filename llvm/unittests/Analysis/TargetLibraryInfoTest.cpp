@@ -42,13 +42,13 @@ protected:
   }
 
   ::testing::AssertionResult isLibFunc(const Function *FDecl,
-                                       LibFunc::Func ExpectedLF) {
+                                       LibFunc ExpectedLF) {
     StringRef ExpectedLFName = TLI.getName(ExpectedLF);
 
     if (!FDecl)
       return ::testing::AssertionFailure() << ExpectedLFName << " not found";
 
-    LibFunc::Func F;
+    LibFunc F;
     if (!TLI.getLibFunc(*FDecl, F))
       return ::testing::AssertionFailure() << ExpectedLFName << " invalid";
 
@@ -66,7 +66,7 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
 
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
-    LibFunc::Func LF = (LibFunc::Func)FI;
+    LibFunc LF = (LibFunc)FI;
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy));
     EXPECT_FALSE(isLibFunc(F, LF));
@@ -334,6 +334,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     "declare i32 @vsnprintf(i8*, i64, i8*, %struct*)\n"
     "declare i32 @vsprintf(i8*, i8*, %struct*)\n"
     "declare i32 @vsscanf(i8*, i8*, %struct*)\n"
+    "declare i64 @wcslen(i32*)\n"
 
     // These functions were also extracted from the OS X headers, but they are
     // available with a special name on darwin.
@@ -469,10 +470,56 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     "declare i32 @isascii(i32)\n"
     "declare i32 @isdigit(i32)\n"
     "declare i32 @toascii(i32)\n"
+
+    // These functions were extracted from math-finite.h which provides
+    // functions similar to those in math.h, but optimized for handling
+    // finite values only.
+    "declare double @__acos_finite(double)\n"
+    "declare float @__acosf_finite(float)\n"
+    "declare x86_fp80 @__acosl_finite(x86_fp80)\n"
+    "declare double @__acosh_finite(double)\n"
+    "declare float @__acoshf_finite(float)\n"
+    "declare x86_fp80 @__acoshl_finite(x86_fp80)\n"
+    "declare double @__asin_finite(double)\n"
+    "declare float @__asinf_finite(float)\n"
+    "declare x86_fp80 @__asinl_finite(x86_fp80)\n"
+    "declare double @__atan2_finite(double, double)\n"
+    "declare float @__atan2f_finite(float, float)\n"
+    "declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80)\n"
+    "declare double @__atanh_finite(double)\n"
+    "declare float @__atanhf_finite(float)\n"
+    "declare x86_fp80 @__atanhl_finite(x86_fp80)\n"
+    "declare double @__cosh_finite(double)\n"
+    "declare float @__coshf_finite(float)\n"
+    "declare x86_fp80 @__coshl_finite(x86_fp80)\n"
+    "declare double @__exp10_finite(double)\n"
+    "declare float @__exp10f_finite(float)\n"
+    "declare x86_fp80 @__exp10l_finite(x86_fp80)\n"
+    "declare double @__exp2_finite(double)\n"
+    "declare float @__exp2f_finite(float)\n"
+    "declare x86_fp80 @__exp2l_finite(x86_fp80)\n"
+    "declare double @__exp_finite(double)\n"
+    "declare float @__expf_finite(float)\n"
+    "declare x86_fp80 @__expl_finite(x86_fp80)\n"     
+    "declare double @__log10_finite(double)\n"
+    "declare float @__log10f_finite(float)\n"
+    "declare x86_fp80 @__log10l_finite(x86_fp80)\n"
+    "declare double @__log2_finite(double)\n"
+    "declare float @__log2f_finite(float)\n"
+    "declare x86_fp80 @__log2l_finite(x86_fp80)\n"
+    "declare double @__log_finite(double)\n"
+    "declare float @__logf_finite(float)\n"
+    "declare x86_fp80 @__logl_finite(x86_fp80)\n"
+    "declare double @__pow_finite(double, double)\n"
+    "declare float @__powf_finite(float, float)\n"
+    "declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)\n"
+    "declare double @__sinh_finite(double)\n"
+    "declare float @__sinhf_finite(float)\n"
+    "declare x86_fp80 @__sinhl_finite(x86_fp80)\n"
     );
 
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
-    LibFunc::Func LF = (LibFunc::Func)FI;
+    LibFunc LF = (LibFunc)FI;
     // Make sure everything is available; we're not testing target defaults.
     TLII.setAvailable(LF);
     Function *F = M->getFunction(TLI.getName(LF));

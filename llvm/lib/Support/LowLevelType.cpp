@@ -18,25 +18,25 @@ using namespace llvm;
 
 LLT::LLT(MVT VT) {
   if (VT.isVector()) {
-    SizeInBits = VT.getVectorElementType().getSizeInBits();
-    ElementsOrAddrSpace = VT.getVectorNumElements();
-    Kind = ElementsOrAddrSpace == 1 ? Scalar : Vector;
+    init(/*isPointer=*/false, VT.getVectorNumElements() > 1,
+         VT.getVectorNumElements(), VT.getVectorElementType().getSizeInBits(),
+         /*AddressSpace=*/0);
   } else if (VT.isValid()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    Kind = Scalar;
-    SizeInBits = VT.getSizeInBits();
-    ElementsOrAddrSpace = 1;
-    assert(SizeInBits != 0 && "invalid zero-sized type");
+    assert(VT.getSizeInBits() != 0 && "invalid zero-sized type");
+    init(/*isPointer=*/false, /*isVector=*/false, /*NumElements=*/0,
+         VT.getSizeInBits(), /*AddressSpace=*/0);
   } else {
-    Kind = Invalid;
-    SizeInBits = ElementsOrAddrSpace = 0;
+    IsPointer = false;
+    IsVector = false;
+    RawData = 0;
   }
 }
 
 void LLT::print(raw_ostream &OS) const {
   if (isVector())
-    OS << "<" << ElementsOrAddrSpace << " x s" << SizeInBits << ">";
+    OS << "<" << getNumElements() << " x " << getElementType() << ">";
   else if (isPointer())
     OS << "p" << getAddressSpace();
   else if (isValid()) {
@@ -45,3 +45,12 @@ void LLT::print(raw_ostream &OS) const {
   } else
     llvm_unreachable("trying to print an invalid type");
 }
+
+const constexpr LLT::BitFieldInfo LLT::ScalarSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerAddressSpaceFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::VectorElementsFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::VectorSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorElementsFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorAddressSpaceFieldInfo;

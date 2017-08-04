@@ -19,7 +19,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 
 ; CHECK:   [[BAD]] (landing-pad):
 ; CHECK:     EH_LABEL
-; CHECK:     [[UNDEF:%[0-9]+]](s128) = IMPLICIT_DEF
+; CHECK:     [[UNDEF:%[0-9]+]](s128) = G_IMPLICIT_DEF
 ; CHECK:     [[PTR:%[0-9]+]](p0) = COPY %x0
 ; CHECK:     [[VAL_WITH_PTR:%[0-9]+]](s128) = G_INSERT [[UNDEF]], [[PTR]](p0), 0
 ; CHECK:     [[SEL_PTR:%[0-9]+]](p0) = COPY %x1

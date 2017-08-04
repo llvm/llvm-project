@@ -14,10 +14,10 @@ if (p2) jumpr r0
 # CHECK: 5361c300 { if (!p3) jumpr:nt
 if (!p3) jumpr r1
 
-# CHECK: 1c2eceee { v14 = vxor(v14,{{ *}}v14) }
+# CHECK: 1c2eceee { v14 = vxor(v14,v14) }
 v14 = #0
 
-# CHECK: 1c80c0a0 { v1:0.w = vsub(v1:0.w,v1:0.w) }
+# CHECK: 1c9edea0 { v1:0.w = vsub(v31:30.w,v31:30.w) }
 v1:0 = #0
 
 # CHECK: 1f42c3e0 { v1:0 = vcombine(v3,v2) }
@@ -53,7 +53,7 @@ q0 = vcmp.eq(v8.uw, v9.uw)
 # CHECK: 1c8aea09 { q1 &= vcmp.eq(v10.w,v10.w) }
 q1 &= vcmp.eq(v10.uw, v10.uw)
 
-# CHECK: 1c8ceb46 { q2 |= vcmp.eq(v11.h,v12.h) }
+# CHECK: 1c8ceb4a { q2 |= vcmp.eq(v11.w,v12.w) }
 q2 |= vcmp.eq(v11.uw, v12.uw)
 
 # CHECK: 1c8eed8b { q3 ^= vcmp.eq(v13.w,v14.w) }

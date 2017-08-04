@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-override %t
+// RUN: %check_clang_tidy %s modernize-use-override %t -- -- -std=c++11 -fexceptions
 
 #define ABSTRACT = 0
 
@@ -11,6 +11,10 @@
 #define UNUSED __attribute__((unused))
 
 struct MUST_USE_RESULT MustUseResultObject {};
+
+struct IntPair {
+  int First, Second;
+};
 
 struct Base {
   virtual ~Base() {}
@@ -41,6 +45,8 @@ struct Base {
 
   virtual void ne() noexcept(false);
   virtual void t() throw();
+
+  virtual void il(IntPair);
 };
 
 struct SimpleCases : public Base {
@@ -221,6 +227,14 @@ public:
   // CHECK-FIXES: {{^}}  void cv2() const volatile override // some comment
 };
 
+struct DefaultArguments : public Base {
+  // Tests for default arguments (with initializer lists).
+  // Make sure the override fix is placed after the argument list.
+  void il(IntPair p = {1, (2 + (3))}) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: annotate this
+  // CHECK-FIXES: {{^}}  void il(IntPair p = {1, (2 + (3))}) override {}
+};
+
 struct Macros : public Base {
   // Tests for 'virtual' and 'override' being defined through macros. Basically
   // give up for now.
@@ -288,3 +302,17 @@ struct MembersOfSpecializations : public Base2 {
 };
 template <> void MembersOfSpecializations<3>::a() {}
 void ff() { MembersOfSpecializations<3>().a(); };
+
+// In case try statement is used as a method body,
+// make sure that override fix is placed before try keyword.
+struct TryStmtAsBody : public Base {
+  void a() try
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: annotate this
+  // CHECK-FIXES: {{^}}  void a() override try
+  { b(); } catch(...) { c(); }
+
+  virtual void d() try
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
+  // CHECK-FIXES: {{^}}  void d() override try
+  { e(); } catch(...) { f(); }
+};

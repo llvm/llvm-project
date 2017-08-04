@@ -14,10 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "R600Defines.h"
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
 #include "MCTargetDesc/AMDGPUMCCodeEmitter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "R600Defines.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"

@@ -31,6 +31,8 @@ using namespace __esan; // NOLINT
 // Get the per-platform defines for what is possible to intercept
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+
 // TODO(bruening): tsan disables several interceptors (getpwent, etc.) claiming
 // that interception is a perf hit: should we do the same?
 
@@ -302,20 +304,6 @@ INTERCEPTOR(int, unlink, char *path) {
   COMMON_INTERCEPTOR_ENTER(ctx, unlink, path);
   COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
   return REAL(unlink)(path);
-}
-
-INTERCEPTOR(uptr, fread, void *ptr, uptr size, uptr nmemb, void *f) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, fread, ptr, size, nmemb, f);
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size * nmemb);
-  return REAL(fread)(ptr, size, nmemb, f);
-}
-
-INTERCEPTOR(uptr, fwrite, const void *p, uptr size, uptr nmemb, void *f) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, fwrite, p, size, nmemb, f);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, p, size * nmemb);
-  return REAL(fwrite)(p, size, nmemb, f);
 }
 
 INTERCEPTOR(int, puts, const char *s) {

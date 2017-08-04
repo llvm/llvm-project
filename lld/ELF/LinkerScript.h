@@ -15,6 +15,7 @@
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -28,45 +29,36 @@ namespace lld {
 namespace elf {
 
 class DefinedCommon;
-class ScriptParser;
 class SymbolBody;
-template <class ELFT> class InputSectionBase;
-template <class ELFT> class InputSection;
-class OutputSectionBase;
-template <class ELFT> class OutputSectionFactory;
-class InputSectionData;
+class InputSectionBase;
+class InputSection;
+class OutputSection;
+class OutputSectionFactory;
+class InputSectionBase;
+class SectionBase;
+
+struct ExprValue {
+  SectionBase *Sec;
+  uint64_t Val;
+  bool ForceAbsolute;
+  uint64_t Alignment = 1;
+  std::string Loc;
+
+  ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val,
+            const Twine &Loc)
+      : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute), Loc(Loc.str()) {}
+  ExprValue(SectionBase *Sec, uint64_t Val, const Twine &Loc)
+      : ExprValue(Sec, false, Val, Loc) {}
+  ExprValue(uint64_t Val) : ExprValue(nullptr, Val, "") {}
+  bool isAbsolute() const { return ForceAbsolute || Sec == nullptr; }
+  uint64_t getValue() const;
+  uint64_t getSecAddr() const;
+};
 
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
-// Later, we evaluate the expression by calling the function
-// with the value of special context variable ".".
-struct Expr {
-  std::function<uint64_t(uint64_t)> Val;
-  std::function<bool()> IsAbsolute;
-
-  // If expression is section-relative the function below is used
-  // to get the output section pointer.
-  std::function<const OutputSectionBase *()> Section;
-
-  uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
-  operator bool() const { return (bool)Val; }
-
-  Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute,
-       std::function<const OutputSectionBase *()> Section)
-      : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
-  template <typename T>
-  Expr(T V) : Expr(V, [] { return true; }, [] { return nullptr; }) {}
-  Expr() : Expr(nullptr) {}
-};
-
-// Parses a linker script. Calling this function updates
-// Config and ScriptConfig.
-void readLinkerScript(MemoryBufferRef MB);
-
-// Parses a version script.
-void readVersionScript(MemoryBufferRef MB);
-
-void readDynamicList(MemoryBufferRef MB);
+// Later, we evaluate the expression by calling the function.
+typedef std::function<ExprValue()> Expr;
 
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
@@ -80,16 +72,13 @@ enum SectionsCommandKind {
 
 struct BaseCommand {
   BaseCommand(int K) : Kind(K) {}
-
-  virtual ~BaseCommand() = default;
-
   int Kind;
 };
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
+  SymbolAssignment(StringRef Name, Expr E, std::string Loc)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc) {}
 
   static bool classof(const BaseCommand *C);
 
@@ -103,6 +92,9 @@ struct SymbolAssignment : BaseCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
   bool Hidden = false;
+
+  // Holds file name and line number for error reporting.
+  std::string Location;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -111,22 +103,46 @@ struct SymbolAssignment : BaseCommand {
 // with ONLY_IF_RW is created if all input sections are RW.
 enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
+// This struct is used to represent the location and size of regions of
+// target memory. Instances of the struct are created by parsing the
+// MEMORY command.
+struct MemoryRegion {
+  std::string Name;
+  uint64_t Origin;
+  uint64_t Length;
+  uint32_t Flags;
+  uint32_t NegFlags;
+};
+
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
       : BaseCommand(OutputSectionKind), Name(Name) {}
 
   static bool classof(const BaseCommand *C);
 
+  OutputSection *Sec = nullptr;
+  MemoryRegion *MemRegion = nullptr;
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
   Expr LMAExpr;
   Expr SubalignExpr;
-  std::vector<std::unique_ptr<BaseCommand>> Commands;
+  std::vector<BaseCommand *> Commands;
   std::vector<StringRef> Phdrs;
-  uint32_t Filler = 0;
+  llvm::Optional<uint32_t> Filler;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
   std::string Location;
+  std::string MemoryRegionName;
+  bool Noload = false;
+
+  template <class ELFT> void finalize();
+  template <class ELFT> void writeTo(uint8_t *Buf);
+  template <class ELFT> void maybeCompress();
+  uint32_t getFiller();
+
+  void sort(std::function<int(InputSectionBase *S)> Order);
+  void sortInitFini();
+  void sortCtorsDtors();
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
@@ -154,7 +170,7 @@ struct InputSectionDescription : BaseCommand {
   // will be associated with this InputSectionDescription.
   std::vector<SectionPattern> SectionPatterns;
 
-  std::vector<InputSectionData *> Sections;
+  std::vector<InputSection *> Sections;
 };
 
 // Represents an ASSERT().
@@ -187,25 +203,10 @@ struct PhdrsCommand {
   Expr LMAExpr;
 };
 
-class LinkerScriptBase {
-protected:
-  ~LinkerScriptBase() = default;
-
-public:
-  virtual uint64_t getHeaderSize() = 0;
-  virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
-  virtual bool isDefined(StringRef S) = 0;
-  virtual bool isAbsolute(StringRef S) = 0;
-  virtual const OutputSectionBase *getSymbolSection(StringRef S) = 0;
-  virtual const OutputSectionBase *getOutputSection(const Twine &Loc,
-                                                    StringRef S) = 0;
-  virtual uint64_t getOutputSectionSize(StringRef S) = 0;
-};
-
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
   // Used to assign addresses to sections.
-  std::vector<std::unique_ptr<BaseCommand>> Commands;
+  std::vector<BaseCommand *> Commands;
 
   // Used to assign sections to headers.
   std::vector<PhdrsCommand> PhdrsCommands;
@@ -215,20 +216,69 @@ struct ScriptConfiguration {
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
   std::vector<InputSectionDescription *> KeptSections;
+
+  // A map from memory region name to a memory region descriptor.
+  llvm::DenseMap<llvm::StringRef, MemoryRegion> MemoryRegions;
+
+  // A list of symbols referenced by the script.
+  std::vector<llvm::StringRef> ReferencedSymbols;
 };
 
-extern ScriptConfiguration *ScriptConfig;
+class LinkerScript final {
+  // Temporary state used in processCommands() and assignAddresses()
+  // that must be reinitialized for each call to the above functions, and must
+  // not be used outside of the scope of a call to the above functions.
+  struct AddressState {
+    uint64_t ThreadBssOffset = 0;
+    OutputSection *OutSec = nullptr;
+    MemoryRegion *MemRegion = nullptr;
+    llvm::DenseMap<const MemoryRegion *, uint64_t> MemRegionOffset;
+    std::function<uint64_t()> LMAOffset;
+    AddressState(const ScriptConfiguration &Opt);
+  };
+  llvm::DenseMap<OutputSection *, OutputSectionCommand *> SecToCommand;
+  llvm::DenseMap<StringRef, OutputSectionCommand *> NameToOutputSectionCommand;
 
-// This is a runner of the linker script.
-template <class ELFT> class LinkerScript final : public LinkerScriptBase {
-  typedef typename ELFT::uint uintX_t;
+  void assignSymbol(SymbolAssignment *Cmd, bool InSec);
+  void setDot(Expr E, const Twine &Loc, bool InSec);
+
+  std::vector<InputSection *>
+  computeInputSections(const InputSectionDescription *);
+
+  std::vector<InputSectionBase *>
+  createInputSectionList(OutputSectionCommand &Cmd);
+
+  std::vector<size_t> getPhdrIndices(OutputSectionCommand *Cmd);
+  size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
+
+  MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd);
+
+  void switchTo(OutputSection *Sec);
+  uint64_t advance(uint64_t Size, unsigned Align);
+  void output(InputSection *Sec);
+  void process(BaseCommand &Base);
+
+  AddressState *CurAddressState = nullptr;
+  OutputSection *Aether;
+
+  uint64_t Dot;
 
 public:
-  LinkerScript();
-  ~LinkerScript();
+  bool ErrorOnMissingSection = false;
+  OutputSectionCommand *createOutputSectionCommand(StringRef Name,
+                                                   StringRef Location);
+  OutputSectionCommand *getOrCreateOutputSectionCommand(StringRef Name);
 
-  void processCommands(OutputSectionFactory<ELFT> &Factory);
-  void addOrphanSections(OutputSectionFactory<ELFT> &Factory);
+  OutputSectionCommand *getCmd(OutputSection *Sec) const;
+  bool hasPhdrsCommands() { return !Opt.PhdrsCommands.empty(); }
+  uint64_t getDot() { return Dot; }
+  void discard(ArrayRef<InputSectionBase *> V);
+
+  ExprValue getSymbolValue(const Twine &Loc, StringRef S);
+  bool isDefined(StringRef S);
+
+  void fabricateDefaultCommands();
+  void addOrphanSections(OutputSectionFactory &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
@@ -236,61 +286,19 @@ public:
   std::vector<PhdrEntry> createPhdrs();
   bool ignoreInterpSection();
 
-  uint32_t getFiller(StringRef Name);
-  void writeDataBytes(StringRef Name, uint8_t *Buf);
-  bool hasLMA(StringRef Name);
-  bool shouldKeep(InputSectionBase<ELFT> *S);
+  bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
-  void placeOrphanSections();
-  void assignAddresses(std::vector<PhdrEntry> &Phdrs);
-  bool hasPhdrsCommands();
-  uint64_t getHeaderSize() override;
-  uint64_t getSymbolValue(const Twine &Loc, StringRef S) override;
-  bool isDefined(StringRef S) override;
-  bool isAbsolute(StringRef S) override;
-  const OutputSectionBase *getSymbolSection(StringRef S) override;
-  const OutputSectionBase *getOutputSection(const Twine &Loc,
-                                            StringRef S) override;
-  uint64_t getOutputSectionSize(StringRef S) override;
+  void processNonSectionCommands();
+  void assignAddresses();
+  void allocateHeaders(std::vector<PhdrEntry> &Phdrs);
+  void addSymbol(SymbolAssignment *Cmd);
+  void processCommands(OutputSectionFactory &Factory);
 
-  std::vector<OutputSectionBase *> *OutputSections;
-
-  int getSectionIndex(StringRef Name);
-
-private:
-  void computeInputSections(InputSectionDescription *);
-
-  void addSection(OutputSectionFactory<ELFT> &Factory,
-                  InputSectionBase<ELFT> *Sec, StringRef Name);
-  void discard(ArrayRef<InputSectionBase<ELFT> *> V);
-
-  std::vector<InputSectionBase<ELFT> *>
-  createInputSectionList(OutputSectionCommand &Cmd);
-
-  // "ScriptConfig" is a bit too long, so define a short name for it.
-  ScriptConfiguration &Opt = *ScriptConfig;
-
-  std::vector<size_t> getPhdrIndices(StringRef SectionName);
-  size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
-
-  uintX_t Dot;
-  uintX_t LMAOffset = 0;
-  OutputSectionBase *CurOutSec = nullptr;
-  uintX_t ThreadBssOffset = 0;
-  void switchTo(OutputSectionBase *Sec);
-  void flush();
-  void output(InputSection<ELFT> *Sec);
-  void process(BaseCommand &Base);
-  llvm::DenseSet<OutputSectionBase *> AlreadyOutputOS;
-  llvm::DenseSet<InputSectionData *> AlreadyOutputIS;
+  // Parsed linker script configurations are set to this struct.
+  ScriptConfiguration Opt;
 };
 
-// Variable template is a C++14 feature, so we can't template
-// a global variable. Use a struct to workaround.
-template <class ELFT> struct Script { static LinkerScript<ELFT> *X; };
-template <class ELFT> LinkerScript<ELFT> *Script<ELFT>::X;
-
-extern LinkerScriptBase *ScriptBase;
+extern LinkerScript *Script;
 
 } // end namespace elf
 } // end namespace lld

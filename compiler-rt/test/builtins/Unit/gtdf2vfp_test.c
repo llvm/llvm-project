@@ -1,3 +1,5 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+
 //===-- gtdf2vfp_test.c - Test __gtdf2vfp ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -19,7 +21,7 @@
 
 extern int __gtdf2vfp(double a, double b);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__gtdf2vfp(double a, double b)
 {
     int actual = __gtdf2vfp(a, b);
@@ -33,7 +35,7 @@ int test__gtdf2vfp(double a, double b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__gtdf2vfp(0.0, 0.0))
         return 1;
     if (test__gtdf2vfp(1.0, 0.0))

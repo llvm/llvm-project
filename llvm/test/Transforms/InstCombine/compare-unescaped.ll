@@ -144,7 +144,7 @@ chk2:
   ret i8* %n
 ; CHECK-LABEL: compare_ret_escape
 ; CHECK: %cmp = icmp eq i8* %n, %c
-; CHECK: %cmp2 = icmp eq i32* %bc, %lgp
+; CHECK: %cmp2 = icmp eq i32* %lgp, %bc
 }
 
 ; The malloc call for %m cannot be elided since it is used in the call to function f.

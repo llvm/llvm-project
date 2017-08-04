@@ -5,15 +5,20 @@
 // with ASan) involving C++ standard library types when using libcxx.
 #define _LIBCPP_HAS_NO_ASAN
 
+// Do not attempt to use LLVM ostream from gtest.
+#define GTEST_NO_LLVM_RAW_OSTREAM 1
+
 #include "FuzzerCorpus.h"
-#include "FuzzerInternal.h"
 #include "FuzzerDictionary.h"
+#include "FuzzerInternal.h"
 #include "FuzzerMerge.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
+#include "FuzzerTracePC.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <set>
+#include <sstream>
 
 using namespace fuzzer;
 
@@ -419,35 +424,6 @@ TEST(FuzzerMutate, AddWordFromDictionary2) {
   TestAddWordFromDictionary(&MutationDispatcher::Mutate, 1 << 15);
 }
 
-void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
-  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
-  fuzzer::EF = t.get();
-  Random Rand(0);
-  MutationDispatcher MD(Rand, {});
-  uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
-  size_t PosHint = 7777;
-  MD.AddWordToAutoDictionary({Word(W, sizeof(W)), PosHint});
-  int FoundMask = 0;
-  for (int i = 0; i < NumIter; i++) {
-    uint8_t T[10000];
-    memset(T, 0, sizeof(T));
-    size_t NewSize = (MD.*M)(T, 9000, 10000);
-    if (NewSize >= PosHint + sizeof(W) &&
-        !memcmp(W, T + PosHint, sizeof(W)))
-      FoundMask = 1;
-  }
-  EXPECT_EQ(FoundMask, 1);
-}
-
-TEST(FuzzerMutate, AddWordFromDictionaryWithHint1) {
-  TestAddWordFromDictionaryWithHint(
-      &MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary, 1 << 5);
-}
-
-TEST(FuzzerMutate, AddWordFromDictionaryWithHint2) {
-  TestAddWordFromDictionaryWithHint(&MutationDispatcher::Mutate, 1 << 10);
-}
-
 void TestChangeASCIIInteger(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
@@ -584,15 +560,15 @@ TEST(FuzzerUtil, Base64) {
 
 TEST(Corpus, Distribution) {
   Random Rand(0);
-  InputCorpus C("");
+  std::unique_ptr<InputCorpus> C(new InputCorpus(""));
   size_t N = 10;
   size_t TriesPerUnit = 1<<16;
   for (size_t i = 0; i < N; i++)
-    C.AddToCorpus(Unit{ static_cast<uint8_t>(i) }, 0);
+    C->AddToCorpus(Unit{ static_cast<uint8_t>(i) }, 1, false, {});
 
   std::vector<size_t> Hist(N);
   for (size_t i = 0; i < N * TriesPerUnit; i++) {
-    Hist[C.ChooseUnitIdxToMutate(Rand)]++;
+    Hist[C->ChooseUnitIdxToMutate(Rand)]++;
   }
   for (size_t i = 0; i < N; i++) {
     // A weak sanity check that every unit gets invoked.
@@ -636,7 +612,10 @@ static void Merge(const std::string &Input,
   Merger M;
   std::vector<std::string> NewFiles;
   EXPECT_TRUE(M.Parse(Input, true));
+  std::stringstream SS;
+  M.PrintSummary(SS);
   EXPECT_EQ(NumNewFeatures, M.Merge(&NewFiles));
+  EXPECT_EQ(M.AllFeatures(), M.ParseSummary(SS));
   EQ(NewFiles, Result);
 }
 
@@ -706,6 +685,16 @@ TEST(Merge, Good) {
   EQ(M.Files[2].Features, {1, 3, 6});
   EXPECT_EQ(3U, M.Merge(&NewFiles));
   EQ(NewFiles, {"B"});
+
+  // Same as the above, but with InitialFeatures.
+  EXPECT_TRUE(M.Parse("2\n0\nB\nC\n"
+                        "STARTED 0 1001\nDONE 0 4 5 6 \n"
+                        "STARTED 1 1002\nDONE 1 6 1 3\n"
+                        "", true));
+  EQ(M.Files[0].Features, {4, 5, 6});
+  EQ(M.Files[1].Features, {1, 3, 6});
+  EXPECT_EQ(3U, M.Merge({1, 2, 3}, &NewFiles));
+  EQ(NewFiles, {"B"});
 }
 
 TEST(Merge, Merge) {
@@ -735,4 +724,38 @@ TEST(Merge, Merge) {
         "STARTED 2 1100\nDONE 2 2 3 \n"
         "STARTED 3 1000\nDONE 3 1  \n",
         {"B", "D"}, 3);
+}
+
+TEST(Fuzzer, ForEachNonZeroByte) {
+  const size_t N = 64;
+  alignas(64) uint8_t Ar[N + 8] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 2, 0, 0, 0, 0, 0, 0,
+    0, 0, 3, 0, 4, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 5, 0, 6, 0, 0,
+    0, 0, 0, 0, 0, 0, 7, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 8,
+    9, 9, 9, 9, 9, 9, 9, 9,
+  };
+  typedef std::vector<std::pair<size_t, uint8_t> > Vec;
+  Vec Res, Expected;
+  auto CB = [&](size_t Idx, uint8_t V) { Res.push_back({Idx, V}); };
+  ForEachNonZeroByte(Ar, Ar + N, 100, CB);
+  Expected = {{108, 1}, {109, 2}, {118, 3}, {120, 4},
+              {135, 5}, {137, 6}, {146, 7}, {163, 8}};
+  EXPECT_EQ(Res, Expected);
+
+  Res.clear();
+  ForEachNonZeroByte(Ar + 9, Ar + N, 109, CB);
+  Expected = {          {109, 2}, {118, 3}, {120, 4},
+              {135, 5}, {137, 6}, {146, 7}, {163, 8}};
+  EXPECT_EQ(Res, Expected);
+
+  Res.clear();
+  ForEachNonZeroByte(Ar + 9, Ar + N - 9, 109, CB);
+  Expected = {          {109, 2}, {118, 3}, {120, 4},
+              {135, 5}, {137, 6}, {146, 7}};
+  EXPECT_EQ(Res, Expected);
 }

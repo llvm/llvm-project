@@ -15,8 +15,8 @@
 #define LLVM_ANALYSIS_MEMORYDEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"

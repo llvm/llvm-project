@@ -10,8 +10,8 @@
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
-#include "llvm/DebugInfo/MSF/StreamWriter.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -27,6 +27,14 @@ Error CodeViewRecordIO::beginRecord(Optional<uint32_t> MaxLength) {
 Error CodeViewRecordIO::endRecord() {
   assert(!Limits.empty() && "Not in a record!");
   Limits.pop_back();
+  // We would like to assert that we actually read / wrote all the bytes that we
+  // expected to for this record, but unfortunately we can't do this.  Some
+  // producers such as MASM over-allocate for certain types of records and
+  // commit the extraneous data, so when reading we can't be sure every byte
+  // will have been read.  And when writing we over-allocate temporarily since
+  // we don't know how big the record is until we're finished writing it, so
+  // even though we don't commit the extraneous data, we still can't guarantee
+  // we're at the end of the allocated data.
   return Error::success();
 }
 
@@ -47,6 +55,12 @@ uint32_t CodeViewRecordIO::maxFieldLength() const {
   assert(Min.hasValue() && "Every field must have a maximum length!");
 
   return *Min;
+}
+
+Error CodeViewRecordIO::padToAlignment(uint32_t Align) {
+  if (isReading())
+    return Reader->padToAlignment(Align);
+  return Writer->padToAlignment(Align);
 }
 
 Error CodeViewRecordIO::skipPadding() {
@@ -145,27 +159,28 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
   if (isWriting()) {
     // Truncate if we attempt to write too much.
     StringRef S = Value.take_front(maxFieldLength() - 1);
-    if (auto EC = Writer->writeZeroString(S))
+    if (auto EC = Writer->writeCString(S))
       return EC;
   } else {
-    if (auto EC = Reader->readZeroString(Value))
+    if (auto EC = Reader->readCString(Value))
       return EC;
   }
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapGuid(StringRef &Guid) {
+Error CodeViewRecordIO::mapGuid(GUID &Guid) {
   constexpr uint32_t GuidSize = 16;
   if (maxFieldLength() < GuidSize)
     return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
 
   if (isWriting()) {
-    assert(Guid.size() == 16 && "Invalid Guid Size!");
-    if (auto EC = Writer->writeFixedString(Guid))
+    if (auto EC = Writer->writeBytes(Guid.Guid))
       return EC;
   } else {
-    if (auto EC = Reader->readFixedString(Guid, 16))
+    ArrayRef<uint8_t> GuidBytes;
+    if (auto EC = Reader->readBytes(GuidBytes, GuidSize))
       return EC;
+    memcpy(Guid.Guid, GuidBytes.data(), GuidSize);
   }
   return Error::success();
 }
@@ -176,7 +191,7 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
       if (auto EC = mapStringZ(V))
         return EC;
     }
-    if (auto EC = Writer->writeInteger(uint8_t(0)))
+    if (auto EC = Writer->writeInteger<uint8_t>(0))
       return EC;
   } else {
     StringRef S;
@@ -194,22 +209,22 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
 Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
   assert(Value < 0 && "Encoded integer is not signed!");
   if (Value >= std::numeric_limits<int8_t>::min()) {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_CHAR)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_CHAR))
       return EC;
-    if (auto EC = Writer->writeInteger(static_cast<int8_t>(Value)))
+    if (auto EC = Writer->writeInteger<int8_t>(Value))
       return EC;
   } else if (Value >= std::numeric_limits<int16_t>::min()) {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_SHORT)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_SHORT))
       return EC;
-    if (auto EC = Writer->writeInteger(static_cast<int16_t>(Value)))
+    if (auto EC = Writer->writeInteger<int16_t>(Value))
       return EC;
   } else if (Value >= std::numeric_limits<int32_t>::min()) {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_LONG)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_LONG))
       return EC;
-    if (auto EC = Writer->writeInteger(static_cast<int32_t>(Value)))
+    if (auto EC = Writer->writeInteger<int32_t>(Value))
       return EC;
   } else {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_QUADWORD)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_QUADWORD))
       return EC;
     if (auto EC = Writer->writeInteger(Value))
       return EC;
@@ -219,20 +234,20 @@ Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
 
 Error CodeViewRecordIO::writeEncodedUnsignedInteger(const uint64_t &Value) {
   if (Value < LF_NUMERIC) {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(Value)))
+    if (auto EC = Writer->writeInteger<uint16_t>(Value))
       return EC;
   } else if (Value <= std::numeric_limits<uint16_t>::max()) {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_USHORT)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_USHORT))
       return EC;
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(Value)))
+    if (auto EC = Writer->writeInteger<uint16_t>(Value))
       return EC;
   } else if (Value <= std::numeric_limits<uint32_t>::max()) {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_ULONG)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_ULONG))
       return EC;
-    if (auto EC = Writer->writeInteger(static_cast<uint32_t>(Value)))
+    if (auto EC = Writer->writeInteger<uint32_t>(Value))
       return EC;
   } else {
-    if (auto EC = Writer->writeInteger(static_cast<uint16_t>(LF_UQUADWORD)))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_UQUADWORD))
       return EC;
     if (auto EC = Writer->writeInteger(Value))
       return EC;

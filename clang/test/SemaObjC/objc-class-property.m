@@ -21,6 +21,8 @@
 @property (class) int c2; // expected-note {{property declared here}} \
                           // expected-note {{property declared here}}
 @property (class) int x;
+@property (class, setter=customSet:) int customSetterProperty;
+@property (class, getter=customGet) int customGetterProperty;
 @end
 
 @implementation A // expected-warning {{class property 'c2' requires method 'c2' to be defined}} \
@@ -29,12 +31,19 @@
 @dynamic (class) x; // refers to the class property
 @synthesize z, c2; // expected-error {{@synthesize not allowed on a class property 'c2'}}
 @dynamic c; // refers to the class property
+@dynamic customSetterProperty;
+@dynamic customGetterProperty;
 @end
 
 int test() {
   A *a = [[A alloc] init];
   a.c; // expected-error {{property 'c' is a class property; did you mean to access it with class 'A'}}
   return a.x + A.c;
+}
+
+void customSelectors() {
+  A.customSetterProperty = 1;
+  (void)A.customGetterProperty;
 }
 
 void message_id(id me) {

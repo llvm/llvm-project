@@ -1,5 +1,3 @@
-include(AddLLVM) # for add_lit_testsuite
-
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
@@ -35,6 +33,7 @@ pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
 pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
 pythonize_bool(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
 pythonize_bool(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
+pythonize_bool(LIBCXX_DEBUG_BUILD)
 
 # By default, for non-standalone builds, libcxx and libcxxabi share a library
 # directory.
@@ -61,21 +60,61 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   set(LIBCXX_TEST_DEPS cxx_experimental)
 endif()
 
-if (LIBCXX_HAS_EXTERNAL_THREAD_API)
+if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
 endif()
 
-add_lit_testsuite(check-cxx
-  "Running libcxx tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS cxx ${LIBCXX_TEST_DEPS})
+if (LIBCXX_INCLUDE_TESTS)
+  include(AddLLVM) # for add_lit_testsuite
+  add_lit_testsuite(check-cxx
+    "Running libcxx tests"
+    ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS cxx ${LIBCXX_TEST_DEPS})
 
-add_custom_target(check-libcxx DEPENDS check-cxx)
+  add_custom_target(check-libcxx DEPENDS check-cxx)
+endif()
 
 if (LIBCXX_GENERATE_COVERAGE)
   include(CodeCoverage)
   set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/coverage")
-  set(capture_dirs "${LIBCXX_LIB_CMAKEFILES_DIR}/cxx.dir/;${LIBCXX_LIB_CMAKEFILES_DIR}/cxx_experimental.dir/;${CMAKE_CURRENT_BINARY_DIR}")
+  set(capture_dirs
+      "${LIBCXX_LIB_CMAKEFILES_DIR}/cxx_objects.dir/"
+      "${LIBCXX_LIB_CMAKEFILES_DIR}/cxx.dir/"
+      "${LIBCXX_LIB_CMAKEFILES_DIR}/cxx_experimental.dir/"
+      "${CMAKE_CURRENT_BINARY_DIR}")
   set(extract_dirs "${LIBCXX_SOURCE_DIR}/include;${LIBCXX_SOURCE_DIR}/src")
   setup_lcov_test_target_coverage("cxx" "${output_dir}" "${capture_dirs}" "${extract_dirs}")
+endif()
+
+
+if (LIBCXX_CONFIGURE_IDE)
+  # Create dummy targets for each of the tests in the test suite, this allows
+  # IDE's such as CLion to correctly highlight the tests because it knows
+  # roughly what include paths/compile flags/macro definitions are needed.
+  include_directories(support)
+  file(GLOB_RECURSE LIBCXX_TESTS ${CMAKE_CURRENT_SOURCE_DIR}/*.pass.cpp)
+  file(GLOB LIBCXX_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/support/*)
+  file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
+  add_executable(libcxx_test_objects EXCLUDE_FROM_ALL
+          ${LIBCXX_TESTS} ${LIBCXX_TEST_HEADERS} ${LIBCXX_HEADERS})
+  add_dependencies(libcxx_test_objects cxx)
+
+  set(STATIC_ROOT ${LIBCXX_SOURCE_DIR}/test/std/experimental/filesystem/Inputs/static_test_env)
+  add_definitions(-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="${STATIC_ROOT}")
+
+  set(DYNAMIC_ROOT ${LIBCXX_BINARY_DIR}/test/filesystem/Output/dynamic_env)
+  add_definitions(-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT="${DYNAMIC_ROOT}")
+
+  set(DYNAMIC_HELPER "python ${LIBCXX_SOURCE_DIR}/test/support/filesystem_dynamic_test_helper.py ")
+  add_definitions(-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER="${DYNAMIC_HELPER}")
+
+  split_list(LIBCXX_COMPILE_FLAGS)
+  split_list(LIBCXX_LINK_FLAGS)
+
+  set_target_properties(libcxx_test_objects
+          PROPERTIES
+            COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+            LINK_FLAGS "${LIBCXX_LINK_FLAGS}"
+            EXCLUDE_FROM_ALL ON
+  )
 endif()

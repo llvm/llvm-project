@@ -29,8 +29,7 @@ define <2 x double> @test6(<2 x i64> %trigger, <2 x double>* %addr, <2 x double>
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
-; SKX-NEXT:    vmovupd (%rdi), %xmm1 {%k1}
-; SKX-NEXT:    vmovapd %xmm1, %xmm0
+; SKX-NEXT:    vblendmpd (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i64> %trigger, zeroinitializer
   %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1>%mask, <2 x double>%dst)
@@ -58,8 +57,7 @@ define <4 x float> @test7(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %d
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
-; SKX-NEXT:    vmovups (%rdi), %xmm1 {%k1}
-; SKX-NEXT:    vmovaps %xmm1, %xmm0
+; SKX-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1>%mask, <4 x float>%dst)
@@ -95,8 +93,7 @@ define <4 x i32> @test8(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
-; SKX-NEXT:    vmovdqu32 (%rdi), %xmm1 {%k1}
-; SKX-NEXT:    vmovdqa %xmm1, %xmm0
+; SKX-NEXT:    vpblendmd (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1>%mask, <4 x i32>%dst)
@@ -171,8 +168,7 @@ define <4 x double> @test10(<4 x i32> %trigger, <4 x double>* %addr, <4 x double
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
-; SKX-NEXT:    vmovapd (%rdi), %ymm1 {%k1}
-; SKX-NEXT:    vmovapd %ymm1, %ymm0
+; SKX-NEXT:    vblendmpd (%rdi), %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 32, <4 x i1>%mask, <4 x double>%dst)
@@ -246,16 +242,15 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512F-NEXT:    vmovups (%rdi), %zmm1 {%k1}
-; AVX512F-NEXT:    vmovaps %ymm1, %ymm0
+; AVX512F-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test11a:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
-; SKX-NEXT:    vmovaps (%rdi), %ymm1 {%k1}
-; SKX-NEXT:    vmovaps %ymm1, %ymm0
+; SKX-NEXT:    vblendmps (%rdi), %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
   %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 32, <8 x i1>%mask, <8 x float>%dst)
@@ -293,16 +288,15 @@ define <8 x i32> @test11b(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %dst) {
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm1 {%k1}
-; AVX512F-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test11b:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
-; SKX-NEXT:    vmovdqu32 (%rdi), %ymm1 {%k1}
-; SKX-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX-NEXT:    vpblendmd (%rdi), %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %addr, i32 4, <8 x i1>%mask, <8 x i32>%dst)
   ret <8 x i32> %res
@@ -421,6 +415,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test12:
@@ -428,6 +423,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
 ; SKX-NEXT:    vmovdqu32 %ymm1, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>%val, <8 x i32>* %addr, i32 4, <8 x i1>%mask)
@@ -466,9 +462,7 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k0
-; SKX-NEXT:    kshiftlw $14, %k0, %k0
-; SKX-NEXT:    kshiftrw $14, %k0, %k1
+; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vmovups %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -554,11 +548,8 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k0
-; SKX-NEXT:    kshiftlw $14, %k0, %k0
-; SKX-NEXT:    kshiftrw $14, %k0, %k1
-; SKX-NEXT:    vmovups (%rdi), %xmm1 {%k1}
-; SKX-NEXT:    vmovaps %xmm1, %xmm0
+; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
+; SKX-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1>%mask, <2 x float>%dst)
@@ -606,9 +597,7 @@ define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k0
-; SKX-NEXT:    kshiftlw $14, %k0, %k0
-; SKX-NEXT:    kshiftrw $14, %k0, %k1
+; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; SKX-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    vpmovsxdq %xmm0, %xmm0
@@ -650,9 +639,7 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0
-; SKX-NEXT:    kshiftlw $14, %k0, %k0
-; SKX-NEXT:    kshiftrw $14, %k0, %k1
+; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -702,7 +689,7 @@ define <4 x float> @mload_constmask_v4f32(<4 x float>* %addr, <4 x float> %dst) 
 ; SKX-LABEL: mload_constmask_v4f32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $13, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x float> %dst)
@@ -736,7 +723,7 @@ define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
 ; SKX-LABEL: mload_constmask_v4i32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $14, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %dst)
@@ -765,7 +752,7 @@ define <8 x float> @mload_constmask_v8f32(<8 x float>* %addr, <8 x float> %dst) 
 ; SKX-LABEL: mload_constmask_v8f32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $7, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovups (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x float> %dst)
@@ -790,7 +777,7 @@ define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %ds
 ; SKX-LABEL: mload_constmask_v4f64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $7, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovupd (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> %dst)
@@ -822,7 +809,7 @@ define <8 x i32> @mload_constmask_v8i32(<8 x i32>* %addr, <8 x i32> %dst) {
 ; SKX-LABEL: mload_constmask_v8i32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $-121, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i32> %dst)
@@ -850,7 +837,7 @@ define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 ; SKX-LABEL: mload_constmask_v4i64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $9, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i64> %dst)
@@ -866,12 +853,19 @@ define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %ds
 ; AVX-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0,1,2],ymm0[3]
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: mload_constmask_v8f64:
-; AVX512:       ## BB#0:
-; AVX512-NEXT:    movb $-121, %al
-; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: mload_constmask_v8f64:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    movb $-121, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: mload_constmask_v8f64:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movb $-121, %al
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; SKX-NEXT:    retq
   %res = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x double> %dst)
   ret <8 x double> %res
 }
@@ -894,7 +888,7 @@ define <4 x double> @mload_constmask_v4f64_undef_passthrough(<4 x double>* %addr
 ; SKX-LABEL: mload_constmask_v4f64_undef_passthrough:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $7, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovupd (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> undef)
@@ -923,7 +917,7 @@ define <4 x i64> @mload_constmask_v4i64_undef_passthrough(<4 x i64>* %addr) {
 ; SKX-LABEL: mload_constmask_v4i64_undef_passthrough:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $6, %al
-; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x i64> undef)
@@ -1005,12 +999,14 @@ define void @one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; AVX512F:       ## BB#0:
 ; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    vmovlps %xmm0, 16(%rdi)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: one_mask_bit_set3:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vmovq %xmm0, 16(%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> %val, <4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
   ret void
@@ -1030,6 +1026,7 @@ define void @one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovhpd %xmm0, 24(%rdi)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %val, <4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
   ret void
@@ -1049,6 +1046,7 @@ define void @one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; AVX512-NEXT:    vmovlps %xmm0, 48(%rdi)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %val, <8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false>)
   ret void

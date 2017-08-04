@@ -16,8 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
-#include <cstdint>
-#include <cstdio>
 #include <fcntl.h>
 #include <mutex>
 #include <sys/stat.h>
@@ -26,19 +24,13 @@
 #include <thread>
 #include <unistd.h>
 
-#if defined(__x86_64__)
-#include "xray_x86_64.h"
-#elif defined(__arm__) || defined(__aarch64__)
-#include "xray_emulate_tsc.h"
-#else
-#error "Unsupported CPU Architecture"
-#endif /* Architecture-specific inline intrinsics */
-
 #include "sanitizer_common/sanitizer_libc.h"
 #include "xray/xray_records.h"
 #include "xray_defs.h"
 #include "xray_flags.h"
 #include "xray_interface_internal.h"
+#include "xray_tsc.h"
+#include "xray_utils.h"
 
 // __xray_InMemoryRawLog will use a thread-local aligned buffer capped to a
 // certain size (32kb by default) and use it as if it were a circular buffer for
@@ -52,25 +44,6 @@ void __xray_InMemoryRawLog(int32_t FuncId,
 namespace __xray {
 
 std::mutex LogMutex;
-
-static void retryingWriteAll(int Fd, char *Begin,
-                             char *End) XRAY_NEVER_INSTRUMENT {
-  if (Begin == End)
-    return;
-  auto TotalBytes = std::distance(Begin, End);
-  while (auto Written = write(Fd, Begin, TotalBytes)) {
-    if (Written < 0) {
-      if (errno == EINTR)
-        continue; // Try again.
-      Report("Failed to write; errno = %d\n", errno);
-      return;
-    }
-    TotalBytes -= Written;
-    if (TotalBytes == 0)
-      break;
-    Begin += Written;
-  }
-}
 
 class ThreadExitFlusher {
   int Fd;
@@ -102,41 +75,15 @@ public:
 
 using namespace __xray;
 
-void PrintToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
-  fprintf(stderr, "%s", Buffer);
-}
-
 static int __xray_OpenLogFile() XRAY_NEVER_INSTRUMENT {
-  // FIXME: Figure out how to make this less stderr-dependent.
-  SetPrintfAndReportCallback(PrintToStdErr);
-  // Open a temporary file once for the log.
-  static char TmpFilename[256] = {};
-  static char TmpWildcardPattern[] = "XXXXXX";
-  auto Argv = GetArgv();
-  const char *Progname = Argv[0] == nullptr ? "(unknown)" : Argv[0];
-  const char *LastSlash = internal_strrchr(Progname, '/');
-
-  if (LastSlash != nullptr)
-    Progname = LastSlash + 1;
-
-  const int HalfLength = sizeof(TmpFilename) / 2 - sizeof(TmpWildcardPattern);
-  int NeededLength = internal_snprintf(TmpFilename, sizeof(TmpFilename),
-                                       "%.*s%.*s.%s",
-                                       HalfLength, flags()->xray_logfile_base,
-                                       HalfLength, Progname,
-                                       TmpWildcardPattern);
-  if (NeededLength > int(sizeof(TmpFilename))) {
-    Report("XRay log file name too long (%d): %s\n", NeededLength, TmpFilename);
+  int F = getLogFD();
+  if (F == -1)
     return -1;
-  }
-  int Fd = mkstemp(TmpFilename);
-  if (Fd == -1) {
-    Report("XRay: Failed opening temporary file '%s'; not logging events.\n",
-           TmpFilename);
-    return -1;
-  }
-  if (Verbosity())
-    fprintf(stderr, "XRay: Log file in '%s'\n", TmpFilename);
+
+  // Test for required CPU features and cache the cycle frequency
+  static bool TSCSupported = probeRequiredCPUFeatures();
+  static uint64_t CycleFrequency = TSCSupported ? getTSCFrequency()
+                                   : __xray::NanosecondsPerSecond;
 
   // Since we're here, we get to write the header. We set it up so that the
   // header will only be written once, at the start, and let the threads
@@ -144,19 +91,20 @@ static int __xray_OpenLogFile() XRAY_NEVER_INSTRUMENT {
   XRayFileHeader Header;
   Header.Version = 1;
   Header.Type = FileTypes::NAIVE_LOG;
-  Header.CycleFrequency = __xray::cycleFrequency();
+  Header.CycleFrequency = CycleFrequency;
 
   // FIXME: Actually check whether we have 'constant_tsc' and 'nonstop_tsc'
   // before setting the values in the header.
   Header.ConstantTSC = 1;
   Header.NonstopTSC = 1;
-  retryingWriteAll(Fd, reinterpret_cast<char *>(&Header),
+  retryingWriteAll(F, reinterpret_cast<char *>(&Header),
                    reinterpret_cast<char *>(&Header) + sizeof(Header));
-  return Fd;
+  return F;
 }
 
-void __xray_InMemoryRawLog(int32_t FuncId,
-                           XRayEntryType Type) XRAY_NEVER_INSTRUMENT {
+template <class RDTSC>
+void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
+                           RDTSC ReadTSC) XRAY_NEVER_INSTRUMENT {
   using Buffer =
       std::aligned_storage<sizeof(XRayRecord), alignof(XRayRecord)>::type;
   static constexpr size_t BuffLen = 1024;
@@ -173,7 +121,7 @@ void __xray_InMemoryRawLog(int32_t FuncId,
   // through a pointer offset.
   auto &R = reinterpret_cast<__xray::XRayRecord *>(InMemoryBuffer)[Offset];
   R.RecordType = RecordTypes::NORMAL;
-  R.TSC = __xray::readTSC(R.CPU);
+  R.TSC = ReadTSC(R.CPU);
   R.TId = TId;
   R.Type = Type;
   R.FuncId = FuncId;
@@ -187,8 +135,32 @@ void __xray_InMemoryRawLog(int32_t FuncId,
   }
 }
 
-static auto Unused = [] {
+void __xray_InMemoryRawLogRealTSC(int32_t FuncId,
+                                  XRayEntryType Type) XRAY_NEVER_INSTRUMENT {
+  __xray_InMemoryRawLog(FuncId, Type, __xray::readTSC);
+}
+
+void __xray_InMemoryEmulateTSC(int32_t FuncId,
+                               XRayEntryType Type) XRAY_NEVER_INSTRUMENT {
+  __xray_InMemoryRawLog(FuncId, Type, [](uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
+    timespec TS;
+    int result = clock_gettime(CLOCK_REALTIME, &TS);
+    if (result != 0) {
+      Report("clock_gettimg(2) return %d, errno=%d.", result, int(errno));
+      TS = {0, 0};
+    }
+    CPU = 0;
+    return TS.tv_sec * __xray::NanosecondsPerSecond + TS.tv_nsec;
+  });
+}
+
+static auto UNUSED Unused = [] {
+  auto UseRealTSC = probeRequiredCPUFeatures();
+  if (!UseRealTSC)
+    Report("WARNING: Required CPU features missing for XRay instrumentation, "
+           "using emulation instead.\n");
   if (flags()->xray_naive_log)
-    __xray_set_handler(__xray_InMemoryRawLog);
+    __xray_set_handler(UseRealTSC ? __xray_InMemoryRawLogRealTSC
+                                  : __xray_InMemoryEmulateTSC);
   return true;
 }();

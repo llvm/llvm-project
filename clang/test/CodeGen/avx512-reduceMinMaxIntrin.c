@@ -1,3 +1,5 @@
+// FIXME: We should not be testing with -O2 (ie, a dependency on the entire IR optimizer).
+
 // RUN: %clang_cc1 -ffreestanding %s -O2 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror |opt -instnamer -S |FileCheck %s
 
 #include <immintrin.h>
@@ -202,7 +204,7 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 int test_mm512_reduce_max_epi32(__m512i __W){
   // CHECK: %tmp = bitcast <8 x i64> %__W to <16 x i32>
   // CHECK: %shuffle1.i = shufflevector <16 x i32> %tmp, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK: %tmp1 = icmp sgt <16 x i32> %tmp, %shuffle1.i
+  // CHECK: %tmp1 = icmp slt <16 x i32> %shuffle1.i, %tmp
   // CHECK: %tmp2 = select <16 x i1> %tmp1, <16 x i32> %tmp, <16 x i32> %shuffle1.i
   // CHECK: %shuffle3.i = shufflevector <16 x i32> %tmp2, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp3 = icmp sgt <16 x i32> %tmp2, %shuffle3.i
@@ -223,7 +225,7 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 unsigned int test_mm512_reduce_max_epu32(__m512i __W){
   // CHECK: %tmp = bitcast <8 x i64> %__W to <16 x i32>
   // CHECK: %shuffle1.i = shufflevector <16 x i32> %tmp, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK: %tmp1 = icmp ugt <16 x i32> %tmp, %shuffle1.i
+  // CHECK: %tmp1 = icmp ult <16 x i32> %shuffle1.i, %tmp
   // CHECK: %tmp2 = select <16 x i1> %tmp1, <16 x i32> %tmp, <16 x i32> %shuffle1.i
   // CHECK: %shuffle3.i = shufflevector <16 x i32> %tmp2, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp3 = icmp ugt <16 x i32> %tmp2, %shuffle3.i
@@ -258,7 +260,7 @@ float test_mm512_reduce_max_ps(__m512 __W){
 int test_mm512_reduce_min_epi32(__m512i __W){
   // CHECK: %tmp = bitcast <8 x i64> %__W to <16 x i32>
   // CHECK: %shuffle1.i = shufflevector <16 x i32> %tmp, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK: %tmp1 = icmp slt <16 x i32> %tmp, %shuffle1.i
+  // CHECK: %tmp1 = icmp sgt <16 x i32> %shuffle1.i, %tmp
   // CHECK: %tmp2 = select <16 x i1> %tmp1, <16 x i32> %tmp, <16 x i32> %shuffle1.i
   // CHECK: %shuffle3.i = shufflevector <16 x i32> %tmp2, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp3 = icmp slt <16 x i32> %tmp2, %shuffle3.i
@@ -279,7 +281,7 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 unsigned int test_mm512_reduce_min_epu32(__m512i __W){
   // CHECK: %tmp = bitcast <8 x i64> %__W to <16 x i32>
   // CHECK: %shuffle1.i = shufflevector <16 x i32> %tmp, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK: %tmp1 = icmp ult <16 x i32> %tmp, %shuffle1.i
+  // CHECK: %tmp1 = icmp ugt <16 x i32> %shuffle1.i, %tmp
   // CHECK: %tmp2 = select <16 x i1> %tmp1, <16 x i32> %tmp, <16 x i32> %shuffle1.i
   // CHECK: %shuffle3.i = shufflevector <16 x i32> %tmp2, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: %tmp3 = icmp ult <16 x i32> %tmp2, %shuffle3.i

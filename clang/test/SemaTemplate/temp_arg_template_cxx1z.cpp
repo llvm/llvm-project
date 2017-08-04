@@ -78,7 +78,7 @@ namespace Auto {
   template<int*> struct IntPtr;
 
   TInt<Auto> ia;
-  TInt<AutoPtr> iap; // expected-error {{different template parameters}}
+  TInt<AutoPtr> iap; // FIXME: ill-formed (?)
   TInt<DecltypeAuto> ida;
   TInt<Int> ii;
   TInt<IntPtr> iip; // expected-error {{different template parameters}}
@@ -90,27 +90,28 @@ namespace Auto {
   TIntPtr<IntPtr> ipip;
 
   TAuto<Auto> aa;
-  TAuto<AutoPtr> aap; // expected-error {{different template parameters}}
-  TAuto<Int> ai; // expected-error {{different template parameters}}
-  TAuto<IntPtr> aip; // expected-error {{different template parameters}}
+  TAuto<AutoPtr> aap; // FIXME: ill-formed (?)
+  TAuto<Int> ai; // FIXME: ill-formed (?)
+  TAuto<IntPtr> aip; // FIXME: ill-formed (?)
 
   TAutoPtr<Auto> apa;
   TAutoPtr<AutoPtr> apap;
-  TAutoPtr<Int> api; // expected-error {{different template parameters}}
-  TAutoPtr<IntPtr> apip; // expected-error {{different template parameters}}
+  TAutoPtr<Int> api; // FIXME: ill-formed (?)
+  TAutoPtr<IntPtr> apip; // FIXME: ill-formed (?)
 
   TDecltypeAuto<DecltypeAuto> dada;
-  TDecltypeAuto<Int> dai; // expected-error {{different template parameters}}
-  TDecltypeAuto<IntPtr> daip; // expected-error {{different template parameters}}
+  TDecltypeAuto<Int> dai; // FIXME: ill-formed (?)
+  TDecltypeAuto<IntPtr> daip; // FIXME: ill-formed (?)
 
-  // FIXME: It's completely unclear what should happen here. A case can be made
-  // that 'auto' is more specialized, because it's always a prvalue, whereas
-  // 'decltype(auto)' could have any value category. Under that interpretation,
-  // we get the following results entirely backwards:
-  TAuto<DecltypeAuto> ada; // expected-error {{different template parameters}}
-  TAutoPtr<DecltypeAuto> apda; // expected-error {{different template parameters}}
+  // FIXME: It's completely unclear what should happen here, but these results
+  // seem at least plausible:
+  TAuto<DecltypeAuto> ada;
+  TAutoPtr<DecltypeAuto> apda;
+  // Perhaps this case should be invalid, as there are valid 'decltype(auto)'
+  // parameters (such as 'user-defined-type &') that are not valid 'auto'
+  // parameters.
   TDecltypeAuto<Auto> daa;
-  TDecltypeAuto<AutoPtr> daa; // expected-error {{different template parameters}}
+  TDecltypeAuto<AutoPtr> daap; // FIXME: should probably be ill-formed
 
   int n;
   template<auto A, decltype(A) B = &n> struct SubstFailure;

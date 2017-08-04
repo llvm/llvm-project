@@ -16,10 +16,10 @@ define i32 @test_jumptable(i32 %in) {
 ; CHECK: ldr [[DEST:x[0-9]+]], [x[[JT]], {{x[0-9]+}}, lsl #3]
 ; CHECK: br [[DEST]]
 
-; CHECK-LARGE: movz x[[JTADDR:[0-9]+]], #:abs_g3:.LJTI0_0
-; CHECK-LARGE: movk x[[JTADDR]], #:abs_g2_nc:.LJTI0_0
+; CHECK-LARGE: movz x[[JTADDR:[0-9]+]], #:abs_g0_nc:.LJTI0_0
 ; CHECK-LARGE: movk x[[JTADDR]], #:abs_g1_nc:.LJTI0_0
-; CHECK-LARGE: movk x[[JTADDR]], #:abs_g0_nc:.LJTI0_0
+; CHECK-LARGE: movk x[[JTADDR]], #:abs_g2_nc:.LJTI0_0
+; CHECK-LARGE: movk x[[JTADDR]], #:abs_g3:.LJTI0_0
 ; CHECK-LARGE: ldr [[DEST:x[0-9]+]], [x[[JTADDR]], {{x[0-9]+}}, lsl #3]
 ; CHECK-LARGE: br [[DEST]]
 

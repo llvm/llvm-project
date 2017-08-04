@@ -69,6 +69,10 @@ ClBinaryName("obj", cl::init(""),
              cl::desc("Path to object file to be symbolized (if not provided, "
                       "object file should be specified for each input line)"));
 
+static cl::opt<std::string>
+    ClDwpName("dwp", cl::init(""),
+              cl::desc("Path to DWP file to be use for any split CUs"));
+
 static cl::list<std::string>
 ClDsymHint("dsym-hint", cl::ZeroOrMore,
            cl::desc("Path to .dSYM bundles to search for debug info for the "
@@ -84,6 +88,9 @@ static cl::opt<bool>
 static cl::opt<int> ClPrintSourceContextLines(
     "print-source-context-lines", cl::init(0),
     cl::desc("Print N number of source file context"));
+
+static cl::opt<bool> ClVerbose("verbose", cl::init(false),
+                               cl::desc("Print verbose line info"));
 
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
@@ -160,7 +167,7 @@ int main(int argc, char **argv) {
   LLVMSymbolizer Symbolizer(Opts);
 
   DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
-                    ClPrettyPrint, ClPrintSourceContextLines);
+                    ClPrettyPrint, ClPrintSourceContextLines, ClVerbose);
 
   const int kMaxInputStringLength = 1024;
   char InputString[kMaxInputStringLength];
@@ -188,11 +195,13 @@ int main(int argc, char **argv) {
       auto ResOrErr = Symbolizer.symbolizeData(ModuleName, ModuleOffset);
       Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());
     } else if (ClPrintInlining) {
-      auto ResOrErr = Symbolizer.symbolizeInlinedCode(ModuleName, ModuleOffset);
+      auto ResOrErr =
+          Symbolizer.symbolizeInlinedCode(ModuleName, ModuleOffset, ClDwpName);
       Printer << (error(ResOrErr) ? DIInliningInfo()
                                              : ResOrErr.get());
     } else {
-      auto ResOrErr = Symbolizer.symbolizeCode(ModuleName, ModuleOffset);
+      auto ResOrErr =
+          Symbolizer.symbolizeCode(ModuleName, ModuleOffset, ClDwpName);
       Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get());
     }
     outs() << "\n";

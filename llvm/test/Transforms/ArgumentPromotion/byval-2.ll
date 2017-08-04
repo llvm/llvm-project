@@ -1,4 +1,5 @@
 ; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 ; Arg promotion eliminates the struct argument.
 ; FIXME: Should it eliminate the i32* argument?

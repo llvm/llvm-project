@@ -11,22 +11,27 @@
 
 #include <bitset>
 
-#ifndef _LIBCPP_CSTDDEF
-#error <cstddef> has not been included
-#endif
-
-#ifndef _LIBCPP_STRING
-#error <string> has not been included
-#endif
-
-#ifndef _LIBCPP_STDEXCEPT
-#error <stdexcept> has not been included
-#endif
-
-#ifndef _LIBCPP_IOSFWD
-#error <iosfwd> has not been included
-#endif
+template <class> void test_typedef() {}
 
 int main()
 {
+  { // test for <cstddef>
+    std::ptrdiff_t p; ((void)p);
+    std::size_t s; ((void)s);
+    std::nullptr_t np; ((void)np);
+  }
+  { // test for <string>
+    std::string s; ((void)s);
+  }
+  { // test for <stdexcept>
+    std::logic_error le("blah"); ((void)le);
+    std::runtime_error re("blah"); ((void)re);
+  }
+  { // test for <iosfwd>
+    test_typedef<std::ios>();
+    test_typedef<std::wios>();
+    test_typedef<std::istream>();
+    test_typedef<std::ostream>();
+    test_typedef<std::iostream>();
+  }
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-sink-common=true -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -S | FileCheck %s
 
 define i1 @test1(i1 zeroext %flag, i8* %y) #0 {
 entry:

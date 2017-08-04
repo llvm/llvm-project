@@ -4,12 +4,11 @@
 @import ElaboratedTypeStructs.Empty; // The structs are now hidden.
 struct S1 *x;
 struct S2 *y;
-// FIXME: compatible definition should not be an error.
-struct S2 { int x; }; // expected-error {{redefinition}}
+struct S2 { int x; };
 struct S3 *z;
 // Incompatible definition.
-struct S3 { float y; }; // expected-error {{redefinition}}
-// expected-note@elaborated-type-structs.h:* 2 {{previous definition is here}}
+struct S3 { float y; }; // expected-error {{has incompatible definitions}} // expected-note {{field has name}}
+// expected-note@Inputs/elaborated-type-structs.h:3 {{field has name}}
 
 @import ElaboratedTypeStructs.Structs;
 

@@ -47,7 +47,7 @@ struct HeaderFileInfo {
   /// whether it is C++ clean or not.  This can be set by the include paths or
   /// by \#pragma gcc system_header.  This is an instance of
   /// SrcMgr::CharacteristicKind.
-  unsigned DirInfo : 2;
+  unsigned DirInfo : 3;
 
   /// \brief Whether this header file info was supplied by an external source,
   /// and has not changed since.
@@ -409,7 +409,8 @@ public:
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
-                              bool isImport, Module *CorrespondingModule);
+                              bool isImport, bool ModulesEnabled,
+                              Module *CorrespondingModule);
 
   /// \brief Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
@@ -537,9 +538,18 @@ public:
   ///
   /// \param File The module map file.
   /// \param IsSystem Whether this file is in a system header directory.
-  ///
+  /// \param ID If the module map file is already mapped (perhaps as part of
+  ///        processing a preprocessed module), the ID of the file.
+  /// \param Offset [inout] An offset within ID to start parsing. On exit,
+  ///        filled by the end of the parsed contents (either EOF or the
+  ///        location of an end-of-module-map pragma).
+  /// \param OriginalModuleMapFile The original path to the module map file,
+  ///        used to resolve paths within the module (this is required when
+  ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(const FileEntry *File, bool IsSystem);
+  bool loadModuleMapFile(const FileEntry *File, bool IsSystem,
+                         FileID ID = FileID(), unsigned *Offset = nullptr,
+                         StringRef OriginalModuleMapFile = StringRef());
 
   /// \brief Collect the set of all known, top-level modules.
   ///
@@ -685,7 +695,9 @@ private:
 
   LoadModuleMapResult loadModuleMapFileImpl(const FileEntry *File,
                                             bool IsSystem,
-                                            const DirectoryEntry *Dir);
+                                            const DirectoryEntry *Dir,
+                                            FileID ID = FileID(),
+                                            unsigned *Offset = nullptr);
 
   /// \brief Try to load the module map file in the given directory.
   ///

@@ -77,7 +77,7 @@ CAMLprim value llvm_datalayout_pointer_size(value DL) {
 
 /* Llvm.llcontext -> DataLayout.t -> Llvm.lltype */
 CAMLprim LLVMTypeRef llvm_datalayout_intptr_type(LLVMContextRef C, value DL) {
-  return LLVMIntPtrTypeInContext(C, DataLayout_val(DL));;
+  return LLVMIntPtrTypeInContext(C, DataLayout_val(DL));
 }
 
 /* int -> DataLayout.t -> int */

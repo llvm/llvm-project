@@ -2,8 +2,8 @@
 // License. See LICENSE.TXT for details.
 
 // Test with a leak.
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 static volatile void *Sink;
 

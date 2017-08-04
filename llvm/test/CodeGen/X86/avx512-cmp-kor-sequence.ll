@@ -13,12 +13,13 @@ define zeroext i16 @cmp_kor_seq_16(<16 x float> %a, <16 x float> %b, <16 x float
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm0, %k0
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm1, %k1
-; CHECK-NEXT:    vcmpgeps %zmm4, %zmm2, %k2
-; CHECK-NEXT:    vcmpgeps %zmm4, %zmm3, %k3
 ; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    korw %k3, %k2, %k1
+; CHECK-NEXT:    vcmpgeps %zmm4, %zmm2, %k1
+; CHECK-NEXT:    vcmpgeps %zmm4, %zmm3, %k2
+; CHECK-NEXT:    korw %k2, %k1, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a, <16 x float> %x, i32 13, i16 -1, i32 4)

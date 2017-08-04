@@ -1,0 +1,33 @@
+RUN: llvm-strings %S/Inputs/numbers | FileCheck %s -check-prefix CHECK-NONE
+RUN: llvm-strings -t d %S/Inputs/numbers | FileCheck %s -check-prefix CHECK-DEC
+RUN: llvm-strings -t o %S/Inputs/numbers | FileCheck %s -check-prefix CHECK-OCT
+RUN: llvm-strings -t x %S/Inputs/numbers | FileCheck %s -check-prefix CHECK-HEX
+
+CHECK-NONE: three
+CHECK-NONE: four
+CHECK-NONE: five
+CHECK-NONE: seven
+CHECK-NONE: eight
+CHECK-NONE: nine
+
+CHECK-DEC:      8 three
+CHECK-DEC:     14 four
+CHECK-DEC:     19 five
+CHECK-DEC:     28 seven
+CHECK-DEC:     34 eight
+CHECK-DEC:     40 nine
+
+CHECK-OCT:     10 three
+CHECK-OCT:     16 four
+CHECK-OCT:     23 five
+CHECK-OCT:     34 seven
+CHECK-OCT:     42 eight
+CHECK-OCT:     50 nine
+
+CHECK-HEX:      8 three
+CHECK-HEX:      e four
+CHECK-HEX:     13 five
+CHECK-HEX:     1c seven
+CHECK-HEX:     22 eight
+CHECK-HEX:     28 nine
+

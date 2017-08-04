@@ -30,8 +30,8 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
 using namespace llvm;

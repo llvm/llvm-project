@@ -4,6 +4,4 @@
 ---
 # CHECK: name: foo
 name: foo
-body: |
-  bb.0:
 ...

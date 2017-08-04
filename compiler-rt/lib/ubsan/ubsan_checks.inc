@@ -19,6 +19,7 @@
 
 UBSAN_CHECK(GenericUB, "undefined-behavior", "undefined")
 UBSAN_CHECK(NullPointerUse, "null-pointer-use", "null")
+UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
 UBSAN_CHECK(InsufficientObjectSize, "insufficient-object-size", "object-size")
 UBSAN_CHECK(SignedIntegerOverflow, "signed-integer-overflow",
@@ -28,6 +29,7 @@ UBSAN_CHECK(UnsignedIntegerOverflow, "unsigned-integer-overflow",
 UBSAN_CHECK(IntegerDivideByZero, "integer-divide-by-zero",
             "integer-divide-by-zero")
 UBSAN_CHECK(FloatDivideByZero, "float-divide-by-zero", "float-divide-by-zero")
+UBSAN_CHECK(InvalidBuiltin, "invalid-builtin-use", "invalid-builtin-use")
 UBSAN_CHECK(InvalidShiftBase, "invalid-shift-base", "shift-base")
 UBSAN_CHECK(InvalidShiftExponent, "invalid-shift-exponent", "shift-exponent")
 UBSAN_CHECK(OutOfBoundsIndex, "out-of-bounds-index", "bounds")

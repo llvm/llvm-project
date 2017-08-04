@@ -64,14 +64,23 @@ struct forward_iterator_tag       : public input_iterator_tag         {};
 struct bidirectional_iterator_tag : public forward_iterator_tag       {};
 struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 
+// 27.4.3, iterator operations
 // extension: second argument not conforming to C++03
-template <class InputIterator>
-void advance(InputIterator& i,
+template <class InputIterator>  // constexpr in C++17
+  constexpr void advance(InputIterator& i,
              typename iterator_traits<InputIterator>::difference_type n);
 
-template <class InputIterator>
-typename iterator_traits<InputIterator>::difference_type
-distance(InputIterator first, InputIterator last);
+template <class InputIterator>  // constexpr in C++17
+  constexpr typename iterator_traits<InputIterator>::difference_type
+    distance(InputIterator first, InputIterator last);
+
+template <class InputIterator>  // constexpr in C++17
+  constexpr InputIterator next(InputIterator x,
+typename iterator_traits<InputIterator>::difference_type n = 1);
+
+template <class BidirectionalIterator>  // constexpr in C++17
+  constexpr BidirectionalIterator prev(BidirectionalIterator x,
+    typename iterator_traits<BidirectionalIterator>::difference_type n = 1);    
 
 template <class Iterator>
 class reverse_iterator
@@ -529,7 +538,7 @@ struct _LIBCPP_TEMPLATE_VIS iterator
 };
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void __advance(_InputIter& __i,
              typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag)
 {
@@ -538,7 +547,7 @@ void __advance(_InputIter& __i,
 }
 
 template <class _BiDirIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void __advance(_BiDirIter& __i,
              typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag)
 {
@@ -551,7 +560,7 @@ void __advance(_BiDirIter& __i,
 }
 
 template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void __advance(_RandIter& __i,
              typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag)
 {
@@ -559,7 +568,7 @@ void __advance(_RandIter& __i,
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void advance(_InputIter& __i,
              typename iterator_traits<_InputIter>::difference_type __n)
 {
@@ -567,7 +576,7 @@ void advance(_InputIter& __i,
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename iterator_traits<_InputIter>::difference_type
 __distance(_InputIter __first, _InputIter __last, input_iterator_tag)
 {
@@ -578,7 +587,7 @@ __distance(_InputIter __first, _InputIter __last, input_iterator_tag)
 }
 
 template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename iterator_traits<_RandIter>::difference_type
 __distance(_RandIter __first, _RandIter __last, random_access_iterator_tag)
 {
@@ -586,7 +595,7 @@ __distance(_RandIter __first, _RandIter __last, random_access_iterator_tag)
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename iterator_traits<_InputIter>::difference_type
 distance(_InputIter __first, _InputIter __last)
 {
@@ -594,7 +603,7 @@ distance(_InputIter __first, _InputIter __last)
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 _InputIter
 next(_InputIter __x,
      typename iterator_traits<_InputIter>::difference_type __n = 1,
@@ -605,7 +614,7 @@ next(_InputIter __x,
 }
 
 template <class _BidiretionalIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 _BidiretionalIter
 prev(_BidiretionalIter __x,
      typename iterator_traits<_BidiretionalIter>::difference_type __n = 1,
@@ -614,6 +623,14 @@ prev(_BidiretionalIter __x,
     _VSTD::advance(__x, -__n);
     return __x;
 }
+
+
+template <class _Tp, class = void>
+struct __is_stashing_iterator : false_type {};
+
+template <class _Tp>
+struct __is_stashing_iterator<_Tp, typename __void_t<typename _Tp::__stashing_iterator_tag>::type>
+  : true_type {};
 
 template <class _Iter>
 class _LIBCPP_TEMPLATE_VIS reverse_iterator
@@ -625,6 +642,11 @@ class _LIBCPP_TEMPLATE_VIS reverse_iterator
 {
 private:
     /*mutable*/ _Iter __t;  // no longer used as of LWG #2360, not removed due to ABI break
+
+    static_assert(!__is_stashing_iterator<_Iter>::value,
+      "The specified iterator type cannot be used with reverse_iterator; "
+      "Using stashing iterators with reverse_iterator causes undefined behavior");
+
 protected:
     _Iter current;
 public:
@@ -770,10 +792,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY explicit back_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_back(__value_); return *this;}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator=(typename _Container::value_type&& __value_)
         {container->push_back(_VSTD::move(__value_)); return *this;}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator*()     {return *this;}
     _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator++()    {return *this;}
     _LIBCPP_INLINE_VISIBILITY back_insert_iterator  operator++(int) {return *this;}
@@ -803,10 +825,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY explicit front_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_front(__value_); return *this;}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator=(typename _Container::value_type&& __value_)
         {container->push_front(_VSTD::move(__value_)); return *this;}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator*()     {return *this;}
     _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator++()    {return *this;}
     _LIBCPP_INLINE_VISIBILITY front_insert_iterator  operator++(int) {return *this;}
@@ -838,10 +860,10 @@ public:
         : container(_VSTD::addressof(__x)), iter(__i) {}
     _LIBCPP_INLINE_VISIBILITY insert_iterator& operator=(const typename _Container::value_type& __value_)
         {iter = container->insert(iter, __value_); ++iter; return *this;}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY insert_iterator& operator=(typename _Container::value_type&& __value_)
         {iter = container->insert(iter, _VSTD::move(__value_)); ++iter; return *this;}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY insert_iterator& operator*()        {return *this;}
     _LIBCPP_INLINE_VISIBILITY insert_iterator& operator++()       {return *this;}
     _LIBCPP_INLINE_VISIBILITY insert_iterator& operator++(int)    {return *this;}
@@ -968,7 +990,6 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY char_type  operator*() const
         {return static_cast<char_type>(__sbuf_->sgetc());}
-    _LIBCPP_INLINE_VISIBILITY char_type* operator->() const {return nullptr;}
     _LIBCPP_INLINE_VISIBILITY istreambuf_iterator& operator++()
         {
             __sbuf_->sbumpc();
@@ -1047,7 +1068,7 @@ public:
     typedef typename iterator_traits<iterator_type>::value_type value_type;
     typedef typename iterator_traits<iterator_type>::difference_type difference_type;
     typedef iterator_type pointer;
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     typedef typename iterator_traits<iterator_type>::reference __reference;
     typedef typename conditional<
             is_reference<__reference>::value,

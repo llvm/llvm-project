@@ -102,9 +102,11 @@ public:
   uint32_t getVirtualBaseDispIndex() const override;
   uint32_t getVirtualBaseOffset() const override;
   uint32_t getVirtualTableShapeId() const override;
+  std::unique_ptr<PDBSymbolTypeBuiltin>
+  getVirtualBaseTableType() const override;
   PDB_DataKind getDataKind() const override;
   PDB_SymType getSymTag() const override;
-  PDB_UniqueId getGuid() const override;
+  codeview::GUID getGuid() const override;
   int32_t getOffset() const override;
   int32_t getThisAdjust() const override;
   int32_t getVirtualBasePointerOffset() const override;

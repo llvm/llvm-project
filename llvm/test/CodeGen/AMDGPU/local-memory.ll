@@ -14,7 +14,7 @@
 ; GCN: ds_read_b32 v{{[0-9]+}}, v[[ZERO]] offset:4
 
 ; R600: LDS_READ_RET
-define void @load_i32_local_const_ptr(i32 addrspace(1)* %out, i32 addrspace(3)* %in) #0 {
+define amdgpu_kernel void @load_i32_local_const_ptr(i32 addrspace(1)* %out, i32 addrspace(3)* %in) #0 {
 entry:
   %tmp0 = getelementptr [512 x i32], [512 x i32] addrspace(3)* @lds, i32 0, i32 1
   %tmp1 = load i32, i32 addrspace(3)* %tmp0
@@ -30,7 +30,7 @@ entry:
 ; R600: LDS_READ_RET
 ; GCN-DAG: ds_read_b32
 ; GCN-DAG: ds_read2_b32
-define void @load_i32_v2i32_local(<2 x i32> addrspace(1)* %out, i32 addrspace(3)* %in) #0 {
+define amdgpu_kernel void @load_i32_v2i32_local(<2 x i32> addrspace(1)* %out, i32 addrspace(3)* %in) #0 {
   %scalar = load i32, i32 addrspace(3)* %in
   %tmp0 = bitcast i32 addrspace(3)* %in to <2 x i32> addrspace(3)*
   %vec_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(3)* %tmp0, i32 2

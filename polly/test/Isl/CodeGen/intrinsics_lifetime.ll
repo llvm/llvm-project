@@ -1,11 +1,7 @@
 ; RUN: opt %loadPolly -basicaa -polly-codegen -S < %s | FileCheck %s
 ;
-; Verify that we remove the lifetime markers from the optimized SCoP.
+; Verify that we remove the lifetime markers from everywhere.
 ;
-; CHECK: for.body:
-; CHECK:   call void @llvm.lifetime.start
-; CHECK: for.end:
-; CHECK:   call void @llvm.lifetime.end
 ; CHECK-NOT: call void @llvm.lifetime.start
 ; CHECK-NOT: call void @llvm.lifetime.end
 ;

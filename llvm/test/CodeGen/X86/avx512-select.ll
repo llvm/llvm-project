@@ -90,6 +90,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -120,6 +121,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    kandw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -137,6 +139,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; CHECK-NEXT:    kandw %k0, %k1, %k0
 ; CHECK-NEXT:    korw %k2, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -149,10 +152,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 define i64 @pr30249() {
 ; CHECK-LABEL: pr30249:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpb $1, %cl
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    adcxq %rcx, %rax
+; CHECK-NEXT:    movl $2, %eax
 ; CHECK-NEXT:    retq
   %v = select i1 undef , i64 1, i64 2
   ret i64 %v
@@ -161,7 +161,7 @@ define i64 @pr30249() {
 define double @pr30561_f64(double %b, double %a, i1 %c) {
 ; CHECK-LABEL: pr30561_f64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -172,7 +172,7 @@ define double @pr30561_f64(double %b, double %a, i1 %c) {
 define float @pr30561_f32(float %b, float %a, i1 %c) {
 ; CHECK-LABEL: pr30561_f32:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    retq

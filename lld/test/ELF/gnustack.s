@@ -5,26 +5,30 @@
 # RUN: ld.lld %t1 -o %t
 # RUN: llvm-readobj --program-headers -s %t | FileCheck --check-prefix=RW %s
 
-# RW:       Sections [
-# RW-NOT:   Name: .note.GNU-stack
-# RW:       ProgramHeaders [
-# RW:        ProgramHeader {
-# RW:        Type: PT_GNU_STACK
-# RW-NEXT:   Offset: 0x0
-# RW-NEXT:   VirtualAddress: 0x0
-# RW-NEXT:   PhysicalAddress: 0x0
-# RW-NEXT:   FileSize: 0
-# RW-NEXT:   MemSize: 0
-# RW-NEXT:   Flags [
-# RW-NEXT:     PF_R
-# RW-NEXT:     PF_W
-# RW-NEXT:   ]
-# RW-NEXT:   Alignment: 0
-# RW-NEXT:   }
+# RW:      Type: PT_GNU_STACK
+# RW-NEXT: Offset: 0x0
+# RW-NEXT: VirtualAddress: 0x0
+# RW-NEXT: PhysicalAddress: 0x0
+# RW-NEXT: FileSize: 0
+# RW-NEXT: MemSize: 0
+# RW-NEXT: Flags [
+# RW-NEXT:   PF_R
+# RW-NEXT:   PF_W
 # RW-NEXT: ]
+# RW-NEXT: Alignment: 0
 
-# RWX-NOT: Name: .note.GNU-stack
-# RWX-NOT: Type: PT_GNU_STACK
+# RWX:      Type: PT_GNU_STACK
+# RWX-NEXT: Offset: 0x0
+# RWX-NEXT: VirtualAddress: 0x0
+# RWX-NEXT: PhysicalAddress: 0x0
+# RWX-NEXT: FileSize: 0
+# RWX-NEXT: MemSize: 0
+# RWX-NEXT: Flags [
+# RWX-NEXT:   PF_R
+# RWX-NEXT:   PF_W
+# RWX-NEXT:   PF_X
+# RWX-NEXT: ]
+# RWX-NEXT: Alignment: 0
 
 .globl _start
 _start:

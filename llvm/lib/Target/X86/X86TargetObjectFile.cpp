@@ -9,6 +9,8 @@
 
 #include "X86TargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/MC/MCContext.h"
@@ -16,8 +18,6 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/COFF.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Target/TargetLowering.h"
 
 using namespace llvm;
@@ -82,6 +82,12 @@ X86FuchsiaTargetObjectFile::Initialize(MCContext &Ctx,
 void
 X86LinuxNaClTargetObjectFile::Initialize(MCContext &Ctx,
                                          const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  InitializeELF(TM.Options.UseInitArray);
+}
+
+void X86SolarisTargetObjectFile::Initialize(MCContext &Ctx,
+                                            const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(TM.Options.UseInitArray);
 }

@@ -14,10 +14,11 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMCONSTANTPOOLVALUE_H
 #define LLVM_LIB_TARGET_ARM_ARMCONSTANTPOOLVALUE_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cstddef>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -29,6 +30,7 @@ class LLVMContext;
 class MachineBasicBlock;
 
 namespace ARMCP {
+
   enum ARMCPKind {
     CPValue,
     CPExtSymbol,
@@ -47,7 +49,8 @@ namespace ARMCP {
     SECREL,      /// Section Relative (Windows TLS)
     SBREL,       /// Static Base Relative (RWPI)
   };
-}
+
+} // end namespace ARMCP
 
 /// ARMConstantPoolValue - ARM specific constantpool value. This is used to
 /// represent PC-relative displacement between the address of the load
@@ -169,9 +172,11 @@ public:
 
   const GlobalValue *getGV() const;
   const BlockAddress *getBlockAddress() const;
+
   const GlobalVariable *getPromotedGlobal() const {
     return dyn_cast_or_null<GlobalVariable>(GVar);
   }
+
   const Constant *getPromotedGlobalInit() const {
     return CVal;
   }
@@ -186,6 +191,7 @@ public:
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
 
   void print(raw_ostream &O) const override;
+
   static bool classof(const ARMConstantPoolValue *APV) {
     return APV->isGlobalValue() || APV->isBlockAddress() || APV->isLSDA() ||
            APV->isPromotedGlobal();
@@ -267,6 +273,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_ARMCONSTANTPOOLVALUE_H

@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs -run-pass si-fold-operands -o - %s | FileCheck -check-prefix=GCN %s
+...
+---
+
+# Blocks should be processed in program order to make sure folds
+# aren't made in users before the def is seen.
+
+# GCN-LABEL: name: mov_in_use_list_2x{{$}}
+# GCN: %2 = V_MOV_B32_e32 0, implicit %exec
+# GCN-NEXT: %3 = COPY undef %0
+
+# GCN: %1 = V_MOV_B32_e32 0, implicit %exec
+
+
+name: mov_in_use_list_2x
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '' }
+  - { id: 1, class: vgpr_32, preferred-register: '' }
+  - { id: 2, class: vgpr_32, preferred-register: '' }
+  - { id: 3, class: vgpr_32, preferred-register: '' }
+liveins:
+body:             |
+  bb.0:
+    successors: %bb.2
+
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    %2 = COPY %1
+    %3 = V_XOR_B32_e64 killed %2, undef %0, implicit %exec
+
+  bb.2:
+    successors: %bb.1
+
+    %1 = V_MOV_B32_e32 0, implicit %exec
+    S_BRANCH %bb.1
+
+...

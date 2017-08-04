@@ -9,7 +9,7 @@
 
 // <map>
 
-// Check that std::map and it's iterators can be instantiated with an incomplete
+// Check that std::map and its iterators can be instantiated with an incomplete
 // type.
 
 #include <map>

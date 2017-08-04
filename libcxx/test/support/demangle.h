@@ -16,7 +16,7 @@
 
 #if !defined(TEST_HAS_NO_DEMANGLE)
 # if defined(__GNUC__) || defined(__clang__)
-#   if __has_include("cxxabi.h")
+#   if __has_include("cxxabi.h") && !defined(_LIBCPP_ABI_MICROSOFT)
 #     include "cxxabi.h"
 #   else
 #     define TEST_HAS_NO_DEMANGLE
@@ -34,9 +34,7 @@ inline std::string demangle(const char* mangled_name) {
 template <size_t N> struct Printer;
 inline std::string demangle(const char* mangled_name) {
   int status = 0;
-  std::string input(mangled_name);
-  input.insert(0, "_Z");
-  char* out = __cxxabiv1::__cxa_demangle(input.c_str(), nullptr, nullptr, &status);
+  char* out = __cxxabiv1::__cxa_demangle(mangled_name, nullptr, nullptr, &status);
   if (out != nullptr) {
     std::string res(out);
     std::free(out);

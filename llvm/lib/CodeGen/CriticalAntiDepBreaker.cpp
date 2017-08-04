@@ -71,8 +71,11 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   // callee-saved register that is not saved in the prolog.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   BitVector Pristine = MFI.getPristineRegs(MF);
-  for (const MCPhysReg *I = TRI->getCalleeSavedRegs(&MF); *I; ++I) {
-    if (!IsReturnBlock && !Pristine.test(*I)) continue;
+  for (const MCPhysReg *I = MF.getRegInfo().getCalleeSavedRegs(); *I;
+       ++I) {
+    unsigned Reg = *I;
+    if (!IsReturnBlock && !Pristine.test(Reg))
+      continue;
     for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI) {
       unsigned Reg = *AI;
       Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
@@ -645,10 +648,8 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
           // as well.
           const SUnit *SU = MISUnitMap[Q->second->getParent()];
           if (!SU) continue;
-          for (DbgValueVector::iterator DVI = DbgValues.begin(),
-                 DVE = DbgValues.end(); DVI != DVE; ++DVI)
-            if (DVI->second == Q->second->getParent())
-              UpdateDbgValue(*DVI->first, AntiDepReg, NewReg);
+          UpdateDbgValues(DbgValues, Q->second->getParent(),
+                          AntiDepReg, NewReg);
         }
 
         // We just went back in time and modified history; the

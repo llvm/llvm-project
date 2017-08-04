@@ -6,11 +6,9 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#undef NDEBUG
 #include "experimental/filesystem"
 #include "string_view"
 #include "utility"
-#include "cassert"
 
 namespace { namespace parser
 {
@@ -58,13 +56,13 @@ public:
   }
 
   PosPtr peek() const noexcept {
-    auto End = &Path.back() + 1;
     auto TkEnd = getNextTokenStartPos();
+    auto End = getAfterBack();
     return TkEnd == End ? nullptr : TkEnd;
   }
 
   void increment() noexcept {
-    const PosPtr End = &Path.back() + 1;
+    const PosPtr End = getAfterBack();
     const PosPtr Start = getNextTokenStartPos();
     if (Start == End)
       return makeState(PS_AtEnd);
@@ -111,9 +109,8 @@ public:
   }
 
   void decrement() noexcept {
-    const PosPtr REnd = &Path.front() - 1;
+    const PosPtr REnd = getBeforeFront();
     const PosPtr RStart = getCurrentTokenStartPos() - 1;
-    assert(RStart != REnd);
 
     switch (State) {
     case PS_AtEnd: {
@@ -198,19 +195,27 @@ private:
     RawEntry = {};
   }
 
+  PosPtr getAfterBack() const noexcept {
+    return Path.data() + Path.size();
+  }
+
+  PosPtr getBeforeFront() const noexcept {
+    return Path.data() - 1;
+  }
+
   /// \brief Return a pointer to the first character after the currently
   ///   lexed element.
   PosPtr getNextTokenStartPos() const noexcept {
     switch (State) {
     case PS_BeforeBegin:
-      return &Path.front();
+      return Path.data();
     case PS_InRootName:
     case PS_InRootDir:
     case PS_InFilenames:
       return &RawEntry.back() + 1;
     case PS_InTrailingSep:
     case PS_AtEnd:
-      return &Path.back() + 1;
+      return getAfterBack();
     }
     _LIBCPP_UNREACHABLE();
   }
@@ -256,7 +261,8 @@ private:
 string_view_pair separate_filename(string_view_t const & s) {
     if (s == "." || s == ".." || s.empty()) return string_view_pair{s, ""};
     auto pos = s.find_last_of('.');
-    if (pos == string_view_t::npos) return string_view_pair{s, string_view{}};
+    if (pos == string_view_t::npos)
+        return string_view_pair{s, string_view_t{}};
     return string_view_pair{s.substr(0, pos), s.substr(pos)};
 }
 
@@ -322,7 +328,6 @@ string_view_t path::__root_path_raw() const
       auto NextCh = PP.peek();
       if (NextCh && *NextCh == '/') {
         ++PP;
-        assert(PP.State == PathParser::PS_InRootDir);
         return createView(__pn_.data(), &PP.RawEntry.back());
       }
       return PP.RawEntry;
@@ -392,7 +397,7 @@ int path::__compare(string_view_t __s) const {
 size_t hash_value(const path& __p) noexcept {
   auto PP = PathParser::CreateBegin(__p.native());
   size_t hash_value = 0;
-  std::hash<string_view> hasher;
+  std::hash<string_view_t> hasher;
   while (PP) {
     hash_value = __hash_combine(hash_value, hasher(*PP));
     ++PP;

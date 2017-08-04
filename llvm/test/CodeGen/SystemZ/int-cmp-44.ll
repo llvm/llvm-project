@@ -473,8 +473,8 @@ entry:
   %xor = xor i32 %val, 1
   %add = add i32 %xor, 1000000
   call void @foo()
-  %cmp = icmp ne i32 %add, 0
-  br i1 %cmp, label %exit, label %store
+  %cmp = icmp eq i32 %add, 0
+  br i1 %cmp, label %store, label %exit, !prof !1
 
 store:
   store i32 %add, i32 *%ptr
@@ -888,3 +888,5 @@ store:
 exit:
   ret i64 %res
 }
+
+!1 = !{!"branch_weights", i32 2, i32 1}

@@ -109,7 +109,7 @@ struct JSONImporter : public ScopPass {
   ///
   /// @param S The scop to update.
   /// @param JScop The JScop file describing the new schedule.
-  /// @param DL The datalayout to assume.
+  /// @param DL The data layout to assume.
   ///
   /// @returns True if the import succeeded, otherwise False.
   bool importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL);
@@ -202,7 +202,7 @@ Json::Value JSONExporter::getJSON(Scop &S) const {
       Json::Value access;
 
       access["kind"] = MA->isRead() ? "read" : "write";
-      access["relation"] = MA->getOriginalAccessRelationStr();
+      access["relation"] = MA->getAccessRelationStr();
 
       statement["accesses"].append(access);
     }
@@ -274,10 +274,47 @@ typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
 
 bool JSONImporter::importContext(Scop &S, Json::Value &JScop) {
   isl_set *OldContext = S.getContext();
+
+  // Check if key 'context' is present.
+  if (!JScop.isMember("context")) {
+    errs() << "JScop file has no key named 'context'.\n";
+    isl_set_free(OldContext);
+    return false;
+  }
+
   isl_set *NewContext =
       isl_set_read_from_str(S.getIslCtx(), JScop["context"].asCString());
 
-  for (unsigned i = 0; i < isl_set_dim(OldContext, isl_dim_param); i++) {
+  // Check whether the context was parsed successfully.
+  if (!NewContext) {
+    errs() << "The context was not parsed successfully by ISL.\n";
+    isl_set_free(NewContext);
+    isl_set_free(OldContext);
+    return false;
+  }
+
+  // Check if the isl_set is a parameter set.
+  if (!isl_set_is_params(NewContext)) {
+    errs() << "The isl_set is not a parameter set.\n";
+    isl_set_free(NewContext);
+    isl_set_free(OldContext);
+    return false;
+  }
+
+  unsigned OldContextDim = isl_set_dim(OldContext, isl_dim_param);
+  unsigned NewContextDim = isl_set_dim(NewContext, isl_dim_param);
+
+  // Check if the imported context has the right number of parameters.
+  if (OldContextDim != NewContextDim) {
+    errs() << "Imported context has the wrong number of parameters : "
+           << "Found " << NewContextDim << " Expected " << OldContextDim
+           << "\n";
+    isl_set_free(NewContext);
+    isl_set_free(OldContext);
+    return false;
+  }
+
+  for (unsigned i = 0; i < OldContextDim; i++) {
     isl_id *Id = isl_set_get_dim_id(OldContext, isl_dim_param, i);
     NewContext = isl_set_set_dim_id(NewContext, isl_dim_param, i, Id);
   }
@@ -291,12 +328,45 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
                                   const Dependences &D) {
   StatementToIslMapTy NewSchedule;
 
+  // Check if key 'statements' is present.
+  if (!JScop.isMember("statements")) {
+    errs() << "JScop file has no key name 'statements'.\n";
+    return false;
+  }
+
+  Json::Value statements = JScop["statements"];
+
+  // Check whether the number of indices equals the number of statements
+  if (statements.size() != S.getSize()) {
+    errs() << "The number of indices and the number of statements differ.\n";
+    return false;
+  }
+
   int Index = 0;
   for (ScopStmt &Stmt : S) {
-    Json::Value Schedule = JScop["statements"][Index]["schedule"];
+    // Check if key 'schedule' is present.
+    if (!statements[Index].isMember("schedule")) {
+      errs() << "Statement " << Index << " has no 'schedule' key.\n";
+      for (auto Element : NewSchedule) {
+        isl_map_free(Element.second);
+      }
+      return false;
+    }
+    Json::Value Schedule = statements[Index]["schedule"];
     assert(!Schedule.asString().empty() &&
            "Schedules that contain extension nodes require special handling.");
     isl_map *Map = isl_map_read_from_str(S.getIslCtx(), Schedule.asCString());
+
+    // Check whether the schedule was parsed successfully
+    if (!Map) {
+      errs() << "The schedule was not parsed successfully (index = " << Index
+             << ").\n";
+      for (auto Element : NewSchedule) {
+        isl_map_free(Element.second);
+      }
+      return false;
+    }
+
     isl_space *Space = Stmt.getDomainSpace();
 
     // Copy the old tuple id. This is necessary to retain the user pointer,
@@ -312,6 +382,7 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
     Index++;
   }
 
+  // Check whether the new schedule is valid or not.
   if (!D.isValidSchedule(S, &NewSchedule)) {
     errs() << "JScop file contains a schedule that changes the "
            << "dependences. Use -disable-polly-legality to continue anyways\n";
@@ -336,18 +407,64 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
 bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
                                   const DataLayout &DL) {
   int StatementIdx = 0;
+
+  // Check if key 'statements' is present.
+  if (!JScop.isMember("statements")) {
+    errs() << "JScop file has no key name 'statements'.\n";
+    return false;
+  }
+  Json::Value statements = JScop["statements"];
+
+  // Check whether the number of indices equals the number of statements
+  if (statements.size() != S.getSize()) {
+    errs() << "The number of indices and the number of statements differ.\n";
+    return false;
+  }
+
   for (ScopStmt &Stmt : S) {
     int MemoryAccessIdx = 0;
+
+    // Check if key 'accesses' is present.
+    if (!statements[StatementIdx].isMember("accesses")) {
+      errs()
+          << "Statement from JScop file has no key name 'accesses' for index "
+          << StatementIdx << ".\n";
+      return false;
+    }
+
+    // Check whether the number of indices equals the number of memory accesses
+    if (Stmt.size() != statements[StatementIdx]["accesses"].size()) {
+      errs() << "The number of memory accesses in the JSop file and the number "
+                "of memory accesses differ for index "
+             << StatementIdx << ".\n";
+      return false;
+    }
+
     for (MemoryAccess *MA : Stmt) {
-      Json::Value Accesses = JScop["statements"][StatementIdx]["accesses"]
-                                  [MemoryAccessIdx]["relation"];
+      // Check if key 'relation' is present.
+      Json::Value JsonMemoryAccess =
+          statements[StatementIdx]["accesses"][MemoryAccessIdx];
+      if (!JsonMemoryAccess.isMember("relation")) {
+        errs() << "Memory access number " << MemoryAccessIdx
+               << " has no key name 'relation' for statement number "
+               << StatementIdx << ".\n";
+        return false;
+      }
+      Json::Value Accesses = JsonMemoryAccess["relation"];
       isl_map *NewAccessMap =
           isl_map_read_from_str(S.getIslCtx(), Accesses.asCString());
+
+      // Check whether the access was parsed successfully
+      if (!NewAccessMap) {
+        errs() << "The access was not parsed successfully by ISL.\n";
+        return false;
+      }
       isl_map *CurrentAccessMap = MA->getAccessRelation();
 
+      // Check if the number of parameter change
       if (isl_map_dim(NewAccessMap, isl_dim_param) !=
           isl_map_dim(CurrentAccessMap, isl_dim_param)) {
-        errs() << "JScop file changes the number of parameter dimensions\n";
+        errs() << "JScop file changes the number of parameter dimensions.\n";
         isl_map_free(CurrentAccessMap);
         isl_map_free(NewAccessMap);
         return false;
@@ -405,6 +522,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
           isl_set_free(NewAccessSet);
           isl_set_free(CurrentAccessSet);
 
+          // Check if the JScop file changes the accessed memory.
           if (!IsSubset) {
             errs() << "JScop file changes the accessed memory\n";
             isl_map_free(CurrentAccessMap);
@@ -446,8 +564,9 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       CurrentAccessDomain =
           isl_set_intersect_params(CurrentAccessDomain, S.getContext());
 
-      if (isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
-          isl_bool_false) {
+      if (MA->isRead() &&
+          isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
+              isl_bool_false) {
         errs() << "Mapping not defined for all iteration domain elements\n";
         isl_set_free(CurrentAccessDomain);
         isl_set_free(NewAccessDomain);
@@ -481,6 +600,24 @@ bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
   std::string Buffer;
   llvm::raw_string_ostream RawStringOstream(Buffer);
 
+  // Check if key 'type' is present.
+  if (!Array.isMember("type")) {
+    errs() << "Array has no key 'type'.\n";
+    return false;
+  }
+
+  // Check if key 'sizes' is present.
+  if (!Array.isMember("sizes")) {
+    errs() << "Array has no key 'sizes'.\n";
+    return false;
+  }
+
+  // Check if key 'name' is present.
+  if (!Array.isMember("name")) {
+    errs() << "Array has no key 'name'.\n";
+    return false;
+  }
+
   if (SAI->getName() != Array["name"].asCString())
     return false;
 
@@ -494,9 +631,12 @@ bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
     Buffer.clear();
   }
 
+  // Check if key 'type' differs from the current one or is not valid.
   SAI->getElementType()->print(RawStringOstream);
-  if (RawStringOstream.str() != Array["type"].asCString())
+  if (RawStringOstream.str() != Array["type"].asCString()) {
+    errs() << "Array has not a valid type.\n";
     return false;
+  }
 
   return true;
 }
@@ -535,7 +675,6 @@ Type *parseTextType(const std::string &TypeTextRepresentation,
 
 bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
   Json::Value Arrays = JScop["arrays"];
-
   if (Arrays.size() == 0)
     return true;
 
@@ -543,23 +682,44 @@ bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
   for (auto &SAI : S.arrays()) {
     if (!SAI->isArrayKind())
       continue;
-    if (ArrayIdx + 1 > Arrays.size())
+    if (ArrayIdx + 1 > Arrays.size()) {
+      errs() << "Not enough array entries in JScop file.\n";
       return false;
-    if (!areArraysEqual(SAI, Arrays[ArrayIdx]))
+    }
+    if (!areArraysEqual(SAI, Arrays[ArrayIdx])) {
+      errs() << "No match for array '" << SAI->getName() << "' in JScop.\n";
       return false;
+    }
     ArrayIdx++;
   }
 
   for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
-    auto *ElementType = parseTextType(Arrays[ArrayIdx]["type"].asCString(),
-                                      S.getSE()->getContext());
-    if (!ElementType)
+    auto &Array = Arrays[ArrayIdx];
+    auto *ElementType =
+        parseTextType(Array["type"].asCString(), S.getSE()->getContext());
+    if (!ElementType) {
+      errs() << "Error while parsing element type for new array.\n";
       return false;
+    }
     std::vector<unsigned> DimSizes;
-    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
-      DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));
-    S.createScopArrayInfo(ElementType, Arrays[ArrayIdx]["name"].asCString(),
-                          DimSizes);
+    for (unsigned i = 0; i < Array["sizes"].size(); i++) {
+      auto Size = std::stoi(Array["sizes"][i].asCString());
+
+      // Check if the size if positive.
+      if (Size <= 0) {
+        errs() << "The size at index " << i << " is =< 0.\n";
+        return false;
+      }
+
+      DimSizes.push_back(Size);
+    }
+
+    auto NewSAI =
+        S.createScopArrayInfo(ElementType, Array["name"].asCString(), DimSizes);
+
+    if (Array.isMember("allocation")) {
+      NewSAI->setIsOnHeap(Array["allocation"].asString() == "heap");
+    }
   }
 
   return true;

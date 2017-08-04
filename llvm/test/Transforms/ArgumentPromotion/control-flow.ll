@@ -1,19 +1,27 @@
-; RUN: opt < %s -argpromotion -S | \
-; RUN:    not grep "load i32* null"
+; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
+; Don't promote around control flow.
 define internal i32 @callee(i1 %C, i32* %P) {
-        br i1 %C, label %T, label %F
+; CHECK-LABEL: define internal i32 @callee(
+; CHECK: i1 %C, i32* %P)
+entry:
+  br i1 %C, label %T, label %F
 
-T:              ; preds = %0
-        ret i32 17
+T:
+  ret i32 17
 
-F:              ; preds = %0
-        %X = load i32, i32* %P               ; <i32> [#uses=1]
-        ret i32 %X
+F:
+  %X = load i32, i32* %P
+  ret i32 %X
 }
 
 define i32 @foo() {
-        %X = call i32 @callee( i1 true, i32* null )             ; <i32> [#uses=1]
-        ret i32 %X
+; CHECK-LABEL: define i32 @foo(
+entry:
+; CHECK-NOT: load i32, i32* null
+  %X = call i32 @callee(i1 true, i32* null)
+; CHECK: call i32 @callee(i1 true, i32* null)
+  ret i32 %X
 }
 

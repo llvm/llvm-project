@@ -39,7 +39,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 declare i8* @objc_msgSend(i8*, i8*, ...)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
@@ -47,7 +47,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
   %1 = alloca %0*, align 4
   %bounds = alloca %struct.CR, align 4
   %data = alloca %struct.CR, align 4
-  call void @llvm.dbg.value(metadata i8* %.block_descriptor, i64 0, metadata !27, metadata !DIExpression()), !dbg !129
+  call void @llvm.dbg.value(metadata i8* %.block_descriptor, metadata !27, metadata !DIExpression()), !dbg !129
   store %0* %loadedMydata, %0** %1, align 4
   call void @llvm.dbg.declare(metadata %0** %1, metadata !130, metadata !DIExpression()), !dbg !131
   %2 = bitcast %struct.CR* %bounds to %1*
@@ -273,6 +273,6 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !160 = !DIFile(filename: "header.h", directory: "/Volumes/Sandbox/llvm")
 !161 = !{!"header2.h", !"/Volumes/Sandbox/llvm"}
 !162 = !{i32 1, !"Debug Info Version", i32 3}
-!163 = !DIExpression(DW_OP_plus, 20, DW_OP_deref, DW_OP_plus, 4, DW_OP_deref, DW_OP_plus, 24)
-!164 = !DIExpression(DW_OP_deref, DW_OP_plus, 24)
-!165 = !DIExpression(DW_OP_deref, DW_OP_plus, 28)
+!163 = !DIExpression(DW_OP_plus_uconst, 20, DW_OP_deref, DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_plus_uconst, 24)
+!164 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24)
+!165 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 28)

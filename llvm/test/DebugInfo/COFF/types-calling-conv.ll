@@ -165,7 +165,7 @@ target triple = "i386-pc-windows-msvc19.0.23918"
 ; Function Attrs: nounwind readnone
 define x86_thiscallcc void @"\01?thiscallcc@A@@QAEXXZ"(%struct.A* nocapture %this) #0 align 2 !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.A* %this, i64 0, metadata !14, metadata !16), !dbg !17
+  tail call void @llvm.dbg.value(metadata %struct.A* %this, metadata !14, metadata !16), !dbg !17
   ret void, !dbg !18
 }
 
@@ -194,7 +194,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { norecurse nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon-unknown-elf -mcpu=hexagonv5 -hexagon-bit=0 < %s | FileCheck %s
 ; Optimize fabsf to clrbit in V5.
 
-; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #31)
+; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}},#31)
 
 define float @my_fabsf(float %x) nounwind {
 entry:

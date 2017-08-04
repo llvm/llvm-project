@@ -302,9 +302,9 @@ ELF: ]
 
 ELF32: DynamicSection [ (9 entries)
 ELF32:   Tag        Type                 Name/Value
-ELF32:   0x00000001 NEEDED               SharedLibrary (libc.so.6)
-ELF32:   0x00000001 NEEDED               SharedLibrary (libm.so.6)
-ELF32:   0x0000000E SONAME               LibrarySoname (libfoo.so)
+ELF32:   0x00000001 NEEDED               Shared library: [libc.so.6]
+ELF32:   0x00000001 NEEDED               Shared library: [libm.so.6]
+ELF32:   0x0000000E SONAME               Library soname: [libfoo.so]
 ELF32:   0x00000004 HASH                 {{[0-9a-f]+}}
 ELF32:   0x00000005 STRTAB               {{[0-9a-f]+}}
 ELF32:   0x00000006 SYMTAB               {{[0-9a-f]+}}
@@ -315,9 +315,9 @@ ELF32: ]
 
 ELF64: DynamicSection [ (9 entries)
 ELF64:   Tag        Type                 Name/Value
-ELF64:   0x0000000000000001 NEEDED               SharedLibrary (libc.so.6)
-ELF64:   0x0000000000000001 NEEDED               SharedLibrary (libm.so.6)
-ELF64:   0x000000000000000E SONAME               LibrarySoname (libfoo.so)
+ELF64:   0x0000000000000001 NEEDED               Shared library: [libc.so.6]
+ELF64:   0x0000000000000001 NEEDED               Shared library: [libm.so.6]
+ELF64:   0x000000000000000E SONAME               Library soname: [libfoo.so]
 ELF64:   0x0000000000000004 HASH                 {{[0-9a-f]+}}
 ELF64:   0x0000000000000005 STRTAB               {{[0-9a-f]+}}
 ELF64:   0x0000000000000006 SYMTAB               {{[0-9a-f]+}}

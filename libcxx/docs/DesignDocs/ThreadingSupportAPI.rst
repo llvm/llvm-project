@@ -33,13 +33,22 @@ interface normally provided by ``<__threading_support>``.
 External Threading Library
 ==========================
 
-Normally ``<__threading_support>`` provides inline definitions to each internal
-threading API function it declares. However libc++ also supports using an
-external library to provide the definitions.
+libc++ can be compiled with its internal threading API delegating to an external
+library. Such a configuration is useful for library vendors who wish to
+distribute a thread-agnostic libc++ library, where the users of the library are
+expected to provide the implementation of the libc++ internal threading API.
 
-When ``_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL`` libc++ does not provide inline
-definitions for the internal API, instead assuming the definitions will be
-provided by an external library.
+On a production setting, this would be achieved through a custom
+``<__external_threading>`` header, which declares the libc++ internal threading
+API but leaves out the implementation.
+
+The ``-DLIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY`` option allows building libc++ in
+such a configuration while allowing it to be tested on a platform that supports
+any of the threading systems (e.g. pthread) supported in ``__threading_support``
+header. Therefore, the main purpose of this option is to allow testing of this
+particular configuration of the library without being tied to a vendor-specific
+threading system. This option is only meant to be used by libc++ library
+developers.
 
 Threading Configuration Macros
 ==============================

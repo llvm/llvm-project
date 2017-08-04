@@ -18,7 +18,6 @@
 #include <typeinfo>
 
 #include "__cxxabi_config.h"
-#include "config.h"
 #include "cxa_exception.hpp"
 #include "cxa_handlers.hpp"
 #include "private_typeinfo.h"
@@ -317,7 +316,7 @@ call_terminate(bool native_exception, _Unwind_Exception* unwind_exception)
     std::terminate();
 }
 
-#if LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
 static const void* read_target2_value(const void* ptr)
 {
     uintptr_t offset = *reinterpret_cast<const uintptr_t*>(ptr);
@@ -328,7 +327,7 @@ static const void* read_target2_value(const void* ptr)
     // deferred to the linker. For bare-metal they turn into absolute
     // relocations. For linux they turn into GOT-REL relocations."
     // https://gcc.gnu.org/ml/gcc-patches/2009-08/msg00264.html
-#if LIBCXXABI_BAREMETAL
+#if defined(LIBCXXABI_BAREMETAL)
     return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(ptr) +
                                          offset);
 #else
@@ -358,7 +357,7 @@ get_shim_type_info(uint64_t ttypeIndex, const uint8_t* classInfo,
     return reinterpret_cast<const __shim_type_info *>(
         read_target2_value(ttypePtr));
 }
-#else // !LIBCXXABI_ARM_EHABI
+#else // !defined(_LIBCXXABI_ARM_EHABI)
 static
 const __shim_type_info*
 get_shim_type_info(uint64_t ttypeIndex, const uint8_t* classInfo,
@@ -394,7 +393,7 @@ get_shim_type_info(uint64_t ttypeIndex, const uint8_t* classInfo,
     classInfo -= ttypeIndex;
     return (const __shim_type_info*)readEncodedPointer(&classInfo, ttypeEncoding);
 }
-#endif // !LIBCXXABI_ARM_EHABI
+#endif // !defined(_LIBCXXABI_ARM_EHABI)
 
 /*
     This is checking a thrown exception type, excpType, against a possibly empty
@@ -405,7 +404,7 @@ get_shim_type_info(uint64_t ttypeIndex, const uint8_t* classInfo,
     the list will catch a excpType.  If any catchType in the list can catch an
     excpType, then this exception spec does not catch the excpType.
 */
-#if LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
 static
 bool
 exception_spec_can_catch(int64_t specIndex, const uint8_t* classInfo,
@@ -934,7 +933,7 @@ _UA_CLEANUP_PHASE
         Else a cleanup is not found: return _URC_CONTINUE_UNWIND
 */
 
-#if !LIBCXXABI_ARM_EHABI
+#if !defined(_LIBCXXABI_ARM_EHABI)
 _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
 #ifdef __USING_SJLJ_EXCEPTIONS__
 __gxx_personality_sj0
@@ -1194,7 +1193,7 @@ __cxa_call_unexpected(void* arg)
         u_handler = old_exception_header->unexpectedHandler;
         // If std::__unexpected(u_handler) rethrows the same exception,
         //   these values get overwritten by the rethrow.  So save them now:
-#if LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
         ttypeIndex = (int64_t)(int32_t)unwind_exception->barrier_cache.bitpattern[4];
         lsda = (const uint8_t*)unwind_exception->barrier_cache.bitpattern[2];
 #else

@@ -2,7 +2,45 @@
 # RUN:     FileCheck %s --check-prefix=ALL
 
     .text
-foo:                      # ALL-LABEL: foo:
+foo:
+    beql $a2, 0x1ffff, foo # ALL: lui $1, 1
+                           # ALL: ori $1, $1, 65535
+                           # ALL: beql  $6, $1, foo
+                           # ALL:  #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+                           # ALL: nop
+    beql $a2, -4096, foo   # ALL: addiu $1, $zero, -4096
+                           # ALL: beql  $6, $1, foo
+                           # ALL: #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+    beql $a2, -0x10000, foo # ALL: lui $1, 65535
+                            # ALL: beql  $6, $1, foo
+                            # ALL: # fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+    beql $a2, 16, foo     # ALL: addiu   $1, $zero, 16
+                          # ALL: beql    $6, $1, foo
+                          # ALL:  # fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+                          # ALL: nop
+    bnel $a2, 0x1ffff, foo # ALL: lui $1, 1
+                           # ALL: ori $1, $1, 65535
+                           # ALL: bnel  $6, $1, foo
+                           # ALL:  #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+                           # ALL: nop
+    bnel $a2, -4096, foo   # ALL: addiu $1, $zero, -4096
+                           # ALL: bnel  $6, $1, foo
+                           # ALL: #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+    bnel $a2, -0x10000, foo # ALL: lui $1, 65535
+                            # ALL: bnel  $6, $1, foo
+                            # ALL: # fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+    bnel $a2, 16, foo     # ALL: addiu   $1, $zero, 16
+                          # ALL: bnel    $6, $1, foo
+                          # ALL: #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+                          # ALL: nop
+    beql $a2, 32767, foo  # ALL: addiu   $1, $zero, 32767
+                          # ALL: beql    $6, $1, foo
+                          # ALL: #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+                          # ALL: nop
+    bnel $a2, 32768, foo  # ALL: ori     $1, $zero, 32768
+                          # ALL: bnel    $6, $1, foo
+                          # ALL: #   fixup A - offset: 0, value: foo-4, kind: fixup_Mips_PC16
+                          # ALL: nop
     blt $a2, 16, foo      # ALL: addiu $1, $zero, 16
                           # ALL: slt   $1, $6, $1
                           # ALL: bnez  $1, foo

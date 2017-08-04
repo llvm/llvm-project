@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  Option
   )
 
 add_clang_unittest(ClangDriverTests

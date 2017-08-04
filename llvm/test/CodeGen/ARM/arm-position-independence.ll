@@ -13,6 +13,12 @@
 ; RUN: llc -relocation-model=rwpi      -mtriple=thumbv6m--none-eabi < %s | FileCheck %s --check-prefix=CHECK --check-prefix=THUMB1_RO_ABS --check-prefix=THUMB1_RW_SB
 ; RUN: llc -relocation-model=ropi-rwpi -mtriple=thumbv6m--none-eabi < %s | FileCheck %s --check-prefix=CHECK --check-prefix=THUMB1_RO_PC  --check-prefix=THUMB1_RW_SB
 
+; RUN: llc -relocation-model=rwpi      -mtriple=armv7a--none-eabi   -mattr=no-movt < %s | FileCheck %s --check-prefix=CHECK --check-prefix=NO_MOVT_ARM_RO_ABS --check-prefix=NO_MOVT_ARM_RW_SB
+; RUN: llc -relocation-model=ropi-rwpi -mtriple=armv7a--none-eabi   -mattr=no-movt < %s | FileCheck %s --check-prefix=CHECK --check-prefix=NO_MOVT_ARM_RO_PC  --check-prefix=NO_MOVT_ARM_RW_SB
+
+; RUN: llc -relocation-model=rwpi      -mtriple=thumbv7m--none-eabi -mattr=no-movt < %s | FileCheck %s --check-prefix=CHECK --check-prefix=NO_MOVT_THUMB2_RO_ABS  --check-prefix=NO_MOVT_THUMB2_RW_SB
+; RUN: llc -relocation-model=ropi-rwpi -mtriple=thumbv7m--none-eabi -mattr=no-movt < %s | FileCheck %s --check-prefix=CHECK --check-prefix=NO_MOVT_THUMB2_RO_PC  --check-prefix=NO_MOVT_THUMB2_RW_SB
+
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 @a = external global i32, align 4
@@ -28,15 +34,23 @@ entry:
 ; ARM_RW_ABS: movt    r[[REG]], :upper16:a
 ; ARM_RW_ABS: ldr     r0, [r[[REG]]]
 
-; ARM_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; ARM_RW_SB: movw    r[[REG:[0-9]]], :lower16:a(sbrel)
+; ARM_RW_SB: movt    r[[REG]], :upper16:a(sbrel)
 ; ARM_RW_SB: ldr     r0, [r9, r[[REG]]]
+
+; NO_MOVT_ARM_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RW_SB: ldr     r0, [r9, r[[REG]]]
 
 ; THUMB2_RW_ABS: movw    r[[REG:[0-9]]], :lower16:a
 ; THUMB2_RW_ABS: movt    r[[REG]], :upper16:a
 ; THUMB2_RW_ABS: ldr     r0, [r[[REG]]]
 
-; THUMB2_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; THUMB2_RW_SB: movw    r[[REG:[0-9]]], :lower16:a(sbrel)
+; THUMB2_RW_SB: movt    r[[REG]], :upper16:a(sbrel)
 ; THUMB2_RW_SB: ldr.w   r0, [r9, r[[REG]]]
+
+; NO_MOVT_THUMB2_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RW_SB: ldr.w   r0, [r9, r[[REG]]]
 
 ; THUMB1_RW_ABS: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
 ; THUMB1_RW_ABS: ldr     r0, [r[[REG]]]
@@ -47,11 +61,11 @@ entry:
 
 ; CHECK: {{(bx lr|pop)}}
 
-; ARM_RW_SB: [[LCPI]]
-; ARM_RW_SB: .long   a(sbrel)
+; NO_MOVT_ARM_RW_SB: [[LCPI]]
+; NO_MOVT_ARM_RW_SB: .long   a(sbrel)
 
-; THUMB2_RW_SB: [[LCPI]]
-; THUMB2_RW_SB: .long   a(sbrel)
+; NO_MOVT_THUMB2_RW_SB: [[LCPI]]
+; NO_MOVT_THUMB2_RW_SB: .long   a(sbrel)
 
 ; THUMB1_RW_ABS: [[LCPI]]
 ; THUMB1_RW_ABS-NEXT: .long a
@@ -70,15 +84,23 @@ entry:
 ; ARM_RW_ABS: movt    r[[REG]], :upper16:a
 ; ARM_RW_ABS: str     r0, [r[[REG:[0-9]]]]
 
-; ARM_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
-; ARM_RW_SB: str     r0, [r9, r[[REG]]]
+; ARM_RW_SB: movw    r[[REG:[0-9]]], :lower16:a
+; ARM_RW_SB: movt    r[[REG]], :upper16:a
+; ARM_RW_SB: str     r0, [r9, r[[REG:[0-9]]]]
+
+; NO_MOVT_ARM_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RW_SB: str     r0, [r9, r[[REG]]]
 
 ; THUMB2_RW_ABS: movw    r[[REG:[0-9]]], :lower16:a
 ; THUMB2_RW_ABS: movt    r[[REG]], :upper16:a
 ; THUMB2_RW_ABS: str     r0, [r[[REG]]]
 
-; THUMB2_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; THUMB2_RW_SB: movw    r[[REG:[0-9]]], :lower16:a(sbrel)
+; THUMB2_RW_SB: movt    r[[REG]], :upper16:a(sbrel)
 ; THUMB2_RW_SB: str.w   r0, [r9, r[[REG]]]
+
+; NO_MOVT_THUMB2_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RW_SB: str.w   r0, [r9, r[[REG]]]
 
 ; THUMB1_RW_ABS: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
 ; THUMB1_RW_ABS: str     r0, [r[[REG]]]
@@ -89,11 +111,11 @@ entry:
 
 ; CHECK: {{(bx lr|pop)}}
 
-; ARM_RW_SB: [[LCPI]]
-; ARM_RW_SB: .long   a(sbrel)
+; NO_MOVT_ARM_RW_SB: [[LCPI]]
+; NO_MOVT_ARM_RW_SB: .long   a(sbrel)
 
-; THUMB2_RW_SB: [[LCPI]]
-; THUMB2_RW_SB: .long   a(sbrel)
+; NO_MOVT_THUMB2_RW_SB: [[LCPI]]
+; NO_MOVT_THUMB2_RW_SB: .long   a(sbrel)
 
 ; THUMB1_RW_ABS: [[LCPI]]
 ; THUMB1_RW_ABS-NEXT: .long a
@@ -112,20 +134,36 @@ entry:
 ; ARM_RO_ABS: movt    r[[reg]], :upper16:b
 ; ARM_RO_ABS: ldr     r0, [r[[reg]]]
 
+; NO_MOVT_ARM_RO_ABS: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RO_ABS: ldr     r0, [r[[REG]]]
+
 ; ARM_RO_PC: movw    r[[REG:[0-9]]], :lower16:(b-([[LPC:.LPC[0-9]+_[0-9]+]]+8))
 ; ARM_RO_PC: movt    r[[REG]], :upper16:(b-([[LPC]]+8))
 ; ARM_RO_PC: [[LPC]]:
 ; ARM_RO_PC-NEXT: ldr     r0, [pc, r[[REG]]]
 
+; NO_MOVT_ARM_RO_PC: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RO_PC: [[LPC:.LPC[0-9]+_[0-9]+]]:
+; NO_MOVT_ARM_RO_PC: ldr     r0, [pc, r[[REG]]]
+
 ; THUMB2_RO_ABS: movw    r[[REG:[0-9]]], :lower16:b
 ; THUMB2_RO_ABS: movt    r[[REG]], :upper16:b
 ; THUMB2_RO_ABS: ldr     r0, [r[[REG]]]
+
+; NO_MOVT_THUMB2_RO_ABS: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RO_ABS: ldr     r0, [r[[REG]]]
 
 ; THUMB2_RO_PC: movw    r[[REG:[0-9]]], :lower16:(b-([[LPC:.LPC[0-9]+_[0-9]+]]+4))
 ; THUMB2_RO_PC: movt    r[[REG]], :upper16:(b-([[LPC]]+4))
 ; THUMB2_RO_PC: [[LPC]]:
 ; THUMB2_RO_PC-NEXT: add     r[[REG]], pc
 ; THUMB2_RO_PC: ldr     r0, [r[[REG]]]
+
+; NO_MOVT_THUMB2_RO_PC: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RO_PC: [[LPC:.LPC[0-9]+_[0-9]+]]:
+; NO_MOVT_THUMB2_RO_PC-NEXT: add     r[[REG]], pc
+; NO_MOVT_THUMB2_RO_PC: ldr     r0, [r[[REG]]]
+
 
 ; THUMB1_RO_ABS: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
 ; THUMB1_RO_ABS: ldr     r0, [r[[REG]]]
@@ -137,8 +175,20 @@ entry:
 
 ; CHECK: {{(bx lr|pop)}}
 
+; NO_MOVT_ARM_RO_ABS: [[LCPI]]
+; NO_MOVT_ARM_RO_ABS-NEXT: .long b
+
+; NO_MOVT_THUMB2_RO_ABS: [[LCPI]]
+; NO_MOVT_THUMB2_RO_ABS-NEXT: .long b
+
 ; THUMB1_RO_ABS: [[LCPI]]
 ; THUMB1_RO_ABS-NEXT: .long b
+
+; NO_MOVT_ARM_RO_PC: [[LCPI]]
+; NO_MOVT_ARM_RO_PC-NEXT: .long b-([[LPC]]+8)
+
+; NO_MOVT_THUMB2_RO_PC: [[LCPI]]
+; NO_MOVT_THUMB2_RO_PC-NEXT: .long b-([[LPC]]+4)
 
 ; THUMB1_RO_PC: [[LCPI]]
 ; THUMB1_RO_PC-NEXT: .long b-([[LPC]]+4)
@@ -152,14 +202,22 @@ entry:
 ; ARM_RW_ABS: movw    r[[REG:[0-9]]], :lower16:a
 ; ARM_RW_ABS: movt    r[[REG]], :upper16:a
 
-; ARM_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; ARM_RW_SB: movw    r[[REG:[0-9]]], :lower16:a(sbrel)
+; ARM_RW_SB: movt    r[[REG]], :upper16:a(sbrel)
 ; ARM_RW_SB: add     r0, r9, r[[REG]]
+
+; NO_MOVT_ARM_RW_SB: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RW_SB: add     r0, r9, r[[REG]]
 
 ; THUMB2_RW_ABS: movw    r[[REG:[0-9]]], :lower16:a
 ; THUMB2_RW_ABS: movt    r[[REG]], :upper16:a
 
-; THUMB2_RW_SB: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; THUMB2_RW_SB: movw    r[[REG:[0-9]]], :lower16:a(sbrel)
+; THUMB2_RW_SB: movt    r[[REG]], :upper16:a(sbrel)
 ; THUMB2_RW_SB: add     r0, r9
+
+; NO_MOVT_THUMB2_RW_SB: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RW_SB: add     r0, r9
 
 ; THUMB1_RW_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
 
@@ -169,11 +227,11 @@ entry:
 
 ; CHECK: {{(bx lr|pop)}}
 
-; ARM_RW_SB: [[LCPI]]
-; ARM_RW_SB: .long   a(sbrel)
+; NO_MOVT_ARM_RW_SB: [[LCPI]]
+; NO_MOVT_ARM_RW_SB: .long   a(sbrel)
 
-; THUMB2_RW_SB: [[LCPI]]
-; THUMB2_RW_SB: .long   a(sbrel)
+; NO_MOVT_THUMB2_RW_SB: [[LCPI]]
+; NO_MOVT_THUMB2_RW_SB: .long   a(sbrel)
 
 ; THUMB1_RW_ABS: [[LCPI]]
 ; THUMB1_RW_ABS-NEXT: .long a
@@ -190,18 +248,30 @@ entry:
 ; ARM_RO_ABS: movw    r[[REG:[0-9]]], :lower16:b
 ; ARM_RO_ABS: movt    r[[REG]], :upper16:b
 
+; NO_MOVT_ARM_RO_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
+
 ; ARM_RO_PC: movw    r[[REG:[0-9]]], :lower16:(b-([[LPC:.LPC[0-9]+_[0-9]+]]+8))
 ; ARM_RO_PC: movt    r[[REG]], :upper16:(b-([[LPC]]+8))
 ; ARM_RO_PC: [[LPC]]:
 ; ARM_RO_PC-NEXT: add     r0, pc, r[[REG:[0-9]]]
 
+; NO_MOVT_ARM_RO_PC: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RO_PC: [[LPC:.LPC[0-9]+_[0-9]+]]:
+; NO_MOVT_ARM_RO_PC-NEXT: add     r0, pc, r[[REG]]
+
 ; THUMB2_RO_ABS: movw    r[[REG:[0-9]]], :lower16:b
 ; THUMB2_RO_ABS: movt    r[[REG]], :upper16:b
+
+; NO_MOVT_THUMB2_RO_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
 
 ; THUMB2_RO_PC: movw    r0, :lower16:(b-([[LPC:.LPC[0-9]+_[0-9]+]]+4))
 ; THUMB2_RO_PC: movt    r0, :upper16:(b-([[LPC]]+4))
 ; THUMB2_RO_PC: [[LPC]]:
 ; THUMB2_RO_PC-NEXT: add     r0, pc
+
+; NO_MOVT_THUMB2_RO_PC: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RO_PC: [[LPC:.LPC[0-9]+_[0-9]+]]:
+; NO_MOVT_THUMB2_RO_PC-NEXT: add     r[[REG]], pc
 
 ; THUMB1_RO_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
 
@@ -211,8 +281,20 @@ entry:
 
 ; CHECK: {{(bx lr|pop)}}
 
+; NO_MOVT_ARM_RO_ABS: [[LCPI]]
+; NO_MOVT_ARM_RO_ABS-NEXT: .long b
+
+; NO_MOVT_THUMB2_RO_ABS: [[LCPI]]
+; NO_MOVT_THUMB2_RO_ABS-NEXT: .long b
+
 ; THUMB1_RO_ABS: [[LCPI]]
 ; THUMB1_RO_ABS-NEXT: .long b
+
+; NO_MOVT_ARM_RO_PC: [[LCPI]]
+; NO_MOVT_ARM_RO_PC-NEXT: .long b-([[LPC]]+8)
+
+; NO_MOVT_THUMB2_RO_PC: [[LCPI]]
+; NO_MOVT_THUMB2_RO_PC-NEXT: .long b-([[LPC]]+4)
 
 ; THUMB1_RO_PC: [[LCPI]]
 ; THUMB1_RO_PC-NEXT: .long b-([[LPC]]+4)
@@ -226,18 +308,30 @@ entry:
 ; ARM_RO_ABS: movw    r[[REG:[0-9]]], :lower16:take_addr_func
 ; ARM_RO_ABS: movt    r[[REG]], :upper16:take_addr_func
 
+; NO_MOVT_ARM_RO_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
+
 ; ARM_RO_PC: movw    r[[REG:[0-9]]], :lower16:(take_addr_func-([[LPC:.LPC[0-9]+_[0-9]+]]+8))
 ; ARM_RO_PC: movt    r[[REG]], :upper16:(take_addr_func-([[LPC]]+8))
 ; ARM_RO_PC: [[LPC]]:
 ; ARM_RO_PC-NEXT: add     r0, pc, r[[REG:[0-9]]]
 
+; NO_MOVT_ARM_RO_PC: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_ARM_RO_PC: [[LPC:.LPC[0-9]+_[0-9]+]]:
+; NO_MOVT_ARM_RO_PC-NEXT: add     r0, pc, r[[REG]]
+
 ; THUMB2_RO_ABS: movw    r[[REG:[0-9]]], :lower16:take_addr_func
 ; THUMB2_RO_ABS: movt    r[[REG]], :upper16:take_addr_func
+
+; NO_MOVT_THUMB2_RO_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
 
 ; THUMB2_RO_PC: movw    r0, :lower16:(take_addr_func-([[LPC:.LPC[0-9]+_[0-9]+]]+4))
 ; THUMB2_RO_PC: movt    r0, :upper16:(take_addr_func-([[LPC]]+4))
 ; THUMB2_RO_PC: [[LPC]]:
 ; THUMB2_RO_PC-NEXT: add     r0, pc
+
+; NO_MOVT_THUMB2_RO_PC: ldr     r[[REG:[0-9]]], [[LCPI:.LCPI[0-9]+_[0-9]+]]
+; NO_MOVT_THUMB2_RO_PC: [[LPC:.LPC[0-9]+_[0-9]+]]:
+; NO_MOVT_THUMB2_RO_PC-NEXT: add     r[[REG]], pc
 
 ; THUMB1_RO_ABS: ldr     r0, [[LCPI:.LCPI[0-9]+_[0-9]+]]
 
@@ -247,8 +341,20 @@ entry:
 
 ; CHECK: {{(bx lr|pop)}}
 
+; NO_MOVT_ARM_RO_ABS: [[LCPI]]
+; NO_MOVT_ARM_RO_ABS-NEXT: .long take_addr_func
+
+; NO_MOVT_THUMB2_RO_ABS: [[LCPI]]
+; NO_MOVT_THUMB2_RO_ABS-NEXT: .long take_addr_func
+
 ; THUMB1_RO_ABS: [[LCPI]]
 ; THUMB1_RO_ABS-NEXT: .long take_addr_func
+
+; NO_MOVT_ARM_RO_PC: [[LCPI]]
+; NO_MOVT_ARM_RO_PC-NEXT: .long take_addr_func-([[LPC]]+8)
+
+; NO_MOVT_THUMB2_RO_PC: [[LCPI]]
+; NO_MOVT_THUMB2_RO_PC-NEXT: .long take_addr_func-([[LPC]]+4)
 
 ; THUMB1_RO_PC: [[LCPI]]
 ; THUMB1_RO_PC-NEXT: .long take_addr_func-([[LPC]]+4)

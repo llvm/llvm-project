@@ -9,7 +9,7 @@
 ; XGCN: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[DATA:v[0-9]+]]
 ; XGCN: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; XGCN: flat_load_dword [[DATA]], v[{{[0-9]+:[0-9]+}}]
-define void @test(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
   store volatile i32 0, i32 addrspace(1)* %out
   %val = load volatile i32, i32 addrspace(1)* %out
   ret void

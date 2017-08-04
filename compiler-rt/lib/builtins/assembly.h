@@ -44,7 +44,8 @@
 #endif
 #define CONST_SECTION .section .rodata
 
-#if defined(__GNU__) || defined(__ANDROID__) || defined(__FreeBSD__)
+#if defined(__GNU__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
+    defined(__linux__)
 #define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack,"",%progbits
 #else
 #define NO_EXEC_STACK_DIRECTIVE
@@ -95,9 +96,11 @@
 #if __ARM_ARCH_ISA_THUMB == 2
 #define IT(cond)  it cond
 #define ITT(cond) itt cond
+#define ITE(cond) ite cond
 #else
 #define IT(cond)
 #define ITT(cond)
+#define ITE(cond)
 #endif
 
 #if __ARM_ARCH_ISA_THUMB == 2

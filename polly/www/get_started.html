@@ -53,6 +53,18 @@ cmake ../llvm_git && make
 
 <pre>make check-polly</pre>
 
+<h3>Building Polly Without LLVM</h3>
+It is also possible to build Polly without
+also building LLVM. All you need is an installed version of LLVM or a previous
+build. To configure Polly to use a pre-built LLVM, set the
+<code>-DCMAKE_PREFIX_PATH</code> option:
+
+<pre>cmake -DCMAKE_PREFIX_PATH=${LLVM_PREFIX}/lib/cmake/llvm</pre>
+
+To run unittests, however, you need to have the LLVM source directory around.
+Polly will use the <code>llvm-config</code> of the LLVM you're building against
+to guess the location of the source directory. You may override autodetected
+location by setting the <code>-DLLVM_SOURCE_ROOT</code> option.
 
 <h3> Troubleshooting</h3>
 

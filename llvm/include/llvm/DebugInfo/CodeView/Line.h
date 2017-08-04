@@ -127,27 +127,6 @@ public:
   bool isNeverStepInto() const { return LineInf.isNeverStepInto(); }
 };
 
-enum class InlineeLinesSignature : uint32_t {
-  Normal,    // CV_INLINEE_SOURCE_LINE_SIGNATURE
-  ExtraFiles // CV_INLINEE_SOURCE_LINE_SIGNATURE_EX
-};
-
-struct InlineeSourceLine {
-  TypeIndex Inlinee;         // ID of the function that was inlined.
-  ulittle32_t FileID;        // Offset into FileChecksums subsection.
-  ulittle32_t SourceLineNum; // First line of inlined code.
-  // If extra files present:
-  //   ulittle32_t ExtraFileCount;
-  //   ulittle32_t Files[];
-};
-
-struct FileChecksum {
-  ulittle32_t FileNameOffset; // Byte offset of filename in global string table.
-  uint8_t ChecksumSize;       // Number of bytes of checksum.
-  uint8_t ChecksumKind;       // FileChecksumKind
-  // Checksum bytes follow.
-};
-
 } // namespace codeview
 } // namespace llvm
 

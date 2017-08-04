@@ -12,9 +12,9 @@
 @a = common global float 0.000000e+00, align 4
 
 ; CHECK-LABEL: test1
-; CHECK: [[REG11:(r[0-9]+)]]{{ *}}={{ *}}memw(r{{[0-9]+}} + r{{[0-9]+}}<<#2)
+; CHECK: [[REG11:(r[0-9]+)]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#2)
 ; CHECK: [[REG12:(r[0-9]+)]] += sfmpy({{.*}}[[REG11]]
-; CHECK: memw(r{{[0-9]+}} + r{{[0-9]+}}<<#2) = [[REG12]].new
+; CHECK: memw(r{{[0-9]+}}+r{{[0-9]+}}<<#2) = [[REG12]].new
 
 ; Function Attrs: norecurse nounwind
 define void @test1(%struct.matrix_params* nocapture readonly %params, i32 %col1) {
@@ -35,7 +35,7 @@ entry:
 }
 
 ; CHECK-LABEL: test2
-; CHECK: [[REG21:(r[0-9]+)]]{{ *}}={{ *}}memw(##globB+92)
+; CHECK: [[REG21:(r[0-9]+)]] = memw(##globB+92)
 ; CHECK: [[REG22:(r[0-9]+)]] = sfadd({{.*}}[[REG21]]
 ; CHECK: memw(##globA+84) = [[REG22]]
 
@@ -54,9 +54,9 @@ entry:
 }
 
 ; CHECK-LABEL: test3
-; CHECK: [[REG31:(r[0-9]+)]]{{ *}}={{ *}}memw(#b)
+; CHECK: [[REG31:(r[0-9]+)]] = memw(gp+#b)
 ; CHECK: [[REG32:(r[0-9]+)]] = sfadd({{.*}}[[REG31]]
-; CHECK: memw(#a) = [[REG32]]
+; CHECK: memw(gp+#a) = [[REG32]]
 
 ; Function Attrs: norecurse nounwind
 define void @test3(%struct.matrix_params* nocapture readonly %params, i32 %col1) {
@@ -73,9 +73,9 @@ entry:
 }
 
 ; CHECK-LABEL: test4
-; CHECK: [[REG41:(r[0-9]+)]]{{ *}}={{ *}}memw(r0<<#2 + ##globB+52)
+; CHECK: [[REG41:(r[0-9]+)]] = memw(r0<<#2+##globB+52)
 ; CHECK: [[REG42:(r[0-9]+)]] = sfadd({{.*}}[[REG41]]
-; CHECK: memw(r0<<#2 + ##globA+60) = [[REG42]]
+; CHECK: memw(r0<<#2+##globA+60) = [[REG42]]
 ; Function Attrs: noinline norecurse nounwind
 define void @test4(i32 %col1) {
 entry:

@@ -19,7 +19,7 @@ while.cond:                                       ; preds = %cond.true270, %if.t
   br i1 undef, label %if.then260, label %while.body210
 
 while.body210:                                    ; preds = %while.cond
-  unreachable
+  ret void
 
 if.then260:                                       ; preds = %while.cond
   %p.4 = getelementptr inbounds i8, i8* null, i64 1

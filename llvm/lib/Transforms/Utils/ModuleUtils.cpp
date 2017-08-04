@@ -35,7 +35,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
     // Upgrade a 2-field global array type to the new 3-field format if needed.
     if (Data && OldEltTy->getNumElements() < 3)
       EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                              IRB.getInt8PtrTy(), nullptr);
+                              IRB.getInt8PtrTy());
     else
       EltTy = OldEltTy;
     if (Constant *Init = GVCtor->getInitializer()) {
@@ -44,10 +44,10 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
       for (unsigned i = 0; i != n; ++i) {
         auto Ctor = cast<Constant>(Init->getOperand(i));
         if (EltTy != OldEltTy)
-          Ctor = ConstantStruct::get(
-              EltTy, Ctor->getAggregateElement((unsigned)0),
-              Ctor->getAggregateElement(1),
-              Constant::getNullValue(IRB.getInt8PtrTy()), nullptr);
+          Ctor =
+              ConstantStruct::get(EltTy, Ctor->getAggregateElement((unsigned)0),
+                                  Ctor->getAggregateElement(1),
+                                  Constant::getNullValue(IRB.getInt8PtrTy()));
         CurrentCtors.push_back(Ctor);
       }
     }
@@ -55,7 +55,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   } else {
     // Use the new three-field struct if there isn't one already.
     EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                            IRB.getInt8PtrTy(), nullptr);
+                            IRB.getInt8PtrTy());
   }
 
   // Build a 2 or 3 field global_ctor entry.  We don't take a comdat key.
@@ -138,6 +138,17 @@ Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {
   report_fatal_error(Err);
 }
 
+Function *llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                             ArrayRef<Type *> InitArgTypes) {
+  assert(!InitName.empty() && "Expected init function name");
+  Function *F = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+      InitName,
+      FunctionType::get(Type::getVoidTy(M.getContext()), InitArgTypes, false),
+      AttributeList()));
+  F->setLinkage(Function::ExternalLinkage);
+  return F;
+}
+
 std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
@@ -145,22 +156,19 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
   assert(!InitName.empty() && "Expected init function name");
   assert(InitArgs.size() == InitArgTypes.size() &&
          "Sanitizer's init function expects different number of arguments");
+  Function *InitFunction =
+      declareSanitizerInitFunction(M, InitName, InitArgTypes);
   Function *Ctor = Function::Create(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
       GlobalValue::InternalLinkage, CtorName, &M);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   IRBuilder<> IRB(ReturnInst::Create(M.getContext(), CtorBB));
-  Function *InitFunction =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          InitName, FunctionType::get(IRB.getVoidTy(), InitArgTypes, false),
-          AttributeSet()));
-  InitFunction->setLinkage(Function::ExternalLinkage);
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
     Function *VersionCheckFunction =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
             VersionCheckName, FunctionType::get(IRB.getVoidTy(), {}, false),
-            AttributeSet()));
+            AttributeList()));
     IRB.CreateCall(VersionCheckFunction, {});
   }
   return std::make_pair(Ctor, InitFunction);
@@ -228,4 +236,36 @@ void llvm::filterDeadComdatFunctions(
     return ComdatEntriesCovered.find(GV->getComdat()) ==
            ComdatEntriesCovered.end();
   });
+}
+
+std::string llvm::getUniqueModuleId(Module *M) {
+  MD5 Md5;
+  bool ExportsSymbols = false;
+  auto AddGlobal = [&](GlobalValue &GV) {
+    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
+        !GV.hasExternalLinkage())
+      return;
+    ExportsSymbols = true;
+    Md5.update(GV.getName());
+    Md5.update(ArrayRef<uint8_t>{0});
+  };
+
+  for (auto &F : *M)
+    AddGlobal(F);
+  for (auto &GV : M->globals())
+    AddGlobal(GV);
+  for (auto &GA : M->aliases())
+    AddGlobal(GA);
+  for (auto &IF : M->ifuncs())
+    AddGlobal(IF);
+
+  if (!ExportsSymbols)
+    return "";
+
+  MD5::MD5Result R;
+  Md5.final(R);
+
+  SmallString<32> Str;
+  MD5::stringifyResult(R, Str);
+  return ("$" + Str).str();
 }

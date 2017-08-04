@@ -7,8 +7,8 @@
 ; CHECK:   %polly.access.polly.access.A.load.load = load i32*, i32** %polly.access.polly.access.A.load
 ;
 ; CHECK: polly.stmt.bb2:
-; CHECK:   %p_tmp6 = getelementptr inbounds i32, i32* %polly.access.polly.access.A.load.load, i64 %polly.indvar
-; CHECK:   store i32 0, i32* %p_tmp6, align 4
+; CHECK: %scevgep = getelementptr i32, i32* %polly.access.polly.access.A.load.load, i64 %polly.indvar
+; CHECK:   store i32 0, i32* %scevgep, align 4
 ;
 ;    void f(int ***A) {
 ;      for (int i = 0; i < 1024; i++)

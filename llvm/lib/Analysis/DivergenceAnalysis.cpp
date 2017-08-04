@@ -241,7 +241,7 @@ void DivergencePropagator::exploreDataDependency(Value *V) {
   // Follow def-use chains of V.
   for (User *U : V->users()) {
     Instruction *UserInst = cast<Instruction>(U);
-    if (DV.insert(UserInst).second)
+    if (!TTI.isAlwaysUniform(U) && DV.insert(UserInst).second)
       Worklist.push_back(UserInst);
   }
 }

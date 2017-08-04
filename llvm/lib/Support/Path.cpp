@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/COFF.h"
-#include "llvm/Support/MachO.h"
+#include "llvm/Support/Path.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include <cctype>
 #include <cstring>
@@ -34,16 +33,29 @@ using namespace llvm::support::endian;
 namespace {
   using llvm::StringRef;
   using llvm::sys::path::is_separator;
+  using llvm::sys::path::Style;
 
+  inline Style real_style(Style style) {
 #ifdef LLVM_ON_WIN32
-  const char *separators = "\\/";
-  const char preferred_separator = '\\';
+    return (style == Style::posix) ? Style::posix : Style::windows;
 #else
-  const char  separators = '/';
-  const char preferred_separator = '/';
+    return (style == Style::windows) ? Style::windows : Style::posix;
 #endif
+  }
 
-  StringRef find_first_component(StringRef path) {
+  inline const char *separators(Style style) {
+    if (real_style(style) == Style::windows)
+      return "\\/";
+    return "/";
+  }
+
+  inline char preferred_separator(Style style) {
+    if (real_style(style) == Style::windows)
+      return '\\';
+    return '/';
+  }
+
+  StringRef find_first_component(StringRef path, Style style) {
     // Look for this first component in the following order.
     // * empty (in this case we return an empty string)
     // * either C: or {//,\\}net.
@@ -53,96 +65,85 @@ namespace {
     if (path.empty())
       return path;
 
-#ifdef LLVM_ON_WIN32
-    // C:
-    if (path.size() >= 2 && std::isalpha(static_cast<unsigned char>(path[0])) &&
-        path[1] == ':')
-      return path.substr(0, 2);
-#endif
+    if (real_style(style) == Style::windows) {
+      // C:
+      if (path.size() >= 2 &&
+          std::isalpha(static_cast<unsigned char>(path[0])) && path[1] == ':')
+        return path.substr(0, 2);
+    }
 
     // //net
-    if ((path.size() > 2) &&
-        is_separator(path[0]) &&
-        path[0] == path[1] &&
-        !is_separator(path[2])) {
+    if ((path.size() > 2) && is_separator(path[0], style) &&
+        path[0] == path[1] && !is_separator(path[2], style)) {
       // Find the next directory separator.
-      size_t end = path.find_first_of(separators, 2);
+      size_t end = path.find_first_of(separators(style), 2);
       return path.substr(0, end);
     }
 
     // {/,\}
-    if (is_separator(path[0]))
+    if (is_separator(path[0], style))
       return path.substr(0, 1);
 
     // * {file,directory}name
-    size_t end = path.find_first_of(separators);
+    size_t end = path.find_first_of(separators(style));
     return path.substr(0, end);
   }
 
-  size_t filename_pos(StringRef str) {
-    if (str.size() == 2 &&
-        is_separator(str[0]) &&
-        str[0] == str[1])
+  size_t filename_pos(StringRef str, Style style) {
+    if (str.size() == 2 && is_separator(str[0], style) && str[0] == str[1])
       return 0;
 
-    if (str.size() > 0 && is_separator(str[str.size() - 1]))
+    if (str.size() > 0 && is_separator(str[str.size() - 1], style))
       return str.size() - 1;
 
-    size_t pos = str.find_last_of(separators, str.size() - 1);
+    size_t pos = str.find_last_of(separators(style), str.size() - 1);
 
-#ifdef LLVM_ON_WIN32
-    if (pos == StringRef::npos)
-      pos = str.find_last_of(':', str.size() - 2);
-#endif
+    if (real_style(style) == Style::windows) {
+      if (pos == StringRef::npos)
+        pos = str.find_last_of(':', str.size() - 2);
+    }
 
-    if (pos == StringRef::npos ||
-        (pos == 1 && is_separator(str[0])))
+    if (pos == StringRef::npos || (pos == 1 && is_separator(str[0], style)))
       return 0;
 
     return pos + 1;
   }
 
-  size_t root_dir_start(StringRef str) {
+  size_t root_dir_start(StringRef str, Style style) {
     // case "c:/"
-#ifdef LLVM_ON_WIN32
-    if (str.size() > 2 &&
-        str[1] == ':' &&
-        is_separator(str[2]))
-      return 2;
-#endif
+    if (real_style(style) == Style::windows) {
+      if (str.size() > 2 && str[1] == ':' && is_separator(str[2], style))
+        return 2;
+    }
 
     // case "//"
-    if (str.size() == 2 &&
-        is_separator(str[0]) &&
-        str[0] == str[1])
+    if (str.size() == 2 && is_separator(str[0], style) && str[0] == str[1])
       return StringRef::npos;
 
     // case "//net"
-    if (str.size() > 3 &&
-        is_separator(str[0]) &&
-        str[0] == str[1] &&
-        !is_separator(str[2])) {
-      return str.find_first_of(separators, 2);
+    if (str.size() > 3 && is_separator(str[0], style) && str[0] == str[1] &&
+        !is_separator(str[2], style)) {
+      return str.find_first_of(separators(style), 2);
     }
 
     // case "/"
-    if (str.size() > 0 && is_separator(str[0]))
+    if (str.size() > 0 && is_separator(str[0], style))
       return 0;
 
     return StringRef::npos;
   }
 
-  size_t parent_path_end(StringRef path) {
-    size_t end_pos = filename_pos(path);
+  size_t parent_path_end(StringRef path, Style style) {
+    size_t end_pos = filename_pos(path, style);
 
-    bool filename_was_sep = path.size() > 0 && is_separator(path[end_pos]);
+    bool filename_was_sep =
+        path.size() > 0 && is_separator(path[end_pos], style);
 
     // Skip separators except for root dir.
-    size_t root_dir_pos = root_dir_start(path.substr(0, end_pos));
+    size_t root_dir_pos = root_dir_start(path.substr(0, end_pos), style);
 
-    while(end_pos > 0 &&
-          (end_pos - 1) != root_dir_pos &&
-          is_separator(path[end_pos - 1]))
+    while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
+           is_separator(path[end_pos - 1], style))
       --end_pos;
 
     if (end_pos == 1 && root_dir_pos == 0 && filename_was_sep)
@@ -230,11 +231,12 @@ namespace llvm {
 namespace sys  {
 namespace path {
 
-const_iterator begin(StringRef path) {
+const_iterator begin(StringRef path, Style style) {
   const_iterator i;
   i.Path      = path;
-  i.Component = find_first_component(path);
+  i.Component = find_first_component(path, style);
   i.Position  = 0;
+  i.S = style;
   return i;
 }
 
@@ -259,27 +261,21 @@ const_iterator &const_iterator::operator++() {
 
   // Both POSIX and Windows treat paths that begin with exactly two separators
   // specially.
-  bool was_net = Component.size() > 2 &&
-    is_separator(Component[0]) &&
-    Component[1] == Component[0] &&
-    !is_separator(Component[2]);
+  bool was_net = Component.size() > 2 && is_separator(Component[0], S) &&
+                 Component[1] == Component[0] && !is_separator(Component[2], S);
 
   // Handle separators.
-  if (is_separator(Path[Position])) {
+  if (is_separator(Path[Position], S)) {
     // Root dir.
-    if (was_net
-#ifdef LLVM_ON_WIN32
+    if (was_net ||
         // c:/
-        || Component.endswith(":")
-#endif
-        ) {
+        (real_style(S) == Style::windows && Component.endswith(":"))) {
       Component = Path.substr(Position, 1);
       return *this;
     }
 
     // Skip extra separators.
-    while (Position != Path.size() &&
-           is_separator(Path[Position])) {
+    while (Position != Path.size() && is_separator(Path[Position], S)) {
       ++Position;
     }
 
@@ -292,7 +288,7 @@ const_iterator &const_iterator::operator++() {
   }
 
   // Find next component.
-  size_t end_pos = Path.find_first_of(separators, Position);
+  size_t end_pos = Path.find_first_of(separators(S), Position);
   Component = Path.slice(Position, end_pos);
 
   return *this;
@@ -306,10 +302,11 @@ ptrdiff_t const_iterator::operator-(const const_iterator &RHS) const {
   return Position - RHS.Position;
 }
 
-reverse_iterator rbegin(StringRef Path) {
+reverse_iterator rbegin(StringRef Path, Style style) {
   reverse_iterator I;
   I.Path = Path;
   I.Position = Path.size();
+  I.S = style;
   return ++I;
 }
 
@@ -324,10 +321,9 @@ reverse_iterator rend(StringRef Path) {
 reverse_iterator &reverse_iterator::operator++() {
   // If we're at the end and the previous char was a '/', return '.' unless
   // we are the root path.
-  size_t root_dir_pos = root_dir_start(Path);
-  if (Position == Path.size() &&
-      Path.size() > root_dir_pos + 1 &&
-      is_separator(Path[Position - 1])) {
+  size_t root_dir_pos = root_dir_start(Path, S);
+  if (Position == Path.size() && Path.size() > root_dir_pos + 1 &&
+      is_separator(Path[Position - 1], S)) {
     --Position;
     Component = ".";
     return *this;
@@ -336,13 +332,12 @@ reverse_iterator &reverse_iterator::operator++() {
   // Skip separators unless it's the root directory.
   size_t end_pos = Position;
 
-  while(end_pos > 0 &&
-        (end_pos - 1) != root_dir_pos &&
-        is_separator(Path[end_pos - 1]))
+  while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
+         is_separator(Path[end_pos - 1], S))
     --end_pos;
 
   // Find next separator.
-  size_t start_pos = filename_pos(Path.substr(0, end_pos));
+  size_t start_pos = filename_pos(Path.substr(0, end_pos), S);
   Component = Path.slice(start_pos, end_pos);
   Position = start_pos;
   return *this;
@@ -357,21 +352,15 @@ ptrdiff_t reverse_iterator::operator-(const reverse_iterator &RHS) const {
   return Position - RHS.Position;
 }
 
-StringRef root_path(StringRef path) {
-  const_iterator b = begin(path),
-                 pos = b,
-                 e = end(path);
+StringRef root_path(StringRef path, Style style) {
+  const_iterator b = begin(path, style), pos = b, e = end(path);
   if (b != e) {
-    bool has_net = b->size() > 2 && is_separator((*b)[0]) && (*b)[1] == (*b)[0];
-    bool has_drive =
-#ifdef LLVM_ON_WIN32
-      b->endswith(":");
-#else
-      false;
-#endif
+    bool has_net =
+        b->size() > 2 && is_separator((*b)[0], style) && (*b)[1] == (*b)[0];
+    bool has_drive = (real_style(style) == Style::windows) && b->endswith(":");
 
     if (has_net || has_drive) {
-      if ((++pos != e) && is_separator((*pos)[0])) {
+      if ((++pos != e) && is_separator((*pos)[0], style)) {
         // {C:/,//net/}, so get the first two components.
         return path.substr(0, b->size() + pos->size());
       } else {
@@ -381,7 +370,7 @@ StringRef root_path(StringRef path) {
     }
 
     // POSIX style root directory.
-    if (is_separator((*b)[0])) {
+    if (is_separator((*b)[0], style)) {
       return *b;
     }
   }
@@ -389,17 +378,12 @@ StringRef root_path(StringRef path) {
   return StringRef();
 }
 
-StringRef root_name(StringRef path) {
-  const_iterator b = begin(path),
-                 e = end(path);
+StringRef root_name(StringRef path, Style style) {
+  const_iterator b = begin(path, style), e = end(path);
   if (b != e) {
-    bool has_net = b->size() > 2 && is_separator((*b)[0]) && (*b)[1] == (*b)[0];
-    bool has_drive =
-#ifdef LLVM_ON_WIN32
-      b->endswith(":");
-#else
-      false;
-#endif
+    bool has_net =
+        b->size() > 2 && is_separator((*b)[0], style) && (*b)[1] == (*b)[0];
+    bool has_drive = (real_style(style) == Style::windows) && b->endswith(":");
 
     if (has_net || has_drive) {
       // just {C:,//net}, return the first component.
@@ -411,27 +395,21 @@ StringRef root_name(StringRef path) {
   return StringRef();
 }
 
-StringRef root_directory(StringRef path) {
-  const_iterator b = begin(path),
-                 pos = b,
-                 e = end(path);
+StringRef root_directory(StringRef path, Style style) {
+  const_iterator b = begin(path, style), pos = b, e = end(path);
   if (b != e) {
-    bool has_net = b->size() > 2 && is_separator((*b)[0]) && (*b)[1] == (*b)[0];
-    bool has_drive =
-#ifdef LLVM_ON_WIN32
-      b->endswith(":");
-#else
-      false;
-#endif
+    bool has_net =
+        b->size() > 2 && is_separator((*b)[0], style) && (*b)[1] == (*b)[0];
+    bool has_drive = (real_style(style) == Style::windows) && b->endswith(":");
 
     if ((has_net || has_drive) &&
         // {C:,//net}, skip to the next component.
-        (++pos != e) && is_separator((*pos)[0])) {
+        (++pos != e) && is_separator((*pos)[0], style)) {
       return *pos;
     }
 
     // POSIX style root directory.
-    if (!has_net && is_separator((*b)[0])) {
+    if (!has_net && is_separator((*b)[0], style)) {
       return *b;
     }
   }
@@ -440,15 +418,13 @@ StringRef root_directory(StringRef path) {
   return StringRef();
 }
 
-StringRef relative_path(StringRef path) {
-  StringRef root = root_path(path);
+StringRef relative_path(StringRef path, Style style) {
+  StringRef root = root_path(path, style);
   return path.substr(root.size());
 }
 
-void append(SmallVectorImpl<char> &path, const Twine &a,
-                                         const Twine &b,
-                                         const Twine &c,
-                                         const Twine &d) {
+void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
+            const Twine &b, const Twine &c, const Twine &d) {
   SmallString<32> a_storage;
   SmallString<32> b_storage;
   SmallString<32> c_storage;
@@ -461,13 +437,15 @@ void append(SmallVectorImpl<char> &path, const Twine &a,
   if (!d.isTriviallyEmpty()) components.push_back(d.toStringRef(d_storage));
 
   for (auto &component : components) {
-    bool path_has_sep = !path.empty() && is_separator(path[path.size() - 1]);
-    bool component_has_sep = !component.empty() && is_separator(component[0]);
-    bool is_root_name = has_root_name(component);
+    bool path_has_sep =
+        !path.empty() && is_separator(path[path.size() - 1], style);
+    bool component_has_sep =
+        !component.empty() && is_separator(component[0], style);
+    bool is_root_name = has_root_name(component, style);
 
     if (path_has_sep) {
       // Strip separators from beginning of component.
-      size_t loc = component.find_first_not_of(separators);
+      size_t loc = component.find_first_not_of(separators(style));
       StringRef c = component.substr(loc);
 
       // Append it.
@@ -477,41 +455,47 @@ void append(SmallVectorImpl<char> &path, const Twine &a,
 
     if (!component_has_sep && !(path.empty() || is_root_name)) {
       // Add a separator.
-      path.push_back(preferred_separator);
+      path.push_back(preferred_separator(style));
     }
 
     path.append(component.begin(), component.end());
   }
 }
 
-void append(SmallVectorImpl<char> &path,
-            const_iterator begin, const_iterator end) {
-  for (; begin != end; ++begin)
-    path::append(path, *begin);
+void append(SmallVectorImpl<char> &path, const Twine &a, const Twine &b,
+            const Twine &c, const Twine &d) {
+  append(path, Style::native, a, b, c, d);
 }
 
-StringRef parent_path(StringRef path) {
-  size_t end_pos = parent_path_end(path);
+void append(SmallVectorImpl<char> &path, const_iterator begin,
+            const_iterator end, Style style) {
+  for (; begin != end; ++begin)
+    path::append(path, style, *begin);
+}
+
+StringRef parent_path(StringRef path, Style style) {
+  size_t end_pos = parent_path_end(path, style);
   if (end_pos == StringRef::npos)
     return StringRef();
   else
     return path.substr(0, end_pos);
 }
 
-void remove_filename(SmallVectorImpl<char> &path) {
-  size_t end_pos = parent_path_end(StringRef(path.begin(), path.size()));
+void remove_filename(SmallVectorImpl<char> &path, Style style) {
+  size_t end_pos = parent_path_end(StringRef(path.begin(), path.size()), style);
   if (end_pos != StringRef::npos)
     path.set_size(end_pos);
 }
 
-void replace_extension(SmallVectorImpl<char> &path, const Twine &extension) {
+void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
+                       Style style) {
   StringRef p(path.begin(), path.size());
   SmallString<32> ext_storage;
   StringRef ext = extension.toStringRef(ext_storage);
 
   // Erase existing extension.
   size_t pos = p.find_last_of('.');
-  if (pos != StringRef::npos && pos >= filename_pos(p))
+  if (pos != StringRef::npos && pos >= filename_pos(p, style))
     path.set_size(pos);
 
   // Append '.' if needed.
@@ -523,8 +507,8 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension) {
 }
 
 void replace_path_prefix(SmallVectorImpl<char> &Path,
-                         const StringRef &OldPrefix,
-                         const StringRef &NewPrefix) {
+                         const StringRef &OldPrefix, const StringRef &NewPrefix,
+                         Style style) {
   if (OldPrefix.empty() && NewPrefix.empty())
     return;
 
@@ -540,53 +524,58 @@ void replace_path_prefix(SmallVectorImpl<char> &Path,
 
   StringRef RelPath = OrigPath.substr(OldPrefix.size());
   SmallString<256> NewPath;
-  path::append(NewPath, NewPrefix);
-  path::append(NewPath, RelPath);
+  path::append(NewPath, style, NewPrefix);
+  path::append(NewPath, style, RelPath);
   Path.swap(NewPath);
 }
 
-void native(const Twine &path, SmallVectorImpl<char> &result) {
+void native(const Twine &path, SmallVectorImpl<char> &result, Style style) {
   assert((!path.isSingleStringRef() ||
           path.getSingleStringRef().data() != result.data()) &&
          "path and result are not allowed to overlap!");
   // Clear result.
   result.clear();
   path.toVector(result);
-  native(result);
+  native(result, style);
 }
 
-void native(SmallVectorImpl<char> &Path) {
-#ifdef LLVM_ON_WIN32
-  std::replace(Path.begin(), Path.end(), '/', '\\');
-#else
-  for (auto PI = Path.begin(), PE = Path.end(); PI < PE; ++PI) {
-    if (*PI == '\\') {
-      auto PN = PI + 1;
-      if (PN < PE && *PN == '\\')
-        ++PI; // increment once, the for loop will move over the escaped slash
-      else
-        *PI = '/';
+void native(SmallVectorImpl<char> &Path, Style style) {
+  if (Path.empty())
+    return;
+  if (real_style(style) == Style::windows) {
+    std::replace(Path.begin(), Path.end(), '/', '\\');
+    if (Path[0] == '~' && (Path.size() == 1 || is_separator(Path[1], style))) {
+      SmallString<128> PathHome;
+      home_directory(PathHome);
+      PathHome.append(Path.begin() + 1, Path.end());
+      Path = PathHome;
+    }
+  } else {
+    for (auto PI = Path.begin(), PE = Path.end(); PI < PE; ++PI) {
+      if (*PI == '\\') {
+        auto PN = PI + 1;
+        if (PN < PE && *PN == '\\')
+          ++PI; // increment once, the for loop will move over the escaped slash
+        else
+          *PI = '/';
+      }
     }
   }
-#endif
 }
 
-std::string convert_to_slash(StringRef path) {
-#ifdef LLVM_ON_WIN32
+std::string convert_to_slash(StringRef path, Style style) {
+  if (real_style(style) != Style::windows)
+    return path;
+
   std::string s = path.str();
   std::replace(s.begin(), s.end(), '\\', '/');
   return s;
-#else
-  return path;
-#endif
 }
 
-StringRef filename(StringRef path) {
-  return *rbegin(path);
-}
+StringRef filename(StringRef path, Style style) { return *rbegin(path, style); }
 
-StringRef stem(StringRef path) {
-  StringRef fname = filename(path);
+StringRef stem(StringRef path, Style style) {
+  StringRef fname = filename(path, style);
   size_t pos = fname.find_last_of('.');
   if (pos == StringRef::npos)
     return fname;
@@ -598,8 +587,8 @@ StringRef stem(StringRef path) {
       return fname.substr(0, pos);
 }
 
-StringRef extension(StringRef path) {
-  StringRef fname = filename(path);
+StringRef extension(StringRef path, Style style) {
+  StringRef fname = filename(path, style);
   size_t pos = fname.find_last_of('.');
   if (pos == StringRef::npos)
     return StringRef();
@@ -611,110 +600,109 @@ StringRef extension(StringRef path) {
       return fname.substr(pos);
 }
 
-bool is_separator(char value) {
-  switch(value) {
-#ifdef LLVM_ON_WIN32
-    case '\\': // fall through
-#endif
-    case '/': return true;
-    default: return false;
-  }
+bool is_separator(char value, Style style) {
+  if (value == '/')
+    return true;
+  if (real_style(style) == Style::windows)
+    return value == '\\';
+  return false;
 }
 
-static const char preferred_separator_string[] = { preferred_separator, '\0' };
-
-StringRef get_separator() {
-  return preferred_separator_string;
+StringRef get_separator(Style style) {
+  if (real_style(style) == Style::windows)
+    return "\\";
+  return "/";
 }
 
-bool has_root_name(const Twine &path) {
+bool has_root_name(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !root_name(p).empty();
+  return !root_name(p, style).empty();
 }
 
-bool has_root_directory(const Twine &path) {
+bool has_root_directory(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !root_directory(p).empty();
+  return !root_directory(p, style).empty();
 }
 
-bool has_root_path(const Twine &path) {
+bool has_root_path(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !root_path(p).empty();
+  return !root_path(p, style).empty();
 }
 
-bool has_relative_path(const Twine &path) {
+bool has_relative_path(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !relative_path(p).empty();
+  return !relative_path(p, style).empty();
 }
 
-bool has_filename(const Twine &path) {
+bool has_filename(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !filename(p).empty();
+  return !filename(p, style).empty();
 }
 
-bool has_parent_path(const Twine &path) {
+bool has_parent_path(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !parent_path(p).empty();
+  return !parent_path(p, style).empty();
 }
 
-bool has_stem(const Twine &path) {
+bool has_stem(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !stem(p).empty();
+  return !stem(p, style).empty();
 }
 
-bool has_extension(const Twine &path) {
+bool has_extension(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  return !extension(p).empty();
+  return !extension(p, style).empty();
 }
 
-bool is_absolute(const Twine &path) {
+bool is_absolute(const Twine &path, Style style) {
   SmallString<128> path_storage;
   StringRef p = path.toStringRef(path_storage);
 
-  bool rootDir = has_root_directory(p),
-#ifdef LLVM_ON_WIN32
-       rootName = has_root_name(p);
-#else
-       rootName = true;
-#endif
+  bool rootDir = has_root_directory(p, style);
+  bool rootName =
+      (real_style(style) != Style::windows) || has_root_name(p, style);
 
   return rootDir && rootName;
 }
 
-bool is_relative(const Twine &path) { return !is_absolute(path); }
+bool is_relative(const Twine &path, Style style) {
+  return !is_absolute(path, style);
+}
 
-StringRef remove_leading_dotslash(StringRef Path) {
+StringRef remove_leading_dotslash(StringRef Path, Style style) {
   // Remove leading "./" (or ".//" or "././" etc.)
-  while (Path.size() > 2 && Path[0] == '.' && is_separator(Path[1])) {
+  while (Path.size() > 2 && Path[0] == '.' && is_separator(Path[1], style)) {
     Path = Path.substr(2);
-    while (Path.size() > 0 && is_separator(Path[0]))
+    while (Path.size() > 0 && is_separator(Path[0], style))
       Path = Path.substr(1);
   }
   return Path;
 }
 
-static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot) {
+static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot,
+                                    Style style) {
   SmallVector<StringRef, 16> components;
 
   // Skip the root path, then look for traversal in the components.
-  StringRef rel = path::relative_path(path);
-  for (StringRef C : llvm::make_range(path::begin(rel), path::end(rel))) {
+  StringRef rel = path::relative_path(path, style);
+  for (StringRef C :
+       llvm::make_range(path::begin(rel, style), path::end(rel))) {
     if (C == ".")
       continue;
     // Leading ".." will remain in the path unless it's at the root.
@@ -723,22 +711,23 @@ static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot) {
         components.pop_back();
         continue;
       }
-      if (path::is_absolute(path))
+      if (path::is_absolute(path, style))
         continue;
     }
     components.push_back(C);
   }
 
-  SmallString<256> buffer = path::root_path(path);
+  SmallString<256> buffer = path::root_path(path, style);
   for (StringRef C : components)
-    path::append(buffer, C);
+    path::append(buffer, style, C);
   return buffer;
 }
 
-bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot) {
+bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot,
+                 Style style) {
   StringRef p(path.data(), path.size());
 
-  SmallString<256> result = remove_dots(p, remove_dot_dot);
+  SmallString<256> result = remove_dots(p, remove_dot_dot, style);
   if (result == path)
     return false;
 
@@ -776,7 +765,7 @@ createTemporaryFile(const Twine &Model, int &ResultFD,
                     llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   SmallString<128> Storage;
   StringRef P = Model.toNullTerminatedStringRef(Storage);
-  assert(P.find_first_of(separators) == StringRef::npos &&
+  assert(P.find_first_of(separators(Style::native)) == StringRef::npos &&
          "Model must be a simple filename.");
   // Use P.begin() so that createUniqueEntity doesn't need to recreate Storage.
   return createUniqueEntity(P.begin(), ResultFD, ResultPath,
@@ -818,12 +807,9 @@ static std::error_code make_absolute(const Twine &current_directory,
                                      bool use_current_directory) {
   StringRef p(path.data(), path.size());
 
-  bool rootDirectory = path::has_root_directory(p),
-#ifdef LLVM_ON_WIN32
-       rootName = path::has_root_name(p);
-#else
-       rootName = true;
-#endif
+  bool rootDirectory = path::has_root_directory(p);
+  bool rootName =
+      (real_style(Style::native) != Style::windows) || path::has_root_name(p);
 
   // Already absolute.
   if (rootName && rootDirectory)
@@ -937,12 +923,49 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
   return std::error_code();
 }
 
+ErrorOr<MD5::MD5Result> md5_contents(int FD) {
+  MD5 Hash;
+
+  constexpr size_t BufSize = 4096;
+  std::vector<uint8_t> Buf(BufSize);
+  int BytesRead = 0;
+  for (;;) {
+    BytesRead = read(FD, Buf.data(), BufSize);
+    if (BytesRead <= 0)
+      break;
+    Hash.update(makeArrayRef(Buf.data(), BytesRead));
+  }
+
+  if (BytesRead < 0)
+    return std::error_code(errno, std::generic_category());
+  MD5::MD5Result Result;
+  Hash.final(Result);
+  return Result;
+}
+
+ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path) {
+  int FD;
+  if (auto EC = openFileForRead(Path, FD))
+    return EC;
+
+  auto Result = md5_contents(FD);
+  close(FD);
+  return Result;
+}
+
 bool exists(file_status status) {
   return status_known(status) && status.type() != file_type::file_not_found;
 }
 
 bool status_known(file_status s) {
   return s.type() != file_type::status_error;
+}
+
+file_type get_file_type(const Twine &Path, bool Follow) {
+  file_status st;
+  if (status(Path, st, Follow))
+    return file_type::status_error;
+  return st.type();
 }
 
 bool is_directory(file_status status) {
@@ -969,6 +992,18 @@ std::error_code is_regular_file(const Twine &path, bool &result) {
   return std::error_code();
 }
 
+bool is_symlink_file(file_status status) {
+  return status.type() == file_type::symlink_file;
+}
+
+std::error_code is_symlink_file(const Twine &path, bool &result) {
+  file_status st;
+  if (std::error_code ec = status(path, st, false))
+    return ec;
+  result = is_symlink_file(st);
+  return std::error_code();
+}
+
 bool is_other(file_status status) {
   return exists(status) &&
          !is_regular_file(status) &&
@@ -990,179 +1025,16 @@ void directory_entry::replace_filename(const Twine &filename, file_status st) {
   Status = st;
 }
 
-template <size_t N>
-static bool startswith(StringRef Magic, const char (&S)[N]) {
-  return Magic.startswith(StringRef(S, N - 1));
+std::error_code directory_entry::status(file_status &result) const {
+  return fs::status(Path, result, FollowSymlinks);
 }
 
-/// @brief Identify the magic in magic.
-file_magic identify_magic(StringRef Magic) {
-  if (Magic.size() < 4)
-    return file_magic::unknown;
-  switch ((unsigned char)Magic[0]) {
-    case 0x00: {
-      // COFF bigobj, CL.exe's LTO object file, or short import library file
-      if (startswith(Magic, "\0\0\xFF\xFF")) {
-        size_t MinSize = offsetof(COFF::BigObjHeader, UUID) + sizeof(COFF::BigObjMagic);
-        if (Magic.size() < MinSize)
-          return file_magic::coff_import_library;
-
-        const char *Start = Magic.data() + offsetof(COFF::BigObjHeader, UUID);
-        if (memcmp(Start, COFF::BigObjMagic, sizeof(COFF::BigObjMagic)) == 0)
-          return file_magic::coff_object;
-        if (memcmp(Start, COFF::ClGlObjMagic, sizeof(COFF::BigObjMagic)) == 0)
-          return file_magic::coff_cl_gl_object;
-        return file_magic::coff_import_library;
-      }
-      // Windows resource file
-      if (startswith(Magic, "\0\0\0\0\x20\0\0\0\xFF"))
-        return file_magic::windows_resource;
-      // 0x0000 = COFF unknown machine type
-      if (Magic[1] == 0)
-        return file_magic::coff_object;
-      if (startswith(Magic, "\0asm"))
-        return file_magic::wasm_object;
-      break;
-    }
-    case 0xDE:  // 0x0B17C0DE = BC wraper
-      if (startswith(Magic, "\xDE\xC0\x17\x0B"))
-        return file_magic::bitcode;
-      break;
-    case 'B':
-      if (startswith(Magic, "BC\xC0\xDE"))
-        return file_magic::bitcode;
-      break;
-    case '!':
-      if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
-        return file_magic::archive;
-      break;
-
-    case '\177':
-      if (startswith(Magic, "\177ELF") && Magic.size() >= 18) {
-        bool Data2MSB = Magic[5] == 2;
-        unsigned high = Data2MSB ? 16 : 17;
-        unsigned low  = Data2MSB ? 17 : 16;
-        if (Magic[high] == 0) {
-          switch (Magic[low]) {
-            default: return file_magic::elf;
-            case 1: return file_magic::elf_relocatable;
-            case 2: return file_magic::elf_executable;
-            case 3: return file_magic::elf_shared_object;
-            case 4: return file_magic::elf_core;
-          }
-        }
-        // It's still some type of ELF file.
-        return file_magic::elf;
-      }
-      break;
-
-    case 0xCA:
-      if (startswith(Magic, "\xCA\xFE\xBA\xBE") ||
-          startswith(Magic, "\xCA\xFE\xBA\xBF")) {
-        // This is complicated by an overlap with Java class files.
-        // See the Mach-O section in /usr/share/file/magic for details.
-        if (Magic.size() >= 8 && Magic[7] < 43)
-          return file_magic::macho_universal_binary;
-      }
-      break;
-
-      // The two magic numbers for mach-o are:
-      // 0xfeedface - 32-bit mach-o
-      // 0xfeedfacf - 64-bit mach-o
-    case 0xFE:
-    case 0xCE:
-    case 0xCF: {
-      uint16_t type = 0;
-      if (startswith(Magic, "\xFE\xED\xFA\xCE") ||
-          startswith(Magic, "\xFE\xED\xFA\xCF")) {
-        /* Native endian */
-        size_t MinSize;
-        if (Magic[3] == char(0xCE))
-          MinSize = sizeof(MachO::mach_header);
-        else
-          MinSize = sizeof(MachO::mach_header_64);
-        if (Magic.size() >= MinSize)
-          type = Magic[12] << 24 | Magic[13] << 12 | Magic[14] << 8 | Magic[15];
-      } else if (startswith(Magic, "\xCE\xFA\xED\xFE") ||
-                 startswith(Magic, "\xCF\xFA\xED\xFE")) {
-        /* Reverse endian */
-        size_t MinSize;
-        if (Magic[0] == char(0xCE))
-          MinSize = sizeof(MachO::mach_header);
-        else
-          MinSize = sizeof(MachO::mach_header_64);
-        if (Magic.size() >= MinSize)
-          type = Magic[15] << 24 | Magic[14] << 12 |Magic[13] << 8 | Magic[12];
-      }
-      switch (type) {
-        default: break;
-        case 1: return file_magic::macho_object;
-        case 2: return file_magic::macho_executable;
-        case 3: return file_magic::macho_fixed_virtual_memory_shared_lib;
-        case 4: return file_magic::macho_core;
-        case 5: return file_magic::macho_preload_executable;
-        case 6: return file_magic::macho_dynamically_linked_shared_lib;
-        case 7: return file_magic::macho_dynamic_linker;
-        case 8: return file_magic::macho_bundle;
-        case 9: return file_magic::macho_dynamically_linked_shared_lib_stub;
-        case 10: return file_magic::macho_dsym_companion;
-        case 11: return file_magic::macho_kext_bundle;
-      }
-      break;
-    }
-    case 0xF0: // PowerPC Windows
-    case 0x83: // Alpha 32-bit
-    case 0x84: // Alpha 64-bit
-    case 0x66: // MPS R4000 Windows
-    case 0x50: // mc68K
-    case 0x4c: // 80386 Windows
-    case 0xc4: // ARMNT Windows
-      if (Magic[1] == 0x01)
-        return file_magic::coff_object;
-
-    case 0x90: // PA-RISC Windows
-    case 0x68: // mc68K Windows
-      if (Magic[1] == 0x02)
-        return file_magic::coff_object;
-      break;
-
-    case 'M': // Possible MS-DOS stub on Windows PE file
-      if (startswith(Magic, "MZ")) {
-        uint32_t off = read32le(Magic.data() + 0x3c);
-        // PE/COFF file, either EXE or DLL.
-        if (off < Magic.size() &&
-            memcmp(Magic.data()+off, COFF::PEMagic, sizeof(COFF::PEMagic)) == 0)
-          return file_magic::pecoff_executable;
-      }
-      break;
-
-    case 0x64: // x86-64 Windows.
-      if (Magic[1] == char(0x86))
-        return file_magic::coff_object;
-      break;
-
-    default:
-      break;
-  }
-  return file_magic::unknown;
-}
-
-std::error_code identify_magic(const Twine &Path, file_magic &Result) {
-  int FD;
-  if (std::error_code EC = openFileForRead(Path, FD))
+ErrorOr<perms> getPermissions(const Twine &Path) {
+  file_status Status;
+  if (std::error_code EC = status(Path, Status))
     return EC;
 
-  char Buffer[32];
-  int Length = read(FD, Buffer, sizeof(Buffer));
-  if (close(FD) != 0 || Length < 0)
-    return std::error_code(errno, std::generic_category());
-
-  Result = identify_magic(StringRef(Buffer, Length));
-  return std::error_code();
-}
-
-std::error_code directory_entry::status(file_status &result) const {
-  return fs::status(Path, result);
+  return Status.permissions();
 }
 
 } // end namespace fs

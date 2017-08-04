@@ -3,6 +3,11 @@
 global pipe int gp;            // expected-error {{type '__global read_only pipe int' can only be used as a function parameter in OpenCL}}
 global reserve_id_t rid;          // expected-error {{the '__global reserve_id_t' type cannot be used to declare a program scope variable}}
 
+extern pipe write_only int get_pipe(); // expected-error {{type '__global write_only pipe int ()' can only be used as a function parameter in OpenCL}}
+
+kernel void test_invalid_reserved_id(reserve_id_t ID) { // expected-error {{'reserve_id_t' cannot be used as the type of a kernel parameter}}
+}
+
 void test1(pipe int *p) {// expected-error {{pipes packet types cannot be of reference type}}
 }
 void test2(pipe p) {// expected-error {{missing actual type specifier for pipe}}

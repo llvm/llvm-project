@@ -1,10 +1,10 @@
 // Check compiling a module interface to a .pcm file.
 //
-// RUN: %clang -fmodules-ts -x c++-module --precompile %s -Dimplementation= -o %t.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
+// RUN: %clang -fmodules-ts -x c++-module --precompile %s -o %t.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 //
 // CHECK-PRECOMPILE: -cc1 {{.*}} -emit-module-interface
 // CHECK-PRECOMPILE-SAME: -o {{.*}}.pcm
-// CHECK-PRECOMPILE-SAME: -x c++-module
+// CHECK-PRECOMPILE-SAME: -x c++
 // CHECK-PRECOMPILE-SAME: modules-ts.cpp
 
 // Check compiling a .pcm file to a .o file.
@@ -18,7 +18,7 @@
 
 // Check use of a .pcm file in another compilation.
 //
-// RUN: %clang -fmodules-ts -fmodule-file=%t.pcm %s -c -o %t.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-USE
+// RUN: %clang -fmodules-ts -fmodule-file=%t.pcm -Dexport= %s -c -o %t.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-USE
 //
 // CHECK-USE: -cc1
 // CHECK-USE-SAME: -emit-obj
@@ -28,11 +28,11 @@
 
 // Check combining precompile and compile steps works.
 //
-// RUN: %clang -fmodules-ts -x c++-module %s -Dimplementation= -c -o %t.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
+// RUN: %clang -fmodules-ts -x c++-module %s -c -o %t.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
 
 // Check that .cppm is treated as a module implicitly.
 // RUN: cp %s %t.cppm
-// RUN: %clang -fmodules-ts --precompile %t.cppm -Dimplementation= -o %t.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
+// RUN: %clang -fmodules-ts --precompile %t.cppm -o %t.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 
-// Note, we use -Dimplementation= to make this a valid module interface unit when building the interface.
-module implementation foo;
+// Note, we use -Dexport= to make this a module implementation unit when building the implementation.
+export module foo;

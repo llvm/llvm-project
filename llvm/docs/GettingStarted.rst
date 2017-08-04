@@ -52,6 +52,18 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``cd llvm/tools``
    * ``svn co http://llvm.org/svn/llvm-project/cfe/trunk clang``
 
+#. Checkout LLD linker **[Optional]**:
+
+   * ``cd where-you-want-llvm-to-live``
+   * ``cd llvm/tools``
+   * ``svn co http://llvm.org/svn/llvm-project/lld/trunk lld``
+
+#. Checkout Polly Loop Optimizer **[Optional]**:
+
+   * ``cd where-you-want-llvm-to-live``
+   * ``cd llvm/tools``
+   * ``svn co http://llvm.org/svn/llvm-project/polly/trunk polly``
+
 #. Checkout Compiler-RT (required to build the sanitizers) **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``
@@ -159,6 +171,8 @@ Linux              PowerPC               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
+NetBSD             x86\ :sup:`1`         GCC, Clang
+NetBSD             amd64                 GCC, Clang
 MacOS X\ :sup:`2`  PowerPC               GCC
 MacOS X            x86                   GCC, Clang
 Cygwin/Win32       x86\ :sup:`1, 3`      GCC
@@ -685,14 +699,14 @@ For developers to work with a git monorepo
 
 .. note::
 
-   This set-up is using unofficial mirror hosted on GitHub, use with caution.
+   This set-up is using an unofficial mirror hosted on GitHub, use with caution.
 
 To set up a clone of all the llvm projects using a unified repository:
 
 .. code-block:: console
 
   % export TOP_LEVEL_DIR=`pwd`
-  % git clone https://github.com/llvm-project/llvm-project/
+  % git clone https://github.com/llvm-project/llvm-project-20170507/ llvm-project
   % cd llvm-project
   % git config branch.master.rebase true
 
@@ -719,10 +733,10 @@ Or a combination of multiple projects:
 
   % cd $TOP_LEVEL_DIR
   % mkdir clang-build && cd clang-build
-  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;compiler-rt"
+  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"
 
-A helper script is provided in `llvm/utils/git-svn/git-llvm`. After you add it
-to your path, you can push committed changes upstream with `git llvm push`.
+A helper script is provided in ``llvm/utils/git-svn/git-llvm``. After you add it
+to your path, you can push committed changes upstream with ``git llvm push``.
 
 .. code-block:: console
 
@@ -731,10 +745,22 @@ to your path, you can push committed changes upstream with `git llvm push`.
 
 While this is using SVN under the hood, it does not require any interaction from
 you with git-svn.
-After a few minutes, `git pull` should get back the changes as they were
-committed. Note that a current limitation is that `git` does not directly record
-file rename, and thus it is propagated to SVN as a combination of delete-add
-instead of a file rename.
+After a few minutes, ``git pull`` should get back the changes as they were
+committed. Note that a current limitation is that ``git`` does not directly
+record file rename, and thus it is propagated to SVN as a combination of
+delete-add instead of a file rename.
+
+The SVN revision of each monorepo commit can be found in the commit notes.  git
+does not fetch notes by default. The following commands will fetch the notes and
+configure git to fetch future notes. Use ``git notes show $commit`` to look up
+the SVN revision of a git commit. The notes show up ``git log``, and searching
+the log is currently the recommended way to look up the git commit for a given
+SVN revision.
+
+.. code-block:: console
+
+  % git config --add remote.origin.fetch +refs/notes/commits:refs/notes/commits
+  % git fetch
 
 If you are using `arc` to interact with Phabricator, you need to manually put it
 at the root of the checkout:
@@ -793,7 +819,8 @@ used by people developing LLVM.
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
-|                         | slow and generates a lot of output.                |
+|                         | slow and generates a lot of output. Sphinx version |
+|                         | 1.5 or later recommended.                          |
 +-------------------------+----------------------------------------------------+
 | LLVM_BUILD_LLVM_DYLIB   | Generate libLLVM.so. This library contains a       |
 |                         | default set of LLVM components that can be         |
@@ -1138,7 +1165,7 @@ the `Command Guide <CommandGuide/index.html>`_.
 ``llc``
 
   ``llc`` is the LLVM backend compiler, which translates LLVM bitcode to a
-  native code assembly file or to C code (with the ``-march=c`` option).
+  native code assembly file.
 
 ``opt``
 

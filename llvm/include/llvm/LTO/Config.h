@@ -17,6 +17,7 @@
 
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
@@ -38,11 +39,15 @@ struct Config {
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
-  Reloc::Model RelocModel = Reloc::PIC_;
+  Optional<Reloc::Model> RelocModel = Reloc::PIC_;
   CodeModel::Model CodeModel = CodeModel::Default;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
+  TargetMachine::CodeGenFileType CGFileType = TargetMachine::CGFT_ObjectFile;
   unsigned OptLevel = 2;
   bool DisableVerify = false;
+
+  /// Use the new pass manager
+  bool UseNewPM = false;
 
   /// Disable entirely the optimizer, including importing for ThinLTO
   bool CodeGenOnly = false;
@@ -67,6 +72,12 @@ struct Config {
 
   /// Sample PGO profile path.
   std::string SampleProfile;
+
+  /// Optimization remarks file path.
+  std::string RemarksFilename = "";
+
+  /// Whether to emit optimization remarks with hotness informations.
+  bool RemarksWithHotness = false;
 
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;

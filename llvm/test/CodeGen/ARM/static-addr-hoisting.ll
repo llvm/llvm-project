@@ -6,9 +6,9 @@ define void @multiple_store() {
 ; CHECK: movs [[VAL:r[0-9]+]], #42
 ; CHECK: movt r[[BASE1]], #15
 
-; CHECK: str [[VAL]], [r[[BASE1]]]
-; CHECK: str [[VAL]], [r[[BASE1]], #24]
-; CHECK: str.w [[VAL]], [r[[BASE1]], #42]
+; CHECK-DAG: str [[VAL]], [r[[BASE1]]]
+; CHECK-DAG: str [[VAL]], [r[[BASE1]], #24]
+; CHECK-DAG: str.w [[VAL]], [r[[BASE1]], #42]
 
 ; CHECK: movw r[[BASE2:[0-9]+]], #20394
 ; CHECK: movt r[[BASE2]], #18

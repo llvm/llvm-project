@@ -19,7 +19,7 @@
 namespace llvm {
 class PassRegistry;
 class Pass;
-} // anonymous namespace
+} // namespace llvm
 
 namespace polly {
 llvm::Pass *createFlattenSchedulePass();

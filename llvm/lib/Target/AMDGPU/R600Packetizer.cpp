@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Debug.h"
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "R600InstrInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -36,7 +36,7 @@ class R600Packetizer : public MachineFunctionPass {
 
 public:
   static char ID;
-  R600Packetizer(const TargetMachine &TM) : MachineFunctionPass(ID) {}
+  R600Packetizer() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -404,6 +404,6 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
 
 } // end anonymous namespace
 
-llvm::FunctionPass *llvm::createR600Packetizer(TargetMachine &tm) {
-  return new R600Packetizer(tm);
+llvm::FunctionPass *llvm::createR600Packetizer() {
+  return new R600Packetizer();
 }

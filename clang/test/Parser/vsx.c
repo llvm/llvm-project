@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -faltivec -target-feature +vsx -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -faltivec -target-feature +vsx -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -target-feature +vsx -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -target-feature +vsx -fsyntax-only -verify %s
 
 // Legitimate for VSX.
 __vector double vv_d1;

@@ -20,7 +20,8 @@
 #include <vector>
 
 namespace llvm {
-  class raw_ostream;
+
+class raw_ostream;
 
 /// StringMatcher - Given a list of strings and code to execute when they match,
 /// output a simple switch tree to classify the input string.
@@ -30,7 +31,7 @@ namespace llvm {
 ///
 class StringMatcher {
 public:
-  typedef std::pair<std::string, std::string> StringPair;
+  using StringPair = std::pair<std::string, std::string>;
 
 private:
   StringRef StrVariableName;
@@ -38,7 +39,7 @@ private:
   raw_ostream &OS;
 
 public:
-  StringMatcher(StringRef strVariableName, 
+  StringMatcher(StringRef strVariableName,
                 const std::vector<StringPair> &matches, raw_ostream &os)
     : StrVariableName(strVariableName), Matches(matches), OS(os) {}
 
@@ -49,6 +50,6 @@ private:
                                 unsigned CharNo, unsigned IndentCount) const;
 };
 
-} // end llvm namespace.
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TABLEGEN_STRINGMATCHER_H

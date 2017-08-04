@@ -14,6 +14,8 @@
 #include <complex>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test()
@@ -38,7 +40,7 @@ test()
     assert(c.real() == 10.5);
     assert(c.imag() == -9.5);
     }
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     {
     constexpr std::complex<T> c;
     static_assert(c.real() == 0, "");

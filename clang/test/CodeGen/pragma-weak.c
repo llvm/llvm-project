@@ -189,4 +189,4 @@ void zzz(void){}
 int correct_linkage;
 
 // CHECK: attributes [[NI]] = { noinline nounwind{{.*}} }
-// CHECK: attributes [[RN]] = { noinline nounwind readnone{{.*}} }
+// CHECK: attributes [[RN]] = { noinline nounwind optnone readnone{{.*}} }

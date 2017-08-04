@@ -2,6 +2,7 @@
 ; RUN: opt -module-summary %p/Inputs/diagnostic-handler-remarks.ll -o %t2.bc
 
 ; Optimization records are collected regardless of the diagnostic handler
+; RUN: rm -f %t.yaml.thin.0.yaml %t.yaml.thin.1.yaml
 ; RUN: llvm-lto -thinlto-action=run \
 ; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -exported-symbol _func2 \

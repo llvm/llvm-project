@@ -6,10 +6,10 @@ target triple = "powerpc64le--linux"
 define i32 @foo(i32 %guard, ...) {
   %vl = alloca i8*, align 8
   %1 = bitcast i8** %vl to i8*
-  call void @llvm.lifetime.start(i64 32, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 32, i8* %1)
   call void @llvm.va_start(i8* %1)
   call void @llvm.va_end(i8* %1)
-  call void @llvm.lifetime.end(i64 32, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* %1)
   ret i32 0
 }
 
@@ -23,10 +23,10 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK: [[STACK:%.*]] = bitcast {{.*}} @__msan_va_arg_tls to i8*
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[C]], i8* [[STACK]], i64 [[B]], i32 8, i1 false)
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 declare void @llvm.va_start(i8*) #2
 declare void @llvm.va_end(i8*) #2
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 define i32 @bar() {
   %1 = call i32 (i32, ...) @foo(i32 0, i32 1, i64 2, double 3.000000e+00)

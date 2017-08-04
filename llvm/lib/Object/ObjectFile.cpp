@@ -1,4 +1,4 @@
-//===- ObjectFile.cpp - File format independent object file -----*- C++ -*-===//
+//===- ObjectFile.cpp - File format independent object file ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,19 +12,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <system_error>
 
 using namespace llvm;
 using namespace object;
 
-void ObjectFile::anchor() { }
+void ObjectFile::anchor() {}
 
 ObjectFile::ObjectFile(unsigned int Type, MemoryBufferRef Source)
     : SymbolicFile(Type, Source) {}
@@ -71,42 +80,42 @@ section_iterator ObjectFile::getRelocatedSection(DataRefImpl Sec) const {
 }
 
 Expected<std::unique_ptr<ObjectFile>>
-ObjectFile::createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type) {
+ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   StringRef Data = Object.getBuffer();
-  if (Type == sys::fs::file_magic::unknown)
-    Type = sys::fs::identify_magic(Data);
+  if (Type == file_magic::unknown)
+    Type = identify_magic(Data);
 
   switch (Type) {
-  case sys::fs::file_magic::unknown:
-  case sys::fs::file_magic::bitcode:
-  case sys::fs::file_magic::coff_cl_gl_object:
-  case sys::fs::file_magic::archive:
-  case sys::fs::file_magic::macho_universal_binary:
-  case sys::fs::file_magic::windows_resource:
+  case file_magic::unknown:
+  case file_magic::bitcode:
+  case file_magic::coff_cl_gl_object:
+  case file_magic::archive:
+  case file_magic::macho_universal_binary:
+  case file_magic::windows_resource:
     return errorCodeToError(object_error::invalid_file_type);
-  case sys::fs::file_magic::elf:
-  case sys::fs::file_magic::elf_relocatable:
-  case sys::fs::file_magic::elf_executable:
-  case sys::fs::file_magic::elf_shared_object:
-  case sys::fs::file_magic::elf_core:
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core:
     return errorOrToExpected(createELFObjectFile(Object));
-  case sys::fs::file_magic::macho_object:
-  case sys::fs::file_magic::macho_executable:
-  case sys::fs::file_magic::macho_fixed_virtual_memory_shared_lib:
-  case sys::fs::file_magic::macho_core:
-  case sys::fs::file_magic::macho_preload_executable:
-  case sys::fs::file_magic::macho_dynamically_linked_shared_lib:
-  case sys::fs::file_magic::macho_dynamic_linker:
-  case sys::fs::file_magic::macho_bundle:
-  case sys::fs::file_magic::macho_dynamically_linked_shared_lib_stub:
-  case sys::fs::file_magic::macho_dsym_companion:
-  case sys::fs::file_magic::macho_kext_bundle:
+  case file_magic::macho_object:
+  case file_magic::macho_executable:
+  case file_magic::macho_fixed_virtual_memory_shared_lib:
+  case file_magic::macho_core:
+  case file_magic::macho_preload_executable:
+  case file_magic::macho_dynamically_linked_shared_lib:
+  case file_magic::macho_dynamic_linker:
+  case file_magic::macho_bundle:
+  case file_magic::macho_dynamically_linked_shared_lib_stub:
+  case file_magic::macho_dsym_companion:
+  case file_magic::macho_kext_bundle:
     return createMachOObjectFile(Object);
-  case sys::fs::file_magic::coff_object:
-  case sys::fs::file_magic::coff_import_library:
-  case sys::fs::file_magic::pecoff_executable:
+  case file_magic::coff_object:
+  case file_magic::coff_import_library:
+  case file_magic::pecoff_executable:
     return errorOrToExpected(createCOFFObjectFile(Object));
-  case sys::fs::file_magic::wasm_object:
+  case file_magic::wasm_object:
     return createWasmObjectFile(Object);
   }
   llvm_unreachable("Unexpected Object File Type");

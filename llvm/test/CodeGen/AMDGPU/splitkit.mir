@@ -1,0 +1,105 @@
+# RUN: llc -o - %s -mtriple=amdgcn-- -mcpu=fiji -verify-machineinstrs -run-pass=greedy,virtregrewriter | FileCheck %s
+--- |
+  define amdgpu_kernel void @func0() #0 { ret void }
+  define amdgpu_kernel void @func1() #0 { ret void }
+  define amdgpu_kernel void @splitHoist() #0 { ret void }
+
+  attributes #0 = { "amdgpu-num-sgpr"="12" }
+...
+---
+# Make sure we only get a single spill+reload even if liverange splitting
+# created a sequence of multiple copy instructions.
+# CHECK-LABEL: name: func0
+# CHECK: SI_SPILL_S128_SAVE
+# CHECK-NOT: SI_SPILL_S128_SAVE
+# CHECK: S_NOP 0
+# CHECK: SI_SPILL_S128_RESTORE
+# CHECK-NOT: SI_SPILL_S128_RESTORE
+name: func0
+body: |
+  bb.0:
+    S_NOP 0, implicit-def undef %0.sub0 : sreg_128
+    S_NOP 0, implicit-def %0.sub3 : sreg_128
+
+    ; Clobber registers
+    S_NOP 0, implicit-def dead %sgpr0, implicit-def dead %sgpr1, implicit-def dead %sgpr2, implicit-def dead %sgpr3, implicit-def dead %sgpr4, implicit-def dead %sgpr5, implicit-def dead %sgpr6, implicit-def dead %sgpr7, implicit-def dead %sgpr8, implicit-def dead %sgpr9, implicit-def dead %sgpr10, implicit-def dead %sgpr11
+
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0.sub3
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0.sub3
+...
+---
+# LiveRange splitting should split this into 2 intervals with the second getting
+# allocated to sgpr0_sgpr1 and the first to something else so we see two copies
+# in between for the two subregisters that are alive.
+# CHECK-LABEL: name: func1
+# CHECK: [[REG0:%sgpr[0-9]+]] = COPY %sgpr0
+# CHECK: [[REG1:%sgpr[0-9]+]] = COPY %sgpr2
+# CHECK: S_NOP 0
+# CHECK: S_NOP 0, implicit [[REG0]]
+# CHECK: S_NOP 0, implicit [[REG1]]
+# CHECK: %sgpr0 = COPY [[REG0]]
+# CHECK: %sgpr2 = COPY [[REG1]]
+# CHECK: S_NOP
+# CHECK: S_NOP 0, implicit %sgpr0
+# CHECK: S_NOP 0, implicit %sgpr2
+name: func1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %sgpr0, %sgpr1, %sgpr2
+    undef %0.sub0 : sreg_128 = COPY %sgpr0
+    %0.sub2 = COPY %sgpr2
+
+    S_NOP 0, implicit-def dead %sgpr0, implicit-def dead %sgpr1
+
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0.sub2
+
+    ; Clobber everything but sgpr0-sgpr3
+    S_NOP 0, implicit-def dead %sgpr4, implicit-def dead %sgpr5, implicit-def dead %sgpr6, implicit-def dead %sgpr7, implicit-def dead %sgpr8, implicit-def dead %sgpr9, implicit-def dead %sgpr10, implicit-def dead %sgpr11, implicit-def dead %sgpr12, implicit-def dead %sgpr13, implicit-def dead %sgpr14, implicit-def dead %sgpr15, implicit-def dead %vcc_lo, implicit-def dead %vcc_hi
+
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0.sub2
+...
+---
+# Check that copy hoisting out of loops works. This mainly should not crash the
+# compiler when it hoists a subreg copy sequence.
+# CHECK-LABEL: name: splitHoist
+# CHECK: S_NOP 0, implicit-def %sgpr0
+# CHECK: S_NOP 0, implicit-def %sgpr3
+# CHECK-NEXT: SI_SPILL_S128_SAVE
+name: splitHoist
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_NOP 0, implicit-def undef %0.sub0 : sreg_128
+    S_NOP 0, implicit-def %0.sub3 : sreg_128
+
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.1, %bb.3
+    S_NOP 0, implicit %0.sub0
+
+    ; Clobber registers
+    S_NOP 0, implicit-def dead %sgpr0, implicit-def dead %sgpr1, implicit-def dead %sgpr2, implicit-def dead %sgpr3, implicit-def dead %sgpr4, implicit-def dead %sgpr5, implicit-def dead %sgpr6, implicit-def dead %sgpr7, implicit-def dead %sgpr8, implicit-def dead %sgpr9, implicit-def dead %sgpr10, implicit-def dead %sgpr11
+
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    ; Clobber registers
+    S_NOP 0, implicit-def dead %sgpr0, implicit-def dead %sgpr1, implicit-def dead %sgpr2, implicit-def dead %sgpr3, implicit-def dead %sgpr4, implicit-def dead %sgpr5, implicit-def dead %sgpr6, implicit-def dead %sgpr7, implicit-def dead %sgpr8, implicit-def dead %sgpr9, implicit-def dead %sgpr10, implicit-def dead %sgpr11
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0.sub3
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0.sub3
+...

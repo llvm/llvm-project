@@ -158,3 +158,30 @@ struct PublicDeleted {
 public:
   PublicDeleted(const PublicDeleted &) = delete;
 };
+
+#define M1                                                         \
+  struct PrivateDeletedMacro {                                     \
+  private:                                                         \
+    PrivateDeletedMacro(const PrivateDeletedMacro &) = delete;     \
+  };                                                               \
+  struct ProtectedDeletedMacro {                                   \
+  protected:                                                       \
+    ProtectedDeletedMacro(const ProtectedDeletedMacro &) = delete; \
+  }
+
+M1;
+
+#define DISALLOW_COPY_AND_ASSIGN(name) \
+  name(const name &) = delete;         \
+  void operator=(const name &) = delete
+
+struct PrivateDeletedMacro2 {
+private:
+  DISALLOW_COPY_AND_ASSIGN(PrivateDeletedMacro2);
+};
+
+struct ProtectedDeletedMacro2 {
+protected:
+  DISALLOW_COPY_AND_ASSIGN(ProtectedDeletedMacro2);
+};
+

@@ -24,7 +24,15 @@
 using namespace clang;
 using namespace CodeGen;
 
-static RequiredArgs
+namespace {
+struct MemberCallInfo {
+  RequiredArgs ReqArgs;
+  // Number of prefix arguments for the call. Ignores the `this` pointer.
+  unsigned PrefixSize;
+};
+}
+
+static MemberCallInfo
 commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
                                   llvm::Value *This, llvm::Value *ImplicitParam,
                                   QualType ImplicitParamTy, const CallExpr *CE,
@@ -48,6 +56,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
 
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size(), MD);
+  unsigned PrefixSize = Args.size() - 1;
 
   // And the rest of the call args.
   if (RtlArgs) {
@@ -65,7 +74,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
         FPT->getNumParams() == 0 &&
         "No CallExpr specified for function with non-zero number of arguments");
   }
-  return required;
+  return {required, PrefixSize};
 }
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
@@ -75,9 +84,10 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
     const CallExpr *CE, CallArgList *RtlArgs) {
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   CallArgList Args;
-  RequiredArgs required = commonEmitCXXMemberOrOperatorCall(
+  MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
-  auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required);
+  auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
+      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
   return EmitCall(FnInfo, Callee, ReturnValue, Args);
 }
 
@@ -189,7 +199,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   bool CanUseVirtualCall = MD->isVirtual() && !HasQualifier;
 
   const CXXMethodDecl *DevirtualizedMethod = nullptr;
-  if (CanUseVirtualCall && CanDevirtualizeMemberFunctionCall(Base, MD)) {
+  if (CanUseVirtualCall &&
+      MD->getDevirtualizedMethod(Base, getLangOpts().AppleKext)) {
     const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
     DevirtualizedMethod = MD->getCorrespondingMethodInClass(BestDynamicDecl);
     assert(DevirtualizedMethod);
@@ -430,7 +441,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
-  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required),
+  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
+                                                      /*PrefixSize=*/0),
                   Callee, ReturnValue, Args);
 }
 
@@ -669,7 +681,10 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   // Emit the array size expression.
   // We multiply the size of all dimensions for NumElements.
   // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
-  numElements = CGF.EmitScalarExpr(e->getArraySize());
+  numElements = CGF.CGM.EmitConstantExpr(e->getArraySize(),
+                                         CGF.getContext().getSizeType(), &CGF);
+  if (!numElements)
+    numElements = CGF.EmitScalarExpr(e->getArraySize());
   assert(isa<llvm::IntegerType>(numElements->getType()));
 
   // The number of elements can be have an arbitrary integer type;
@@ -1266,10 +1281,10 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
       Fn && Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
     // FIXME: Add addAttribute to CallSite.
     if (llvm::CallInst *CI = dyn_cast<llvm::CallInst>(CallOrInvoke))
-      CI->addAttribute(llvm::AttributeSet::FunctionIndex,
+      CI->addAttribute(llvm::AttributeList::FunctionIndex,
                        llvm::Attribute::Builtin);
     else if (llvm::InvokeInst *II = dyn_cast<llvm::InvokeInst>(CallOrInvoke))
-      II->addAttribute(llvm::AttributeSet::FunctionIndex,
+      II->addAttribute(llvm::AttributeList::FunctionIndex,
                        llvm::Attribute::Builtin);
     else
       llvm_unreachable("unexpected kind of call instruction");
@@ -1517,13 +1532,13 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     assert(E->getNumPlacementArgs() == 1);
     const Expr *arg = *E->placement_arguments().begin();
 
-    AlignmentSource alignSource;
-    allocation = EmitPointerWithAlignment(arg, &alignSource);
+    LValueBaseInfo BaseInfo;
+    allocation = EmitPointerWithAlignment(arg, &BaseInfo);
 
     // The pointer expression will, in many cases, be an opaque void*.
     // In these cases, discard the computed alignment and use the
     // formal alignment of the allocated type.
-    if (alignSource != AlignmentSource::Decl)
+    if (BaseInfo.getAlignmentSource() != AlignmentSource::Decl)
       allocation = Address(allocation.getPointer(), allocAlign);
 
     // Set up allocatorArgs for the call to operator delete if it's not
@@ -1644,8 +1659,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 
   // Passing pointer through invariant.group.barrier to avoid propagation of
   // vptrs information which may be included in previous type.
+  // To not break LTO with different optimizations levels, we do it regardless
+  // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
-      CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       allocator->isReservedGlobalPlacementOperator())
     result = Address(Builder.CreateInvariantGroupBarrier(result.getPointer()),
                      result.getAlignment());

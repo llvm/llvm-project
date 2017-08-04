@@ -77,9 +77,15 @@ STATISTIC(NumMovedLoads, "Number of load insts hoisted or sunk");
 STATISTIC(NumMovedCalls, "Number of call insts hoisted or sunk");
 STATISTIC(NumPromoted, "Number of memory locations promoted to registers");
 
+/// Memory promotion is enabled by default.
 static cl::opt<bool>
-    DisablePromotion("disable-licm-promotion", cl::Hidden,
+    DisablePromotion("disable-licm-promotion", cl::Hidden, cl::init(false),
                      cl::desc("Disable memory promotion in LICM pass"));
+
+static cl::opt<uint32_t> MaxNumUsesTraversed(
+    "licm-max-num-uses-traversed", cl::Hidden, cl::init(8),
+    cl::desc("Max num uses visited for identifying load "
+             "invariance in loop using invariant start (default = 8)"));
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
@@ -201,9 +207,9 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.SE, ORE, true))
     return PreservedAnalyses::all();
 
-  // FIXME: There is no setPreservesCFG in the new PM. When that becomes
-  // available, it should be used here.
-  return getLoopPassPreservedAnalyses();
+  auto PA = getLoopPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 char LegacyLICMPass::ID = 0;
@@ -425,6 +431,29 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         continue;
       }
 
+      // Attempt to remove floating point division out of the loop by converting
+      // it to a reciprocal multiplication.
+      if (I.getOpcode() == Instruction::FDiv &&
+          CurLoop->isLoopInvariant(I.getOperand(1)) &&
+          I.hasAllowReciprocal()) {
+        auto Divisor = I.getOperand(1);
+        auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
+        auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
+        ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
+        ReciprocalDivisor->insertBefore(&I);
+
+        auto Product = BinaryOperator::CreateFMul(I.getOperand(0),
+                                                  ReciprocalDivisor);
+        Product->setFastMathFlags(I.getFastMathFlags());
+        Product->insertAfter(&I);
+        I.replaceAllUsesWith(Product);
+        I.eraseFromParent();
+
+        hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
+        Changed = true;
+        continue;
+      }
+
       // Try hoisting the instruction out to the preheader.  We can only do this
       // if all of the operands of the instruction are loop invariant and if it
       // is safe to hoist the instruction.
@@ -461,7 +490,10 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
 
   SafetyInfo->MayThrow = SafetyInfo->HeaderMayThrow;
   // Iterate over loop instructions and compute safety info.
-  for (Loop::block_iterator BB = CurLoop->block_begin(),
+  // Skip header as it has been computed and stored in HeaderMayThrow.
+  // The first block in loopinfo.Blocks is guaranteed to be the header.
+  assert(Header == *CurLoop->getBlocks().begin() && "First block must be header");
+  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
        (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
     for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end();
@@ -475,6 +507,59 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
     if (Constant *PersonalityFn = Fn->getPersonalityFn())
       if (isFuncletEHPersonality(classifyEHPersonality(PersonalityFn)))
         SafetyInfo->BlockColors = colorEHFunclets(*Fn);
+}
+
+// Return true if LI is invariant within scope of the loop. LI is invariant if
+// CurLoop is dominated by an invariant.start representing the same memory location
+// and size as the memory location LI loads from, and also the invariant.start
+// has no uses.
+static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
+                                  Loop *CurLoop) {
+  Value *Addr = LI->getOperand(0);
+  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const uint32_t LocSizeInBits = DL.getTypeSizeInBits(
+      cast<PointerType>(Addr->getType())->getElementType());
+
+  // if the type is i8 addrspace(x)*, we know this is the type of
+  // llvm.invariant.start operand
+  auto *PtrInt8Ty = PointerType::get(Type::getInt8Ty(LI->getContext()),
+                                     LI->getPointerAddressSpace());
+  unsigned BitcastsVisited = 0;
+  // Look through bitcasts until we reach the i8* type (this is invariant.start
+  // operand type).
+  while (Addr->getType() != PtrInt8Ty) {
+    auto *BC = dyn_cast<BitCastInst>(Addr);
+    // Avoid traversing high number of bitcast uses.
+    if (++BitcastsVisited > MaxNumUsesTraversed || !BC)
+      return false;
+    Addr = BC->getOperand(0);
+  }
+
+  unsigned UsesVisited = 0;
+  // Traverse all uses of the load operand value, to see if invariant.start is
+  // one of the uses, and whether it dominates the load instruction.
+  for (auto *U : Addr->users()) {
+    // Avoid traversing for Load operand with high number of users.
+    if (++UsesVisited > MaxNumUsesTraversed)
+      return false;
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
+    // If there are escaping uses of invariant.start instruction, the load maybe
+    // non-invariant.
+    if (!II || II->getIntrinsicID() != Intrinsic::invariant_start ||
+        !II->use_empty())
+      continue;
+    unsigned InvariantSizeInBits =
+        cast<ConstantInt>(II->getArgOperand(0))->getSExtValue() * 8;
+    // Confirm the invariant.start location size contains the load operand size
+    // in bits. Also, the invariant.start should dominate the load, and we
+    // should not hoist the load out of a loop that contains this dominating
+    // invariant.start.
+    if (LocSizeInBits <= InvariantSizeInBits &&
+        DT->properlyDominates(II->getParent(), CurLoop->getHeader()))
+      return true;
+  }
+
+  return false;
 }
 
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
@@ -491,6 +576,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (AA->pointsToConstantMemory(LI->getOperand(0)))
       return true;
     if (LI->getMetadata(LLVMContext::MD_invariant_load))
+      return true;
+
+    // This checks for an invariant.start dominating the load.
+    if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
     // Don't hoist loads which have may-aliased stores in loop.
@@ -782,7 +871,7 @@ static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   DEBUG(dbgs() << "LICM hoisting to " << Preheader->getName() << ": " << I
                << "\n");
   ORE->emit(OptimizationRemark(DEBUG_TYPE, "Hoisted", &I)
-            << "hosting " << ore::NV("Inst", &I));
+            << "hoisting " << ore::NV("Inst", &I));
 
   // Metadata can be dependent on conditions we are hoisting above.
   // Conservatively strip all metadata on the instruction unless we were
@@ -852,6 +941,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   LoopInfo &LI;
   DebugLoc DL;
   int Alignment;
+  bool UnorderedAtomic;
   AAMDNodes AATags;
 
   Value *maybeInsertLCSSAPHI(Value *V, BasicBlock *BB) const {
@@ -875,10 +965,11 @@ public:
                SmallVectorImpl<BasicBlock *> &LEB,
                SmallVectorImpl<Instruction *> &LIP, PredIteratorCache &PIC,
                AliasSetTracker &ast, LoopInfo &li, DebugLoc dl, int alignment,
-               const AAMDNodes &AATags)
+               bool UnorderedAtomic, const AAMDNodes &AATags)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), PredCache(PIC), AST(ast),
-        LI(li), DL(std::move(dl)), Alignment(alignment), AATags(AATags) {}
+        LI(li), DL(std::move(dl)), Alignment(alignment),
+        UnorderedAtomic(UnorderedAtomic),AATags(AATags) {}
 
   bool isInstInList(Instruction *I,
                     const SmallVectorImpl<Instruction *> &) const override {
@@ -902,6 +993,8 @@ public:
       Value *Ptr = maybeInsertLCSSAPHI(SomePtr, ExitBlock);
       Instruction *InsertPos = LoopInsertPts[i];
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
+      if (UnorderedAtomic)
+        NewSI->setOrdering(AtomicOrdering::Unordered);
       NewSI->setAlignment(Alignment);
       NewSI->setDebugLoc(DL);
       if (AATags)
@@ -992,18 +1085,41 @@ bool llvm::promoteLoopAccessesToScalars(
   // We start with an alignment of one and try to find instructions that allow
   // us to prove better alignment.
   unsigned Alignment = 1;
+  // Keep track of which types of access we see
+  bool SawUnorderedAtomic = false; 
+  bool SawNotAtomic = false;
   AAMDNodes AATags;
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
+  // Do we know this object does not escape ?
+  bool IsKnownNonEscapingObject = false;
   if (SafetyInfo->MayThrow) {
     // If a loop can throw, we have to insert a store along each unwind edge.
     // That said, we can't actually make the unwind edge explicit. Therefore,
     // we have to prove that the store is dead along the unwind edge.
     //
-    // Currently, this code just special-cases alloca instructions.
-    if (!isa<AllocaInst>(GetUnderlyingObject(SomePtr, MDL)))
-      return false;
+    // If the underlying object is not an alloca, nor a pointer that does not
+    // escape, then we can not effectively prove that the store is dead along
+    // the unwind edge. i.e. the caller of this function could have ways to
+    // access the pointed object.
+    Value *Object = GetUnderlyingObject(SomePtr, MDL);
+    // If this is a base pointer we do not understand, simply bail.
+    // We only handle alloca and return value from alloc-like fn right now.
+    if (!isa<AllocaInst>(Object)) {
+        if (!isAllocLikeFn(Object, TLI))
+          return false;
+      // If this is an alloc like fn. There are more constraints we need to verify.
+      // More specifically, we must make sure that the pointer can not escape.
+      //
+      // NOTE: PointerMayBeCaptured is not enough as the pointer may have escaped
+      // even though its not captured by the enclosing function. Standard allocation
+      // functions like malloc, calloc, and operator new return values which can
+      // be assumed not to have previously escaped.
+      if (PointerMayBeCaptured(Object, true, true))
+        return false;
+      IsKnownNonEscapingObject = true;
+    }
   }
 
   // Check that all of the pointers in the alias set have the same type.  We
@@ -1029,8 +1145,11 @@ bool llvm::promoteLoopAccessesToScalars(
       // it.
       if (LoadInst *Load = dyn_cast<LoadInst>(UI)) {
         assert(!Load->isVolatile() && "AST broken");
-        if (!Load->isSimple())
+        if (!Load->isUnordered())
           return false;
+        
+        SawUnorderedAtomic |= Load->isAtomic();
+        SawNotAtomic |= !Load->isAtomic();
 
         if (!DereferenceableInPH)
           DereferenceableInPH = isSafeToExecuteUnconditionally(
@@ -1041,8 +1160,11 @@ bool llvm::promoteLoopAccessesToScalars(
         if (UI->getOperand(1) != ASIV)
           continue;
         assert(!Store->isVolatile() && "AST broken");
-        if (!Store->isSimple())
+        if (!Store->isUnordered())
           return false;
+
+        SawUnorderedAtomic |= Store->isAtomic();
+        SawNotAtomic |= !Store->isAtomic();
 
         // If the store is guaranteed to execute, both properties are satisfied.
         // We may want to check if a store is guaranteed to execute even if we
@@ -1096,6 +1218,12 @@ bool llvm::promoteLoopAccessesToScalars(
     }
   }
 
+  // If we found both an unordered atomic instruction and a non-atomic memory
+  // access, bail.  We can't blindly promote non-atomic to atomic since we
+  // might not be able to lower the result.  We can't downgrade since that
+  // would violate memory model.  Also, align 0 is an error for atomics.
+  if (SawUnorderedAtomic && SawNotAtomic)
+    return false;
 
   // If we couldn't prove we can hoist the load, bail.
   if (!DereferenceableInPH)
@@ -1106,10 +1234,15 @@ bool llvm::promoteLoopAccessesToScalars(
   // stores along paths which originally didn't have them without violating the
   // memory model.
   if (!SafeToInsertStore) {
-    Value *Object = GetUnderlyingObject(SomePtr, MDL);
-    SafeToInsertStore =
-        (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) &&
+    // If this is a known non-escaping object, it is safe to insert the stores.
+    if (IsKnownNonEscapingObject)
+      SafeToInsertStore = true;
+    else {
+      Value *Object = GetUnderlyingObject(SomePtr, MDL);
+      SafeToInsertStore =
+        (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) && 
         !PointerMayBeCaptured(Object, true, true);
+    }
   }
 
   // If we've still failed to prove we can sink the store, give up.
@@ -1134,12 +1267,15 @@ bool llvm::promoteLoopAccessesToScalars(
   SmallVector<PHINode *, 16> NewPHIs;
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
-                        InsertPts, PIC, *CurAST, *LI, DL, Alignment, AATags);
+                        InsertPts, PIC, *CurAST, *LI, DL, Alignment,
+                        SawUnorderedAtomic, AATags);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = new LoadInst(
       SomePtr, SomePtr->getName() + ".promoted", Preheader->getTerminator());
+  if (SawUnorderedAtomic)
+    PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
   PreheaderLoad->setAlignment(Alignment);
   PreheaderLoad->setDebugLoc(DL);
   if (AATags)

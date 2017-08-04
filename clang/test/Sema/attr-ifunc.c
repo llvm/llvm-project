@@ -39,5 +39,9 @@ void f1() __attribute__((ifunc("f1_ifunc")));
 //expected-error@-1 {{definition with same mangled name as another definition}}
 void* f1_ifunc() { return 0; }
 
+void* f6_ifunc(int i);
+void __attribute__((ifunc("f6_ifunc"))) f6() {}
+//expected-error@-1 {{definition 'f6' cannot also be an ifunc}}
+
 #endif
 #endif

@@ -21,10 +21,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "RAIIObjectsForParser.h"
+#include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/PrettyStackTrace.h"
-#include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
@@ -192,18 +192,25 @@ Parser::ParseAssignmentExprWithObjCMessageExprStart(SourceLocation LBracLoc,
   return ParseRHSOfBinaryExpression(R, prec::Assignment);
 }
 
+ExprResult
+Parser::ParseConstantExpressionInExprEvalContext(TypeCastState isTypeCast) {
+  assert(Actions.ExprEvalContexts.back().Context ==
+             Sema::ExpressionEvaluationContext::ConstantEvaluated &&
+         "Call this function only if your ExpressionEvaluationContext is "
+         "already ConstantEvaluated");
+  ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
+  ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+  return Actions.ActOnConstantExpression(Res);
+}
 
 ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   // C++03 [basic.def.odr]p2:
   //   An expression is potentially evaluated unless it appears where an
   //   integral constant expression is required (see 5.19) [...].
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
-  EnterExpressionEvaluationContext ConstantEvaluated(Actions,
-                                               Sema::ConstantEvaluated);
-
-  ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
-  ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
-  return Actions.ActOnConstantExpression(Res);
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+  return ParseConstantExpressionInExprEvalContext(isTypeCast);
 }
 
 /// \brief Parse a constraint-expression.
@@ -233,6 +240,30 @@ bool Parser::isNotExpressionStart() {
     return true;
   // If this is a decl-specifier, we can't be at the start of an expression.
   return isKnownToBeDeclarationSpecifier();
+}
+
+/// We've parsed something that could plausibly be intended to be a template
+/// name (\p LHS) followed by a '<' token, and the following code can't possibly
+/// be an expression. Determine if this is likely to be a template-id and if so,
+/// diagnose it.
+bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
+  TentativeParsingAction TPA(*this);
+  // FIXME: We could look at the token sequence in a lot more detail here.
+  if (SkipUntil(tok::greater, tok::greatergreater, tok::greatergreatergreater,
+                StopAtSemi | StopBeforeMatch)) {
+    TPA.Commit();
+
+    SourceLocation Greater;
+    ParseGreaterThanInTemplateList(Greater, true, false);
+    Actions.diagnoseExprIntendedAsTemplateName(getCurScope(), LHS,
+                                               Less, Greater);
+    return true;
+  }
+
+  // There's no matching '>' token, this probably isn't supposed to be
+  // interpreted as a template-id. Parse it as an (ill-formed) comparison.
+  TPA.Revert();
+  return false;
 }
 
 static bool isFoldOperator(prec::Level Level) {
@@ -275,6 +306,16 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       Tok = OpToken;
       return LHS;
     }
+
+    // If a '<' token is followed by a type that can be a template argument and
+    // cannot be an expression, then this is ill-formed, but might be intended
+    // to be a template-id.
+    if (OpToken.is(tok::less) && Actions.mightBeIntendedToBeTemplateName(LHS) &&
+        (isKnownToBeDeclarationSpecifier() ||
+         Tok.isOneOf(tok::greater, tok::greatergreater,
+                     tok::greatergreatergreater)) &&
+        diagnoseUnknownTemplateId(LHS, OpToken.getLocation()))
+      return ExprError();
 
     // If the next token is an ellipsis, then this is a fold-expression. Leave
     // it alone so we can handle it in the paren expression.
@@ -339,7 +380,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
         ColonLoc = Tok.getLocation();
       }
     }
-    
+
     // Code completion for the right-hand side of an assignment expression
     // goes through a special hook that takes the left-hand side into account.
     if (Tok.is(tok::code_completion) && NextTokPrec == prec::Assignment) {
@@ -347,7 +388,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       cutOffParsing();
       return ExprError();
     }
-    
+
     // Parse another leaf here for the RHS of the operator.
     // ParseCastExpression works here because all RHS expressions in C have it
     // as a prefix, at least. However, in C++, an assignment-expression could
@@ -456,6 +497,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       if (!getLangOpts().CPlusPlus)
         continue;
     }
+
     // Ensure potential typos aren't left undiagnosed.
     if (LHS.isInvalid()) {
       Actions.CorrectDelayedTyposInExpr(OrigLHS);
@@ -473,12 +515,14 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 ///
 ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
                                        bool isAddressOfOperand,
-                                       TypeCastState isTypeCast) {
+                                       TypeCastState isTypeCast,
+                                       bool isVectorLiteral) {
   bool NotCastExpr;
   ExprResult Res = ParseCastExpression(isUnaryExpression,
                                        isAddressOfOperand,
                                        NotCastExpr,
-                                       isTypeCast);
+                                       isTypeCast,
+                                       isVectorLiteral);
   if (NotCastExpr)
     Diag(Tok, diag::err_expected_expression);
   return Res;
@@ -674,6 +718,7 @@ class CastExpressionIdValidator : public CorrectionCandidateCallback {
 ///                   '__is_union'
 ///
 /// [Clang] unary-type-trait:
+///                   '__is_aggregate'
 ///                   '__trivially_copyable'
 ///
 ///       binary-type-trait:
@@ -694,7 +739,8 @@ class CastExpressionIdValidator : public CorrectionCandidateCallback {
 ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
                                        bool isAddressOfOperand,
                                        bool &NotCastExpr,
-                                       TypeCastState isTypeCast) {
+                                       TypeCastState isTypeCast,
+                                       bool isVectorLiteral) {
   ExprResult Res;
   tok::TokenKind SavedKind = Tok.getKind();
   NotCastExpr = false;
@@ -721,6 +767,9 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     SourceLocation RParenLoc;
     Res = ParseParenExpression(ParenExprType, false/*stopIfCastExr*/,
                                isTypeCast == IsTypeCast, CastTy, RParenLoc);
+
+    if (isVectorLiteral)
+        return Res;
 
     switch (ParenExprType) {
     case SimpleExpr:   break;    // Nothing else to do.
@@ -762,7 +811,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::annot_primary_expr:
     assert(Res.get() == nullptr && "Stray primary-expression annotation?");
     Res = getExprAnnotation(Tok);
-    ConsumeToken();
+    ConsumeAnnotationToken();
     break;
 
   case tok::kw___super:
@@ -798,6 +847,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
             = RTT_JOIN(tok::kw_,Name)
 
           REVERTIBLE_TYPE_TRAIT(__is_abstract);
+          REVERTIBLE_TYPE_TRAIT(__is_aggregate);
           REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
           REVERTIBLE_TYPE_TRAIT(__is_array);
           REVERTIBLE_TYPE_TRAIT(__is_assignable);
@@ -1156,7 +1206,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
       if (Ty.isInvalid())
         break;
 
-      ConsumeToken();
+      ConsumeAnnotationToken();
       Res = ParseObjCMessageExpressionBody(SourceLocation(), SourceLocation(),
                                            Ty.get(), nullptr);
       break;
@@ -1264,6 +1314,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     }
 
     // Fall through to treat the template-id as an id-expression.
+    LLVM_FALLTHROUGH;
   }
 
   case tok::kw_operator: // [C++] id-expression: operator/conversion-function-id
@@ -1307,7 +1358,8 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     // C++11 [expr.unary.noexcept]p1:
     //   The noexcept operator determines whether the evaluation of its operand,
     //   which is an unevaluated operand, can throw an exception.
-    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated);
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult Result = ParseExpression();
 
     T.consumeClose();
@@ -1433,9 +1485,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
                                              nullptr, LHS.get());
         break;
       }
-        
       // Fall through; this isn't a message send.
-                
+      LLVM_FALLTHROUGH;
+
     default:  // Not a postfix-expression suffix.
       return LHS;
     case tok::l_square: {  // postfix-expression: p-e '[' expression ']'
@@ -1693,6 +1745,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
                                     /*AllowDestructorName=*/true,
                                     /*AllowConstructorName=*/
                                       getLangOpts().MicrosoftExt, 
+                                    /*AllowDeductionGuide=*/false,
                                     ObjectType, TemplateKWLoc, Name)) {
         (void)Actions.CorrectDelayedTyposInExpr(LHS);
         LHS = ExprError();
@@ -1813,7 +1866,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     }
   }
 
-  // If we get here, the operand to the typeof/sizeof/alignof was an expresion.
+  // If we get here, the operand to the typeof/sizeof/alignof was an expression.
   isCastExpr = false;
   return Operand;
 }
@@ -1875,9 +1928,10 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     
     if (!Name)
       return ExprError();
-    
-    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated,
-                                                 Sema::ReuseLambdaContextDecl);
+
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+        Sema::ReuseLambdaContextDecl);
 
     return Actions.ActOnSizeofParameterPackExpr(getCurScope(),
                                                 OpTok.getLocation(), 
@@ -1888,8 +1942,9 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   if (OpTok.isOneOf(tok::kw_alignof, tok::kw__Alignof))
     Diag(OpTok, diag::warn_cxx98_compat_alignof);
 
-  EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated,
-                                               Sema::ReuseLambdaContextDecl);
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
 
   bool isCastExpr;
   ParsedType CastTy;
@@ -1917,7 +1972,7 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   if (OpTok.isOneOf(tok::kw_alignof, tok::kw__Alignof))
     Diag(OpTok, diag::ext_alignof_expr) << OpTok.getIdentifierInfo();
 
-  // If we get here, the operand to the sizeof/alignof was an expresion.
+  // If we get here, the operand to the sizeof/alignof was an expression.
   if (!Operand.isInvalid())
     Operand = Actions.ActOnUnaryExprOrTypeTraitExpr(OpTok.getLocation(),
                                                     ExprKind,
@@ -2349,6 +2404,48 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         return ParseCompoundLiteralExpression(Ty.get(), OpenLoc, RParenLoc);
       }
 
+      if (Tok.is(tok::l_paren)) {
+        // This could be OpenCL vector Literals
+        if (getLangOpts().OpenCL)
+        {
+          TypeResult Ty;
+          {
+            InMessageExpressionRAIIObject InMessage(*this, false);
+            Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+          }
+          if(Ty.isInvalid())
+          {
+             return ExprError();
+          }
+          QualType QT = Ty.get().get().getCanonicalType();
+          if (QT->isVectorType())
+          {
+            // We parsed '(' vector-type-name ')' followed by '('
+
+            // Parse the cast-expression that follows it next.
+            // isVectorLiteral = true will make sure we don't parse any
+            // Postfix expression yet
+            Result = ParseCastExpression(/*isUnaryExpression=*/false,
+                                         /*isAddressOfOperand=*/false,
+                                         /*isTypeCast=*/IsTypeCast,
+                                         /*isVectorLiteral=*/true);
+
+            if (!Result.isInvalid()) {
+              Result = Actions.ActOnCastExpr(getCurScope(), OpenLoc,
+                                             DeclaratorInfo, CastTy,
+                                             RParenLoc, Result.get());
+            }
+
+            // After we performed the cast we can check for postfix-expr pieces.
+            if (!Result.isInvalid()) {
+              Result = ParsePostfixExpressionSuffix(Result);
+            }
+
+            return Result;
+          }
+        }
+      }
+
       if (ExprType == CastExpr) {
         // We parsed '(' type-name ')' and the thing after it wasn't a '{'.
 
@@ -2520,7 +2617,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
   {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
-    EnterExpressionEvaluationContext Unevaluated(Actions, Sema::Unevaluated);
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
     ControllingExpr =
         Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
     if (ControllingExpr.isInvalid()) {

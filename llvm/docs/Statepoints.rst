@@ -9,15 +9,22 @@ Garbage Collection Safepoints in LLVM
 Status
 =======
 
-This document describes a set of experimental extensions to LLVM. Use
-with caution.  Because the intrinsics have experimental status,
-compatibility across LLVM releases is not guaranteed.
+This document describes a set of extensions to LLVM to support garbage
+collection.  By now, these mechanisms are well proven with commercial java 
+implementation with a fully relocating collector having shipped using them.  
+There are a couple places where bugs might still linger; these are called out
+below.
 
-LLVM currently supports an alternate mechanism for conservative
-garbage collection support using the ``gcroot`` intrinsic.  The mechanism
-described here shares little in common with the alternate ``gcroot``
-implementation and it is hoped that this mechanism will eventually
-replace the gc_root mechanism.
+They are still listed as "experimental" to indicate that no forward or backward
+compatibility guarantees are offered across versions.  If your use case is such 
+that you need some form of forward compatibility guarantee, please raise the 
+issue on the llvm-dev mailing list.  
+
+LLVM still supports an alternate mechanism for conservative garbage collection 
+support using the ``gcroot`` intrinsic.  The ``gcroot`` mechanism is mostly of
+historical interest at this point with one exception - its implementation of
+shadow stacks has been used successfully by a number of language frontends and
+is still supported.  
 
 Overview
 ========
@@ -86,9 +93,36 @@ the collector must be able to:
 
 This document describes the mechanism by which an LLVM based compiler
 can provide this information to a language runtime/collector, and
-ensure that all pointers can be read and updated if desired.  The
-heart of the approach is to construct (or rewrite) the IR in a manner
-where the possible updates performed by the garbage collector are
+ensure that all pointers can be read and updated if desired.  
+
+At a high level, LLVM has been extended to support compiling to an abstract 
+machine which extends the actual target with a non-integral pointer type 
+suitable for representing a garbage collected reference to an object.  In 
+particular, such non-integral pointer type have no defined mapping to an 
+integer representation.  This semantic quirk allows the runtime to pick a 
+integer mapping for each point in the program allowing relocations of objects 
+without visible effects.
+
+Warning: Non-Integral Pointer Types are a newly added concept in LLVM IR.  
+It's possible that we've missed disabling some of the optimizations which 
+assume an integral value for pointers.  If you find such a case, please 
+file a bug or share a patch.
+
+Warning: There is one currently known semantic hole in the definition of 
+non-integral pointers which has not been addressed upstream.  To work around
+this, you need to disable speculation of loads unless the memory type 
+(non-integral pointer vs anything else) is known to unchanged.  That is, it is 
+not safe to speculate a load if doing causes a non-integral pointer value to 
+be loaded as any other type or vice versa.  In practice, this restriction is 
+well isolated to isSafeToSpeculate in ValueTracking.cpp.
+
+This high level abstract machine model is used for most of the LLVM optimizer.
+Before starting code generation, we switch representations to an explicit form.
+In theory, a frontend could directly generate this low level explicit form, but 
+doing so is likely to inhibit optimization.  
+
+The heart of the explicit approach is to construct (or rewrite) the IR in a 
+manner where the possible updates performed by the garbage collector are
 explicitly visible in the IR.  Doing so requires that we:
 
 #. create a new SSA value for each potentially relocated pointer, and
@@ -104,7 +138,7 @@ explicitly visible in the IR.  Doing so requires that we:
 At the most abstract level, inserting a safepoint can be thought of as
 replacing a call instruction with a call to a multiple return value
 function which both calls the original target of the call, returns
-it's result, and returns updated values for any live pointers to
+its result, and returns updated values for any live pointers to
 garbage collected objects.
 
   Note that the task of identifying all live pointers to garbage
@@ -200,7 +234,9 @@ The relevant parts of the StackMap section for our example are:
 	  .short	7
 	  .long	0
 
-This example was taken from the tests for the :ref:`RewriteStatepointsForGC` utility pass.  As such, it's full StackMap can be easily examined with the following command.
+This example was taken from the tests for the :ref:`RewriteStatepointsForGC`
+utility pass.  As such, its full StackMap can be easily examined with the
+following command.
 
 .. code-block:: bash
 
@@ -536,7 +572,7 @@ Semantics:
 """"""""""
 
 The return value of ``gc.relocate`` is the potentially relocated value
-of the pointer specified by it's arguments.  It is unspecified how the
+of the pointer specified by its arguments.  It is unspecified how the
 value of the returned pointer relates to the argument to the
 ``gc.statepoint`` other than that a) it points to the same source
 language object with the same offset, and b) the 'based-on'
@@ -654,11 +690,15 @@ Utility Passes for Safepoint Insertion
 RewriteStatepointsForGC
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The pass RewriteStatepointsForGC transforms a functions IR by replacing a 
-``gc.statepoint`` (with an optional ``gc.result``) with a full relocation 
-sequence, including all required ``gc.relocates``.  To function, the pass 
-requires that the GC strategy specified for the function be able to reliably 
-distinguish between GC references and non-GC references in IR it is given.
+The pass RewriteStatepointsForGC transforms a function's IR to lower from the
+abstract machine model described above to the explicit statepoint model of 
+relocations.  To do this, it replaces all calls or invokes of functions which
+might contain a safepoint poll with a ``gc.statepoint`` and associated full
+relocation sequence, including all required ``gc.relocates``.  
+
+Note that by default, this pass only runs for the "statepoint-example" or 
+"core-clr" gc strategies.  You will need to add your custom strategy to this 
+whitelist or use one of the predefined ones. 
 
 As an example, given this code:
 
@@ -666,7 +706,7 @@ As an example, given this code:
 
   define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
          gc "statepoint-example" {
-    call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+    call void @foo()
     ret i8 addrspace(1)* %obj
   }
 
@@ -683,7 +723,8 @@ The pass would produce this IR:
 
 In the above examples, the addrspace(1) marker on the pointers is the mechanism
 that the ``statepoint-example`` GC strategy uses to distinguish references from
-non references.  Address space 1 is not globally reserved for this purpose.
+non references.  The pass assumes that all addrspace(1) pointers are non-integral
+pointer types.  Address space 1 is not globally reserved for this purpose.
 
 This pass can be used an utility function by a language frontend that doesn't 
 want to manually reason about liveness, base pointers, or relocation when 
@@ -701,23 +742,34 @@ can be relaxed to producing interior derived pointers provided the target
 collector can find the associated allocation from an arbitrary interior 
 derived pointer.
 
-In practice, RewriteStatepointsForGC can be run much later in the pass 
+By default RewriteStatepointsForGC passes in ``0xABCDEF00`` as the statepoint
+ID and ``0`` as the number of patchable bytes to the newly constructed
+``gc.statepoint``.  These values can be configured on a per-callsite
+basis using the attributes ``"statepoint-id"`` and
+``"statepoint-num-patch-bytes"``.  If a call site is marked with a
+``"statepoint-id"`` function attribute and its value is a positive
+integer (represented as a string), then that value is used as the ID
+of the newly constructed ``gc.statepoint``.  If a call site is marked
+with a ``"statepoint-num-patch-bytes"`` function attribute and its
+value is a positive integer, then that value is used as the 'num patch
+bytes' parameter of the newly constructed ``gc.statepoint``.  The
+``"statepoint-id"`` and ``"statepoint-num-patch-bytes"`` attributes
+are not propagated to the ``gc.statepoint`` call or invoke if they
+could be successfully parsed.
+
+In practice, RewriteStatepointsForGC should be run much later in the pass 
 pipeline, after most optimization is already done.  This helps to improve 
 the quality of the generated code when compiled with garbage collection support.
-In the long run, this is the intended usage model.  At this time, a few details
-have yet to be worked out about the semantic model required to guarantee this 
-is always correct.  As such, please use with caution and report bugs.
 
 .. _PlaceSafepoints:
 
 PlaceSafepoints
 ^^^^^^^^^^^^^^^^
 
-The pass PlaceSafepoints transforms a function's IR by replacing any call or 
-invoke instructions with appropriate ``gc.statepoint`` and ``gc.result`` pairs,
-and inserting safepoint polls sufficient to ensure running code checks for a 
-safepoint request on a timely manner.  This pass is expected to be run before 
-RewriteStatepointsForGC and thus does not produce full relocation sequences.  
+The pass PlaceSafepoints inserts safepoint polls sufficient to ensure running 
+code checks for a safepoint request on a timely manner. This pass is expected 
+to be run before RewriteStatepointsForGC and thus does not produce full 
+relocation sequences.  
 
 As an example, given input IR of the following:
 
@@ -740,13 +792,16 @@ This pass would produce the following IR:
 .. code-block:: text
 
   define void @test() gc "statepoint-example" {
-    %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0)
-    %safepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0)
+    call void @do_safepoint()
+    call void @foo()
     ret void
   }
 
-In this case, we've added an (unconditional) entry safepoint poll and converted the call into a ``gc.statepoint``.  Note that despite appearances, the entry poll is not necessarily redundant.  We'd have to know that ``foo`` and ``test`` were not mutually recursive for the poll to be redundant.  In practice, you'd probably want to your poll definition to contain a conditional branch of some form.
-
+In this case, we've added an (unconditional) entry safepoint poll.  Note that 
+despite appearances, the entry poll is not necessarily redundant.  We'd have to 
+know that ``foo`` and ``test`` were not mutually recursive for the poll to be 
+redundant.  In practice, you'd probably want to your poll definition to contain 
+a conditional branch of some form.
 
 At the moment, PlaceSafepoints can insert safepoint polls at method entry and 
 loop backedges locations.  Extending this to work with return polls would be 
@@ -763,26 +818,13 @@ of this function is inserted at each poll site desired.  While calls or invokes
 inside this method are transformed to a ``gc.statepoints``, recursive poll 
 insertion is not performed.
 
-By default PlaceSafepoints passes in ``0xABCDEF00`` as the statepoint
-ID and ``0`` as the number of patchable bytes to the newly constructed
-``gc.statepoint``.  These values can be configured on a per-callsite
-basis using the attributes ``"statepoint-id"`` and
-``"statepoint-num-patch-bytes"``.  If a call site is marked with a
-``"statepoint-id"`` function attribute and its value is a positive
-integer (represented as a string), then that value is used as the ID
-of the newly constructed ``gc.statepoint``.  If a call site is marked
-with a ``"statepoint-num-patch-bytes"`` function attribute and its
-value is a positive integer, then that value is used as the 'num patch
-bytes' parameter of the newly constructed ``gc.statepoint``.  The
-``"statepoint-id"`` and ``"statepoint-num-patch-bytes"`` attributes
-are not propagated to the ``gc.statepoint`` call or invoke if they
-could be successfully parsed.
-
-If you are scheduling the RewriteStatepointsForGC pass late in the pass order,
-you should probably schedule this pass immediately before it.  The exception 
-would be if you need to preserve abstract frame information (e.g. for
-deoptimization or introspection) at safepoints.  In that case, ask on the 
-llvm-dev mailing list for suggestions.
+This pass is useful for any language frontend which only has to support
+garbage collection semantics at safepoints.  If you need other abstract
+frame information at safepoints (e.g. for deoptimization or introspection),
+you can insert safepoint polls in the frontend.  If you have the later case,
+please ask on llvm-dev for suggestions.  There's been a good amount of work
+done on making such a scheme work well in practice which is not yet documented
+here.  
 
 
 Supported Architectures
@@ -793,13 +835,6 @@ Today, only X86_64 is supported.
 
 Problem Areas and Active Work
 =============================
-
-#. As the existing users of the late rewriting model have matured, we've found
-   cases where the optimizer breaks the assumption that an SSA value of
-   gc-pointer type actually contains a gc-pointer and vice-versa.  We need to
-   clarify our expectations and propose at least one small IR change.  (Today,
-   the gc-pointer distinction is managed via address spaces.  This turns out
-   not to be quite strong enough.)
 
 #. Support for languages which allow unmanaged pointers to garbage collected
    objects (i.e. pass a pointer to an object to a C routine) via pinning.
@@ -831,7 +866,7 @@ Bugs and Enhancements
 
 Currently known bugs and enhancements under consideration can be
 tracked by performing a `bugzilla search
-<http://llvm.org/bugs/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
+<https://bugs.llvm.org/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
 for [Statepoint] in the summary field. When filing new bugs, please
 use this tag so that interested parties see the newly filed bug.  As
 with most LLVM features, design discussions take place on `llvm-dev

@@ -1,80 +1,5 @@
 # RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs -run-pass si-fold-operands,dead-mi-elimination -o - %s | FileCheck -check-prefix=GCN %s
---- |
-  define void @s_fold_and_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
-    %and = and i32 %a, 1234567
-    store volatile i32 %and, i32 addrspace(1)* %out
-    ret void
-  }
-
-  define void @v_fold_and_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %idxprom = sext i32 %tid to i64
-    %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
-    %gep.out = getelementptr i32, i32 addrspace(1)* %out, i64 %idxprom
-    %a = load i32, i32 addrspace(1)* %gep.a
-    %and = and i32 %a, 1234567
-    store i32 %and, i32 addrspace(1)* %gep.out
-    ret void
-  }
-
-  define void @s_fold_shl_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
-    %shl = shl i32 %a, 12
-    store volatile i32 %shl, i32 addrspace(1)* %out
-    ret void
-  }
-
-  define void @v_fold_shl_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %idxprom = sext i32 %tid to i64
-    %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
-    %gep.out = getelementptr i32, i32 addrspace(1)* %out, i64 %idxprom
-    %a = load i32, i32 addrspace(1)* %gep.a
-    %shl = shl i32 %a, 12
-    store i32 %shl, i32 addrspace(1)* %gep.out
-    ret void
-  }
-
-  define void @s_fold_ashr_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
-    %ashr = ashr i32 %a, 12
-    store volatile i32 %ashr, i32 addrspace(1)* %out
-    ret void
-  }
-
-  define void @v_fold_ashr_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %idxprom = sext i32 %tid to i64
-    %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
-    %gep.out = getelementptr i32, i32 addrspace(1)* %out, i64 %idxprom
-    %a = load i32, i32 addrspace(1)* %gep.a
-    %ashr = ashr i32 %a, 12
-    store i32 %ashr, i32 addrspace(1)* %gep.out
-    ret void
-  }
-
-   define void @s_fold_lshr_imm_regimm_32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
-    %lshr = lshr i32 %a, 12
-    store volatile i32 %lshr, i32 addrspace(1)* %out
-    ret void
-  }
-
-  define void @v_fold_lshr_imm_regimm_32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %idxprom = sext i32 %tid to i64
-    %gep.a = getelementptr i32, i32 addrspace(1)* %aptr, i64 %idxprom
-    %gep.out = getelementptr i32, i32 addrspace(1)* %out, i64 %idxprom
-    %a = load i32, i32 addrspace(1)* %gep.a
-    %lshr = lshr i32 %a, 12
-    store i32 %lshr, i32 addrspace(1)* %gep.out
-    ret void
-  }
-
-  declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-  attributes #0 = { nounwind }
-  attributes #1 = { nounwind readnone }
-
 ...
----
 
 # GCN-LABEL: name: s_fold_and_imm_regimm_32{{$}}
 # GCN: %10 = V_MOV_B32_e32 1543, implicit %exec
@@ -115,11 +40,11 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1
 
     %0 = COPY %sgpr0_sgpr1
-    %1 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %1 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2 = COPY %1.sub1
     %3 = COPY %1.sub0
     %4 = S_MOV_B32 61440
@@ -129,7 +54,7 @@ body:             |
     %8 = S_MOV_B32 9999
     %9 = S_AND_B32 killed %7, killed %8, implicit-def dead %scc
     %10 = COPY %9
-    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out)
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -200,12 +125,12 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %31 = V_ASHRREV_I32_e64 31, %3, implicit %exec
     %32 = REG_SEQUENCE %3, 1, %31, 2
     %33 = V_LSHLREV_B64 2, killed %32, implicit %exec
@@ -219,19 +144,19 @@ body:             |
     %34 = V_MOV_B32_e32 63, implicit %exec
 
     %27 = V_AND_B32_e64 %26, %24, implicit %exec
-    FLAT_STORE_DWORD %37, %27, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %27, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %28 = V_AND_B32_e64 %24, %26, implicit %exec
-    FLAT_STORE_DWORD %37, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %29 = V_AND_B32_e32 %26, %24, implicit %exec
-    FLAT_STORE_DWORD %37, %29, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %29, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %30 = V_AND_B32_e64 %26, %26, implicit %exec
-    FLAT_STORE_DWORD %37, %30, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %30, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %31 = V_AND_B32_e64 %34, %34, implicit %exec
-    FLAT_STORE_DWORD %37, %31, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %31, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     S_ENDPGM
 
@@ -281,11 +206,11 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1
 
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %5 = S_MOV_B32 1
     %6 = COPY %4.sub1
     %7 = COPY %4.sub0
@@ -294,7 +219,7 @@ body:             |
     %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
     %12 = S_LSHL_B32 killed %5, 12, implicit-def dead %scc
     %13 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out)
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -386,7 +311,7 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %2 = COPY %vgpr0
@@ -407,34 +332,34 @@ body:             |
     %27 = S_MOV_B32 -4
 
     %11 = V_LSHLREV_B32_e64 12, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %12 = V_LSHLREV_B32_e64 %7, 12, implicit %exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %13 = V_LSHL_B32_e64 %7, 12, implicit %exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %14 = V_LSHL_B32_e64 12, %7, implicit %exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %15 = V_LSHL_B32_e64 12, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %22 = V_LSHL_B32_e64 %6, 12, implicit %exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %23 = V_LSHL_B32_e64 %6, 32, implicit %exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %25 = V_LSHL_B32_e32 %6, %6, implicit %exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %26 = V_LSHLREV_B32_e32 11, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %28 = V_LSHL_B32_e32 %27, %6, implicit %exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     S_ENDPGM
 
@@ -481,11 +406,11 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1
 
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %5 = S_MOV_B32 999123
     %6 = COPY %4.sub1
     %7 = COPY %4.sub0
@@ -494,7 +419,7 @@ body:             |
     %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
     %12 = S_ASHR_I32 killed %5, 12, implicit-def dead %scc
     %13 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out)
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -589,12 +514,12 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %2 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %15 = V_ASHRREV_I32_e64 31, %2, implicit %exec
     %16 = REG_SEQUENCE %2, 1, %15, 2
     %17 = V_LSHLREV_B64 2, killed %16, implicit %exec
@@ -615,34 +540,34 @@ body:             |
     %35 = V_MOV_B32_e32 2, implicit %exec
 
     %11 = V_ASHRREV_I32_e64 8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %12 = V_ASHRREV_I32_e64 %8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %13 = V_ASHR_I32_e64 %7, 3, implicit %exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %14 = V_ASHR_I32_e64 7, %32, implicit %exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %15 = V_ASHR_I32_e64 %27, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %22 = V_ASHR_I32_e64 %6, 4, implicit %exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %23 = V_ASHR_I32_e64 %6, %33, implicit %exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %25 = V_ASHR_I32_e32 %34, %34, implicit %exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %26 = V_ASHRREV_I32_e32 11, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %28 = V_ASHR_I32_e32 %27, %35, implicit %exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     S_ENDPGM
 
@@ -689,11 +614,11 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1
 
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %5 = S_MOV_B32 -999123
     %6 = COPY %4.sub1
     %7 = COPY %4.sub0
@@ -702,7 +627,7 @@ body:             |
     %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
     %12 = S_LSHR_B32 killed %5, 12, implicit-def dead %scc
     %13 = COPY %12
-    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out)
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -798,12 +723,12 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %2 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0
     %15 = V_ASHRREV_I32_e64 31, %2, implicit %exec
     %16 = REG_SEQUENCE %2, 1, %15, 2
     %17 = V_LSHLREV_B64 2, killed %16, implicit %exec
@@ -824,35 +749,58 @@ body:             |
     %35 = V_MOV_B32_e32 2, implicit %exec
 
     %11 = V_LSHRREV_B32_e64 8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %12 = V_LSHRREV_B32_e64 %8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %13 = V_LSHR_B32_e64 %7, 3, implicit %exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %14 = V_LSHR_B32_e64 7, %32, implicit %exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %15 = V_LSHR_B32_e64 %27, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %22 = V_LSHR_B32_e64 %6, 4, implicit %exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %23 = V_LSHR_B32_e64 %6, %33, implicit %exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %25 = V_LSHR_B32_e32 %34, %34, implicit %exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %26 = V_LSHRREV_B32_e32 11, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr
 
     %28 = V_LSHR_B32_e32 %27, %35, implicit %exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
 
+    S_ENDPGM
+
+...
+---
+# There is only an undef use operand for %1, so there is no
+# corresponding defining instruction
+
+# GCN-LABEL: name: undefined_vreg_operand{{$}}
+# GCN: bb.0
+# GCN-NEXT: FLAT_STORE_DWORD undef %3, undef %1,
+# GCN-NEXT: S_ENDPGM
+name: undefined_vreg_operand
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '' }
+  - { id: 1, class: vgpr_32, preferred-register: '' }
+  - { id: 2, class: vgpr_32, preferred-register: '' }
+  - { id: 3, class: vreg_64, preferred-register: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 0, implicit %exec
+    %2 = V_XOR_B32_e64 killed %0, undef %1, implicit %exec
+    FLAT_STORE_DWORD undef %3, %2, 0, 0, 0, implicit %exec, implicit %flat_scr
     S_ENDPGM
 
 ...

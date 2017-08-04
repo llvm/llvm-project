@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es6",
+        "outDir": "out",
+        "lib": [
+            "es6",
+            "es2015.core",
+            "es2015.collection",
+            "es2015.generator",
+            "es2015.iterable",
+            "es2015.promise",
+            "es2015.symbol",
+            "es2016.array.include"
+        ],
+        "sourceMap": true,
+        "rootDir": ".",
+        "alwaysStrict": true,
+        "noEmitOnError": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true
+    },
+    "exclude": [
+        "node_modules",
+        ".vscode-test"
+    ]
+}

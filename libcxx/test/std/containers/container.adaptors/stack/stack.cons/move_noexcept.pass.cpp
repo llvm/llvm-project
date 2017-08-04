@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <stack>
 
 // stack(stack&&)
 //        noexcept(is_nothrow_move_constructible<container_type>::value);
 
 // This tests a conforming extension
-
-// UNSUPPORTED: c++98, c++03
 
 #include <stack>
 #include <cassert>
@@ -24,8 +24,10 @@
 
 int main()
 {
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::stack<MoveOnly> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
+#endif
 }

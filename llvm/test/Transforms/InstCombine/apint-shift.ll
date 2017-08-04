@@ -63,6 +63,8 @@ define i55 @test6(i55 %A) {
   ret i55 %C
 }
 
+; (X * C2) << C1 --> X * (C2 << C1)
+
 define i55 @test6a(i55 %A) {
 ; CHECK-LABEL: @test6a(
 ; CHECK-NEXT:    [[C:%.*]] = mul i55 %A, 6
@@ -71,6 +73,18 @@ define i55 @test6a(i55 %A) {
   %B = mul i55 %A, 3
   %C = shl i55 %B, 1
   ret i55 %C
+}
+
+; (X * C2) << C1 --> X * (C2 << C1)
+
+define <2 x i55> @test6a_vec(<2 x i55> %A) {
+; CHECK-LABEL: @test6a_vec(
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i55> %A, <i55 6, i55 48>
+; CHECK-NEXT:    ret <2 x i55> [[C]]
+;
+  %B = mul <2 x i55> %A, <i55 3, i55 12>
+  %C = shl <2 x i55> %B, <i55 1, i55 2>
+  ret <2 x i55> %C
 }
 
 define i29 @test7(i8 %X) {
@@ -101,14 +115,150 @@ define i17 @test9(i17 %A) {
   ret i17 %C
 }
 
-define i19 @test10(i19 %A) {
+; shl (lshr X, C), C --> and X, C'
+
+define i19 @test10(i19 %X) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[B:%.*]] = and i19 %A, -262144
-; CHECK-NEXT:    ret i19 [[B]]
+; CHECK-NEXT:    [[SH1:%.*]] = and i19 %X, -262144
+; CHECK-NEXT:    ret i19 [[SH1]]
 ;
-  %B = lshr i19 %A, 18
-  %C = shl i19 %B, 18
-  ret i19 %C
+  %sh1 = lshr i19 %X, 18
+  %sh2 = shl i19 %sh1, 18
+  ret i19 %sh2
+}
+
+; Two right shifts in the same direction:
+; lshr (lshr X, C1), C2 --> lshr X, C1 + C2
+
+define <2 x i19> @lshr_lshr_splat_vec(<2 x i19> %X) {
+; CHECK-LABEL: @lshr_lshr_splat_vec(
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i19> %X, <i19 5, i19 5>
+; CHECK-NEXT:    ret <2 x i19> [[SH1]]
+;
+  %sh1 = lshr <2 x i19> %X, <i19 3, i19 3>
+  %sh2 = lshr <2 x i19> %sh1, <i19 2, i19 2>
+  ret <2 x i19> %sh2
+}
+
+define i9 @multiuse_lshr_lshr(i9 %x) {
+; CHECK-LABEL: @multiuse_lshr_lshr(
+; CHECK-NEXT:    [[SH1:%.*]] = lshr i9 %x, 2
+; CHECK-NEXT:    [[SH2:%.*]] = lshr i9 %x, 5
+; CHECK-NEXT:    [[MUL:%.*]] = mul i9 [[SH1]], [[SH2]]
+; CHECK-NEXT:    ret i9 [[MUL]]
+;
+  %sh1 = lshr i9 %x, 2
+  %sh2 = lshr i9 %sh1, 3
+  %mul = mul i9 %sh1, %sh2
+  ret i9 %mul
+}
+
+define <2 x i9> @multiuse_lshr_lshr_splat(<2 x i9> %x) {
+; CHECK-LABEL: @multiuse_lshr_lshr_splat(
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i9> %x, <i9 2, i9 2>
+; CHECK-NEXT:    [[SH2:%.*]] = lshr <2 x i9> %x, <i9 5, i9 5>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i9> [[SH1]], [[SH2]]
+; CHECK-NEXT:    ret <2 x i9> [[MUL]]
+;
+  %sh1 = lshr <2 x i9> %x, <i9 2, i9 2>
+  %sh2 = lshr <2 x i9> %sh1, <i9 3, i9 3>
+  %mul = mul <2 x i9> %sh1, %sh2
+  ret <2 x i9> %mul
+}
+
+; Two left shifts in the same direction:
+; shl (shl X, C1), C2 -->  shl X, C1 + C2
+
+define <2 x i19> @shl_shl_splat_vec(<2 x i19> %X) {
+; CHECK-LABEL: @shl_shl_splat_vec(
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i19> %X, <i19 5, i19 5>
+; CHECK-NEXT:    ret <2 x i19> [[SH1]]
+;
+  %sh1 = shl <2 x i19> %X, <i19 3, i19 3>
+  %sh2 = shl <2 x i19> %sh1, <i19 2, i19 2>
+  ret <2 x i19> %sh2
+}
+
+define i42 @multiuse_shl_shl(i42 %x) {
+; CHECK-LABEL: @multiuse_shl_shl(
+; CHECK-NEXT:    [[SH1:%.*]] = shl i42 %x, 8
+; CHECK-NEXT:    [[SH2:%.*]] = shl i42 %x, 17
+; CHECK-NEXT:    [[MUL:%.*]] = mul i42 [[SH1]], [[SH2]]
+; CHECK-NEXT:    ret i42 [[MUL]]
+;
+  %sh1 = shl i42 %x, 8
+  %sh2 = shl i42 %sh1, 9
+  %mul = mul i42 %sh1, %sh2
+  ret i42 %mul
+}
+
+define <2 x i42> @multiuse_shl_shl_splat(<2 x i42> %x) {
+; CHECK-LABEL: @multiuse_shl_shl_splat(
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i42> %x, <i42 8, i42 8>
+; CHECK-NEXT:    [[SH2:%.*]] = shl <2 x i42> %x, <i42 17, i42 17>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i42> [[SH1]], [[SH2]]
+; CHECK-NEXT:    ret <2 x i42> [[MUL]]
+;
+  %sh1 = shl <2 x i42> %x, <i42 8, i42 8>
+  %sh2 = shl <2 x i42> %sh1, <i42 9, i42 9>
+  %mul = mul <2 x i42> %sh1, %sh2
+  ret <2 x i42> %mul
+}
+
+; Equal shift amounts in opposite directions become bitwise 'and':
+; lshr (shl X, C), C --> and X, C'
+
+define <2 x i19> @eq_shl_lshr_splat_vec(<2 x i19> %X) {
+; CHECK-LABEL: @eq_shl_lshr_splat_vec(
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i19> %X, <i19 65535, i19 65535>
+; CHECK-NEXT:    ret <2 x i19> [[SH1]]
+;
+  %sh1 = shl <2 x i19> %X, <i19 3, i19 3>
+  %sh2 = lshr <2 x i19> %sh1, <i19 3, i19 3>
+  ret <2 x i19> %sh2
+}
+
+; Equal shift amounts in opposite directions become bitwise 'and':
+; shl (lshr X, C), C --> and X, C'
+
+define <2 x i19> @eq_lshr_shl_splat_vec(<2 x i19> %X) {
+; CHECK-LABEL: @eq_lshr_shl_splat_vec(
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i19> %X, <i19 -8, i19 -8>
+; CHECK-NEXT:    ret <2 x i19> [[SH1]]
+;
+  %sh1 = lshr <2 x i19> %X, <i19 3, i19 3>
+  %sh2 = shl <2 x i19> %sh1, <i19 3, i19 3>
+  ret <2 x i19> %sh2
+}
+
+; In general, we would need an 'and' for this transform, but the masked-off bits are known zero.
+; shl (lshr X, C1), C2 --> lshr X, C1 - C2
+
+define <2 x i7> @lshr_shl_splat_vec(<2 x i7> %X) {
+; CHECK-LABEL: @lshr_shl_splat_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i7> %X, <i7 -8, i7 -8>
+; CHECK-NEXT:    [[SH1:%.*]] = lshr exact <2 x i7> [[MUL]], <i7 1, i7 1>
+; CHECK-NEXT:    ret <2 x i7> [[SH1]]
+;
+  %mul = mul <2 x i7> %X, <i7 -8, i7 -8>
+  %sh1 = lshr exact <2 x i7> %mul, <i7 3, i7 3>
+  %sh2 = shl nuw nsw <2 x i7> %sh1, <i7 2, i7 2>
+  ret <2 x i7> %sh2
+}
+
+; In general, we would need an 'and' for this transform, but the masked-off bits are known zero.
+; lshr (shl X, C1), C2 -->  shl X, C1 - C2
+
+define <2 x i7> @shl_lshr_splat_vec(<2 x i7> %X) {
+; CHECK-LABEL: @shl_lshr_splat_vec(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i7> %X, <i7 9, i7 9>
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw nsw <2 x i7> [[DIV]], <i7 1, i7 1>
+; CHECK-NEXT:    ret <2 x i7> [[SH1]]
+;
+  %div = udiv <2 x i7> %X, <i7 9, i7 9>
+  %sh1 = shl nuw <2 x i7> %div, <i7 3, i7 3>
+  %sh2 = lshr exact <2 x i7> %sh1, <i7 2, i7 2>
+  ret <2 x i7> %sh2
 }
 
 ; Don't hide the shl from scalar evolution. DAGCombine will get it.
@@ -125,14 +275,26 @@ define i23 @test11(i23 %A) {
   ret i23 %C
 }
 
-define i47 @test12(i47 %A) {
+; shl (ashr X, C), C --> and X, C'
+
+define i47 @test12(i47 %X) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[B1:%.*]] = and i47 %A, -256
-; CHECK-NEXT:    ret i47 [[B1]]
+; CHECK-NEXT:    [[SH11:%.*]] = and i47 %X, -256
+; CHECK-NEXT:    ret i47 [[SH11]]
 ;
-  %B = ashr i47 %A, 8
-  %C = shl i47 %B, 8
-  ret i47 %C
+  %sh1 = ashr i47 %X, 8
+  %sh2 = shl i47 %sh1, 8
+  ret i47 %sh2
+}
+
+define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
+; CHECK-LABEL: @test12_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i47> %X, <i47 -256, i47 -256>
+; CHECK-NEXT:    ret <2 x i47> [[TMP1]]
+;
+  %sh1 = ashr <2 x i47> %X, <i47 8, i47 8>
+  %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>
+  ret <2 x i47> %sh2
 }
 
 ; Don't hide the shl from scalar evolution. DAGCombine will get it.
@@ -328,6 +490,66 @@ define i11 @test23(i44 %A) {
   %C = ashr i44 %B, 33
   %D = trunc i44 %C to i11
   ret i11 %D
+}
+
+; Fold lshr (shl X, C), C -> and X, C' regardless of the number of uses of the shl.
+
+define i44 @shl_lshr_eq_amt_multi_use(i44 %A) {
+; CHECK-LABEL: @shl_lshr_eq_amt_multi_use(
+; CHECK-NEXT:    [[B:%.*]] = shl i44 %A, 33
+; CHECK-NEXT:    [[C:%.*]] = and i44 %A, 2047
+; CHECK-NEXT:    [[D:%.*]] = or i44 [[B]], [[C]]
+; CHECK-NEXT:    ret i44 [[D]]
+;
+  %B = shl i44 %A, 33
+  %C = lshr i44 %B, 33
+  %D = add i44 %B, %C
+  ret i44 %D
+}
+
+; Fold vector lshr (shl X, C), C -> and X, C' regardless of the number of uses of the shl.
+
+define <2 x i44> @shl_lshr_eq_amt_multi_use_splat_vec(<2 x i44> %A) {
+; CHECK-LABEL: @shl_lshr_eq_amt_multi_use_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = shl <2 x i44> %A, <i44 33, i44 33>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i44> %A, <i44 2047, i44 2047>
+; CHECK-NEXT:    [[D:%.*]] = or <2 x i44> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i44> [[D]]
+;
+  %B = shl <2 x i44> %A, <i44 33, i44 33>
+  %C = lshr <2 x i44> %B, <i44 33, i44 33>
+  %D = add <2 x i44> %B, %C
+  ret <2 x i44> %D
+}
+
+; Fold shl (lshr X, C), C -> and X, C' regardless of the number of uses of the lshr.
+
+define i43 @lshr_shl_eq_amt_multi_use(i43 %A) {
+; CHECK-LABEL: @lshr_shl_eq_amt_multi_use(
+; CHECK-NEXT:    [[B:%.*]] = lshr i43 %A, 23
+; CHECK-NEXT:    [[C:%.*]] = and i43 %A, -8388608
+; CHECK-NEXT:    [[D:%.*]] = mul i43 [[B]], [[C]]
+; CHECK-NEXT:    ret i43 [[D]]
+;
+  %B = lshr i43 %A, 23
+  %C = shl i43 %B, 23
+  %D = mul i43 %B, %C
+  ret i43 %D
+}
+
+; Fold vector shl (lshr X, C), C -> and X, C' regardless of the number of uses of the lshr.
+
+define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
+; CHECK-LABEL: @lshr_shl_eq_amt_multi_use_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i43> %A, <i43 23, i43 23>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i43> %A, <i43 -8388608, i43 -8388608>
+; CHECK-NEXT:    [[D:%.*]] = mul <2 x i43> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i43> [[D]]
+;
+  %B = lshr <2 x i43> %A, <i43 23, i43 23>
+  %C = shl <2 x i43> %B, <i43 23, i43 23>
+  %D = mul <2 x i43> %B, %C
+  ret <2 x i43> %D
 }
 
 define i37 @test25(i37 %tmp.2, i37 %AA) {

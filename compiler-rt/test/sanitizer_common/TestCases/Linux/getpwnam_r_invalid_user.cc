@@ -1,6 +1,8 @@
 // Regression test for a crash in getpwnam_r and similar interceptors.
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 
+// XFAIL: mips
+
 #include <assert.h>
 #include <errno.h>
 #include <pwd.h>

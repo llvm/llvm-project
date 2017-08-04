@@ -13,27 +13,31 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_SEQ_H
-#define LLVM_ADT_SEQ_H
+#ifndef LLVM_ADT_SEQUENCE_H
+#define LLVM_ADT_SEQUENCE_H
 
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include <algorithm>
+#include <iterator>
+#include <utility>
 
 namespace llvm {
 
 namespace detail {
+
 template <typename ValueT>
 class value_sequence_iterator
     : public iterator_facade_base<value_sequence_iterator<ValueT>,
                                   std::random_access_iterator_tag,
                                   const ValueT> {
-  typedef typename value_sequence_iterator::iterator_facade_base BaseT;
+  using BaseT = typename value_sequence_iterator::iterator_facade_base;
 
   ValueT Value;
 
 public:
-  typedef typename BaseT::difference_type difference_type;
-  typedef typename BaseT::reference reference;
+  using difference_type = typename BaseT::difference_type;
+  using reference = typename BaseT::reference;
 
   value_sequence_iterator() = default;
   value_sequence_iterator(const value_sequence_iterator &) = default;
@@ -65,7 +69,8 @@ public:
 
   reference operator*() const { return Value; }
 };
-} // End detail namespace.
+
+} // end namespace detail
 
 template <typename ValueT>
 iterator_range<detail::value_sequence_iterator<ValueT>> seq(ValueT Begin,
@@ -74,6 +79,6 @@ iterator_range<detail::value_sequence_iterator<ValueT>> seq(ValueT Begin,
                     detail::value_sequence_iterator<ValueT>(End));
 }
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_SEQUENCE_H

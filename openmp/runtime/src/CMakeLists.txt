@@ -93,7 +93,7 @@ else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    libomp_append(LIBOMP_ASMFILES z_Linux_asm.s) # Unix assembly file
+    libomp_append(LIBOMP_ASMFILES z_Linux_asm.S) # Unix assembly file
   endif()
   libomp_append(LIBOMP_CFILES thirdparty/ittnotify/ittnotify_static.c LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)

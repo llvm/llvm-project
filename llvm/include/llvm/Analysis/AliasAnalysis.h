@@ -38,11 +38,11 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSIS_H
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 
 namespace llvm {
 class BasicAAResult;
@@ -443,11 +443,7 @@ public:
 
   /// getModRefInfo (for fences) - Return information about whether
   /// a particular store modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
-    // Conservatively correct.  (We could possibly be a bit smarter if
-    // Loc is a alloca that doesn't escape.)
-    return MRI_ModRef;
-  }
+  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc);
 
   /// getModRefInfo (for fences) - A convenience wrapper.
   ModRefInfo getModRefInfo(const FenceInst *S, const Value *P, uint64_t Size) {
@@ -527,6 +523,14 @@ public:
 
   /// Check whether or not an instruction may read or write the specified
   /// memory location.
+  ///
+  /// Note explicitly that getModRefInfo considers the effects of reading and
+  /// writing the memory location, and not the effect of ordering relative to
+  /// other instructions.  Thus, a volatile load is considered to be Ref,
+  /// because it does not actually write memory, it just can't be reordered
+  /// relative to other volatiles (or removed).  Atomic ordered loads/stores are
+  /// considered ModRef ATM because conservatively, the visible effect appears
+  /// as if memory was written, not just an ordering constraint.
   ///
   /// An instruction that doesn't read or write memory may be trivially LICM'd
   /// for example.

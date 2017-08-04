@@ -1,0 +1,58 @@
+{
+    "name": "clangd-vscode",
+    "displayName": "clangd-vscode",
+    "description": "Clang Language Server",
+    "version": "0.0.1",
+    "publisher": "Unpublished",
+    "engines": {
+        "vscode": "^1.8.0"
+    },
+    "categories": [
+        "Languages",
+        "Linters",
+        "Snippets"
+    ],
+    "activationEvents": [
+        "onLanguage:cpp",
+        "onLanguage:c"
+    ],
+    "main": "./out/src/extension",
+    "scripts": {
+        "vscode:prepublish": "tsc -p ./",
+        "compile": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "node ./node_modules/vscode/bin/test"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^2.6.3",
+        "vscode-languageserver": "^2.6.2"
+    },
+    "devDependencies": {
+        "typescript": "^2.0.3",
+        "vscode": "^1.0.3",
+        "mocha": "^2.3.3",
+        "@types/node": "^6.0.40",
+        "@types/mocha": "^2.2.32"
+    },
+    "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "clangd configuration",
+            "properties": {
+                "clangd.path": {
+                    "type": "string",
+                    "default": "clangd",
+                    "description": "The path to clangd executable, e.g.: /usr/bin/clangd"
+                },
+                "clangd.arguments": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Arguments for clangd server"
+                }
+            }
+        }
+    }
+}

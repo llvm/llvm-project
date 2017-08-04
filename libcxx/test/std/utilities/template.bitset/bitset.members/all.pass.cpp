@@ -10,6 +10,7 @@
 // test bool all() const;
 
 #include <bitset>
+#include <type_traits>
 #include <cassert>
 
 template <std::size_t N>
@@ -20,7 +21,8 @@ void test_all()
     assert(v.all() == (N == 0));
     v.set();
     assert(v.all() == true);
-    if (N > 1)
+    const bool greater_than_1 = std::integral_constant<bool, (N > 1)>::value; // avoid compiler warnings
+    if (greater_than_1)
     {
         v[N/2] = false;
         assert(v.all() == false);

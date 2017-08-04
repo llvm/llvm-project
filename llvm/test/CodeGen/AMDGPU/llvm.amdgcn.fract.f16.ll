@@ -7,7 +7,7 @@ declare half @llvm.amdgcn.fract.f16(half %a)
 ; VI:  v_fract_f16_e32 v[[R_F16:[0-9]+]], v[[A_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
-define void @fract_f16(
+define amdgpu_kernel void @fract_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:

@@ -4,8 +4,8 @@ RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mipsel | FileCheck %s --check-pr
 RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mips64el | FileCheck %s --check-prefix ELF-MIPS64EL
 RUN: obj2yaml %p/Inputs/trivial-object-test.elf-x86-64 | FileCheck %s --check-prefix ELF-X86-64
 RUN: obj2yaml %p/Inputs/trivial-object-test.elf-avr | FileCheck %s --check-prefix ELF-AVR
-RUN: obj2yaml %p/Inputs/unwind-section.elf-x86-64 \
-RUN:   | FileCheck %s --check-prefix ELF-X86-64-UNWIND
+RUN: obj2yaml %p/Inputs/trivial-object-test.wasm | FileCheck %s --check-prefix WASM
+RUN: obj2yaml %p/Inputs/unwind-section.elf-x86-64 | FileCheck %s --check-prefix ELF-X86-64-UNWIND
 
 COFF-I386: header:
 COFF-I386-NEXT:  Machine: IMAGE_FILE_MACHINE_I386
@@ -411,13 +411,13 @@ ELF-X86-64-NEXT:     - Name:            SomeOtherFunction
 ELF-X86-64-NEXT:     - Name:            puts
 
 
-ELF-AVR:      FileHeader:      
+ELF-AVR:      FileHeader:
 ELF-AVR-NEXT:   Class:           ELFCLASS32
 ELF-AVR-NEXT:   Data:            ELFDATA2LSB
 ELF-AVR-NEXT:   Type:            ET_EXEC
 ELF-AVR-NEXT:   Machine:         EM_AVR
 ELF-AVR-NEXT:   Flags:           [ EF_AVR_ARCH_AVR2 ]
-ELF-AVR-NEXT: Sections:        
+ELF-AVR-NEXT: Sections:
 ELF-AVR-NEXT:   - Name:            .text
 ELF-AVR-NEXT:     Type:            SHT_PROGBITS
 ELF-AVR-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
@@ -429,8 +429,8 @@ ELF-AVR-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
 ELF-AVR-NEXT:     Address:         0x0000000000800060
 ELF-AVR-NEXT:     AddressAlign:    0x0000000000000001
 ELF-AVR-NEXT:     Content:         ''
-ELF-AVR-NEXT: Symbols:         
-ELF-AVR-NEXT:   Local:           
+ELF-AVR-NEXT: Symbols:
+ELF-AVR-NEXT:   Local:
 ELF-AVR-NEXT:     - Type:            STT_SECTION
 ELF-AVR-NEXT:       Section:         .text
 ELF-AVR-NEXT:     - Type:            STT_SECTION
@@ -440,7 +440,7 @@ ELF-AVR-NEXT:     - Name:            a.o
 ELF-AVR-NEXT:       Type:            STT_FILE
 ELF-AVR-NEXT:     - Name:            main
 ELF-AVR-NEXT:       Section:         .text
-ELF-AVR-NEXT:   Global:          
+ELF-AVR-NEXT:   Global:
 ELF-AVR-NEXT:     - Name:            __trampolines_start
 ELF-AVR-NEXT:       Section:         .text
 ELF-AVR-NEXT:     - Name:            _etext
@@ -470,6 +470,17 @@ ELF-AVR-NEXT:     - Name:            _end
 ELF-AVR-NEXT:       Section:         .data
 ELF-AVR-NEXT:       Value:           0x0000000000800060
 
+WASM:      --- !WASM
+WASM-NEXT: FileHeader:
+WASM-NEXT:   Version:         0x00000001
+WASM:      - Type:            EXPORT
+WASM-NEXT:   Exports:         
+WASM-NEXT:     - Name:            main
+WASM-NEXT:       Kind:            FUNCTION
+WASM-NEXT:       Index:           2
+WASM-NEXT:     - Name:            var
+WASM-NEXT:       Kind:            GLOBAL
+WASM-NEXT:       Index:           1
 
 ELF-X86-64-UNWIND:      - Name:            .eh_frame
 ELF-X86-64-UNWIND-NEXT:   Type:            SHT_X86_64_UNWIND
@@ -478,4 +489,4 @@ ELF-X86-64-UNWIND-NEXT:   AddressAlign:    0x0000000000000001
 ELF-X86-64-UNWIND-NEXT:   Content:         ''
 
 RUN: not obj2yaml %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-ENOENT: Error: '{{[Nn]}}o such file or directory'
+ENOENT: Error reading file: {{.*}}.blah: {{[Nn]}}o such file or directory

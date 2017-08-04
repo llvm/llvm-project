@@ -107,3 +107,34 @@ entry:
   %ret = add i32 %cast0, %cast1
   ret i32 %ret
 }
+
+@exception_type = external global i8
+
+; Constants in inline ASM should not be hoisted.
+define i32 @inline_asm_invoke() personality i8* null {
+;CHECK-LABEL: @inline_asm_invoke
+;CHECK-NOT: %const = 214672
+;CHECK: %X = invoke i32 asm "bswap $0", "=r,r"(i32 214672)
+  %X = invoke i32 asm "bswap $0", "=r,r"(i32 214672)
+                  to label %L unwind label %lpad
+;CHECK: %Y = invoke i32 asm "bswap $0", "=r,r"(i32 214672)
+  %Y = invoke i32 asm "bswap $0", "=r,r"(i32 214672)
+                  to label %L unwind label %lpad
+L:
+  ret i32 %X
+lpad:
+  %lp = landingpad i32
+      cleanup
+      catch i8* @exception_type
+  ret i32 1
+}
+
+define i32 @inline_asm_call() {
+;CHECK-LABEL: @inline_asm_call
+;CHECK-NOT: %const = 214672
+;CHECK: %X = call i32 asm "bswap $0", "=r,r"(i32 214672)
+  %X = call i32 asm "bswap $0", "=r,r"(i32 214672)
+;CHECK: %Y = call i32 asm "bswap $0", "=r,r"(i32 214672)
+  %Y = call i32 asm "bswap $0", "=r,r"(i32 214672)
+  ret i32 %X
+}

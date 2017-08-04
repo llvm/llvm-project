@@ -46,7 +46,7 @@
 ; CHECK:   Magic: 0x4
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
-; CHECK:     ProcStart {
+; CHECK:     {{.*}}Proc{{.*}}Sym {
 ; CHECK:       PtrParent: 0x0
 ; CHECK:       PtrEnd: 0x0
 ; CHECK:       PtrNext: 0x0
@@ -61,13 +61,13 @@
 ; CHECK:       DisplayName: f
 ; CHECK:       LinkageName: ?f@@YAXXZ
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: 0x1003
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: a
 ; CHECK:     }
-; CHECK:     DefRangeRegisterRel {
+; CHECK:     DefRangeRegisterRelSym {
 ; CHECK:       BaseRegister: 22
 ; CHECK:       HasSpilledUDTMember: No
 ; CHECK:       OffsetInParent: 0

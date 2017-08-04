@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck -check-prefix=OPT %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
 
@@ -7,7 +7,7 @@
 ; optnone test.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare void @something()
 
@@ -1144,7 +1144,6 @@ bb7:
 ; optnone to disable optimizations to test this case.
 
 ; CHECK-LABEL: test13:
-; CHECK-NEXT:  .local i32{{$}}
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK:       br_if 0, $pop0{{$}}
@@ -1161,7 +1160,6 @@ bb7:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  unreachable{{$}}
 ; OPT-LABEL: test13:
-; OPT-NEXT:  .local i32{{$}}
 ; OPT-NEXT:  block   {{$}}
 ; OPT-NEXT:  block   {{$}}
 ; OPT:       br_if 0, $pop0{{$}}

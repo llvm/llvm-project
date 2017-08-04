@@ -101,23 +101,24 @@ template<> class numeric_limits<cv long double>;
 }  // std
 
 */
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
-
 #include <__config>
 #include <type_traits>
 
-#include <__undef_min_max>
-
-#if defined(_LIBCPP_MSVCRT)
-#include "support/win32/limits_win32.h"
+#if defined(_LIBCPP_COMPILER_MSVC)
+#include "support/win32/limits_msvc_win32.h"
 #endif // _LIBCPP_MSVCRT
 
 #if defined(__IBMCPP__)
 #include "support/ibm/limits.h"
 #endif // __IBMCPP__
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -182,14 +183,14 @@ protected:
     static _LIBCPP_CONSTEXPR const float_round_style round_style = round_toward_zero;
 };
 
-template <class _Tp, int digits, bool _IsSigned>
+template <class _Tp, int __digits, bool _IsSigned>
 struct __libcpp_compute_min
 {
-    static _LIBCPP_CONSTEXPR const _Tp value = _Tp(_Tp(1) << digits);
+    static _LIBCPP_CONSTEXPR const _Tp value = _Tp(_Tp(1) << __digits);
 };
 
-template <class _Tp, int digits>
-struct __libcpp_compute_min<_Tp, digits, false>
+template <class _Tp, int __digits>
+struct __libcpp_compute_min<_Tp, __digits, false>
 {
     static _LIBCPP_CONSTEXPR const _Tp value = _Tp(0);
 };
@@ -810,5 +811,7 @@ template <class _Tp>
     _LIBCPP_CONSTEXPR const float_round_style numeric_limits<const volatile _Tp>::round_style;
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_LIMITS

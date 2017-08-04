@@ -1,5 +1,5 @@
 ; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck %s -check-prefix=CHECK-MIPS32
-; RUN: llc -march=mips64el -mcpu=mips64 < %s | \
+; RUN: llc -march=mips64el -mcpu=mips64 -relocation-model=pic < %s | \
 ; RUN:      FileCheck %s -check-prefix=CHECK-MIPS64
 ; RUN: llc -march=mipsel -mcpu=mips64 -target-abi n32 < %s | \
 ; RUN:      FileCheck %s -check-prefix=CHECK-MIPSN32

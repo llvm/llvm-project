@@ -9,6 +9,11 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-exceptions, libcpp-no-if-constexpr
+// MODULES_DEFINES: _LIBCPP_DEBUG=1
+// MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS
+
+// Can't test the system lib because this test enables debug mode
+// UNSUPPORTED: with_system_cxx_lib
 
 // test container debugging
 
@@ -38,8 +43,7 @@ struct StringContainerChecks : BasicContainerChecks<Container, CT> {
 public:
   static void run() {
     Base::run_iterator_tests();
-    // FIXME: get these passing
-    // Base::run_allocator_aware_tests();
+    Base::run_allocator_aware_tests();
     try {
       for (int N : {3, 128}) {
         FrontOnEmptyContainer(N);

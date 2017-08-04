@@ -473,3 +473,16 @@ struct NegativeInitializedBitfieldMembers {
   unsigned F : 5;
   unsigned G : 5;
 };
+
+struct NegativeImplicitInheritedCtorBase {
+  NegativeImplicitInheritedCtorBase(unsigned F) : F(F) {}
+  unsigned F;
+};
+
+struct NegativeImplicitInheritedCtor : NegativeImplicitInheritedCtorBase {
+  using NegativeImplicitInheritedCtorBase::NegativeImplicitInheritedCtorBase;
+};
+
+void Bug33557() {
+  NegativeImplicitInheritedCtor I(5);
+}

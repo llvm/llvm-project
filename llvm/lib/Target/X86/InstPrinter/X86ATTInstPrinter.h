@@ -1,4 +1,4 @@
-//==- X86ATTInstPrinter.h - Convert X86 MCInst to assembly syntax -*- C++ -*-=//
+//=- X86ATTInstPrinter.h - Convert X86 MCInst to assembly syntax --*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -137,6 +137,7 @@ public:
 private:
   bool HasCustomInstComment;
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_X86_INSTPRINTER_X86ATTINSTPRINTER_H

@@ -405,6 +405,17 @@ private:
   /// deleteRematVictims - Delete defs that are dead after rematerializing.
   void deleteRematVictims();
 
+  /// Add a copy instruction copying \p FromReg to \p ToReg before
+  /// \p InsertBefore. This can be invoked with a \p LaneMask which may make it
+  /// necessary to construct a sequence of copies to cover it exactly.
+  SlotIndex buildCopy(unsigned FromReg, unsigned ToReg, LaneBitmask LaneMask,
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+      bool Late, unsigned RegIdx);
+
+  SlotIndex buildSingleSubRegCopy(unsigned FromReg, unsigned ToReg,
+      MachineBasicBlock &MB, MachineBasicBlock::iterator InsertBefore,
+      unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex PrevCopy);
+
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
   /// Newly created intervals will be appended to newIntervals.

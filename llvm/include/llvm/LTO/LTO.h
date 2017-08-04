@@ -19,12 +19,14 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/CodeGen/Analysis.h"
+#include "llvm/Analysis/ObjectUtils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Linker/IRMover.h"
-#include "llvm/Object/IRObjectFile.h"
+#include "llvm/Object/IRSymtab.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -68,25 +70,35 @@ std::string getThinLTOOutputFile(const std::string &Path,
                                  const std::string &OldPrefix,
                                  const std::string &NewPrefix);
 
+/// Setup optimization remarks.
+Expected<std::unique_ptr<tool_output_file>>
+setupOptimizationRemarks(LLVMContext &Context, StringRef LTORemarksFilename,
+                         bool LTOPassRemarksWithHotness, int Count = -1);
+
 class LTO;
 struct SymbolResolution;
 class ThinBackendProc;
 
-/// An input file. This is a wrapper for ModuleSymbolTable that exposes only the
+/// An input file. This is a symbol table wrapper that only exposes the
 /// information that an LTO client should need in order to do symbol resolution.
 class InputFile {
+public:
+  class Symbol;
+
+private:
   // FIXME: Remove LTO class friendship once we have bitcode symbol tables.
   friend LTO;
   InputFile() = default;
 
-  // FIXME: Remove the LLVMContext once we have bitcode symbol tables.
-  LLVMContext Ctx;
-  struct InputModule;
-  std::vector<InputModule> Mods;
-  ModuleSymbolTable SymTab;
+  std::vector<BitcodeModule> Mods;
+  SmallVector<char, 0> Strtab;
+  std::vector<Symbol> Symbols;
 
-  std::vector<StringRef> Comdats;
-  DenseMap<const Comdat *, unsigned> ComdatMap;
+  // [begin, end) for each module
+  std::vector<std::pair<size_t, size_t>> ModuleSymIndices;
+
+  StringRef TargetTriple, SourceFileName, COFFLinkerOpts;
+  std::vector<StringRef> ComdatTable;
 
 public:
   ~InputFile();
@@ -94,143 +106,52 @@ public:
   /// Create an InputFile.
   static Expected<std::unique_ptr<InputFile>> create(MemoryBufferRef Object);
 
-  class symbol_iterator;
-
-  /// This is a wrapper for ArrayRef<ModuleSymbolTable::Symbol>::iterator that
-  /// exposes only the information that an LTO client should need in order to do
-  /// symbol resolution.
-  ///
-  /// This object is ephemeral; it is only valid as long as an iterator obtained
-  /// from symbols() refers to it.
-  class Symbol {
-    friend symbol_iterator;
+  /// The purpose of this class is to only expose the symbol information that an
+  /// LTO client should need in order to do symbol resolution.
+  class Symbol : irsymtab::Symbol {
     friend LTO;
 
-    ArrayRef<ModuleSymbolTable::Symbol>::iterator I;
-    const ModuleSymbolTable &SymTab;
-    const InputFile *File;
-    uint32_t Flags;
-    SmallString<64> Name;
-
-    bool shouldSkip() {
-      return !(Flags & object::BasicSymbolRef::SF_Global) ||
-             (Flags & object::BasicSymbolRef::SF_FormatSpecific);
-    }
-
-    void skip() {
-      ArrayRef<ModuleSymbolTable::Symbol>::iterator E = SymTab.symbols().end();
-      while (I != E) {
-        Flags = SymTab.getSymbolFlags(*I);
-        if (!shouldSkip())
-          break;
-        ++I;
-      }
-      if (I == E)
-        return;
-
-      Name.clear();
-      {
-        raw_svector_ostream OS(Name);
-        SymTab.printSymbolName(OS, *I);
-      }
-    }
-
-    bool isGV() const { return I->is<GlobalValue *>(); }
-    GlobalValue *getGV() const { return I->get<GlobalValue *>(); }
-
   public:
-    Symbol(ArrayRef<ModuleSymbolTable::Symbol>::iterator I,
-           const ModuleSymbolTable &SymTab, const InputFile *File)
-        : I(I), SymTab(SymTab), File(File) {
-      skip();
-    }
+    Symbol(const irsymtab::Symbol &S) : irsymtab::Symbol(S) {}
 
-    /// Returns the mangled name of the global.
-    StringRef getName() const { return Name; }
-
-    uint32_t getFlags() const { return Flags; }
-    GlobalValue::VisibilityTypes getVisibility() const {
-      if (isGV())
-        return getGV()->getVisibility();
-      return GlobalValue::DefaultVisibility;
-    }
-    bool canBeOmittedFromSymbolTable() const {
-      return isGV() && llvm::canBeOmittedFromSymbolTable(getGV());
-    }
-    bool isTLS() const {
-      // FIXME: Expose a thread-local flag for module asm symbols.
-      return isGV() && getGV()->isThreadLocal();
-    }
-
-    // Returns the index of the comdat this symbol is in or -1 if the symbol
-    // is not in a comdat.
-    // FIXME: We have to return Expected<int> because aliases point to an
-    // arbitrary ConstantExpr and that might not actually be a constant. That
-    // means we might not be able to find what an alias is aliased to and
-    // so find its comdat.
-    Expected<int> getComdatIndex() const;
-
-    uint64_t getCommonSize() const {
-      assert(Flags & object::BasicSymbolRef::SF_Common);
-      if (!isGV())
-        return 0;
-      return getGV()->getParent()->getDataLayout().getTypeAllocSize(
-          getGV()->getType()->getElementType());
-    }
-    unsigned getCommonAlignment() const {
-      assert(Flags & object::BasicSymbolRef::SF_Common);
-      if (!isGV())
-        return 0;
-      return getGV()->getAlignment();
-    }
-  };
-
-  class symbol_iterator {
-    Symbol Sym;
-
-  public:
-    symbol_iterator(ArrayRef<ModuleSymbolTable::Symbol>::iterator I,
-                    const ModuleSymbolTable &SymTab, const InputFile *File)
-        : Sym(I, SymTab, File) {}
-
-    symbol_iterator &operator++() {
-      ++Sym.I;
-      Sym.skip();
-      return *this;
-    }
-
-    symbol_iterator operator++(int) {
-      symbol_iterator I = *this;
-      ++*this;
-      return I;
-    }
-
-    const Symbol &operator*() const { return Sym; }
-    const Symbol *operator->() const { return &Sym; }
-
-    bool operator!=(const symbol_iterator &Other) const {
-      return Sym.I != Other.Sym.I;
-    }
+    using irsymtab::Symbol::isUndefined;
+    using irsymtab::Symbol::isCommon;
+    using irsymtab::Symbol::isWeak;
+    using irsymtab::Symbol::isIndirect;
+    using irsymtab::Symbol::getName;
+    using irsymtab::Symbol::getVisibility;
+    using irsymtab::Symbol::canBeOmittedFromSymbolTable;
+    using irsymtab::Symbol::isTLS;
+    using irsymtab::Symbol::getComdatIndex;
+    using irsymtab::Symbol::getCommonSize;
+    using irsymtab::Symbol::getCommonAlignment;
+    using irsymtab::Symbol::getCOFFWeakExternalFallback;
+    using irsymtab::Symbol::isExecutable;
   };
 
   /// A range over the symbols in this InputFile.
-  iterator_range<symbol_iterator> symbols() {
-    return llvm::make_range(
-        symbol_iterator(SymTab.symbols().begin(), SymTab, this),
-        symbol_iterator(SymTab.symbols().end(), SymTab, this));
-  }
+  ArrayRef<Symbol> symbols() const { return Symbols; }
+
+  /// Returns linker options specified in the input file.
+  StringRef getCOFFLinkerOpts() const { return COFFLinkerOpts; }
 
   /// Returns the path to the InputFile.
   StringRef getName() const;
 
+  /// Returns the input file's target triple.
+  StringRef getTargetTriple() const { return TargetTriple; }
+
   /// Returns the source file path specified at compile time.
-  StringRef getSourceFileName() const;
+  StringRef getSourceFileName() const { return SourceFileName; }
 
   // Returns a table with all the comdats used by this file.
-  ArrayRef<StringRef> getComdatTable() const { return Comdats; }
+  ArrayRef<StringRef> getComdatTable() const { return ComdatTable; }
 
 private:
-  iterator_range<symbol_iterator> module_symbols(InputModule &IM);
+  ArrayRef<Symbol> module_symbols(unsigned I) const {
+    const auto &Indices = ModuleSymIndices[I];
+    return {Symbols.data() + Indices.first, Symbols.data() + Indices.second};
+  }
 };
 
 /// This class wraps an output stream for a native object. Most clients should
@@ -360,6 +281,16 @@ private:
     bool HasModule = false;
     std::unique_ptr<Module> CombinedModule;
     std::unique_ptr<IRMover> Mover;
+
+    // This stores the information about a regular LTO module that we have added
+    // to the link. It will either be linked immediately (for modules without
+    // summaries) or after summary-based dead stripping (for modules with
+    // summaries).
+    struct AddedModule {
+      std::unique_ptr<Module> M;
+      std::vector<GlobalValue *> Keep;
+    };
+    std::vector<AddedModule> ModsWithSummaries;
   } RegularLTO;
 
   struct ThinLTOState {
@@ -382,9 +313,10 @@ private:
     /// The unmangled name of the global.
     std::string IRName;
 
-    /// Keep track if the symbol is visible outside of ThinLTO (i.e. in
-    /// either a regular object or the regular LTO partition).
-    bool VisibleOutsideThinLTO = false;
+    /// Keep track if the symbol is visible outside of a module with a summary
+    /// (i.e. in either a regular object or a regular LTO module without a
+    /// summary).
+    bool VisibleOutsideSummary = false;
 
     bool UnnamedAddr = true;
 
@@ -418,20 +350,24 @@ private:
   // Global mapping from mangled symbol names to resolutions.
   StringMap<GlobalResolution> GlobalResolutions;
 
-  void addSymbolToGlobalRes(SmallPtrSet<GlobalValue *, 8> &Used,
-                            const InputFile::Symbol &Sym, SymbolResolution Res,
-                            unsigned Partition);
+  void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
+                            ArrayRef<SymbolResolution> Res, unsigned Partition,
+                            bool InSummary);
 
   // These functions take a range of symbol resolutions [ResI, ResE) and consume
   // the resolutions used by a single input module by incrementing ResI. After
   // these functions return, [ResI, ResE) will refer to the resolution range for
   // the remaining modules in the InputFile.
-  Error addModule(InputFile &Input, InputFile::InputModule &IM,
+  Error addModule(InputFile &Input, unsigned ModI,
                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
-  Error addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
-                      const SymbolResolution *ResE);
-  Error addThinLTO(BitcodeModule BM, Module &M,
-                   iterator_range<InputFile::symbol_iterator> Syms,
+
+  Expected<RegularLTOState::AddedModule>
+  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Error linkRegularLTO(RegularLTOState::AddedModule Mod,
+                       bool LivenessFromIndex);
+
+  Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    const SymbolResolution *&ResI, const SymbolResolution *ResE);
 
   Error runRegularLTO(AddStreamFn AddStream);
@@ -445,8 +381,9 @@ private:
 /// each global symbol based on its internal resolution of that symbol.
 struct SymbolResolution {
   SymbolResolution()
-      : Prevailing(0), FinalDefinitionInLinkageUnit(0), VisibleToRegularObj(0) {
-  }
+      : Prevailing(0), FinalDefinitionInLinkageUnit(0), VisibleToRegularObj(0),
+        LinkerRedefined(0) {}
+
   /// The linker has chosen this definition of the symbol.
   unsigned Prevailing : 1;
 
@@ -456,6 +393,10 @@ struct SymbolResolution {
 
   /// The definition of this symbol is visible outside of the LTO unit.
   unsigned VisibleToRegularObj : 1;
+
+  /// Linker redefined version of the symbol which appeared in -wrap or -defsym
+  /// linker option.
+  unsigned LinkerRedefined : 1;
 };
 
 } // namespace lto

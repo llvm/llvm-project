@@ -367,7 +367,7 @@ public:
   void EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc, QualType FnType);
 
   /// Constructs the debug code for exiting a function.
-  void EmitFunctionEnd(CGBuilderTy &Builder);
+  void EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn);
 
   /// Emit metadata to indicate the beginning of a new lexical block
   /// and push the block onto the stack.
@@ -436,9 +436,21 @@ public:
   void completeType(const RecordDecl *RD);
   void completeRequiredType(const RecordDecl *RD);
   void completeClassData(const RecordDecl *RD);
+  void completeClass(const RecordDecl *RD);
 
   void completeTemplateDefinition(const ClassTemplateSpecializationDecl &SD);
+  void completeUnusedClass(const CXXRecordDecl &D);
 
+  /// Create debug info for a macro defined by a #define directive or a macro
+  /// undefined by a #undef directive.
+  llvm::DIMacro *CreateMacro(llvm::DIMacroFile *Parent, unsigned MType,
+                             SourceLocation LineLoc, StringRef Name,
+                             StringRef Value);
+
+  /// Create debug info for a file referenced by an #include directive.
+  llvm::DIMacroFile *CreateTempMacroFile(llvm::DIMacroFile *Parent,
+                                         SourceLocation LineLoc,
+                                         SourceLocation FileLoc);
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
   void EmitDeclare(const VarDecl *decl, llvm::Value *AI,

@@ -14,8 +14,7 @@ int main(int argc, char **argv)
   assert(argc == 2);
   if (!strcmp(argv[1], "pointers")) {
     void *p = malloc(1U << 16);
-    if (!p)
-      return 1;
+    assert(p);
     free(reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(p) | 1));
   }
   return 0;

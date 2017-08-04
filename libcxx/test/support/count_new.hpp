@@ -231,12 +231,17 @@ public:
   const bool MemCounter::disable_checking = false;
 #endif
 
-MemCounter globalMemCounter((MemCounter::MemCounterCtorArg_()));
+inline MemCounter* getGlobalMemCounter() {
+  static MemCounter counter((MemCounter::MemCounterCtorArg_()));
+  return &counter;
+}
+
+MemCounter &globalMemCounter = *getGlobalMemCounter();
 
 #ifndef DISABLE_NEW_COUNT
 void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 {
-    globalMemCounter.newCalled(s);
+    getGlobalMemCounter()->newCalled(s);
     void* ret = std::malloc(s);
     if (ret == nullptr)
         detail::throw_bad_alloc_helper();
@@ -245,21 +250,21 @@ void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 
 void  operator delete(void* p) TEST_NOEXCEPT
 {
-    globalMemCounter.deleteCalled(p);
+    getGlobalMemCounter()->deleteCalled(p);
     std::free(p);
 }
 
 
 void* operator new[](std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 {
-    globalMemCounter.newArrayCalled(s);
+    getGlobalMemCounter()->newArrayCalled(s);
     return operator new(s);
 }
 
 
 void operator delete[](void* p) TEST_NOEXCEPT
 {
-    globalMemCounter.deleteArrayCalled(p);
+    getGlobalMemCounter()->deleteArrayCalled(p);
     operator delete(p);
 }
 

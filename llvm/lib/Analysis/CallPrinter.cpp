@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallPrinter.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 
 using namespace llvm;

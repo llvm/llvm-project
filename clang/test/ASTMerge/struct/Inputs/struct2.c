@@ -58,3 +58,19 @@ struct {
   int i;
   float f;
 } x11;
+
+// Matches
+typedef struct {
+  int i;
+  float f;
+} S12;
+
+S12 x12;
+
+// Mismatch
+typedef struct {
+  int i; // Mismatch here.
+  float f;
+} S13;
+
+S13 x13;

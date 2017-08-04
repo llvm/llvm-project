@@ -53,8 +53,8 @@ define void @unsupportedInstructionForPromotion(<2 x i32>* %addr1, i32 %in2, i1*
 ; IR-BOTH: ret
 ;
 ; ASM-LABEL: unsupportedChainInDifferentBBs:
-; ASM: vldrne [[LOAD:d[0-9]+]], [r0]
-; ASM: vmovne.32 {{r[0-9]+}}, [[LOAD]]
+; ASM: vldr [[LOAD:d[0-9]+]], [r0]
+; ASM: vmov.32 {{r[0-9]+}}, [[LOAD]]
 ; ASM: bx
 define void @unsupportedChainInDifferentBBs(<2 x i32>* %addr1, i32* %dest, i1 %bool) {
 bb1:

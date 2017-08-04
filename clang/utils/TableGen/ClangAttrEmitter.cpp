@@ -92,13 +92,13 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-    .EndsWith("Decl *", "GetLocalDeclAs<" 
-              + std::string(type, 0, type.size()-1) + ">(F, Record[Idx++])")
-    .Case("TypeSourceInfo *", "GetTypeSourceInfo(F, Record, Idx)")
-    .Case("Expr *", "ReadExpr(F)")
-    .Case("IdentifierInfo *", "GetIdentifierInfo(F, Record, Idx)")
-    .Case("StringRef", "ReadString(Record, Idx)")
-    .Default("Record[Idx++]");
+    .EndsWith("Decl *", "Record.GetLocalDeclAs<" 
+              + std::string(type, 0, type.size()-1) + ">(Record.readInt())")
+    .Case("TypeSourceInfo *", "Record.getTypeSourceInfo()")
+    .Case("Expr *", "Record.readExpr()")
+    .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
+    .Case("StringRef", "Record.readString()")
+    .Default("Record.readInt()");
 }
 
 // Get a type that is suitable for storing an object of the specified type.
@@ -415,7 +415,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    std::string " << getLowerName()
-         << "= ReadString(Record, Idx);\n";
+         << "= Record.readString();\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -541,13 +541,13 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    bool is" << getLowerName() << "Expr = Record[Idx++];\n";
+      OS << "    bool is" << getLowerName() << "Expr = Record.readInt();\n";
       OS << "    void *" << getLowerName() << "Ptr;\n";
       OS << "    if (is" << getLowerName() << "Expr)\n";
-      OS << "      " << getLowerName() << "Ptr = ReadExpr(F);\n";
+      OS << "      " << getLowerName() << "Ptr = Record.readExpr();\n";
       OS << "    else\n";
       OS << "      " << getLowerName()
-         << "Ptr = GetTypeSourceInfo(F, Record, Idx);\n";
+         << "Ptr = Record.getTypeSourceInfo();\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -660,7 +660,7 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    unsigned " << getLowerName() << "Size = Record[Idx++];\n";
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
       OS << "    SmallVector<" << getType() << ", 4> "
          << getLowerName() << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
@@ -718,9 +718,9 @@ namespace {
   };
 
   // Unique the enums, but maintain the original declaration ordering.
-  std::vector<std::string>
-  uniqueEnumsInOrder(const std::vector<std::string> &enums) {
-    std::vector<std::string> uniques;
+  std::vector<StringRef>
+  uniqueEnumsInOrder(const std::vector<StringRef> &enums) {
+    std::vector<StringRef> uniques;
     SmallDenseSet<StringRef, 8> unique_set;
     for (const auto &i : enums) {
       if (unique_set.insert(i).second)
@@ -731,7 +731,8 @@ namespace {
 
   class EnumArgument : public Argument {
     std::string type;
-    std::vector<std::string> values, enums, uniques;
+    std::vector<StringRef> values, enums, uniques;
+
   public:
     EnumArgument(const Record &Arg, StringRef Attr)
       : Argument(Arg, Attr), type(Arg.getValueAsString("Type")),
@@ -785,7 +786,7 @@ namespace {
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    " << getAttrName() << "Attr::" << type << " " << getLowerName()
          << "(static_cast<" << getAttrName() << "Attr::" << type
-         << ">(Record[Idx++]));\n";
+         << ">(Record.readInt()));\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -850,7 +851,7 @@ namespace {
   
   class VariadicEnumArgument: public VariadicArgument {
     std::string type, QualifiedTypeName;
-    std::vector<std::string> values, enums, uniques;
+    std::vector<StringRef> values, enums, uniques;
 
   protected:
     void writeValueImpl(raw_ostream &OS) const override {
@@ -908,14 +909,14 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    unsigned " << getLowerName() << "Size = Record[Idx++];\n";
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
       OS << "    SmallVector<" << QualifiedTypeName << ", 4> " << getLowerName()
          << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
          << "Size);\n";
       OS << "    for (unsigned i = " << getLowerName() << "Size; i; --i)\n";
       OS << "      " << getLowerName() << ".push_back(" << "static_cast<"
-         << QualifiedTypeName << ">(Record[Idx++]));\n";
+         << QualifiedTypeName << ">(Record.readInt()));\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -998,7 +999,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    VersionTuple " << getLowerName()
-         << "= ReadVersionTuple(Record, Idx);\n";
+         << "= Record.readVersionTuple();\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -1038,7 +1039,7 @@ namespace {
       OS << "      " << getType() << " tempInst" << getUpperName() << ";\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
-         << "Unevaluated(S, Sema::Unevaluated);\n";
+         << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
       OS << "        ExprResult " << "Result = S.SubstExpr("
          << "A->get" << getUpperName() << "(), TemplateArgs);\n";
       OS << "        tempInst" << getUpperName() << " = "
@@ -1085,7 +1086,7 @@ namespace {
          << "[A->" << getLowerName() << "_size()];\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
-         << "Unevaluated(S, Sema::Unevaluated);\n";
+         << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
       OS << "        " << getType() << " *TI = tempInst" << getUpperName()
          << ";\n";
       OS << "        " << getType() << " *I = A->" << getLowerName()
@@ -1170,7 +1171,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    AttrVec vec;\n"
-            "    ReadAttributes(F, vec, Record, Idx);\n"
+            "    ReadAttributes(Record, vec);\n"
             "    assert(vec.size() == 1);\n"
             "    Attr *" << getLowerName() << " = vec.front();";
     }
@@ -1619,8 +1620,9 @@ struct AttributeSubjectMatchRule {
   }
 
   std::string getEnumValueName() const {
-    std::string Result =
-        "SubjectMatchRule_" + MetaSubject->getValueAsString("Name");
+    SmallString<128> Result;
+    Result += "SubjectMatchRule_";
+    Result += MetaSubject->getValueAsString("Name");
     if (isSubRule()) {
       Result += "_";
       if (isNegatedSubRule())
@@ -1629,7 +1631,7 @@ struct AttributeSubjectMatchRule {
     }
     if (isAbstractRule())
       Result += "_abstract";
-    return Result;
+    return Result.str();
   }
 
   std::string getEnumValue() const { return "attr::" + getEnumValueName(); }
@@ -1700,7 +1702,7 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
       Records.getAllDerivedDefinitions("AttrSubjectMatcherRule");
   auto MapFromSubjectsToRules = [this](const Record *SubjectContainer,
                                        const Record *MetaSubject,
-                                       const Record *Constraint = nullptr) {
+                                       const Record *Constraint) {
     Rules.emplace_back(MetaSubject, Constraint);
     std::vector<Record *> ApplicableSubjects =
         SubjectContainer->getValueAsListOfDefs("Subjects");
@@ -1718,7 +1720,7 @@ PragmaClangAttributeSupport::PragmaClangAttributeSupport(
     }
   };
   for (const auto *MetaSubject : MetaSubjects) {
-    MapFromSubjectsToRules(MetaSubject, MetaSubject);
+    MapFromSubjectsToRules(MetaSubject, MetaSubject, /*Constraints=*/nullptr);
     std::vector<Record *> Constraints =
         MetaSubject->getValueAsListOfDefs("Constraints");
     for (const auto *Constraint : Constraints)
@@ -2571,9 +2573,9 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
     
     OS << "  case attr::" << R.getName() << ": {\n";
     if (R.isSubClassOf(InhClass))
-      OS << "    bool isInherited = Record[Idx++];\n";
-    OS << "    bool isImplicit = Record[Idx++];\n";
-    OS << "    unsigned Spelling = Record[Idx++];\n";
+      OS << "    bool isInherited = Record.readInt();\n";
+    OS << "    bool isImplicit = Record.readInt();\n";
+    OS << "    unsigned Spelling = Record.readInt();\n";
     ArgRecords = R.getValueAsListOfDefs("Args");
     Args.clear();
     for (const auto *Arg : ArgRecords) {
@@ -2631,7 +2633,7 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
 // append a unique suffix to distinguish this set of target checks from other
 // TargetSpecificAttr records.
 static void GenerateTargetSpecificAttrChecks(const Record *R,
-                                             std::vector<std::string> &Arches,
+                                             std::vector<StringRef> &Arches,
                                              std::string &Test,
                                              std::string *FnName) {
   // It is assumed that there will be an llvm::Triple object
@@ -2641,8 +2643,9 @@ static void GenerateTargetSpecificAttrChecks(const Record *R,
   Test += "(";
 
   for (auto I = Arches.begin(), E = Arches.end(); I != E; ++I) {
-    std::string Part = *I;
-    Test += "T.getArch() == llvm::Triple::" + Part;
+    StringRef Part = *I;
+    Test += "T.getArch() == llvm::Triple::";
+    Test += Part;
     if (I + 1 != E)
       Test += " || ";
     if (FnName)
@@ -2655,11 +2658,12 @@ static void GenerateTargetSpecificAttrChecks(const Record *R,
     // We know that there was at least one arch test, so we need to and in the
     // OS tests.
     Test += " && (";
-    std::vector<std::string> OSes = R->getValueAsListOfStrings("OSes");
+    std::vector<StringRef> OSes = R->getValueAsListOfStrings("OSes");
     for (auto I = OSes.begin(), E = OSes.end(); I != E; ++I) {
-      std::string Part = *I;
+      StringRef Part = *I;
 
-      Test += "T.getOS() == llvm::Triple::" + Part;
+      Test += "T.getOS() == llvm::Triple::";
+      Test += Part;
       if (I + 1 != E)
         Test += " || ";
       if (FnName)
@@ -2671,10 +2675,11 @@ static void GenerateTargetSpecificAttrChecks(const Record *R,
   // If one or more CXX ABIs are specified, check those as well.
   if (!R->isValueUnset("CXXABIs")) {
     Test += " && (";
-    std::vector<std::string> CXXABIs = R->getValueAsListOfStrings("CXXABIs");
+    std::vector<StringRef> CXXABIs = R->getValueAsListOfStrings("CXXABIs");
     for (auto I = CXXABIs.begin(), E = CXXABIs.end(); I != E; ++I) {
-      std::string Part = *I;
-      Test += "Target.getCXXABI().getKind() == TargetCXXABI::" + Part;
+      StringRef Part = *I;
+      Test += "Target.getCXXABI().getKind() == TargetCXXABI::";
+      Test += Part;
       if (I + 1 != E)
         Test += " || ";
       if (FnName)
@@ -2712,7 +2717,7 @@ static void GenerateHasAttrSpellingStringSwitch(
     std::string Test;
     if (Attr->isSubClassOf("TargetSpecificAttr")) {
       const Record *R = Attr->getValueAsDef("Target");
-      std::vector<std::string> Arches = R->getValueAsListOfStrings("Arches");
+      std::vector<StringRef> Arches = R->getValueAsListOfStrings("Arches");
       GenerateTargetSpecificAttrChecks(R, Arches, Test, nullptr);
 
       // If this is the C++11 variety, also add in the LangOpts test.
@@ -3351,7 +3356,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
 
   // Get the list of architectures to be tested for.
   const Record *R = Attr.getValueAsDef("Target");
-  std::vector<std::string> Arches = R->getValueAsListOfStrings("Arches");
+  std::vector<StringRef> Arches = R->getValueAsListOfStrings("Arches");
   if (Arches.empty()) {
     PrintError(Attr.getLoc(), "Empty list of target architectures for a "
                               "target-specific attr");
@@ -3368,9 +3373,10 @@ static std::string GenerateTargetRequirements(const Record &Attr,
     std::string APK = Attr.getValueAsString("ParseKind");
     for (const auto &I : Dupes) {
       if (I.first == APK) {
-        std::vector<std::string> DA = I.second->getValueAsDef("Target")
-                                          ->getValueAsListOfStrings("Arches");
-        std::move(DA.begin(), DA.end(), std::back_inserter(Arches));
+        std::vector<StringRef> DA =
+            I.second->getValueAsDef("Target")->getValueAsListOfStrings(
+                "Arches");
+        Arches.insert(Arches.end(), DA.begin(), DA.end());
       }
     }
   }
@@ -3863,19 +3869,19 @@ void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
         SubjectObj->getValueAsListOfDefs("Subjects");
     OS << " (";
     for (const auto &Subject : llvm::enumerate(Subjects)) {
-      if (Subject.Index)
+      if (Subject.index())
         OS << ", ";
       PragmaClangAttributeSupport::RuleOrAggregateRuleSet &RuleSet =
-          Support.SubjectsToRules.find(Subject.Value)->getSecond();
+          Support.SubjectsToRules.find(Subject.value())->getSecond();
       if (RuleSet.isRule()) {
         OS << RuleSet.getRule().getEnumValueName();
         continue;
       }
       OS << "(";
       for (const auto &Rule : llvm::enumerate(RuleSet.getAggregateRuleSet())) {
-        if (Rule.Index)
+        if (Rule.index())
           OS << ", ";
-        OS << Rule.Value.getEnumValueName();
+        OS << Rule.value().getEnumValueName();
       }
       OS << ")";
     }

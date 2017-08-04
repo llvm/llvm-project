@@ -1,4 +1,5 @@
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx \
+; RUN:    -enable-legalize-types-checking | FileCheck %s --check-prefix=X64
 ;
 ; These cases check if x86_64-linux-android works with -O2 -g,
 ; especially CSE matching needed by SoftenFloatRes_LOAD.

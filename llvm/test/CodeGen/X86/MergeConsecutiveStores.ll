@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWON %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=0 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -addr-sink-using-gep=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWON %s
 
 %struct.A = type { i8, i8, i8, i8, i8, i8, i8, i8 }
 %struct.B = type { i32, i32, i32, i32, i32, i32, i32, i32 }
@@ -111,8 +110,7 @@ define void @merge_const_store_vec(i32 %count, %struct.B* nocapture %p) nounwind
 ; CHECK-LABEL: merge_nonconst_store:
 ; CHECK: movl $67305985
 ; CHECK: movb
-; CHECK: movb
-; CHECK: movb
+; CHECK: movw
 ; CHECK: movb
 ; CHECK: ret
 define void @merge_nonconst_store(i32 %count, i8 %zz, %struct.A* nocapture %p) nounwind uwtable noinline ssp {
@@ -292,16 +290,12 @@ block4:                                       ; preds = %4, %.lr.ph
   ret void
 }
 
-;; On x86, even unaligned copies should be merged to vector ops.
-;; TODO: however, this cannot happen at the moment, due to brokenness
-;; in MergeConsecutiveStores. See UseAA FIXME in DAGCombiner.cpp
-;; visitSTORE.
-
+;; On x86, even unaligned copies can be merged to vector ops.
 ; CHECK-LABEL: merge_loads_no_align:
 ;  load:
-; CHECK-NOT: vmovups ;; TODO
+; CHECK: vmovups
 ;  store:
-; CHECK-NOT: vmovups ;; TODO
+; CHECK: vmovups
 ; CHECK: ret
 define void @merge_loads_no_align(i32 %count, %struct.B* noalias nocapture %q, %struct.B* noalias nocapture %p) nounwind uwtable noinline ssp {
   %a1 = icmp sgt i32 %count, 0
@@ -583,8 +577,54 @@ define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
 
 ; CHECK-LABEL: merge_vec_element_and_scalar_load
 ; CHECK:      movq	(%rdi), %rax
+; CHECK-NEXT: movq	8(%rdi), %rcx
 ; CHECK-NEXT: movq	%rax, 32(%rdi)
-; CHECK-NEXT: movq	8(%rdi), %rax
-; CHECK-NEXT: movq	%rax, 40(%rdi)
+; CHECK-NEXT: movq	%rcx, 40(%rdi)
+; CHECK-NEXT: retq
+}
+
+; Don't let a non-consecutive store thwart merging of the last two.
+define void @almost_consecutive_stores(i8* %p) {
+  store i8 0, i8* %p
+  %p1 = getelementptr i8, i8* %p, i64 42
+  store i8 1, i8* %p1
+  %p2 = getelementptr i8, i8* %p, i64 2
+  store i8 2, i8* %p2
+  %p3 = getelementptr i8, i8* %p, i64 3
+  store i8 3, i8* %p3
+  ret void
+; CHECK-LABEL: almost_consecutive_stores
+; CHECK-DAG: movb $0, (%rdi)
+; CHECK-DAG: movb $1, 42(%rdi)
+; CHECK-DAG: movw $770, 2(%rdi)
+; CHECK: retq
+}
+
+; We should be able to merge these.
+define void @merge_bitcast(<4 x i32> %v, float* %ptr) {
+  %fv = bitcast <4 x i32> %v to <4 x float>
+
+  %vecext1 = extractelement <4 x i32> %v, i32 1
+  %vecext2 = extractelement <4 x i32> %v, i32 2
+  %vecext3 = extractelement <4 x i32> %v, i32 3
+  %f0 = extractelement <4 x float> %fv, i32 0
+  %f1 = bitcast i32 %vecext1 to float
+  %f2 = bitcast i32 %vecext2 to float
+  %f3 = bitcast i32 %vecext3 to float
+  %idx0 = getelementptr inbounds float, float* %ptr, i64 0
+  %idx1 = getelementptr inbounds float, float* %ptr, i64 1
+  %idx2 = getelementptr inbounds float, float* %ptr, i64 2
+  %idx3 = getelementptr inbounds float, float* %ptr, i64 3
+  store float %f0, float* %idx0, align 4
+  store float %f1, float* %idx1, align 4
+  store float %f2, float* %idx2, align 4
+  store float %f3, float* %idx3, align 4
+  ret void
+
+; CHECK-LABEL: merge_bitcast
+; CHECK:      vmovd	%xmm0, (%rdi)
+; CHECK-NEXT: vpextrd	$1, %xmm0, 4(%rdi)
+; CHECK-NEXT: vpextrd	$2, %xmm0, 8(%rdi)
+; CHECK-NEXT: vpextrd	$3, %xmm0, 12(%rdi)
 ; CHECK-NEXT: retq
 }

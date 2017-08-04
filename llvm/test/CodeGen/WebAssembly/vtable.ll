@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s --check-prefix=TYPEINFONAME
-; RUN: llc < %s -asm-verbose=false | FileCheck %s --check-prefix=VTABLE
-; RUN: llc < %s -asm-verbose=false | FileCheck %s --check-prefix=TYPEINFO
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s --check-prefix=TYPEINFONAME
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s --check-prefix=VTABLE
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s --check-prefix=TYPEINFO
 
 ; Test that simple vtables assemble as expected.
 ;
@@ -12,7 +12,7 @@
 ; Each with a virtual dtor and method foo.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 %struct.A = type { i32 (...)** }
 %struct.B = type { %struct.A }
@@ -36,7 +36,7 @@ target triple = "wasm32-unknown-unknown"
 @_ZTS1D = constant [3 x i8] c"1D\00"
 
 ; VTABLE:       .type _ZTV1A,@object
-; VTABLE-NEXT:  .section .data.rel.ro,"aw",@progbits
+; VTABLE-NEXT:  .section .data.rel.ro._ZTV1A,
 ; VTABLE-NEXT:  .globl _ZTV1A
 ; VTABLE-LABEL: _ZTV1A:
 ; VTABLE-NEXT:  .int32 0
@@ -47,6 +47,7 @@ target triple = "wasm32-unknown-unknown"
 ; VTABLE-NEXT:  .size _ZTV1A, 20
 @_ZTV1A = constant [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* bitcast (%struct.A* (%struct.A*)* @_ZN1AD2Ev to i8*), i8* bitcast (void (%struct.A*)* @_ZN1AD0Ev to i8*), i8* bitcast (void (%struct.A*)* @_ZN1A3fooEv to i8*)], align 4
 ; VTABLE:       .type _ZTV1B,@object
+; VTABLE-NEXT:  .section .data.rel.ro._ZTV1B,
 ; VTABLE-NEXT:  .globl _ZTV1B
 ; VTABLE-LABEL: _ZTV1B:
 ; VTABLE-NEXT:  .int32 0
@@ -57,6 +58,7 @@ target triple = "wasm32-unknown-unknown"
 ; VTABLE-NEXT:  .size _ZTV1B, 20
 @_ZTV1B = constant [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI1B to i8*), i8* bitcast (%struct.A* (%struct.A*)* @_ZN1AD2Ev to i8*), i8* bitcast (void (%struct.B*)* @_ZN1BD0Ev to i8*), i8* bitcast (void (%struct.B*)* @_ZN1B3fooEv to i8*)], align 4
 ; VTABLE:       .type _ZTV1C,@object
+; VTABLE-NEXT:  .section .data.rel.ro._ZTV1C,
 ; VTABLE-NEXT:  .globl _ZTV1C
 ; VTABLE-LABEL: _ZTV1C:
 ; VTABLE-NEXT:  .int32 0
@@ -67,6 +69,7 @@ target triple = "wasm32-unknown-unknown"
 ; VTABLE-NEXT:  .size _ZTV1C, 20
 @_ZTV1C = constant [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI1C to i8*), i8* bitcast (%struct.A* (%struct.A*)* @_ZN1AD2Ev to i8*), i8* bitcast (void (%struct.C*)* @_ZN1CD0Ev to i8*), i8* bitcast (void (%struct.C*)* @_ZN1C3fooEv to i8*)], align 4
 ; VTABLE:       .type _ZTV1D,@object
+; VTABLE-NEXT:  .section .data.rel.ro._ZTV1D,
 ; VTABLE-NEXT:  .globl _ZTV1D
 ; VTABLE-LABEL: _ZTV1D:
 ; VTABLE-NEXT:  .int32 0

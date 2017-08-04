@@ -7,7 +7,13 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: libcpp-no-exceptions
+// MODULES_DEFINES: _LIBCPP_DEBUG=1
+// MODULES_DEFINES: _LIBCPP_DEBUG_USE_EXCEPTIONS
+
+// Can't test the system lib because this test enables debug mode
+// UNSUPPORTED: with_system_cxx_lib
 
 // Test that defining _LIBCPP_DEBUG_USE_EXCEPTIONS causes _LIBCPP_ASSERT
 // to throw on failure.

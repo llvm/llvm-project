@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonBitTracker.h"
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonTargetMachine.h"
@@ -57,12 +57,10 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
   // tion). To avoid the complications with in-memory arguments, only consi-
   // der the initial sequence of formal parameters that are known to be
   // passed via registers.
-  unsigned AttrIdx = 0;
   unsigned InVirtReg, InPhysReg = 0;
   const Function &F = *MF.getFunction();
   typedef Function::const_arg_iterator arg_iterator;
   for (arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I) {
-    AttrIdx++;
     const Argument &Arg = *I;
     Type *ATy = Arg.getType();
     unsigned Width = 0;
@@ -74,8 +72,7 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
     // Module::AnyPointerSize.
     if (Width == 0 || Width > 64)
       break;
-    AttributeSet Attrs = F.getAttributes();
-    if (Attrs.hasAttribute(AttrIdx, Attribute::ByVal))
+    if (Arg.hasAttribute(Attribute::ByVal))
       continue;
     InPhysReg = getNextPhysReg(InPhysReg, Width);
     if (!InPhysReg)
@@ -83,9 +80,9 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
     InVirtReg = getVirtRegFor(InPhysReg);
     if (!InVirtReg)
       continue;
-    if (Attrs.hasAttribute(AttrIdx, Attribute::SExt))
+    if (Arg.hasAttribute(Attribute::SExt))
       VRX.insert(std::make_pair(InVirtReg, ExtType(ExtType::SExt, Width)));
-    else if (Attrs.hasAttribute(AttrIdx, Attribute::ZExt))
+    else if (Arg.hasAttribute(Attribute::ZExt))
       VRX.insert(std::make_pair(InVirtReg, ExtType(ExtType::ZExt, Width)));
   }
 }
@@ -271,6 +268,9 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
   // Pre-compute the bitwidth here, because it is needed in many cases
   // cases below.
   uint16_t W0 = (Reg[0].Reg != 0) ? getRegBitWidth(Reg[0]) : 0;
+
+  // Register id of the 0th operand. It can be 0.
+  unsigned Reg0 = Reg[0].Reg;
 
   switch (Opc) {
     // Transfer immediate:
@@ -792,6 +792,17 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case A2_zxth:
       return rr0(eZXT(rc(1), 16), Outputs);
 
+    // Saturations
+
+    case A2_satb:
+      return rr0(eSXT(RegisterCell::self(0, W0).regify(Reg0), 8), Outputs);
+    case A2_sath:
+      return rr0(eSXT(RegisterCell::self(0, W0).regify(Reg0), 16), Outputs);
+    case A2_satub:
+      return rr0(eZXT(RegisterCell::self(0, W0).regify(Reg0), 8), Outputs);
+    case A2_satuh:
+      return rr0(eZXT(RegisterCell::self(0, W0).regify(Reg0), 16), Outputs);
+
     // Bit count:
 
     case S2_cl0:
@@ -926,6 +937,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &BI,
     case Hexagon::J2_jumpfnew:
     case Hexagon::J2_jumpfnewpt:
       Negated = true;
+      LLVM_FALLTHROUGH;
     case Hexagon::J2_jumpt:
     case Hexagon::J2_jumptpt:
     case Hexagon::J2_jumptnew:

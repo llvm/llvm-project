@@ -17,9 +17,9 @@ namespace {
 
 TEST(AllocatorTest, Basics) {
   BumpPtrAllocator Alloc;
-  int *a = (int*)Alloc.Allocate(sizeof(int), 1);
-  int *b = (int*)Alloc.Allocate(sizeof(int) * 10, 1);
-  int *c = (int*)Alloc.Allocate(sizeof(int), 1);
+  int *a = (int*)Alloc.Allocate(sizeof(int), alignof(int));
+  int *b = (int*)Alloc.Allocate(sizeof(int) * 10, alignof(int));
+  int *c = (int*)Alloc.Allocate(sizeof(int), alignof(int));
   *a = 1;
   b[0] = 2;
   b[9] = 2;

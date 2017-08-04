@@ -1,4 +1,4 @@
-//===-- SyntaxHighlighting.h ------------------------------------*- C++ -*-===//
+//===- SyntaxHighlighting.h -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,9 +10,10 @@
 #ifndef LLVM_LIB_DEBUGINFO_SYNTAXHIGHLIGHTING_H
 #define LLVM_LIB_DEBUGINFO_SYNTAXHIGHLIGHTING_H
 
-#include "llvm/Support/raw_ostream.h"
-
 namespace llvm {
+
+class raw_ostream;
+
 namespace dwarf {
 namespace syntax {
 
@@ -22,18 +23,20 @@ enum HighlightColor { Address, String, Tag, Attribute, Enumerator, Macro };
 /// An RAII object that temporarily switches an output stream to a
 /// specific color.
 class WithColor {
-  llvm::raw_ostream &OS;
+  raw_ostream &OS;
 
 public:
   /// To be used like this: WithColor(OS, syntax::String) << "text";
-  WithColor(llvm::raw_ostream &OS, enum HighlightColor Type);
+  WithColor(raw_ostream &OS, enum HighlightColor Type);
   ~WithColor();
 
-  llvm::raw_ostream& get() { return OS; }
-  operator llvm::raw_ostream& () { return OS; }
+  raw_ostream& get() { return OS; }
+  operator raw_ostream& () { return OS; }
 };
-}
-}
-}
 
-#endif
+} // end namespace syntax
+} // end namespace dwarf
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_DEBUGINFO_SYNTAXHIGHLIGHTING_H

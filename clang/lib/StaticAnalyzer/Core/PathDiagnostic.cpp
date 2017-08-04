@@ -578,6 +578,7 @@ getLocationForCaller(const StackFrameContext *SFC,
   }
   case CFGElement::TemporaryDtor:
   case CFGElement::NewAllocator:
+  case CFGElement::LifetimeEnds:
     llvm_unreachable("not yet implemented!");
   }
 
@@ -694,7 +695,30 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
   return PathDiagnosticLocation(S, SMng, P.getLocationContext());
 }
 
+static const LocationContext *
+findTopAutosynthesizedParentContext(const LocationContext *LC) {
+  assert(LC->getAnalysisDeclContext()->isBodyAutosynthesized());
+  const LocationContext *ParentLC = LC->getParent();
+  assert(ParentLC && "We don't start analysis from autosynthesized code");
+  while (ParentLC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+    LC = ParentLC;
+    ParentLC = LC->getParent();
+    assert(ParentLC && "We don't start analysis from autosynthesized code");
+  }
+  return LC;
+}
+
 const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
+  // We cannot place diagnostics on autosynthesized code.
+  // Put them onto the call site through which we jumped into autosynthesized
+  // code for the first time.
+  const LocationContext *LC = N->getLocationContext();
+  if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+    // It must be a stack frame because we only autosynthesize functions.
+    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
+        ->getCallSite();
+  }
+  // Otherwise, see if the node's program point directly points to a statement.
   ProgramPoint P = N->getLocation();
   if (Optional<StmtPoint> SP = P.getAs<StmtPoint>())
     return SP->getStmt();
@@ -912,6 +936,17 @@ void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
 
   callEnterWithin = PathDiagnosticLocation::createBegin(Callee, SM);
   callEnter = getLocationForCaller(CalleeCtx, CE.getLocationContext(), SM);
+
+  // Autosynthesized property accessors are special because we'd never
+  // pop back up to non-autosynthesized code until we leave them.
+  // This is not generally true for autosynthesized callees, which may call
+  // non-autosynthesized callbacks.
+  // Unless set here, the IsCalleeAnAutosynthesizedPropertyAccessor flag
+  // defaults to false.
+  if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(Callee))
+    IsCalleeAnAutosynthesizedPropertyAccessor = (
+        MD->isPropertyAccessor() &&
+        CalleeCtx->getAnalysisDeclContext()->isBodyAutosynthesized());
 }
 
 static inline void describeClass(raw_ostream &Out, const CXXRecordDecl *D,
@@ -986,7 +1021,11 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
 
 std::shared_ptr<PathDiagnosticEventPiece>
 PathDiagnosticCallPiece::getCallEnterEvent() const {
-  if (!Callee)
+  // We do not produce call enters and call exits for autosynthesized property
+  // accessors. We do generally produce them for other functions coming from
+  // the body farm because they may call callbacks that bring us back into
+  // visible code.
+  if (!Callee || IsCalleeAnAutosynthesizedPropertyAccessor)
     return nullptr;
 
   SmallString<256> buf;
@@ -1020,7 +1059,11 @@ PathDiagnosticCallPiece::getCallEnterWithinCallerEvent() const {
 
 std::shared_ptr<PathDiagnosticEventPiece>
 PathDiagnosticCallPiece::getCallExitEvent() const {
-  if (NoExit)
+  // We do not produce call enters and call exits for autosynthesized property
+  // accessors. We do generally produce them for other functions coming from
+  // the body farm because they may call callbacks that bring us back into
+  // visible code.
+  if (NoExit || IsCalleeAnAutosynthesizedPropertyAccessor)
     return nullptr;
 
   SmallString<256> buf;

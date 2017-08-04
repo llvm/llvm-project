@@ -34,6 +34,17 @@ class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   let Inst{44-43} = SDWA.UNUSED_PRESERVE;
 }
 
+class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
+  bits<9> src1;
+
+  let Inst{8-0}   = 0xf9; // sdwa
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{24-17} = op;
+  let Inst{31-25} = 0x3e; // encoding
+  let Inst{63}    = !if(P.HasSrc1, src1{8}, 0); // src1_sgpr
+}
+
+
 //===----------------------------------------------------------------------===//
 // VOPC classes
 //===----------------------------------------------------------------------===//
@@ -93,6 +104,8 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   let Constraints        = ps.Constraints;
   let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let Uses                 = ps.Uses;
 }
 
 class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -135,6 +148,19 @@ class VOPCInstAlias <VOP3_Pseudo ps, Instruction inst, VOPProfile p = ps.Pfl> :
   let SubtargetPredicate = AssemblerPredicate;
 }
 
+class getVOPCPat64 <PatLeaf cond, VOPProfile P> : LetDummies {
+  list<dag> ret = !if(P.HasModifiers,
+      [(set i1:$sdst,
+        (setcc (P.Src0VT
+                  !if(P.HasOMod,
+                    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+                    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp))),
+               (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
+               cond))],
+      [(set i1:$sdst, (setcc P.Src0VT:$src0, P.Src1VT:$src1, cond))]);
+}
+
+
 multiclass VOPC_Pseudos <string opName,
                          VOPC_Profile P,
                          PatLeaf cond = COND_NULL,
@@ -150,14 +176,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  def _e64 : VOP3_Pseudo<opName, P,
-    !if(P.HasModifiers,
-      [(set i1:$sdst,
-          (setcc (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                      i1:$clamp, i32:$omod)),
-                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
-                 cond))],
-      [(set i1:$sdst, (setcc P.Src0VT:$src0, P.Src1VT:$src1, cond))])>,
+  def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret>,
     Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
@@ -165,13 +184,11 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  def _sdwa : VOPC_SDWA_Pseudo <opName, P>,
-              Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)> {
+  def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
     let isCompare = 1;
-    let isCommutable = 1;
   }
 }
 
@@ -517,9 +534,11 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType vt> :
   VOPC_Profile<sched, vt, i32> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
   let Asm64 = "$sdst, $src0_modifiers, $src1";
+
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
+
   let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
   let HasSrc1Mods = 0;
   let HasClamp = 0;
@@ -563,7 +582,7 @@ multiclass VOPC_CLASS_F16 <string opName> :
   VOPC_Class_Pseudos <opName, VOPC_I1_F16_I32, 0>;
 
 multiclass VOPCX_CLASS_F16 <string opName> :
-  VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 1>;
+  VOPC_Class_Pseudos <opName, VOPC_I1_F16_I32, 1>;
 
 multiclass VOPC_CLASS_F32 <string opName> :
   VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 0>;
@@ -621,7 +640,7 @@ class FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> : Pat <
   (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                    (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
   (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
-        DSTCLAMP.NONE, DSTOMOD.NONE)
+        DSTCLAMP.NONE)
 >;
 
 def : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F32_e64, f32>;
@@ -919,6 +938,10 @@ multiclass VOPC_Real_vi <bits<10> op> {
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
+
+  def _sdwa_gfx9 :
+    VOP_SDWA9_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOPC_SDWA9e <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_vi")> {

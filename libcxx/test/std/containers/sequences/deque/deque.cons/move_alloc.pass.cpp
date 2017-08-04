@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <deque>
 
 // deque(deque&& c, const allocator_type& a);
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
         int* an = ab + sizeof(ab)/sizeof(ab[0]);
@@ -66,7 +67,6 @@ int main()
         assert(c3.get_allocator() == A(3));
         assert(c1.size() != 0);
     }
-#if TEST_STD_VER >= 11
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
         int* an = ab + sizeof(ab)/sizeof(ab[0]);
@@ -82,6 +82,4 @@ int main()
         assert(c3.get_allocator() == A());
         assert(c1.size() == 0);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "asan_test_utils.h"
+#include <vector>
 
 template<typename T>
 void MemSetOOBTestTemplate(size_t length) {
@@ -76,7 +77,7 @@ TEST(AddressSanitizer, MemSetOOBTest) {
 // Strictly speaking we are not guaranteed to find such two pointers,
 // but given the structure of asan's allocator we will.
 static bool AllocateTwoAdjacentArrays(char **x1, char **x2, size_t size) {
-  vector<uintptr_t> v;
+  std::vector<uintptr_t> v;
   bool res = false;
   for (size_t i = 0; i < 1000U && !res; i++) {
     v.push_back(reinterpret_cast<uintptr_t>(new char[size]));

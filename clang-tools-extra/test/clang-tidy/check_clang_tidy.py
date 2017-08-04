@@ -58,8 +58,13 @@ def main():
 
   clang_tidy_extra_args = extra_args
   if len(clang_tidy_extra_args) == 0:
-    clang_tidy_extra_args = ['--', '--std=c++11'] if extension == '.cpp' \
-                       else ['--']
+    clang_tidy_extra_args = ['--', '--std=c++11'] \
+        if extension == '.cpp' or extension == '.hpp' else ['--']
+
+  # Tests should not rely on STL being available, and instead provide mock
+  # implementations of relevant APIs.
+  clang_tidy_extra_args.append('-nostdinc++')
+
   if resource_dir is not None:
     clang_tidy_extra_args.append('-resource-dir=%s' % resource_dir)
 

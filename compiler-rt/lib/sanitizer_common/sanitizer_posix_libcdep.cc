@@ -134,7 +134,8 @@ void SleepForMillis(int millis) {
 void Abort() {
 #if !SANITIZER_GO
   // If we are handling SIGABRT, unhandle it first.
-  if (IsHandledDeadlySignal(SIGABRT)) {
+  // TODO(vitalybuka): Check if handler belongs to sanitizer.
+  if (GetHandleSignalMode(SIGABRT) != kHandleSignalNo) {
     struct sigaction sigact;
     internal_memset(&sigact, 0, sizeof(sigact));
     sigact.sa_sigaction = (sa_sigaction_t)SIG_DFL;
@@ -188,8 +189,8 @@ void UnsetAlternateSignalStack() {
 
 static void MaybeInstallSigaction(int signum,
                                   SignalHandlerType handler) {
-  if (!IsHandledDeadlySignal(signum))
-    return;
+  if (GetHandleSignalMode(signum) == kHandleSignalNo) return;
+
   struct sigaction sigact;
   internal_memset(&sigact, 0, sizeof(sigact));
   sigact.sa_sigaction = (sa_sigaction_t)handler;
@@ -245,7 +246,6 @@ void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
   // Same for /proc/self/exe in the symbolizer.
 #if !SANITIZER_GO
   Symbolizer::GetOrInit()->PrepareForSandboxing();
-  CovPrepareForSandboxing(args);
 #endif
 }
 
@@ -416,6 +416,10 @@ int WaitForProcess(pid_t pid) {
     return -1;
   }
   return process_status;
+}
+
+bool IsStateDetached(int state) {
+  return state == PTHREAD_CREATE_DETACHED;
 }
 
 } // namespace __sanitizer

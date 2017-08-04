@@ -1,0 +1,8 @@
+; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %s -o - | llvm-objdump -r - | FileCheck %s
+
+@foo1 = hidden global i32 1, align 4
+@foo2 = hidden global i32 1, align 4
+@bar = hidden global i32* @foo2, align 4
+
+; CHECK:      RELOCATION RECORDS FOR [DATA]:
+; CHECK-NEXT: 0000000e R_WEBASSEMBLY_GLOBAL_ADDR_I32 1+0

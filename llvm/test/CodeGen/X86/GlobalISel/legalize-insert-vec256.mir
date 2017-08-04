@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                -global-isel -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl  -global-isel -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
+--- |
+  define void @test_insert_128() {
+    ret void
+  }
+...
+---
+name:            test_insert_128
+# ALL-LABEL: name:  test_insert_128
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:               %0(<8 x s32>) = COPY %ymm0
+# ALL-NEXT:          %1(<4 x s32>) = COPY %xmm1
+# ALL-NEXT:          %2(<8 x s32>) = G_INSERT %0, %1(<4 x s32>), 0
+# ALL-NEXT:          %ymm0 = COPY %2(<8 x s32>)
+# ALL-NEXT:          RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<8 x s32>) = COPY %ymm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<8 x s32>) = G_INSERT %0(<8 x s32>), %1(<4 x s32>), 0
+    %ymm0 = COPY %2(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...

@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPC.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
@@ -78,7 +78,7 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
   BlockSizes.resize(Fn.getNumBlockIDs());
 
   auto GetAlignmentAdjustment =
-    [TII](MachineBasicBlock &MBB, unsigned Offset) -> unsigned {
+    [](MachineBasicBlock &MBB, unsigned Offset) -> unsigned {
     unsigned Align = MBB.getAlignment();
     if (!Align)
       return 0;

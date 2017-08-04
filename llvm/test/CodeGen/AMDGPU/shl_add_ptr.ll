@@ -19,7 +19,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_read_b32 {{v[0-9]+}}, [[PTR]] offset:8
 ; SI: s_endpgm
-define void @load_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @load_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i32 0, i32 %idx.0
@@ -39,7 +39,7 @@ define void @load_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %ad
 ; SI-DAG: buffer_store_dword [[RESULT]]
 ; SI-DAG: buffer_store_dword [[ADDUSE]]
 ; SI: s_endpgm
-define void @load_shl_base_lds_1(float addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @load_shl_base_lds_1(float addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i32 0, i32 %idx.0
@@ -55,7 +55,7 @@ define void @load_shl_base_lds_1(float addrspace(1)* %out, i32 addrspace(1)* %ad
 ; SI-LABEL: {{^}}load_shl_base_lds_max_offset
 ; SI: ds_read_u8 v{{[0-9]+}}, v{{[0-9]+}} offset:65535
 ; SI: s_endpgm
-define void @load_shl_base_lds_max_offset(i8 addrspace(1)* %out, i8 addrspace(3)* %lds, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @load_shl_base_lds_max_offset(i8 addrspace(1)* %out, i8 addrspace(3)* %lds, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 65535
   %arrayidx0 = getelementptr inbounds [65536 x i8], [65536 x i8] addrspace(3)* @maxlds, i32 0, i32 %idx.0
@@ -73,7 +73,7 @@ define void @load_shl_base_lds_max_offset(i8 addrspace(1)* %out, i8 addrspace(3)
 ; SI: s_mov_b32 m0, -1
 ; SI-NEXT: ds_read2st64_b32 {{v\[[0-9]+:[0-9]+\]}}, [[PTR]] offset0:1 offset1:9
 ; SI: s_endpgm
-define void @load_shl_base_lds_2(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @load_shl_base_lds_2(float addrspace(1)* %out) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 64
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i32 0, i32 %idx.0
@@ -89,7 +89,7 @@ define void @load_shl_base_lds_2(float addrspace(1)* %out) #0 {
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_write_b32 [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @store_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @store_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i32 0, i32 %idx.0
@@ -104,7 +104,7 @@ define void @store_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %a
 
 @lds2 = addrspace(3) global [512 x i32] undef, align 4
 
-; define void @atomic_load_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+; define amdgpu_kernel void @atomic_load_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
 ;   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
 ;   %idx.0 = add nsw i32 %tid.x, 2
 ;   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -119,7 +119,7 @@ define void @store_shl_base_lds_0(float addrspace(1)* %out, i32 addrspace(1)* %a
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_cmpst_rtn_b32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}}, {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_cmpxchg_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use, i32 %swap) #0 {
+define amdgpu_kernel void @atomic_cmpxchg_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use, i32 %swap) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -134,7 +134,7 @@ define void @atomic_cmpxchg_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_wrxchg_rtn_b32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_swap_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_swap_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -148,7 +148,7 @@ define void @atomic_swap_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_add_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_add_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_add_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -162,7 +162,7 @@ define void @atomic_add_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_sub_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_sub_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_sub_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -176,7 +176,7 @@ define void @atomic_sub_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_and_rtn_b32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_and_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_and_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -190,7 +190,7 @@ define void @atomic_and_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_or_rtn_b32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_or_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_or_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -204,7 +204,7 @@ define void @atomic_or_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* 
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_xor_rtn_b32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_xor_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_xor_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -214,7 +214,7 @@ define void @atomic_xor_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
   ret void
 }
 
-; define void @atomic_nand_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+; define amdgpu_kernel void @atomic_nand_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
 ;   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
 ;   %idx.0 = add nsw i32 %tid.x, 2
 ;   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -228,7 +228,7 @@ define void @atomic_xor_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_min_rtn_i32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_min_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_min_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -242,7 +242,7 @@ define void @atomic_min_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_max_rtn_i32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_max_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_max_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -256,7 +256,7 @@ define void @atomic_max_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_min_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_umin_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_umin_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0
@@ -270,7 +270,7 @@ define void @atomic_umin_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)
 ; SI: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: ds_max_rtn_u32 {{v[0-9]+}}, [[PTR]], {{v[0-9]+}} offset:8
 ; SI: s_endpgm
-define void @atomic_umax_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
+define amdgpu_kernel void @atomic_umax_shl_base_lds_0(i32 addrspace(1)* %out, i32 addrspace(1)* %add_use) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], [512 x i32] addrspace(3)* @lds2, i32 0, i32 %idx.0

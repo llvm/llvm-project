@@ -77,6 +77,7 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       PrintMethod = Rec->getValueAsString("PrintMethod");
       OperandType = Rec->getValueAsString("OperandType");
       OperandNamespace = Rec->getValueAsString("OperandNamespace");
+      EncoderMethod = Rec->getValueAsString("EncoderMethod");
     } else if (Rec->isSubClassOf("Operand")) {
       PrintMethod = Rec->getValueAsString("PrintMethod");
       OperandType = Rec->getValueAsString("OperandType");

@@ -1,5 +1,6 @@
 ; Tests that coro-split can handle the case when a code after coro.suspend uses
 ; a value produces between coro.save and coro.suspend (%Result.i19)
+; and checks whether stray coro.saves are properly removed
 ; RUN: opt < %s -coro-split -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }
@@ -24,17 +25,19 @@ entry:
     i8 1, label %exit
   ]
 await.ready:
+  %StrayCoroSave = call token @llvm.coro.save(i8* null)
   %val = load i32, i32* %Result.i19
   call void @print(i32 %val)
-  br label %exit  
+  br label %exit
 exit:
-  call void @llvm.coro.end(i8* null, i1 false)
+  call i1 @llvm.coro.end(i8* null, i1 false)
   ret void
 }
 
 ; CHECK-LABEL: @a.resume(
 ; CHECK:         getelementptr inbounds %a.Frame
 ; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
+; CHECK-NOT:     call token @llvm.coro.save(i8* null)
 ; CHECK-NEXT:    %val = load i32, i32* %Result
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void
@@ -50,5 +53,5 @@ declare i8* @llvm.coro.frame() #5
 declare i8 @llvm.coro.suspend(token, i1) #3
 declare void @"\01??3@YAXPEAX@Z"(i8*) local_unnamed_addr #10
 declare i8* @llvm.coro.free(token, i8* nocapture readonly) #2
-declare void @llvm.coro.end(i8*, i1) #3
+declare i1 @llvm.coro.end(i8*, i1) #3
 

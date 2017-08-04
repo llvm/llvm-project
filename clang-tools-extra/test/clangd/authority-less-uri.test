@@ -1,0 +1,32 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Test authority-less URI
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 246
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
+
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test authority-less URI
+#
+# CHECK: {"jsonrpc":"2.0","id":1,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"99964a","filterText":"a","insertText":"a"}
+# CHECK: ]}
+
+Content-Length: 172
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"uri":"file:///main.cpp","position":{"line":3,"character":5}}}
+# Test params parsing in the presence of a 1.x-compatible client (inlined "uri")
+#
+# CHECK: {"jsonrpc":"2.0","id":2,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"99964a","filterText":"a","insertText":"a"}
+# CHECK: ]}
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}

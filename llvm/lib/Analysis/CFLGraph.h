@@ -16,7 +16,6 @@
 #define LLVM_ANALYSIS_CFLGRAPH_H
 
 #include "AliasAnalysisSummary.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
@@ -210,6 +209,11 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     void addDerefEdge(Value *From, Value *To, bool IsRead) {
       assert(From != nullptr && To != nullptr);
+      // FIXME: This is subtly broken, due to how we model some instructions
+      // (e.g. extractvalue, extractelement) as loads. Since those take
+      // non-pointer operands, we'll entirely skip adding edges for those.
+      //
+      // addAssignEdge seems to have a similar issue with insertvalue, etc.
       if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
         return;
       addNode(From);
@@ -400,8 +404,7 @@ template <typename CFLAA> class CFLGraphBuilder {
       // TODO: address other common library functions such as realloc(),
       // strdup(),
       // etc.
-      if (isMallocLikeFn(Inst, &TLI) || isCallocLikeFn(Inst, &TLI) ||
-          isFreeCall(Inst, &TLI))
+      if (isMallocOrCallocLikeFn(Inst, &TLI) || isFreeCall(Inst, &TLI))
         return;
 
       // TODO: Add support for noalias args/all the other fun function
@@ -430,7 +433,7 @@ template <typename CFLAA> class CFLGraphBuilder {
 
       if (Inst->getType()->isPointerTy()) {
         auto *Fn = CS.getCalledFunction();
-        if (Fn == nullptr || !Fn->doesNotAlias(0))
+        if (Fn == nullptr || !Fn->returnDoesNotAlias())
           // No need to call addNode() since we've added Inst at the
           // beginning of this function and we know it is not a global.
           Graph.addAttr(InstantiatedValue{Inst, 0}, getAttrUnknown());
@@ -541,6 +544,7 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::ExtractValue: {
         auto *Ptr = CE->getOperand(0);
         addLoadEdge(Ptr, CE);
+        break;
       }
       case Instruction::ShuffleVector: {
         auto *From1 = CE->getOperand(0);

@@ -1,4 +1,4 @@
-//===- COFFObjectFile.cpp - COFF object file implementation -----*- C++ -*-===//
+//===- COFFObjectFile.cpp - COFF object file implementation ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,16 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Object/COFF.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/COFF.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cctype>
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/Object/Error.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <limits>
+#include <memory>
+#include <system_error>
 
 using namespace llvm;
 using namespace object;
@@ -116,7 +129,7 @@ const coff_symbol_type *COFFObjectFile::toSymb(DataRefImpl Ref) const {
 const coff_section *COFFObjectFile::toSec(DataRefImpl Ref) const {
   const coff_section *Addr = reinterpret_cast<const coff_section*>(Ref.p);
 
-# ifndef NDEBUG
+#ifndef NDEBUG
   // Verify that the section points to a valid entry in the section table.
   if (Addr < SectionTable || Addr >= (SectionTable + getNumberOfSections()))
     report_fatal_error("Section was outside of section table.");
@@ -124,7 +137,7 @@ const coff_section *COFFObjectFile::toSec(DataRefImpl Ref) const {
   uintptr_t Offset = uintptr_t(Addr) - uintptr_t(SectionTable);
   assert(Offset % sizeof(coff_section) == 0 &&
          "Section did not point to the beginning of a section");
-# endif
+#endif
 
   return Addr;
 }
@@ -147,8 +160,7 @@ void COFFObjectFile::moveSymbolNext(DataRefImpl &Ref) const {
 Expected<StringRef> COFFObjectFile::getSymbolName(DataRefImpl Ref) const {
   COFFSymbolRef Symb = getCOFFSymbol(Ref);
   StringRef Result;
-  std::error_code EC = getSymbolName(Symb, Result);
-  if (EC)
+  if (std::error_code EC = getSymbolName(Symb, Result))
     return errorCodeToError(EC);
   return Result;
 }
@@ -215,8 +227,11 @@ uint32_t COFFObjectFile::getSymbolFlags(DataRefImpl Ref) const {
   if (Symb.isExternal() || Symb.isWeakExternal())
     Result |= SymbolRef::SF_Global;
 
-  if (Symb.isWeakExternal())
+  if (Symb.isWeakExternal()) {
     Result |= SymbolRef::SF_Weak;
+    // We use indirect to allow the archiver to write weak externs
+    Result |= SymbolRef::SF_Indirect;
+  }
 
   if (Symb.getSectionNumber() == COFF::IMAGE_SYM_ABSOLUTE)
     Result |= SymbolRef::SF_Absolute;
@@ -279,6 +294,10 @@ uint64_t COFFObjectFile::getSectionAddress(DataRefImpl Ref) const {
   // return virtual addresses.
   Result += getImageBase();
   return Result;
+}
+
+uint64_t COFFObjectFile::getSectionIndex(DataRefImpl Sec) const {
+  return toSec(Sec) - SectionTable;
 }
 
 uint64_t COFFObjectFile::getSectionSize(DataRefImpl Ref) const {
@@ -634,6 +653,23 @@ std::error_code COFFObjectFile::initDebugDirectoryPtr() {
   return std::error_code();
 }
 
+std::error_code COFFObjectFile::initLoadConfigPtr() {
+  // Get the RVA of the debug directory. Do nothing if it does not exist.
+  const data_directory *DataEntry;
+  if (getDataDirectory(COFF::LOAD_CONFIG_TABLE, DataEntry))
+    return std::error_code();
+
+  // Do nothing if the RVA is NULL.
+  if (DataEntry->RelativeVirtualAddress == 0)
+    return std::error_code();
+  uintptr_t IntPtr = 0;
+  if (std::error_code EC = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr))
+    return EC;
+
+  LoadConfig = (const void *)IntPtr;
+  return std::error_code();
+}
+
 COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
     : ObjectFile(Binary::ID_COFF, Object), COFFHeader(nullptr),
       COFFBigObjHeader(nullptr), PE32Header(nullptr), PE32PlusHeader(nullptr),
@@ -768,6 +804,9 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
   if ((EC = initDebugDirectoryPtr()))
     return;
 
+  if ((EC = initLoadConfigPtr()))
+    return;
+
   EC = std::error_code();
 }
 
@@ -847,7 +886,7 @@ base_reloc_iterator COFFObjectFile::base_reloc_end() const {
 }
 
 uint8_t COFFObjectFile::getBytesInAddress() const {
-  return getArch() == Triple::x86_64 ? 8 : 4;
+  return getArch() == Triple::x86_64 || getArch() == Triple::aarch64 ? 8 : 4;
 }
 
 StringRef COFFObjectFile::getFileFormatName() const {
@@ -985,7 +1024,7 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
   if (Symbol.getNumberOfAuxSymbols() > 0) {
     // AUX data comes immediately after the symbol in COFF
     Aux = reinterpret_cast<const uint8_t *>(Symbol.getRawPtr()) + SymbolSize;
-# ifndef NDEBUG
+#ifndef NDEBUG
     // Verify that the Aux symbol points to a valid entry in the symbol table.
     uintptr_t Offset = uintptr_t(Aux) - uintptr_t(base());
     if (Offset < getPointerToSymbolTable() ||
@@ -995,7 +1034,7 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
 
     assert((Offset - getPointerToSymbolTable()) % SymbolSize == 0 &&
            "Aux Symbol data did not point to the beginning of a symbol");
-# endif
+#endif
   }
   return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
 }
@@ -1050,7 +1089,7 @@ COFFObjectFile::getSectionContents(const coff_section *Sec,
   // In COFF, a virtual section won't have any in-file
   // content, so the file pointer to the content will be zero.
   if (Sec->PointerToRawData == 0)
-    return object_error::parse_failed;
+    return std::error_code();
   // The only thing that we need to verify is that the contents is contained
   // within the file bounds. We don't need to make sure it doesn't cover other
   // data, as there's nothing that says that is not allowed.
@@ -1176,6 +1215,29 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH20T);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24T);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX23T);
+    default:
+      Res = "Unknown";
+    }
+    break;
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    switch (Reloc->Type) {
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32NB);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH26);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEBASE_REL21);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_REL21);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEOFFSET_12A);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEOFFSET_12L);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_LOW12A);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_HIGH12A);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_LOW12L);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_TOKEN);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECTION);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR64);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH19);
+    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH14);
     default:
       Res = "Unknown";
     }
@@ -1578,4 +1640,43 @@ std::error_code BaseRelocRef::getRVA(uint32_t &Result) const {
   auto *Entry = reinterpret_cast<const coff_base_reloc_block_entry *>(Header + 1);
   Result = Header->PageRVA + Entry[Index].getOffset();
   return std::error_code();
+}
+
+#define RETURN_IF_ERROR(X)                                                     \
+  if (auto EC = errorToErrorCode(X))                                           \
+    return EC;
+
+ErrorOr<ArrayRef<UTF16>> ResourceSectionRef::getDirStringAtOffset(uint32_t Offset) {
+  BinaryStreamReader Reader = BinaryStreamReader(BBS);
+  Reader.setOffset(Offset);
+  uint16_t Length;
+  RETURN_IF_ERROR(Reader.readInteger(Length));
+  ArrayRef<UTF16> RawDirString;
+  RETURN_IF_ERROR(Reader.readArray(RawDirString, Length));
+  return RawDirString;
+}
+
+ErrorOr<ArrayRef<UTF16>>
+ResourceSectionRef::getEntryNameString(const coff_resource_dir_entry &Entry) {
+  return getDirStringAtOffset(Entry.Identifier.getNameOffset());
+}
+
+ErrorOr<const coff_resource_dir_table &>
+ResourceSectionRef::getTableAtOffset(uint32_t Offset) {
+  const coff_resource_dir_table *Table = nullptr;
+
+  BinaryStreamReader Reader(BBS);
+  Reader.setOffset(Offset);
+  RETURN_IF_ERROR(Reader.readObject(Table));
+  assert(Table != nullptr);
+  return *Table;
+}
+
+ErrorOr<const coff_resource_dir_table &>
+ResourceSectionRef::getEntrySubDir(const coff_resource_dir_entry &Entry) {
+  return getTableAtOffset(Entry.Offset.value());
+}
+
+ErrorOr<const coff_resource_dir_table &> ResourceSectionRef::getBaseTable() {
+  return getTableAtOffset(0);
 }

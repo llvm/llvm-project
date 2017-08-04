@@ -150,7 +150,7 @@ static void BM_LongTest(benchmark::State& state) {
 BENCHMARK(BM_LongTest)->Range(1 << 16, 1 << 28);
 
 static void BM_ParallelMemset(benchmark::State& state) {
-  int size = state.range(0) / sizeof(int);
+  int size = state.range(0) / static_cast<int>(sizeof(int));
   int thread_size = size / state.threads;
   int from = thread_size * state.thread_index;
   int to = from + thread_size;
@@ -209,10 +209,26 @@ BENCHMARK_CAPTURE(BM_with_args, string_and_pair_test, std::string("abc"),
                   std::pair<int, double>(42, 3.8));
 
 void BM_non_template_args(benchmark::State& state, int, double) {
-  while (state.KeepRunning()) {
-  }
+  while(state.KeepRunning()) {}
 }
 BENCHMARK_CAPTURE(BM_non_template_args, basic_test, 0, 0);
+
+static void BM_UserCounter(benchmark::State& state) {
+  static const int depth = 1024;
+  while (state.KeepRunning()) {
+    benchmark::DoNotOptimize(CalculatePi(depth));
+  }
+  state.counters["Foo"] = 1;
+  state.counters["Bar"] = 2;
+  state.counters["Baz"] = 3;
+  state.counters["Bat"] = 5;
+#ifdef BENCHMARK_HAS_CXX11
+  state.counters.insert({{"Foo", 2}, {"Bar", 3}, {"Baz", 5}, {"Bat", 6}});
+#endif
+}
+BENCHMARK(BM_UserCounter)->Threads(8);
+BENCHMARK(BM_UserCounter)->ThreadRange(1, 32);
+BENCHMARK(BM_UserCounter)->ThreadPerCpu();
 
 #endif  // __cplusplus >= 201103L
 

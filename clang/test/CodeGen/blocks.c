@@ -78,3 +78,37 @@ int main() {
 // CHECK: [[ONE:%.*]] = bitcast void (...)* [[ZERO]] to void ()*
 // CHECK-NEXT:   br label [[CE:%.*]]
 
+// Ensure that we don't emit helper code in copy/dispose routines for variables
+// that are const-captured.
+void testConstCaptureInCopyAndDestroyHelpers() {
+  const int x = 0;
+  __block int i;
+  (^ { i = x; })();
+}
+// CHECK-LABEL: testConstCaptureInCopyAndDestroyHelpers_block_invoke
+
+// CHECK: @__copy_helper_block
+// CHECK: alloca
+// CHECK-NEXT: alloca
+// CHECK-NEXT: store
+// CHECK-NEXT: store
+// CHECK-NEXT: load
+// CHECK-NEXT: bitcast
+// CHECK-NEXT: load
+// CHECK-NEXT: bitcast
+// CHECK-NEXT: getelementptr
+// CHECK-NEXT: getelementptr
+// CHECK-NEXT: load
+// CHECK-NEXT: bitcast
+// CHECK-NEXT: call void @_Block_object_assign
+// CHECK-NEXT: ret
+
+// CHECK: @__destroy_helper_block
+// CHECK: alloca
+// CHECK-NEXT: store
+// CHECK-NEXT: load
+// CHECK-NEXT: bitcast
+// CHECK-NEXT: getelementptr
+// CHECK-NEXT: load
+// CHECK-NEXT: call void @_Block_object_dispose
+// CHECK-NEXT: ret

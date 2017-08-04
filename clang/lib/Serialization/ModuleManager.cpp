@@ -28,7 +28,7 @@
 using namespace clang;
 using namespace serialization;
 
-ModuleFile *ModuleManager::lookup(StringRef Name) {
+ModuleFile *ModuleManager::lookup(StringRef Name) const {
   const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
                                            /*cacheFailure=*/false);
   if (Entry)
@@ -37,9 +37,8 @@ ModuleFile *ModuleManager::lookup(StringRef Name) {
   return nullptr;
 }
 
-ModuleFile *ModuleManager::lookup(const FileEntry *File) {
-  llvm::DenseMap<const FileEntry *, ModuleFile *>::iterator Known
-    = Modules.find(File);
+ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
+  auto Known = Modules.find(File);
   if (Known == Modules.end())
     return nullptr;
 
@@ -245,7 +244,7 @@ void ModuleManager::removeModules(
     // rebuilt (or there was an error). Invalidate them so that we can load the
     // new files that will be renamed over the old ones.
     //
-    // The PCMCache tracks whether the module was succesfully loaded in another
+    // The PCMCache tracks whether the module was successfully loaded in another
     // thread/context; in that case, it won't need to be rebuilt (and we can't
     // safely invalidate it anyway).
     if (LoadedSuccessfully.count(&*victim) == 0 &&

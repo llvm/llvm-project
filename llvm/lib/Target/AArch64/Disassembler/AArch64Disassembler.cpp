@@ -756,7 +756,7 @@ static DecodeStatus DecodeThreeAddrSRegInstruction(llvm::MCInst &Inst,
     // if shift == '11' then ReservedValue()
     if (shiftHi == 0x3)
       return Fail;
-    // Deliberate fallthrough
+    LLVM_FALLTHROUGH;
   case AArch64::ANDWrs:
   case AArch64::ANDSWrs:
   case AArch64::BICWrs:
@@ -780,7 +780,7 @@ static DecodeStatus DecodeThreeAddrSRegInstruction(llvm::MCInst &Inst,
     // if shift == '11' then ReservedValue()
     if (shiftHi == 0x3)
       return Fail;
-    // Deliberate fallthrough
+    LLVM_FALLTHROUGH;
   case AArch64::ANDXrs:
   case AArch64::ANDSXrs:
   case AArch64::BICXrs:

@@ -23,6 +23,7 @@ module LLVM_Backend {
     exclude header "CodeGen/CommandFlags.h"
     exclude header "CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "CodeGen/LinkAllCodegenComponents.h"
+    exclude header "CodeGen/GlobalISel/InstructionSelectorImpl.h"
 
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"
@@ -38,6 +39,31 @@ module LLVM_Backend {
 }
 
 module LLVM_Bitcode { requires cplusplus umbrella "Bitcode" module * { export * } }
+
+module LLVM_BinaryFormat {
+    requires cplusplus
+    umbrella "BinaryFormat" module * { export * }
+    textual header "BinaryFormat/Dwarf.def"
+    textual header "BinaryFormat/MachO.def"
+    textual header "BinaryFormat/ELFRelocs/AArch64.def"
+    textual header "BinaryFormat/ELFRelocs/AMDGPU.def"
+    textual header "BinaryFormat/ELFRelocs/ARM.def"
+    textual header "BinaryFormat/ELFRelocs/AVR.def"
+    textual header "BinaryFormat/ELFRelocs/BPF.def"
+    textual header "BinaryFormat/ELFRelocs/Hexagon.def"
+    textual header "BinaryFormat/ELFRelocs/i386.def"
+    textual header "BinaryFormat/ELFRelocs/Lanai.def"
+    textual header "BinaryFormat/ELFRelocs/Mips.def"
+    textual header "BinaryFormat/ELFRelocs/PowerPC64.def"
+    textual header "BinaryFormat/ELFRelocs/PowerPC.def"
+    textual header "BinaryFormat/ELFRelocs/RISCV.def"
+    textual header "BinaryFormat/ELFRelocs/Sparc.def"
+    textual header "BinaryFormat/ELFRelocs/SystemZ.def"
+    textual header "BinaryFormat/ELFRelocs/x86_64.def"
+    textual header "BinaryFormat/ELFRelocs/WebAssembly.def"
+    textual header "BinaryFormat/WasmRelocs/WebAssembly.def"
+}
+
 module LLVM_Config { requires cplusplus umbrella "Config" module * { export * } }
 
 module LLVM_DebugInfo {
@@ -95,8 +121,8 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
-  textual header "DebugInfo/CodeView/TypeRecords.def"
-  textual header "DebugInfo/CodeView/CVSymbolTypes.def"
+  textual header "DebugInfo/CodeView/CodeViewTypes.def"
+  textual header "DebugInfo/CodeView/CodeViewSymbols.def"
 }
 
 module LLVM_ExecutionEngine {
@@ -148,6 +174,7 @@ module LLVM_intrinsic_gen {
   module IR_Attributes { header "IR/Attributes.h" export * }
   module IR_CallSite { header "IR/CallSite.h" export * }
   module IR_ConstantFolder { header "IR/ConstantFolder.h" export * }
+  module IR_GlobalVariable { header "IR/GlobalVariable.h" export * }
   module IR_NoFolder { header "IR/NoFolder.h" export * }
   module IR_Module { header "IR/Module.h" export * }
   module IR_ModuleSummaryIndex { header "IR/ModuleSummaryIndex.h" export * }
@@ -249,33 +276,13 @@ module LLVM_Utils {
     umbrella "Support"
     module * { export * }
 
-    // Exclude this; it's only included on Solaris.
-    exclude header "Support/Solaris.h"
-
-    // Exclude this; it's fundamentally non-modular.
+    // Exclude these; they are fundamentally non-modular.
     exclude header "Support/PluginLoader.h"
+    exclude header "Support/Solaris/sys/regset.h"
 
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"
     textual header "Support/AArch64TargetParser.def"
-    textual header "Support/Dwarf.def"
-    textual header "Support/MachO.def"
-    textual header "Support/ELFRelocs/AArch64.def"
-    textual header "Support/ELFRelocs/AMDGPU.def"
-    textual header "Support/ELFRelocs/ARM.def"
-    textual header "Support/ELFRelocs/AVR.def"
-    textual header "Support/ELFRelocs/BPF.def"
-    textual header "Support/ELFRelocs/Hexagon.def"
-    textual header "Support/ELFRelocs/i386.def"
-    textual header "Support/ELFRelocs/Lanai.def"
-    textual header "Support/ELFRelocs/Mips.def"
-    textual header "Support/ELFRelocs/PowerPC64.def"
-    textual header "Support/ELFRelocs/PowerPC.def"
-    textual header "Support/ELFRelocs/RISCV.def"
-    textual header "Support/ELFRelocs/Sparc.def"
-    textual header "Support/ELFRelocs/SystemZ.def"
-    textual header "Support/ELFRelocs/x86_64.def"
-    textual header "Support/ELFRelocs/WebAssembly.def"
   }
 
   // This part of the module is usable from both C and C++ code.

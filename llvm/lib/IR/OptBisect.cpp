@@ -13,11 +13,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/OptBisect.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -39,14 +40,6 @@ static void printPassMessage(const StringRef &Name, int PassNum,
          << "(" << PassNum << ") " << Name << " on " << TargetDesc << "\n";
 }
 
-static void printCaseMessage(int CaseNum, StringRef Msg, bool Running) {
-  if (Running)
-    errs() << "BISECT: running case (";
-  else
-    errs() << "BISECT: NOT running case (";
-  errs() << CaseNum << "): " << Msg << "\n";
-}
-
 static std::string getDescription(const Module &M) {
   return "module (" + M.getName().str() + ")";
 }
@@ -61,13 +54,20 @@ static std::string getDescription(const BasicBlock &BB) {
 }
 
 static std::string getDescription(const Loop &L) {
-  // FIXME: I'd like to be able to provide a better description here, but
-  //        calling L->getHeader() would introduce a new dependency on the
-  //        LLVMCore library.
+  // FIXME: Move into LoopInfo so we can get a better description
+  // (and avoid a circular dependency between IR and Analysis).
   return "loop";
 }
 
+static std::string getDescription(const Region &R) {
+  // FIXME: Move into RegionInfo so we can get a better description
+  // (and avoid a circular dependency between IR and Analysis).
+  return "region";
+}
+
 static std::string getDescription(const CallGraphSCC &SCC) {
+  // FIXME: Move into CallGraphSCCPass to avoid circular dependency between
+  // IR and Analysis.
   std::string Desc = "SCC (";
   bool First = true;
   for (CallGraphNode *CGN : SCC) {
@@ -91,6 +91,7 @@ template bool OptBisect::shouldRunPass(const Pass *, const Function &);
 template bool OptBisect::shouldRunPass(const Pass *, const BasicBlock &);
 template bool OptBisect::shouldRunPass(const Pass *, const Loop &);
 template bool OptBisect::shouldRunPass(const Pass *, const CallGraphSCC &);
+template bool OptBisect::shouldRunPass(const Pass *, const Region &);
 
 template <class UnitT>
 bool OptBisect::shouldRunPass(const Pass *P, const UnitT &U) {
@@ -108,13 +109,3 @@ bool OptBisect::checkPass(const StringRef PassName,
   printPassMessage(PassName, CurBisectNum, TargetDesc, ShouldRun);
   return ShouldRun;
 }
-
-bool OptBisect::shouldRunCase(const Twine &Msg) {
-  if (!BisectEnabled)
-    return true;
-  int CurFuelNum = ++LastBisectNum;
-  bool ShouldRun = (OptBisectLimit == -1 || CurFuelNum <= OptBisectLimit);
-  printCaseMessage(CurFuelNum, Msg.str(), ShouldRun);
-  return ShouldRun;
-}
-

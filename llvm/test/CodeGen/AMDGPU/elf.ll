@@ -24,11 +24,13 @@
 ; TONGA-NEXT: .long   704
 ; CONFIG: .p2align 8
 ; CONFIG: test:
-define amdgpu_ps void @test(i32 %p) {
+define amdgpu_ps void @test(i32 %p) #0 {
    %i = add i32 %p, 2
    %r = bitcast i32 %i to float
-   call void @llvm.SI.export(i32 15, i32 0, i32 1, i32 12, i32 0, float %r, float %r, float %r, float %r)
+   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r, float %r, float %r, float %r, i1 true, i1 false)
    ret void
 }
 
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+
+attributes #0 = { nounwind }

@@ -115,34 +115,36 @@ define void @cfg(i1 %x, i1 %y) {
 ; Test that the blocks are analyzed in the correct order.
 ; CHECK-LABEL: cfg:
 entry:
-  br i1 %x, label %bb1, label %bb2
+  br i1 %x, label %bb1, label %bb3
 
 bb1:
   %p1 = alloca %struct.S
 ; CHECK: pushl %eax
 ; CHECK: subl $1020, %esp
-  br label %bb3
+  br label %bb4
+
 bb2:
-  %p2 = alloca %struct.T
-; CHECK: pushl %eax
-; CHECK: subl $2996, %esp
-  br label %bb3
-
-bb3:
-  br i1 %y, label %bb4, label %bb5
-
-bb4:
-  %p4 = alloca %struct.S
-; CHECK: subl $1024, %esp
-  call void @f(%struct.S* %p4)
-  ret void
-
-bb5:
   %p5 = alloca %struct.T
 ; CHECK: pushl %eax
 ; CHECK: subl $2996, %esp
   call void @g(%struct.T* %p5)
   ret void
+
+bb3:
+  %p2 = alloca %struct.T
+; CHECK: pushl %eax
+; CHECK: subl $2996, %esp
+  br label %bb4
+
+bb4:
+  br i1 %y, label %bb5, label %bb2
+
+bb5:
+  %p4 = alloca %struct.S
+; CHECK: subl $1024, %esp
+  call void @f(%struct.S* %p4)
+  ret void
+
 }
 
 

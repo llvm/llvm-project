@@ -17,12 +17,12 @@ entry:
   %1 = tail call i64 @llvm.coro.size.i64(), !dbg !26
   %call = tail call i8* @malloc(i64 %1), !dbg !26
   %2 = tail call i8* @llvm.coro.begin(token %0, i8* %call) #9, !dbg !26
-  tail call void @llvm.dbg.value(metadata i8* %2, i64 0, metadata !21, metadata !12), !dbg !26
+  tail call void @llvm.dbg.value(metadata i8* %2, metadata !21, metadata !12), !dbg !26
   br label %for.cond, !dbg !27
 
 for.cond:                                         ; preds = %for.cond, %entry
-  tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !22, metadata !12), !dbg !28
-  tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !11, metadata !12) #7, !dbg !29
+  tail call void @llvm.dbg.value(metadata i32 undef, metadata !22, metadata !12), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32 undef, metadata !11, metadata !12) #7, !dbg !29
   tail call void (...) @bar() #7, !dbg !33
   %3 = tail call token @llvm.coro.save(i8* null), !dbg !34
   %4 = tail call i8 @llvm.coro.suspend(token %3, i1 false), !dbg !34
@@ -38,12 +38,12 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !36
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call void @llvm.coro.end(i8* null, i1 false) #9, !dbg !38
+  tail call i1 @llvm.coro.end(i8* null, i1 false) #9, !dbg !38
   ret i8* %2, !dbg !39
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #4
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #4
 
 ; Function Attrs: argmemonly nounwind readonly
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #5
@@ -54,13 +54,13 @@ declare i64 @llvm.coro.size.i64() #1
 declare i8* @llvm.coro.begin(token, i8* writeonly) #7
 declare token @llvm.coro.save(i8*) #7
 declare i8 @llvm.coro.suspend(token, i1) #7
-declare void @llvm.lifetime.end(i64, i8* nocapture) #4
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #4
 declare i8* @llvm.coro.free(token, i8* nocapture readonly) #5
 declare void @free(i8* nocapture) local_unnamed_addr #6
-declare void @llvm.coro.end(i8*, i1) #7
+declare i1 @llvm.coro.end(i8*, i1) #7
 declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #5
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

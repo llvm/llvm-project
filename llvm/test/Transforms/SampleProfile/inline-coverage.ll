@@ -16,7 +16,7 @@
 ;    11      return sum > 0 ? 0 : 1;
 ;    12    }
 ;
-; CHECK: remark: coverage.cc:10:12: inlined hot callee '_Z3fool' with 172746 samples into 'main'
+; CHECK: remark: coverage.cc:10:12: inlined hot callee '_Z3fool' into 'main'
 ; CHECK: remark: coverage.cc:9:21: Applied 23478 samples from profile (offset: 2.1)
 ; CHECK: remark: coverage.cc:10:16: Applied 23478 samples from profile (offset: 3)
 ; CHECK: remark: coverage.cc:4:10: Applied 31878 samples from profile (offset: 1)
@@ -120,7 +120,7 @@ for.end:                                          ; preds = %for.cond
 !27 = !DILocation(line: 9, column: 12, scope: !26)
 !28 = !DILocation(line: 9, column: 8, scope: !26)
 !29 = !DILocation(line: 9, column: 19, scope: !30)
-!30 = !DILexicalBlockFile(scope: !31, file: !1, discriminator: 1)
+!30 = !DILexicalBlockFile(scope: !31, file: !1, discriminator: 2)
 !31 = distinct !DILexicalBlock(scope: !26, file: !1, line: 9, column: 3)
 !32 = !DILocation(line: 9, column: 21, scope: !30)
 !33 = !DILocation(line: 9, column: 3, scope: !30)

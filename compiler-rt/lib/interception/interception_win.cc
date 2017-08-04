@@ -477,7 +477,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   switch (*(u8*)address) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
                 //   movabs eax, dword ptr ds:[XXXXXXXX]
-      return 8;
+      return 9;
   }
 
   switch (*(u16*)address) {
@@ -495,6 +495,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x5741:  // push r15
     case 0x9066:  // Two-byte NOP
       return 2;
+
+    case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
+      if (rel_offset)
+        *rel_offset = 2;
+      return 6;
   }
 
   switch (0x00FFFFFF & *(u32*)address) {
@@ -878,6 +883,8 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
   IMAGE_DATA_DIRECTORY *export_directory =
       &headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+  if (export_directory->Size == 0)
+    return 0;
   RVAPtr<IMAGE_EXPORT_DIRECTORY> exports(module,
                                          export_directory->VirtualAddress);
   RVAPtr<DWORD> functions(module, exports->AddressOfFunctions);

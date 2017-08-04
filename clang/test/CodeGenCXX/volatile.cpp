@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++98 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // Check that IR gen doesn't try to do an lvalue-to-rvalue conversion
 // on a volatile reference result.  rdar://problem/8338198
@@ -27,6 +28,7 @@ namespace test1 {
   // CHECK-LABEL: define void @_ZN5test14testEv()
   void test() {
     // CHECK:      [[TMP:%.*]] = load i32*, i32** @_ZN5test11xE, align 8
+    // CHECK11-NEXT: {{%.*}} = load volatile i32, i32* [[TMP]], align 4
     // CHECK-NEXT: ret void
     *x;
   }

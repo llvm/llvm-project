@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <deque>
 
 // deque& operator=(deque&& c);
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
         int* an = ab + sizeof(ab)/sizeof(ab[0]);
@@ -69,7 +70,6 @@ int main()
         assert(c1.size() == 0);
         assert(c3.get_allocator() == A(5));
     }
-#if TEST_STD_VER >= 11
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
         int* an = ab + sizeof(ab)/sizeof(ab[0]);
@@ -86,6 +86,4 @@ int main()
         assert(c1.size() == 0);
         assert(c3.get_allocator() == A());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

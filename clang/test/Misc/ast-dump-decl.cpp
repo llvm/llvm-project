@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions -ast-dump -ast-dump-filter Test %s | FileCheck -check-prefix CHECK -strict-whitespace %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions -ast-dump -ast-dump-filter Test %s | FileCheck -strict-whitespace %s
 
 class testEnumDecl {
   enum class TestEnumDeclScoped;
@@ -95,17 +95,12 @@ class TestCXXRecordDeclPack : public T... {
 thread_local int TestThreadLocalInt;
 // CHECK: TestThreadLocalInt {{.*}} tls_dynamic
 
-__module_private__ class TestCXXRecordDeclPrivate;
-// CHECK: CXXRecordDecl{{.*}} class TestCXXRecordDeclPrivate __module_private__
-
 class testCXXMethodDecl {
-  __module_private__ void TestCXXMethodDeclPrivate();
   virtual void TestCXXMethodDeclPure() = 0;
   void TestCXXMethodDeclDelete() = delete;
   void TestCXXMethodDeclThrow() throw();
   void TestCXXMethodDeclThrowType() throw(int);
 };
-// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclPrivate 'void (void)' __module_private__
 // CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclPure 'void (void)' virtual pure
 // CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclDelete 'void (void)' delete
 // CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclThrow 'void (void) throw()'
@@ -355,8 +350,8 @@ namespace TestTemplateTypeParmDecl {
 }
 // CHECK:      NamespaceDecl{{.*}} TestTemplateTypeParmDecl
 // CHECK-NEXT:   FunctionTemplateDecl
-// CHECK-NEXT:     TemplateTypeParmDecl{{.*}} typename ... T
-// CHECK-NEXT:     TemplateTypeParmDecl{{.*}} class U
+// CHECK-NEXT:     TemplateTypeParmDecl{{.*}} typename depth 0 index 0 ... T
+// CHECK-NEXT:     TemplateTypeParmDecl{{.*}} class depth 0 index 1 U
 // CHECK-NEXT:       TemplateArgument type 'int'
 
 namespace TestNonTypeTemplateParmDecl {
@@ -364,10 +359,10 @@ namespace TestNonTypeTemplateParmDecl {
 }
 // CHECK:      NamespaceDecl{{.*}} TestNonTypeTemplateParmDecl
 // CHECK-NEXT:   FunctionTemplateDecl
-// CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' I
+// CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 0 I
 // CHECK-NEXT:       TemplateArgument expr
 // CHECK-NEXT:         IntegerLiteral{{.*}} 'int' 1
-// CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' ... J
+// CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 1 ... J
 
 namespace TestTemplateTemplateParmDecl {
   template<typename T> class A;

@@ -522,7 +522,8 @@ static void HandleDefinition() {
   if (auto FnAST = ParseDefinition()) {
     if (auto *FnIR = FnAST->codegen()) {
       fprintf(stderr, "Read function definition:");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
     }
   } else {
     // Skip token for error recovery.
@@ -534,7 +535,8 @@ static void HandleExtern() {
   if (auto ProtoAST = ParseExtern()) {
     if (auto *FnIR = ProtoAST->codegen()) {
       fprintf(stderr, "Read extern: ");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
     }
   } else {
     // Skip token for error recovery.
@@ -547,7 +549,8 @@ static void HandleTopLevelExpression() {
   if (auto FnAST = ParseTopLevelExpr()) {
     if (auto *FnIR = FnAST->codegen()) {
       fprintf(stderr, "Read top-level expression:");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
     }
   } else {
     // Skip token for error recovery.
@@ -601,7 +604,7 @@ int main() {
   MainLoop();
 
   // Print out all of the generated code.
-  TheModule->dump();
+  TheModule->print(errs(), nullptr);
 
   return 0;
 }

@@ -1,0 +1,11 @@
+RUN: llvm-cxxfilt -_ __ZN2ns1fE _ZSt1f _f | FileCheck %s -check-prefix CHECK-STRIPPED
+RUN: llvm-cxxfilt __ZN2ns1fE _ZSt1f _f | FileCheck %s -check-prefix CHECK-UNSTRIPPED
+
+CHECK-STRIPPED: ns::f
+CHECK-STRIPPED: _ZSt1f
+CHECK-STRIPPED: _f
+
+CHECK-UNSTRIPPED: __ZN2ns1fE
+CHECK-UNSTRIPPED: std::f
+CHECK-UNSTRIPPED: _f
+

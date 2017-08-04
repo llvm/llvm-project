@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTX.h"
 #include "NVPTXInstrInfo.h"
+#include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -38,7 +38,7 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
 
-  if (DestRC->getSize() != SrcRC->getSize())
+  if (RegInfo.getRegSizeInBits(*DestRC) != RegInfo.getRegSizeInBits(*SrcRC))
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
@@ -52,6 +52,11 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   } else if (DestRC == &NVPTX::Int64RegsRegClass) {
     Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64rr
                                              : NVPTX::BITCONVERT_64_F2I);
+  } else if (DestRC == &NVPTX::Float16RegsRegClass) {
+    Op = (SrcRC == &NVPTX::Float16RegsRegClass ? NVPTX::FMOV16rr
+                                               : NVPTX::BITCONVERT_16_I2F);
+  } else if (DestRC == &NVPTX::Float16x2RegsRegClass) {
+    Op = NVPTX::IMOV32rr;
   } else if (DestRC == &NVPTX::Float32RegsRegClass) {
     Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32rr
                                                : NVPTX::BITCONVERT_32_I2F);

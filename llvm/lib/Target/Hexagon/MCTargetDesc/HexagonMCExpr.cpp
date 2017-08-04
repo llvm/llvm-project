@@ -11,7 +11,9 @@
 #include "HexagonMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -36,7 +38,47 @@ MCFragment *llvm::HexagonMCExpr::findAssociatedFragment() const {
   return Expr->findAssociatedFragment();
 }
 
-void HexagonMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {}
+static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
+  switch (Expr->getKind()) {
+  case MCExpr::Target:
+    llvm_unreachable("Cannot handle nested target MCExpr");
+    break;
+  case MCExpr::Constant:
+    break;
+
+  case MCExpr::Binary: {
+    const MCBinaryExpr *be = cast<MCBinaryExpr>(Expr);
+    fixELFSymbolsInTLSFixupsImpl(be->getLHS(), Asm);
+    fixELFSymbolsInTLSFixupsImpl(be->getRHS(), Asm);
+    break;
+  }
+  case MCExpr::SymbolRef: {
+    const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(Expr);
+    switch (symRef.getKind()) {
+    default:
+      return;
+    case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_GD_PLT:
+    case MCSymbolRefExpr::VK_Hexagon_LD_PLT:
+    case MCSymbolRefExpr::VK_Hexagon_IE:
+    case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+    case MCSymbolRefExpr::VK_TPREL:
+      break;
+    }
+    cast<MCSymbolELF>(symRef.getSymbol()).setType(ELF::STT_TLS);
+    break;
+  }
+  case MCExpr::Unary:
+    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
+    break;
+  }
+}
+
+void HexagonMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
+  auto expr = getExpr();
+  fixELFSymbolsInTLSFixupsImpl(expr, Asm);
+}
 
 MCExpr const *HexagonMCExpr::getExpr() const { return Expr; }
 
@@ -52,9 +94,9 @@ void HexagonMCExpr::setMustNotExtend(bool Val) {
 }
 bool HexagonMCExpr::mustNotExtend() const { return MustNotExtend; }
 
-bool HexagonMCExpr::s23_2_reloc() const { return S23_2_reloc; }
-void HexagonMCExpr::setS23_2_reloc(bool Val) {
-  S23_2_reloc = Val;
+bool HexagonMCExpr::s27_2_reloc() const { return S27_2_reloc; }
+void HexagonMCExpr::setS27_2_reloc(bool Val) {
+  S27_2_reloc = Val;
 }
 
 bool HexagonMCExpr::classof(MCExpr const *E) {
@@ -62,7 +104,7 @@ bool HexagonMCExpr::classof(MCExpr const *E) {
 }
 
 HexagonMCExpr::HexagonMCExpr(MCExpr const *Expr)
-    : Expr(Expr), MustNotExtend(false), MustExtend(false), S23_2_reloc(false),
+    : Expr(Expr), MustNotExtend(false), MustExtend(false), S27_2_reloc(false),
       SignMismatch(false) {}
 
 void HexagonMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {

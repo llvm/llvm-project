@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-r52 -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=R52_SCHED
-; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=generic    -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=GENERIC
+; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-r52 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=R52_SCHED
+; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=generic    -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=GENERIC
 ;
 ; Check the latency for instructions for both generic and cortex-r52.
 ; Cortex-r52 machine model will cause the div to be sceduled before eor
@@ -12,10 +12,10 @@
 ; GENERIC:    Latency    : 1
 ; R52_SCHED:  Latency    : 3
 ; CHECK:      MLA
-; GENERIC:    Latency    : 1
+; GENERIC:    Latency    : 2
 ; R52_SCHED:  Latency    : 4
 ; CHECK:      SDIV
-; GENERIC:    Latency    : 1
+; GENERIC:    Latency    : 0
 ; R52_SCHED:  Latency    : 8
 ; CHECK:      ** Final schedule for BB#0 ***
 ; GENERIC:    EORrr

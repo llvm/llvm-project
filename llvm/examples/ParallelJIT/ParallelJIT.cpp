@@ -54,8 +54,7 @@ static Function* createAdd1(Module *M) {
   Function *Add1F =
     cast<Function>(M->getOrInsertFunction("add1",
                                           Type::getInt32Ty(M->getContext()),
-                                          Type::getInt32Ty(M->getContext()),
-                                          nullptr));
+                                          Type::getInt32Ty(M->getContext())));
 
   // Add a basic block to the function. As before, it automatically inserts
   // because of the last argument.
@@ -85,8 +84,7 @@ static Function *CreateFibFunction(Module *M) {
   Function *FibF = 
     cast<Function>(M->getOrInsertFunction("fib",
                                           Type::getInt32Ty(M->getContext()),
-                                          Type::getInt32Ty(M->getContext()),
-                                          nullptr));
+                                          Type::getInt32Ty(M->getContext())));
 
   // Add a basic block to the function.
   BasicBlock *BB = BasicBlock::Create(M->getContext(), "EntryBlock", FibF);
@@ -147,6 +145,7 @@ public:
     waitFor = 0;
 
     int result = pthread_cond_init( &condition, nullptr );
+    (void)result;
     assert( result == 0 );
 
     result = pthread_mutex_init( &mutex, nullptr );

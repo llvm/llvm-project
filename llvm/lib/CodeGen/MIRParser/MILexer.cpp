@@ -365,6 +365,14 @@ static Cursor maybeLexIRValue(Cursor C, MIToken &Token,
   return lexName(C, Token, MIToken::NamedIRValue, Rule.size(), ErrorCallback);
 }
 
+static Cursor maybeLexStringConstant(Cursor C, MIToken &Token,
+                                     ErrorCallbackType ErrorCallback) {
+  if (C.peek() != '"')
+    return None;
+  return lexName(C, Token, MIToken::StringConstant, /*PrefixLength=*/0,
+                 ErrorCallback);
+}
+
 static Cursor lexVirtualRegister(Cursor C, MIToken &Token) {
   auto Range = C;
   C.advance(); // Skip '%'
@@ -629,6 +637,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   if (Cursor R = maybeLexNewline(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexEscapedIRValue(C, Token, ErrorCallback))
+    return R.remaining();
+  if (Cursor R = maybeLexStringConstant(C, Token, ErrorCallback))
     return R.remaining();
 
   Token.reset(MIToken::Error, C.remaining());

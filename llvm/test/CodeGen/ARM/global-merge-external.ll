@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -global-merge-on-external=true  | FileCheck %s --check-prefix=CHECK-MERGE
 ; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -global-merge-on-external=false | FileCheck %s --check-prefix=CHECK-NO-MERGE
 ; RUN: llc < %s -mtriple=arm-macho -arm-global-merge                                 | FileCheck %s --check-prefix=CHECK-NO-MERGE
+; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -relocation-model=pic           | FileCheck %s --check-prefix=CHECK-NO-MERGE
 
 @x = global i32 0, align 4
 @y = global i32 0, align 4

@@ -3,11 +3,11 @@
 ; Check if S4_subi_asl_ri is being generated correctly.
 
 ; CHECK-LABEL: yes_sub_asl
-; CHECK: [[REG1:(r[0-9]+)]] = sub(#0, asl([[REG1]], #1))
+; CHECK: [[REG1:(r[0-9]+)]] = sub(#0,asl([[REG1]],#1))
 
 ; CHECK-LABEL: no_sub_asl
-; CHECK: [[REG2:(r[0-9]+)]] = asl(r{{[0-9]+}}, #1)
-; CHECK: r{{[0-9]+}} = sub([[REG2]], r{{[0-9]+}})
+; CHECK: [[REG2:(r[0-9]+)]] = asl(r{{[0-9]+}},#1)
+; CHECK: r{{[0-9]+}} = sub([[REG2]],r{{[0-9]+}})
 
 %struct.rtx_def = type { i16, i8 }
 

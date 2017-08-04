@@ -1,4 +1,18 @@
+//===-- Operator.cpp - Implement the LLVM operators -----------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the non-inline methods for the LLVM Operator classes.
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"

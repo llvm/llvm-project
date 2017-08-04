@@ -218,7 +218,7 @@
 ; CHECK: CodeViewDebugInfo [
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
-; CHECK:     ProcStart {
+; CHECK:     {{.*}}Proc{{.*}}Sym {
 ; CHECK:       DbgStart: 0x0
 ; CHECK:       DbgEnd: 0x0
 ; CHECK:       FunctionType: f (0x1002)
@@ -229,68 +229,68 @@
 ; CHECK:       DisplayName: f
 ; CHECK:       LinkageName: ?f@@YAXMN_J@Z
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: float (0x40)
 ; CHECK:       Flags [ (0x1)
 ; CHECK:         IsParameter (0x1)
 ; CHECK:       ]
 ; CHECK:       VarName: p1
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: double (0x41)
 ; CHECK:       Flags [ (0x1)
 ; CHECK:         IsParameter (0x1)
 ; CHECK:       ]
 ; CHECK:       VarName: p2
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: __int64 (0x13)
 ; CHECK:       Flags [ (0x1)
 ; CHECK:         IsParameter (0x1)
 ; CHECK:       ]
 ; CHECK:       VarName: p3
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: int (0x74)
 ; CHECK:       VarName: v1
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: int* (0x674)
 ; CHECK:       VarName: v2
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: const int* (0x1004)
 ; CHECK:       VarName: v21
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: void* (0x603)
 ; CHECK:       VarName: v3
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: int A::* (0x1006)
 ; CHECK:       VarName: v4
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: void A::() A::* (0x100E)
 ; CHECK:       VarName: v5
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: long (0x12)
 ; CHECK:       VarName: l1
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: long (0x12)
 ; CHECK:       VarName: l2
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: unsigned long (0x22)
 ; CHECK:       VarName: l3
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: unsigned long (0x22)
 ; CHECK:       VarName: l4
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: const void* (0x1010)
 ; CHECK:       VarName: v6
 ; CHECK:     }
@@ -298,48 +298,48 @@
 ; CHECK:     }
 ; CHECK:   ]
 ; CHECK:   Subsection [
-; CHECK:     ProcStart {
+; CHECK:     {{.*}}Proc{{.*}}Sym {
 ; CHECK:       Type: CharTypes (0x1012)
 ; CHECK:       DisplayName: CharTypes
 ; CHECK:       LinkageName: ?CharTypes@@YAXXZ
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: wchar_t (0x71)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: w
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: unsigned short (0x21)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: us
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: char (0x70)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: c
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: unsigned char (0x20)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: uc
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: signed char (0x10)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: sc
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: char16_t (0x7A)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
 ; CHECK:       VarName: c16
 ; CHECK:     }
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: char32_t (0x7B)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]

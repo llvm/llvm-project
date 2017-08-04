@@ -6,7 +6,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; CHECK-LABEL: @slsr_after_reassociate_global_geps_mubuf_max_offset(
 ; CHECK: [[b1:%[0-9]+]] = getelementptr float, float addrspace(1)* %arr, i64 [[bump:%[0-9]+]]
 ; CHECK: [[b2:%[0-9]+]] = getelementptr float, float addrspace(1)* [[b1]], i64 [[bump]]
-define void @slsr_after_reassociate_global_geps_mubuf_max_offset(float addrspace(1)* %out, float addrspace(1)* noalias %arr, i32 %i) {
+define amdgpu_kernel void @slsr_after_reassociate_global_geps_mubuf_max_offset(float addrspace(1)* %out, float addrspace(1)* noalias %arr, i32 %i) {
 bb:
   %i2 = shl nsw i32 %i, 1
   %j1 = add nsw i32 %i, 1023
@@ -33,7 +33,7 @@ bb:
 ; CHECK: %tmp = sext i32 %j1 to i64
 ; CHECK: getelementptr inbounds float, float addrspace(1)* %arr, i64 %tmp
 ; CHECK: getelementptr inbounds float, float addrspace(1)* %arr, i64 %tmp5
-define void @slsr_after_reassociate_global_geps_over_mubuf_max_offset(float addrspace(1)* %out, float addrspace(1)* noalias %arr, i32 %i) {
+define amdgpu_kernel void @slsr_after_reassociate_global_geps_over_mubuf_max_offset(float addrspace(1)* %out, float addrspace(1)* noalias %arr, i32 %i) {
 bb:
   %i2 = shl nsw i32 %i, 1
   %j1 = add nsw i32 %i, 1024
@@ -61,7 +61,7 @@ bb:
 
 ; CHECK: [[B2:%[0-9]+]] = getelementptr float, float addrspace(3)* [[B1]], i32 %i
 ; CHECK: getelementptr inbounds float, float addrspace(3)* [[B2]], i32 16383
-define void @slsr_after_reassociate_lds_geps_ds_max_offset(float addrspace(1)* %out, float addrspace(3)* noalias %arr, i32 %i) {
+define amdgpu_kernel void @slsr_after_reassociate_lds_geps_ds_max_offset(float addrspace(1)* %out, float addrspace(3)* noalias %arr, i32 %i) {
 bb:
   %i2 = shl nsw i32 %i, 1
   %j1 = add nsw i32 %i, 16383
@@ -86,7 +86,7 @@ bb:
 ; CHECK: getelementptr inbounds float, float addrspace(3)* %arr, i32 %j1
 ; CHECK: %j2 = add i32 %j1, %i
 ; CHECK: getelementptr inbounds float, float addrspace(3)* %arr, i32 %j2
-define void @slsr_after_reassociate_lds_geps_over_ds_max_offset(float addrspace(1)* %out, float addrspace(3)* noalias %arr, i32 %i) {
+define amdgpu_kernel void @slsr_after_reassociate_lds_geps_over_ds_max_offset(float addrspace(1)* %out, float addrspace(3)* noalias %arr, i32 %i) {
 bb:
   %i2 = shl nsw i32 %i, 1
   %j1 = add nsw i32 %i, 16384

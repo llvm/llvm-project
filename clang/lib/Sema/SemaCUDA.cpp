@@ -295,7 +295,7 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
 
     CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
-    Sema::SpecialMemberOverloadResult *SMOR =
+    Sema::SpecialMemberOverloadResult SMOR =
         LookupSpecialMember(BaseClassDecl, CSM,
                             /* ConstArg */ ConstRHS,
                             /* VolatileArg */ false,
@@ -303,11 +303,10 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                             /* ConstThis */ false,
                             /* VolatileThis */ false);
 
-    if (!SMOR || !SMOR->getMethod()) {
+    if (!SMOR.getMethod())
       continue;
-    }
 
-    CUDAFunctionTarget BaseMethodTarget = IdentifyCUDATarget(SMOR->getMethod());
+    CUDAFunctionTarget BaseMethodTarget = IdentifyCUDATarget(SMOR.getMethod());
     if (!InferredTarget.hasValue()) {
       InferredTarget = BaseMethodTarget;
     } else {
@@ -339,7 +338,7 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
 
     CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(FieldType->getDecl());
-    Sema::SpecialMemberOverloadResult *SMOR =
+    Sema::SpecialMemberOverloadResult SMOR =
         LookupSpecialMember(FieldRecDecl, CSM,
                             /* ConstArg */ ConstRHS && !F->isMutable(),
                             /* VolatileArg */ false,
@@ -347,12 +346,11 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                             /* ConstThis */ false,
                             /* VolatileThis */ false);
 
-    if (!SMOR || !SMOR->getMethod()) {
+    if (!SMOR.getMethod())
       continue;
-    }
 
     CUDAFunctionTarget FieldMethodTarget =
-        IdentifyCUDATarget(SMOR->getMethod());
+        IdentifyCUDATarget(SMOR.getMethod());
     if (!InferredTarget.hasValue()) {
       InferredTarget = FieldMethodTarget;
     } else {
@@ -630,12 +628,6 @@ static bool IsKnownEmitted(Sema &S, FunctionDecl *FD) {
   // only have a declaration, we don't know whether or not the function will be
   // emitted, because (say) the definition could include "inline".
   FunctionDecl *Def = FD->getDefinition();
-
-  // We may currently be parsing the body of FD, in which case
-  // FD->getDefinition() will be null, but we still want to treat FD as though
-  // it's a definition.
-  if (!Def && FD->willHaveBody())
-    Def = FD;
 
   if (Def &&
       !isDiscardableGVALinkage(S.getASTContext().GetGVALinkageForFunction(Def)))

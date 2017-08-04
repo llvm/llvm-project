@@ -28,7 +28,7 @@ public:
   /// \returns A list of `SymbolInfo` candidates.
   // FIXME: Expose the type name so we can also insert using declarations (or
   // fix the usage)
-  virtual std::vector<clang::find_all_symbols::SymbolInfo>
+  virtual std::vector<find_all_symbols::SymbolAndSignals>
   search(llvm::StringRef Identifier) = 0;
 };
 

@@ -29,15 +29,15 @@ public:
   static llvm::ErrorOr<std::unique_ptr<YamlSymbolIndex>>
   createFromDirectory(llvm::StringRef Directory, llvm::StringRef Name);
 
-  std::vector<clang::find_all_symbols::SymbolInfo>
+  std::vector<find_all_symbols::SymbolAndSignals>
   search(llvm::StringRef Identifier) override;
 
 private:
   explicit YamlSymbolIndex(
-      std::vector<clang::find_all_symbols::SymbolInfo> Symbols)
+      std::vector<find_all_symbols::SymbolAndSignals> Symbols)
       : Symbols(std::move(Symbols)) {}
 
-  std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
+  std::vector<find_all_symbols::SymbolAndSignals> Symbols;
 };
 
 } // namespace include_fixer

@@ -226,7 +226,7 @@ def R600_Reg32 : RegisterClass <"AMDGPU", [f32, i32], 32, (add
     R600_Addr,
     R600_KC0, R600_KC1,
     ZERO, HALF, ONE, ONE_INT, PV_X, ALU_LITERAL_X, NEG_ONE, NEG_HALF,
-    ALU_CONST, ALU_PARAM, OQAP
+    ALU_CONST, ALU_PARAM, OQAP, INDIRECT_BASE_ADDR
     )>;
 
 def R600_Predicate : RegisterClass <"AMDGPU", [i32], 32, (add

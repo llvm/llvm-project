@@ -23,7 +23,7 @@
 ; NOHSA-DEFAULT: buffer_store_dword
 ; NOHSA-NODEFAULT: flat_store_dword
 ; NOHSA-NOADDR64: flat_store_dword
-define void @test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
 entry:
   store i32 0, i32 addrspace(1)* %out
   ret void
@@ -36,7 +36,7 @@ entry:
 ; NOHSA-DEFAULT: buffer_store_dword
 ; NOHSA-NODEFAULT: flat_store_dword
 ; NOHSA-NOADDR64: flat_store_dword
-define void @test_addr64(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_addr64(i32 addrspace(1)* %out) {
 entry:
   %out.addr = alloca i32 addrspace(1)*, align 4
 

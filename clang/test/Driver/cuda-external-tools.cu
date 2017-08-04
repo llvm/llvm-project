@@ -24,8 +24,8 @@
 // RUN: | FileCheck -check-prefix ARCH64 -check-prefix SM20 -check-prefix DBG %s
 
 // --no-cuda-noopt-device-debug overrides --cuda-noopt-device-debug.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-debug \
-// RUN:   --no-cuda-noopt-debug -O2 -c %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-device-debug \
+// RUN:   --no-cuda-noopt-device-debug -O2 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix ARCH64 -check-prefix SM20 -check-prefix OPT2 %s
 
 // Regular compile without -O.  This should result in us passing -O0 to ptxas.

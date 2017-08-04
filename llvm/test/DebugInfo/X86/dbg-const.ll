@@ -17,15 +17,15 @@ target triple = "x86_64-apple-darwin10.0.0"
 ;CHECK-NEXT:  .byte	42
 define i32 @foobar() nounwind readonly noinline ssp !dbg !0 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 42, i64 0, metadata !6, metadata !DIExpression()), !dbg !9
+  tail call void @llvm.dbg.value(metadata i32 42, metadata !6, metadata !DIExpression()), !dbg !9
   %call = tail call i32 @bar(), !dbg !11
-  tail call void @llvm.dbg.value(metadata i32 %call, i64 0, metadata !6, metadata !DIExpression()), !dbg !11
+  tail call void @llvm.dbg.value(metadata i32 %call, metadata !6, metadata !DIExpression()), !dbg !11
   %call2 = tail call i32 @bar(), !dbg !11
   %add = add nsw i32 %call2, %call, !dbg !12
   ret i32 %add, !dbg !10
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 declare i32 @bar() nounwind readnone
 
 !llvm.dbg.cu = !{!2}

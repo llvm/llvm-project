@@ -25,7 +25,6 @@
 namespace llvm {
 
 class GlobalValue;
-class MachineFunctionInitializer;
 class Mangler;
 class MCAsmInfo;
 class MCContext;
@@ -34,6 +33,7 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
+class PassManagerBuilder;
 class Target;
 class TargetIntrinsicInfo;
 class TargetIRAnalysis;
@@ -205,10 +205,9 @@ public:
   /// uses this to answer queries about the IR.
   virtual TargetIRAnalysis getTargetIRAnalysis();
 
-  /// Add target-specific function passes that should be run as early as
-  /// possible in the optimization pipeline.  Most TargetMachines have no such
-  /// passes.
-  virtual void addEarlyAsPossiblePasses(PassManagerBase &) {}
+  /// Allow the target to modify the pass manager, e.g. by calling
+  /// PassManagerBuilder::addExtension.
+  virtual void adjustPassManager(PassManagerBuilder &) {}
 
   /// These enums are meant to be passed into addPassesToEmitFile to indicate
   /// what type of file to emit, and returned by it to indicate what type of
@@ -227,8 +226,7 @@ public:
       PassManagerBase &, raw_pwrite_stream &, CodeGenFileType,
       bool /*DisableVerify*/ = true, AnalysisID /*StartBefore*/ = nullptr,
       AnalysisID /*StartAfter*/ = nullptr, AnalysisID /*StopBefore*/ = nullptr,
-      AnalysisID /*StopAfter*/ = nullptr,
-      MachineFunctionInitializer * /*MFInitializer*/ = nullptr) {
+      AnalysisID /*StopAfter*/ = nullptr) {
     return true;
   }
 
@@ -289,8 +287,7 @@ public:
       PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
       bool DisableVerify = true, AnalysisID StartBefore = nullptr,
       AnalysisID StartAfter = nullptr, AnalysisID StopBefore = nullptr,
-      AnalysisID StopAfter = nullptr,
-      MachineFunctionInitializer *MFInitializer = nullptr) override;
+      AnalysisID StopAfter = nullptr) override;
 
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported. It
@@ -299,6 +296,17 @@ public:
   bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
                          raw_pwrite_stream &OS,
                          bool DisableVerify = true) override;
+
+  /// Returns true if the target is expected to pass all machine verifier
+  /// checks. This is a stopgap measure to fix targets one by one. We will
+  /// remove this at some point and always enable the verifier when
+  /// EXPENSIVE_CHECKS is enabled.
+  virtual bool isMachineVerifierClean() const { return true; }
+
+  /// \brief Adds an AsmPrinter pass to the pipeline that prints assembly or
+  /// machine code from the MI representation.
+  bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
+                     CodeGenFileType FileTYpe, MCContext &Context);
 };
 
 } // end namespace llvm

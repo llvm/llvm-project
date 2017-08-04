@@ -45,3 +45,11 @@ class DefaultMemberInitSelf {
   DefaultMemberTemplate<int> t = {};
   int *p = &t.n;
 };
+
+namespace composed_templates {
+  // Regression test -- obtaining the type from composed templates should not
+  // require out-of-line definition.
+  template <typename T> struct Zero { static const typename T::type value = 0; };
+  struct Integer { using type = int; };
+  template struct Zero<Integer>;
+}

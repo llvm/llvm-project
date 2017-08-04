@@ -15,8 +15,8 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -74,6 +74,7 @@ private:
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   bool parseSysAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
+  void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond);
   bool parseCondCode(OperandVector &Operands, bool invertCondCode);
   unsigned matchRegisterNameAlias(StringRef Name, bool isVector);
@@ -85,7 +86,7 @@ private:
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
 
-  bool showMatchError(SMLoc Loc, unsigned ErrCode);
+  bool showMatchError(SMLoc Loc, unsigned ErrCode, OperandVector &Operands);
 
   bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
@@ -537,154 +538,15 @@ public:
     return (Val % Scale) == 0 && Val >= 0 && (Val / Scale) < 0x1000;
   }
 
-  bool isImm0_1() const {
+  template <int N, int M>
+  bool isImmInRange() const {
     if (!isImm())
       return false;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
       return false;
     int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 2);
-  }
-
-  bool isImm0_7() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 8);
-  }
-
-  bool isImm1_8() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val > 0 && Val < 9);
-  }
-
-  bool isImm0_15() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 16);
-  }
-
-  bool isImm1_16() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val > 0 && Val < 17);
-  }
-
-  bool isImm0_31() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 32);
-  }
-
-  bool isImm1_31() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 1 && Val < 32);
-  }
-
-  bool isImm1_32() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 1 && Val < 33);
-  }
-
-  bool isImm0_63() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 64);
-  }
-
-  bool isImm1_63() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 1 && Val < 64);
-  }
-
-  bool isImm1_64() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 1 && Val < 65);
-  }
-
-  bool isImm0_127() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 128);
-  }
-
-  bool isImm0_255() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 256);
-  }
-
-  bool isImm0_65535() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 0 && Val < 65536);
-  }
-
-  bool isImm32_63() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= 32 && Val < 64);
+    return (Val >= N && Val <= M);
   }
 
   bool isLogicalImm32() const {
@@ -804,7 +666,8 @@ public:
     return AArch64_AM::isAdvSIMDModImmType10(MCE->getValue());
   }
 
-  bool isBranchTarget26() const {
+  template<int N>
+  bool isBranchTarget() const {
     if (!isImm())
       return false;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
@@ -813,31 +676,8 @@ public:
     int64_t Val = MCE->getValue();
     if (Val & 0x3)
       return false;
-    return (Val >= -(0x2000000 << 2) && Val <= (0x1ffffff << 2));
-  }
-
-  bool isPCRelLabel19() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return true;
-    int64_t Val = MCE->getValue();
-    if (Val & 0x3)
-      return false;
-    return (Val >= -(0x40000 << 2) && Val <= (0x3ffff << 2));
-  }
-
-  bool isBranchTarget14() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return true;
-    int64_t Val = MCE->getValue();
-    if (Val & 0x3)
-      return false;
-    return (Val >= -(0x2000 << 2) && Val <= (0x1fff << 2));
+    assert(N > 0 && "Branch target immediate cannot be 0 bits!");
+    return (Val >= -((1<<(N-1)) << 2) && Val <= (((1<<(N-1))-1) << 2));
   }
 
   bool
@@ -2260,27 +2100,9 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   bool isNegative = parseOptionalToken(AsmToken::Minus);
 
   const AsmToken &Tok = Parser.getTok();
-  if (Tok.is(AsmToken::Real)) {
-    APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
-    if (isNegative)
-      RealVal.changeSign();
-
-    uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
-    int Val = AArch64_AM::getFP64Imm(APInt(64, IntVal));
-    Parser.Lex(); // Eat the token.
-    // Check for out of range values. As an exception, we let Zero through,
-    // as we handle that special case in post-processing before matching in
-    // order to use the zero register for it.
-    if (Val == -1 && !RealVal.isPosZero()) {
-      TokError("expected compatible register or floating-point constant");
-      return MatchOperand_ParseFail;
-    }
-    Operands.push_back(AArch64Operand::CreateFPImm(Val, S, getContext()));
-    return MatchOperand_Success;
-  }
-  if (Tok.is(AsmToken::Integer)) {
+  if (Tok.is(AsmToken::Real) || Tok.is(AsmToken::Integer)) {
     int64_t Val;
-    if (!isNegative && Tok.getString().startswith("0x")) {
+    if (Tok.is(AsmToken::Integer) && !isNegative && Tok.getString().startswith("0x")) {
       Val = Tok.getIntVal();
       if (Val > 255 || Val < 0) {
         TokError("encoded floating point value out of range");
@@ -2288,10 +2110,24 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
       }
     } else {
       APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
+      if (isNegative)
+        RealVal.changeSign();
+
       uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
-      // If we had a '-' in front, toggle the sign bit.
-      IntVal ^= (uint64_t)isNegative << 63;
       Val = AArch64_AM::getFP64Imm(APInt(64, IntVal));
+
+      // Check for out of range values. As an exception we let Zero through,
+      // but as tokens instead of an FPImm so that it can be matched by the
+      // appropriate alias if one exists.
+      if (RealVal.isPosZero()) {
+        Parser.Lex(); // Eat the token.
+        Operands.push_back(AArch64Operand::CreateToken("#0", false, S, getContext()));
+        Operands.push_back(AArch64Operand::CreateToken(".0", false, S, getContext()));
+        return MatchOperand_Success;
+      } else if (Val == -1) {
+        TokError("expected compatible register or floating-point constant");
+        return MatchOperand_ParseFail;
+      }
     }
     Parser.Lex(); // Eat the token.
     Operands.push_back(AArch64Operand::CreateFPImm(Val, S, getContext()));
@@ -2494,6 +2330,35 @@ AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
+  if (FBS[AArch64::HasV8_1aOps])
+    Str += "ARMv8.1a";
+  else if (FBS[AArch64::HasV8_2aOps])
+    Str += "ARMv8.2a";
+  else
+    Str += "(unknown)";
+}
+
+void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands,
+                                      SMLoc S) {
+  const uint16_t Op2 = Encoding & 7;
+  const uint16_t Cm = (Encoding & 0x78) >> 3;
+  const uint16_t Cn = (Encoding & 0x780) >> 7;
+  const uint16_t Op1 = (Encoding & 0x3800) >> 11;
+
+  const MCExpr *Expr = MCConstantExpr::create(Op1, getContext());
+
+  Operands.push_back(
+      AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
+  Operands.push_back(
+      AArch64Operand::CreateSysCR(Cn, S, getLoc(), getContext()));
+  Operands.push_back(
+      AArch64Operand::CreateSysCR(Cm, S, getLoc(), getContext()));
+  Expr = MCConstantExpr::create(Op2, getContext());
+  Operands.push_back(
+      AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
+}
+
 /// parseSysAlias - The IC, DC, AT, and TLBI instructions are simple aliases for
 /// the SYS instruction. Parse them specially so that we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
@@ -2510,227 +2375,47 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
 
-  const MCExpr *Expr = nullptr;
-
-#define SYS_ALIAS(op1, Cn, Cm, op2)                                            \
-  do {                                                                         \
-    Expr = MCConstantExpr::create(op1, getContext());                          \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));           \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateSysCR(Cn, S, getLoc(), getContext()));           \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateSysCR(Cm, S, getLoc(), getContext()));           \
-    Expr = MCConstantExpr::create(op2, getContext());                          \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));           \
-  } while (false)
-
   if (Mnemonic == "ic") {
-    if (!Op.compare_lower("ialluis")) {
-      // SYS #0, C7, C1, #0
-      SYS_ALIAS(0, 7, 1, 0);
-    } else if (!Op.compare_lower("iallu")) {
-      // SYS #0, C7, C5, #0
-      SYS_ALIAS(0, 7, 5, 0);
-    } else if (!Op.compare_lower("ivau")) {
-      // SYS #3, C7, C5, #1
-      SYS_ALIAS(3, 7, 5, 1);
-    } else {
+    const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
+    if (!IC)
       return TokError("invalid operand for IC instruction");
+    else if (!IC->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("IC " + std::string(IC->Name) + " requires ");
+      setRequiredFeatureString(IC->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(IC->Encoding, Operands, S);
   } else if (Mnemonic == "dc") {
-    if (!Op.compare_lower("zva")) {
-      // SYS #3, C7, C4, #1
-      SYS_ALIAS(3, 7, 4, 1);
-    } else if (!Op.compare_lower("ivac")) {
-      // SYS #3, C7, C6, #1
-      SYS_ALIAS(0, 7, 6, 1);
-    } else if (!Op.compare_lower("isw")) {
-      // SYS #0, C7, C6, #2
-      SYS_ALIAS(0, 7, 6, 2);
-    } else if (!Op.compare_lower("cvac")) {
-      // SYS #3, C7, C10, #1
-      SYS_ALIAS(3, 7, 10, 1);
-    } else if (!Op.compare_lower("csw")) {
-      // SYS #0, C7, C10, #2
-      SYS_ALIAS(0, 7, 10, 2);
-    } else if (!Op.compare_lower("cvau")) {
-      // SYS #3, C7, C11, #1
-      SYS_ALIAS(3, 7, 11, 1);
-    } else if (!Op.compare_lower("civac")) {
-      // SYS #3, C7, C14, #1
-      SYS_ALIAS(3, 7, 14, 1);
-    } else if (!Op.compare_lower("cisw")) {
-      // SYS #0, C7, C14, #2
-      SYS_ALIAS(0, 7, 14, 2);
-    } else if (!Op.compare_lower("cvap")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #3, C7, C12, #1
-        SYS_ALIAS(3, 7, 12, 1);
-      } else {
-        return TokError("DC CVAP requires ARMv8.2a");
-      }
-    } else {
+    const AArch64DC::DC *DC = AArch64DC::lookupDCByName(Op);
+    if (!DC)
       return TokError("invalid operand for DC instruction");
+    else if (!DC->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("DC " + std::string(DC->Name) + " requires ");
+      setRequiredFeatureString(DC->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(DC->Encoding, Operands, S);
   } else if (Mnemonic == "at") {
-    if (!Op.compare_lower("s1e1r")) {
-      // SYS #0, C7, C8, #0
-      SYS_ALIAS(0, 7, 8, 0);
-    } else if (!Op.compare_lower("s1e2r")) {
-      // SYS #4, C7, C8, #0
-      SYS_ALIAS(4, 7, 8, 0);
-    } else if (!Op.compare_lower("s1e3r")) {
-      // SYS #6, C7, C8, #0
-      SYS_ALIAS(6, 7, 8, 0);
-    } else if (!Op.compare_lower("s1e1w")) {
-      // SYS #0, C7, C8, #1
-      SYS_ALIAS(0, 7, 8, 1);
-    } else if (!Op.compare_lower("s1e2w")) {
-      // SYS #4, C7, C8, #1
-      SYS_ALIAS(4, 7, 8, 1);
-    } else if (!Op.compare_lower("s1e3w")) {
-      // SYS #6, C7, C8, #1
-      SYS_ALIAS(6, 7, 8, 1);
-    } else if (!Op.compare_lower("s1e0r")) {
-      // SYS #0, C7, C8, #3
-      SYS_ALIAS(0, 7, 8, 2);
-    } else if (!Op.compare_lower("s1e0w")) {
-      // SYS #0, C7, C8, #3
-      SYS_ALIAS(0, 7, 8, 3);
-    } else if (!Op.compare_lower("s12e1r")) {
-      // SYS #4, C7, C8, #4
-      SYS_ALIAS(4, 7, 8, 4);
-    } else if (!Op.compare_lower("s12e1w")) {
-      // SYS #4, C7, C8, #5
-      SYS_ALIAS(4, 7, 8, 5);
-    } else if (!Op.compare_lower("s12e0r")) {
-      // SYS #4, C7, C8, #6
-      SYS_ALIAS(4, 7, 8, 6);
-    } else if (!Op.compare_lower("s12e0w")) {
-      // SYS #4, C7, C8, #7
-      SYS_ALIAS(4, 7, 8, 7);
-    } else if (!Op.compare_lower("s1e1rp")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #0, C7, C9, #0
-        SYS_ALIAS(0, 7, 9, 0);
-      } else {
-        return TokError("AT S1E1RP requires ARMv8.2a");
-      }
-    } else if (!Op.compare_lower("s1e1wp")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #0, C7, C9, #1
-        SYS_ALIAS(0, 7, 9, 1);
-      } else {
-        return TokError("AT S1E1WP requires ARMv8.2a");
-      }
-    } else {
+    const AArch64AT::AT *AT = AArch64AT::lookupATByName(Op);
+    if (!AT)
       return TokError("invalid operand for AT instruction");
+    else if (!AT->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("AT " + std::string(AT->Name) + " requires ");
+      setRequiredFeatureString(AT->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(AT->Encoding, Operands, S);
   } else if (Mnemonic == "tlbi") {
-    if (!Op.compare_lower("vmalle1is")) {
-      // SYS #0, C8, C3, #0
-      SYS_ALIAS(0, 8, 3, 0);
-    } else if (!Op.compare_lower("alle2is")) {
-      // SYS #4, C8, C3, #0
-      SYS_ALIAS(4, 8, 3, 0);
-    } else if (!Op.compare_lower("alle3is")) {
-      // SYS #6, C8, C3, #0
-      SYS_ALIAS(6, 8, 3, 0);
-    } else if (!Op.compare_lower("vae1is")) {
-      // SYS #0, C8, C3, #1
-      SYS_ALIAS(0, 8, 3, 1);
-    } else if (!Op.compare_lower("vae2is")) {
-      // SYS #4, C8, C3, #1
-      SYS_ALIAS(4, 8, 3, 1);
-    } else if (!Op.compare_lower("vae3is")) {
-      // SYS #6, C8, C3, #1
-      SYS_ALIAS(6, 8, 3, 1);
-    } else if (!Op.compare_lower("aside1is")) {
-      // SYS #0, C8, C3, #2
-      SYS_ALIAS(0, 8, 3, 2);
-    } else if (!Op.compare_lower("vaae1is")) {
-      // SYS #0, C8, C3, #3
-      SYS_ALIAS(0, 8, 3, 3);
-    } else if (!Op.compare_lower("alle1is")) {
-      // SYS #4, C8, C3, #4
-      SYS_ALIAS(4, 8, 3, 4);
-    } else if (!Op.compare_lower("vale1is")) {
-      // SYS #0, C8, C3, #5
-      SYS_ALIAS(0, 8, 3, 5);
-    } else if (!Op.compare_lower("vaale1is")) {
-      // SYS #0, C8, C3, #7
-      SYS_ALIAS(0, 8, 3, 7);
-    } else if (!Op.compare_lower("vmalle1")) {
-      // SYS #0, C8, C7, #0
-      SYS_ALIAS(0, 8, 7, 0);
-    } else if (!Op.compare_lower("alle2")) {
-      // SYS #4, C8, C7, #0
-      SYS_ALIAS(4, 8, 7, 0);
-    } else if (!Op.compare_lower("vale2is")) {
-      // SYS #4, C8, C3, #5
-      SYS_ALIAS(4, 8, 3, 5);
-    } else if (!Op.compare_lower("vale3is")) {
-      // SYS #6, C8, C3, #5
-      SYS_ALIAS(6, 8, 3, 5);
-    } else if (!Op.compare_lower("alle3")) {
-      // SYS #6, C8, C7, #0
-      SYS_ALIAS(6, 8, 7, 0);
-    } else if (!Op.compare_lower("vae1")) {
-      // SYS #0, C8, C7, #1
-      SYS_ALIAS(0, 8, 7, 1);
-    } else if (!Op.compare_lower("vae2")) {
-      // SYS #4, C8, C7, #1
-      SYS_ALIAS(4, 8, 7, 1);
-    } else if (!Op.compare_lower("vae3")) {
-      // SYS #6, C8, C7, #1
-      SYS_ALIAS(6, 8, 7, 1);
-    } else if (!Op.compare_lower("aside1")) {
-      // SYS #0, C8, C7, #2
-      SYS_ALIAS(0, 8, 7, 2);
-    } else if (!Op.compare_lower("vaae1")) {
-      // SYS #0, C8, C7, #3
-      SYS_ALIAS(0, 8, 7, 3);
-    } else if (!Op.compare_lower("alle1")) {
-      // SYS #4, C8, C7, #4
-      SYS_ALIAS(4, 8, 7, 4);
-    } else if (!Op.compare_lower("vale1")) {
-      // SYS #0, C8, C7, #5
-      SYS_ALIAS(0, 8, 7, 5);
-    } else if (!Op.compare_lower("vale2")) {
-      // SYS #4, C8, C7, #5
-      SYS_ALIAS(4, 8, 7, 5);
-    } else if (!Op.compare_lower("vale3")) {
-      // SYS #6, C8, C7, #5
-      SYS_ALIAS(6, 8, 7, 5);
-    } else if (!Op.compare_lower("vaale1")) {
-      // SYS #0, C8, C7, #7
-      SYS_ALIAS(0, 8, 7, 7);
-    } else if (!Op.compare_lower("ipas2e1")) {
-      // SYS #4, C8, C4, #1
-      SYS_ALIAS(4, 8, 4, 1);
-    } else if (!Op.compare_lower("ipas2le1")) {
-      // SYS #4, C8, C4, #5
-      SYS_ALIAS(4, 8, 4, 5);
-    } else if (!Op.compare_lower("ipas2e1is")) {
-      // SYS #4, C8, C4, #1
-      SYS_ALIAS(4, 8, 0, 1);
-    } else if (!Op.compare_lower("ipas2le1is")) {
-      // SYS #4, C8, C4, #5
-      SYS_ALIAS(4, 8, 0, 5);
-    } else if (!Op.compare_lower("vmalls12e1")) {
-      // SYS #4, C8, C7, #6
-      SYS_ALIAS(4, 8, 7, 6);
-    } else if (!Op.compare_lower("vmalls12e1is")) {
-      // SYS #4, C8, C3, #6
-      SYS_ALIAS(4, 8, 3, 6);
-    } else {
+    const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByName(Op);
+    if (!TLBI)
       return TokError("invalid operand for TLBI instruction");
+    else if (!TLBI->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("TLBI " + std::string(TLBI->Name) + " requires ");
+      setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(TLBI->Encoding, Operands, S);
   }
-
-#undef SYS_ALIAS
 
   Parser.Lex(); // Eat operand.
 
@@ -2744,12 +2429,10 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     HasRegister = true;
   }
 
-  if (ExpectRegister && !HasRegister) {
+  if (ExpectRegister && !HasRegister)
     return TokError("specified " + Mnemonic + " op requires a register");
-  }
-  else if (!ExpectRegister && HasRegister) {
+  else if (!ExpectRegister && HasRegister)
     return TokError("specified " + Mnemonic + " op does not use a register");
-  }
 
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;
@@ -2790,15 +2473,13 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  auto DB = AArch64DB::lookupDBByName(Tok.getString());
-  if (!DB) {
-    TokError("invalid barrier option name");
-    return MatchOperand_ParseFail;
-  }
-
   // The only valid named option for ISB is 'sy'
-  if (Mnemonic == "isb" && DB->Encoding != AArch64DB::sy) {
+  auto DB = AArch64DB::lookupDBByName(Tok.getString());
+  if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy)) {
     TokError("'sy' or #imm operand expected");
+    return MatchOperand_ParseFail;
+  } else if (!DB) {
+    TokError("invalid barrier option name");
     return MatchOperand_ParseFail;
   }
 
@@ -2884,7 +2565,6 @@ bool AArch64AsmParser::tryParseVectorRegister(OperandVector &Operands) {
 
 /// parseRegister - Parse a non-vector register operand.
 bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
   // Try for a vector register.
   if (!tryParseVectorRegister(Operands))
@@ -2896,30 +2576,6 @@ bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
     return true;
   Operands.push_back(
       AArch64Operand::CreateReg(Reg, false, S, getLoc(), getContext()));
-
-  // A small number of instructions (FMOVXDhighr, for example) have "[1]"
-  // as a string token in the instruction itself.
-  SMLoc LBracS = getLoc();
-  const AsmToken &Tok = Parser.getTok();
-  if (parseOptionalToken(AsmToken::LBrac)) {
-    if (Tok.is(AsmToken::Integer)) {
-      SMLoc IntS = getLoc();
-      int64_t Val = Tok.getIntVal();
-      if (Val == 1) {
-        Parser.Lex();
-        SMLoc RBracS = getLoc();
-        if (parseOptionalToken(AsmToken::RBrac)) {
-          Operands.push_back(
-              AArch64Operand::CreateToken("[", false, LBracS, getContext()));
-          Operands.push_back(
-              AArch64Operand::CreateToken("1", false, IntS, getContext()));
-          Operands.push_back(
-              AArch64Operand::CreateToken("]", false, RBracS, getContext()));
-          return false;
-        }
-      }
-    }
-  }
 
   return false;
 }
@@ -3601,7 +3257,10 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
   }
 }
 
-bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode) {
+std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS);
+
+bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
+                                      OperandVector &Operands) {
   switch (ErrCode) {
   case Match_MissingFeature:
     return Error(Loc,
@@ -3696,6 +3355,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode) {
     return Error(Loc, "immediate must be an integer in range [0, 63].");
   case Match_InvalidImm0_127:
     return Error(Loc, "immediate must be an integer in range [0, 127].");
+  case Match_InvalidImm0_255:
+    return Error(Loc, "immediate must be an integer in range [0, 255].");
   case Match_InvalidImm0_65535:
     return Error(Loc, "immediate must be an integer in range [0, 65535].");
   case Match_InvalidImm1_8:
@@ -3722,8 +3383,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode) {
     return Error(Loc, "expected readable system register");
   case Match_MSR:
     return Error(Loc, "expected writable system register or pstate");
-  case Match_MnemonicFail:
-    return Error(Loc, "unrecognized instruction mnemonic");
+  case Match_MnemonicFail: {
+    std::string Suggestion = AArch64MnemonicSpellCheck(
+        ((AArch64Operand &)*Operands[0]).getToken(),
+        ComputeAvailableFeatures(STI->getFeatureBits()));
+    return Error(Loc, "unrecognized instruction mnemonic" + Suggestion);
+  }
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -3991,21 +3656,6 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
   }
 
-  // Yet another horrible hack to handle FMOV Rd, #0.0 using [WX]ZR.
-  if (NumOperands == 3 && Tok == "fmov") {
-    AArch64Operand &RegOp = static_cast<AArch64Operand &>(*Operands[1]);
-    AArch64Operand &ImmOp = static_cast<AArch64Operand &>(*Operands[2]);
-    if (RegOp.isReg() && ImmOp.isFPImm() && ImmOp.getFPImm() == (unsigned)-1) {
-      unsigned zreg =
-          !AArch64MCRegisterClasses[AArch64::FPR64RegClassID].contains(
-              RegOp.getReg())
-              ? AArch64::WZR
-              : AArch64::XZR;
-      Operands[2] = AArch64Operand::CreateReg(zreg, false, Op.getStartLoc(),
-                                              Op.getEndLoc(), getContext());
-    }
-  }
-
   MCInst Inst;
   // First try to match against the secondary set of tables containing the
   // short-form NEON instructions (e.g. "fadd.2s v0, v1, v2").
@@ -4064,7 +3714,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, Msg);
   }
   case Match_MnemonicFail:
-    return showMatchError(IDLoc, MatchResult);
+    return showMatchError(IDLoc, MatchResult, Operands);
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;
 
@@ -4083,7 +3733,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         ((AArch64Operand &)*Operands[ErrorInfo]).isTokenSuffix())
       MatchResult = Match_InvalidSuffix;
 
-    return showMatchError(ErrorLoc, MatchResult);
+    return showMatchError(ErrorLoc, MatchResult, Operands);
   }
   case Match_InvalidMemoryIndexed1:
   case Match_InvalidMemoryIndexed2:
@@ -4120,6 +3770,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm0_31:
   case Match_InvalidImm0_63:
   case Match_InvalidImm0_127:
+  case Match_InvalidImm0_255:
   case Match_InvalidImm0_65535:
   case Match_InvalidImm1_8:
   case Match_InvalidImm1_16:
@@ -4140,7 +3791,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = ((AArch64Operand &)*Operands[ErrorInfo]).getStartLoc();
     if (ErrorLoc == SMLoc())
       ErrorLoc = IDLoc;
-    return showMatchError(ErrorLoc, MatchResult);
+    return showMatchError(ErrorLoc, MatchResult, Operands);
   }
   }
 
@@ -4260,10 +3911,14 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   return false;
 }
 
+static SMLoc incrementLoc(SMLoc L, int Offset) {
+  return SMLoc::getFromPointer(L.getPointer() + Offset);
+}
+
 /// parseDirectiveCPU
 ///   ::= .cpu id
 bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
-  SMLoc CPULoc = getLoc();
+  SMLoc CurLoc = getLoc();
 
   StringRef CPU, ExtensionString;
   std::tie(CPU, ExtensionString) =
@@ -4279,15 +3934,19 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   // FIXME This is using tablegen data, but should be moved to ARMTargetParser
   // once that is tablegen'ed
   if (!getSTI().isCPUStringValid(CPU)) {
-    Error(CPULoc, "unknown CPU name");
+    Error(CurLoc, "unknown CPU name");
     return false;
   }
 
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, "");
+  CurLoc = incrementLoc(CurLoc, CPU.size());
 
   FeatureBitset Features = STI.getFeatureBits();
   for (auto Name : RequestedExtensions) {
+    // Advance source location past '+'.
+    CurLoc = incrementLoc(CurLoc, 1);
+
     bool EnableFeature = true;
 
     if (Name.startswith_lower("no")) {
@@ -4295,6 +3954,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       Name = Name.substr(2);
     }
 
+    bool FoundExtension = false;
     for (const auto &Extension : ExtensionMap) {
       if (Extension.Name != Name)
         continue;
@@ -4308,9 +3968,15 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       uint64_t Features =
           ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
       setAvailableFeatures(Features);
+      FoundExtension = true;
 
       break;
     }
+
+    if (!FoundExtension)
+      Error(CurLoc, "unsupported architectural extension");
+
+    CurLoc = incrementLoc(CurLoc, Name.size());
   }
   return false;
 }

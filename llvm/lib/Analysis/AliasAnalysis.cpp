@@ -332,8 +332,8 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc) {
-  // Be conservative in the face of volatile/atomic.
-  if (!L->isUnordered())
+  // Be conservative in the face of atomic.
+  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
     return MRI_ModRef;
 
   // If the load address doesn't alias the given address, it doesn't read
@@ -347,8 +347,8 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc) {
-  // Be conservative in the face of volatile/atomic.
-  if (!S->isUnordered())
+  // Be conservative in the face of atomic.
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
     return MRI_ModRef;
 
   if (Loc.Ptr) {
@@ -365,6 +365,14 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 
   // Otherwise, a store just writes.
   return MRI_Mod;
+}
+
+ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
+  // If we know that the location is a constant memory location, the fence
+  // cannot modify this location.
+  if (Loc.Ptr && pointsToConstantMemory(Loc))
+    return MRI_Ref;
+  return MRI_ModRef;
 }
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
@@ -689,7 +697,7 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
 
 bool llvm::isNoAliasCall(const Value *V) {
   if (auto CS = ImmutableCallSite(V))
-    return CS.paramHasAttr(0, Attribute::NoAlias);
+    return CS.hasRetAttr(Attribute::NoAlias);
   return false;
 }
 

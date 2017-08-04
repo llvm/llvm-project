@@ -16,9 +16,13 @@
 #ifndef LLVM_OBJECTYAML_MACHOYAML_H
 #define LLVM_OBJECTYAML_MACHOYAML_H
 
-#include "llvm/ObjectYAML/YAML.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
-#include "llvm/Support/MachO.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace llvm {
 namespace MachOYAML {
@@ -51,6 +55,7 @@ struct FileHeader {
 
 struct LoadCommand {
   virtual ~LoadCommand();
+
   llvm::MachO::macho_load_command Data;
   std::vector<Section> Sections;
   std::vector<MachO::build_tool_version> Tools;
@@ -66,6 +71,7 @@ struct NListEntry {
   uint16_t n_desc;
   uint64_t n_value;
 };
+
 struct RebaseOpcode {
   MachO::RebaseOpcode Opcode;
   uint8_t Imm;
@@ -81,15 +87,12 @@ struct BindOpcode {
 };
 
 struct ExportEntry {
-  ExportEntry()
-      : TerminalSize(0), NodeOffset(0), Name(), Flags(0), Address(0), Other(0),
-        ImportName(), Children() {}
-  uint64_t TerminalSize;
-  uint64_t NodeOffset;
+  uint64_t TerminalSize = 0;
+  uint64_t NodeOffset = 0;
   std::string Name;
-  llvm::yaml::Hex64 Flags;
-  llvm::yaml::Hex64 Address;
-  llvm::yaml::Hex64 Other;
+  llvm::yaml::Hex64 Flags = 0;
+  llvm::yaml::Hex64 Address = 0;
+  llvm::yaml::Hex64 Other = 0;
   std::string ImportName;
   std::vector<MachOYAML::ExportEntry> Children;
 };
@@ -135,12 +138,11 @@ struct UniversalBinary {
   std::vector<Object> Slices;
 };
 
-} // namespace llvm::MachOYAML
-} // namespace llvm
+} // end namespace MachOYAML
+} // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::LoadCommand)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Section)
-LLVM_YAML_IS_SEQUENCE_VECTOR(int64_t)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::RebaseOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::BindOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::ExportEntry)
@@ -150,6 +152,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::FatArch)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachO::build_tool_version)
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace yaml {
 
 template <> struct MappingTraits<MachOYAML::FileHeader> {
@@ -209,7 +214,7 @@ template <> struct MappingTraits<MachO::build_tool_version> {
 
 template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
   static void enumeration(IO &io, MachO::LoadCommandType &value) {
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
     io.enumFallback<Hex32>(value);
   }
 };
@@ -251,22 +256,20 @@ template <> struct ScalarEnumerationTraits<MachO::BindOpcode> {
 };
 
 // This trait is used for 16-byte chars in Mach structures used for strings
-typedef char char_16[16];
+using char_16 = char[16];
 
 template <> struct ScalarTraits<char_16> {
-  static void output(const char_16 &Val, void *, llvm::raw_ostream &Out);
-
+  static void output(const char_16 &Val, void *, raw_ostream &Out);
   static StringRef input(StringRef Scalar, void *, char_16 &Val);
   static bool mustQuote(StringRef S);
 };
 
 // This trait is used for UUIDs. It reads and writes them matching otool's
 // formatting style.
-typedef uint8_t uuid_t[16];
+using uuid_t = uint8_t[16];
 
 template <> struct ScalarTraits<uuid_t> {
-  static void output(const uuid_t &Val, void *, llvm::raw_ostream &Out);
-
+  static void output(const uuid_t &Val, void *, raw_ostream &Out);
   static StringRef input(StringRef Scalar, void *, uuid_t &Val);
   static bool mustQuote(StringRef S);
 };
@@ -278,7 +281,7 @@ template <> struct ScalarTraits<uuid_t> {
     static void mapping(IO &IO, MachO::LCStruct &LoadCommand);                 \
   };
 
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
 
 // Extra structures used by load commands
 template <> struct MappingTraits<MachO::dylib> {
@@ -297,8 +300,8 @@ template <> struct MappingTraits<MachO::section_64> {
   static void mapping(IO &IO, MachO::section_64 &LoadCommand);
 };
 
-} // namespace llvm::yaml
+} // end namespace yaml
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_OBJECTYAML_MACHOYAML_H

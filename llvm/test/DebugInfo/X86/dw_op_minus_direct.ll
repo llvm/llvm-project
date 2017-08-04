@@ -26,11 +26,11 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @inc(i32 %i) local_unnamed_addr #1 !dbg !7 {
 entry:
   %add = add nsw i32 %i, 1, !dbg !15
-  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !12, metadata !13), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 %add, metadata !12, metadata !13), !dbg !14
   ret i32 %add, !dbg !16
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #1 = { nounwind readnone }
 
@@ -51,7 +51,7 @@ attributes #1 = { nounwind readnone }
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !11 = !{!12}
 !12 = !DILocalVariable(name: "i", arg: 1, scope: !7, file: !1, line: 1, type: !10)
-!13 = !DIExpression(DW_OP_minus, 1, DW_OP_stack_value)
+!13 = !DIExpression(DW_OP_constu, 1, DW_OP_minus, DW_OP_stack_value)
 !14 = !DILocation(line: 1, column: 13, scope: !7)
 !15 = !DILocation(line: 2, column: 11, scope: !7)
 !16 = !DILocation(line: 2, column: 3, scope: !7)

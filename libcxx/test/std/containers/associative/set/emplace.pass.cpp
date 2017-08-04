@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <set>
 
 // class set
@@ -23,7 +25,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef std::set<DefaultOnly> M;
         typedef std::pair<M::iterator, bool> R;
@@ -74,7 +75,6 @@ int main()
         assert(m.size() == 1);
         assert(*r.first == 2);
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::set<int, std::less<int>, min_allocator<int>> M;
         typedef std::pair<M::iterator, bool> R;
@@ -85,6 +85,4 @@ int main()
         assert(m.size() == 1);
         assert(*r.first == 2);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

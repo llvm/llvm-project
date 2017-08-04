@@ -83,30 +83,26 @@ MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
   return MIB;
 }
 
-MachineInstrBuilder MachineIRBuilder::buildDirectDbgValue(
-    unsigned Reg, const MDNode *Variable, const MDNode *Expr) {
+MachineInstrBuilder
+MachineIRBuilder::buildDirectDbgValue(unsigned Reg, const MDNode *Variable,
+                                      const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addReg(Reg, RegState::Debug)
-      .addReg(0, RegState::Debug)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(BuildMI(getMF(), DL, getTII().get(TargetOpcode::DBG_VALUE),
+                             /*IsIndirect*/ false, Reg, Variable, Expr));
 }
 
-MachineInstrBuilder MachineIRBuilder::buildIndirectDbgValue(
-    unsigned Reg, unsigned Offset, const MDNode *Variable, const MDNode *Expr) {
+MachineInstrBuilder
+MachineIRBuilder::buildIndirectDbgValue(unsigned Reg, const MDNode *Variable,
+                                        const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addReg(Reg, RegState::Debug)
-      .addImm(Offset)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(BuildMI(getMF(), DL, getTII().get(TargetOpcode::DBG_VALUE),
+                             /*IsIndirect*/ true, Reg, Variable, Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
@@ -124,7 +120,6 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
-                                                         unsigned Offset,
                                                          const MDNode *Variable,
                                                          const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
@@ -144,7 +139,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addReg(0U);
   }
 
-  return MIB.addImm(Offset).addMetadata(Variable).addMetadata(Expr);
+  return MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFrameIndex(unsigned Res, int Idx) {
@@ -166,17 +161,22 @@ MachineInstrBuilder MachineIRBuilder::buildGlobalValue(unsigned Res,
       .addGlobalAddress(GV);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildAdd(unsigned Res, unsigned Op0,
+MachineInstrBuilder MachineIRBuilder::buildBinaryOp(unsigned Opcode, unsigned Res, unsigned Op0,
                                                unsigned Op1) {
   assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
          "invalid operand type");
   assert(MRI->getType(Res) == MRI->getType(Op0) &&
          MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
 
-  return buildInstr(TargetOpcode::G_ADD)
+  return buildInstr(Opcode)
       .addDef(Res)
       .addUse(Op0)
       .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildAdd(unsigned Res, unsigned Op0,
+                                               unsigned Op1) {
+  return buildBinaryOp(TargetOpcode::G_ADD, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
@@ -189,6 +189,24 @@ MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
       .addDef(Res)
       .addUse(Op0)
       .addUse(Op1);
+}
+
+Optional<MachineInstrBuilder>
+MachineIRBuilder::materializeGEP(unsigned &Res, unsigned Op0,
+                                 const LLT &ValueTy, uint64_t Value) {
+  assert(Res == 0 && "Res is a result argument");
+  assert(ValueTy.isScalar()  && "invalid offset type");
+
+  if (Value == 0) {
+    Res = Op0;
+    return None;
+  }
+
+  Res = MRI->createGenericVirtualRegister(MRI->getType(Op0));
+  unsigned TmpReg = MRI->createGenericVirtualRegister(ValueTy);
+
+  buildConstant(TmpReg, Value);
+  return buildGEP(Res, Op0, TmpReg);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
@@ -204,41 +222,22 @@ MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
 
 MachineInstrBuilder MachineIRBuilder::buildSub(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
-         "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
-
-  return buildInstr(TargetOpcode::G_SUB)
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+  return buildBinaryOp(TargetOpcode::G_SUB, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildMul(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
-         "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
-
-  return buildInstr(TargetOpcode::G_MUL)
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+  return buildBinaryOp(TargetOpcode::G_MUL, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildAnd(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
-         "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
+  return buildBinaryOp(TargetOpcode::G_AND, Res, Op0, Op1);
+}
 
-  return buildInstr(TargetOpcode::G_AND)
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+MachineInstrBuilder MachineIRBuilder::buildOr(unsigned Res, unsigned Op0,
+                                              unsigned Op1) {
+  return buildBinaryOp(TargetOpcode::G_OR, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
@@ -246,10 +245,13 @@ MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
+  assert(MRI->getType(Tgt).isPointer() && "invalid branch destination");
   return buildInstr(TargetOpcode::G_BRINDIRECT).addUse(Tgt);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCopy(unsigned Res, unsigned Op) {
+  assert(MRI->getType(Res) == LLT() || MRI->getType(Op) == LLT() ||
+         MRI->getType(Res) == MRI->getType(Op));
   return buildInstr(TargetOpcode::COPY).addDef(Res).addUse(Op);
 }
 
@@ -346,26 +348,35 @@ MachineInstrBuilder MachineIRBuilder::buildZExt(unsigned Res, unsigned Op) {
 
 MachineInstrBuilder MachineIRBuilder::buildSExtOrTrunc(unsigned Res,
                                                        unsigned Op) {
+  assert(MRI->getType(Res).isScalar() || MRI->getType(Res).isVector());
+  assert(MRI->getType(Res).isScalar() == MRI->getType(Op).isScalar());
+
   unsigned Opcode = TargetOpcode::COPY;
   if (MRI->getType(Res).getSizeInBits() > MRI->getType(Op).getSizeInBits())
     Opcode = TargetOpcode::G_SEXT;
   else if (MRI->getType(Res).getSizeInBits() < MRI->getType(Op).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
+  else
+    assert(MRI->getType(Res) == MRI->getType(Op));
 
   return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildZExtOrTrunc(unsigned Res,
                                                        unsigned Op) {
+  assert(MRI->getType(Res).isScalar() || MRI->getType(Res).isVector());
+  assert(MRI->getType(Res).isScalar() == MRI->getType(Op).isScalar());
+
   unsigned Opcode = TargetOpcode::COPY;
   if (MRI->getType(Res).getSizeInBits() > MRI->getType(Op).getSizeInBits())
     Opcode = TargetOpcode::G_ZEXT;
   else if (MRI->getType(Res).getSizeInBits() < MRI->getType(Op).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
+  else
+    assert(MRI->getType(Res) == MRI->getType(Op));
 
   return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
-
 
 MachineInstrBuilder MachineIRBuilder::buildCast(unsigned Dst, unsigned Src) {
   LLT SrcTy = MRI->getType(Src);
@@ -407,10 +418,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(unsigned Res, unsigned Src,
       .addImm(Index);
 }
 
-MachineInstrBuilder
-MachineIRBuilder::buildSequence(unsigned Res,
-                                ArrayRef<unsigned> Ops,
-                                ArrayRef<uint64_t> Indices) {
+void MachineIRBuilder::buildSequence(unsigned Res, ArrayRef<unsigned> Ops,
+                                     ArrayRef<uint64_t> Indices) {
 #ifndef NDEBUG
   assert(Ops.size() == Indices.size() && "incompatible args");
   assert(!Ops.empty() && "invalid trivial sequence");
@@ -422,17 +431,35 @@ MachineIRBuilder::buildSequence(unsigned Res,
     assert(MRI->getType(Op).isValid() && "invalid operand type");
 #endif
 
-  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_SEQUENCE);
-  MIB.addDef(Res);
+  LLT ResTy = MRI->getType(Res);
+  LLT OpTy = MRI->getType(Ops[0]);
+  unsigned OpSize = OpTy.getSizeInBits();
+  bool MaybeMerge = true;
   for (unsigned i = 0; i < Ops.size(); ++i) {
-    MIB.addUse(Ops[i]);
-    MIB.addImm(Indices[i]);
+    if (MRI->getType(Ops[i]) != OpTy || Indices[i] != i * OpSize) {
+      MaybeMerge = false;
+      break;
+    }
   }
-  return MIB;
+
+  if (MaybeMerge && Ops.size() * OpSize == ResTy.getSizeInBits()) {
+    buildMerge(Res, Ops);
+    return;
+  }
+
+  unsigned ResIn = MRI->createGenericVirtualRegister(ResTy);
+  buildUndef(ResIn);
+
+  for (unsigned i = 0; i < Ops.size(); ++i) {
+    unsigned ResOut =
+        i + 1 == Ops.size() ? Res : MRI->createGenericVirtualRegister(ResTy);
+    buildInsert(ResOut, ResIn, Ops[i], Indices[i]);
+    ResIn = ResOut;
+  }
 }
 
 MachineInstrBuilder MachineIRBuilder::buildUndef(unsigned Res) {
-  return buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Res);
+  return buildInstr(TargetOpcode::G_IMPLICIT_DEF).addDef(Res);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
@@ -447,6 +474,9 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
              MRI->getType(Res).getSizeInBits() &&
          "input operands do not cover output register");
 #endif
+
+  if (Ops.size() == 1)
+    return buildCast(Res, Ops[0]);
 
   MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_MERGE_VALUES);
   MIB.addDef(Res);
@@ -477,8 +507,11 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
 
 MachineInstrBuilder MachineIRBuilder::buildInsert(unsigned Res, unsigned Src,
                                                   unsigned Op, unsigned Index) {
+  assert(Index + MRI->getType(Op).getSizeInBits() <=
+             MRI->getType(Res).getSizeInBits() &&
+         "insertion past the end of a register");
+
   if (MRI->getType(Res).getSizeInBits() == MRI->getType(Op).getSizeInBits()) {
-    assert(Index == 0 && "insertion past the end of a register");
     return buildCast(Res, Op);
   }
 
@@ -592,7 +625,7 @@ MachineInstrBuilder MachineIRBuilder::buildInsertVectorElement(unsigned Res,
   LLT EltTy = MRI->getType(Elt);
   LLT IdxTy = MRI->getType(Idx);
   assert(ResTy.isVector() && ValTy.isVector() && "invalid operand type");
-  assert(EltTy.isScalar() && IdxTy.isScalar() && "invalid operand type");
+  assert(IdxTy.isScalar() && "invalid operand type");
   assert(ResTy.getNumElements() == ValTy.getNumElements() && "type mismatch");
   assert(ResTy.getElementType() == EltTy && "type mismatch");
 #endif
@@ -612,7 +645,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtractVectorElement(unsigned Res,
   LLT ValTy = MRI->getType(Val);
   LLT IdxTy = MRI->getType(Idx);
   assert(ValTy.isVector() && "invalid operand type");
-  assert(ResTy.isScalar() && IdxTy.isScalar() && "invalid operand type");
+  assert((ResTy.isScalar() || ResTy.isPointer()) && "invalid operand type");
+  assert(IdxTy.isScalar() && "invalid operand type");
   assert(ValTy.getElementType() == ResTy && "type mismatch");
 #endif
 

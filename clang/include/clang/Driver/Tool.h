@@ -35,7 +35,7 @@ class Tool {
 public:
   // Documents the level of support for response files in this tool.
   // Response files are necessary if the command line gets too large,
-  // requiring the arguments to be transfered to a file.
+  // requiring the arguments to be transferred to a file.
   enum ResponseFileSupport {
     // Provides full support for response files, which means we can transfer
     // all tool input arguments to a file. E.g.: clang, gcc, binutils and MSVC

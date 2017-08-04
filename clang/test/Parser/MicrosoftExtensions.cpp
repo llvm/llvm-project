@@ -60,7 +60,7 @@ struct struct_without_uuid { };
 struct __declspec(uuid("000000A0-0000-0000-C000-000000000049"))
 struct_with_uuid2;
 
-[uuid("000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid3;
+[uuid("000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid3; // expected-warning{{specifying 'uuid' as an ATL attribute is deprecated; use __declspec instead}}
 
 struct
 struct_with_uuid2 {} ;
@@ -261,9 +261,7 @@ int __identifier(else} = __identifier(for); // expected-error {{missing ')' afte
 #define identifier_weird(x) __identifier(x
 int k = identifier_weird(if)); // expected-error {{use of undeclared identifier 'if'}}
 
-// This is a bit weird, but the alternative tokens aren't keywords, and this
-// behavior matches MSVC. FIXME: Consider supporting this anyway.
-extern int __identifier(and) r; // expected-error {{cannot convert '&&' token to an identifier}}
+extern int __identifier(and);
 
 void f() {
   __identifier(() // expected-error {{cannot convert '(' token to an identifier}}

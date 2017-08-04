@@ -92,7 +92,7 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
 
 // Given a resume function @f.resume(%f.frame* %frame), returns %f.frame type.
 static Type *getFrameType(Function *Resume) {
-  auto *ArgType = Resume->getArgumentList().front().getType();
+  auto *ArgType = Resume->arg_begin()->getType();
   return cast<PointerType>(ArgType)->getElementType();
 }
 
@@ -127,7 +127,8 @@ void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
   // is spilled into the coroutine frame and recreate the alignment information
   // here. Possibly we will need to do a mini SROA here and break the coroutine
   // frame into individual AllocaInst recreating the original alignment.
-  auto *Frame = new AllocaInst(FrameTy, "", InsertPt);
+  const DataLayout &DL = F->getParent()->getDataLayout();
+  auto *Frame = new AllocaInst(FrameTy, DL.getAllocaAddrSpace(), "", InsertPt);
   auto *FrameVoidPtr =
       new BitCastInst(Frame, Type::getInt8PtrTy(C), "vFrame", InsertPt);
 
@@ -257,7 +258,9 @@ static bool replaceDevirtTrigger(Function &F) {
 namespace {
 struct CoroElide : FunctionPass {
   static char ID;
-  CoroElide() : FunctionPass(ID) {}
+  CoroElide() : FunctionPass(ID) {
+    initializeCoroElidePass(*PassRegistry::getPassRegistry());
+  }
 
   std::unique_ptr<Lowerer> L;
 
@@ -300,6 +303,7 @@ struct CoroElide : FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
   }
+  StringRef getPassName() const override { return "Coroutine Elision"; }
 };
 }
 

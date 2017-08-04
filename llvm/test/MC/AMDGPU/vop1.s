@@ -56,7 +56,7 @@ v_cvt_u32_f32_e32 v1, v2
 v_cvt_i32_f32_e32 v1, v2
 
 // SICI: v_mov_fed_b32_e32 v1, v2 ; encoding: [0x02,0x13,0x02,0x7e]
-// NOVI: error: instruction not supported on this GPU
+// VI:   v_mov_fed_b32_e32 v1, v2 ; encoding: [0x02,0x13,0x02,0x7e]
 v_mov_fed_b32_e32 v1, v2
 
 // GCN: v_cvt_f16_f32_e32 v1, v2 ; encoding: [0x02,0x15,0x02,0x7e]

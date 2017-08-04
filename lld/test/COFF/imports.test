@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # Verify that the lld can handle .lib files and emit .idata sections.
 #
 # RUN: lld-link /out:%t.exe /entry:main /subsystem:console \

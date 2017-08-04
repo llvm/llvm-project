@@ -154,6 +154,8 @@ extern void isl_sioimath_tdiv_q_ui(isl_sioimath_ptr dst, isl_sioimath_src lhs,
 	unsigned long rhs);
 extern void isl_sioimath_cdiv_q(isl_sioimath_ptr dst, isl_sioimath_src lhs,
 	isl_sioimath_src rhs);
+extern void isl_sioimath_cdiv_q_ui(isl_sioimath_ptr dst, isl_sioimath_src lhs,
+	unsigned long rhs);
 extern void isl_sioimath_fdiv_q(isl_sioimath_ptr dst, isl_sioimath_src lhs,
 	isl_sioimath_src rhs);
 extern void isl_sioimath_fdiv_q_ui(isl_sioimath_ptr dst, isl_sioimath_src lhs,

@@ -14,7 +14,7 @@ namespace dr1213 { // dr1213: 4
 #endif
 }
 
-namespace dr1250 {  // dr1250: 3.9
+namespace dr1250 { // dr1250: 3.9
 struct Incomplete;
 
 struct Base {
@@ -24,9 +24,23 @@ struct Base {
 struct Derived : Base {
   virtual Incomplete *meow();
 };
-} // dr1250
+}
 
-namespace dr1295 {  // dr1295: 4
+namespace dr1265 { // dr1265: 5
+#if __cplusplus >= 201103L
+  auto a = 0, b() -> int; // expected-error {{declaration with trailing return type must be the only declaration in its group}}
+  auto b() -> int, d = 0; // expected-error {{declaration with trailing return type must be the only declaration in its group}}
+  auto e() -> int, f() -> int; // expected-error {{declaration with trailing return type must be the only declaration in its group}}
+#endif
+
+#if __cplusplus >= 201402L
+  auto g(), h = 0; // expected-error {{function with deduced return type must be the only declaration in its group}}
+  auto i = 0, j(); // expected-error {{function with deduced return type must be the only declaration in its group}}
+  auto k(), l(); // expected-error {{function with deduced return type must be the only declaration in its group}}
+#endif
+}
+
+namespace dr1295 { // dr1295: 4
   struct X {
     unsigned bitfield : 4;
   };

@@ -2,7 +2,7 @@
 ; RUN: llc -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=false -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_NOBFI
 
 ; Test that by changing BlockFrequencyInfo we change the order in which
-; machine-sink looks for sucessor blocks. By not using BFI, both G and B
+; machine-sink looks for successor blocks. By not using BFI, both G and B
 ; have the same loop depth and no instructions is sinked - B is selected but
 ; can't be used as to avoid breaking a non profitable critical edge. By using
 ; BFI, "mul" is sinked into the less frequent block G.

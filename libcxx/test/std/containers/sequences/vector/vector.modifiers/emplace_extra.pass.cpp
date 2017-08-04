@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <vector>
 
 // template <class... Args> iterator emplace(const_iterator pos, Args&&... args);
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         std::vector<int> v;
         v.reserve(3);
@@ -38,7 +39,6 @@ int main()
         assert(v[0] == 3);
         assert(is_contiguous_container_asan_correct(v));
     }
-#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> v;
         v.reserve(3);
@@ -57,6 +57,4 @@ int main()
         assert(v[0] == 3);
         assert(is_contiguous_container_asan_correct(v));
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

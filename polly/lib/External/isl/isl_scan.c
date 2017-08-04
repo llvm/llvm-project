@@ -65,7 +65,7 @@ static int add_solution(struct isl_tab *tab, struct isl_scan_callback *callback)
 	return callback->add(callback, sample);
 }
 
-static int scan_0D(struct isl_basic_set *bset,
+static isl_stat scan_0D(__isl_take isl_basic_set *bset,
 	struct isl_scan_callback *callback)
 {
 	struct isl_vec *sample;
@@ -74,7 +74,7 @@ static int scan_0D(struct isl_basic_set *bset,
 	isl_basic_set_free(bset);
 
 	if (!sample)
-		return -1;
+		return isl_stat_error;
 
 	isl_int_set_si(sample->el[0], 1);
 
@@ -99,7 +99,7 @@ static int scan_0D(struct isl_basic_set *bset,
  * Solutions are added in the leaves of the search tree, i.e., after
  * we have fixed a value in each direction of the basis.
  */
-int isl_basic_set_scan(struct isl_basic_set *bset,
+isl_stat isl_basic_set_scan(__isl_take isl_basic_set *bset,
 	struct isl_scan_callback *callback)
 {
 	unsigned dim;
@@ -113,7 +113,7 @@ int isl_basic_set_scan(struct isl_basic_set *bset,
 	enum isl_lp_result res;
 
 	if (!bset)
-		return -1;
+		return isl_stat_error;
 
 	dim = isl_basic_set_total_dim(bset);
 	if (dim == 0)
@@ -209,7 +209,7 @@ int isl_basic_set_scan(struct isl_basic_set *bset,
 	isl_vec_free(max);
 	isl_basic_set_free(bset);
 	isl_mat_free(B);
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_tab_free(tab);
 	free(snap);
@@ -217,10 +217,11 @@ error:
 	isl_vec_free(max);
 	isl_basic_set_free(bset);
 	isl_mat_free(B);
-	return -1;
+	return isl_stat_error;
 }
 
-int isl_set_scan(__isl_take isl_set *set, struct isl_scan_callback *callback)
+isl_stat isl_set_scan(__isl_take isl_set *set,
+	struct isl_scan_callback *callback)
 {
 	int i;
 
@@ -239,10 +240,10 @@ int isl_set_scan(__isl_take isl_set *set, struct isl_scan_callback *callback)
 			goto error;
 
 	isl_set_free(set);
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_set_free(set);
-	return -1;
+	return isl_stat_error;
 }
 
 int isl_basic_set_count_upto(__isl_keep isl_basic_set *bset,

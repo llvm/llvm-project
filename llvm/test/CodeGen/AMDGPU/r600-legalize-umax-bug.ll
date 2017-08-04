@@ -2,7 +2,7 @@
 ; Don't crash
 
 ; CHECK: MAX_UINT
-define void @test(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @test(i64 addrspace(1)* %out) {
 bb:
   store i64 2, i64 addrspace(1)* %out
   %tmp = load i64, i64 addrspace(1)* %out

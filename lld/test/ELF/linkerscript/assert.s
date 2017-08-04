@@ -5,10 +5,6 @@
 # RUN: ld.lld -shared -o %t1 --script %t1.script %t1.o
 # RUN: llvm-readobj %t1 > /dev/null
 
-# RUN: echo "SECTIONS { ASSERT(ASSERT(42, fail) == 42, fail) }" > %t2.script
-# RUN: ld.lld -shared -o %t2 --script %t2.script %t1.o
-# RUN: llvm-readobj %t2 > /dev/null
-
 # RUN: echo "SECTIONS { ASSERT(0, fail) }" > %t3.script
 # RUN: not ld.lld -shared -o %t3 --script %t3.script %t1.o > %t.log 2>&1
 # RUN: FileCheck %s -check-prefix=FAIL < %t.log

@@ -21,7 +21,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: FullDebug, file: !16, enums: !2, retainedTypes: !2, globals: !2)
 !1 = !{!2}
 !2 = !{}
-!5 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barN2N11AE", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scope: !6, type: !7)
+!5 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barN2N11AE", file: !16, line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scope: !6, type: !7)
 !6 = !DIFile(filename: "n2.c", directory: "/private/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}

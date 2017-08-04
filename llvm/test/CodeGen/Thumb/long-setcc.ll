@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumb-eabi %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-eabi < %s | FileCheck %s
 
 define i1 @t1(i64 %x) {
 	%B = icmp slt i64 %x, 0

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+v7,+t2xtpk %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+v7 %s -o - | FileCheck %s
 
 define i32 @f1(i32 %a) {
 ; CHECK-LABEL: f1:

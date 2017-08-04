@@ -30,7 +30,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(ldoubles)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(ldoubles)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(ldoubles)
 
 ; The first four arguments are the same in N32/N64.
 ; The first argument is floating point but soft-float is enabled so floating

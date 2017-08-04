@@ -190,3 +190,12 @@ define i1 @test15(i32 %C) {
   %cmp = icmp ne i8* %dst, null
   ret i1 %cmp
 }
+
+@s = internal constant [1 x i8] [i8 0], align 1
+define i8* @pr32124() {
+; CHECK-LABEL: @pr32124(
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([1 x i8], [1 x i8]* @s, i32 0, i32 0)
+;
+  %res = tail call i8* @memchr(i8* getelementptr ([1 x i8], [1 x i8]* @s, i64 0, i64 0), i32 0, i32 1)
+  ret i8* %res
+}

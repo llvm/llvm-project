@@ -1,4 +1,4 @@
-//===-- llvm/Value.h - Definition of the Value class ------------*- C++ -*-===//
+//===- llvm/Value.h - Definition of the Value class -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,13 +14,14 @@
 #ifndef LLVM_IR_VALUE_H
 #define LLVM_IR_VALUE_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Use.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
-#include "llvm-c/Types.h"
 #include <cassert>
 #include <iterator>
+#include <memory>
 
 namespace llvm {
 
@@ -44,12 +45,13 @@ class LLVMContext;
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
+template<typename ValueTy> class StringMapEntry;
 class StringRef;
 class Twine;
 class Type;
+class User;
 
-template<typename ValueTy> class StringMapEntry;
-typedef StringMapEntry<Value*> ValueName;
+using ValueName = StringMapEntry<Value *>;
 
 //===----------------------------------------------------------------------===//
 //                                 Value Class
@@ -69,6 +71,8 @@ typedef StringMapEntry<Value*> ValueName;
 /// objects that watch it and listen to RAUW and Destroy events.  See
 /// llvm/IR/ValueHandle.h for details.
 class Value {
+  // The least-significant bit of the first word of Value *must* be zero:
+  //   http://www.llvm.org/docs/ProgrammersManual.html#the-waymarking-algorithm
   Type *VTy;
   Use *UseList;
 
@@ -120,9 +124,11 @@ private:
   template <typename UseT> // UseT == 'Use' or 'const Use'
   class use_iterator_impl
       : public std::iterator<std::forward_iterator_tag, UseT *> {
-    UseT *U;
-    explicit use_iterator_impl(UseT *u) : U(u) {}
     friend class Value;
+
+    UseT *U;
+
+    explicit use_iterator_impl(UseT *u) : U(u) {}
 
   public:
     use_iterator_impl() : U() {}
@@ -198,10 +204,19 @@ private:
 protected:
   Value(Type *Ty, unsigned scid);
 
+  /// Value's destructor should be virtual by design, but that would require
+  /// that Value and all of its subclasses have a vtable that effectively
+  /// duplicates the information in the value ID. As a size optimization, the
+  /// destructor has been protected, and the caller should manually call
+  /// deleteValue.
+  ~Value(); // Use deleteValue() to delete a generic Value.
+
 public:
   Value(const Value &) = delete;
-  void operator=(const Value &) = delete;
-  virtual ~Value();
+  Value &operator=(const Value &) = delete;
+
+  /// Delete a pointer to a generic Value.
+  void deleteValue();
 
   /// \brief Support for debugging, callable in GDB: V->dump()
   void dump() const;
@@ -294,15 +309,24 @@ public:
   // when using them since you might not get all uses.
   // The methods that don't start with materialized_ assert that modules is
   // fully materialized.
-  void assertModuleIsMaterialized() const;
+  void assertModuleIsMaterializedImpl() const;
+  // This indirection exists so we can keep assertModuleIsMaterializedImpl()
+  // around in release builds of Value.cpp to be linked with other code built
+  // in debug mode. But this avoids calling it in any of the release built code.
+  void assertModuleIsMaterialized() const {
+#ifndef NDEBUG
+    assertModuleIsMaterializedImpl();
+#endif
+  }
 
   bool use_empty() const {
     assertModuleIsMaterialized();
     return UseList == nullptr;
   }
 
-  typedef use_iterator_impl<Use> use_iterator;
-  typedef use_iterator_impl<const Use> const_use_iterator;
+  using use_iterator = use_iterator_impl<Use>;
+  using const_use_iterator = use_iterator_impl<const Use>;
+
   use_iterator materialized_use_begin() { return use_iterator(UseList); }
   const_use_iterator materialized_use_begin() const {
     return const_use_iterator(UseList);
@@ -337,8 +361,9 @@ public:
     return UseList == nullptr;
   }
 
-  typedef user_iterator_impl<User> user_iterator;
-  typedef user_iterator_impl<const User> const_user_iterator;
+  using user_iterator = user_iterator_impl<User>;
+  using const_user_iterator = user_iterator_impl<const User>;
+
   user_iterator materialized_user_begin() { return user_iterator(UseList); }
   const_user_iterator materialized_user_begin() const {
     return const_user_iterator(UseList);
@@ -468,27 +493,41 @@ public:
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripPointerCasts();
-  const Value *stripPointerCasts() const {
-    return const_cast<Value*>(this)->stripPointerCasts();
+  const Value *stripPointerCasts() const;
+  Value *stripPointerCasts() {
+    return const_cast<Value *>(
+                         static_cast<const Value *>(this)->stripPointerCasts());
+  }
+
+  /// \brief Strip off pointer casts, all-zero GEPs, aliases and barriers.
+  ///
+  /// Returns the original uncasted value.  If this is called on a non-pointer
+  /// value, it returns 'this'. This function should be used only in
+  /// Alias analysis.
+  const Value *stripPointerCastsAndBarriers() const;
+  Value *stripPointerCastsAndBarriers() {
+    return const_cast<Value *>(
+        static_cast<const Value *>(this)->stripPointerCastsAndBarriers());
   }
 
   /// \brief Strip off pointer casts and all-zero GEPs.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripPointerCastsNoFollowAliases();
-  const Value *stripPointerCastsNoFollowAliases() const {
-    return const_cast<Value*>(this)->stripPointerCastsNoFollowAliases();
+  const Value *stripPointerCastsNoFollowAliases() const;
+  Value *stripPointerCastsNoFollowAliases() {
+    return const_cast<Value *>(
+          static_cast<const Value *>(this)->stripPointerCastsNoFollowAliases());
   }
 
   /// \brief Strip off pointer casts and all-constant inbounds GEPs.
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripInBoundsConstantOffsets();
-  const Value *stripInBoundsConstantOffsets() const {
-    return const_cast<Value*>(this)->stripInBoundsConstantOffsets();
+  const Value *stripInBoundsConstantOffsets() const;
+  Value *stripInBoundsConstantOffsets() {
+    return const_cast<Value *>(
+              static_cast<const Value *>(this)->stripInBoundsConstantOffsets());
   }
 
   /// \brief Accumulate offsets from \a stripInBoundsConstantOffsets().
@@ -498,21 +537,22 @@ public:
   /// correct bitwidth for an offset of this pointer type.
   ///
   /// If this is called on a non-pointer value, it returns 'this'.
-  Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
-                                                   APInt &Offset);
   const Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
-                                                         APInt &Offset) const {
-    return const_cast<Value *>(this)
-        ->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+                                                         APInt &Offset) const;
+  Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
+                                                   APInt &Offset) {
+    return const_cast<Value *>(static_cast<const Value *>(this)
+        ->stripAndAccumulateInBoundsConstantOffsets(DL, Offset));
   }
 
   /// \brief Strip off pointer casts and inbounds GEPs.
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  Value *stripInBoundsOffsets();
-  const Value *stripInBoundsOffsets() const {
-    return const_cast<Value*>(this)->stripInBoundsOffsets();
+  const Value *stripInBoundsOffsets() const;
+  Value *stripInBoundsOffsets() {
+    return const_cast<Value *>(
+                      static_cast<const Value *>(this)->stripInBoundsOffsets());
   }
 
   /// \brief Returns the number of bytes known to be dereferenceable for the
@@ -535,11 +575,11 @@ public:
   /// the PHI node corresponding to PredBB.  If not, return ourself.  This is
   /// useful if you want to know the value something has in a predecessor
   /// block.
-  Value *DoPHITranslation(const BasicBlock *CurBB, const BasicBlock *PredBB);
-
   const Value *DoPHITranslation(const BasicBlock *CurBB,
-                                const BasicBlock *PredBB) const{
-    return const_cast<Value*>(this)->DoPHITranslation(CurBB, PredBB);
+                                const BasicBlock *PredBB) const;
+  Value *DoPHITranslation(const BasicBlock *CurBB, const BasicBlock *PredBB) {
+    return const_cast<Value *>(
+             static_cast<const Value *>(this)->DoPHITranslation(CurBB, PredBB));
   }
 
   /// \brief The maximum alignment for instructions.
@@ -582,7 +622,7 @@ private:
     Use *Merged;
     Use **Next = &Merged;
 
-    for (;;) {
+    while (true) {
       if (!L) {
         *Next = R;
         break;
@@ -615,6 +655,13 @@ protected:
   unsigned short getSubclassDataFromValue() const { return SubclassData; }
   void setValueSubclassData(unsigned short D) { SubclassData = D; }
 };
+
+struct ValueDeleter { void operator()(Value *V) { V->deleteValue(); } };
+
+/// Use this instead of std::unique_ptr<Value> or std::unique_ptr<Instruction>.
+/// Those don't work because Value and Instruction's destructors are protected,
+/// aren't virtual, and won't destroy the complete object.
+using unique_value = std::unique_ptr<Value, ValueDeleter>;
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Value &V) {
   V.print(OS);

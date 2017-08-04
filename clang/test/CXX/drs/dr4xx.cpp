@@ -35,9 +35,7 @@ namespace dr401 { // dr401: yes
   };
 
   A<B> *b; // expected-note {{default argument}}
-  // FIXME: We're missing the "in instantiation of" note for the default
-  // argument here.
-  A<D> *d;
+  A<D> *d; // expected-note {{in instantiation of default argument}}
 
   struct E {
     template<class T, class U = typename T::type> class A : public T {};
@@ -1204,16 +1202,15 @@ namespace dr495 { // dr495: 3.5
   long n2 = s2;
 }
 
-namespace dr496 { // dr496: no
+namespace dr496 { // dr496: sup dr2094
   struct A { int n; };
   struct B { volatile int n; };
   int check1[ __is_trivially_copyable(const int) ? 1 : -1];
-  int check2[!__is_trivially_copyable(volatile int) ? 1 : -1];
+  // This checks the dr2094 behavior, not dr496
+  int check2[ __is_trivially_copyable(volatile int) ? 1 : -1];
   int check3[ __is_trivially_constructible(A, const A&) ? 1 : -1];
-  // FIXME: This is wrong.
   int check4[ __is_trivially_constructible(B, const B&) ? 1 : -1];
   int check5[ __is_trivially_assignable(A, const A&) ? 1 : -1];
-  // FIXME: This is wrong.
   int check6[ __is_trivially_assignable(B, const B&) ? 1 : -1];
 }
 

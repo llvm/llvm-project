@@ -20,11 +20,11 @@
 namespace std
 {
 
-__attribute__((visibility("hidden"), noreturn))
+_LIBCXXABI_HIDDEN _LIBCXXABI_NORETURN
 void
 __unexpected(unexpected_handler func);
 
-__attribute__((visibility("hidden"), noreturn))
+_LIBCXXABI_HIDDEN _LIBCXXABI_NORETURN
 void
 __terminate(terminate_handler func) _NOEXCEPT;
 

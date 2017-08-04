@@ -1,4 +1,4 @@
-//===- symbolSerializer.h ---------------------------------------*- C++ -*-===//
+//===- SymbolSerializer.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,25 +10,27 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLSERIALIZER_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLSERIALIZER_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamWriter.h"
-
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace codeview {
 
 class SymbolSerializer : public SymbolVisitorCallbacks {
-  uint32_t RecordStart = 0;
-  msf::StreamWriter &Writer;
+  BumpPtrAllocator &Storage;
+  std::vector<uint8_t> RecordBuffer;
+  MutableBinaryByteStream Stream;
+  BinaryStreamWriter Writer;
   SymbolRecordMapping Mapping;
   Optional<SymbolKind> CurrentSymbol;
 
@@ -42,47 +44,29 @@ class SymbolSerializer : public SymbolVisitorCallbacks {
   }
 
 public:
-  explicit SymbolSerializer(msf::StreamWriter &Writer)
-      : Writer(Writer), Mapping(Writer) {}
+  SymbolSerializer(BumpPtrAllocator &Storage, CodeViewContainer Container);
 
-  virtual Error visitSymbolBegin(CVSymbol &Record) override {
-    assert(!CurrentSymbol.hasValue() && "Already in a symbol mapping!");
-
-    RecordStart = Writer.getOffset();
-    if (auto EC = writeRecordPrefix(Record.kind()))
-      return EC;
-
-    CurrentSymbol = Record.kind();
-    if (auto EC = Mapping.visitSymbolBegin(Record))
-      return EC;
-
-    return Error::success();
+  template <typename SymType>
+  static CVSymbol writeOneSymbol(SymType &Sym, BumpPtrAllocator &Storage,
+                                 CodeViewContainer Container) {
+    CVSymbol Result;
+    Result.Type = static_cast<SymbolKind>(Sym.Kind);
+    SymbolSerializer Serializer(Storage, Container);
+    consumeError(Serializer.visitSymbolBegin(Result));
+    consumeError(Serializer.visitKnownRecord(Result, Sym));
+    consumeError(Serializer.visitSymbolEnd(Result));
+    return Result;
   }
 
-  virtual Error visitSymbolEnd(CVSymbol &Record) override {
-    assert(CurrentSymbol.hasValue() && "Not in a symbol mapping!");
-
-    if (auto EC = Mapping.visitSymbolEnd(Record))
-      return EC;
-
-    uint32_t RecordEnd = Writer.getOffset();
-    Writer.setOffset(RecordStart);
-    uint16_t Length = RecordEnd - Writer.getOffset() - 2;
-    if (auto EC = Writer.writeInteger(Length))
-      return EC;
-
-    Writer.setOffset(RecordEnd);
-    CurrentSymbol.reset();
-
-    return Error::success();
-  }
+  Error visitSymbolBegin(CVSymbol &Record) override;
+  Error visitSymbolEnd(CVSymbol &Record) override;
 
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \
-  virtual Error visitKnownRecord(CVSymbol &CVR, Name &Record) override {       \
+  Error visitKnownRecord(CVSymbol &CVR, Name &Record) override {               \
     return visitKnownRecordImpl(CVR, Record);                                  \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
   template <typename RecordKind>
@@ -90,7 +74,8 @@ private:
     return Mapping.visitKnownRecord(CVR, Record);
   }
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_SYMBOLSERIALIZER_H

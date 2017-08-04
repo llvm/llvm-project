@@ -107,7 +107,7 @@ bb32:                                             ; preds = %.loopexit2, %.loope
   br i1 %tmp35, label %bb37, label %bb36
 
 bb36:                                             ; preds = %bb32
-  unreachable
+  ret void
 
 bb37:                                             ; preds = %bb32
   ret void

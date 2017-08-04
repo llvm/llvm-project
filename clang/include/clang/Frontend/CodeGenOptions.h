@@ -124,8 +124,21 @@ public:
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;
 
-  /// The name of the bitcode file to link before optzns.
-  std::vector<std::pair<unsigned, std::string>> LinkBitcodeFiles;
+  struct BitcodeFileToLink {
+    /// The filename of the bitcode file to link in.
+    std::string Filename;
+    /// If true, we set attributes functions in the bitcode library according to
+    /// our CodeGenOptions, much as we set attrs on functions that we generate
+    /// ourselves.
+    bool PropagateAttrs = false;
+    /// If true, we use LLVM module internalizer.
+    bool Internalize = false;
+    /// Bitwise combination of llvm::Linker::Flags, passed to the LLVM linker.
+    unsigned LinkFlags = 0;
+  };
+
+  /// The files specified here are linked in to the module before optimizations.
+  std::vector<BitcodeFileToLink> LinkBitcodeFiles;
 
   /// The user provided name for the "main file", if non-empty. This is useful
   /// in situations where the input file name does not match the original input
@@ -169,6 +182,11 @@ public:
   /// importing.
   std::string ThinLTOIndexFile;
 
+  /// Name of a file that can optionally be written with minimized bitcode
+  /// to be used as input for the ThinLTO thin link step, which only needs
+  /// the summary and module symbol table (and not, e.g. any debug metadata).
+  std::string ThinLinkBitcodeFile;
+
   /// A list of file names passed with -fcuda-include-gpubinary options to
   /// forward to CUDA runtime back-end for incorporating them into host-side
   /// object file.
@@ -200,7 +218,7 @@ public:
   /// flag.
   std::shared_ptr<llvm::Regex> OptimizationRemarkAnalysisPattern;
 
-  /// Set of files definining the rules for the symbol rewriting.
+  /// Set of files defining the rules for the symbol rewriting.
   std::vector<std::string> RewriteMapFiles;
 
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be

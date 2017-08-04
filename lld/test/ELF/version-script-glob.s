@@ -14,6 +14,9 @@ bar1:
         .globl zed1
 zed1:
 
+        .globl local
+local:
+
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:
@@ -43,3 +46,27 @@ zed1:
 # CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
+
+# RUN: echo "{ global : local; local: *; };" > %t1.script
+# RUN: ld.lld -shared --version-script %t1.script %t.o -o %t1.so
+
+# LOCAL:      DynamicSymbols [
+# LOCAL-NEXT:   Symbol {
+# LOCAL-NEXT:     Name:
+# LOCAL-NEXT:     Value: 0x0
+# LOCAL-NEXT:     Size: 0
+# LOCAL-NEXT:     Binding: Local
+# LOCAL-NEXT:     Type: None
+# LOCAL-NEXT:     Other: 0
+# LOCAL-NEXT:     Section: Undefined
+# LOCAL-NEXT:   }
+# LOCAL-NEXT:   Symbol {
+# LOCAL-NEXT:     Name: local
+# LOCAL-NEXT:     Value: 0x1000
+# LOCAL-NEXT:     Size: 0
+# LOCAL-NEXT:     Binding: Global
+# LOCAL-NEXT:     Type: None
+# LOCAL-NEXT:     Other: 0
+# LOCAL-NEXT:     Section: .text
+# LOCAL-NEXT:   }
+# LOCAL-NEXT: ]

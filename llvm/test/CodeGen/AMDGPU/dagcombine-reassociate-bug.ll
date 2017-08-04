@@ -9,7 +9,7 @@
 ; CHECK: buffer_store_dword v{{[0-9]+}}, [[VADDR]], [[SADDR]]
 ; CHECK: buffer_store_dword v{{[0-9]+}}, [[VADDR]], [[SADDR]]
 
-define void @store_same_base_ptr(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @store_same_base_ptr(i32 addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #0
   %offset = sext i32 %id to i64

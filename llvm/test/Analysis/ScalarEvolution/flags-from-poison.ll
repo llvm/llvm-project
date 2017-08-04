@@ -205,7 +205,7 @@ exit:
   ret void
 }
 
-; Demonstrate why we need a Visited set in llvm::isKnownNotFullPoison.
+; Demonstrate why we need a Visited set in llvm::programUndefinedIfFullPoison.
 define void @test-add-not-header5(float* %input, i32 %offset) {
 ; CHECK-LABEL: @test-add-not-header5
 entry:
@@ -272,17 +272,16 @@ exit:
   ret void
 }
 
-; Without inbounds, GEP does not propagate poison in the very
-; conservative approach used here.
-define void @test-add-no-inbounds(float* %input, i32 %offset, i32 %numIterations) {
-; CHECK-LABEL: @test-add-no-inbounds
+; Any poison input makes getelementptr produce poison
+define void @test-gep-propagates-poison(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-gep-propagates-poison
 entry:
   br label %loop
 loop:
   %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %ptr = getelementptr float, float* %input, i32 %index32
@@ -317,17 +316,16 @@ exit:
   ret void
 }
 
-; Multiplication by a non-constant should not propagate poison in the
-; very conservative approach used here.
-define void @test-add-mul-no-propagation(float* %input, i32 %offset, i32 %numIterations) {
-; CHECK-LABEL: @test-add-mul-no-propagation
+; Any poison input to multiplication propages poison.
+define void @test-mul-propagates-poison(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-mul-propagates-poison
 entry:
   br label %loop
 loop:
   %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %indexmul = mul nsw i32 %index32, %offset
@@ -340,17 +338,15 @@ exit:
   ret void
 }
 
-; Multiplication by a non-zero constant does not propagate poison
-; without a no-wrap flag.
-define void @test-add-mul-no-propagation2(float* %input, i32 %offset, i32 %numIterations) {
-; CHECK-LABEL: @test-add-mul-no-propagation2
+define void @test-mul-propagates-poison-2(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-mul-propagates-poison-2
 entry:
   br label %loop
 loop:
   %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %indexmul = mul i32 %index32, 2

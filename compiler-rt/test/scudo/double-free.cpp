@@ -16,30 +16,26 @@ int main(int argc, char **argv)
   assert(argc == 2);
   if (!strcmp(argv[1], "malloc")) {
     void *p = malloc(sizeof(int));
-    if (!p)
-      return 1;
+    assert(p);
     free(p);
     free(p);
   }
   if (!strcmp(argv[1], "new")) {
     int *p = new int;
-    if (!p)
-      return 1;
+    assert(p);
     delete p;
     delete p;
   }
   if (!strcmp(argv[1], "newarray")) {
     int *p = new int[8];
-    if (!p)
-      return 1;
+    assert(p);
     delete[] p;
     delete[] p;
   }
   if (!strcmp(argv[1], "memalign")) {
     void *p = nullptr;
     posix_memalign(&p, 0x100, sizeof(int));
-    if (!p)
-      return 1;
+    assert(p);
     free(p);
     free(p);
   }

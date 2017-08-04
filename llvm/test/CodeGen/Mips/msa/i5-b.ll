@@ -89,7 +89,7 @@ define void @llvm_mips_binsli_b_test() nounwind {
 entry:
   %0 = load <16 x i8>, <16 x i8>* @llvm_mips_binsli_b_ARG1
   %1 = load <16 x i8>, <16 x i8>* @llvm_mips_binsli_b_ARG2
-  %2 = tail call <16 x i8> @llvm.mips.binsli.b(<16 x i8> %0, <16 x i8> %1, i32 7)
+  %2 = tail call <16 x i8> @llvm.mips.binsli.b(<16 x i8> %0, <16 x i8> %1, i32 6)
   store <16 x i8> %2, <16 x i8>* @llvm_mips_binsli_b_RES
   ret void
 }
@@ -101,7 +101,7 @@ declare <16 x i8> @llvm.mips.binsli.b(<16 x i8>, <16 x i8>, i32) nounwind
 ; CHECK-DAG: lw [[R2:\$[0-9]+]], %got(llvm_mips_binsli_b_ARG2)(
 ; CHECK-DAG: ld.b [[R3:\$w[0-9]+]], 0([[R1]])
 ; CHECK-DAG: ld.b [[R4:\$w[0-9]+]], 0([[R2]])
-; CHECK-DAG: binsli.b [[R3]], [[R4]], 7
+; CHECK-DAG: binsli.b [[R3]], [[R4]], 6
 ; CHECK-DAG: lw [[R5:\$[0-9]+]], %got(llvm_mips_binsli_b_RES)(
 ; CHECK-DAG: st.b [[R3]], 0([[R5]])
 ; CHECK: .size llvm_mips_binsli_b_test
@@ -193,7 +193,7 @@ define void @llvm_mips_binsri_b_test() nounwind {
 entry:
   %0 = load <16 x i8>, <16 x i8>* @llvm_mips_binsri_b_ARG1
   %1 = load <16 x i8>, <16 x i8>* @llvm_mips_binsri_b_ARG2
-  %2 = tail call <16 x i8> @llvm.mips.binsri.b(<16 x i8> %0, <16 x i8> %1, i32 7)
+  %2 = tail call <16 x i8> @llvm.mips.binsri.b(<16 x i8> %0, <16 x i8> %1, i32 6)
   store <16 x i8> %2, <16 x i8>* @llvm_mips_binsri_b_RES
   ret void
 }
@@ -205,7 +205,7 @@ declare <16 x i8> @llvm.mips.binsri.b(<16 x i8>, <16 x i8>, i32) nounwind
 ; CHECK-DAG: lw [[R2:\$[0-9]+]], %got(llvm_mips_binsri_b_ARG2)(
 ; CHECK-DAG: ld.b [[R3:\$w[0-9]+]], 0([[R1]])
 ; CHECK-DAG: ld.b [[R4:\$w[0-9]+]], 0([[R2]])
-; CHECK-DAG: binsri.b [[R3]], [[R4]], 7
+; CHECK-DAG: binsri.b [[R3]], [[R4]], 6
 ; CHECK-DAG: lw [[R5:\$[0-9]+]], %got(llvm_mips_binsri_b_RES)(
 ; CHECK-DAG: st.b [[R3]], 0([[R5]])
 ; CHECK: .size llvm_mips_binsri_b_test

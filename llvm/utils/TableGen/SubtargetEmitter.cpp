@@ -180,9 +180,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
     // Next feature
     Record *Feature = FeatureList[i];
 
-    const std::string &Name = Feature->getName();
-    const std::string &CommandLineName = Feature->getValueAsString("Name");
-    const std::string &Desc = Feature->getValueAsString("Desc");
+    StringRef Name = Feature->getName();
+    StringRef CommandLineName = Feature->getValueAsString("Name");
+    StringRef Desc = Feature->getValueAsString("Desc");
 
     if (CommandLineName.empty()) continue;
 
@@ -237,7 +237,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
     // Next processor
     Record *Processor = ProcessorList[i];
 
-    const std::string &Name = Processor->getValueAsString("Name");
+    StringRef Name = Processor->getValueAsString("Name");
     const std::vector<Record*> &FeatureList =
       Processor->getValueAsListOfDefs("Features");
 
@@ -375,7 +375,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
     if (FUs.empty())
       continue;
 
-    const std::string &Name = ProcModel.ItinsDef->getName();
+    StringRef Name = ProcModel.ItinsDef->getName();
     OS << "\n// Functional units for \"" << Name << "\"\n"
        << "namespace " << Name << "FU {\n";
 
@@ -415,7 +415,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
   BypassTable += " 0, // No itinerary\n";
 
   // For each Itinerary across all processors, add a unique entry to the stages,
-  // operand cycles, and pipepine bypess tables. Then add the new Itinerary
+  // operand cycles, and pipeline bypass tables. Then add the new Itinerary
   // object with computed offsets to the ProcItinLists result.
   unsigned StageCount = 1, OperandCycleCount = 1;
   std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;
@@ -429,7 +429,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
     if (!ProcModel.hasItineraries())
       continue;
 
-    const std::string &Name = ProcModel.ItinsDef->getName();
+    StringRef Name = ProcModel.ItinsDef->getName();
 
     ItinList.resize(SchedModels.numInstrSchedClasses());
     assert(ProcModel.ItinDefList.size() == ItinList.size() && "bad Itins");
@@ -546,9 +546,6 @@ EmitItineraries(raw_ostream &OS,
     if (!ItinsDefSet.insert(ItinsDef).second)
       continue;
 
-    // Get processor itinerary name
-    const std::string &Name = ItinsDef->getName();
-
     // Get the itinerary list for the processor.
     assert(ProcItinListsIter != ProcItinLists.end() && "bad iterator");
     std::vector<InstrItinerary> &ItinList = *ProcItinListsIter;
@@ -562,7 +559,7 @@ EmitItineraries(raw_ostream &OS,
     OS << "static const llvm::InstrItinerary ";
 
     // Begin processor itinerary table
-    OS << Name << "[] = {\n";
+    OS << ItinsDef->getName() << "[] = {\n";
 
     // For each itinerary class in CodeGenSchedClass::Index order.
     for (unsigned j = 0, M = ItinList.size(); j < M; ++j) {
@@ -805,6 +802,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     return;
 
   std::vector<MCSchedClassDesc> &SCTab = SchedTables.ProcSchedClasses.back();
+  DEBUG(dbgs() << "\n+++ SCHED CLASSES (GenSchedClassTables) +++\n");
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     DEBUG(SC.dump(&SchedModels));
 
@@ -917,6 +915,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
         SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
         SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
+        SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
+        SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
 
         // Create an entry for each ProcResource listed in WriteRes.
         RecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
@@ -1210,7 +1210,7 @@ void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
     // Next processor
     Record *Processor = ProcessorList[i];
 
-    const std::string &Name = Processor->getValueAsString("Name");
+    StringRef Name = Processor->getValueAsString("Name");
     const std::string &ProcModelName =
       SchedModels.getModelForProc(Processor).ModelName;
 
@@ -1358,9 +1358,9 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
 
   for (Record *R : Features) {
     // Next record
-    const std::string &Instance = R->getName();
-    const std::string &Value = R->getValueAsString("Value");
-    const std::string &Attribute = R->getValueAsString("Attribute");
+    StringRef Instance = R->getName();
+    StringRef Value = R->getValueAsString("Value");
+    StringRef Attribute = R->getValueAsString("Attribute");
 
     if (Value=="true" || Value=="false")
       OS << "  if (Bits[" << Target << "::"

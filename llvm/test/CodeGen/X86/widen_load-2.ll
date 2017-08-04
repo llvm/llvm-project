@@ -164,8 +164,7 @@ define void @add3i16(%i16vec3* nocapture sret %ret, %i16vec3* %ap, %i16vec3* %bp
 ; X86-NEXT:    paddd %xmm0, %xmm1
 ; X86-NEXT:    pextrw $4, %xmm1, 4(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; X86-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
-; X86-NEXT:    movd %xmm0, (%eax)
+; X86-NEXT:    movd %xmm1, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
@@ -177,8 +176,7 @@ define void @add3i16(%i16vec3* nocapture sret %ret, %i16vec3* %ap, %i16vec3* %bp
 ; X64-NEXT:    paddd %xmm0, %xmm1
 ; X64-NEXT:    pextrw $4, %xmm1, 4(%rdi)
 ; X64-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; X64-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
-; X64-NEXT:    movd %xmm0, (%rdi)
+; X64-NEXT:    movd %xmm1, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 	%a = load %i16vec3, %i16vec3* %ap, align 16
@@ -301,8 +299,7 @@ define void @add3i8(%i8vec3* nocapture sret %ret, %i8vec3* %ap, %i8vec3* %bp) no
 ; X86-NEXT:    paddd %xmm0, %xmm1
 ; X86-NEXT:    pextrb $8, %xmm1, 2(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; X86-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; X86-NEXT:    pextrw $0, %xmm0, (%eax)
+; X86-NEXT:    pextrw $0, %xmm1, (%eax)
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl $4
 ;
@@ -313,8 +310,7 @@ define void @add3i8(%i8vec3* nocapture sret %ret, %i8vec3* %ap, %i8vec3* %bp) no
 ; X64-NEXT:    paddd %xmm0, %xmm1
 ; X64-NEXT:    pextrb $8, %xmm1, 2(%rdi)
 ; X64-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
+; X64-NEXT:    pextrw $0, %xmm1, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 	%a = load %i8vec3, %i8vec3* %ap, align 16
@@ -372,38 +368,36 @@ define void @rot(%i8vec3pack* nocapture sret %result, %i8vec3pack* %X, %i8vec3pa
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    pmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; X86-NEXT:    movdqa {{.*#+}} xmm0 = [40606,0,158,0]
 ; X86-NEXT:    pextrw $0, %xmm0, (%edx)
 ; X86-NEXT:    movb $-98, 2(%edx)
-; X86-NEXT:    pmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; X86-NEXT:    movdqa {{.*#+}} xmm0 = [257,0,1,0]
 ; X86-NEXT:    pextrw $0, %xmm0, (%ecx)
 ; X86-NEXT:    movb $1, 2(%ecx)
 ; X86-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psrld $1, %xmm1
-; X86-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; X86-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    pextrb $8, %xmm1, 2(%eax)
-; X86-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; X86-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; X86-NEXT:    pextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: rot:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; X64-NEXT:    movdqa {{.*#+}} xmm0 = [40606,158]
 ; X64-NEXT:    pextrw $0, %xmm0, (%rsi)
 ; X64-NEXT:    movb $-98, 2(%rsi)
-; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; X64-NEXT:    movdqa {{.*#+}} xmm0 = [257,1]
 ; X64-NEXT:    pextrw $0, %xmm0, (%rdx)
 ; X64-NEXT:    movb $1, 2(%rdx)
 ; X64-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psrld $1, %xmm1
-; X64-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    pextrb $8, %xmm1, 2(%rdi)
-; X64-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq

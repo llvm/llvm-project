@@ -22,6 +22,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 #include <memory>
 

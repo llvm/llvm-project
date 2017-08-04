@@ -2,10 +2,10 @@
 // License. See LICENSE.TXT for details.
 
 // Simple test for a fuzzer. The fuzzer must find a particular string.
-#include <cstring>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 static volatile int sink;
 

@@ -34,7 +34,7 @@
 #include <algorithm>
 using namespace llvm;
 
-#define DEBUG_TYPE "phielim"
+#define DEBUG_TYPE "phi-node-elimination"
 
 static cl::opt<bool>
 DisableEdgeSplitting("disable-phi-elim-edge-splitting", cl::init(false),
@@ -112,11 +112,11 @@ STATISTIC(NumReused, "Number of reused lowered phis");
 char PHIElimination::ID = 0;
 char& llvm::PHIEliminationID = PHIElimination::ID;
 
-INITIALIZE_PASS_BEGIN(PHIElimination, "phi-node-elimination",
+INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveVariables)
-INITIALIZE_PASS_END(PHIElimination, "phi-node-elimination",
+INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
                     "Eliminate PHI nodes for register allocation", false, false)
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {

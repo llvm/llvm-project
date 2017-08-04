@@ -1,6 +1,6 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj -codeview | FileCheck %s
 
-; CHECK: ProcStart {
+; CHECK: {{.*}}Proc{{.*}}Sym {
 ; CHECK:   Kind: S_GPROC32_ID (0x1147)
 ; CHECK:   FunctionType: {{A+}} (0x1002)
 ; CHECK:   CodeOffset: f+0x0

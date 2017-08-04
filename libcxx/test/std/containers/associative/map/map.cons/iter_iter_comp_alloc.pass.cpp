@@ -92,7 +92,6 @@ int main()
         V(3, 2),
     };
     {
-    typedef std::pair<const int, double> V;
     typedef min_allocator<V> A;
     typedef test_compare<std::less<int> > C;
     A a;
@@ -106,7 +105,6 @@ int main()
     assert(m.get_allocator() == a);
     }
     {
-    typedef std::pair<const int, double> V;
     typedef explicit_allocator<V> A;
     typedef test_compare<std::less<int> > C;
     A a;

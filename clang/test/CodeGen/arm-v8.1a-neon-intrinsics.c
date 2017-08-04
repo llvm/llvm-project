@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv8.1a-linux-gnu -target-feature +neon \
+// RUN: %clang_cc1 -triple armv8.1a-linux-gnu -target-abi apcs-gnu -target-feature +neon \
 // RUN:  -S -emit-llvm -o - %s \
 // RUN:  | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
 

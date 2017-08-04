@@ -412,7 +412,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
   if (CI->doesNotReturn()) {
     if (auto *F = dyn_cast<Function>(CI->getCalledValue()))
       F->removeFnAttr(Attribute::NoReturn);
-    CI->removeAttribute(AttributeSet::FunctionIndex, Attribute::NoReturn);
+    CI->removeAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
   }
 
   IRBuilder<> IRB(C);
@@ -435,25 +435,20 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
 
   // Because we added the pointer to the callee as first argument, all
   // argument attribute indices have to be incremented by one.
-  SmallVector<AttributeSet, 8> AttributesVec;
-  const AttributeSet &InvokePAL = CI->getAttributes();
-  CallSite::arg_iterator AI = CI->arg_begin();
-  unsigned i = 1; // Argument attribute index starts from 1
-  for (unsigned e = CI->getNumArgOperands(); i <= e; ++AI, ++i) {
-    if (InvokePAL.hasAttributes(i)) {
-      AttrBuilder B(InvokePAL, i);
-      AttributesVec.push_back(AttributeSet::get(C, i + 1, B));
-    }
-  }
-  // Add any return attributes.
-  if (InvokePAL.hasAttributes(AttributeSet::ReturnIndex))
-    AttributesVec.push_back(AttributeSet::get(C, InvokePAL.getRetAttributes()));
-  // Add any function attributes.
-  if (InvokePAL.hasAttributes(AttributeSet::FunctionIndex))
-    AttributesVec.push_back(AttributeSet::get(C, InvokePAL.getFnAttributes()));
+  SmallVector<AttributeSet, 8> ArgAttributes;
+  const AttributeList &InvokeAL = CI->getAttributes();
+
+  // No attributes for the callee pointer.
+  ArgAttributes.push_back(AttributeSet());
+  // Copy the argument attributes from the original
+  for (unsigned i = 0, e = CI->getNumArgOperands(); i < e; ++i)
+    ArgAttributes.push_back(InvokeAL.getParamAttributes(i));
+
   // Reconstruct the AttributesList based on the vector we constructed.
-  AttributeSet NewCallPAL = AttributeSet::get(C, AttributesVec);
-  NewCall->setAttributes(NewCallPAL);
+  AttributeList NewCallAL =
+      AttributeList::get(C, InvokeAL.getFnAttributes(),
+                         InvokeAL.getRetAttributes(), ArgAttributes);
+  NewCall->setAttributes(NewCallAL);
 
   CI->replaceAllUsesWith(NewCall);
 
@@ -624,7 +619,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::createSetThrewFunction(Module &M) {
   Function *F =
       Function::Create(FTy, GlobalValue::ExternalLinkage, SetThrewFName, &M);
   Argument *Arg1 = &*(F->arg_begin());
-  Argument *Arg2 = &*(++F->arg_begin());
+  Argument *Arg2 = &*std::next(F->arg_begin());
   Arg1->setName("threw");
   Arg2->setName("value");
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
@@ -902,7 +897,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     }
   }
 
-  // Look for orphan landingpads, can occur in blocks with no predecesors
+  // Look for orphan landingpads, can occur in blocks with no predecessors
   for (BasicBlock &BB : F) {
     Instruction *I = BB.getFirstNonPHI();
     if (auto *LPI = dyn_cast<LandingPadInst>(I))

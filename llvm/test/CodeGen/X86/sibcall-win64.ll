@@ -1,15 +1,15 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
-declare x86_64_win64cc void @win64_callee(i32)
-declare x86_64_win64cc void (i32)* @win64_indirect()
-declare x86_64_win64cc void @win64_other(i32)
+declare win64cc void @win64_callee(i32)
+declare win64cc void (i32)* @win64_indirect()
+declare win64cc void @win64_other(i32)
 declare void @sysv_callee(i32)
 declare void (i32)* @sysv_indirect()
 declare void @sysv_other(i32)
 
 define void @sysv_caller(i32 %p1) {
 entry:
-  tail call x86_64_win64cc void @win64_callee(i32 %p1)
+  tail call win64cc void @win64_callee(i32 %p1)
   ret void
 }
 
@@ -19,7 +19,7 @@ entry:
 ; CHECK: addq $40, %rsp
 ; CHECK: retq
 
-define x86_64_win64cc void @win64_caller(i32 %p1) {
+define win64cc void @win64_caller(i32 %p1) {
 entry:
   tail call void @sysv_callee(i32 %p1)
   ret void
@@ -37,18 +37,18 @@ define void @sysv_matched(i32 %p1) {
 ; CHECK-LABEL: sysv_matched:
 ; CHECK: jmp sysv_callee # TAILCALL
 
-define x86_64_win64cc void @win64_matched(i32 %p1) {
-  tail call x86_64_win64cc void @win64_callee(i32 %p1)
+define win64cc void @win64_matched(i32 %p1) {
+  tail call win64cc void @win64_callee(i32 %p1)
   ret void
 }
 
 ; CHECK-LABEL: win64_matched:
 ; CHECK: jmp win64_callee # TAILCALL
 
-define x86_64_win64cc void @win64_indirect_caller(i32 %p1) {
-  %1 = call x86_64_win64cc void (i32)* @win64_indirect()
-  call x86_64_win64cc void @win64_other(i32 0)
-  tail call x86_64_win64cc void %1(i32 %p1)
+define win64cc void @win64_indirect_caller(i32 %p1) {
+  %1 = call win64cc void (i32)* @win64_indirect()
+  call win64cc void @win64_other(i32 0)
+  tail call win64cc void %1(i32 %p1)
   ret void
 }
 

@@ -56,7 +56,6 @@ int main()
 {
     {
     typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
 
     test("");
     test("", A(2));
@@ -73,7 +72,6 @@ int main()
 #if TEST_STD_VER >= 11
     {
     typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
 
     test("");
     test("", A());

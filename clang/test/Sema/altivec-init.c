@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=powerpc-apple-darwin8 -faltivec -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -triple=powerpc-apple-darwin8 -target-feature +altivec -verify -pedantic -fsyntax-only
 
 typedef int v4 __attribute((vector_size(16)));
 typedef short v8 __attribute((vector_size(16)));
@@ -23,8 +23,8 @@ v8 foo(void) {
 
   return (v8){0, 1, 2, 3, 1, 2, 3, 4};
 
-  // FIXME: test that (type)(fn)(args) still works with -faltivec
-  // FIXME: test that c++ overloaded commas still work -faltivec
+  // FIXME: test that (type)(fn)(args) still works with -maltivec
+  // FIXME: test that c++ overloaded commas still work -maltivec
 }
 
 void __attribute__((__overloadable__)) f(v4 a)

@@ -67,6 +67,6 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !12 = !DILocation(line: 4, scope: !4)
 
 ; CHECK: ![[THEN]] = !DILocation(line: 3, scope: ![[THENBLOCK:[0-9]+]])
-; CHECK: ![[THENBLOCK]] = !DILexicalBlockFile(scope: ![[SCOPE:[0-9]+]],{{.*}} discriminator: 1)
+; CHECK: ![[THENBLOCK]] = !DILexicalBlockFile(scope: ![[SCOPE:[0-9]+]],{{.*}} discriminator: 2)
 ; CHECK: ![[ELSE]] = !DILocation(line: 3, scope: ![[ELSEBLOCK:[0-9]+]])
-; CHECK: ![[ELSEBLOCK]] = !DILexicalBlockFile(scope: ![[SCOPE]],{{.*}} discriminator: 2)
+; CHECK: ![[ELSEBLOCK]] = !DILexicalBlockFile(scope: ![[SCOPE]],{{.*}} discriminator: 4)

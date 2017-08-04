@@ -1,0 +1,2 @@
+CHECK: BINGO
+RUN: LLVMFuzzer-SimpleTest-TracePC -runs=100000 -seed=1 2>&1 | FileCheck %s

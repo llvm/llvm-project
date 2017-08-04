@@ -1,9 +1,11 @@
+XFAIL: darwin
+
 CHECK: COVERAGE:
 CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:13
 CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:14
 CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:16
 CHECK-DAG: COVERED: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:19
-CHECK: COVERED_DIRS: {{.*}}lib/Fuzzer/test
+CHECK: COVERED_DIRS: {{.*}}lib{{[/\\]}}Fuzzer{{[/\\]}}test
 RUN: not LLVMFuzzer-NullDerefTest -print_coverage=1 2>&1 | FileCheck %s
 
 RUN: LLVMFuzzer-DSOTest -print_coverage=1 -runs=0 2>&1 | FileCheck %s --check-prefix=DSO

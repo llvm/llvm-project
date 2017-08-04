@@ -765,11 +765,13 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <vector>
 #include <deque>
 
-#include <__undef_min_max>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -2539,14 +2541,14 @@ public:
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
           __end_(0)
         {__parse(__first, __last);}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     basic_regex(initializer_list<value_type> __il,
                 flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
           __end_(0)
         {__parse(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 //    ~basic_regex() = default;
 
@@ -2555,11 +2557,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_regex& operator=(const value_type* __p)
         {return assign(__p);}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     basic_regex& operator=(initializer_list<value_type> __il)
         {return assign(__il);}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
     template <class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY
         basic_regex& operator=(const basic_string<value_type, _ST, _SA>& __p)
@@ -2569,7 +2571,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_regex& assign(const basic_regex& __that)
         {return *this = __that;}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     basic_regex& assign(basic_regex&& __that) _NOEXCEPT
         {return *this = _VSTD::move(__that);}
@@ -2626,14 +2628,14 @@ public:
             return assign(basic_regex(__first, __last, __f));
         }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     basic_regex& assign(initializer_list<value_type> __il,
                         flag_type __f = regex_constants::ECMAScript)
         {return assign(__il.begin(), __il.end(), __f);}
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     // const operations:
     _LIBCPP_INLINE_VISIBILITY
@@ -3957,7 +3959,6 @@ basic_regex<_CharT, _Traits>::__parse_equivalence_class(_ForwardIterator __first
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [= ... =]
-    typedef typename _Traits::string_type string_type;
     string_type __collate_name =
         __traits_.lookup_collatename(__first, __temp);
     if (__collate_name.empty())
@@ -6141,7 +6142,7 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
 {
     __flags_ |= regex_constants::__no_update_pos;
     _BidirectionalIterator __start = __match_[0].second;
-    if (__match_.empty())
+    if (__match_[0].first == __match_[0].second)
     {
         if (__start == __end_)
         {
@@ -6214,7 +6215,7 @@ public:
                                      regex_constants::match_default) = delete;
 #endif
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type& __re,
                          initializer_list<int> __submatches,
@@ -6228,7 +6229,7 @@ public:
                          regex_constants::match_flag_type __m =
                                        regex_constants::match_default) = delete;
 #endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
     template <size_t _Np>
         regex_token_iterator(_BidirectionalIterator __a,
                              _BidirectionalIterator __b,
@@ -6328,7 +6329,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
     __init(__a, __b);
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
 regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
@@ -6343,7 +6344,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
     __init(__a, __b);
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
 template <size_t _Np>
@@ -6562,5 +6563,7 @@ regex_replace(const _CharT* __s,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_REGEX

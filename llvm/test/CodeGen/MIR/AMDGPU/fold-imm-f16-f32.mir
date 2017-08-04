@@ -1,6 +1,6 @@
 # RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
 --- |
-  define void @add_f32_1.0_one_f16_use() #0 {
+  define amdgpu_kernel void @add_f32_1.0_one_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -11,7 +11,7 @@
     ret void
   }
 
-  define void @add_f32_1.0_multi_f16_use() #0 {
+  define amdgpu_kernel void @add_f32_1.0_multi_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -22,7 +22,7 @@
     ret void
   }
 
-  define void @add_f32_1.0_one_f32_use_one_f16_use () #0 {
+  define amdgpu_kernel void @add_f32_1.0_one_f32_use_one_f16_use () #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -33,7 +33,7 @@
     ret void
   }
 
-  define void @add_f32_1.0_one_f32_use_multi_f16_use () #0 {
+  define amdgpu_kernel void @add_f32_1.0_one_f32_use_multi_f16_use () #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -46,7 +46,7 @@
     ret void
   }
 
-  define void @add_i32_1_multi_f16_use() #0 {
+  define amdgpu_kernel void @add_i32_1_multi_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f16.add0 = fadd half %f16.val0, 0xH0001
@@ -56,7 +56,7 @@
     ret void
   }
 
-  define void @add_i32_m2_one_f32_use_multi_f16_use () #0 {
+  define amdgpu_kernel void @add_i32_m2_one_f32_use_multi_f16_use () #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -69,7 +69,7 @@
     ret void
   }
 
-  define void @add_f16_1.0_multi_f32_use() #0 {
+  define amdgpu_kernel void @add_f16_1.0_multi_f32_use() #0 {
     %f32.val0 = load volatile float, float addrspace(1)* undef
     %f32.val1 = load volatile float, float addrspace(1)* undef
     %f32.val = load volatile float, float addrspace(1)* undef
@@ -80,7 +80,7 @@
     ret void
   }
 
-  define void @add_f16_1.0_other_high_bits_multi_f16_use() #0 {
+  define amdgpu_kernel void @add_f16_1.0_other_high_bits_multi_f16_use() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile half, half addrspace(1)* undef
@@ -91,7 +91,7 @@
     ret void
   }
 
-  define void @add_f16_1.0_other_high_bits_use_f16_f32() #0 {
+  define amdgpu_kernel void @add_f16_1.0_other_high_bits_use_f16_f32() #0 {
     %f16.val0 = load volatile half, half addrspace(1)* undef
     %f16.val1 = load volatile half, half addrspace(1)* undef
     %f32.val = load volatile half, half addrspace(1)* undef
@@ -171,8 +171,8 @@ body:             |
 
 # CHECK-LABEL: name: add_f32_1.0_multi_f16_use
 # CHECK: %13 = V_MOV_B32_e32 1065353216, implicit %exec
-# CHECK: %14 = V_ADD_F16_e32 %13, killed %11, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 killed %13, killed %12, implicit %exec
+# CHECK: %14 = V_ADD_F16_e32 killed %11, %13, implicit %exec
+# CHECK: %15 = V_ADD_F16_e32 killed %12, killed %13, implicit %exec
 
 
 name:            add_f32_1.0_multi_f16_use
@@ -307,8 +307,8 @@ body:             |
 
 # CHECK-LABEL: name: add_f32_1.0_one_f32_use_multi_f16_use
 # CHECK: %14 = V_MOV_B32_e32 1065353216, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32  %14, %11, implicit %exec
-# CHECK: %16 = V_ADD_F16_e32 %14,  %12, implicit %exec
+# CHECK: %15 = V_ADD_F16_e32  %11, %14, implicit %exec
+# CHECK: %16 = V_ADD_F16_e32 %12,  %14, implicit %exec
 # CHECK: %17 = V_ADD_F32_e32 1065353216, killed %13, implicit %exec
 
 name:            add_f32_1.0_one_f32_use_multi_f16_use
@@ -514,8 +514,8 @@ body:             |
 
 # CHECK-LABEL: name: add_f16_1.0_multi_f32_use
 # CHECK: %13 = V_MOV_B32_e32 15360, implicit %exec
-# CHECK: %14 = V_ADD_F32_e32 %13, %11, implicit %exec
-# CHECK: %15 = V_ADD_F32_e32 %13, %12, implicit %exec
+# CHECK: %14 = V_ADD_F32_e32 %11, %13, implicit %exec
+# CHECK: %15 = V_ADD_F32_e32 %12, %13, implicit %exec
 
 name:            add_f16_1.0_multi_f32_use
 alignment:       0
@@ -581,8 +581,8 @@ body:             |
 
 # CHECK-LABEL: name: add_f16_1.0_other_high_bits_multi_f16_use
 # CHECK: %13 = V_MOV_B32_e32 80886784, implicit %exec
-# CHECK: %14 = V_ADD_F16_e32 %13, %11, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 %13, %12, implicit %exec
+# CHECK: %14 = V_ADD_F16_e32 %11, %13, implicit %exec
+# CHECK: %15 = V_ADD_F16_e32 %12, %13, implicit %exec
 
 name:            add_f16_1.0_other_high_bits_multi_f16_use
 alignment:       0
@@ -648,8 +648,8 @@ body:             |
 
 # CHECK-LABEL: name: add_f16_1.0_other_high_bits_use_f16_f32
 # CHECK: %13 = V_MOV_B32_e32 305413120, implicit %exec
-# CHECK: %14 = V_ADD_F32_e32 %13, %11, implicit %exec
-# CHECK: %15 = V_ADD_F16_e32 %13, %12, implicit %exec
+# CHECK: %14 = V_ADD_F32_e32 %11, %13, implicit %exec
+# CHECK: %15 = V_ADD_F16_e32 %12, %13, implicit %exec
 name:            add_f16_1.0_other_high_bits_use_f16_f32
 alignment:       0
 exposesReturnsTwice: false

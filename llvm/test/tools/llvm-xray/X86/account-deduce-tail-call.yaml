@@ -1,4 +1,4 @@
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d | FileCheck %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -d | FileCheck %s
 ---
 header:
   version: 1

@@ -103,7 +103,6 @@ namespace std {
       constexpr const_pointer data() const noexcept;
 
       // 7.7, basic_string_view modifiers
-      constexpr void clear() noexcept;
       constexpr void remove_prefix(size_type n);
       constexpr void remove_suffix(size_type n);
       constexpr void swap(basic_string_view& s) noexcept;
@@ -167,7 +166,6 @@ namespace std {
 */
 
 #include <__config>
-
 #include <__string>
 #include <algorithm>
 #include <iterator>
@@ -178,6 +176,10 @@ namespace std {
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -199,6 +201,10 @@ public:
 	typedef ptrdiff_t                                  difference_type;
 	static _LIBCPP_CONSTEXPR const size_type npos = -1; // size_type(-1);
 
+    static_assert(is_pod<value_type>::value, "Character type of basic_string_view must be a POD");
+    static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+                  "traits_type::char_type must be the same type as CharT");
+
 	// [string.view.cons], construct/copy
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
 	basic_string_view() _NOEXCEPT : __data (nullptr), __size(0) {}
@@ -206,7 +212,7 @@ public:
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
 	basic_string_view(const basic_string_view&) _NOEXCEPT = default;
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	basic_string_view& operator=(const basic_string_view&) _NOEXCEPT = default;
 
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -235,16 +241,16 @@ public:
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
 	const_iterator cend()   const _NOEXCEPT { return __data + __size; }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator rbegin()   const _NOEXCEPT { return const_reverse_iterator(cend()); }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator rend()     const _NOEXCEPT { return const_reverse_iterator(cbegin()); }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator crbegin()  const _NOEXCEPT { return const_reverse_iterator(cend()); }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator crend()    const _NOEXCEPT { return const_reverse_iterator(cbegin()); }
 
 	// [string.view.capacity], capacity
@@ -288,13 +294,6 @@ public:
 	const_pointer data() const _NOEXCEPT { return __data; }
 
 	// [string.view.modifiers], modifiers:
-	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-	void clear() _NOEXCEPT
-	{
-		__data = nullptr;
-		__size = 0;
-	}
-
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	void remove_prefix(size_type __n) _NOEXCEPT
 	{
@@ -357,9 +356,9 @@ public:
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	int compare(                       size_type __pos1, size_type __n1, 
-				basic_string_view _sv, size_type __pos2, size_type __n2) const
+				basic_string_view __sv, size_type __pos2, size_type __n2) const
 	{
-		return substr(__pos1, __n1).compare(_sv.substr(__pos2, __n2));
+		return substr(__pos1, __n1).compare(__sv.substr(__pos2, __n2));
 	}
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
@@ -787,5 +786,7 @@ inline namespace literals
 }
 #endif
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STRING_VIEW

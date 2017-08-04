@@ -27,11 +27,10 @@ extern class LinkerDriver *Driver;
 class LinkerDriver {
 public:
   void main(ArrayRef<const char *> Args, bool CanExitEarly);
-  void addFile(StringRef Path);
+  void addFile(StringRef Path, bool WithLOption);
   void addLibrary(StringRef Name);
 
 private:
-  std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
   void readConfigs(llvm::opt::InputArgList &Args);
   void createFiles(llvm::opt::InputArgList &Args);
   void inferMachineType();
@@ -59,14 +58,12 @@ public:
 // Create enum with OPT_xxx values for each option in Options.td
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11) OPT_##ID,
+#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
 #include "Options.inc"
 #undef OPTION
 };
 
 void printHelp(const char *Argv0);
-std::vector<uint8_t> parseHexstring(StringRef S);
-
 std::string createResponseFile(const llvm::opt::InputArgList &Args);
 
 llvm::Optional<std::string> findFromSearchPaths(StringRef Path);

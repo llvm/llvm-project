@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"

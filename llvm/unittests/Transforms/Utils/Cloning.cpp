@@ -41,13 +41,18 @@ protected:
   }
 
   void eraseClones() {
-    DeleteContainerPointers(Clones);
+    for (Value *V : Clones)
+      V->deleteValue();
+    Clones.clear();
   }
 
   void TearDown() override {
     eraseClones();
-    DeleteContainerPointers(Orig);
-    delete V;
+    for (Value *V : Orig)
+      V->deleteValue();
+    Orig.clear();
+    if (V)
+      V->deleteValue();
   }
 
   SmallPtrSet<Value *, 4> Orig;   // Erase on exit
@@ -162,10 +167,8 @@ TEST_F(CloneInstruction, Attributes) {
 
   Function *F2 = Function::Create(FT1, Function::ExternalLinkage);
 
-  Attribute::AttrKind AK[] = { Attribute::NoCapture };
-  AttributeSet AS = AttributeSet::get(context, 0, AK);
   Argument *A = &*F1->arg_begin();
-  A->addAttr(AS);
+  A->addAttr(Attribute::NoCapture);
 
   SmallVector<ReturnInst*, 4> Returns;
   ValueToValueMapTy VMap;
@@ -199,6 +202,53 @@ TEST_F(CloneInstruction, CallingConvention) {
 
   delete F1;
   delete F2;
+}
+
+TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
+  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
+  V = new Argument(Type::getInt32Ty(context));
+
+  Function *F = Function::Create(FT, Function::ExternalLinkage);
+
+  BasicBlock *BB1 = BasicBlock::Create(context, "", F);
+  IRBuilder<> Builder1(BB1);
+
+  BasicBlock *BB2 = BasicBlock::Create(context, "", F);
+  IRBuilder<> Builder2(BB2);
+
+  Builder1.CreateBr(BB2);
+
+  Instruction *AddInst = cast<Instruction>(Builder2.CreateAdd(V, V));
+  Instruction *MulInst = cast<Instruction>(Builder2.CreateMul(AddInst, V));
+  Instruction *SubInst = cast<Instruction>(Builder2.CreateSub(MulInst, V));
+  Builder2.CreateRetVoid();
+
+  ValueToValueMapTy Mapping;
+
+  auto Split = DuplicateInstructionsInSplitBetween(BB2, BB1, SubInst, Mapping);
+
+  EXPECT_TRUE(Split);
+  EXPECT_EQ(Mapping.size(), 2u);
+  EXPECT_TRUE(Mapping.find(AddInst) != Mapping.end());
+  EXPECT_TRUE(Mapping.find(MulInst) != Mapping.end());
+
+  auto AddSplit = dyn_cast<Instruction>(Mapping[AddInst]);
+  EXPECT_TRUE(AddSplit);
+  EXPECT_EQ(AddSplit->getOperand(0), V);
+  EXPECT_EQ(AddSplit->getOperand(1), V);
+  EXPECT_EQ(AddSplit->getParent(), Split);
+
+  auto MulSplit = dyn_cast<Instruction>(Mapping[MulInst]);
+  EXPECT_TRUE(MulSplit);
+  EXPECT_EQ(MulSplit->getOperand(0), AddSplit);
+  EXPECT_EQ(MulSplit->getOperand(1), V);
+  EXPECT_EQ(MulSplit->getParent(), Split);
+
+  EXPECT_EQ(AddSplit->getNextNode(), MulSplit);
+  EXPECT_EQ(MulSplit->getNextNode(), Split->getTerminator());
+
+  delete F;
 }
 
 class CloneFunc : public ::testing::Test {
@@ -259,14 +309,18 @@ protected:
         DBuilder.createAutoVariable(Subprogram, "x", File, 5, IntType, true);
     auto *DL = DILocation::get(Subprogram->getContext(), 5, 0, Subprogram);
     DBuilder.insertDeclare(Alloca, Variable, E, DL, Store);
-    DBuilder.insertDbgValueIntrinsic(AllocaContent, 0, Variable, E, DL,
-                                     Entry);
+    DBuilder.insertDbgValueIntrinsic(AllocaContent, Variable, E, DL, Entry);
     // Also create an inlined variable.
+    // Create a distinct struct type that we should not duplicate during
+    // cloning).
+    auto *StructType = DICompositeType::getDistinct(
+        C, dwarf::DW_TAG_structure_type, "some_struct", nullptr, 0, nullptr,
+        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr);
     auto *InlinedSP =
         DBuilder.createFunction(CU, "inlined", "inlined", File, 8, FuncType,
                                 true, true, 9, DINode::FlagZero, false);
     auto *InlinedVar =
-        DBuilder.createAutoVariable(InlinedSP, "inlined", File, 5, IntType, true);
+        DBuilder.createAutoVariable(InlinedSP, "inlined", File, 5, StructType, true);
     auto *Scope = DBuilder.createLexicalBlock(
         DBuilder.createLexicalBlockFile(InlinedSP, File), File, 1, 1);
     auto InlinedDL =
@@ -311,7 +365,7 @@ TEST_F(CloneFunc, NewFunctionCreated) {
 // Test that a new subprogram entry was added and is pointing to the new
 // function, while the original subprogram still points to the old one.
 TEST_F(CloneFunc, Subprogram) {
-  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_EQ(3U, Finder->subprogram_count());
   EXPECT_NE(NewFunc->getSubprogram(), OldFunc->getSubprogram());
 }
@@ -376,7 +430,11 @@ TEST_F(CloneFunc, DebugIntrinsics) {
       EXPECT_EQ(NewFunc, cast<AllocaInst>(NewIntrin->getAddress())->
                          getParent()->getParent());
 
-      if (!OldIntrin->getDebugLoc()->getInlinedAt()) {
+      if (OldIntrin->getDebugLoc()->getInlinedAt()) {
+        // Inlined variable should refer to the same DILocalVariable as in the
+        // Old Function
+        EXPECT_EQ(OldIntrin->getVariable(), NewIntrin->getVariable());
+      } else {
         // Old variable must belong to the old function.
         EXPECT_EQ(OldFunc->getSubprogram(),
                   cast<DISubprogram>(OldIntrin->getVariable()->getScope()));
@@ -414,10 +472,14 @@ protected:
   void SetupModule() { OldM = new Module("", C); }
 
   void CreateOldModule() {
+    auto *CD = OldM->getOrInsertComdat("comdat");
+    CD->setSelectionKind(Comdat::ExactMatch);
+
     auto GV = new GlobalVariable(
         *OldM, Type::getInt32Ty(C), false, GlobalValue::ExternalLinkage,
         ConstantInt::get(Type::getInt32Ty(C), 1), "gv");
     GV->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
+    GV->setComdat(CD);
 
     DIBuilder DBuilder(*OldM);
     IRBuilder<> IBuilder(C);
@@ -428,6 +490,7 @@ protected:
     auto *F =
         Function::Create(FuncType, GlobalValue::PrivateLinkage, "f", OldM);
     F->setPersonalityFn(PersFn);
+    F->setComdat(CD);
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
@@ -442,6 +505,19 @@ protected:
         DBuilder.createFunction(CU, "f", "f", File, 4, DFuncType, true, true, 3,
                                 DINode::FlagZero, false);
     F->setSubprogram(Subprogram);
+
+    // Create and assign DIGlobalVariableExpression to gv
+    auto GVExpression = DBuilder.createGlobalVariableExpression(
+        Subprogram, "gv", "gv", File, 1, DBuilder.createNullPtrType(), false);
+    GV->addDebugInfo(GVExpression);
+
+    // DIGlobalVariableExpression not attached to any global variable
+    auto Expr = DBuilder.createExpression(
+        ArrayRef<uint64_t>{dwarf::DW_OP_constu, 42U, dwarf::DW_OP_stack_value});
+
+    DBuilder.createGlobalVariableExpression(
+        Subprogram, "unattached", "unattached", File, 1,
+        DBuilder.createNullPtrType(), false, Expr);
 
     auto *Entry = BasicBlock::Create(C, "", F);
     IBuilder.SetInsertPoint(Entry);
@@ -480,5 +556,62 @@ TEST_F(CloneModule, Subprogram) {
 TEST_F(CloneModule, GlobalMetadata) {
   GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
   EXPECT_NE(nullptr, NewGV->getMetadata(LLVMContext::MD_type));
+}
+
+TEST_F(CloneModule, GlobalDebugInfo) {
+  GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
+  EXPECT_TRUE(NewGV != nullptr);
+
+  // Find debug info expression assigned to global
+  SmallVector<DIGlobalVariableExpression *, 1> GVs;
+  NewGV->getDebugInfo(GVs);
+  EXPECT_EQ(GVs.size(), 1U);
+
+  DIGlobalVariableExpression *GVExpr = GVs[0];
+  DIGlobalVariable *GV = GVExpr->getVariable();
+  EXPECT_TRUE(GV != nullptr);
+
+  EXPECT_EQ(GV->getName(), "gv");
+  EXPECT_EQ(GV->getLine(), 1U);
+
+  // Assert that the scope of the debug info attached to
+  // global variable matches the cloned function.
+  DISubprogram *SP = NewM->getFunction("f")->getSubprogram();
+  EXPECT_TRUE(SP != nullptr);
+  EXPECT_EQ(GV->getScope(), SP);
+}
+
+TEST_F(CloneModule, CompileUnit) {
+  // Find DICompileUnit listed in llvm.dbg.cu
+  auto *NMD = NewM->getNamedMetadata("llvm.dbg.cu");
+  EXPECT_TRUE(NMD != nullptr);
+  EXPECT_EQ(NMD->getNumOperands(), 1U);
+
+  DICompileUnit *CU = dyn_cast<llvm::DICompileUnit>(NMD->getOperand(0));
+  EXPECT_TRUE(CU != nullptr);
+
+  // Assert this CU is consistent with the cloned function debug info
+  DISubprogram *SP = NewM->getFunction("f")->getSubprogram();
+  EXPECT_TRUE(SP != nullptr);
+  EXPECT_EQ(SP->getUnit(), CU);
+
+  // Check globals listed in CU have the correct scope
+  DIGlobalVariableExpressionArray GlobalArray = CU->getGlobalVariables();
+  EXPECT_EQ(GlobalArray.size(), 2U);
+  for (DIGlobalVariableExpression *GVExpr : GlobalArray) {
+    DIGlobalVariable *GV = GVExpr->getVariable();
+    EXPECT_EQ(GV->getScope(), SP);
+  }
+}
+
+TEST_F(CloneModule, Comdat) {
+  GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
+  auto *CD = NewGV->getComdat();
+  ASSERT_NE(nullptr, CD);
+  EXPECT_EQ("comdat", CD->getName());
+  EXPECT_EQ(Comdat::ExactMatch, CD->getSelectionKind());
+
+  Function *NewF = NewM->getFunction("f");
+  EXPECT_EQ(CD, NewF->getComdat());
 }
 }

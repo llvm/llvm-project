@@ -187,8 +187,8 @@ declare i32 @llvm.hexagon.S2.asr.r.r.sat(i32, i32) #2
 declare i32 @llvm.hexagon.S2.clbnorm(i32) #2
 declare i32 @llvm.hexagon.S2.lsr.r.r(i32, i32) #2
 declare i64 @llvm.hexagon.M2.mpyd.ll.s1(i32, i32) #2
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

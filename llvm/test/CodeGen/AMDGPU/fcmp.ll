@@ -3,7 +3,7 @@
 ; CHECK: {{^}}fcmp_sext:
 ; CHECK: SETE_DX10  T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-define void @fcmp_sext(i32 addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @fcmp_sext(i32 addrspace(1)* %out, float addrspace(1)* %in) {
 entry:
   %0 = load float, float addrspace(1)* %in
   %arrayidx1 = getelementptr inbounds float, float addrspace(1)* %in, i32 1
@@ -22,7 +22,7 @@ entry:
 ; CHECK: SET{{[N]*}}E_DX10 * T{{[0-9]+\.[XYZW],}}
 ; CHECK-NEXT: {{[0-9]+\(5.0}}
 
-define void @fcmp_br(i32 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fcmp_br(i32 addrspace(1)* %out, float %in) {
 entry:
   %0 = fcmp oeq float %in, 5.0
   br i1 %0, label %IF, label %ENDIF

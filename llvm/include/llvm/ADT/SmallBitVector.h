@@ -15,8 +15,15 @@
 #define LLVM_ADT_SMALLBITVECTOR_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/MathExtras.h"
+#include <algorithm>
 #include <cassert>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <utility>
 
 namespace llvm {
 
@@ -29,7 +36,7 @@ class SmallBitVector {
   // TODO: In "large" mode, a pointer to a BitVector is used, leading to an
   // unnecessary level of indirection. It would be more efficient to use a
   // pointer to memory containing size, allocation size, and the array of bits.
-  uintptr_t X;
+  uintptr_t X = 1;
 
   enum {
     // The number of bits in this class.
@@ -54,7 +61,8 @@ class SmallBitVector {
                 "Unsupported word size");
 
 public:
-  typedef unsigned size_type;
+  using size_type = unsigned;
+
   // Encapsulation of a single bit.
   class reference {
     SmallBitVector &TheVector;
@@ -117,9 +125,7 @@ private:
   }
 
   // Return the size.
-  size_t getSmallSize() const {
-    return getSmallRawBits() >> SmallNumDataBits;
-  }
+  size_t getSmallSize() const { return getSmallRawBits() >> SmallNumDataBits; }
 
   void setSmallSize(size_t Size) {
     setSmallRawBits(getSmallBits() | (Size << SmallNumDataBits));
@@ -137,7 +143,7 @@ private:
 
 public:
   /// Creates an empty bitvector.
-  SmallBitVector() : X(1) {}
+  SmallBitVector() = default;
 
   /// Creates a bitvector of specified number of bits. All bits are initialized
   /// to the specified value.
@@ -163,6 +169,21 @@ public:
   ~SmallBitVector() {
     if (!isSmall())
       delete getPointer();
+  }
+
+  using const_set_bits_iterator = const_set_bits_iterator_impl<SmallBitVector>;
+  using set_iterator = const_set_bits_iterator;
+
+  const_set_bits_iterator set_bits_begin() const {
+    return const_set_bits_iterator(*this);
+  }
+
+  const_set_bits_iterator set_bits_end() const {
+    return const_set_bits_iterator(*this, -1);
+  }
+
+  iterator_range<const_set_bits_iterator> set_bits() const {
+    return make_range(set_bits_begin(), set_bits_end());
   }
 
   /// Tests whether there are no bits in this bitvector.
@@ -216,6 +237,39 @@ public:
     return getPointer()->find_first();
   }
 
+  int find_last() const {
+    if (isSmall()) {
+      uintptr_t Bits = getSmallBits();
+      if (Bits == 0)
+        return -1;
+      return NumBaseBits - countLeadingZeros(Bits);
+    }
+    return getPointer()->find_last();
+  }
+
+  /// Returns the index of the first unset bit, -1 if all of the bits are set.
+  int find_first_unset() const {
+    if (isSmall()) {
+      if (count() == getSmallSize())
+        return -1;
+
+      uintptr_t Bits = getSmallBits();
+      return countTrailingOnes(Bits);
+    }
+    return getPointer()->find_first_unset();
+  }
+
+  int find_last_unset() const {
+    if (isSmall()) {
+      if (count() == getSmallSize())
+        return -1;
+
+      uintptr_t Bits = getSmallBits();
+      return NumBaseBits - countLeadingOnes(Bits);
+    }
+    return getPointer()->find_last_unset();
+  }
+
   /// Returns the index of the next set bit following the "Prev" bit.
   /// Returns -1 if the next set bit is not found.
   int find_next(unsigned Prev) const {
@@ -228,6 +282,41 @@ public:
       return countTrailingZeros(Bits);
     }
     return getPointer()->find_next(Prev);
+  }
+
+  /// Returns the index of the next unset bit following the "Prev" bit.
+  /// Returns -1 if the next unset bit is not found.
+  int find_next_unset(unsigned Prev) const {
+    if (isSmall()) {
+      ++Prev;
+      uintptr_t Bits = getSmallBits();
+      // Mask in previous bits.
+      uintptr_t Mask = (1 << Prev) - 1;
+      Bits |= Mask;
+
+      if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
+        return -1;
+      return countTrailingOnes(Bits);
+    }
+    return getPointer()->find_next_unset(Prev);
+  }
+
+  /// find_prev - Returns the index of the first set bit that precedes the
+  /// the bit at \p PriorTo.  Returns -1 if all previous bits are unset.
+  int find_prev(unsigned PriorTo) const {
+    if (isSmall()) {
+      if (PriorTo == 0)
+        return -1;
+
+      --PriorTo;
+      uintptr_t Bits = getSmallBits();
+      Bits &= maskTrailingOnes<uintptr_t>(PriorTo + 1);
+      if (Bits == 0)
+        return -1;
+
+      return NumBaseBits - countLeadingZeros(Bits) - 1;
+    }
+    return getPointer()->find_prev(PriorTo);
   }
 
   /// Clear all bits.
@@ -479,6 +568,22 @@ public:
     return *this;
   }
 
+  SmallBitVector &operator<<=(unsigned N) {
+    if (isSmall())
+      setSmallBits(getSmallBits() << N);
+    else
+      getPointer()->operator<<=(N);
+    return *this;
+  }
+
+  SmallBitVector &operator>>=(unsigned N) {
+    if (isSmall())
+      setSmallBits(getSmallBits() >> N);
+    else
+      getPointer()->operator>>=(N);
+    return *this;
+  }
+
   // Assignment operator.
   const SmallBitVector &operator=(const SmallBitVector &RHS) {
     if (isSmall()) {
@@ -582,14 +687,16 @@ operator^(const SmallBitVector &LHS, const SmallBitVector &RHS) {
   return Result;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
 namespace std {
-  /// Implement std::swap in terms of BitVector swap.
-  inline void
-  swap(llvm::SmallBitVector &LHS, llvm::SmallBitVector &RHS) {
-    LHS.swap(RHS);
-  }
+
+/// Implement std::swap in terms of BitVector swap.
+inline void
+swap(llvm::SmallBitVector &LHS, llvm::SmallBitVector &RHS) {
+  LHS.swap(RHS);
 }
 
-#endif
+} // end namespace std
+
+#endif // LLVM_ADT_SMALLBITVECTOR_H

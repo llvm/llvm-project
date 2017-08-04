@@ -65,7 +65,7 @@ void SymbolEscapedThroughFunctionCall() {
 }
 
 FILE *GlobalF;
-void SymbolEscapedThroughAssignmentToGloabl() {
+void SymbolEscapedThroughAssignmentToGlobal() {
   FILE *F = fopen("myfile.txt", "w");
   GlobalF = F;
   return; // no warning

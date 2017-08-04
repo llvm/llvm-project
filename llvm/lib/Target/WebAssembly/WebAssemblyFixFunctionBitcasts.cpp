@@ -84,7 +84,7 @@ static void FindUses(Value *V, Function &F,
 //  - Call with fewer arguments than needed: arguments are filled in with undef
 //  - Return value is not needed: drop it
 //  - Return value needed but not present: supply an undef
-//  
+//
 // For now, return nullptr without creating a wrapper if the wrapper cannot
 // be generated due to incompatible types.
 static Function *CreateWrapper(Function *F, FunctionType *Ty) {
@@ -146,6 +146,11 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     // to be later casted to something else, we can't generate a wrapper for it.
     // Just ignore such casts for now.
     if (!Ty)
+      continue;
+
+    // Wasm varargs are not ABI-compatible with non-varargs. Just ignore
+    // such casts for now.
+    if (Ty->isVarArg() || F->isVarArg())
       continue;
 
     auto Pair = Wrappers.insert(std::make_pair(std::make_pair(F, Ty), nullptr));

@@ -86,6 +86,10 @@ namespace llvm {
     /// Construct any deferred debug info descriptors.
     void finalize();
 
+    /// Finalize a specific subprogram - no new variables may be added to this
+    /// subprogram afterwards.
+    void finalizeSubprogram(DISubprogram *SP);
+
     /// A CompileUnit provides an anchor for all debugging
     /// information generated during this instance of compilation.
     /// \param Lang          Source programming language, eg. dwarf::DW_LANG_C99
@@ -440,13 +444,6 @@ namespace llvm {
                          DINode::DIFlags Flags = DINode::FlagZero,
                          unsigned CC = 0);
 
-    /// Create an external type reference.
-    /// \param Tag              Dwarf TAG.
-    /// \param File             File in which the type is defined.
-    /// \param UniqueIdentifier A unique identifier for the type.
-    DICompositeType *createExternalTypeRef(unsigned Tag, DIFile *File,
-                                           StringRef UniqueIdentifier);
-
     /// Create a new DIType* with "artificial" flag set.
     DIType *createArtificialType(DIType *Ty);
 
@@ -554,13 +551,17 @@ namespace llvm {
     DIExpression *createExpression(ArrayRef<uint64_t> Addr = None);
     DIExpression *createExpression(ArrayRef<int64_t> Addr);
 
-    /// Create a descriptor to describe one part
-    /// of aggregate variable that is fragmented across multiple Values.
+    /// Create a descriptor to describe one part of an aggregate variable that
+    /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
+    /// will be appended to the elements of \c Expr. If \c Expr already contains
+    /// a \c DW_OP_LLVM_fragment \c OffsetInBits is interpreted as an offset
+    /// into the existing fragment.
     ///
     /// \param OffsetInBits Offset of the piece in bits.
     /// \param SizeInBits   Size of the piece in bits.
     DIExpression *createFragmentExpression(unsigned OffsetInBits,
-                                           unsigned SizeInBits);
+                                           unsigned SizeInBits,
+                                           const DIExpression *Expr = nullptr);
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.
@@ -677,32 +678,37 @@ namespace llvm {
 
     /// Create a descriptor for an imported module.
     /// \param Context The scope this module is imported into
-    /// \param NS The namespace being imported here
-    /// \param Line Line number
+    /// \param NS      The namespace being imported here.
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedModule(DIScope *Context, DINamespace *NS,
-                                           unsigned Line);
+                                           DIFile *File, unsigned Line);
 
     /// Create a descriptor for an imported module.
-    /// \param Context The scope this module is imported into
-    /// \param NS An aliased namespace
-    /// \param Line Line number
+    /// \param Context The scope this module is imported into.
+    /// \param NS      An aliased namespace.
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedModule(DIScope *Context,
-                                           DIImportedEntity *NS, unsigned Line);
+                                           DIImportedEntity *NS, DIFile *File,
+                                           unsigned Line);
 
     /// Create a descriptor for an imported module.
-    /// \param Context The scope this module is imported into
-    /// \param M The module being imported here
-    /// \param Line Line number
+    /// \param Context The scope this module is imported into.
+    /// \param M       The module being imported here
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedModule(DIScope *Context, DIModule *M,
-                                           unsigned Line);
+                                           DIFile *File, unsigned Line);
 
     /// Create a descriptor for an imported function.
-    /// \param Context The scope this module is imported into
-    /// \param Decl The declaration (or definition) of a function, type, or
-    ///             variable
-    /// \param Line Line number
+    /// \param Context The scope this module is imported into.
+    /// \param Decl    The declaration (or definition) of a function, type, or
+    ///                variable.
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedDeclaration(DIScope *Context, DINode *Decl,
-                                                unsigned Line,
+                                                DIFile *File, unsigned Line,
                                                 StringRef Name = "");
 
     /// Insert a new llvm.dbg.declare intrinsic call.
@@ -727,12 +733,11 @@ namespace llvm {
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable
-    /// \param Offset       Offset
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertAtEnd Location for the new intrinsic.
-    Instruction *insertDbgValueIntrinsic(llvm::Value *Val, uint64_t Offset,
+    Instruction *insertDbgValueIntrinsic(llvm::Value *Val,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,
@@ -740,12 +745,11 @@ namespace llvm {
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable
-    /// \param Offset       Offset
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertBefore Location for the new intrinsic.
-    Instruction *insertDbgValueIntrinsic(llvm::Value *Val, uint64_t Offset,
+    Instruction *insertDbgValueIntrinsic(llvm::Value *Val,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,
@@ -783,6 +787,9 @@ namespace llvm {
       return Replacement;
     }
   };
+
+  // Create wrappers for C Binding types (see CBindingWrapping.h).
+  DEFINE_ISA_CONVERSION_FUNCTIONS(DIBuilder, LLVMDIBuilderRef)
 
 } // end namespace llvm
 

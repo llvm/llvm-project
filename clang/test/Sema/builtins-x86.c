@@ -4,6 +4,7 @@ typedef long long __m128i __attribute__((__vector_size__(16)));
 typedef float __m128 __attribute__((__vector_size__(16)));
 typedef double __m128d __attribute__((__vector_size__(16)));
 
+typedef long long __m512i __attribute__((__vector_size__(64)));
 typedef float __m512 __attribute__((__vector_size__(64)));
 typedef double __m512d __attribute__((__vector_size__(64)));
 
@@ -69,3 +70,16 @@ __m128i test__builtin_ia32_vpcomq(__m128i __a, __m128i __b) {
 __mmask16 test__builtin_ia32_cmpps512_mask_rounding(__m512 __a, __m512 __b, __mmask16 __u) {
   __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 0); // expected-error {{invalid rounding argument}}
 }
+
+__m128i test_mm_mask_i32gather_epi32(__m128i a, int const *b, __m128i c, __m128i mask) {
+  return __builtin_ia32_gatherd_d(a, b, c, mask, 5); // expected-error {{scale argument must be 1, 2, 4, or 8}}
+}
+
+__m512i _mm512_mask_prefetch_i32gather_ps(__m512i index, __mmask16 mask, int const *addr) {
+  return __builtin_ia32_gatherpfdps(mask, index, addr, 5, 1); // expected-error {{scale argument must be 1, 2, 4, or 8}}
+}
+
+__m512 _mm512_mask_prefetch_i32gather_ps_2(__m512i index, __mmask16 mask, int const *addr) {
+  return __builtin_ia32_gatherpfdps(mask, index, addr, 1, 1); // expected-error {{argument should be a value from 2 to 3}}
+}
+

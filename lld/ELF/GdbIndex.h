@@ -11,52 +11,44 @@
 #define LLD_ELF_GDB_INDEX_H
 
 #include "InputFiles.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/ELF.h"
 
 namespace lld {
 namespace elf {
 
-template <class ELFT> class InputSection;
+class InputSection;
 
 // Struct represents single entry of address area of gdb index.
-template <class ELFT> struct AddressEntry {
-  InputSectionBase<ELFT> *Section;
+struct AddressEntry {
+  InputSection *Section;
   uint64_t LowAddress;
   uint64_t HighAddress;
-  size_t CuIndex;
+  uint32_t CuIndex;
 };
 
-// GdbIndexBuilder is a helper class used for extracting data required
-// for building .gdb_index section from objects.
-template <class ELFT> class GdbIndexBuilder : public llvm::LoadedObjectInfo {
-  typedef typename ELFT::uint uintX_t;
+// Struct represents single entry of compilation units list area of gdb index.
+// It consist of CU offset in .debug_info section and it's size.
+struct CompilationUnitEntry {
+  uint64_t CuOffset;
+  uint64_t CuLength;
+};
 
-  InputSection<ELFT> *DebugInfoSec;
+// Represents data about symbol and type names which are used
+// to build symbol table and constant pool area of gdb index.
+struct NameTypeEntry {
+  StringRef Name;
+  uint8_t Type;
+};
 
-  std::unique_ptr<llvm::DWARFContext> Dwarf;
-
-public:
-  GdbIndexBuilder(InputSection<ELFT> *DebugInfoSec);
-
-  // Extracts the compilation units. Each first element of pair is a offset of a
-  // CU in the .debug_info section and second is the length of that CU.
-  std::vector<std::pair<uintX_t, uintX_t>> readCUList();
-
-  // Extracts the vector of address area entries. Accepts global index of last
-  // parsed CU.
-  std::vector<AddressEntry<ELFT>> readAddressArea(size_t CurrentCU);
-
-  // Method extracts public names and types. It returns list of name and
-  // gnu_pub* kind pairs.
-  std::vector<std::pair<StringRef, uint8_t>> readPubNamesAndTypes();
-
-private:
-  // Method returns section file offset as a load addres for DWARF parser. That
-  // allows to find the target section index for address ranges.
-  uint64_t
-  getSectionLoadAddress(const llvm::object::SectionRef &Sec) const override;
-  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override;
+// We fill one GdbIndexDataChunk for each object where scan of
+// debug information performed. That information futher used
+// for filling gdb index section areas.
+struct GdbIndexChunk {
+  InputSection *DebugInfoSec;
+  std::vector<AddressEntry> AddressArea;
+  std::vector<CompilationUnitEntry> CompilationUnits;
+  std::vector<NameTypeEntry> NamesAndTypes;
 };
 
 // Element of GdbHashTab hash table.
@@ -75,22 +67,13 @@ class GdbHashTab final {
 public:
   std::pair<bool, GdbSymbol *> add(uint32_t Hash, size_t Offset);
 
+  void finalizeContents();
   size_t getCapacity() { return Table.size(); }
   GdbSymbol *getSymbol(size_t I) { return Table[I]; }
 
 private:
-  void expand();
-
-  GdbSymbol **findSlot(uint32_t Hash, size_t Offset);
-
-  llvm::BumpPtrAllocator Alloc;
+  llvm::DenseMap<size_t, GdbSymbol *> Map;
   std::vector<GdbSymbol *> Table;
-
-  // Size keeps the amount of filled entries in Table.
-  size_t Size = 0;
-
-  // Initial size must be a power of 2.
-  static const int32_t InitialSize = 1024;
 };
 
 } // namespace elf

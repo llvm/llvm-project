@@ -1,0 +1,101 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+
+--- |
+  define void @test_gep_i8() {
+    %arrayidx = getelementptr i32, i32* undef, i8 5
+    ret void
+  }
+
+  define void @test_gep_i16() {
+    %arrayidx = getelementptr i32, i32* undef, i16 5
+    ret void
+  }
+
+  define void @test_gep_i32() {
+    %arrayidx = getelementptr i32, i32* undef, i32 5
+    ret void
+  }
+
+  define void @test_gep_i64() {
+    %arrayidx = getelementptr i32, i32* undef, i64 5
+    ret void
+  }
+...
+---
+name:            test_gep_i8
+# CHECK-LABEL: name:  test_gep_i8
+legalized:       false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# CHECK:          %0(p0) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s8) = G_CONSTANT i8 20
+# CHECK-NEXT:     %3(s32) = G_SEXT %1(s8)
+# CHECK-NEXT:     %2(p0) = G_GEP %0, %3(s32)
+# CHECK-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(p0) = IMPLICIT_DEF
+    %1(s8) = G_CONSTANT i8 20
+    %2(p0) = G_GEP %0, %1(s8)
+    RET 0
+...
+---
+name:            test_gep_i16
+# CHECK-LABEL: name:  test_gep_i16
+legalized:       false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# CHECK:          %0(p0) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s16) = G_CONSTANT i16 20
+# CHECK-NEXT:     %3(s32) = G_SEXT %1(s16)
+# CHECK-NEXT:     %2(p0) = G_GEP %0, %3(s32)
+# CHECK-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(p0) = IMPLICIT_DEF
+    %1(s16) = G_CONSTANT i16 20
+    %2(p0) = G_GEP %0, %1(s16)
+    RET 0
+...
+---
+name:            test_gep_i32
+# CHECK-LABEL: name:  test_gep_i32
+legalized:       false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# CHECK:          %0(p0) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s32) = G_CONSTANT i32 20
+# CHECK-NEXT:     %2(p0) = G_GEP %0, %1(s32)
+# CHECK-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(p0) = IMPLICIT_DEF
+    %1(s32) = G_CONSTANT i32 20
+    %2(p0) = G_GEP %0, %1(s32)
+    RET 0
+...
+---
+name:            test_gep_i64
+# CHECK-LABEL: name:  test_gep_i64
+legalized:       false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# CHECK:          %0(p0) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s64) = G_CONSTANT i64 20
+# CHECK-NEXT:     %2(p0) = G_GEP %0, %1(s64)
+# CHECK-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(p0) = IMPLICIT_DEF
+    %1(s64) = G_CONSTANT i64 20
+    %2(p0) = G_GEP %0, %1(s64)
+    RET 0
+...

@@ -95,20 +95,19 @@ define i32 @Test_use_div_and_idiv(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    idivl %ebx
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    testl $-256, %edi
-; CHECK-NEXT:    jne .LBB3_5
-; CHECK-NEXT:    jmp .LBB3_4
-; CHECK-NEXT:  .LBB3_1:
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
-; CHECK-NEXT:    divb %bl
-; CHECK-NEXT:    movzbl %al, %esi
-; CHECK-NEXT:    testl $-256, %edi
 ; CHECK-NEXT:    je .LBB3_4
 ; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    jmp .LBB3_6
+; CHECK-NEXT:  .LBB3_1:
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
+; CHECK-NEXT:    divb %bl
+; CHECK-NEXT:    movzbl %al, %esi
+; CHECK-NEXT:    testl $-256, %edi
+; CHECK-NEXT:    jne .LBB3_5
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>

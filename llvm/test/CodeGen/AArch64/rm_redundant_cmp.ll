@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-linux-gnuabi -simplifycfg-sink-common=true -O2 | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnuabi -O2 | FileCheck %s
 
 ; The following cases are for i16
 

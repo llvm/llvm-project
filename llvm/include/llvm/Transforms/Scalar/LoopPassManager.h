@@ -51,6 +51,8 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Utils/LCSSA.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 
 namespace llvm {
 
@@ -248,19 +250,25 @@ template <typename LoopPassT>
 class FunctionToLoopPassAdaptor
     : public PassInfoMixin<FunctionToLoopPassAdaptor<LoopPassT>> {
 public:
-  explicit FunctionToLoopPassAdaptor(LoopPassT Pass) : Pass(std::move(Pass)) {}
+  explicit FunctionToLoopPassAdaptor(LoopPassT Pass) : Pass(std::move(Pass)) {
+    LoopCanonicalizationFPM.addPass(LoopSimplifyPass());
+    LoopCanonicalizationFPM.addPass(LCSSAPass());
+  }
 
   /// \brief Runs the loop passes across every loop in the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
-    // Setup the loop analysis manager from its proxy.
-    LoopAnalysisManager &LAM =
-        AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+    // Before we even compute any loop analyses, first run a miniature function
+    // pass pipeline to put loops into their canonical form. Note that we can
+    // directly build up function analyses after this as the function pass
+    // manager handles all the invalidation at that layer.
+    PreservedAnalyses PA = LoopCanonicalizationFPM.run(F, AM);
+
     // Get the loop structure for this function
     LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
 
     // If there are no loops, there is nothing to do here.
     if (LI.empty())
-      return PreservedAnalyses::all();
+      return PA;
 
     // Get the analysis results needed by loop passes.
     LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
@@ -271,7 +279,13 @@ public:
                                        AM.getResult<TargetLibraryAnalysis>(F),
                                        AM.getResult<TargetIRAnalysis>(F)};
 
-    PreservedAnalyses PA = PreservedAnalyses::all();
+    // Setup the loop analysis manager from its proxy. It is important that
+    // this is only done when there are loops to process and we have built the
+    // LoopStandardAnalysisResults object. The loop analyses cached in this
+    // manager have access to those analysis results and so it must invalidate
+    // itself when they go away.
+    LoopAnalysisManager &LAM =
+        AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
 
     // A postorder worklist of loops to process.
     SmallPriorityWorklist<Loop *, 4> Worklist;
@@ -294,8 +308,15 @@ public:
       // Reset the update structure for this loop.
       Updater.CurrentL = L;
       Updater.SkipCurrentLoop = false;
+
 #ifndef NDEBUG
+      // Save a parent loop pointer for asserts.
       Updater.ParentL = L->getParentLoop();
+
+      // Verify the loop structure and LCSSA form before visiting the loop.
+      L->verifyLoop();
+      assert(L->isRecursivelyLCSSAForm(LAR.DT, LI) &&
+             "Loops must remain in LCSSA form!");
 #endif
 
       PreservedAnalyses PassPA = Pass.run(*L, LAM, LAR, Updater);
@@ -321,7 +342,6 @@ public:
     PA.preserveSet<AllAnalysesOn<Loop>>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
     // We also preserve the set of standard analyses.
-    PA.preserve<AssumptionAnalysis>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<ScalarEvolutionAnalysis>();
@@ -336,6 +356,8 @@ public:
 
 private:
   LoopPassT Pass;
+
+  FunctionPassManager LoopCanonicalizationFPM;
 };
 
 /// \brief A function to deduce a loop pass type and wrap it in the templated

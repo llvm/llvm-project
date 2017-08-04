@@ -143,9 +143,24 @@ namespace std { namespace experimental { inline namespace fundamentals_v1 {
 #include <experimental/__config>
 #include <functional>
 #include <stdexcept>
+#if _LIBCPP_STD_VER > 11
+#include <initializer_list>
+#include <type_traits>
+#include <new>
+#include <__functional_base>
+#include <__debug>
+#endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
-class _LIBCPP_EXCEPTION_ABI bad_optional_access
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access
     : public std::logic_error
 {
 public:
@@ -159,17 +174,6 @@ _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 
 #if _LIBCPP_STD_VER > 11
-
-#include <initializer_list>
-#include <type_traits>
-#include <new>
-#include <__functional_base>
-#include <__undef_min_max>
-#include <__debug>
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS
 
@@ -523,6 +527,9 @@ public:
     constexpr explicit operator bool() const noexcept {return this->__engaged_;}
 
 	_LIBCPP_NORETURN _LIBCPP_INLINE_VISIBILITY 
+#ifndef _LIBCPP_NO_EXCEPTIONS
+_LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
+#endif
 	constexpr void __throw_bad_optional_access() const
 	{
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -532,7 +539,7 @@ public:
 #endif
 	}
 	
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
     constexpr value_type const& value() const
     {
         if (!this->__engaged_)
@@ -540,7 +547,7 @@ public:
         return this->__val_;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
     value_type& value()
     {
         if (!this->__engaged_)
@@ -909,5 +916,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<std::experimental::optional<_Tp> >
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_STD_VER > 11
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_EXPERIMENTAL_OPTIONAL

@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/Decompressor.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/ELF.h"
 
 using namespace llvm;
 using namespace llvm::support::endian;
@@ -88,15 +88,7 @@ bool Decompressor::isCompressedELFSection(uint64_t Flags, StringRef Name) {
   return (Flags & ELF::SHF_COMPRESSED) || isGnuStyle(Name);
 }
 
-Error Decompressor::decompress(SmallString<32> &Out) {
-  Out.resize(DecompressedSize);
-  return decompress({Out.data(), (size_t)DecompressedSize});
-}
-
 Error Decompressor::decompress(MutableArrayRef<char> Buffer) {
   size_t Size = Buffer.size();
-  zlib::Status Status = zlib::uncompress(SectionData, Buffer.data(), Size);
-  if (Status != zlib::StatusOK)
-    return createError("decompression failed");
-  return Error::success();
+  return zlib::uncompress(SectionData, Buffer.data(), Size);
 }

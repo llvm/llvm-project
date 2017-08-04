@@ -1,0 +1,232 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt -o - %s | FileCheck %s
+
+--- |
+  define i32 @foo(i32 %a) {
+  bb0:
+    br label %bb1
+  
+  bb1:                                              ; preds = %bb7, %bb0
+    %vreg0 = phi i32 [ 0, %bb0 ], [ %vreg3, %bb7 ]
+    %cond0 = icmp eq i32 %a, 0
+    br i1 %cond0, label %bb4, label %bb3
+  
+  bb3:                                              ; preds = %bb1
+    br label %bb4
+  
+  bb4:                                              ; preds = %bb1, %bb3
+    %vreg5 = phi i32 [ 2, %bb3 ], [ 1, %bb1 ]
+    %cond1 = icmp eq i32 %vreg5, 0
+    br i1 %cond1, label %bb7, label %bb6
+  
+  bb6:                                              ; preds = %bb4
+    br label %bb7
+  
+  bb7:                                              ; preds = %bb4, %bb6
+    %vreg1 = phi i32 [ 2, %bb6 ], [ 1, %bb4 ]
+    %vreg2 = add i32 %vreg5, %vreg0
+    %vreg3 = add i32 %vreg1, %vreg2
+    %cond2 = icmp slt i32 %vreg3, 10
+    br i1 %cond2, label %bb1, label %bb8
+  
+  bb8:                                              ; preds = %bb7
+    ret i32 0
+  }
+  
+  define i32 @bar(i32 %a, i32* %p) {
+  bb0:
+    br label %bb1
+  
+  bb1:                                              ; preds = %bb7, %bb0
+    %vreg0 = phi i32 [ 0, %bb0 ], [ %vreg3, %bb7 ]
+    %cond0 = icmp eq i32 %a, 0
+    br i1 %cond0, label %bb4, label %bb3
+  
+  bb3:                                              ; preds = %bb1
+    br label %bb4
+  
+  bb4:                                              ; preds = %bb1, %bb3
+    %vreg5 = phi i32 [ 2, %bb3 ], [ 1, %bb1 ]
+    %cond1 = icmp eq i32 %vreg5, 0
+    br i1 %cond1, label %bb7, label %bb6
+  
+  bb6:                                              ; preds = %bb4
+    br label %bb7
+  
+  bb7:                                              ; preds = %bb4, %bb6
+    %vreg1 = phi i32 [ 2, %bb6 ], [ 1, %bb4 ]
+    %vreg2 = add i32 %vreg5, %vreg0
+    store i32 %vreg0, i32* %p
+    %vreg3 = add i32 %vreg1, %vreg2
+    %cond2 = icmp slt i32 %vreg3, 10
+    br i1 %cond2, label %bb1, label %bb8
+  
+  bb8:                                              ; preds = %bb7
+    ret i32 0
+  }
+
+...
+---
+# There is a recurrence formulated around %0, %10, and %3. Check that operands
+# are commuted for ADD instructions in bb.5.bb7 so that the values involved in
+# the recurrence are tied. This will remove redundant copy instruction.
+name:            foo
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr32, preferred-register: '' }
+  - { id: 8, class: gr32, preferred-register: '' }
+  - { id: 9, class: gr32, preferred-register: '' }
+  - { id: 10, class: gr32, preferred-register: '' }
+  - { id: 11, class: gr32, preferred-register: '' }
+  - { id: 12, class: gr32, preferred-register: '' }
+liveins:         
+  - { reg: '%edi', virtual-reg: '%4' }
+body:             |
+  bb.0.bb0:
+    successors: %bb.1.bb1(0x80000000)
+    liveins: %edi
+  
+    %4 = COPY %edi
+    %5 = MOV32r0 implicit-def dead %eflags
+  
+  bb.1.bb1:
+    successors: %bb.3.bb4(0x30000000), %bb.2.bb3(0x50000000)
+  
+    ; CHECK: %0 = PHI %5, %bb.0.bb0, %3, %bb.5.bb7
+    %0 = PHI %5, %bb.0.bb0, %3, %bb.5.bb7
+    %6 = MOV32ri 1
+    TEST32rr %4, %4, implicit-def %eflags
+    JE_1 %bb.3.bb4, implicit %eflags
+    JMP_1 %bb.2.bb3
+  
+  bb.2.bb3:
+    successors: %bb.3.bb4(0x80000000)
+  
+    %7 = MOV32ri 2
+  
+  bb.3.bb4:
+    successors: %bb.5.bb7(0x30000000), %bb.4.bb6(0x50000000)
+  
+    %1 = PHI %6, %bb.1.bb1, %7, %bb.2.bb3
+    TEST32rr %1, %1, implicit-def %eflags
+    JE_1 %bb.5.bb7, implicit %eflags
+    JMP_1 %bb.4.bb6
+  
+  bb.4.bb6:
+    successors: %bb.5.bb7(0x80000000)
+  
+    %9 = MOV32ri 2
+  
+  bb.5.bb7:
+    successors: %bb.1.bb1(0x7c000000), %bb.6.bb8(0x04000000)
+  
+    %2 = PHI %6, %bb.3.bb4, %9, %bb.4.bb6
+    %10 = ADD32rr %1, %0, implicit-def dead %eflags
+    ; CHECK: %10 = ADD32rr
+    ; CHECK-SAME: %0,
+    ; CHECK-SAME: %1,
+    %3 = ADD32rr %2, killed %10, implicit-def dead %eflags
+    ; CHECK: %3 = ADD32rr
+    ; CHECK-SAME: %10,
+    ; CHECK-SAME: %2,
+    %11 = SUB32ri8 %3, 10, implicit-def %eflags
+    JL_1 %bb.1.bb1, implicit %eflags
+    JMP_1 %bb.6.bb8
+  
+  bb.6.bb8:
+    %12 = MOV32r0 implicit-def dead %eflags
+    %eax = COPY %12
+    RET 0, %eax
+
+...
+---
+# Here a recurrence is formulated around %0, %11, and %3, but operands should
+# not be commuted because %0 has a use outside of recurrence. This is to
+# prevent the case of commuting operands ties the values with overlapping live
+# ranges. 
+name:            bar
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr64, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr32, preferred-register: '' }
+  - { id: 8, class: gr32, preferred-register: '' }
+  - { id: 9, class: gr32, preferred-register: '' }
+  - { id: 10, class: gr32, preferred-register: '' }
+  - { id: 11, class: gr32, preferred-register: '' }
+  - { id: 12, class: gr32, preferred-register: '' }
+  - { id: 13, class: gr32, preferred-register: '' }
+liveins:         
+  - { reg: '%edi', virtual-reg: '%4' }
+  - { reg: '%rsi', virtual-reg: '%5' }
+body:             |
+  bb.0.bb0:
+    successors: %bb.1.bb1(0x80000000)
+    liveins: %edi, %rsi
+  
+    %5 = COPY %rsi
+    %4 = COPY %edi
+    %6 = MOV32r0 implicit-def dead %eflags
+  
+  bb.1.bb1:
+    successors: %bb.3.bb4(0x30000000), %bb.2.bb3(0x50000000)
+  
+    %0 = PHI %6, %bb.0.bb0, %3, %bb.5.bb7
+    ; CHECK: %0 = PHI %6, %bb.0.bb0, %3, %bb.5.bb7
+    %7 = MOV32ri 1
+    TEST32rr %4, %4, implicit-def %eflags
+    JE_1 %bb.3.bb4, implicit %eflags
+    JMP_1 %bb.2.bb3
+  
+  bb.2.bb3:
+    successors: %bb.3.bb4(0x80000000)
+  
+    %8 = MOV32ri 2
+  
+  bb.3.bb4:
+    successors: %bb.5.bb7(0x30000000), %bb.4.bb6(0x50000000)
+  
+    %1 = PHI %7, %bb.1.bb1, %8, %bb.2.bb3
+    TEST32rr %1, %1, implicit-def %eflags
+    JE_1 %bb.5.bb7, implicit %eflags
+    JMP_1 %bb.4.bb6
+  
+  bb.4.bb6:
+    successors: %bb.5.bb7(0x80000000)
+  
+    %10 = MOV32ri 2
+  
+  bb.5.bb7:
+    successors: %bb.1.bb1(0x7c000000), %bb.6.bb8(0x04000000)
+  
+    %2 = PHI %7, %bb.3.bb4, %10, %bb.4.bb6
+    %11 = ADD32rr %1, %0, implicit-def dead %eflags
+    ; CHECK: %11 = ADD32rr
+    ; CHECK-SAME: %1,
+    ; CHECK-SAME: %0,
+    MOV32mr %5, 1, _, 0, _, %0 :: (store 4 into %ir.p)
+    %3 = ADD32rr %2, killed %11, implicit-def dead %eflags
+    ; CHECK: %3 = ADD32rr
+    ; CHECK-SAME: %2,
+    ; CHECK-SAME: %11,
+    %12 = SUB32ri8 %3, 10, implicit-def %eflags
+    JL_1 %bb.1.bb1, implicit %eflags
+    JMP_1 %bb.6.bb8
+  
+  bb.6.bb8:
+    %13 = MOV32r0 implicit-def dead %eflags
+    %eax = COPY %13
+    RET 0, %eax
+
+...

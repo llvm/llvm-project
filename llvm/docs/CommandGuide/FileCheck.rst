@@ -77,6 +77,15 @@ OPTIONS
   -verify``. With this option FileCheck will verify that input does not contain
   warnings not covered by any ``CHECK:`` patterns.
 
+.. option:: --enable-var-scope
+
+  Enables scope for regex variables.
+
+  Variables with names that start with ``$`` are considered global and
+  remain set throughout the file.
+
+  All other variables get undefined after each encountered ``CHECK-LABEL``.
+
 .. option:: -version
 
  Show the version number of this program.
@@ -344,6 +353,9 @@ matched by the directive cannot also be matched by any other check present in
 other unique identifiers. Conceptually, the presence of ``CHECK-LABEL`` divides
 the input stream into separate blocks, each of which is processed independently,
 preventing a ``CHECK:`` directive in one block matching a line in another block.
+If ``--enable-var-scope`` is in effect, all local variables are cleared at the
+beginning of the block.
+
 For example,
 
 .. code-block:: llvm
@@ -435,6 +447,13 @@ were defined on. For example:
 
 Can be useful if you want the operands of ``op`` to be the same register,
 and don't care exactly which register it is.
+
+If ``--enable-var-scope`` is in effect, variables with names that
+start with ``$`` are considered to be global. All others variables are
+local.  All local variables get undefined at the beginning of each
+CHECK-LABEL block. Global variables are not affected by CHECK-LABEL.
+This makes it easier to ensure that individual tests are not affected
+by variables set in preceding tests.
 
 FileCheck Expressions
 ~~~~~~~~~~~~~~~~~~~~~

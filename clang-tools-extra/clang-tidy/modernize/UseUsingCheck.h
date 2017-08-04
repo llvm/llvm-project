@@ -21,9 +21,14 @@ namespace modernize {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-using.html
 class UseUsingCheck : public ClangTidyCheck {
+
+  const bool IgnoreMacros;
+
 public:
-  UseUsingCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UseUsingCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
+    Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };

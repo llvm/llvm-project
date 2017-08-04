@@ -589,8 +589,12 @@ FileInfo::openCoveragePath(StringRef CoveragePath) {
 /// print -  Print source files with collected line count information.
 void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
                      StringRef GCNOFile, StringRef GCDAFile) {
-  for (const auto &LI : LineInfo) {
-    StringRef Filename = LI.first();
+  SmallVector<StringRef, 4> Filenames;
+  for (const auto &LI : LineInfo)
+    Filenames.push_back(LI.first());
+  std::sort(Filenames.begin(), Filenames.end());
+
+  for (StringRef Filename : Filenames) {
     auto AllLines = LineConsumer(Filename);
 
     std::string CoveragePath = getCoveragePath(Filename, MainFilename);
@@ -603,7 +607,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     CovOS << "        -:    0:Runs:" << RunCount << "\n";
     CovOS << "        -:    0:Programs:" << ProgramCount << "\n";
 
-    const LineData &Line = LI.second;
+    const LineData &Line = LineInfo[Filename];
     GCOVCoverage FileCoverage(Filename);
     for (uint32_t LineIndex = 0; LineIndex < Line.LastLine || !AllLines.empty();
          ++LineIndex) {

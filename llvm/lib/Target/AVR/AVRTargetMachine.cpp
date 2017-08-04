@@ -15,12 +15,12 @@
 
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 
-#include "AVRTargetObjectFile.h"
 #include "AVR.h"
+#include "AVRTargetObjectFile.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 namespace llvm {
@@ -57,7 +57,7 @@ namespace {
 /// AVR Code Generator Pass Configuration Options.
 class AVRPassConfig : public TargetPassConfig {
 public:
-  AVRPassConfig(AVRTargetMachine *TM, PassManagerBase &PM)
+  AVRPassConfig(AVRTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
   AVRTargetMachine &getAVRTargetMachine() const {
@@ -66,12 +66,13 @@ public:
 
   bool addInstSelector() override;
   void addPreSched2() override;
+  void addPreEmitPass() override;
   void addPreRegAlloc() override;
 };
 } // namespace
 
 TargetPassConfig *AVRTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new AVRPassConfig(this, PM);
+  return new AVRPassConfig(*this, PM);
 }
 
 extern "C" void LLVMInitializeAVRTarget() {
@@ -113,6 +114,11 @@ void AVRPassConfig::addPreRegAlloc() {
 void AVRPassConfig::addPreSched2() {
   addPass(createAVRRelaxMemPass());
   addPass(createAVRExpandPseudoPass());
+}
+
+void AVRPassConfig::addPreEmitPass() {
+  // Must run branch selection immediately preceding the asm printer.
+  addPass(&BranchRelaxationPassID);
 }
 
 } // end of namespace llvm

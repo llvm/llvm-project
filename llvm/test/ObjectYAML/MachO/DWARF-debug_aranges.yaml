@@ -313,7 +313,8 @@ LinkEditData:
     - _main
 DWARF:           
   debug_aranges:   
-    - Length:          44
+    - Length:          
+        TotalLength:     44
       Version:         2
       CuOffset:        0
       AddrSize:        8
@@ -325,7 +326,8 @@ DWARF:
 
 #CHECK: DWARF:           
 #CHECK:   debug_aranges:   
-#CHECK:     - Length:          44
+#CHECK:     - Length:          
+#CHECK:         TotalLength:     44
 #CHECK:       Version:         2
 #CHECK:       CuOffset:        0
 #CHECK:       AddrSize:        8

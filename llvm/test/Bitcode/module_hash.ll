@@ -1,7 +1,7 @@
 ; Check per module hash.
-; RUN: opt  -module-hash  %s -o - | llvm-bcanalyzer -dump | FileCheck %s --check-prefix=MOD1
+; RUN: opt  -module-hash  %s -o - | llvm-bcanalyzer -dump -check-hash=foo | FileCheck %s --check-prefix=MOD1
 ; MOD1: <HASH op0={{[0-9]*}} op1={{[0-9]*}} op2={{[0-9]*}} op3={{[0-9]*}} op4={{[0-9]*}} (match)/>
-; RUN: opt  -module-hash  %p/Inputs/module_hash.ll -o - | llvm-bcanalyzer -dump | FileCheck %s --check-prefix=MOD2
+; RUN: opt  -module-hash  %p/Inputs/module_hash.ll -o - | llvm-bcanalyzer -dump -check-hash=bar | FileCheck %s --check-prefix=MOD2
 ; MOD2: <HASH op0={{[0-9]*}} op1={{[0-9]*}} op2={{[0-9]*}} op3={{[0-9]*}} op4={{[0-9]*}} (match)/>
 
 ; Check that the hash matches in the combined index.
@@ -21,8 +21,8 @@
 ; RUN: cat %t.hash | FileCheck %s --check-prefix=COMBINED
 
 ; First capture the value of the hash for the two modules.
-; COMBINED: <HASH op0=[[HASH1_1:[0-9]*]] op1=[[HASH1_2:[0-9]*]] op2=[[HASH1_3:[0-9]*]] op3=[[HASH1_4:[0-9]*]] op4=[[HASH1_5:[0-9]*]] (match)/>
-; COMBINED: <HASH op0=[[HASH2_1:[0-9]*]] op1=[[HASH2_2:[0-9]*]] op2=[[HASH2_3:[0-9]*]] op3=[[HASH2_4:[0-9]*]] op4=[[HASH2_5:[0-9]*]] (match)/>
+; COMBINED: <HASH op0=[[HASH1_1:[0-9]*]] op1=[[HASH1_2:[0-9]*]] op2=[[HASH1_3:[0-9]*]] op3=[[HASH1_4:[0-9]*]] op4=[[HASH1_5:[0-9]*]]/>
+; COMBINED: <HASH op0=[[HASH2_1:[0-9]*]] op1=[[HASH2_2:[0-9]*]] op2=[[HASH2_3:[0-9]*]] op3=[[HASH2_4:[0-9]*]] op4=[[HASH2_5:[0-9]*]]/>
 
 ; Validate against the value extracted from the combined index
 ; COMBINED-DAG: <HASH abbrevid={{[0-9]*}} op0=[[HASH1_1]] op1=[[HASH1_2]] op2=[[HASH1_3]] op3=[[HASH1_4]] op4=[[HASH1_5]]/>

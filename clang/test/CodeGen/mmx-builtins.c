@@ -383,6 +383,93 @@ __m64 test_mm_sad_pu8(__m64 a, __m64 b) {
   return _mm_sad_pu8(a, b);
 }
 
+__m64 test_mm_set_pi8(char a, char b, char c, char d, char e, char f, char g, char h) {
+  // CHECK-LABEL: test_mm_set_pi8
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  return _mm_set_pi8(a, b, c, d, e, f, g, h);
+}
+
+__m64 test_mm_set_pi16(short a, short b, short c, short d) {
+  // CHECK-LABEL: test_mm_set_pi16
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  return _mm_set_pi16(a, b, c, d);
+}
+
+__m64 test_mm_set_pi32(int a, int b) {
+  // CHECK-LABEL: test_mm_set_pi32
+  // CHECK: insertelement <2 x i32>
+  // CHECK: insertelement <2 x i32>
+  return _mm_set_pi32(a, b);
+}
+
+__m64 test_mm_setr_pi8(char a, char b, char c, char d, char e, char f, char g, char h) {
+  // CHECK-LABEL: test_mm_setr_pi8
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  return _mm_setr_pi8(a, b, c, d, e, f, g, h);
+}
+
+__m64 test_mm_setr_pi16(short a, short b, short c, short d) {
+  // CHECK-LABEL: test_mm_setr_pi16
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  return _mm_setr_pi16(a, b, c, d);
+}
+
+__m64 test_mm_setr_pi32(int a, int b) {
+  // CHECK-LABEL: test_mm_setr_pi32
+  // CHECK: insertelement <2 x i32>
+  // CHECK: insertelement <2 x i32>
+  return _mm_setr_pi32(a, b);
+}
+
+__m64 test_mm_set1_pi8(char a) {
+  // CHECK-LABEL: test_mm_set1_pi8
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  // CHECK: insertelement <8 x i8>
+  return _mm_set1_pi8(a);
+}
+
+__m64 test_mm_set1_pi16(short a) {
+  // CHECK-LABEL: test_mm_set1_pi16
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  // CHECK: insertelement <4 x i16>
+  return _mm_set1_pi16(a);
+}
+
+__m64 test_mm_set1_pi32(int a) {
+  // CHECK-LABEL: test_mm_set1_pi32
+  // CHECK: insertelement <2 x i32>
+  // CHECK: insertelement <2 x i32>
+  return _mm_set1_pi32(a);
+}
+
 __m64 test_mm_shuffle_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_shuffle_pi8
   // CHECK: call x86_mmx @llvm.x86.ssse3.pshuf.b

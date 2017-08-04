@@ -244,7 +244,7 @@ for.end:
 ; SGE -> SLT
 ; Turn this into a min reduction (select inputs are reversed).
 ; CHECK-LABEL: @sge_min_red(
-; CHECK: icmp sge <2 x i32>
+; CHECK: icmp slt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp slt <2 x i32>
@@ -273,7 +273,7 @@ for.end:
 ; SLE -> SGT
 ; Turn this into a max reduction (select inputs are reversed).
 ; CHECK-LABEL: @sle_min_red(
-; CHECK: icmp sle <2 x i32>
+; CHECK: icmp sgt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp sgt <2 x i32>
@@ -302,7 +302,7 @@ for.end:
 ; UGE -> ULT
 ; Turn this into a min reduction (select inputs are reversed).
 ; CHECK-LABEL: @uge_min_red(
-; CHECK: icmp uge <2 x i32>
+; CHECK: icmp ult <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp ult <2 x i32>
@@ -331,7 +331,7 @@ for.end:
 ; ULE -> UGT
 ; Turn this into a max reduction (select inputs are reversed).
 ; CHECK-LABEL: @ule_min_red(
-; CHECK: icmp ule <2 x i32>
+; CHECK: icmp ugt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
 ; CHECK: icmp ugt <2 x i32>

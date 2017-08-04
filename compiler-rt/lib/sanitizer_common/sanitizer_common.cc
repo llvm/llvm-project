@@ -284,9 +284,10 @@ void LoadedModule::clear() {
   }
 }
 
-void LoadedModule::addAddressRange(uptr beg, uptr end, bool executable) {
+void LoadedModule::addAddressRange(uptr beg, uptr end, bool executable,
+                                   bool writable) {
   void *mem = InternalAlloc(sizeof(AddressRange));
-  AddressRange *r = new(mem) AddressRange(beg, end, executable);
+  AddressRange *r = new(mem) AddressRange(beg, end, executable, writable);
   ranges_.push_back(r);
   if (executable && end > max_executable_address_)
     max_executable_address_ = end;
@@ -490,7 +491,8 @@ void __sanitizer_set_report_fd(void *fd) {
   report_file.fd_pid = internal_getpid();
 }
 
-void __sanitizer_report_error_summary(const char *error_summary) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_report_error_summary,
+                             const char *error_summary) {
   Printf("%s\n", error_summary);
 }
 
@@ -505,11 +507,4 @@ int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
                                               void (*free_hook)(const void *)) {
   return InstallMallocFreeHooks(malloc_hook, free_hook);
 }
-
-#if !SANITIZER_GO && !SANITIZER_SUPPORTS_WEAK_HOOKS
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void __sanitizer_print_memory_profile(int top_percent) {
-  (void)top_percent;
-}
-#endif
 } // extern "C"

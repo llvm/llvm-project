@@ -140,6 +140,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
 ; SKX-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -192,6 +193,7 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func16xi1
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; SKX-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -291,11 +293,12 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0
 ; SKX-NEXT:    movb $85, %al
-; SKX-NEXT:    kmovb %eax, %k1
+; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    kandb %k1, %k0, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    popq %rax

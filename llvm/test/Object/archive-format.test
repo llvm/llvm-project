@@ -37,6 +37,19 @@ BSD-NEXT: 0123456789abcde{{.....}}bar.
 BSD-SAME: #1/16           0           0     0     644     20        `
 BSD-NEXT: 0123456789abcdefzed.
 
+RUN: rm -f %t.a
+RUN: llvm-ar --format=darwin rc %t.a 0123456789abcde 0123456789abcdef
+RUN: cat %t.a | FileCheck -strict-whitespace --check-prefix=DARWIN %s
+
+DARWIN:      !<arch>
+DARWIN-NEXT: #1/20           0           0     0     644     28        `
+Each [[:space:]] matches a newline.  We explicitly match 3 newlines, as the
+fourth newline is implicitly consumed by FileCheck and cannot be matched.
+DARWIN-NEXT: 0123456789abcde{{.....}}bar.{{[[:space:]][[:space:]][[:space:]]}}
+DARWIN-NEXT: #1/20           0           0     0     644     28        `
+DARWIN-NEXT: 0123456789abcdef{{....}}zed.
+
+
 RUN: rm -f test.a
 RUN: llvm-ar --format=gnu rcT test.a 0123456789abcde 0123456789abcdef
 RUN: cat test.a | FileCheck -strict-whitespace --check-prefix=THIN %s
@@ -65,3 +78,15 @@ THIN-PATH-NEXT: /65             0           0     0     644     4         `
 
 RUN: not llvm-ar --format=bsd rcT bad.a 0123456789abcde 0123456789abcdef 2>&1 | FileCheck --check-prefix=BSD-THIN %s
 BSD-THIN: Only the gnu format has a thin mode.
+
+If an archive has an object with no symbols, the linker and some other
+tools on some versions of Solaris will abort operations if there is no
+symbol table.  Create such an object, put it into an archive, and check to
+see that there is an empty symbol table.
+RUN: mkdir -p %t
+RUN: yaml2obj %S/Inputs/solaris-nosymbols.yaml > %t/foo.o
+RUN: llvm-ar rs %t/foo.a %t/foo.o
+RUN: cat -v %t/foo.a | FileCheck -strict-whitespace --check-prefix=SOLARIS %s
+SOLARIS:      !<arch>
+SOLARIS-NEXT: /               0           0     0     0       8         `
+SOLARIS-NEXT: ^@^@^@^@^@^@^@^@foo.o/

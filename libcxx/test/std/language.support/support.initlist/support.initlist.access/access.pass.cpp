@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // template<class E> class initializer_list;
 
 // const E* begin() const;
@@ -18,8 +20,6 @@
 #include <cstddef>
 
 #include "test_macros.h"
-
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 struct A
 {
@@ -52,13 +52,9 @@ struct B
 
 #endif  // TEST_STD_VER > 11
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     A test1 = {3, 2, 1};
-#endif
 #if TEST_STD_VER > 11
     constexpr B test2 = {3, 2, 1};
 #endif  // TEST_STD_VER > 11

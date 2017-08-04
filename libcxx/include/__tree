@@ -17,11 +17,13 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include <__undef_min_max>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -42,6 +44,10 @@ union __value_type;
 template <class _Key, class _Value>
 struct __value_type;
 #endif
+
+template <class _Key, class _CP, class _Compare,
+    bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
+class __map_value_compare;
 
 template <class _Allocator> class __map_node_destructor;
 template <class _TreeIterator> class _LIBCPP_TEMPLATE_VIS __map_iterator;
@@ -957,6 +963,25 @@ private:
 
 };
 
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _Compare, class _Allocator>
+struct __diagnose_tree_helper {
+  static constexpr bool __trigger_diagnostics()
+      _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Compare const&, _Tp const&, _Tp const&>::value,
+            "the specified comparator type does not provide a const call operator")
+  { return true; }
+};
+
+template <class _Key, class _Value, class _KeyComp, class _Alloc>
+struct __diagnose_tree_helper<
+    __value_type<_Key, _Value>,
+    __map_value_compare<_Key, __value_type<_Key, _Value>, _KeyComp>,
+    _Alloc
+> : __diagnose_tree_helper<_Key, _KeyComp, _Alloc>
+{
+};
+#endif // !_LIBCPP_CXX03_LANG
+
 template <class _Tp, class _Compare, class _Allocator>
 class __tree
 {
@@ -1082,7 +1107,7 @@ public:
         void __assign_unique(_InputIterator __first, _InputIterator __last);
     template <class _InputIterator>
         void __assign_multi(_InputIterator __first, _InputIterator __last);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     __tree(__tree&& __t)
         _NOEXCEPT_(
             is_nothrow_move_constructible<__node_allocator>::value &&
@@ -1093,7 +1118,7 @@ public:
             __node_traits::propagate_on_container_move_assignment::value &&
             is_nothrow_move_assignable<value_compare>::value &&
             is_nothrow_move_assignable<__node_allocator>::value);
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif // _LIBCPP_CXX03_LANG
 
     ~__tree();
 
@@ -1479,7 +1504,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp)
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__node_allocator(__a)),
+      __pair1_(__second_tag(), __node_allocator(__a)),
       __pair3_(0)
 {
     __begin_node() = __end_node();
@@ -1489,7 +1514,7 @@ template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp,
                                            const allocator_type& __a)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__node_allocator(__a)),
+      __pair1_(__second_tag(), __node_allocator(__a)),
       __pair3_(0, __comp)
 {
     __begin_node() = __end_node();
@@ -1646,13 +1671,13 @@ __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _Input
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     : __begin_node_(__iter_pointer()),
-      __pair1_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
+      __pair1_(__second_tag(), __node_traits::select_on_container_copy_construction(__t.__node_alloc())),
       __pair3_(0, __t.value_comp())
 {
     __begin_node() = __end_node();
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t)
@@ -1676,7 +1701,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t)
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
-    : __pair1_(__node_allocator(__a)),
+    : __pair1_(__second_tag(), __node_allocator(__a)),
       __pair3_(0, _VSTD::move(__t.value_comp()))
 {
     if (__a == __t.__alloc())
@@ -1782,14 +1807,18 @@ __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
     return *this;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::~__tree()
 {
     static_assert((is_copy_constructible<value_compare>::value),
                  "Comparator must be copy-constructible.");
-    destroy(__root());
+#ifndef _LIBCPP_CXX03_LANG
+    static_assert((__diagnose_tree_helper<_Tp, _Compare, _Allocator>::
+                     __trigger_diagnostics()), "");
+#endif
+  destroy(__root());
 }
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -2657,5 +2686,7 @@ swap(__tree<_Tp, _Compare, _Allocator>& __x,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP___TREE

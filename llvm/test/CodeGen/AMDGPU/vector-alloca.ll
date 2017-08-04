@@ -15,7 +15,7 @@
 ; EG: MOV
 ; EG: MOV
 ; EG: MOVA_INT
-define void @vector_read(i32 addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @vector_read(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -44,7 +44,7 @@ entry:
 ; EG: MOV
 ; EG: MOVA_INT
 ; EG: MOVA_INT
-define void @vector_write(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
+define amdgpu_kernel void @vector_write(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -71,7 +71,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}bitcast_gep:
 ; EG: STORE_RAW
-define void @bitcast_gep(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
+define amdgpu_kernel void @bitcast_gep(i32 addrspace(1)* %out, i32 %w_index, i32 %r_index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -93,7 +93,7 @@ entry:
 ; OPT-LABEL: @vector_read_bitcast_gep(
 ; OPT: %0 = extractelement <4 x i32> <i32 1065353216, i32 1, i32 2, i32 3>, i32 %index
 ; OPT: store i32 %0, i32 addrspace(1)* %out, align 4
-define void @vector_read_bitcast_gep(i32 addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @vector_read_bitcast_gep(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32]
   %x = getelementptr inbounds [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
@@ -121,7 +121,7 @@ entry:
 ; OPT: store float
 ; OPT: store float
 ; OPT: load float
-define void @vector_read_bitcast_alloca(float addrspace(1)* %out, i32 %index) {
+define amdgpu_kernel void @vector_read_bitcast_alloca(float addrspace(1)* %out, i32 %index) {
 entry:
   %tmp = alloca [4 x i32]
   %tmp.bc = bitcast [4 x i32]* %tmp to [4 x float]*
@@ -136,5 +136,27 @@ entry:
   %tmp1 = getelementptr inbounds [4 x float], [4 x float]* %tmp.bc, i32 0, i32 %index
   %tmp2 = load float, float* %tmp1
   store float %tmp2, float addrspace(1)* %out
+  ret void
+}
+
+; The pointer arguments in local address space should not affect promotion to vector.
+
+; OPT-LABEL: @vector_read_with_local_arg(
+; OPT: %0 = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index
+; OPT: store i32 %0, i32 addrspace(1)* %out, align 4
+define amdgpu_kernel void @vector_read_with_local_arg(i32 addrspace(3)* %stopper, i32 addrspace(1)* %out, i32 %index) {
+entry:
+  %tmp = alloca [4 x i32]
+  %x = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 0
+  %y = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 1
+  %z = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 2
+  %w = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 3
+  store i32 0, i32* %x
+  store i32 1, i32* %y
+  store i32 2, i32* %z
+  store i32 3, i32* %w
+  %tmp1 = getelementptr [4 x i32], [4 x i32]* %tmp, i32 0, i32 %index
+  %tmp2 = load i32, i32* %tmp1
+  store i32 %tmp2, i32 addrspace(1)* %out
   ret void
 }

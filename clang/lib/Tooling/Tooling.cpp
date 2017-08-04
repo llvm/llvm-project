@@ -100,7 +100,6 @@ clang::CompilerInvocation *newInvocation(
       *Diagnostics);
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getCodeGenOpts().DisableFree = false;
-  Invocation->getDependencyOutputOpts() = DependencyOutputOptions();
   return Invocation;
 }
 
@@ -140,9 +139,11 @@ bool runToolOnCodeWithArgs(
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
-  ToolInvocation Invocation(getSyntaxOnlyToolArgs(ToolName, Args, FileNameRef),
-                            ToolAction, Files.get(),
-                            std::move(PCHContainerOps));
+  ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster();
+  ToolInvocation Invocation(
+      getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileNameRef), FileNameRef),
+      ToolAction, Files.get(),
+      std::move(PCHContainerOps));
 
   SmallString<1024> CodeStorage;
   InMemoryFileSystem->addFile(FileNameRef, 0,
@@ -244,7 +245,7 @@ bool ToolInvocation::run() {
   const char *const BinaryName = Argv[0];
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   unsigned MissingArgIndex, MissingArgCount;
-  std::unique_ptr<llvm::opt::OptTable> Opts(driver::createDriverOptTable());
+  std::unique_ptr<llvm::opt::OptTable> Opts = driver::createDriverOptTable();
   llvm::opt::InputArgList ParsedArgs = Opts->ParseArgs(
       ArrayRef<const char *>(Argv).slice(1), MissingArgIndex, MissingArgCount);
   ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
@@ -260,6 +261,8 @@ bool ToolInvocation::run() {
   Driver->setCheckInputsExist(false);
   const std::unique_ptr<clang::driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
+  if (!Compilation)
+    return false;
   const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
       &Diagnostics, Compilation.get());
   if (!CC1Args) {
@@ -333,6 +336,7 @@ ClangTool::ClangTool(const CompilationDatabase &Compilations,
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   appendArgumentsAdjuster(getClangStripOutputAdjuster());
   appendArgumentsAdjuster(getClangSyntaxOnlyAdjuster());
+  appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
 }
 
 ClangTool::~ClangTool() {}
@@ -508,7 +512,8 @@ buildASTFromCode(const Twine &Code, const Twine &FileName,
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     const Twine &Code, const std::vector<std::string> &Args,
     const Twine &FileName, const Twine &ToolName,
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
+    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    ArgumentsAdjuster Adjuster) {
   SmallString<16> FileNameStorage;
   StringRef FileNameRef = FileName.toNullTerminatedStringRef(FileNameStorage);
 
@@ -521,8 +526,10 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
-  ToolInvocation Invocation(getSyntaxOnlyToolArgs(ToolName, Args, FileNameRef),
-                            &Action, Files.get(), std::move(PCHContainerOps));
+
+  ToolInvocation Invocation(
+      getSyntaxOnlyToolArgs(ToolName, Adjuster(Args, FileNameRef), FileNameRef),
+      &Action, Files.get(), std::move(PCHContainerOps));
 
   SmallString<1024> CodeStorage;
   InMemoryFileSystem->addFile(FileNameRef, 0,

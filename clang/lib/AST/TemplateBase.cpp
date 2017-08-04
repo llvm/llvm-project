@@ -453,10 +453,6 @@ LLVM_DUMP_METHOD void TemplateArgument::dump() const { dump(llvm::errs()); }
 // TemplateArgumentLoc Implementation
 //===----------------------------------------------------------------------===//
 
-TemplateArgumentLocInfo::TemplateArgumentLocInfo() {
-  memset((void*)this, 0, sizeof(TemplateArgumentLocInfo));
-}
-
 SourceRange TemplateArgumentLoc::getSourceRange() const {
   switch (Argument.getKind()) {
   case TemplateArgument::Expression:

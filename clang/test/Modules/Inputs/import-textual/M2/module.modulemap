@@ -1,0 +1,17 @@
+
+module M {
+
+  module A {
+    header "A/A.h"
+    textual header "someheader.h"
+    export *
+  }
+
+  module B {
+    header "B/B.h"
+    textual header "someheader.h"
+    export *
+  }
+
+  export *
+}

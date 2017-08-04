@@ -145,4 +145,22 @@ public:
 // CHECK-CC6: o2 : [#BaseTemplate<T>#]o2
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:142:11 %s -o - | FileCheck -check-prefix=CHECK-CC6 %s
   }
+
+  static void staticFn(T &obj);
+
+  struct Nested { };
 };
+
+template<typename T>
+void dependentColonColonCompletion() {
+  Template<T>::staticFn();
+// CHECK-CC7: function : [#void#]function()
+// CHECK-CC7: Nested : Nested
+// CHECK-CC7: o1 : [#BaseTemplate<int>#]o1
+// CHECK-CC7: o2 : [#BaseTemplate<T>#]o2
+// CHECK-CC7: staticFn : [#void#]staticFn(<#T &obj#>)
+// CHECK-CC7: Template : Template
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:156:16 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
+  typename Template<T>::Nested m;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:164:25 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
+}

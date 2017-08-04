@@ -24,8 +24,9 @@
 
 ; CHECK: debug_info contents
 ; 0x74 is DW_OP_breg4, showing that the parameter is accessed indirectly
-; (with a zero offset) from the register parameter
-; CHECK: DW_AT_location [DW_FORM_data4]	([[F_LOC:0x[0-9]*]])
+; (with a zero offset) from the register parameter.
+; CHECK: DW_AT_location {{.*}} 74 00 06
+
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}} = "f"
 ;
@@ -34,9 +35,6 @@
 ; CHECK: DW_AT_name{{.*}} = "g"
 ;
 ; CHECK: debug_loc contents
-; CHECK:         [[F_LOC]]: Beginning
-; CHECK-NEXT:               Ending
-; CHECK-NEXT: Location description: 74 00
 ; CHECK:         [[G_LOC]]: Beginning
 ; CHECK-NEXT:               Ending
 ; CHECK-NEXT: Location description: 74 00
@@ -77,11 +75,10 @@ if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !32
 }
 
-declare void @_ZN7pr147634sinkEPv(i8*) #2
+declare void @_ZN7pr147634sinkEPv(i8*)
 
-attributes #0 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { uwtable }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf"="true" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!21, !33}

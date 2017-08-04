@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf | FileCheck %s
+; RUN: not llc < %s -march=bpf | FileCheck %s
 
 %struct.key_t = type { i32, [16 x i8] }
 

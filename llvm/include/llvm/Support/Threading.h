@@ -15,16 +15,22 @@
 #ifndef LLVM_SUPPORT_THREADING_H
 #define LLVM_SUPPORT_THREADING_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include <ciso646> // So we can check the C++ standard lib macros.
 #include <functional>
 
+#if defined(_MSC_VER)
+// MSVC's call_once implementation worked since VS 2015, which is the minimum
+// supported version as of this writing.
+#define LLVM_THREADING_USE_STD_CALL_ONCE 1
+#elif defined(LLVM_ON_UNIX) &&                                                 \
+    (defined(_LIBCPP_VERSION) ||                                               \
+     !(defined(__NetBSD__) || defined(__OpenBSD__) || defined(__ppc__)))
 // std::call_once from libc++ is used on all Unix platforms. Other
 // implementations like libstdc++ are known to have problems on NetBSD,
 // OpenBSD and PowerPC.
-#if defined(LLVM_ON_UNIX) && (defined(_LIBCPP_VERSION) ||                      \
-    !(defined(__NetBSD__) || defined(__OpenBSD__) || defined(__ppc__)))
 #define LLVM_THREADING_USE_STD_CALL_ONCE 1
 #else
 #define LLVM_THREADING_USE_STD_CALL_ONCE 0
@@ -37,41 +43,43 @@
 #endif
 
 namespace llvm {
-  /// Returns true if LLVM is compiled with support for multi-threading, and
-  /// false otherwise.
-  bool llvm_is_multithreaded();
+class Twine;
 
-  /// llvm_execute_on_thread - Execute the given \p UserFn on a separate
-  /// thread, passing it the provided \p UserData and waits for thread
-  /// completion.
-  ///
-  /// This function does not guarantee that the code will actually be executed
-  /// on a separate thread or honoring the requested stack size, but tries to do
-  /// so where system support is available.
-  ///
-  /// \param UserFn - The callback to execute.
-  /// \param UserData - An argument to pass to the callback function.
-  /// \param RequestedStackSize - If non-zero, a requested size (in bytes) for
-  /// the thread stack.
-  void llvm_execute_on_thread(void (*UserFn)(void*), void *UserData,
-                              unsigned RequestedStackSize = 0);
+/// Returns true if LLVM is compiled with support for multi-threading, and
+/// false otherwise.
+bool llvm_is_multithreaded();
+
+/// llvm_execute_on_thread - Execute the given \p UserFn on a separate
+/// thread, passing it the provided \p UserData and waits for thread
+/// completion.
+///
+/// This function does not guarantee that the code will actually be executed
+/// on a separate thread or honoring the requested stack size, but tries to do
+/// so where system support is available.
+///
+/// \param UserFn - The callback to execute.
+/// \param UserData - An argument to pass to the callback function.
+/// \param RequestedStackSize - If non-zero, a requested size (in bytes) for
+/// the thread stack.
+void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
+                            unsigned RequestedStackSize = 0);
 
 #if LLVM_THREADING_USE_STD_CALL_ONCE
 
   typedef std::once_flag once_flag;
 
-  /// This macro is the only way you should define your once flag for LLVM's
-  /// call_once.
-#define LLVM_DEFINE_ONCE_FLAG(flag) static once_flag flag
-
 #else
 
   enum InitStatus { Uninitialized = 0, Wait = 1, Done = 2 };
-  typedef volatile sys::cas_flag once_flag;
 
-  /// This macro is the only way you should define your once flag for LLVM's
-  /// call_once.
-#define LLVM_DEFINE_ONCE_FLAG(flag) static once_flag flag = Uninitialized
+  /// \brief The llvm::once_flag structure
+  ///
+  /// This type is modeled after std::once_flag to use with llvm::call_once.
+  /// This structure must be used as an opaque object. It is a struct to force
+  /// autoinitialization and behave like std::once_flag.
+  struct once_flag {
+    volatile sys::cas_flag status = Uninitialized;
+  };
 
 #endif
 
@@ -81,7 +89,7 @@ namespace llvm {
   /// \code
   ///   void foo() {...};
   ///   ...
-  ///   LLVM_DEFINE_ONCE_FLAG(flag);
+  ///   static once_flag flag;
   ///   call_once(flag, foo);
   /// \endcode
   ///
@@ -95,24 +103,24 @@ namespace llvm {
 #else
     // For other platforms we use a generic (if brittle) version based on our
     // atomics.
-    sys::cas_flag old_val = sys::CompareAndSwap(&flag, Wait, Uninitialized);
+    sys::cas_flag old_val = sys::CompareAndSwap(&flag.status, Wait, Uninitialized);
     if (old_val == Uninitialized) {
       std::forward<Function>(F)(std::forward<Args>(ArgList)...);
       sys::MemoryFence();
       TsanIgnoreWritesBegin();
-      TsanHappensBefore(&flag);
-      flag = Done;
+      TsanHappensBefore(&flag.status);
+      flag.status = Done;
       TsanIgnoreWritesEnd();
     } else {
       // Wait until any thread doing the call has finished.
-      sys::cas_flag tmp = flag;
+      sys::cas_flag tmp = flag.status;
       sys::MemoryFence();
       while (tmp != Done) {
-        tmp = flag;
+        tmp = flag.status;
         sys::MemoryFence();
       }
     }
-    TsanHappensAfter(&flag);
+    TsanHappensAfter(&flag.status);
 #endif
   }
 
@@ -122,6 +130,32 @@ namespace llvm {
   /// thread::hardware_concurrency().
   /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF
   unsigned heavyweight_hardware_concurrency();
+
+  /// \brief Return the current thread id, as used in various OS system calls.
+  /// Note that not all platforms guarantee that the value returned will be
+  /// unique across the entire system, so portable code should not assume
+  /// this.
+  uint64_t get_threadid();
+
+  /// \brief Get the maximum length of a thread name on this platform.
+  /// A value of 0 means there is no limit.
+  uint32_t get_max_thread_name_length();
+
+  /// \brief Set the name of the current thread.  Setting a thread's name can
+  /// be helpful for enabling useful diagnostics under a debugger or when
+  /// logging.  The level of support for setting a thread's name varies
+  /// wildly across operating systems, and we only make a best effort to
+  /// perform the operation on supported platforms.  No indication of success
+  /// or failure is returned.
+  void set_thread_name(const Twine &Name);
+
+  /// \brief Get the name of the current thread.  The level of support for
+  /// getting a thread's name varies wildly across operating systems, and it
+  /// is not even guaranteed that if you can successfully set a thread's name
+  /// that you can later get it back.  This function is intended for diagnostic
+  /// purposes, and as with setting a thread's name no indication of whether
+  /// the operation succeeded or failed is returned.
+  void get_thread_name(SmallVectorImpl<char> &Name);
 }
 
 #endif

@@ -11,8 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/YAMLParser.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <string>
 
 using namespace llvm;
 using namespace yaml;
@@ -43,6 +46,9 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
       ObjectFile.FatMachO.reset(new MachOYAML::UniversalBinary());
       MappingTraits<MachOYAML::UniversalBinary>::mapping(IO,
                                                          *ObjectFile.FatMachO);
+    } else if (IO.mapTag("!WASM")) {
+      ObjectFile.Wasm.reset(new WasmYAML::Object());
+      MappingTraits<WasmYAML::Object>::mapping(IO, *ObjectFile.Wasm);
     } else {
       Input &In = (Input &)IO;
       std::string Tag = In.getCurrentNode()->getRawTag();
@@ -50,8 +56,8 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
         IO.setError("YAML Object File missing document type tag!");
       else
         IO.setError(
-            llvm::Twine("YAML Object File unsupported document type tag '") +
-            llvm::Twine(Tag) + llvm::Twine("'!"));
+            Twine("YAML Object File unsupported document type tag '") +
+            Twine(Tag) + Twine("'!"));
     }
   }
 }

@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
-#include "PPCInstrInfo.h"
 #include "InstPrinter/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPC.h"
+#include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
@@ -29,6 +29,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -55,11 +57,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachO.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -112,7 +112,9 @@ public:
     void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
     bool runOnMachineFunction(MachineFunction &MF) override {
       Subtarget = &MF.getSubtarget<PPCSubtarget>();
-      return AsmPrinter::runOnMachineFunction(MF);
+      bool Changed = AsmPrinter::runOnMachineFunction(MF);
+      emitXRayTable();
+      return Changed;
     }
   };
 
@@ -134,6 +136,7 @@ public:
 
     void EmitFunctionBodyStart() override;
     void EmitFunctionBodyEnd() override;
+    void EmitInstruction(const MachineInstr *MI) override;
   };
 
   /// PPCDarwinAsmPrinter - PowerPC assembly printer, customized for Darwin/Mac
@@ -402,7 +405,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
                                       .addImm(CallTarget & 0xFFFF));
 
       // Save the current TOC pointer before the remote call.
-      int TOCSaveOffset = Subtarget->isELFv2ABI() ? 24 : 40;
+      int TOCSaveOffset = Subtarget->getFrameLowering()->getTOCSaveOffset();
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::STD)
                                       .addReg(PPC::X2)
                                       .addImm(TOCSaveOffset)
@@ -1044,6 +1047,97 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+  if (!Subtarget->isPPC64())
+    return PPCAsmPrinter::EmitInstruction(MI);
+
+  switch (MI->getOpcode()) {
+  default:
+    return PPCAsmPrinter::EmitInstruction(MI);
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    // .begin:
+    //   b .end # lis 0, FuncId[16..32]
+    //   nop    # li  0, FuncId[0..15]
+    //   std 0, -8(1)
+    //   mflr 0
+    //   bl __xray_FunctionEntry
+    //   mtlr 0
+    // .end:
+    //
+    // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
+    // of instructions change.
+    MCSymbol *BeginOfSled = OutContext.createTempSymbol();
+    MCSymbol *EndOfSled = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(BeginOfSled);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(PPC::B).addExpr(
+                       MCSymbolRefExpr::create(EndOfSled, OutContext)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(PPC::STD).addReg(PPC::X0).addImm(-8).addReg(PPC::X1));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MFLR8).addReg(PPC::X0));
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(PPC::BL8_NOP)
+                       .addExpr(MCSymbolRefExpr::create(
+                           OutContext.getOrCreateSymbol("__xray_FunctionEntry"),
+                           OutContext)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR8).addReg(PPC::X0));
+    OutStreamer->EmitLabel(EndOfSled);
+    recordSled(BeginOfSled, *MI, SledKind::FUNCTION_ENTER);
+    break;
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT: {
+    // .p2align 3
+    // .begin:
+    //   b(lr)? # lis 0, FuncId[16..32]
+    //   nop    # li  0, FuncId[0..15]
+    //   std 0, -8(1)
+    //   mflr 0
+    //   bl __xray_FunctionExit
+    //   mtlr 0
+    // .end:
+    //   b(lr)?
+    //
+    // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
+    // of instructions change.
+    const MachineInstr *Next = [&] {
+      MachineBasicBlock::const_iterator It(MI);
+      assert(It != MI->getParent()->end());
+      ++It;
+      assert(It->isReturn());
+      return &*It;
+    }();
+    OutStreamer->EmitCodeAlignment(8);
+    MCSymbol *BeginOfSled = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(BeginOfSled);
+    MCInst TmpInst;
+    LowerPPCMachineInstrToMCInst(Next, TmpInst, *this, false);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(PPC::STD).addReg(PPC::X0).addImm(-8).addReg(PPC::X1));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MFLR8).addReg(PPC::X0));
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(PPC::BL8_NOP)
+                       .addExpr(MCSymbolRefExpr::create(
+                           OutContext.getOrCreateSymbol("__xray_FunctionExit"),
+                           OutContext)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR8).addReg(PPC::X0));
+    recordSled(BeginOfSled, *MI, SledKind::FUNCTION_EXIT);
+    break;
+  }
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+  case TargetOpcode::PATCHABLE_RET:
+    // PPC's tail call instruction, e.g. PPC::TCRETURNdi8, doesn't really
+    // lower to a PPC::B instruction. The PPC::B instruction is generated
+    // before it, and handled by the normal case.
+    llvm_unreachable("Tail call is handled in the normal case. See comments"
+                     "around this assert.");
+  }
 }
 
 void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {

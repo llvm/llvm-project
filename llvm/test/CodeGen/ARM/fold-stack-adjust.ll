@@ -135,7 +135,7 @@ define void @test_fold_point(i1 %tst) minsize {
 
   ; Important to check for beginning of basic block, because if it gets
   ; if-converted the test is probably no longer checking what it should.
-; CHECK: {{LBB[0-9]+_2}}:
+; CHECK: %end
 ; CHECK-NEXT: vpop {d7, d8}
 ; CHECK-NEXT: pop {r4, pc}
 

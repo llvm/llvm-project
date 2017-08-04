@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic \
-; RUN:     -fast-isel-verbose 2>&1 | FileCheck %s
+; RUN:     -pass-remarks-missed=isel 2>&1 | FileCheck %s
 
 ; CHECK:      FastISel missed call:
 ; CHECK-SAME: %call = call fastcc i32 @foo(i32 signext %a, i32 signext %b)

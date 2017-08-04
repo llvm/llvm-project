@@ -6,23 +6,22 @@
 
 ; CHECK-NEXT: ; BB#1: ; %b3
 ; CHECK: ldr [[LOAD:w[0-9]+]]
-; CHECK: cbz [[LOAD]], [[SKIP_LONG_B:LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: b [[B8:LBB[0-9]+_[0-9]+]]
-
-; CHECK-NEXT: [[SKIP_LONG_B]]:
+; CHECK: cbnz [[LOAD]], [[B8:LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: b [[B7:LBB[0-9]+_[0-9]+]]
+
+; CHECK-NEXT: [[B8]]: ; %b8
+; CHECK-NEXT: ret
 
 ; CHECK-NEXT: [[B2]]: ; %b2
 ; CHECK: mov w{{[0-9]+}}, #93
 ; CHECK: bl _extfunc
 ; CHECK: cbz w{{[0-9]+}}, [[B7]]
-
-; CHECK-NEXT: [[B8]]: ; %b8
-; CHECK-NEXT: ret
+; CHECK-NEXT: b [[B8]]
 
 ; CHECK-NEXT: [[B7]]: ; %b7
 ; CHECK: mov w{{[0-9]+}}, #13
 ; CHECK: b _extfunc
+
 define void @split_block_no_fallthrough(i64 %val) #0 {
 bb:
   %c0 = icmp sgt i64 %val, -5

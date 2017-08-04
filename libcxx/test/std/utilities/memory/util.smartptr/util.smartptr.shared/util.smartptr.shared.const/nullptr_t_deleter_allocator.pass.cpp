@@ -13,7 +13,7 @@
 
 #include <memory>
 #include <cassert>
-#include "../test_deleter.h"
+#include "deleter_types.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 

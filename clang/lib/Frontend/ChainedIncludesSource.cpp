@@ -83,7 +83,7 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
                 ASTDeserializationListener *deserialListener = nullptr) {
   Preprocessor &PP = CI.getPreprocessor();
   std::unique_ptr<ASTReader> Reader;
-  Reader.reset(new ASTReader(PP, CI.getASTContext(),
+  Reader.reset(new ASTReader(PP, &CI.getASTContext(),
                              CI.getPCHContainerReader(),
                              /*Extensions=*/{ },
                              /*isysroot=*/"", /*DisableValidation=*/true));

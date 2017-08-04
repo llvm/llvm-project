@@ -17,7 +17,7 @@ entry:
 ; CHECK-ARMv4: moveq r0, #42
 
 ; CHECK-ARMv7-LABEL: f7:
-; CHECK-ARMv7: vcmpe.f32
+; CHECK-ARMv7: vcmp.f32
 ; CHECK-ARMv7: vmrs APSR_nzcv, fpscr
 ; CHECK-ARMv7: movweq
 ; CHECK-ARMv7-NOT: vmrs

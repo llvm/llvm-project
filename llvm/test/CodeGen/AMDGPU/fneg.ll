@@ -6,7 +6,7 @@
 ; R600: -PV
 
 ; GCN: v_xor_b32
-define void @s_fneg_f32(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @s_fneg_f32(float addrspace(1)* %out, float %in) {
   %fneg = fsub float -0.000000e+00, %in
   store float %fneg, float addrspace(1)* %out
   ret void
@@ -18,7 +18,7 @@ define void @s_fneg_f32(float addrspace(1)* %out, float %in) {
 
 ; GCN: v_xor_b32
 ; GCN: v_xor_b32
-define void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out, <2 x float> %in) {
+define amdgpu_kernel void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out, <2 x float> %in) {
   %fneg = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %in
   store <2 x float> %fneg, <2 x float> addrspace(1)* %out
   ret void
@@ -34,7 +34,7 @@ define void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out, <2 x float> 
 ; GCN: v_xor_b32
 ; GCN: v_xor_b32
 ; GCN: v_xor_b32
-define void @s_fneg_v4f32(<4 x float> addrspace(1)* nocapture %out, <4 x float> %in) {
+define amdgpu_kernel void @s_fneg_v4f32(<4 x float> addrspace(1)* nocapture %out, <4 x float> %in) {
   %fneg = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %in
   store <4 x float> %fneg, <4 x float> addrspace(1)* %out
   ret void
@@ -50,7 +50,7 @@ define void @s_fneg_v4f32(<4 x float> addrspace(1)* nocapture %out, <4 x float> 
 
 ; R600-NOT: XOR
 ; R600: -KC0[2].Z
-define void @fsub0_f32(float addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @fsub0_f32(float addrspace(1)* %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fsub = fsub float 0.0, %bc
   store float %fsub, float addrspace(1)* %out
@@ -66,7 +66,7 @@ define void @fsub0_f32(float addrspace(1)* %out, i32 %in) {
 
 ; R600-NOT: XOR
 ; R600: -PV.W
-define void @fneg_free_f32(float addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @fneg_free_f32(float addrspace(1)* %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fsub = fsub float -0.0, %bc
   store float %fsub, float addrspace(1)* %out
@@ -78,7 +78,7 @@ define void @fneg_free_f32(float addrspace(1)* %out, i32 %in) {
 ; VI: s_load_dword [[NEG_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: xor
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[NEG_VALUE]], [[NEG_VALUE]]
-define void @fneg_fold_f32(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fneg_fold_f32(float addrspace(1)* %out, float %in) {
   %fsub = fsub float -0.0, %in
   %fmul = fmul float %fsub, %in
   store float %fmul, float addrspace(1)* %out

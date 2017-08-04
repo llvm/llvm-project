@@ -1,0 +1,161 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+--- |
+
+  define amdgpu_kernel void @fold_fi_vgpr() {
+    %alloca = alloca [4 x i32]
+    ret void
+  }
+
+  define amdgpu_kernel void @fold_vgpr_fi() {
+    %alloca = alloca [4 x i32]
+    ret void
+  }
+
+  define amdgpu_kernel void @fold_sgpr_fi() {
+    %alloca = alloca [4 x i32]
+    ret void
+  }
+
+  define amdgpu_kernel void @fold_fi_sgpr() {
+    %alloca = alloca [4 x i32]
+    ret void
+  }
+
+  define amdgpu_kernel void @fold_fi_imm() {
+    %alloca = alloca [4 x i32]
+    ret void
+  }
+
+  define amdgpu_kernel void @fold_imm_fi() {
+    %alloca = alloca [4 x i32]
+    ret void
+  }
+
+...
+# GCN-LABEL: name: fold_fi_vgpr{{$}}
+# GCN: %1 = IMPLICIT_DEF
+
+# GCN: %2 = V_ADD_I32_e32 %stack.0.alloca, %1, implicit-def %vcc, implicit %exec
+name: fold_fi_vgpr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
+      di-location: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+    %1 = IMPLICIT_DEF
+    %2, %vcc = V_ADD_I32_e64 %0, %1, implicit %exec
+    S_ENDPGM
+
+...
+# GCN-LABEL: name: fold_vgpr_fi{{$}}
+# GCN: %1 = IMPLICIT_DEF
+# GCN: %2 = V_ADD_I32_e32 %stack.0.alloca, %1, implicit-def %vcc, implicit %exec
+name: fold_vgpr_fi
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
+      di-location: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+    %1 = IMPLICIT_DEF
+    %2, %vcc = V_ADD_I32_e64 %1, %0, implicit %exec
+    S_ENDPGM
+
+...
+# GCN-LABEL: name: fold_sgpr_fi{{$}}
+# GCN: %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+# GCN: %1 = IMPLICIT_DEF
+# GCN: %2 = V_ADD_I32_e32 %1, %0, implicit-def %vcc, implicit %exec
+name: fold_sgpr_fi
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: sgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
+      di-location: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+    %1 = IMPLICIT_DEF
+    %2, %vcc = V_ADD_I32_e64 %1, %0, implicit %exec
+    S_ENDPGM
+
+...
+# GCN-LABEL: name: fold_fi_sgpr{{$}}
+# GCN: %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+# GCN: %1 = IMPLICIT_DEF
+# GCN: %2 = V_ADD_I32_e32 %1, %0, implicit-def %vcc, implicit %exec
+name: fold_fi_sgpr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: sgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
+      di-location: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+    %1 = IMPLICIT_DEF
+    %2, %vcc = V_ADD_I32_e64 %0, %1, implicit %exec
+    S_ENDPGM
+...
+# TODO: Should probably prefer folding immediate first
+# GCN-LABEL: name: fold_fi_imm{{$}}
+# GCN: %1 = V_MOV_B32_e32 999, implicit %exec
+# GCN: %2 = V_ADD_I32_e32 %stack.0.alloca, %1, implicit-def %vcc, implicit %exec
+name: fold_fi_imm
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
+      di-location: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+    %1 = V_MOV_B32_e32 999, implicit %exec
+    %2, %vcc = V_ADD_I32_e64 %0, %1, implicit %exec
+    S_ENDPGM
+
+...
+# GCN-LABEL: name: fold_imm_fi{{$}}
+# GCN: %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+# GCN: %2 = V_ADD_I32_e32 999, %0, implicit-def %vcc, implicit %exec
+name: fold_imm_fi
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, di-variable: '', di-expression: '',
+      di-location: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 %stack.0.alloca, implicit %exec
+    %1 = V_MOV_B32_e32 999, implicit %exec
+    %2, %vcc = V_ADD_I32_e64 %1, %0, implicit %exec
+    S_ENDPGM

@@ -14,8 +14,31 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  file(GLOB local_tds "*.td")
-  file(GLOB_RECURSE global_tds "${LLVM_MAIN_INCLUDE_DIR}/llvm/*.td")
+  # Use depfile instead of globbing arbitrary *.td(s)
+  # DEPFILE is available for Ninja Generator with CMake>=3.7.
+  if(CMAKE_GENERATOR STREQUAL "Ninja" AND NOT CMAKE_VERSION VERSION_LESS 3.7)
+    # Make output path relative to build.ninja, assuming located on
+    # ${CMAKE_BINARY_DIR}.
+    # CMake emits build targets as relative paths but Ninja doesn't identify
+    # absolute path (in *.d) as relative path (in build.ninja)
+    # Note that tblgen is executed on ${CMAKE_BINARY_DIR} as working directory.
+    file(RELATIVE_PATH ofn_rel
+      ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
+    set(additional_cmdline
+      -o ${ofn_rel}.tmp
+      -d ${ofn_rel}.d
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
+      )
+    set(local_tds)
+    set(global_tds)
+  else()
+    file(GLOB local_tds "*.td")
+    file(GLOB_RECURSE global_tds "${LLVM_MAIN_INCLUDE_DIR}/llvm/*.td")
+    set(additional_cmdline
+      -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
+      )
+  endif()
 
   if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
     set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
@@ -30,16 +53,26 @@ function(tablegen project ofn)
     endif()
   endif()
 
+  # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
+  # (both the target and the file) to have .inc files rebuilt on
+  # a tablegen change, as cmake does not propagate file-level dependencies
+  # of custom targets. See the following ticket for more information:
+  # https://cmake.org/Bug/view.php?id=15858
+  # The dependency on both, the target and the file, produces the same
+  # dependency twice in the result file when
+  # ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
+  # but lets us having smaller and cleaner code here.
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
     # Generate tablegen output in a temporary file.
     COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
-    ${LLVM_TABLEGEN_FLAGS} 
+    ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
-    -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
+    ${additional_cmdline}
     # The file in LLVM_TARGET_DEFINITIONS may be not in the current
     # directory and local_tds may not contain it, so we must
     # explicitly list it here:
-    DEPENDS ${${project}_TABLEGEN_TARGET} ${local_tds} ${global_tds}
+    DEPENDS ${${project}_TABLEGEN_TARGET} ${${project}_TABLEGEN_EXE}
+      ${local_tds} ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     COMMENT "Building ${ofn}..."
     )
@@ -94,7 +127,8 @@ macro(add_tablegen target project)
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
-  if(NOT XCODE)
+  # CMake-3.9 doesn't let compilation units depend on their dependent libraries.
+  if(NOT (CMAKE_GENERATOR STREQUAL "Ninja" AND NOT CMAKE_VERSION VERSION_LESS 3.9) AND NOT XCODE)
     # FIXME: It leaks to user, callee of add_tablegen.
     set(LLVM_ENABLE_OBJLIB ON)
   endif()

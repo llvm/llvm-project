@@ -612,11 +612,14 @@ uint64_t PGOHash::finalize() {
   llvm::MD5::MD5Result Result;
   MD5.final(Result);
   using namespace llvm::support;
-  return endian::read<uint64_t, little, unaligned>(Result);
+  return Result.low();
 }
 
 void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   const Decl *D = GD.getDecl();
+  if (!D->hasBody())
+    return;
+
   bool InstrumentRegions = CGM.getCodeGenOpts().hasProfileClangInstr();
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
   if (!InstrumentRegions && !PGOReader)

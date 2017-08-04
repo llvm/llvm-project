@@ -40,6 +40,8 @@ t// Check that -mcpu works for all supported GPUs
 // RUN: %clang -### -target amdgcn -x cl -S -emit-llvm -mcpu=carrizo %s -o - 2>&1 | FileCheck --check-prefix=CARRIZO-CHECK %s
 // RUN: %clang -### -target amdgcn -x cl -S -emit-llvm -mcpu=fiji %s -o - 2>&1 | FileCheck --check-prefix=FIJI-CHECK %s
 // RUN: %clang -### -target amdgcn -x cl -S -emit-llvm -mcpu=stoney %s -o - 2>&1 | FileCheck --check-prefix=STONEY-CHECK %s
+// RUN: %clang -### -target amdgcn -x cl -S -emit-llvm -mcpu=gfx900 %s -o - 2>&1 | FileCheck --check-prefix=GFX900-CHECK %s
+// RUN: %clang -### -target amdgcn -x cl -S -emit-llvm -mcpu=gfx901 %s -o - 2>&1 | FileCheck --check-prefix=GFX901-CHECK %s
 
 // R600-CHECK:  "-target-cpu" "r600"
 // RS880-CHECK: "-target-cpu" "rs880"
@@ -70,3 +72,5 @@ t// Check that -mcpu works for all supported GPUs
 // CARRIZO-CHECK: "-target-cpu" "carrizo"
 // FIJI-CHECK: "-target-cpu" "fiji"
 // STONEY-CHECK: "-target-cpu" "stoney"
+// GFX900-CHECK: "-target-cpu" "gfx900"
+// GFX901-CHECK: "-target-cpu" "gfx901"

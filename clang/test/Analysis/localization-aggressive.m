@@ -61,7 +61,15 @@ int random();
 NSString *CFNumberFormatterCreateStringWithNumber(float x);
 + (NSString *)forceLocalized:(NSString *)str
     __attribute__((annotate("returns_localized_nsstring")));
++ (NSString *)takesLocalizedString:
+    (NSString *)__attribute__((annotate("takes_localized_nsstring")))str;
 @end
+
+NSString *
+takesLocalizedString(NSString *str
+                     __attribute__((annotate("takes_localized_nsstring")))) {
+  return str;
+}
 
 // Test cases begin here
 @implementation LocalizationTestSuite
@@ -74,6 +82,8 @@ NSString *ForceLocalized(NSString *str) { return str; }
 + (NSString *)forceLocalized:(NSString *)str {
   return str;
 }
+
++ (NSString *) takesLocalizedString:(NSString *)str { return str; }
 
 // An ObjC method that returns a localized string
 + (NSString *)unLocalizedStringMethod {
@@ -269,4 +279,13 @@ NSString *ForceLocalized(NSString *str) { return str; }
   NSString *string2 = POSSIBLE_FALSE_POSITIVE(@"Hello", @"Hello"); // no-warning
 }
 
+- (void)testTakesLocalizedString {
+  NSString *localized = NSLocalizedString(@"Hello", @"World");
+  NSString *alsoLocalized = [LocalizationTestSuite takesLocalizedString:localized]; // no-warning
+  NSString *stillLocalized = [LocalizationTestSuite takesLocalizedString:alsoLocalized]; // no-warning
+  takesLocalizedString(stillLocalized); // no-warning
+
+  [LocalizationTestSuite takesLocalizedString:@"not localized"]; // expected-warning {{User-facing text should use localized string macro}}
+  takesLocalizedString(@"not localized"); // expected-warning {{User-facing text should use localized string macro}}
+}
 @end

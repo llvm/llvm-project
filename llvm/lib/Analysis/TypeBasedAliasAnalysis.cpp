@@ -23,10 +23,10 @@
 //
 // The scalar TBAA metadata format is very simple. TBAA MDNodes have up to
 // three fields, e.g.:
-//   !0 = metadata !{ metadata !"an example type tree" }
-//   !1 = metadata !{ metadata !"int", metadata !0 }
-//   !2 = metadata !{ metadata !"float", metadata !0 }
-//   !3 = metadata !{ metadata !"const float", metadata !2, i64 1 }
+//   !0 = !{ !"an example type tree" }
+//   !1 = !{ !"int", !0 }
+//   !2 = !{ !"float", !0 }
+//   !3 = !{ !"const float", !2, i64 1 }
 //
 // The first field is an identity field. It can be any value, usually
 // an MDString, which uniquely identifies the type. The most important
@@ -58,7 +58,7 @@
 //
 // The struct type node has a name and a list of pairs, one pair for each member
 // of the struct. The first element of each pair is a type node (a struct type
-// node or a sclar type node), specifying the type of the member, the second
+// node or a scalar type node), specifying the type of the member, the second
 // element of each pair is the offset of the member.
 //
 // Given an example
@@ -74,13 +74,13 @@
 // instruction. The base type is !4 (struct B), the access type is !2 (scalar
 // type short) and the offset is 4.
 //
-// !0 = metadata !{metadata !"Simple C/C++ TBAA"}
-// !1 = metadata !{metadata !"omnipotent char", metadata !0} // Scalar type node
-// !2 = metadata !{metadata !"short", metadata !1}           // Scalar type node
-// !3 = metadata !{metadata !"A", metadata !2, i64 0}        // Struct type node
-// !4 = metadata !{metadata !"B", metadata !2, i64 0, metadata !3, i64 4}
+// !0 = !{!"Simple C/C++ TBAA"}
+// !1 = !{!"omnipotent char", !0} // Scalar type node
+// !2 = !{!"short", !1}           // Scalar type node
+// !3 = !{!"A", !2, i64 0}        // Struct type node
+// !4 = !{!"B", !2, i64 0, !3, i64 4}
 //                                                           // Struct type node
-// !5 = metadata !{metadata !4, metadata !2, i64 4}          // Path tag node
+// !5 = !{!4, !2, i64 4}          // Path tag node
 //
 // The struct type nodes and the scalar type nodes form a type DAG.
 //         Root (!0)

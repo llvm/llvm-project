@@ -18,9 +18,12 @@
 //   partial_sort_copy(InIter first, InIter last, RAIter result_first, RAIter result_last);
 
 #include <algorithm>
+#include <random>
 #include <cassert>
 
 #include "test_iterators.h"
+
+std::mt19937 randomness;
 
 template <class Iter>
 void
@@ -30,7 +33,7 @@ test_larger_sorts(int N, int M)
     int* output = new int[M];
     for (int i = 0; i < N; ++i)
         input[i] = i;
-    std::random_shuffle(input, input+N);
+    std::shuffle(input, input+N, randomness);
     int* r = std::partial_sort_copy(Iter(input), Iter(input+N), output, output+M);
     int* e = output + std::min(N, M);
     assert(r == e);

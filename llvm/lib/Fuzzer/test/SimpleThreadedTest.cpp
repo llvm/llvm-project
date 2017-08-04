@@ -3,8 +3,8 @@
 
 // Threaded test for a fuzzer. The fuzzer should find "H"
 #include <assert.h>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <thread>

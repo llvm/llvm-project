@@ -4,7 +4,7 @@
 ; CHECK:         deallocframe
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  {
-; CHECK-NEXT:    r29 = add(r29, r28)
+; CHECK-NEXT:    r29 = add(r29,r28)
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  {
 ; CHECK-NEXT:    jumpr r31

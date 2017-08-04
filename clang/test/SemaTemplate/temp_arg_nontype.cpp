@@ -455,3 +455,11 @@ namespace nondependent_default_arg_ordering {
     X<int *, &m> y; f(y); // expected-error {{ambiguous}}
   }
 }
+
+namespace pointer_to_char_array {
+  typedef char T[4];
+  template<T *P> struct A { void f(); };
+  template<T *P> void A<P>::f() {}
+  T foo = "foo";
+  void g() { A<&foo>().f(); }
+}

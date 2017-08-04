@@ -8,8 +8,6 @@
  * Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  */
 
-#include <string.h>
-
 #include <isl_schedule_constraints.h>
 #include <isl/schedule.h>
 #include <isl/set.h>
@@ -526,58 +524,13 @@ __isl_give isl_printer *isl_printer_print_schedule_constraints(
 #define BASE schedule_constraints
 #include <print_templ_yaml.c>
 
-/* Extract a mapping key from the token "tok".
- * Return isl_sc_key_error on error, i.e., if "tok" does not
- * correspond to any known key.
- */
-static enum isl_sc_key extract_key(__isl_keep isl_stream *s,
-	struct isl_token *tok)
-{
-	int type;
-	char *name;
-	isl_ctx *ctx;
-	enum isl_sc_key key;
-
-	if (!tok)
-		return isl_sc_key_error;
-	type = isl_token_get_type(tok);
-	if (type != ISL_TOKEN_IDENT && type != ISL_TOKEN_STRING) {
-		isl_stream_error(s, tok, "expecting key");
-		return isl_sc_key_error;
-	}
-
-	ctx = isl_stream_get_ctx(s);
-	name = isl_token_get_str(ctx, tok);
-	if (!name)
-		return isl_sc_key_error;
-
-	for (key = 0; key < isl_sc_key_end; ++key) {
-		if (!strcmp(name, key_str[key]))
-			break;
-	}
-	free(name);
-
-	if (key >= isl_sc_key_end)
-		isl_die(ctx, isl_error_invalid, "unknown key",
-			return isl_sc_key_error);
-	return key;
-}
-
-/* Read a key from "s" and return the corresponding enum.
- * Return isl_sc_key_error on error, i.e., if the first token
- * on the stream does not correspond to any known key.
- */
-static enum isl_sc_key get_key(__isl_keep isl_stream *s)
-{
-	struct isl_token *tok;
-	enum isl_sc_key key;
-
-	tok = isl_stream_next_token(s);
-	key = extract_key(s, tok);
-	isl_token_free(tok);
-
-	return key;
-}
+#undef KEY
+#define KEY enum isl_sc_key
+#undef KEY_ERROR
+#define KEY_ERROR isl_sc_key_error
+#undef KEY_END
+#define KEY_END isl_sc_key_end
+#include "extract_key.c"
 
 #undef BASE
 #define BASE set

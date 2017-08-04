@@ -40,17 +40,17 @@ template <typename T, typename Vector = std::vector<T>,
           typename Set = DenseSet<T>>
 class SetVector {
 public:
-  typedef T value_type;
-  typedef T key_type;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef Set set_type;
-  typedef Vector vector_type;
-  typedef typename vector_type::const_iterator iterator;
-  typedef typename vector_type::const_iterator const_iterator;
-  typedef typename vector_type::const_reverse_iterator reverse_iterator;
-  typedef typename vector_type::const_reverse_iterator const_reverse_iterator;
-  typedef typename vector_type::size_type size_type;
+  using value_type = T;
+  using key_type = T;
+  using reference = T&;
+  using const_reference = const T&;
+  using set_type = Set;
+  using vector_type = Vector;
+  using iterator = typename vector_type::const_iterator;
+  using const_iterator = typename vector_type::const_iterator;
+  using reverse_iterator = typename vector_type::const_reverse_iterator;
+  using const_reverse_iterator = typename vector_type::const_reverse_iterator;
+  using size_type = typename vector_type::size_type;
 
   /// \brief Construct an empty SetVector
   SetVector() = default;
@@ -117,6 +117,12 @@ public:
   /// \brief Get a const_reverse_iterator to the beginning of the SetVector.
   const_reverse_iterator rend() const {
     return vector_.rend();
+  }
+
+  /// \brief Return the first element of the SetVector.
+  const T &front() const {
+    assert(!empty() && "Cannot call front() on empty SetVector!");
+    return vector_.front();
   }
 
   /// \brief Return the last element of the SetVector.
@@ -232,7 +238,7 @@ public:
   bool operator!=(const SetVector &that) const {
     return vector_ != that.vector_;
   }
-  
+
   /// \brief Compute This := This u S, return whether 'This' changed.
   /// TODO: We should be able to use set_union from SetOperations.h, but
   ///       SetVector interface is inconsistent with DenseSet.

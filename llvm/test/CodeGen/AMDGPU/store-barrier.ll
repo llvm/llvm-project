@@ -12,7 +12,7 @@
 ; CHECK: s_barrier
 ; CHECK: s_endpgm
 ; Function Attrs: nounwind
-define void @test(<2 x i8> addrspace(3)* nocapture %arg, <2 x i8> addrspace(1)* nocapture readonly %arg1, i32 addrspace(1)* nocapture readonly %arg2, <2 x i8> addrspace(1)* nocapture %arg3, i32 %arg4, i64 %tmp9) #0 {
+define amdgpu_kernel void @test(<2 x i8> addrspace(3)* nocapture %arg, <2 x i8> addrspace(1)* nocapture readonly %arg1, i32 addrspace(1)* nocapture readonly %arg2, <2 x i8> addrspace(1)* nocapture %arg3, i32 %arg4, i64 %tmp9) #0 {
 bb:
   %tmp10 = getelementptr inbounds i32, i32 addrspace(1)* %arg2, i64 %tmp9
   %tmp13 = load i32, i32 addrspace(1)* %tmp10, align 2

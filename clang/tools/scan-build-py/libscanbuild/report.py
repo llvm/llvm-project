@@ -13,102 +13,65 @@ import os
 import os.path
 import sys
 import shutil
-import time
-import tempfile
 import itertools
 import plistlib
 import glob
 import json
 import logging
-import contextlib
 import datetime
 from libscanbuild import duplicate_check
 from libscanbuild.clang import get_version
 
-__all__ = ['report_directory', 'document']
+__all__ = ['document']
 
 
-@contextlib.contextmanager
-def report_directory(hint, keep):
-    """ Responsible for the report directory.
-
-    hint -- could specify the parent directory of the output directory.
-    keep -- a boolean value to keep or delete the empty report directory. """
-
-    stamp_format = 'scan-build-%Y-%m-%d-%H-%M-%S-%f-'
-    stamp = datetime.datetime.now().strftime(stamp_format)
-
-    parentdir = os.path.abspath(hint)
-    if not os.path.exists(parentdir):
-        os.makedirs(parentdir)
-
-    name = tempfile.mkdtemp(prefix=stamp, dir=parentdir)
-
-    logging.info('Report directory created: %s', name)
-
-    try:
-        yield name
-    finally:
-        if os.listdir(name):
-            msg = "Run 'scan-view %s' to examine bug reports."
-            keep = True
-        else:
-            if keep:
-                msg = "Report directory '%s' contans no report, but kept."
-            else:
-                msg = "Removing directory '%s' because it contains no report."
-        logging.warning(msg, name)
-
-        if not keep:
-            os.rmdir(name)
-
-
-def document(args, output_dir, use_cdb):
+def document(args):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html_reports_available = args.output_format in {'html', 'plist-html'}
 
     logging.debug('count crashes and bugs')
-    crash_count = sum(1 for _ in read_crashes(output_dir))
+    crash_count = sum(1 for _ in read_crashes(args.output))
     bug_counter = create_counters()
-    for bug in read_bugs(output_dir, html_reports_available):
+    for bug in read_bugs(args.output, html_reports_available):
         bug_counter(bug)
     result = crash_count + bug_counter.total
 
     if html_reports_available and result:
+        use_cdb = os.path.exists(args.cdb)
+
         logging.debug('generate index.html file')
-        # common prefix for source files to have sort filenames
+        # common prefix for source files to have sorter path
         prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
         # assemble the cover from multiple fragments
+        fragments = []
         try:
-            fragments = []
             if bug_counter.total:
-                fragments.append(bug_summary(output_dir, bug_counter))
-                fragments.append(bug_report(output_dir, prefix))
+                fragments.append(bug_summary(args.output, bug_counter))
+                fragments.append(bug_report(args.output, prefix))
             if crash_count:
-                fragments.append(crash_report(output_dir, prefix))
-            assemble_cover(output_dir, prefix, args, fragments)
-            # copy additinal files to the report
-            copy_resource_files(output_dir)
+                fragments.append(crash_report(args.output, prefix))
+            assemble_cover(args, prefix, fragments)
+            # copy additional files to the report
+            copy_resource_files(args.output)
             if use_cdb:
-                shutil.copy(args.cdb, output_dir)
+                shutil.copy(args.cdb, args.output)
         finally:
             for fragment in fragments:
                 os.remove(fragment)
     return result
 
 
-def assemble_cover(output_dir, prefix, args, fragments):
+def assemble_cover(args, prefix, fragments):
     """ Put together the fragments into a final report. """
 
     import getpass
     import socket
-    import datetime
 
     if args.html_title is None:
         args.html_title = os.path.basename(prefix) + ' - analyzer results'
 
-    with open(os.path.join(output_dir, 'index.html'), 'w') as handle:
+    with open(os.path.join(args.output, 'index.html'), 'w') as handle:
         indent = 0
         handle.write(reindent("""
         |<!DOCTYPE html>
@@ -375,11 +338,12 @@ def parse_crash(filename):
 
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
-    with open(filename) as handler:
-        lines = handler.readlines()
+    with open(filename, mode='rb') as handler:
+        # this is a workaround to fix windows read '\r\n' as new lines.
+        lines = [line.decode().rstrip() for line in handler.readlines()]
         return {
-            'source': lines[0].rstrip(),
-            'problem': lines[1].rstrip(),
+            'source': lines[0],
+            'problem': lines[1],
             'file': name,
             'info': name + '.info.txt',
             'stderr': name + '.stderr.txt'
@@ -519,9 +483,10 @@ def commonprefix_from(filename):
 
 
 def commonprefix(files):
-    """ Fixed version of os.path.commonprefix. Return the longest path prefix
-    that is a prefix of all paths in filenames. """
+    """ Fixed version of os.path.commonprefix.
 
+    :param files: list of file names.
+    :return: the longest path prefix that is a prefix of all files. """
     result = None
     for current in files:
         if result is not None:

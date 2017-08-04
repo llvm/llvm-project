@@ -10,6 +10,7 @@
 // This file is a part of ThreadSanitizer (TSan), a race detector.
 //
 //===----------------------------------------------------------------------===//
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
@@ -112,9 +113,8 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
 }
 
 void InitializeAllocator() {
-  allocator()->Init(
-      common_flags()->allocator_may_return_null,
-      common_flags()->allocator_release_to_os_interval_ms);
+  SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
+  allocator()->Init(common_flags()->allocator_release_to_os_interval_ms);
 }
 
 void InitializeAllocatorLate() {
@@ -151,7 +151,7 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
 
 void *user_alloc(ThreadState *thr, uptr pc, uptr sz, uptr align, bool signal) {
   if ((sz >= (1ull << 40)) || (align >= (1ull << 40)))
-    return allocator()->ReturnNullOrDieOnBadRequest();
+    return Allocator::FailureHandler::OnBadRequest();
   void *p = allocator()->Allocate(&thr->proc()->alloc_cache, sz, align);
   if (p == 0)
     return 0;
@@ -163,8 +163,8 @@ void *user_alloc(ThreadState *thr, uptr pc, uptr sz, uptr align, bool signal) {
 }
 
 void *user_calloc(ThreadState *thr, uptr pc, uptr size, uptr n) {
-  if (CallocShouldReturnNullDueToOverflow(size, n))
-    return allocator()->ReturnNullOrDieOnBadRequest();
+  if (CheckForCallocOverflow(size, n))
+    return Allocator::FailureHandler::OnBadRequest();
   void *p = user_alloc(thr, pc, n * size);
   if (p)
     internal_memset(p, 0, n * size);
@@ -295,6 +295,8 @@ uptr __sanitizer_get_allocated_size(const void *p) {
 
 void __tsan_on_thread_idle() {
   ThreadState *thr = cur_thread();
+  thr->clock.ResetCached(&thr->proc()->clock_cache);
+  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
   allocator()->SwallowCache(&thr->proc()->alloc_cache);
   internal_allocator()->SwallowCache(&thr->proc()->internal_alloc_cache);
   ctx->metamap.OnProcIdle(thr->proc());

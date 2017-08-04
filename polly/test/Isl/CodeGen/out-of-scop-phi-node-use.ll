@@ -26,7 +26,7 @@ for.cond:                                         ; preds = %for.cond.outer.oute
   ]
 
 _LZMA_C_RDBD:                                     ; preds = %for.cond
-  unreachable
+  ret void
 
 sw.bb.956:                                        ; preds = %for.cond
   %_s.sroa.294.0.ph519.lcssa2388 = phi i32 [ undef, %for.cond ]
@@ -42,13 +42,13 @@ if.else.969:                                      ; preds = %sw.bb.956
 
 for.cond.981:                                     ; preds = %if.else.969, %if.then.960, %for.cond
   %_s.sroa.343.0.ph5161118 = phi i32 [ %_s.sroa.343.0.ph516.lcssa2357, %if.then.960 ], [ %_s.sroa.343.0.ph516.lcssa2357, %if.else.969 ], [ undef, %for.cond ]
-  unreachable
+  ret void
 
 for.cond.outer.outer.outer:                       ; preds = %entry
   br label %for.cond
 
 saveStateAndReturn:                               ; preds = %for.cond
-  unreachable
+  ret void
 
 cleanup.1072:                                     ; preds = %for.cond
   ret void

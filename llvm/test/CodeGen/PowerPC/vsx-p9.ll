@@ -39,7 +39,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vaddubm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %2 = load <16 x i8>, <16 x i8>* @sca, align 16
   %3 = load <16 x i8>, <16 x i8>* @scb, align 16
@@ -48,7 +48,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vaddubm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %4 = load <8 x i16>, <8 x i16>* @usa, align 16
   %5 = load <8 x i16>, <8 x i16>* @usb, align 16
@@ -57,7 +57,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vadduhm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %6 = load <8 x i16>, <8 x i16>* @ssa, align 16
   %7 = load <8 x i16>, <8 x i16>* @ssb, align 16
@@ -66,7 +66,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vadduhm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %8 = load <4 x i32>, <4 x i32>* @uia, align 16
   %9 = load <4 x i32>, <4 x i32>* @uib, align 16
@@ -75,7 +75,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vadduwm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %10 = load <4 x i32>, <4 x i32>* @sia, align 16
   %11 = load <4 x i32>, <4 x i32>* @sib, align 16
@@ -84,7 +84,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vadduwm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %12 = load <2 x i64>, <2 x i64>* @ulla, align 16
   %13 = load <2 x i64>, <2 x i64>* @ullb, align 16
@@ -93,7 +93,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vaddudm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %14 = load <2 x i64>, <2 x i64>* @slla, align 16
   %15 = load <2 x i64>, <2 x i64>* @sllb, align 16
@@ -102,7 +102,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vaddudm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %16 = load <1 x i128>, <1 x i128>* @uxa, align 16
   %17 = load <1 x i128>, <1 x i128>* @uxb, align 16
@@ -111,7 +111,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vadduqm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %18 = load <1 x i128>, <1 x i128>* @sxa, align 16
   %19 = load <1 x i128>, <1 x i128>* @sxb, align 16
@@ -120,7 +120,7 @@ entry:
 ; CHECK: lxvx 34, 0, 3
 ; CHECK: lxvx 35, 0, 4
 ; CHECK: vadduqm 2, 3, 2
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %20 = load <4 x float>, <4 x float>* @vfa, align 16
   %21 = load <4 x float>, <4 x float>* @vfb, align 16
@@ -129,7 +129,7 @@ entry:
 ; CHECK: lxvx 0, 0, 3
 ; CHECK: lxvx 1, 0, 4
 ; CHECK: xvaddsp 34, 0, 1
-; CHECK: stxvx 34,
+; CHECK: stxv 34,
 ; CHECK: bl sink
   %22 = load <2 x double>, <2 x double>* @vda, align 16
   %23 = load <2 x double>, <2 x double>* @vdb, align 16
@@ -138,7 +138,7 @@ entry:
 ; CHECK: lxvx 0, 0, 3
 ; CHECK: lxvx 1, 0, 4
 ; CHECK: xvadddp 0, 0, 1
-; CHECK: stxvx 0,
+; CHECK: stxv 0,
 ; CHECK: bl sink
   ret void
 }

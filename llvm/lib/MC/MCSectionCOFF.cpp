@@ -8,14 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSectionCOFF.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/COFF.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+
 using namespace llvm;
 
-MCSectionCOFF::~MCSectionCOFF() {} // anchor.
+MCSectionCOFF::~MCSectionCOFF() = default; // anchor.
 
 // ShouldOmitSectionDirective - Decides whether a '.section' directive
 // should be printed before the section name
@@ -37,10 +37,9 @@ void MCSectionCOFF::setSelection(int Selection) const {
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
 }
 
-void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI,
+void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
-
   // standard sections don't require the '.section'
   if (ShouldOmitSectionDirective(SectionName, MAI)) {
     OS << '\t' << getSectionName() << '\n';
@@ -94,7 +93,7 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI,
         OS << "newest,";
         break;
       default:
-        assert (0 && "unsupported COFF selection type");
+        assert(false && "unsupported COFF selection type");
         break;
     }
     assert(COMDATSymbol);

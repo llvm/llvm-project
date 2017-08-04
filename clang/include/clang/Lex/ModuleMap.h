@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/Twine.h"
 #include <algorithm>
 #include <memory>
@@ -116,6 +117,11 @@ public:
     // Adjust ModuleMap::addHeader.
   };
 
+  /// Convert a header kind to a role. Requires Kind to not be HK_Excluded.
+  static ModuleHeaderRole headerKindToRole(Module::HeaderKind Kind);
+  /// Convert a header role to a kind.
+  static Module::HeaderKind headerRoleToKind(ModuleHeaderRole Role);
+
   /// \brief A header that is known to reside within a given module,
   /// whether it was included or excluded.
   class KnownHeader {
@@ -165,7 +171,13 @@ private:
   /// \brief Mapping from each header to the module that owns the contents of
   /// that header.
   HeadersMap Headers;
-  
+
+  /// Map from file sizes to modules with lazy header directives of that size.
+  mutable llvm::DenseMap<off_t, llvm::TinyPtrVector<Module*>> LazyHeadersBySize;
+  /// Map from mtimes to modules with lazy header directives with those mtimes.
+  mutable llvm::DenseMap<time_t, llvm::TinyPtrVector<Module*>>
+              LazyHeadersByModTime;
+
   /// \brief Mapping from directories with umbrella headers to the module
   /// that is generated from the umbrella header.
   ///
@@ -269,6 +281,31 @@ private:
   /// resolved.
   Module *resolveModuleId(const ModuleId &Id, Module *Mod, bool Complain) const;
 
+  /// Add an unresolved header to a module.
+  void addUnresolvedHeader(Module *Mod,
+                           Module::UnresolvedHeaderDirective Header);
+
+  /// Look up the given header directive to find an actual header file.
+  ///
+  /// \param M The module in which we're resolving the header directive.
+  /// \param Header The header directive to resolve.
+  /// \param RelativePathName Filled in with the relative path name from the
+  ///        module to the resolved header.
+  /// \return The resolved file, if any.
+  const FileEntry *findHeader(Module *M,
+                              const Module::UnresolvedHeaderDirective &Header,
+                              SmallVectorImpl<char> &RelativePathName);
+
+  /// Resolve the given header directive.
+  void resolveHeader(Module *M,
+                     const Module::UnresolvedHeaderDirective &Header);
+
+  /// Attempt to resolve the specified header directive as naming a builtin
+  /// header.
+  /// \return \c true if a corresponding builtin header was found.
+  bool resolveAsBuiltinHeader(Module *M,
+                              const Module::UnresolvedHeaderDirective &Header);
+
   /// \brief Looks up the modules that \p File corresponds to.
   ///
   /// If \p File represents a builtin header within Clang's builtin include
@@ -328,6 +365,14 @@ public:
     BuiltinIncludeDir = Dir;
   }
 
+  /// \brief Get the directory that contains Clang-supplied include files.
+  const DirectoryEntry *getBuiltinDir() const {
+    return BuiltinIncludeDir;
+  }
+
+  /// \brief Is this a compiler builtin header?
+  static bool isBuiltinHeader(StringRef FileName);
+
   /// \brief Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {
     Callbacks.push_back(std::move(Callback));
@@ -354,6 +399,15 @@ public:
   /// Typically, \ref findModuleForHeader should be used instead, as it picks
   /// the preferred module for the header.
   ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File) const;
+
+  /// Resolve all lazy header directives for the specified file.
+  ///
+  /// This ensures that the HeaderFileInfo on HeaderSearch is up to date. This
+  /// is effectively internal, but is exposed so HeaderSearch can call it.
+  void resolveHeaderDirectives(const FileEntry *File) const;
+
+  /// Resolve all lazy header directives for the specified module.
+  void resolveHeaderDirectives(Module *Mod) const;
 
   /// \brief Reports errors if a module must not include a specific file.
   ///
@@ -529,16 +583,6 @@ public:
   /// false otherwise.
   bool resolveConflicts(Module *Mod, bool Complain);
 
-  /// \brief Infers the (sub)module based on the given source location and
-  /// source manager.
-  ///
-  /// \param Loc The location within the source that we are querying, along
-  /// with its source manager.
-  ///
-  /// \returns The module that owns this source location, or null if no
-  /// module owns this source location.
-  Module *inferModuleFromLocation(FullSourceLoc Loc);
-  
   /// \brief Sets the umbrella header of the given module to the given
   /// header.
   void setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
@@ -568,14 +612,20 @@ public:
   /// \param HomeDir The directory in which relative paths within this module
   ///        map file will be resolved.
   ///
+  /// \param ID The FileID of the file to process, if we've already entered it.
+  ///
+  /// \param Offset [inout] On input the offset at which to start parsing. On
+  ///        output, the offset at which the module map terminated.
+  ///
   /// \param ExternModuleLoc The location of the "extern module" declaration
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
   bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                          const DirectoryEntry *HomeDir,
+                          const DirectoryEntry *HomeDir, FileID ID = FileID(),
+                          unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());
-    
+
   /// \brief Dump the contents of the module map, for debugging purposes.
   void dump();
   

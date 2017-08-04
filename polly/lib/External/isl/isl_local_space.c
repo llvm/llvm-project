@@ -729,8 +729,8 @@ __isl_give isl_local_space *isl_local_space_intersect(
 	isl_ctx *ctx;
 	int *exp1 = NULL;
 	int *exp2 = NULL;
-	isl_mat *div;
-	int equal;
+	isl_mat *div = NULL;
+	isl_bool equal;
 
 	if (!ls1 || !ls2)
 		goto error;
@@ -777,6 +777,7 @@ __isl_give isl_local_space *isl_local_space_intersect(
 error:
 	free(exp1);
 	free(exp2);
+	isl_mat_free(div);
 	isl_local_space_free(ls1);
 	isl_local_space_free(ls2);
 	return NULL;
@@ -1036,11 +1037,11 @@ __isl_give isl_local_space *isl_local_space_substitute(
 					    subs->v->size, 0, ls->div->n_row);
 }
 
-int isl_local_space_is_named_or_nested(__isl_keep isl_local_space *ls,
+isl_bool isl_local_space_is_named_or_nested(__isl_keep isl_local_space *ls,
 	enum isl_dim_type type)
 {
 	if (!ls)
-		return -1;
+		return isl_bool_error;
 	return isl_space_is_named_or_nested(ls->dim, type);
 }
 
@@ -1125,16 +1126,16 @@ __isl_give isl_local_space *isl_local_space_insert_dims(
  * or
  *		-(f-(m-1)) + m d >= 0
  */
-int isl_local_space_is_div_constraint(__isl_keep isl_local_space *ls,
+isl_bool isl_local_space_is_div_constraint(__isl_keep isl_local_space *ls,
 	isl_int *constraint, unsigned div)
 {
 	unsigned pos;
 
 	if (!ls)
-		return -1;
+		return isl_bool_error;
 
 	if (isl_int_is_zero(ls->div->row[div][0]))
-		return 0;
+		return isl_bool_false;
 
 	pos = isl_local_space_offset(ls, isl_dim_div) + div;
 
@@ -1148,20 +1149,20 @@ int isl_local_space_is_div_constraint(__isl_keep isl_local_space *ls,
 		isl_int_add(ls->div->row[div][1],
 				ls->div->row[div][1], ls->div->row[div][0]);
 		if (!neg)
-			return 0;
+			return isl_bool_false;
 		if (isl_seq_first_non_zero(constraint+pos+1,
 					    ls->div->n_row-div-1) != -1)
-			return 0;
+			return isl_bool_false;
 	} else if (isl_int_abs_eq(constraint[pos], ls->div->row[div][0])) {
 		if (!isl_seq_eq(constraint, ls->div->row[div]+1, pos))
-			return 0;
+			return isl_bool_false;
 		if (isl_seq_first_non_zero(constraint+pos+1,
 					    ls->div->n_row-div-1) != -1)
-			return 0;
+			return isl_bool_false;
 	} else
-		return 0;
+		return isl_bool_false;
 
-	return 1;
+	return isl_bool_true;
 }
 
 /*

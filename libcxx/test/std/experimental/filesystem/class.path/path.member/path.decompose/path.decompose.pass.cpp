@@ -54,12 +54,6 @@
 #include "count_new.hpp"
 #include "filesystem_test_helper.hpp"
 
-template <class It>
-std::reverse_iterator<It> mkRev(It it) {
-  return std::reverse_iterator<It>(it);
-}
-
-
 namespace fs = std::experimental::filesystem;
 struct PathDecomposeTestcase
 {
@@ -147,7 +141,11 @@ void decompPathTest()
     assert(checkCollectionsEqual(p.begin(), p.end(),
                                  TC.elements.begin(), TC.elements.end()));
     // check backwards
-    assert(checkCollectionsEqual(mkRev(p.end()), mkRev(p.begin()),
+
+    std::vector<fs::path> Parts;
+    for (auto it = p.end(); it != p.begin(); )
+      Parts.push_back(*--it);
+    assert(checkCollectionsEqual(Parts.begin(), Parts.end(),
                                  TC.elements.rbegin(), TC.elements.rend()));
   }
 }

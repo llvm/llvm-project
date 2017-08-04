@@ -1,6 +1,8 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 // RUN: ld.lld %t -o %t2
 // RUN: llvm-objdump -d %t2 | FileCheck %s
+// RUN: ld.lld -pie %t -o %t3
+// RUN: llvm-objdump -d %t3 | FileCheck --check-prefix=PIE %s
 // REQUIRES: x86
 
 .globl _start
@@ -28,3 +30,14 @@ _start:
 // CHECK-NEXT:   20100f:    e8 ec ef df ff     callq    -2101268
 // CHECK-NEXT:   201014:    e8 e7 ef df ff     callq    -2101273
 // CHECK-NEXT:   201019:    e8 e2 ef df ff     callq    -2101278
+
+// In position-independent binaries, they resolve to the image base.
+
+// PIE:      Disassembly of section .text:
+// PIE-NEXT: _start:
+// PIE-NEXT:     1000:	e8 fb ef ff ff 	callq	-4101
+// PIE-NEXT:     1005:	e8 f6 ef ff ff 	callq	-4106
+// PIE-NEXT:     100a:	e8 f1 ef ff ff 	callq	-4111
+// PIE-NEXT:     100f:	e8 ec ef ff ff 	callq	-4116
+// PIE-NEXT:     1014:	e8 e7 ef ff ff 	callq	-4121
+// PIE-NEXT:     1019:	e8 e2 ef ff ff 	callq	-4126

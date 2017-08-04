@@ -39,8 +39,8 @@ public:
 X<int>::C *c1;
 X<float>::C *c2;
 
-X<int>::X *xi; // expected-error{{qualified reference to 'X' is a constructor name rather than a type wherever a constructor can be declared}}
-X<float>::X *xf; // expected-error{{qualified reference to 'X' is a constructor name rather than a type wherever a constructor can be declared}}
+X<int>::X *xi; // expected-error{{qualified reference to 'X' is a constructor name rather than a type}}
+X<float>::X *xf; // expected-error{{qualified reference to 'X' is a constructor name rather than a type}}
 
 void test_naming() {
   c1 = c2; // expected-error{{assigning to 'X<int>::C *' from incompatible type 'X<float>::C *'}}

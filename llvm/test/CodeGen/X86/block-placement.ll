@@ -314,7 +314,7 @@ exit:
 define void @unnatural_cfg1() {
 ; Test that we can handle a loop with an inner unnatural loop at the end of
 ; a function. This is a gross CFG reduced out of the single source GCC.
-; CHECK: unnatural_cfg1
+; CHECK-LABEL: unnatural_cfg1
 ; CHECK: %entry
 ; CHECK: %loop.body1
 ; CHECK: %loop.body2
@@ -352,18 +352,16 @@ define void @unnatural_cfg2() {
 ; Test that we can handle a loop with a nested natural loop *and* an unnatural
 ; loop. This was reduced from a crash on block placement when run over
 ; single-source GCC.
-; CHECK: unnatural_cfg2
+; CHECK-LABEL: unnatural_cfg2
 ; CHECK: %entry
+; CHECK: %loop.header
 ; CHECK: %loop.body1
 ; CHECK: %loop.body2
-; CHECK: %loop.body3
-; CHECK: %loop.inner1.begin
-; The end block is folded with %loop.body3...
-; CHECK-NOT: %loop.inner1.end
 ; CHECK: %loop.body4
 ; CHECK: %loop.inner2.begin
-; The loop.inner2.end block is folded
-; CHECK: %loop.header
+; CHECK: %loop.inner2.begin
+; CHECK: %loop.body3
+; CHECK: %loop.inner1.begin
 ; CHECK: %bail
 
 entry:
@@ -559,7 +557,7 @@ define void @test_eh_lpad_successor() personality i8* bitcast (i32 (...)* @__gxx
 ; didn't correctly locate the fallthrough successor, assuming blindly that the
 ; first one was the fallthrough successor. As a result, we would add an
 ; erroneous jump to the landing pad thinking *that* was the default successor.
-; CHECK: test_eh_lpad_successor
+; CHECK-LABEL: test_eh_lpad_successor
 ; CHECK: %entry
 ; CHECK-NOT: jmp
 ; CHECK: %loop
@@ -587,7 +585,7 @@ define void @test_eh_throw() personality i8* bitcast (i32 (...)* @__gxx_personal
 ; fallthrough simply won't occur. Make sure we don't crash trying to update
 ; terminators for such constructs.
 ;
-; CHECK: test_eh_throw
+; CHECK-LABEL: test_eh_throw
 ; CHECK: %entry
 ; CHECK: %cleanup
 
@@ -609,7 +607,7 @@ define void @test_unnatural_cfg_backwards_inner_loop() {
 ; attempt to merge onto the wrong end of the inner loop just because we find it
 ; first. This was reduced from a crasher in GCC's single source.
 ;
-; CHECK: test_unnatural_cfg_backwards_inner_loop
+; CHECK-LABEL: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
 ; CHECK: %loop2b
 ; CHECK: %loop1
@@ -649,7 +647,7 @@ define void @unanalyzable_branch_to_loop_header() {
 ; fallthrough because that happens to always produce unanalyzable branches on
 ; x86.
 ;
-; CHECK: unanalyzable_branch_to_loop_header
+; CHECK-LABEL: unanalyzable_branch_to_loop_header
 ; CHECK: %entry
 ; CHECK: %loop
 ; CHECK: %exit
@@ -673,7 +671,7 @@ define void @unanalyzable_branch_to_best_succ(i1 %cond) {
 ; This branch is now analyzable and hence the destination block becomes the
 ; hotter one. The right order is entry->bar->exit->foo.
 ;
-; CHECK: unanalyzable_branch_to_best_succ
+; CHECK-LABEL: unanalyzable_branch_to_best_succ
 ; CHECK: %entry
 ; CHECK: %bar
 ; CHECK: %exit
@@ -699,7 +697,7 @@ define void @unanalyzable_branch_to_free_block(float %x) {
 ; Ensure that we can handle unanalyzable branches where the destination block
 ; gets selected as the best free block in the CFG.
 ;
-; CHECK: unanalyzable_branch_to_free_block
+; CHECK-LABEL: unanalyzable_branch_to_free_block
 ; CHECK: %entry
 ; CHECK: %a
 ; CHECK: %b
@@ -729,7 +727,7 @@ define void @many_unanalyzable_branches() {
 ; Ensure that we don't crash as we're building up many unanalyzable branches,
 ; blocks, and loops.
 ;
-; CHECK: many_unanalyzable_branches
+; CHECK-LABEL: many_unanalyzable_branches
 ; CHECK: %entry
 ; CHECK: %exit
 
@@ -948,7 +946,7 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ;    strange layouts that are siginificantly less efficient, often times maing
 ;    it discontiguous.
 ;
-; CHECK: @benchmark_heapsort
+; CHECK-LABEL: @benchmark_heapsort
 ; CHECK: %entry
 ; First rotated loop top.
 ; CHECK: .p2align
@@ -1456,9 +1454,149 @@ exit:
   ret void
 }
 
+; Because %endif has a higher frequency than %if, the calculations show we
+; shouldn't tail-duplicate %endif so that we can place it after %if. We were
+; previously undercounting the cost by ignoring execution frequency that didn't
+; come from the %if->%endif path.
+; CHECK-LABEL: higher_frequency_succ_tail_dup
+; CHECK: %entry
+; CHECK: %elseif
+; CHECK: %else
+; CHECK: %endif
+; CHECK: %then
+; CHECK: %ret
+define void @higher_frequency_succ_tail_dup(i1 %a, i1 %b, i1 %c) {
+entry:
+  br label %if
+if:                                               ; preds = %entry
+  call void @effect(i32 0)
+  br i1 %a, label %elseif, label %endif, !prof !11 ; even
+
+elseif:                                           ; preds = %if
+  call void @effect(i32 1)
+  br i1 %b, label %else, label %endif, !prof !11 ; even
+
+else:                                             ; preds = %elseif
+  call void @effect(i32 2)
+  br label %endif
+
+endif:                                            ; preds = %if, %elseif, %else
+  br i1 %c, label %then, label %ret, !prof !12 ; 5 to 3
+
+then:                                             ; preds = %endif
+  call void @effect(i32 3)
+  br label %ret
+
+ret:                                              ; preds = %endif, %then
+  ret void
+}
+
+define i32 @not_rotate_if_extra_branch(i32 %count) {
+; Test checks that there is no loop rotation
+; if it introduces extra branch.
+; Specifically in this case because best exit is .header
+; but it has fallthrough to .middle block and last block in
+; loop chain .slow does not have afallthrough to .header.
+; CHECK-LABEL: not_rotate_if_extra_branch
+; CHECK: %.entry
+; CHECK: %.header
+; CHECK: %.middle
+; CHECK: %.backedge
+; CHECK: %.slow
+; CHECK: %.bailout
+; CHECK: %.stop
+.entry:
+  %sum.0 = shl nsw i32 %count, 1
+  br label %.header
+
+.header:
+  %i = phi i32 [ %i.1, %.backedge ], [ 0, %.entry ]
+  %sum = phi i32 [ %sum.1, %.backedge ], [ %sum.0, %.entry ]
+  %is_exc = icmp sgt i32 %i, 9000000
+  br i1 %is_exc, label %.bailout, label %.middle, !prof !13
+
+.bailout:
+  %sum.2 = add nsw i32 %count, 1
+  br label %.stop
+
+.middle:
+  %pr.1 = and i32 %i, 1023
+  %pr.2 = icmp eq i32 %pr.1, 0
+  br i1 %pr.2, label %.slow, label %.backedge, !prof !14
+
+.slow:
+  tail call void @effect(i32 %sum)
+  br label %.backedge
+
+.backedge:
+  %sum.1 = add nsw i32 %i, %sum
+  %i.1 = add nsw i32 %i, 1
+  %end = icmp slt i32 %i.1, %count
+  br i1 %end, label %.header, label %.stop, !prof !15
+
+.stop:
+  %sum.phi = phi i32 [ %sum.1, %.backedge ], [ %sum.2, %.bailout ]
+  ret i32 %sum.phi
+}
+
+define i32 @not_rotate_if_extra_branch_regression(i32 %count, i32 %init) {
+; This is a regression test against patch avoid loop rotation if
+; it introduce an extra btanch.
+; CHECK-LABEL: not_rotate_if_extra_branch_regression
+; CHECK: %.entry
+; CHECK: %.first_backedge
+; CHECK: %.slow
+; CHECK: %.second_header
+.entry:
+  %sum.0 = shl nsw i32 %count, 1
+  br label %.first_header
+
+.first_header:
+  %i = phi i32 [ %i.1, %.first_backedge ], [ 0, %.entry ]
+  %is_bo1 = icmp sgt i32 %i, 9000000
+  br i1 %is_bo1, label %.bailout, label %.first_backedge, !prof !14
+
+.first_backedge:
+  %i.1 = add nsw i32 %i, 1
+  %end = icmp slt i32 %i.1, %count
+  br i1 %end, label %.first_header, label %.second_header, !prof !13
+
+.second_header:
+  %j = phi i32 [ %j.1, %.second_backedge ], [ %init, %.first_backedge ]
+  %end.2 = icmp sgt i32 %j, %count
+  br i1 %end.2, label %.stop, label %.second_middle, !prof !14
+
+.second_middle:
+  %is_slow = icmp sgt i32 %j, 9000000
+  br i1 %is_slow, label %.slow, label %.second_backedge, !prof !14
+
+.slow:
+  tail call void @effect(i32 %j)
+  br label %.second_backedge
+
+.second_backedge:
+  %j.1 = add nsw i32 %j, 1
+  %end.3 = icmp slt i32 %j, 10000000
+  br i1 %end.3, label %.second_header, label %.stop, !prof !13
+
+.stop:
+  %res = add nsw i32 %j, %i.1
+  ret i32 %res
+
+.bailout:
+  ret i32 0
+}
+
+declare void @effect(i32)
+
 !5 = !{!"branch_weights", i32 84, i32 16}
 !6 = !{!"function_entry_count", i32 10}
 !7 = !{!"branch_weights", i32 60, i32 40}
 !8 = !{!"branch_weights", i32 5001, i32 4999}
 !9 = !{!"branch_weights", i32 85, i32 15}
 !10 = !{!"branch_weights", i32 90, i32 10}
+!11 = !{!"branch_weights", i32 1, i32 1}
+!12 = !{!"branch_weights", i32 5, i32 3}
+!13 = !{!"branch_weights", i32 1, i32 1}
+!14 = !{!"branch_weights", i32 1, i32 1023}
+!15 = !{!"branch_weights", i32 4095, i32 1}

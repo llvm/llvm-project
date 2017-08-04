@@ -17,6 +17,18 @@
 
 using namespace llvm;
 
+static std::string updateTripleOSVersion(std::string Triple) {
+  return Triple;
+}
+
 std::string sys::getDefaultTargetTriple() {
-  return Triple::normalize(LLVM_DEFAULT_TARGET_TRIPLE);
+  const char *Triple = LLVM_DEFAULT_TARGET_TRIPLE;
+
+  // Override the default target with an environment variable named by LLVM_TARGET_TRIPLE_ENV.
+#if defined(LLVM_TARGET_TRIPLE_ENV)
+  if (const char *EnvTriple = std::getenv(LLVM_TARGET_TRIPLE_ENV))
+    Triple = EnvTriple;
+#endif
+
+  return Triple::normalize(Triple);
 }

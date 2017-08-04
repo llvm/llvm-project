@@ -55,11 +55,14 @@ There are currently the following groups of checks:
 ====================== =========================================================
 Name prefix            Description
 ====================== =========================================================
+``android-``           Checks related to Android.
 ``boost-``             Checks related to Boost library.
+``bugprone-``          Checks that target bugprone code constructs.
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
-``google-``            Checks related to the Google coding conventions.
+``google-``            Checks related to Google coding conventions.
+``hicpp-``             Checks related to High Integrity C++ Coding Standard.
 ``llvm-``              Checks related to the LLVM coding conventions.
 ``misc-``              Checks that we didn't have a better category for.
 ``modernize-``         Checks that advocate usage of modern (currently "modern"
@@ -158,6 +161,19 @@ An overview of all the command-line options:
                                    errors were found. If compiler errors have
                                    attached fix-its, clang-tidy will apply them as
                                    well.
+    -format-style=<string>       -
+                                   Style for formatting code around applied fixes:
+                                     - 'none' (default) turns off formatting
+                                     - 'file' (literally 'file', not a placeholder)
+                                       uses .clang-format file in the closest parent
+                                       directory
+                                     - '{ <json> }' specifies options inline, e.g.
+                                       -format-style='{BasedOnStyle: llvm, IndentWidth: 8}'
+                                     - 'llvm', 'google', 'webkit', 'mozilla'
+                                   See clang-format documentation for the up-to-date
+                                   information about formatting styles and options.
+                                   This option overrides the 'FormatStyle` option in
+                                   .clang-tidy file, if any.
     -header-filter=<string>      -
                                    Regular expression matching the names of the
                                    headers to output diagnostics from. Diagnostics
@@ -179,9 +195,11 @@ An overview of all the command-line options:
                                    List all enabled checks and exit. Use with
                                    -checks=* to list all available checks.
     -p=<string>                  - Build path
-    -style=<string>              -
-                                   Fallback style for reformatting after inserting fixes
-                                   if there is no clang-format config file found.
+    -quiet                       -
+                                   Run clang-tidy in quiet mode. This suppresses
+                                   printing statistics about ignored warnings and
+                                   warnings treated as errors if the respective
+                                   options are specified.
     -system-headers              - Display the errors from system headers.
     -warnings-as-errors=<string> -
                                    Upgrades warnings to errors. Same format as
@@ -217,12 +235,13 @@ An overview of all the command-line options:
     option, command-line option takes precedence. The effective
     configuration can be inspected using -dump-config:
 
-      $ clang-tidy -dump-config - --
+      $ clang-tidy -dump-config
       ---
       Checks:          '-*,some-check'
       WarningsAsErrors: ''
       HeaderFilterRegex: ''
       AnalyzeTemporaryDtors: false
+      FormatStyle:     none
       User:            user
       CheckOptions:
         - key:             some-check.SomeOption
@@ -537,6 +556,12 @@ YAML format:
 Testing Checks
 --------------
 
+To run tests for :program:`clang-tidy` use the command:
+
+.. code-block:: console
+
+  $ ninja check-clang-tools
+
 :program:`clang-tidy` checks can be tested using either unit tests or
 `lit`_ tests. Unit tests may be more convenient to test complex replacements
 with strict checks. `Lit`_ tests allow using partial text matching and regular
@@ -549,13 +574,13 @@ file, runs :program:`clang-tidy` and verifies messages and fixes with two
 separate `FileCheck`_ invocations: once with FileCheck's directive
 prefix set to ``CHECK-MESSAGES``, validating the diagnostic messages,
 and once with the directive prefix set to ``CHECK-FIXES``, running
-against the fixed code (i.e., the code after generated fixits are
+against the fixed code (i.e., the code after generated fix-its are
 applied). In particular, ``CHECK-FIXES:`` can be used to check
-that code was not modified by fixits, by checking that it is present
-unchanged in the fixed code.  The full set of `FileCheck`_ directives
+that code was not modified by fix-its, by checking that it is present
+unchanged in the fixed code. The full set of `FileCheck`_ directives
 is available (e.g., ``CHECK-MESSAGES-SAME:``, ``CHECK-MESSAGES-NOT:``), though
 typically the basic ``CHECK`` forms (``CHECK-MESSAGES`` and ``CHECK-FIXES``)
-are sufficient for clang-tidy tests.  Note that the `FileCheck`_
+are sufficient for clang-tidy tests. Note that the `FileCheck`_
 documentation mostly assumes the default prefix (``CHECK``), and hence
 describes the directive as ``CHECK:``, ``CHECK-SAME:``, ``CHECK-NOT:``, etc.
 Replace ``CHECK`` by either ``CHECK-FIXES`` or ``CHECK-MESSAGES`` for
@@ -630,7 +655,7 @@ The script provides multiple configuration flags.
 * To restrict the files examined you can provide one or more regex arguments
   that the file names are matched against.
   ``run-clang-tidy.py clang-tidy/.*Check\.cpp`` will only analyze clang-tidy
-  checkers. It may also be necessary to restrict the header files warnings are
+  checks. It may also be necessary to restrict the header files warnings are
   displayed from using the ``-header-filter`` flag. It has the same behavior
   as the corresponding :program:`clang-tidy` flag.
 

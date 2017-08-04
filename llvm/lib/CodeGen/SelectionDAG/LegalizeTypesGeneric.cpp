@@ -57,7 +57,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
       // Expand the floating point operand only if it was converted to integers.
       // Otherwise, it is a legal type like f128 that can be saved in a register.
       auto SoftenedOp = GetSoftenedFloat(InOp);
-      if (SoftenedOp == InOp)
+      if (isLegalInHWReg(SoftenedOp.getValueType()))
         break;
       SplitInteger(SoftenedOp, Lo, Hi);
       Lo = DAG.getNode(ISD::BITCAST, dl, NOutVT, Lo);
@@ -362,8 +362,8 @@ SDValue DAGTypeLegalizer::ExpandOp_BITCAST(SDNode *N) {
     SmallVector<SDValue, 8> Ops;
     IntegerToVector(N->getOperand(0), NumElts, Ops, NVT.getVectorElementType());
 
-    SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, NVT,
-                              makeArrayRef(Ops.data(), NumElts));
+    SDValue Vec =
+        DAG.getBuildVector(NVT, dl, makeArrayRef(Ops.data(), NumElts));
     return DAG.getNode(ISD::BITCAST, dl, N->getValueType(0), Vec);
   }
 
@@ -396,10 +396,8 @@ SDValue DAGTypeLegalizer::ExpandOp_BUILD_VECTOR(SDNode *N) {
     NewElts.push_back(Hi);
   }
 
-  SDValue NewVec = DAG.getNode(ISD::BUILD_VECTOR, dl,
-                               EVT::getVectorVT(*DAG.getContext(),
-                                                NewVT, NewElts.size()),
-                               NewElts);
+  EVT NewVecVT = EVT::getVectorVT(*DAG.getContext(), NewVT, NewElts.size());
+  SDValue NewVec = DAG.getBuildVector(NewVecVT, dl, NewElts);
 
   // Convert the new vector to the old vector type.
   return DAG.getNode(ISD::BITCAST, dl, VecVT, NewVec);
@@ -458,7 +456,7 @@ SDValue DAGTypeLegalizer::ExpandOp_SCALAR_TO_VECTOR(SDNode *N) {
   SDValue UndefVal = DAG.getUNDEF(Ops[0].getValueType());
   for (unsigned i = 1; i < NumElts; ++i)
     Ops[i] = UndefVal;
-  return DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
+  return DAG.getBuildVector(VT, dl, Ops);
 }
 
 SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
@@ -512,8 +510,24 @@ void DAGTypeLegalizer::SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
   GetSplitOp(Op, Lo, Hi);
 }
 
-void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo,
-                                       SDValue &Hi) {
+static std::pair<SDValue, SDValue> SplitVSETCC(const SDNode *N,
+                                               SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+
+  // Split the inputs.
+  SDValue Lo, Hi, LL, LH, RL, RH;
+  std::tie(LL, LH) = DAG.SplitVectorOperand(N, 0);
+  std::tie(RL, RH) = DAG.SplitVectorOperand(N, 1);
+
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2));
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2));
+
+  return std::make_pair(Lo, Hi);
+}
+
+void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue LL, LH, RL, RH, CL, CH;
   SDLoc dl(N);
   GetSplitOp(N->getOperand(1), LL, LH);
@@ -522,9 +536,16 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo,
   SDValue Cond = N->getOperand(0);
   CL = CH = Cond;
   if (Cond.getValueType().isVector()) {
+    if (SDValue Res = WidenVSELECTAndMask(N))
+      std::tie(CL, CH) = DAG.SplitVector(Res->getOperand(0), dl);
+    // It seems to improve code to generate two narrow SETCCs as opposed to
+    // splitting a wide result vector.
+    else if (Cond.getOpcode() == ISD::SETCC)
+      std::tie(CL, CH) = SplitVSETCC(Cond.getNode(), DAG);
     // Check if there are already splitted versions of the vector available and
     // use those instead of splitting the mask operand again.
-    if (getTypeAction(Cond.getValueType()) == TargetLowering::TypeSplitVector)
+    else if (getTypeAction(Cond.getValueType()) ==
+             TargetLowering::TypeSplitVector)
       GetSplitVector(Cond, CL, CH);
     else
       std::tie(CL, CH) = DAG.SplitVector(Cond, dl);

@@ -14,146 +14,120 @@
 #ifndef LLVM_TARGET_TARGETCALLINGCONV_H
 #define LLVM_TARGET_TARGETCALLINGCONV_H
 
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
+#include <cassert>
 #include <climits>
+#include <cstdint>
 
 namespace llvm {
-
 namespace ISD {
+
   struct ArgFlagsTy {
   private:
-    static const uint64_t NoFlagSet      = 0ULL;
-    static const uint64_t ZExt           = 1ULL<<0;  ///< Zero extended
-    static const uint64_t ZExtOffs       = 0;
-    static const uint64_t SExt           = 1ULL<<1;  ///< Sign extended
-    static const uint64_t SExtOffs       = 1;
-    static const uint64_t InReg          = 1ULL<<2;  ///< Passed in register
-    static const uint64_t InRegOffs      = 2;
-    static const uint64_t SRet           = 1ULL<<3;  ///< Hidden struct-ret ptr
-    static const uint64_t SRetOffs       = 3;
-    static const uint64_t ByVal          = 1ULL<<4;  ///< Struct passed by value
-    static const uint64_t ByValOffs      = 4;
-    static const uint64_t Nest           = 1ULL<<5;  ///< Nested fn static chain
-    static const uint64_t NestOffs       = 5;
-    static const uint64_t Returned       = 1ULL<<6;  ///< Always returned
-    static const uint64_t ReturnedOffs   = 6;
-    static const uint64_t ByValAlign     = 0xFULL<<7; ///< Struct alignment
-    static const uint64_t ByValAlignOffs = 7;
-    static const uint64_t Split          = 1ULL<<11;
-    static const uint64_t SplitOffs      = 11;
-    static const uint64_t InAlloca       = 1ULL<<12; ///< Passed with inalloca
-    static const uint64_t InAllocaOffs   = 12;
-    static const uint64_t SplitEnd       = 1ULL<<13; ///< Last part of a split
-    static const uint64_t SplitEndOffs   = 13;
-    static const uint64_t SwiftSelf      = 1ULL<<14; ///< Swift self parameter
-    static const uint64_t SwiftSelfOffs  = 14;
-    static const uint64_t SwiftError     = 1ULL<<15; ///< Swift error parameter
-    static const uint64_t SwiftErrorOffs = 15;
-    static const uint64_t Hva            = 1ULL << 16; ///< HVA field for
-                                                       ///< vectorcall
-    static const uint64_t HvaOffs        = 16;
-    static const uint64_t HvaStart       = 1ULL << 17; ///< HVA structure start
-                                                       ///< for vectorcall
-    static const uint64_t HvaStartOffs   = 17;
-    static const uint64_t SecArgPass     = 1ULL << 18; ///< Second argument
-                                                       ///< pass for vectorcall
-    static const uint64_t SecArgPassOffs = 18;
-    static const uint64_t OrigAlign      = 0x1FULL<<27;
-    static const uint64_t OrigAlignOffs  = 27;
-    static const uint64_t ByValSize      = 0x3fffffffULL<<32; ///< Struct size
-    static const uint64_t ByValSizeOffs  = 32;
-    static const uint64_t InConsecutiveRegsLast      = 0x1ULL<<62; ///< Struct size
-    static const uint64_t InConsecutiveRegsLastOffs  = 62;
-    static const uint64_t InConsecutiveRegs      = 0x1ULL<<63; ///< Struct size
-    static const uint64_t InConsecutiveRegsOffs  = 63;
+    unsigned IsZExt : 1;     ///< Zero extended
+    unsigned IsSExt : 1;     ///< Sign extended
+    unsigned IsInReg : 1;    ///< Passed in register
+    unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
+    unsigned IsByVal : 1;    ///< Struct passed by value
+    unsigned IsNest : 1;     ///< Nested fn static chain
+    unsigned IsReturned : 1; ///< Always returned
+    unsigned IsSplit : 1;
+    unsigned IsInAlloca : 1;   ///< Passed with inalloca
+    unsigned IsSplitEnd : 1;   ///< Last part of a split
+    unsigned IsSwiftSelf : 1;  ///< Swift self parameter
+    unsigned IsSwiftError : 1; ///< Swift error parameter
+    unsigned IsHva : 1;        ///< HVA field for
+    unsigned IsHvaStart : 1;   ///< HVA structure start
+    unsigned IsSecArgPass : 1; ///< Second argument
+    unsigned ByValAlign : 4;   ///< Log 2 of byval alignment
+    unsigned OrigAlign : 5;    ///< Log 2 of original alignment
+    unsigned IsInConsecutiveRegsLast : 1;
+    unsigned IsInConsecutiveRegs : 1;
+    unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
 
-    static const uint64_t One            = 1ULL; ///< 1 of this type, for shifts
-
-    uint64_t Flags;
+    unsigned ByValSize; ///< Byval struct size
 
   public:
-    ArgFlagsTy() : Flags(0) { }
-
-    bool isZExt()      const { return Flags & ZExt; }
-    void setZExt()     { Flags |= One << ZExtOffs; }
-
-    bool isSExt()      const { return Flags & SExt; }
-    void setSExt()     { Flags |= One << SExtOffs; }
-
-    bool isInReg()     const { return Flags & InReg; }
-    void setInReg()    { Flags |= One << InRegOffs; }
-
-    bool isSRet()      const { return Flags & SRet; }
-    void setSRet()     { Flags |= One << SRetOffs; }
-
-    bool isByVal()     const { return Flags & ByVal; }
-    void setByVal()    { Flags |= One << ByValOffs; }
-
-    bool isInAlloca()  const { return Flags & InAlloca; }
-    void setInAlloca() { Flags |= One << InAllocaOffs; }
-
-    bool isSwiftSelf() const { return Flags & SwiftSelf; }
-    void setSwiftSelf() { Flags |= One << SwiftSelfOffs; }
-
-    bool isSwiftError() const { return Flags & SwiftError; }
-    void setSwiftError() { Flags |= One << SwiftErrorOffs; }
-
-    bool isHva() const { return Flags & Hva; }
-    void setHva() { Flags |= One << HvaOffs; }
-
-    bool isHvaStart() const { return Flags & HvaStart; }
-    void setHvaStart() { Flags |= One << HvaStartOffs; }
-
-    bool isSecArgPass() const { return Flags & SecArgPass; }
-    void setSecArgPass() { Flags |= One << SecArgPassOffs; }
-
-    bool isNest()      const { return Flags & Nest; }
-    void setNest()     { Flags |= One << NestOffs; }
-
-    bool isReturned()  const { return Flags & Returned; }
-    void setReturned() { Flags |= One << ReturnedOffs; }
-
-    bool isInConsecutiveRegs()  const { return Flags & InConsecutiveRegs; }
-    void setInConsecutiveRegs() { Flags |= One << InConsecutiveRegsOffs; }
-
-    bool isInConsecutiveRegsLast()  const { return Flags & InConsecutiveRegsLast; }
-    void setInConsecutiveRegsLast() { Flags |= One << InConsecutiveRegsLastOffs; }
-
-    unsigned getByValAlign() const {
-      return (unsigned)
-        ((One << ((Flags & ByValAlign) >> ByValAlignOffs)) / 2);
+    ArgFlagsTy()
+        : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsNest(0),
+          IsReturned(0), IsSplit(0), IsInAlloca(0), IsSplitEnd(0),
+          IsSwiftSelf(0), IsSwiftError(0), IsHva(0), IsHvaStart(0),
+          IsSecArgPass(0), ByValAlign(0), OrigAlign(0),
+          IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
+          IsCopyElisionCandidate(0), ByValSize(0) {
+      static_assert(sizeof(*this) == 2 * sizeof(unsigned), "flags are too big");
     }
+
+    bool isZExt() const { return IsZExt; }
+    void setZExt() { IsZExt = 1; }
+
+    bool isSExt() const { return IsSExt; }
+    void setSExt() { IsSExt = 1; }
+
+    bool isInReg() const { return IsInReg; }
+    void setInReg() { IsInReg = 1; }
+
+    bool isSRet() const { return IsSRet; }
+    void setSRet() { IsSRet = 1; }
+
+    bool isByVal() const { return IsByVal; }
+    void setByVal() { IsByVal = 1; }
+
+    bool isInAlloca() const { return IsInAlloca; }
+    void setInAlloca() { IsInAlloca = 1; }
+
+    bool isSwiftSelf() const { return IsSwiftSelf; }
+    void setSwiftSelf() { IsSwiftSelf = 1; }
+
+    bool isSwiftError() const { return IsSwiftError; }
+    void setSwiftError() { IsSwiftError = 1; }
+
+    bool isHva() const { return IsHva; }
+    void setHva() { IsHva = 1; }
+
+    bool isHvaStart() const { return IsHvaStart; }
+    void setHvaStart() { IsHvaStart = 1; }
+
+    bool isSecArgPass() const { return IsSecArgPass; }
+    void setSecArgPass() { IsSecArgPass = 1; }
+
+    bool isNest() const { return IsNest; }
+    void setNest() { IsNest = 1; }
+
+    bool isReturned() const { return IsReturned; }
+    void setReturned() { IsReturned = 1; }
+
+    bool isInConsecutiveRegs()  const { return IsInConsecutiveRegs; }
+    void setInConsecutiveRegs() { IsInConsecutiveRegs = 1; }
+
+    bool isInConsecutiveRegsLast() const { return IsInConsecutiveRegsLast; }
+    void setInConsecutiveRegsLast() { IsInConsecutiveRegsLast = 1; }
+
+    bool isSplit()   const { return IsSplit; }
+    void setSplit()  { IsSplit = 1; }
+
+    bool isSplitEnd()   const { return IsSplitEnd; }
+    void setSplitEnd()  { IsSplitEnd = 1; }
+
+    bool isCopyElisionCandidate()  const { return IsCopyElisionCandidate; }
+    void setCopyElisionCandidate() { IsCopyElisionCandidate = 1; }
+
+    unsigned getByValAlign() const { return (1U << ByValAlign) / 2; }
     void setByValAlign(unsigned A) {
-      Flags = (Flags & ~ByValAlign) |
-        (uint64_t(Log2_32(A) + 1) << ByValAlignOffs);
+      ByValAlign = Log2_32(A) + 1;
+      assert(getByValAlign() == A && "bitfield overflow");
     }
 
-    bool isSplit()   const { return Flags & Split; }
-    void setSplit()  { Flags |= One << SplitOffs; }
-
-    bool isSplitEnd()   const { return Flags & SplitEnd; }
-    void setSplitEnd()  { Flags |= One << SplitEndOffs; }
-
-    unsigned getOrigAlign() const {
-      return (unsigned)
-        ((One << ((Flags & OrigAlign) >> OrigAlignOffs)) / 2);
-    }
+    unsigned getOrigAlign() const { return (1U << OrigAlign) / 2; }
     void setOrigAlign(unsigned A) {
-      Flags = (Flags & ~OrigAlign) |
-        (uint64_t(Log2_32(A) + 1) << OrigAlignOffs);
+      OrigAlign = Log2_32(A) + 1;
+      assert(getOrigAlign() == A && "bitfield overflow");
     }
 
-    unsigned getByValSize() const {
-      return (unsigned)((Flags & ByValSize) >> ByValSizeOffs);
-    }
-    void setByValSize(unsigned S) {
-      Flags = (Flags & ~ByValSize) | (uint64_t(S) << ByValSizeOffs);
-    }
-
-    /// getRawBits - Represent the flags as a bunch of bits.
-    uint64_t getRawBits() const { return Flags; }
+    unsigned getByValSize() const { return ByValSize; }
+    void setByValSize(unsigned S) { ByValSize = S; }
   };
 
   /// InputArg - This struct carries flags and type information about a
@@ -162,9 +136,9 @@ namespace ISD {
   ///
   struct InputArg {
     ArgFlagsTy Flags;
-    MVT VT;
+    MVT VT = MVT::Other;
     EVT ArgVT;
-    bool Used;
+    bool Used = false;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -176,7 +150,7 @@ namespace ISD {
     /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    InputArg() : VT(MVT::Other), Used(false) {}
+    InputArg() = default;
     InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, bool used,
              unsigned origIdx, unsigned partOffs)
       : Flags(flags), Used(used), OrigArgIndex(origIdx), PartOffset(partOffs) {
@@ -204,7 +178,7 @@ namespace ISD {
     EVT ArgVT;
 
     /// IsFixed - Is this a "fixed" value, ie not passed through a vararg "...".
-    bool IsFixed;
+    bool IsFixed = false;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -214,7 +188,7 @@ namespace ISD {
     /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    OutputArg() : IsFixed(false) {}
+    OutputArg() = default;
     OutputArg(ArgFlagsTy flags, EVT vt, EVT argvt, bool isfixed,
               unsigned origIdx, unsigned partOffs)
       : Flags(flags), IsFixed(isfixed), OrigArgIndex(origIdx),
@@ -223,8 +197,8 @@ namespace ISD {
       ArgVT = argvt;
     }
   };
-} // end namespace ISD
 
-} // end llvm namespace
+} // end namespace ISD
+} // end namespace llvm
 
 #endif // LLVM_TARGET_TARGETCALLINGCONV_H

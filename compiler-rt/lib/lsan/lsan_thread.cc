@@ -19,13 +19,11 @@
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan_allocator.h"
+#include "lsan_common.h"
 
 namespace __lsan {
 
-const u32 kInvalidTid = (u32) -1;
-
 static ThreadRegistry *thread_registry;
-static THREADLOCAL u32 current_thread_tid = kInvalidTid;
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   void *mem = MmapOrDie(sizeof(ThreadContext), "ThreadContext");
@@ -39,14 +37,6 @@ void InitializeThreadRegistry() {
   static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry = new(thread_registry_placeholder)
     ThreadRegistry(CreateThreadContext, kMaxThreads, kThreadQuarantineSize);
-}
-
-u32 GetCurrentThread() {
-  return current_thread_tid;
-}
-
-void SetCurrentThread(u32 tid) {
-  current_thread_tid = tid;
 }
 
 ThreadContext::ThreadContext(int tid)
@@ -87,7 +77,7 @@ u32 ThreadCreate(u32 parent_tid, uptr user_id, bool detached) {
                                        /* arg */ nullptr);
 }
 
-void ThreadStart(u32 tid, uptr os_id) {
+void ThreadStart(u32 tid, tid_t os_id, bool workerthread) {
   OnStartedArgs args;
   uptr stack_size = 0;
   uptr tls_size = 0;
@@ -97,11 +87,12 @@ void ThreadStart(u32 tid, uptr os_id) {
   args.tls_end = args.tls_begin + tls_size;
   GetAllocatorCacheRange(&args.cache_begin, &args.cache_end);
   args.dtls = DTLS_Get();
-  thread_registry->StartThread(tid, os_id, /*workerthread*/ false, &args);
+  thread_registry->StartThread(tid, os_id, workerthread, &args);
 }
 
 void ThreadFinish() {
   thread_registry->FinishThread(GetCurrentThread());
+  SetCurrentThread(kInvalidTid);
 }
 
 ThreadContext *CurrentThreadContext() {
@@ -136,7 +127,7 @@ void EnsureMainThreadIDIsCorrect() {
 
 ///// Interface to the common LSan module. /////
 
-bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
+bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls) {
   ThreadContext *context = static_cast<ThreadContext *>(
@@ -152,7 +143,7 @@ bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
   return true;
 }
 
-void ForEachExtraStackRange(uptr os_id, RangeIteratorCallback callback,
+void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg) {
 }
 

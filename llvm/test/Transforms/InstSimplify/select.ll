@@ -402,7 +402,8 @@ define i32* @select_icmp_pointers(i32* %x, i32* %y) {
   ret i32* %sel
 }
 
-; FIXME: If the condition is known, we don't need to select.
+; If the condition is known, we don't need to select, but we're not
+; doing this fold here to avoid compile-time cost.
 
 declare void @llvm.assume(i1)
 

@@ -14,8 +14,8 @@
 #include "DwarfExpression.h"
 #include "DwarfDebug.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -117,8 +117,9 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // Otherwise, attempt to find a covering set of sub-register numbers.
   // For example, Q0 on ARM is a composition of D0+D1.
   unsigned CurPos = 0;
-  // The size of the register in bits, assuming 8 bits per byte.
-  unsigned RegSize = TRI.getMinimalPhysRegClass(MachineReg)->getSize() * 8;
+  // The size of the register in bits.
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(MachineReg);
+  unsigned RegSize = TRI.getRegSizeInBits(*RC);
   // Keep track of the bits in the register we already emitted, so we
   // can avoid emitting redundant aliasing subregs.
   SmallBitVector Coverage(RegSize, false);
@@ -247,15 +248,25 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   assert(Reg.Size == 0 && "subregister has same size as superregister");
 
   // Pattern-match combinations for which more efficient representations exist.
-  // [Reg, Offset, DW_OP_plus] --> [DW_OP_breg, Offset].
-  // [Reg, Offset, DW_OP_minus] --> [DW_OP_breg, -Offset].
-  // If Reg is a subregister we need to mask it out before subtracting.
-  if (Op && ((Op->getOp() == dwarf::DW_OP_plus) ||
-             (Op->getOp() == dwarf::DW_OP_minus && !SubRegisterSizeInBits))) {
-    int Offset = Op->getArg(0);
-    SignedOffset = (Op->getOp() == dwarf::DW_OP_plus) ? Offset : -Offset;
+  // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].
+  if (Op && (Op->getOp() == dwarf::DW_OP_plus_uconst)) {
+    SignedOffset = Op->getArg(0);
     ExprCursor.take();
   }
+
+  // [Reg, DW_OP_constu, Offset, DW_OP_plus]  --> [DW_OP_breg, Offset]
+  // [Reg, DW_OP_constu, Offset, DW_OP_minus] --> [DW_OP_breg,-Offset]
+  // If Reg is a subregister we need to mask it out before subtracting.
+  if (Op && Op->getOp() == dwarf::DW_OP_constu) {
+    auto N = ExprCursor.peekNext();
+    if (N && (N->getOp() == dwarf::DW_OP_plus ||
+             (N->getOp() == dwarf::DW_OP_minus && !SubRegisterSizeInBits))) {
+      int Offset = Op->getArg(0);
+      SignedOffset = (N->getOp() == dwarf::DW_OP_minus) ? -Offset : Offset;
+      ExprCursor.consume(2);
+    }
+  }
+
   if (FBReg)
     addFBReg(SignedOffset);
   else
@@ -319,17 +330,14 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       LocationKind = Unknown;
       return;
     }
-    case dwarf::DW_OP_plus:
+    case dwarf::DW_OP_plus_uconst:
       assert(LocationKind != Register);
       emitOp(dwarf::DW_OP_plus_uconst);
       emitUnsigned(Op->getArg(0));
       break;
+    case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
-      assert(LocationKind != Register);
-      // There is no DW_OP_minus_uconst.
-      emitOp(dwarf::DW_OP_constu);
-      emitUnsigned(Op->getArg(0));
-      emitOp(dwarf::DW_OP_minus);
+      emitOp(Op->getOp());
       break;
     case dwarf::DW_OP_deref: {
       assert(LocationKind != Register);

@@ -25,7 +25,11 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/Refactor/IndexerQuery.h"
+#include "clang/Tooling/Refactor/RefactoringOperation.h"
+#include "clang/Tooling/Refactor/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
@@ -102,10 +106,10 @@ TEST_F(ReplacementTest, ReturnsInvalidPath) {
 
 // Checks that an llvm::Error instance contains a ReplacementError with expected
 // error code, expected new replacement, and expected existing replacement.
-static bool checkReplacementError(
-    llvm::Error&& Error, replacement_error ExpectedErr,
-    llvm::Optional<Replacement> ExpectedExisting,
-    llvm::Optional<Replacement> ExpectedNew) {
+static bool checkReplacementError(llvm::Error &&Error,
+                                  replacement_error ExpectedErr,
+                                  llvm::Optional<Replacement> ExpectedExisting,
+                                  llvm::Optional<Replacement> ExpectedNew) {
   if (!Error) {
     llvm::errs() << "Error is a success.";
     return false;
@@ -1087,6 +1091,378 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
   FileToReplaces[Path2] = Replacements();
   FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_TRUE(FileToReplaces.empty());
+}
+
+namespace {
+struct TestRefactoringValueOption final : RefactoringOption {
+  int Value;
+  TestRefactoringValueOption(int Value) : Value(Value) {}
+
+  static constexpr const char *Name = "test value option";
+};
+} // end anonymous namespace
+
+TEST(RefactoringOptionSet, AddGet) {
+  RefactoringOptionSet Options;
+  const TestRefactoringValueOption Kind(21);
+  const TestRefactoringValueOption DefaultKind(42);
+
+  EXPECT_EQ(Options.get<TestRefactoringValueOption>(), nullptr);
+  EXPECT_EQ(Options.get(DefaultKind).Value, DefaultKind.Value);
+
+  Options.add(Kind);
+
+  auto *Ptr = Options.get<TestRefactoringValueOption>();
+  ASSERT_TRUE(Ptr);
+  EXPECT_EQ(Ptr->Value, Kind.Value);
+  EXPECT_EQ(Options.get(DefaultKind).Value, Kind.Value);
+}
+
+namespace {
+struct TestRefactoringOption final : RefactoringOption {
+  int &Counter;
+  TestRefactoringOption(int &Counter) : Counter(Counter) {}
+  ~TestRefactoringOption() { ++Counter; }
+
+  static constexpr const char *Name = "test option";
+};
+} // end anonymous namespace
+
+TEST(RefactoringOptionSet, OptionDestroyed) {
+  int Counter = 0;
+  {
+    RefactoringOptionSet Options;
+    Options.add(TestRefactoringOption(Counter));
+    Options.add(TestRefactoringOption(Counter));
+  }
+  EXPECT_EQ(Counter, 3);
+}
+
+class AtomicChangeTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+      DefaultFileID = Context.createInMemoryFile("input.cpp", DefaultCode);
+      DefaultLoc = Context.Sources.getLocForStartOfFile(DefaultFileID)
+                       .getLocWithOffset(20);
+      assert(DefaultLoc.isValid() && "Default location must be valid.");
+    }
+
+    RewriterTestContext Context;
+    std::string DefaultCode = std::string(100, 'a');
+    unsigned DefaultOffset = 20;
+    SourceLocation DefaultLoc;
+    FileID DefaultFileID;
+};
+
+TEST_F(AtomicChangeTest, AtomicChangeToYAML) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err =
+      Change.insert(Context.Sources, DefaultLoc, "aa", /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+  Err = Change.insert(Context.Sources, DefaultLoc.getLocWithOffset(10), "bb",
+                    /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+  Change.addHeader("a.h");
+  Change.removeHeader("b.h");
+  std::string YAMLString = Change.toYAMLString();
+
+  // NOTE: If this test starts to fail for no obvious reason, check whitespace.
+  ASSERT_STREQ("---\n"
+               "Key:             'input.cpp:20'\n"
+               "FilePath:        input.cpp\n"
+               "Error:           ''\n"
+               "InsertedHeaders: \n" // Extra whitespace here!
+               "  - a.h\n"
+               "RemovedHeaders:  \n" // Extra whitespace here!
+               "  - b.h\n"
+               "Replacements:    \n" // Extra whitespace here!
+               "  - FilePath:        input.cpp\n"
+               "    Offset:          20\n"
+               "    Length:          0\n"
+               "    ReplacementText: aa\n"
+               "  - FilePath:        input.cpp\n"
+               "    Offset:          30\n"
+               "    Length:          0\n"
+               "    ReplacementText: bb\n"
+               "...\n",
+               YAMLString.c_str());
+}
+
+TEST_F(AtomicChangeTest, YAMLToAtomicChange) {
+  std::string YamlContent = "---\n"
+                            "Key:             'input.cpp:20'\n"
+                            "FilePath:        input.cpp\n"
+                            "Error:           'ok'\n"
+                            "InsertedHeaders: \n" // Extra whitespace here!
+                            "  - a.h\n"
+                            "RemovedHeaders:  \n" // Extra whitespace here!
+                            "  - b.h\n"
+                            "Replacements:    \n" // Extra whitespace here!
+                            "  - FilePath:        input.cpp\n"
+                            "    Offset:          20\n"
+                            "    Length:          0\n"
+                            "    ReplacementText: aa\n"
+                            "  - FilePath:        input.cpp\n"
+                            "    Offset:          30\n"
+                            "    Length:          0\n"
+                            "    ReplacementText: bb\n"
+                            "...\n";
+  AtomicChange ExpectedChange(Context.Sources, DefaultLoc);
+  llvm::Error Err = ExpectedChange.insert(Context.Sources, DefaultLoc, "aa",
+                                        /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+  Err = ExpectedChange.insert(Context.Sources, DefaultLoc.getLocWithOffset(10),
+                            "bb", /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+
+  ExpectedChange.addHeader("a.h");
+  ExpectedChange.removeHeader("b.h");
+  ExpectedChange.setError("ok");
+
+  AtomicChange ActualChange = AtomicChange::convertFromYAML(YamlContent);
+  EXPECT_EQ(ExpectedChange.getKey(), ActualChange.getKey());
+  EXPECT_EQ(ExpectedChange.getFilePath(), ActualChange.getFilePath());
+  EXPECT_EQ(ExpectedChange.getError(), ActualChange.getError());
+  EXPECT_EQ(ExpectedChange.getInsertedHeaders(),
+            ActualChange.getInsertedHeaders());
+  EXPECT_EQ(ExpectedChange.getRemovedHeaders(),
+            ActualChange.getRemovedHeaders());
+  EXPECT_EQ(ExpectedChange.getReplacements().size(),
+            ActualChange.getReplacements().size());
+  EXPECT_EQ(2u, ActualChange.getReplacements().size());
+  EXPECT_EQ(*ExpectedChange.getReplacements().begin(),
+            *ActualChange.getReplacements().begin());
+  EXPECT_EQ(*(++ExpectedChange.getReplacements().begin()),
+            *(++ActualChange.getReplacements().begin()));
+}
+
+TEST_F(AtomicChangeTest, CheckKeyAndKeyFile) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  EXPECT_EQ("input.cpp:20", Change.getKey());
+  EXPECT_EQ("input.cpp", Change.getFilePath());
+}
+
+TEST_F(AtomicChangeTest, Replace) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err = Change.replace(Context.Sources, DefaultLoc, 2, "aa");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 2, "aa"));
+
+  // Add a new replacement that conflicts with the existing one.
+  Err = Change.replace(Context.Sources, DefaultLoc, 3, "ab");
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+}
+
+TEST_F(AtomicChangeTest, ReplaceWithRange) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  SourceLocation End = DefaultLoc.getLocWithOffset(20);
+  llvm::Error Err = Change.replace(
+      Context.Sources, CharSourceRange::getCharRange(DefaultLoc, End), "aa");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 20, "aa"));
+}
+
+TEST_F(AtomicChangeTest, InsertBefore) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err = Change.insert(Context.Sources, DefaultLoc, "aa");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 0, "aa"));
+  Err = Change.insert(Context.Sources, DefaultLoc, "b", /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 0, "baa"));
+}
+
+TEST_F(AtomicChangeTest, InsertAfter) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err = Change.insert(Context.Sources, DefaultLoc, "aa");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 0, "aa"));
+  Err = Change.insert(Context.Sources, DefaultLoc, "b");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 0, "aab"));
+}
+
+TEST_F(AtomicChangeTest, InsertBeforeWithInvalidLocation) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err =
+      Change.insert(Context.Sources, DefaultLoc, "a", /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+
+  // Invalid location.
+  Err = Change.insert(Context.Sources, SourceLocation(), "a",
+                    /*InsertAfter=*/false);
+  ASSERT_TRUE((bool)Err);
+  EXPECT_TRUE(checkReplacementError(
+      std::move(Err), replacement_error::wrong_file_path,
+      Replacement(Context.Sources, DefaultLoc, 0, "a"),
+      Replacement(Context.Sources, SourceLocation(), 0, "a")));
+}
+
+TEST_F(AtomicChangeTest, InsertBeforeToWrongFile) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err =
+      Change.insert(Context.Sources, DefaultLoc, "a", /*InsertAfter=*/false);
+  ASSERT_TRUE(!Err);
+
+  // Inserting at a different file.
+  FileID NewID = Context.createInMemoryFile("extra.cpp", DefaultCode);
+  SourceLocation NewLoc = Context.Sources.getLocForStartOfFile(NewID);
+  Err = Change.insert(Context.Sources, NewLoc, "b", /*InsertAfter=*/false);
+  ASSERT_TRUE((bool)Err);
+  EXPECT_TRUE(
+      checkReplacementError(std::move(Err), replacement_error::wrong_file_path,
+                            Replacement(Context.Sources, DefaultLoc, 0, "a"),
+                            Replacement(Context.Sources, NewLoc, 0, "b")));
+}
+
+TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err = Change.insert(Context.Sources, DefaultLoc, "a");
+  ASSERT_TRUE(!Err);
+
+  // Invalid location.
+  Err = Change.insert(Context.Sources, SourceLocation(), "b");
+  ASSERT_TRUE((bool)Err);
+  EXPECT_TRUE(checkReplacementError(
+      std::move(Err), replacement_error::wrong_file_path,
+      Replacement(Context.Sources, DefaultLoc, 0, "a"),
+      Replacement(Context.Sources, SourceLocation(), 0, "b")));
+}
+
+namespace {
+
+class RefactoringOperationTest {
+  RefactoringActionType Type;
+  unsigned Line, Column;
+  bool Success = true;
+  std::function<void(const RefactoringResult &Result)> ResultHandler;
+
+public:
+  RefactoringOperationTest(
+      RefactoringActionType Type, unsigned Line, unsigned Column,
+      std::function<void(const RefactoringResult &Result)> ResultHandler)
+      : Type(Type), Line(Line), Column(Column),
+        ResultHandler(std::move(ResultHandler)) {}
+
+  bool runOver(StringRef Code) {
+    return runToolOnCode(new TestAction(this), Code);
+  }
+
+  bool succeeded() const { return Success; }
+
+  void run() {
+    assert(PP && Context && "Invalid state");
+    SourceLocation Loc = Context->getSourceManager().translateLineCol(
+        Context->getSourceManager().getMainFileID(), Line, Column);
+    if (Loc.isInvalid()) {
+      Success = false;
+      return;
+    }
+    RefactoringOperationResult Op =
+        initiateRefactoringOperationAt(Loc, SourceRange(), *Context, Type);
+    if (!Op.Initiated) {
+      Success = false;
+      return;
+    }
+    RefactoringOptionSet Options;
+    llvm::Expected<RefactoringResult> Result =
+        Op.RefactoringOp->perform(*Context, *PP, Options);
+    if (!Result) {
+      (void)!llvm::handleErrors(
+          Result.takeError(),
+          [&](const RefactoringOperationError &Error) { Success = false; });
+      return;
+    }
+    ResultHandler(Result.get());
+  }
+
+protected:
+  clang::Preprocessor *PP;
+  clang::ASTContext *Context;
+
+private:
+  class TestConsumer : public clang::ASTConsumer {
+  public:
+    TestConsumer(RefactoringOperationTest *Test) : Test(Test) {}
+
+    void HandleTranslationUnit(clang::ASTContext &Context) override {
+      Test->run();
+    }
+
+  private:
+    RefactoringOperationTest *Test;
+  };
+
+  class TestAction : public clang::ASTFrontendAction {
+  public:
+    TestAction(RefactoringOperationTest *Test) : Test(Test) {}
+
+    std::unique_ptr<clang::ASTConsumer>
+    CreateASTConsumer(clang::CompilerInstance &Compiler,
+                      llvm::StringRef) override {
+      Test->PP = &Compiler.getPreprocessor();
+      Test->Context = &Compiler.getASTContext();
+      return llvm::make_unique<TestConsumer>(Test);
+    }
+
+  private:
+    RefactoringOperationTest *Test;
+  };
+};
+
+} // end anonymous namespace
+
+TEST(RefactoringContinuation, ContinuationAndQueriesExist) {
+  using namespace clang::tooling::indexer;
+  using namespace clang::tooling::indexer::detail;
+  RefactoringOperationTest Test(
+      RefactoringActionType::ImplementDeclaredMethods, 2, 1,
+      [](const RefactoringResult &Result) {
+        EXPECT_TRUE(Result.Replacements.empty());
+        ASSERT_NE(Result.Continuation, nullptr);
+        RefactoringContinuation &Continuation = *Result.Continuation;
+
+        ASTProducerQuery *ASTQuery = Continuation.getASTUnitIndexerQuery();
+        ASSERT_NE(ASTQuery, nullptr);
+        EXPECT_TRUE(isa<ASTProducerQuery>(ASTQuery));
+        EXPECT_TRUE(isa<ASTUnitForImplementationOfDeclarationQuery>(ASTQuery));
+        EXPECT_FALSE(isa<DeclarationsQuery>(ASTQuery));
+
+        auto AdditionalQueries = Continuation.getAdditionalIndexerQueries();
+        ASSERT_EQ(AdditionalQueries.size(), (size_t)1);
+        EXPECT_FALSE(isa<ASTProducerQuery>(AdditionalQueries[0]));
+        EXPECT_FALSE(isa<ASTUnitForImplementationOfDeclarationQuery>(
+            AdditionalQueries[0]));
+        ASSERT_TRUE(isa<DeclarationsQuery>(AdditionalQueries[0]));
+
+        const DeclPredicateNode &Predicate =
+            cast<DeclarationsQuery>(AdditionalQueries[0])->getPredicateNode();
+        ASSERT_TRUE(isa<DeclPredicateNotPredicate>(Predicate));
+        const DeclPredicateNode &SubPredicate =
+            cast<DeclPredicateNotPredicate>(Predicate).getChild();
+        ASSERT_TRUE(isa<DeclPredicateNodePredicate>(SubPredicate));
+        EXPECT_EQ(cast<DeclPredicateNodePredicate>(SubPredicate).getPredicate(),
+                  DeclEntity().isDefined().Predicate);
+
+        ASTQuery->invalidateTUSpecificState();
+        AdditionalQueries[0]->invalidateTUSpecificState();
+      });
+  Test.runOver("class Foo {\nvoid method();\n};\n");
+  EXPECT_TRUE(Test.succeeded());
 }
 
 } // end namespace tooling

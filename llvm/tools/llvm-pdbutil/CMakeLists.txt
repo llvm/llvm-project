@@ -1,0 +1,38 @@
+set(LLVM_LINK_COMPONENTS
+  DebugInfoCodeView
+  DebugInfoMSF
+  DebugInfoPDB
+  Object
+  ObjectYAML
+  Support
+  )
+
+add_llvm_tool(llvm-pdbutil
+  Analyze.cpp
+  BytesOutputStyle.cpp
+  Diff.cpp
+  DiffPrinter.cpp
+  DumpOutputStyle.cpp
+  llvm-pdbutil.cpp
+  FormatUtil.cpp
+  LinePrinter.cpp
+  MinimalSymbolDumper.cpp
+  MinimalTypeDumper.cpp
+  PdbYaml.cpp
+  PrettyBuiltinDumper.cpp
+  PrettyClassDefinitionDumper.cpp
+  PrettyClassLayoutGraphicalDumper.cpp
+  PrettyCompilandDumper.cpp
+  PrettyEnumDumper.cpp
+  PrettyExternalSymbolDumper.cpp
+  PrettyFunctionDumper.cpp
+  PrettyTypeDumper.cpp
+  PrettyTypedefDumper.cpp
+  PrettyVariableDumper.cpp
+  StreamUtil.cpp
+  YAMLOutputStyle.cpp
+  )
+
+if(LLVM_USE_SANITIZE_COVERAGE)
+  add_subdirectory(fuzzer)
+endif()

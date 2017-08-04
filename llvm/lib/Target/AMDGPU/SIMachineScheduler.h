@@ -40,13 +40,12 @@ enum SIScheduleCandReason {
 
 struct SISchedulerCandidate {
   // The reason for this candidate.
-  SIScheduleCandReason Reason;
+  SIScheduleCandReason Reason = NoCand;
 
   // Set of reasons that apply to multiple candidates.
-  uint32_t RepeatReasonSet;
+  uint32_t RepeatReasonSet = 0;
 
-  SISchedulerCandidate()
-    :  Reason(NoCand), RepeatReasonSet(0) {}
+  SISchedulerCandidate() = default;
 
   bool isRepeat(SIScheduleCandReason R) { return RepeatReasonSet & (1 << R); }
   void setRepeat(SIScheduleCandReason R) { RepeatReasonSet |= (1 << R); }
@@ -54,6 +53,11 @@ struct SISchedulerCandidate {
 
 class SIScheduleDAGMI;
 class SIScheduleBlockCreator;
+
+enum SIScheduleBlockLinkKind {
+  NoData,
+  Data
+};
 
 class SIScheduleBlock {
   SIScheduleDAGMI *DAG;
@@ -84,8 +88,8 @@ class SIScheduleBlock {
   std::set<unsigned> LiveInRegs;
   std::set<unsigned> LiveOutRegs;
 
-  bool Scheduled;
-  bool HighLatencyBlock;
+  bool Scheduled = false;
+  bool HighLatencyBlock = false;
 
   std::vector<unsigned> HasLowLatencyNonWaitedParent;
 
@@ -93,14 +97,14 @@ class SIScheduleBlock {
   unsigned ID;
 
   std::vector<SIScheduleBlock*> Preds;  // All blocks predecessors.
-  std::vector<SIScheduleBlock*> Succs;  // All blocks successors.
-  unsigned NumHighLatencySuccessors;
+  // All blocks successors, and the kind of link
+  std::vector<std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind>> Succs;
+  unsigned NumHighLatencySuccessors = 0;
 
 public:
   SIScheduleBlock(SIScheduleDAGMI *DAG, SIScheduleBlockCreator *BC,
                   unsigned ID):
-    DAG(DAG), BC(BC), TopRPTracker(TopPressure), Scheduled(false),
-    HighLatencyBlock(false), ID(ID), NumHighLatencySuccessors(0) {}
+    DAG(DAG), BC(BC), TopRPTracker(TopPressure), ID(ID) {}
 
   ~SIScheduleBlock() = default;
 
@@ -114,10 +118,11 @@ public:
 
   // Add block pred, which has instruction predecessor of SU.
   void addPred(SIScheduleBlock *Pred);
-  void addSucc(SIScheduleBlock *Succ);
+  void addSucc(SIScheduleBlock *Succ, SIScheduleBlockLinkKind Kind);
 
   const std::vector<SIScheduleBlock*>& getPreds() const { return Preds; }
-  const std::vector<SIScheduleBlock*>& getSuccs() const { return Succs; }
+  ArrayRef<std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind>>
+    getSuccs() const { return Succs; }
 
   unsigned Height;  // Maximum topdown path length to block without outputs
   unsigned Depth;   // Maximum bottomup path length to block without inputs
@@ -213,9 +218,9 @@ struct SIScheduleBlocks {
 };
 
 enum SISchedulerBlockCreatorVariant {
-    LatenciesAlone,
-    LatenciesGrouped,
-    LatenciesAlonePlusConsecutive
+  LatenciesAlone,
+  LatenciesGrouped,
+  LatenciesAlonePlusConsecutive
 };
 
 class SIScheduleBlockCreator {
@@ -451,6 +456,7 @@ public:
   LiveIntervals *getLIS() { return LIS; }
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
+  ScheduleDAGTopologicalSort *GetTopo() { return &Topo; }
   SUnit& getEntrySU() { return EntrySU; }
   SUnit& getExitSU() { return ExitSU; }
 
@@ -468,6 +474,14 @@ public:
     }
     return InRegs;
   }
+
+  std::set<unsigned> getOutRegs() {
+    std::set<unsigned> OutRegs;
+    for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
+      OutRegs.insert(RegMaskPair.RegUnit);
+    }
+    return OutRegs;
+  };
 
   unsigned getVGPRSetID() const { return VGPRSetID; }
   unsigned getSGPRSetID() const { return SGPRSetID; }

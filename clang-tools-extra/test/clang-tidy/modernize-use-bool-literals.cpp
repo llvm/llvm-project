@@ -1,4 +1,8 @@
-// RUN: %check_clang_tidy %s modernize-use-bool-literals %t
+// RUN: %check_clang_tidy %s modernize-use-bool-literals %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: modernize-use-bool-literals.IgnoreMacros, \
+// RUN:               value: 0}]}" \
+// RUN:   -- -std=c++11
 
 bool IntToTrue = 1;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: converting integer literal to bool, use bool literal instead [modernize-use-bool-literals]

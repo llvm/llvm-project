@@ -1,5 +1,7 @@
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.coff-arm \
 RUN:   | FileCheck %s -check-prefix COFF-ARM
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.coff-arm64 \
+RUN:   | FileCheck %s -check-prefix COFF-ARM64
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF32
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.coff-x86-64 \
@@ -26,6 +28,8 @@ RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
 RUN:   | FileCheck %s -check-prefix COFF-IMPORTLIB
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-lanai \
 RUN:   | FileCheck %s -check-prefix ELF-LANAI
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.wasm \
+RUN:   | FileCheck %s -check-prefix WASM
 
 COFF-ARM:      File: {{(.*[/\\])?}}trivial.obj.coff-arm
 COFF-ARM-NEXT: Format: COFF-ARM
@@ -41,6 +45,21 @@ COFF-ARM-NEXT:   OptionalHeaderSize: 0
 COFF-ARM-NEXT:   Characteristics [ (0x0)
 COFF-ARM-NEXT:   ]
 COFF-ARM-NEXT: }
+
+COFF-ARM64:      File: {{(.*[/\\])?}}trivial.obj.coff-arm64
+COFF-ARM64-NEXT: Format: COFF-ARM64
+COFF-ARM64-NEXT: Arch: aarch64
+COFF-ARM64-NEXT: AddressSize: 64bit
+COFF-ARM64-NEXT: ImageFileHeader {
+COFF-ARM64-NEXT:   Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+COFF-ARM64-NEXT:   SectionCount: 1
+COFF-ARM64-NEXT:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+COFF-ARM64-NEXT:   PointerToSymbolTable: 0x44
+COFF-ARM64-NEXT:   SymbolCount: 3
+COFF-ARM64-NEXT:   OptionalHeaderSize: 0
+COFF-ARM64-NEXT:   Characteristics [ (0x0)
+COFF-ARM64-NEXT:   ]
+COFF-ARM64-NEXT: }
 
 COFF32:      File: {{(.*[/\\])?}}trivial.obj.coff-i386
 COFF32-NEXT: Format: COFF-i386
@@ -233,6 +252,7 @@ PE32-NEXT:     IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
 PE32-NEXT:   ]
 PE32-NEXT: }
 PE32-NEXT: ImageOptionalHeader {
+PE32-NEXT:   Magic: 0x10B
 PE32-NEXT:   MajorLinkerVersion: 11
 PE32-NEXT:   MinorLinkerVersion: 0
 PE32-NEXT:   SizeOfCode: 512
@@ -367,3 +387,8 @@ ELF-LANAI-NEXT:   SectionHeaderEntrySize: 40
 ELF-LANAI-NEXT:   SectionHeaderCount: 8
 ELF-LANAI-NEXT:   StringTableSectionIndex: 1
 ELF-LANAI-NEXT: }
+
+WASM: Format: WASM
+WASM-NEXT: Arch: wasm32
+WASM-NEXT: AddressSize: 32bit
+WASM-NEXT: Version: 0x1

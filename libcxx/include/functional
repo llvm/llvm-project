@@ -235,7 +235,7 @@ namespace placeholders {
 }
 
 template <class Operation>
-class binder1st
+class binder1st     // deprecated in C++11, removed in C++17
     : public unary_function<typename Operation::second_argument_type,
                             typename Operation::result_type>
 {
@@ -249,10 +249,10 @@ public:
 };
 
 template <class Operation, class T>
-binder1st<Operation> bind1st(const Operation& op, const T& x);
+binder1st<Operation> bind1st(const Operation& op, const T& x);  // deprecated in C++11, removed in C++17
 
 template <class Operation>
-class binder2nd
+class binder2nd     // deprecated in C++11, removed in C++17
     : public unary_function<typename Operation::first_argument_type,
                             typename Operation::result_type>
 {
@@ -266,9 +266,9 @@ public:
 };
 
 template <class Operation, class T>
-binder2nd<Operation> bind2nd(const Operation& op, const T& x);
+binder2nd<Operation> bind2nd(const Operation& op, const T& x);  // deprecated in C++11, removed in C++17
 
-template <class Arg, class Result>
+template <class Arg, class Result>      // deprecated in C++11, removed in C++17
 class pointer_to_unary_function : public unary_function<Arg, Result>
 {
 public:
@@ -277,9 +277,9 @@ public:
 };
 
 template <class Arg, class Result>
-pointer_to_unary_function<Arg,Result> ptr_fun(Result (*f)(Arg));
+pointer_to_unary_function<Arg,Result> ptr_fun(Result (*f)(Arg));      // deprecated in C++11, removed in C++17
 
-template <class Arg1, class Arg2, class Result>
+template <class Arg1, class Arg2, class Result>      // deprecated in C++11, removed in C++17
 class pointer_to_binary_function : public binary_function<Arg1, Arg2, Result>
 {
 public:
@@ -288,9 +288,9 @@ public:
 };
 
 template <class Arg1, class Arg2, class Result>
-pointer_to_binary_function<Arg1,Arg2,Result> ptr_fun(Result (*f)(Arg1,Arg2));
+pointer_to_binary_function<Arg1,Arg2,Result> ptr_fun(Result (*f)(Arg1,Arg2));      // deprecated in C++11, removed in C++17
 
-template<class S, class T>
+template<class S, class T>      // deprecated in C++11, removed in C++17
 class mem_fun_t : public unary_function<T*, S>
 {
 public:
@@ -299,18 +299,18 @@ public:
 };
 
 template<class S, class T, class A>
-class mem_fun1_t : public binary_function<T*, A, S>
+class mem_fun1_t : public binary_function<T*, A, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit mem_fun1_t(S (T::*p)(A));
     S operator()(T* p, A x) const;
 };
 
-template<class S, class T>          mem_fun_t<S,T>    mem_fun(S (T::*f)());
-template<class S, class T, class A> mem_fun1_t<S,T,A> mem_fun(S (T::*f)(A));
+template<class S, class T>          mem_fun_t<S,T>    mem_fun(S (T::*f)());      // deprecated in C++11, removed in C++17
+template<class S, class T, class A> mem_fun1_t<S,T,A> mem_fun(S (T::*f)(A));     // deprecated in C++11, removed in C++17
 
 template<class S, class T>
-class mem_fun_ref_t : public unary_function<T, S>
+class mem_fun_ref_t : public unary_function<T, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit mem_fun_ref_t(S (T::*p)());
@@ -318,18 +318,18 @@ public:
 };
 
 template<class S, class T, class A>
-class mem_fun1_ref_t : public binary_function<T, A, S>
+class mem_fun1_ref_t : public binary_function<T, A, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit mem_fun1_ref_t(S (T::*p)(A));
     S operator()(T& p, A x) const;
 };
 
-template<class S, class T>          mem_fun_ref_t<S,T>    mem_fun_ref(S (T::*f)());
-template<class S, class T, class A> mem_fun1_ref_t<S,T,A> mem_fun_ref(S (T::*f)(A));
+template<class S, class T>          mem_fun_ref_t<S,T>    mem_fun_ref(S (T::*f)());      // deprecated in C++11, removed in C++17
+template<class S, class T, class A> mem_fun1_ref_t<S,T,A> mem_fun_ref(S (T::*f)(A));     // deprecated in C++11, removed in C++17
 
 template <class S, class T>
-class const_mem_fun_t : public unary_function<const T*, S>
+class const_mem_fun_t : public unary_function<const T*, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit const_mem_fun_t(S (T::*p)() const);
@@ -337,18 +337,18 @@ public:
 };
 
 template <class S, class T, class A>
-class const_mem_fun1_t : public binary_function<const T*, A, S>
+class const_mem_fun1_t : public binary_function<const T*, A, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit const_mem_fun1_t(S (T::*p)(A) const);
     S operator()(const T* p, A x) const;
 };
 
-template <class S, class T>          const_mem_fun_t<S,T>    mem_fun(S (T::*f)() const);
-template <class S, class T, class A> const_mem_fun1_t<S,T,A> mem_fun(S (T::*f)(A) const);
+template <class S, class T>          const_mem_fun_t<S,T>    mem_fun(S (T::*f)() const);      // deprecated in C++11, removed in C++17
+template <class S, class T, class A> const_mem_fun1_t<S,T,A> mem_fun(S (T::*f)(A) const);     // deprecated in C++11, removed in C++17
 
 template <class S, class T>
-class const_mem_fun_ref_t : public unary_function<T, S>
+class const_mem_fun_ref_t : public unary_function<T, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit const_mem_fun_ref_t(S (T::*p)() const);
@@ -356,15 +356,15 @@ public:
 };
 
 template <class S, class T, class A>
-class const_mem_fun1_ref_t : public binary_function<T, A, S>
+class const_mem_fun1_ref_t : public binary_function<T, A, S>      // deprecated in C++11, removed in C++17
 {
 public:
     explicit const_mem_fun1_ref_t(S (T::*p)(A) const);
     S operator()(const T& p, A x) const;
 };
 
-template <class S, class T>          const_mem_fun_ref_t<S,T>    mem_fun_ref(S (T::*f)() const);
-template <class S, class T, class A> const_mem_fun1_ref_t<S,T,A> mem_fun_ref(S (T::*f)(A) const);
+template <class S, class T>          const_mem_fun_ref_t<S,T>    mem_fun_ref(S (T::*f)() const);   // deprecated in C++11, removed in C++17
+template <class S, class T, class A> const_mem_fun1_ref_t<S,T,A> mem_fun_ref(S (T::*f)(A) const);  // deprecated in C++11, removed in C++17
 
 template<class R, class T> unspecified mem_fn(R T::*);
 
@@ -470,6 +470,7 @@ template <> struct hash<double>;
 template <> struct hash<long double>;
 
 template<class T> struct hash<T*>;
+template <> struct hash<nullptr_t>;  // C++17
 
 }  // std
 
@@ -485,6 +486,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <exception>
 #include <memory>
 #include <tuple>
+#include <utility>
 
 #include <__functional_base>
 
@@ -1018,6 +1020,7 @@ inline _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 binary_negate<_Predicate>
 not2(const _Predicate& __pred) {return binary_negate<_Predicate>(__pred);}
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
 template <class __Operation>
 class _LIBCPP_TEMPLATE_VIS binder1st
     : public unary_function<typename __Operation::second_argument_type,
@@ -1242,6 +1245,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 const_mem_fun1_ref_t<_Sp,_Tp,_Ap>
 mem_fun_ref(_Sp (_Tp::*__f)(_Ap) const)
     {return const_mem_fun1_ref_t<_Sp,_Tp,_Ap>(__f);}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                MEMFUN
@@ -1260,7 +1264,7 @@ private:
 public:
     _LIBCPP_INLINE_VISIBILITY __mem_fn(type __f) _NOEXCEPT : __f_(__f) {}
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     // invoke
     template <class... _ArgTypes>
     _LIBCPP_INLINE_VISIBILITY
@@ -1387,6 +1391,12 @@ mem_fn(_Rp _Tp::* __pm) _NOEXCEPT
 class _LIBCPP_EXCEPTION_ABI bad_function_call
     : public exception
 {
+#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+public:
+    virtual ~bad_function_call() _NOEXCEPT;
+
+    virtual const char* what() const _NOEXCEPT;
+#endif
 };
 
 _LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
@@ -1444,7 +1454,7 @@ bool __not_null(function<_Fp> const& __f) { return !!__f; }
 
 } // namespace __function
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 namespace __function {
 
@@ -1931,8 +1941,8 @@ _Tp*
 function<_Rp(_ArgTypes...)>::target() _NOEXCEPT
 {
     if (__f_ == 0)
-        return (_Tp*)0;
-    return (_Tp*)__f_->target(typeid(_Tp));
+        return nullptr;
+    return (_Tp*) const_cast<void *>(__f_->target(typeid(_Tp)));
 }
 
 template<class _Rp, class ..._ArgTypes>
@@ -1941,7 +1951,7 @@ const _Tp*
 function<_Rp(_ArgTypes...)>::target() const _NOEXCEPT
 {
     if (__f_ == 0)
-        return (const _Tp*)0;
+        return nullptr;
     return (const _Tp*)__f_->target(typeid(_Tp));
 }
 
@@ -1973,7 +1983,7 @@ void
 swap(function<_Rp(_ArgTypes...)>& __x, function<_Rp(_ArgTypes...)>& __y) _NOEXCEPT
 {return __x.swap(__y);}
 
-#else // _LIBCPP_HAS_NO_VARIADICS
+#else // _LIBCPP_CXX03_LANG
 
 #include <__functional_03>
 
@@ -2037,7 +2047,7 @@ struct __is_placeholder<placeholders::__ph<_Np> >
     : public integral_constant<int, _Np> {};
 
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Uj>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2214,7 +2224,7 @@ typename __bind_return<_Fp, _BoundArgs, _Args>::type
 __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>,
                 _Args&& __args)
 {
-    return __invoke(__f, __mu(_VSTD::get<_Indx>(__bound_args), __args)...);
+    return _VSTD::__invoke(__f, _VSTD::__mu(_VSTD::get<_Indx>(__bound_args), __args)...);
 }
 
 template<class _Fp, class ..._BoundArgs>
@@ -2247,7 +2257,7 @@ public:
         typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args)
         {
-            return __apply_functor(__f_, __bound_args_, __indices(),
+            return _VSTD::__apply_functor(__f_, __bound_args_, __indices(),
                                   tuple<_Args&&...>(_VSTD::forward<_Args>(__args)...));
         }
 
@@ -2256,7 +2266,7 @@ public:
         typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args) const
         {
-            return __apply_functor(__f_, __bound_args_, __indices(),
+            return _VSTD::__apply_functor(__f_, __bound_args_, __indices(),
                                    tuple<_Args&&...>(_VSTD::forward<_Args>(__args)...));
         }
 };
@@ -2337,248 +2347,7 @@ bind(_Fp&& __f, _BoundArgs&&... __bound_args)
     return type(_VSTD::forward<_Fp>(__f), _VSTD::forward<_BoundArgs>(__bound_args)...);
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<bool>
-    : public unary_function<bool, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(bool __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<char>
-    : public unary_function<char, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<signed char>
-    : public unary_function<signed char, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(signed char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<unsigned char>
-    : public unary_function<unsigned char, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(unsigned char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<char16_t>
-    : public unary_function<char16_t, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(char16_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<char32_t>
-    : public unary_function<char32_t, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(char32_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<wchar_t>
-    : public unary_function<wchar_t, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(wchar_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<short>
-    : public unary_function<short, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(short __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<unsigned short>
-    : public unary_function<unsigned short, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(unsigned short __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<int>
-    : public unary_function<int, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(int __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<unsigned int>
-    : public unary_function<unsigned int, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(unsigned int __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<long>
-    : public unary_function<long, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(long __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<unsigned long>
-    : public unary_function<unsigned long, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(unsigned long __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<long long>
-    : public __scalar_hash<long long>
-{
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<unsigned long long>
-    : public __scalar_hash<unsigned long long>
-{
-};
-
-#ifndef _LIBCPP_HAS_NO_INT128
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<__int128_t>
-    : public __scalar_hash<__int128_t>
-{
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<__uint128_t>
-    : public __scalar_hash<__uint128_t>
-{
-};
-
-#endif
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<float>
-    : public __scalar_hash<float>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(float __v) const _NOEXCEPT
-    {
-        // -0.0 and 0.0 should return same hash
-       if (__v == 0)
-           return 0;
-        return __scalar_hash<float>::operator()(__v);
-    }
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<double>
-    : public __scalar_hash<double>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(double __v) const _NOEXCEPT
-    {
-        // -0.0 and 0.0 should return same hash
-       if (__v == 0)
-           return 0;
-        return __scalar_hash<double>::operator()(__v);
-    }
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<long double>
-    : public __scalar_hash<long double>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(long double __v) const _NOEXCEPT
-    {
-        // -0.0 and 0.0 should return same hash
-        if (__v == 0)
-            return 0;
-#if defined(__i386__)
-        // Zero out padding bits
-        union
-        {
-            long double __t;
-            struct
-            {
-                size_t __a;
-                size_t __b;
-                size_t __c;
-                size_t __d;
-            } __s;
-        } __u;
-        __u.__s.__a = 0;
-        __u.__s.__b = 0;
-        __u.__s.__c = 0;
-        __u.__s.__d = 0;
-        __u.__t = __v;
-        return __u.__s.__a ^ __u.__s.__b ^ __u.__s.__c ^ __u.__s.__d;
-#elif defined(__x86_64__)
-        // Zero out padding bits
-        union
-        {
-            long double __t;
-            struct
-            {
-                size_t __a;
-                size_t __b;
-            } __s;
-        } __u;
-        __u.__s.__a = 0;
-        __u.__s.__b = 0;
-        __u.__t = __v;
-        return __u.__s.__a ^ __u.__s.__b;
-#else
-        return __scalar_hash<long double>::operator()(__v);
-#endif
-    }
-};
-
-#if _LIBCPP_STD_VER > 11
-
-template <class _Tp, bool = is_enum<_Tp>::value>
-struct _LIBCPP_TEMPLATE_VIS __enum_hash
-    : public unary_function<_Tp, size_t>
-{
-    _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(_Tp __v) const _NOEXCEPT
-    {
-        typedef typename underlying_type<_Tp>::type type;
-        return hash<type>{}(static_cast<type>(__v));
-    }
-};
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS __enum_hash<_Tp, false> {
-    __enum_hash() = delete;
-    __enum_hash(__enum_hash const&) = delete;
-    __enum_hash& operator=(__enum_hash const&) = delete;
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp>
-{
-};
-#endif
-
+#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 

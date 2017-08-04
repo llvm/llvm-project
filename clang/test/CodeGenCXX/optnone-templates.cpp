@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -std=c++11 -disable-O0-optnone -emit-llvm -o - | FileCheck %s
 
 // Test optnone on template instantiations.
 

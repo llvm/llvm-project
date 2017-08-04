@@ -1,8 +1,4 @@
-// FIXME: This test currently fails on Windows because we use the MSVC linker,
-// which throws away DWARF debug info.
-// XFAIL: win32
-//
-// RUN: %clangxx -fsanitize=alignment -g %s -O3 -o %t
+// RUN: %clangxx %gmlt -fsanitize=alignment %s -O3 -o %t
 // RUN: %run %t l0 && %run %t s0 && %run %t r0 && %run %t m0 && %run %t f0 && %run %t n0 && %run %t u0
 // RUN: %run %t l1 2>&1 | FileCheck %s --check-prefix=CHECK-LOAD --strict-whitespace
 // RUN: %run %t s1 2>&1 | FileCheck %s --check-prefix=CHECK-STORE

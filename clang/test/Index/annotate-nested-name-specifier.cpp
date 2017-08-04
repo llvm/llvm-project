@@ -211,7 +211,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [40:30 - 40:32] UsingDeclaration=iterator:40:46
 // CHECK: Identifier: "vector" [40:32 - 40:38] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [40:38 - 40:39] UsingDeclaration=iterator:40:46
-// CHECK: Identifier: "type" [40:39 - 40:43] TypeRef=type:39:13
+// CHECK: Identifier: "type" [40:39 - 40:43] TypeRef=X2::type:39:13
 // CHECK: Punctuation: ">" [40:43 - 40:44] UsingDeclaration=iterator:40:46
 // CHECK: Punctuation: "::" [40:44 - 40:46] UsingDeclaration=iterator:40:46
 // CHECK: Identifier: "iterator" [40:46 - 40:54] UsingDeclaration=iterator:40:46
@@ -223,7 +223,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [41:21 - 41:23] UsingDeclaration=push_back:41:37
 // CHECK: Identifier: "vector" [41:23 - 41:29] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [41:29 - 41:30] UsingDeclaration=push_back:41:37
-// CHECK: Identifier: "type" [41:30 - 41:34] TypeRef=type:39:13
+// CHECK: Identifier: "type" [41:30 - 41:34] TypeRef=X2::type:39:13
 // CHECK: Punctuation: ">" [41:34 - 41:35] UsingDeclaration=push_back:41:37
 // CHECK: Punctuation: "::" [41:35 - 41:37] UsingDeclaration=push_back:41:37
 // CHECK: Identifier: "push_back" [41:37 - 41:46] UsingDeclaration=push_back:41:37
@@ -266,7 +266,7 @@ struct X9 : X8 {
 // CHECK: Identifier: "vector" [57:51 - 57:57] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [57:57 - 57:58] MemberRefExpr=
 // CHECK: Identifier: "T" [57:58 - 57:59] TypeRef=T:54:19
-// CHECK: Punctuation: ">" [57:59 - 57:60] CallExpr=
+// CHECK: Punctuation: ">" [57:59 - 57:60] MemberRefExpr=
 // CHECK: Punctuation: "(" [57:60 - 57:61] CallExpr=
 // CHECK: Punctuation: ")" [57:61 - 57:62] CallExpr=
 
@@ -283,7 +283,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [76:5 - 76:7] MemberRefExpr=[71:8, 72:8]
 // CHECK: Identifier: "X4" [76:7 - 76:9] TemplateRef=X4:69:8
 // CHECK: Punctuation: "<" [76:9 - 76:10] MemberRefExpr=[71:8, 72:8]
-// CHECK: Identifier: "type" [76:10 - 76:14] TypeRef=type:70:13
+// CHECK: Identifier: "type" [76:10 - 76:14] TypeRef=X4::type:70:13
 // CHECK: Punctuation: ">" [76:14 - 76:15] MemberRefExpr=[71:8, 72:8]
 // CHECK: Punctuation: "::" [76:15 - 76:17] MemberRefExpr=[71:8, 72:8]
 // CHECK: Identifier: "g" [76:17 - 76:18] OverloadedDeclRef=g[71:8, 72:8]
@@ -296,7 +296,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [77:11 - 77:13] MemberRefExpr=
 // CHECK: Identifier: "X4" [77:13 - 77:15] TemplateRef=X4:69:8
 // CHECK: Punctuation: "<" [77:15 - 77:16] MemberRefExpr=
-// CHECK: Identifier: "type" [77:16 - 77:20] TypeRef=type:70:13
+// CHECK: Identifier: "type" [77:16 - 77:20] TypeRef=X4::type:70:13
 // CHECK: Punctuation: ">" [77:20 - 77:21] MemberRefExpr=
 // CHECK: Punctuation: "::" [77:21 - 77:23] MemberRefExpr=
 // CHECK: Identifier: "g" [77:23 - 77:24] MemberRefExpr=
@@ -318,7 +318,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [91:5 - 91:7] MemberRefExpr=g:86:8
 // CHECK: Identifier: "X4" [91:7 - 91:9] TemplateRef=X4:69:8
 // CHECK: Punctuation: "<" [91:9 - 91:10] MemberRefExpr=g:86:8
-// CHECK: Identifier: "type" [91:10 - 91:14] TypeRef=type:84:19
+// CHECK: Identifier: "type" [91:10 - 91:14] TypeRef=X4<int>::type:84:19
 // CHECK: Punctuation: ">" [91:14 - 91:15] MemberRefExpr=g:86:8
 // CHECK: Punctuation: "::" [91:15 - 91:17] MemberRefExpr=g:86:8
 // CHECK: Identifier: "g" [91:17 - 91:18] MemberRefExpr=g:86:8
@@ -331,7 +331,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [92:11 - 92:13] MemberRefExpr=g:86:8
 // CHECK: Identifier: "X4" [92:13 - 92:15] TemplateRef=X4:69:8
 // CHECK: Punctuation: "<" [92:15 - 92:16] MemberRefExpr=g:86:8
-// CHECK: Identifier: "type" [92:16 - 92:20] TypeRef=type:84:19
+// CHECK: Identifier: "type" [92:16 - 92:20] TypeRef=X4<int>::type:84:19
 // CHECK: Punctuation: ">" [92:20 - 92:21] MemberRefExpr=g:86:8
 // CHECK: Punctuation: "::" [92:21 - 92:23] MemberRefExpr=g:86:8
 // CHECK: Identifier: "g" [92:23 - 92:24] MemberRefExpr=g:86:8
@@ -348,7 +348,7 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [100:38 - 100:40] TypedefDecl=iter_type:100:63 (Definition)
 // CHECK: Identifier: "vector" [100:40 - 100:46] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [100:46 - 100:47] TypedefDecl=iter_type:100:63 (Definition)
-// CHECK: Identifier: "type" [100:47 - 100:51] TypeRef=type:99:13
+// CHECK: Identifier: "type" [100:47 - 100:51] TypeRef=X5::type:99:13
 // CHECK: Punctuation: ">" [100:51 - 100:52] TypedefDecl=iter_type:100:63 (Definition)
 // CHECK: Punctuation: "::" [100:52 - 100:54] TypedefDecl=iter_type:100:63 (Definition)
 // CHECK: Identifier: "iterator" [100:54 - 100:62] TypedefDecl=iter_type:100:63 (Definition)
@@ -365,7 +365,7 @@ struct X9 : X8 {
 // CHECK: Keyword: "int" [101:47 - 101:50] TypedefDecl=int_ptr_type:101:62 (Definition)
 // CHECK: Punctuation: ">" [101:50 - 101:51] TypedefDecl=int_ptr_type:101:62 (Definition)
 // CHECK: Punctuation: "::" [101:51 - 101:53] TypedefDecl=int_ptr_type:101:62 (Definition)
-// CHECK: Identifier: "iterator" [101:53 - 101:61] TypeRef=iterator:5:18
+// CHECK: Identifier: "iterator" [101:53 - 101:61] TypeRef=outer::inner::vector<int>::iterator:5:18
 // CHECK: Identifier: "int_ptr_type" [101:62 - 101:74] TypedefDecl=int_ptr_type:101:62 (Definition)
 
 // Dependent template specialization types
@@ -376,13 +376,13 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [107:38 - 107:40] TypedefDecl=type1:107:76 (Definition)
 // CHECK: Identifier: "vector" [107:40 - 107:46] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [107:46 - 107:47] TypedefDecl=type1:107:76 (Definition)
-// CHECK: Identifier: "type" [107:47 - 107:51] TypeRef=type:106:14
+// CHECK: Identifier: "type" [107:47 - 107:51] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [107:51 - 107:52] TypedefDecl=type1:107:76 (Definition)
 // CHECK: Punctuation: "::" [107:52 - 107:54] TypedefDecl=type1:107:76 (Definition)
 // CHECK: Keyword: "template" [107:54 - 107:62] TypedefDecl=type1:107:76 (Definition)
 // CHECK: Identifier: "rebind" [107:63 - 107:69] TypedefDecl=type1:107:76 (Definition)
 // CHECK: Punctuation: "<" [107:69 - 107:70] TypedefDecl=type1:107:76 (Definition)
-// CHECK: Identifier: "type" [107:70 - 107:74] TypeRef=type:106:14
+// CHECK: Identifier: "type" [107:70 - 107:74] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [107:74 - 107:75] TypedefDecl=type1:107:76 (Definition)
 // CHECK: Identifier: "type1" [107:76 - 107:81] TypedefDecl=type1:107:76 (Definition)
 
@@ -394,13 +394,13 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [108:38 - 108:40] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Identifier: "vector" [108:40 - 108:46] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [108:46 - 108:47] TypedefDecl=type2:108:83 (Definition)
-// CHECK: Identifier: "type" [108:47 - 108:51] TypeRef=type:106:14
+// CHECK: Identifier: "type" [108:47 - 108:51] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [108:51 - 108:52] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Punctuation: "::" [108:52 - 108:54] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Keyword: "template" [108:54 - 108:62] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Identifier: "rebind" [108:63 - 108:69] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Punctuation: "<" [108:69 - 108:70] TypedefDecl=type2:108:83 (Definition)
-// CHECK: Identifier: "type" [108:70 - 108:74] TypeRef=type:106:14
+// CHECK: Identifier: "type" [108:70 - 108:74] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [108:74 - 108:75] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Punctuation: "::" [108:75 - 108:77] TypedefDecl=type2:108:83 (Definition)
 // CHECK: Identifier: "other" [108:77 - 108:82] TypedefDecl=type2:108:83 (Definition)
@@ -414,13 +414,13 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [109:35 - 109:37] TypedefDecl=type3:109:73 (Definition)
 // CHECK: Identifier: "vector" [109:37 - 109:43] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [109:43 - 109:44] TypedefDecl=type3:109:73 (Definition)
-// CHECK: Identifier: "type" [109:44 - 109:48] TypeRef=type:106:14
+// CHECK: Identifier: "type" [109:44 - 109:48] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [109:48 - 109:49] TypedefDecl=type3:109:73 (Definition)
 // CHECK: Punctuation: "::" [109:49 - 109:51] TypedefDecl=type3:109:73 (Definition)
 // CHECK: Keyword: "template" [109:51 - 109:59] TypedefDecl=type3:109:73 (Definition)
 // CHECK: Identifier: "rebind" [109:60 - 109:66] TypedefDecl=type3:109:73 (Definition)
 // CHECK: Punctuation: "<" [109:66 - 109:67] TypedefDecl=type3:109:73 (Definition)
-// CHECK: Identifier: "type" [109:67 - 109:71] TypeRef=type:106:14
+// CHECK: Identifier: "type" [109:67 - 109:71] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [109:71 - 109:72] TypedefDecl=type3:109:73 (Definition)
 // CHECK: Identifier: "type3" [109:73 - 109:78] TypedefDecl=type3:109:73 (Definition)
 
@@ -431,13 +431,13 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [110:35 - 110:37] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Identifier: "vector" [110:37 - 110:43] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [110:43 - 110:44] TypedefDecl=type4:110:80 (Definition)
-// CHECK: Identifier: "type" [110:44 - 110:48] TypeRef=type:106:14
+// CHECK: Identifier: "type" [110:44 - 110:48] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [110:48 - 110:49] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Punctuation: "::" [110:49 - 110:51] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Keyword: "template" [110:51 - 110:59] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Identifier: "rebind" [110:60 - 110:66] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Punctuation: "<" [110:66 - 110:67] TypedefDecl=type4:110:80 (Definition)
-// CHECK: Identifier: "type" [110:67 - 110:71] TypeRef=type:106:14
+// CHECK: Identifier: "type" [110:67 - 110:71] TypeRef=X6::type:106:14
 // CHECK: Punctuation: ">" [110:71 - 110:72] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Punctuation: "::" [110:72 - 110:74] TypedefDecl=type4:110:80 (Definition)
 // CHECK: Identifier: "other" [110:74 - 110:79] TypedefDecl=type4:110:80 (Definition)
@@ -451,9 +451,9 @@ struct X9 : X8 {
 // CHECK: Punctuation: "::" [126:29 - 126:31] TypedefDecl=type:126:74 (Definition)
 // CHECK: Identifier: "apply_meta" [126:31 - 126:41] TemplateRef=apply_meta:116:12
 // CHECK: Punctuation: "<" [126:41 - 126:42] TypedefDecl=type:126:74 (Definition)
-// CHECK: Identifier: "T_type" [126:42 - 126:48] TypeRef=T_type:124:13
+// CHECK: Identifier: "T_type" [126:42 - 126:48] TypeRef=X7::T_type:124:13
 // CHECK: Punctuation: "," [126:48 - 126:49] TypedefDecl=type:126:74 (Definition)
-// CHECK: Identifier: "U_type" [126:50 - 126:56] TypeRef=U_type:125:13
+// CHECK: Identifier: "U_type" [126:50 - 126:56] TypeRef=X7::U_type:125:13
 // CHECK: Punctuation: "::" [126:56 - 126:58] TypedefDecl=type:126:74 (Definition)
 // CHECK: Keyword: "template" [126:58 - 126:66] TypedefDecl=type:126:74 (Definition)
 // CHECK: Identifier: "apply" [126:67 - 126:72] TypedefDecl=type:126:74 (Definition)
@@ -461,6 +461,6 @@ struct X9 : X8 {
 // CHECK: Identifier: "type" [126:74 - 126:78] TypedefDecl=type:126:74 (Definition)
 
 // Member access expressions
-// CHECK: Identifier: "inherited" [136:5 - 136:14] TypeRef=inherited:134:14
+// CHECK: Identifier: "inherited" [136:5 - 136:14] TypeRef=X9::inherited:134:14
 // CHECK: Punctuation: "::" [136:14 - 136:16] MemberRefExpr=f:130:8
 // CHECK: Identifier: "f" [136:16 - 136:17] MemberRefExpr=f:130:8

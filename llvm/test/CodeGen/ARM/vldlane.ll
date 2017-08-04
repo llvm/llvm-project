@@ -308,7 +308,7 @@ define <8 x i16> @vld3laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 ;Check for a post-increment updating load with register increment.
 define <8 x i16> @vld3laneQi16_update(i16** %ptr, <8 x i16>* %B, i32 %inc) nounwind {
 ;CHECK-LABEL: vld3laneQi16_update:
-;CHECK: vld3.16 {d{{.*}}[1], d{{.*}}[1], d{{.*}}[1]}, [{{r[0-9]+}}], {{r[0-9]+}}
+;CHECK: vld3.16 {d{{.*}}[1], d{{.*}}[1], d{{.*}}[1]}, [{{r[0-9]+|lr}}], {{r[0-9]+}}
 	%A = load i16*, i16** %ptr
 	%tmp0 = bitcast i16* %A to i8*
 	%tmp1 = load <8 x i16>, <8 x i16>* %B

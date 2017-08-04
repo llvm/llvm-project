@@ -125,11 +125,13 @@ template <class Mutex>
 
 #include <__config>
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+
 #if _LIBCPP_STD_VER > 11 || defined(_LIBCPP_BUILDING_SHARED_MUTEX)
 
 #include <__mutex_base>
-
-#include <__undef_min_max>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -141,7 +143,7 @@ template <class Mutex>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS __shared_mutex_base
+struct _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX __shared_mutex_base
 {
     mutex               __mut_;
     condition_variable  __gate1_;
@@ -173,11 +175,11 @@ struct _LIBCPP_TYPE_VIS __shared_mutex_base
 
 
 #if _LIBCPP_STD_VER > 14
-class _LIBCPP_TYPE_VIS shared_mutex
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX shared_mutex
 {
-	__shared_mutex_base __base;
+    __shared_mutex_base __base;
 public:
-    shared_mutex() : __base() {}
+    _LIBCPP_INLINE_VISIBILITY shared_mutex() : __base() {}
     _LIBCPP_INLINE_VISIBILITY ~shared_mutex() = default;
 
     shared_mutex(const shared_mutex&) = delete;
@@ -199,9 +201,9 @@ public:
 #endif
 
 
-class _LIBCPP_TYPE_VIS shared_timed_mutex
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX shared_timed_mutex
 {
-	__shared_mutex_base __base;
+    __shared_mutex_base __base;
 public:
     shared_timed_mutex();
     _LIBCPP_INLINE_VISIBILITY ~shared_timed_mutex() = default;
@@ -220,6 +222,7 @@ public:
             return try_lock_until(chrono::steady_clock::now() + __rel_time);
         }
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool
         try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time);
     void unlock();
@@ -235,6 +238,7 @@ public:
             return try_lock_shared_until(chrono::steady_clock::now() + __rel_time);
         }
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool
         try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time);
     void unlock_shared();
@@ -497,5 +501,7 @@ _LIBCPP_END_NAMESPACE_STD
 #endif  // !_LIBCPP_HAS_NO_THREADS
 
 #endif  // _LIBCPP_STD_VER > 11
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_SHARED_MUTEX

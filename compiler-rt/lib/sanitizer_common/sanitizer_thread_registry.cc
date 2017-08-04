@@ -59,7 +59,8 @@ void ThreadContextBase::SetFinished() {
   OnFinished();
 }
 
-void ThreadContextBase::SetStarted(uptr _os_id, bool _workerthread, void *arg) {
+void ThreadContextBase::SetStarted(tid_t _os_id, bool _workerthread,
+                                   void *arg) {
   status = ThreadStatusRunning;
   os_id = _os_id;
   workerthread = _workerthread;
@@ -193,7 +194,7 @@ static bool FindThreadContextByOsIdCallback(ThreadContextBase *tctx,
       tctx->status != ThreadStatusDead);
 }
 
-ThreadContextBase *ThreadRegistry::FindThreadContextByOsIDLocked(uptr os_id) {
+ThreadContextBase *ThreadRegistry::FindThreadContextByOsIDLocked(tid_t os_id) {
   return FindThreadContextLocked(FindThreadContextByOsIdCallback,
                                  (void *)os_id);
 }
@@ -267,7 +268,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
   }
 }
 
-void ThreadRegistry::StartThread(u32 tid, uptr os_id, bool workerthread,
+void ThreadRegistry::StartThread(u32 tid, tid_t os_id, bool workerthread,
                                  void *arg) {
   BlockingMutexLock l(&mtx_);
   running_threads_++;

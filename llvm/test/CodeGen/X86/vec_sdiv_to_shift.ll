@@ -49,56 +49,6 @@ entry:
   ret <8 x i16> %0
 }
 
-define <4 x i32> @sdiv_zero(<4 x i32> %var) {
-; SSE-LABEL: sdiv_zero:
-; SSE:       # BB#0: # %entry
-; SSE-NEXT:    pextrd $1, %xmm0, %eax
-; SSE-NEXT:    xorl %esi, %esi
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %esi
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %esi
-; SSE-NEXT:    movd %eax, %xmm1
-; SSE-NEXT:    pinsrd $1, %ecx, %xmm1
-; SSE-NEXT:    pextrd $2, %xmm0, %eax
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %esi
-; SSE-NEXT:    pinsrd $2, %eax, %xmm1
-; SSE-NEXT:    pextrd $3, %xmm0, %eax
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %esi
-; SSE-NEXT:    pinsrd $3, %eax, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: sdiv_zero:
-; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %esi
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %esi
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %esi
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %esi
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
-; AVX-NEXT:    retq
-entry:
-  %0 = sdiv <4 x i32> %var, <i32 0, i32 0, i32 0, i32 0>
-  ret <4 x i32> %0
-}
-
 define <4 x i32> @sdiv_vec4x32(<4 x i32> %var) {
 ; SSE-LABEL: sdiv_vec4x32:
 ; SSE:       # BB#0: # %entry
@@ -234,52 +184,15 @@ entry:
   ret <16 x i16> %a0
 }
 
+; Div-by-0 in any lane is UB.
+
 define <4 x i32> @sdiv_non_splat(<4 x i32> %x) {
 ; SSE-LABEL: sdiv_non_splat:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pextrd $1, %xmm0, %eax
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %ecx
-; SSE-NEXT:    movd %xmm0, %edx
-; SSE-NEXT:    movl %edx, %esi
-; SSE-NEXT:    shrl $31, %esi
-; SSE-NEXT:    addl %edx, %esi
-; SSE-NEXT:    sarl %esi
-; SSE-NEXT:    movd %esi, %xmm1
-; SSE-NEXT:    pinsrd $1, %eax, %xmm1
-; SSE-NEXT:    pextrd $2, %xmm0, %eax
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %ecx
-; SSE-NEXT:    pinsrd $2, %eax, %xmm1
-; SSE-NEXT:    pextrd $3, %xmm0, %eax
-; SSE-NEXT:    cltd
-; SSE-NEXT:    idivl %ecx
-; SSE-NEXT:    pinsrd $3, %eax, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_non_splat:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX-NEXT:    xorl %ecx, %ecx
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %ecx
-; AVX-NEXT:    vmovd %xmm0, %edx
-; AVX-NEXT:    movl %edx, %esi
-; AVX-NEXT:    shrl $31, %esi
-; AVX-NEXT:    addl %edx, %esi
-; AVX-NEXT:    sarl %esi
-; AVX-NEXT:    vmovd %esi, %xmm1
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %ecx
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX-NEXT:    cltd
-; AVX-NEXT:    idivl %ecx
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %y = sdiv <4 x i32> %x, <i32 2, i32 0, i32 0, i32 0>
   ret <4 x i32> %y

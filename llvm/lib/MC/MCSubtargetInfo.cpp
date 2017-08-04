@@ -1,4 +1,4 @@
-//===-- MCSubtargetInfo.cpp - Subtarget Information -----------------------===//
+//===- MCSubtargetInfo.cpp - Subtarget Information ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,12 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cstring>
 
 using namespace llvm;
 

@@ -5,13 +5,13 @@
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1122 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
-# YES: 66001122 00001122 00001122 00001122
+# YES: 66000011 22000011 22000011 22000011
 
 ## Confirming that address was correct:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99887766 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES2 %s
-# YES2: 66887766 99887766 99887766 99887766
+# YES2: 66998877 66998877 66998877 66998877
 
 ## Default padding value is 0x00:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } }" > %t.script
@@ -23,7 +23,7 @@
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =777 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=DEC %s
-# DEC: 66000309 00000309 00000309 00000309
+# DEC: 66000003 09000003 09000003 09000003
 
 ## Invalid hex value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
@@ -33,6 +33,11 @@
 
 ## Check case with space between '=' and expression:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } = 0x1122 }" > %t.script
+# RUN: ld.lld -o %t.out --script %t.script %t
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
+
+## Check case with optional comma following output section command:
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1122, .a : { *(.a*) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
 

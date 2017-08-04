@@ -126,11 +126,11 @@ define void @test4() {
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8*)
+declare void @llvm.lifetime.start.p0i8(i64, i8*)
 define void @test5() {
   %A = alloca %T
   %a = bitcast %T* %A to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %a)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %a)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* bitcast (%T* @G to i8*), i64 124, i32 4, i1 false)
   call void @baz(i8* byval %a)
 ; CHECK-LABEL: @test5(
@@ -202,5 +202,36 @@ define void @test9_addrspacecast() {
   call void @bar(i8* %a) readonly
 ; CHECK-LABEL: @test9_addrspacecast(
 ; CHECK-NEXT: call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*))
+  ret void
+}
+
+@bbb = local_unnamed_addr global [1000000 x i8] zeroinitializer, align 16
+@_ZL3KKK = internal unnamed_addr constant [3 x i8] c"\01\01\02", align 1
+
+; Should not replace alloca with global because of size mismatch.
+define void @test9_small_global() {
+; CHECK-LABEL: @test9_small_global(
+; CHECK-NOT: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}}@bbb,{{.*}}@_ZL3KKK, 
+; CHECK: alloca [1000000 x i8]
+entry:
+  %cc = alloca [1000000 x i8], align 16
+  %cc.0..sroa_idx = getelementptr inbounds [1000000 x i8], [1000000 x i8]* %cc, i64 0, i64 0
+  %arraydecay = getelementptr inbounds [1000000 x i8], [1000000 x i8]* %cc, i32 0, i32 0
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arraydecay, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i32 0, i32 0), i64 3, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i32 0, i32 0), i8* %arraydecay, i64 1000000, i32 16, i1 false)
+  ret void
+}
+
+; Should replace alloca with global as they have exactly the same size.
+define void @test10_same_global() {
+; CHECK-LABEL: @test10_same_global(
+; CHECK-NOT: alloca
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}}@bbb,{{.*}}@_ZL3KKK,{{.*}}, i64 3,
+entry:
+  %cc = alloca [3 x i8], align 1
+  %cc.0..sroa_idx = getelementptr inbounds [3 x i8], [3 x i8]* %cc, i64 0, i64 0
+  %arraydecay = getelementptr inbounds [3 x i8], [3 x i8]* %cc, i32 0, i32 0
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arraydecay, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i32 0, i32 0), i64 3, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i32 0, i32 0), i8* %arraydecay, i64 3, i32 1, i1 false)
   ret void
 }

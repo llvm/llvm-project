@@ -1,4 +1,4 @@
-//===-- DWARFRelocMap.h -----------------------------------------*- C++ -*-===//
+//===- DWARFRelocMap.h ------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFRELOCMAP_H
-#define LLVM_LIB_DEBUGINFO_DWARFRELOCMAP_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFRELOCMAP_H
+#define LLVM_DEBUGINFO_DWARF_DWARFRELOCMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include <cstdint>
 
 namespace llvm {
 
-typedef DenseMap<uint64_t, std::pair<uint8_t, int64_t> > RelocAddrMap;
+/// RelocAddrEntry contains relocated value and section index.
+/// Section index is -1LL if relocation points to absolute symbol.
+struct RelocAddrEntry {
+  uint64_t SectionIndex;
+  uint64_t Value;
+};
 
-} // namespace llvm
+/// In place of applying the relocations to the data we've read from disk we use
+/// a separate mapping table to the side and checking that at locations in the
+/// dwarf where we expect relocated values. This adds a bit of complexity to the
+/// dwarf parsing/extraction at the benefit of not allocating memory for the
+/// entire size of the debug info sections.
+using RelocAddrMap = DenseMap<uint64_t, RelocAddrEntry>;
 
-#endif
+} // end namespace llvm
 
+#endif // LLVM_DEBUGINFO_DWARF_DWARFRELOCMAP_H

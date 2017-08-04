@@ -112,33 +112,6 @@ In this example the ``extra_sources`` variable is only defined if you're
 targeting an Apple platform. For all other targets the ``extra_sources`` will be
 evaluated as empty before add_executable is given its arguments.
 
-One big "Gotcha" with variable dereferencing is that ``if`` commands implicitly
-dereference values. This has some unexpected results. For example:
-
-.. code-block:: cmake
-
-   if("${SOME_VAR}" STREQUAL "MSVC")
-
-In this code sample MSVC will be implicitly dereferenced, which will result in
-the if command comparing the value of the dereferenced variables ``SOME_VAR``
-and ``MSVC``. A common workaround to this solution is to prepend strings being
-compared with an ``x``.
-
-.. code-block:: cmake
-
-   if("x${SOME_VAR}" STREQUAL "xMSVC")
-
-This works because while ``MSVC`` is a defined variable, ``xMSVC`` is not. This
-pattern is uncommon, but it does occur in LLVM's CMake scripts.
-
-.. note::
-   
-   Once the LLVM project upgrades its minimum CMake version to 3.1 or later we
-   can prevent this behavior by setting CMP0054 to new. For more information on
-   CMake policies please see the cmake-policies manpage or the `cmake-policies
-   online documentation
-   <https://cmake.org/cmake/help/v3.4/manual/cmake-policies.7.html>`_.
-
 Lists
 -----
 

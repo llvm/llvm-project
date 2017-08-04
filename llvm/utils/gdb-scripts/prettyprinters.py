@@ -193,6 +193,121 @@ class DenseMapPrinter:
   def display_hint(self):
     return 'map'
 
+class TwinePrinter:
+  "Print a Twine"
+
+  def __init__(self, val):
+    self._val = val
+
+  def display_hint(self):
+    return 'string'
+
+  def string_from_pretty_printer_lookup(self, val):
+    '''Lookup the default pretty-printer for val and use it.
+
+    If no pretty-printer is defined for the type of val, print an error and
+    return a placeholder string.'''
+
+    pp = gdb.default_visualizer(val)
+    if pp:
+      s = pp.to_string()
+
+      # The pretty-printer may return a LazyString instead of an actual Python
+      # string.  Convert it to a Python string.  However, GDB doesn't seem to
+      # register the LazyString type, so we can't check
+      # "type(s) == gdb.LazyString".
+      if 'LazyString' in type(s).__name__:
+        s = s.value().address.string()
+
+    else:
+      print(('No pretty printer for {} found. The resulting Twine ' +
+             'representation will be incomplete.').format(val.type.name))
+      s = '(missing {})'.format(val.type.name)
+
+    return s
+
+  def is_twine_kind(self, kind, expected):
+    if not kind.endswith(expected):
+      return False
+    # apparently some GDB versions add the NodeKind:: namespace
+    # (happens for me on GDB 7.11)
+    return kind in ('llvm::Twine::' + expected,
+                    'llvm::Twine::NodeKind::' + expected)
+
+  def string_from_child(self, child, kind):
+    '''Return the string representation of the Twine::Child child.'''
+
+    if self.is_twine_kind(kind, 'EmptyKind') or self.is_twine_kind(kind, 'NullKind'):
+      return ''
+
+    if self.is_twine_kind(kind, 'TwineKind'):
+      return self.string_from_twine_object(child['twine'].dereference())
+
+    if self.is_twine_kind(kind, 'CStringKind'):
+      return child['cString'].string()
+
+    if self.is_twine_kind(kind, 'StdStringKind'):
+      val = child['stdString'].dereference()
+      return self.string_from_pretty_printer_lookup(val)
+
+    if self.is_twine_kind(kind, 'StringRefKind'):
+      val = child['stringRef'].dereference()
+      pp = StringRefPrinter(val)
+      return pp.to_string()
+
+    if self.is_twine_kind(kind, 'SmallStringKind'):
+      val = child['smallString'].dereference()
+      pp = SmallStringPrinter(val)
+      return pp.to_string()
+
+    if self.is_twine_kind(kind, 'CharKind'):
+      return chr(child['character'])
+
+    if self.is_twine_kind(kind, 'DecUIKind'):
+      return str(child['decUI'])
+
+    if self.is_twine_kind(kind, 'DecIKind'):
+      return str(child['decI'])
+
+    if self.is_twine_kind(kind, 'DecULKind'):
+      return str(child['decUL'].dereference())
+
+    if self.is_twine_kind(kind, 'DecLKind'):
+      return str(child['decL'].dereference())
+
+    if self.is_twine_kind(kind, 'DecULLKind'):
+      return str(child['decULL'].dereference())
+
+    if self.is_twine_kind(kind, 'DecLLKind'):
+      return str(child['decLL'].dereference())
+
+    if self.is_twine_kind(kind, 'UHexKind'):
+      val = child['uHex'].dereference()
+      return hex(int(val))
+
+    print(('Unhandled NodeKind {} in Twine pretty-printer. The result will be '
+           'incomplete.').format(kind))
+
+    return '(unhandled {})'.format(kind)
+
+  def string_from_twine_object(self, twine):
+    '''Return the string representation of the Twine object twine.'''
+
+    lhs_str = ''
+    rhs_str = ''
+
+    lhs = twine['LHS']
+    rhs = twine['RHS']
+    lhs_kind = str(twine['LHSKind'])
+    rhs_kind = str(twine['RHSKind'])
+
+    lhs_str = self.string_from_child(lhs, lhs_kind)
+    rhs_str = self.string_from_child(rhs, rhs_kind)
+
+    return lhs_str + rhs_str
+
+  def to_string(self):
+    return self.string_from_twine_object(self._val)
 
 pp = gdb.printing.RegexpCollectionPrettyPrinter("LLVMSupport")
 pp.add_printer('llvm::SmallString', '^llvm::SmallString<.*>$', SmallStringPrinter)
@@ -201,4 +316,5 @@ pp.add_printer('llvm::SmallVectorImpl', '^llvm::SmallVector(Impl)?<.*>$', SmallV
 pp.add_printer('llvm::ArrayRef', '^llvm::(Const)?ArrayRef<.*>$', ArrayRefPrinter)
 pp.add_printer('llvm::Optional', '^llvm::Optional<.*>$', OptionalPrinter)
 pp.add_printer('llvm::DenseMap', '^llvm::DenseMap<.*>$', DenseMapPrinter)
+pp.add_printer('llvm::Twine', '^llvm::Twine$', TwinePrinter)
 gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)

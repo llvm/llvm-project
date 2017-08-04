@@ -27,16 +27,16 @@ import re
 import itertools
 import json
 import glob
-import argparse
 import logging
-import subprocess
 from libear import build_libear, TemporaryDirectory
-from libscanbuild import command_entry_point
-from libscanbuild import duplicate_check, tempdir, initialize_logging
+from libscanbuild import command_entry_point, compiler_wrapper, \
+    wrapper_environment, run_command, run_build
+from libscanbuild import duplicate_check
 from libscanbuild.compilation import split_command
+from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.shell import encode, decode
 
-__all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
+__all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 
 GS = chr(0x1d)
 RS = chr(0x1e)
@@ -44,26 +44,19 @@ US = chr(0x1f)
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
+TRACE_FILE_EXTENSION = '.cmd'  # same as in ear.c
+WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
 @command_entry_point
-def intercept_build_main(bin_dir):
+def intercept_build():
     """ Entry point for 'intercept-build' command. """
 
-    parser = create_parser()
-    args = parser.parse_args()
-
-    initialize_logging(args.verbose)
-    logging.debug('Parsed arguments: %s', args)
-
-    if not args.build:
-        parser.print_help()
-        return 0
-
-    return capture(args, bin_dir)
+    args = parse_args_for_intercept_build()
+    return capture(args)
 
 
-def capture(args, bin_dir):
+def capture(args):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
@@ -91,28 +84,23 @@ def capture(args, bin_dir):
                 for entry in itertools.chain(previous, current)
                 if os.path.exists(entry['file']) and not duplicate(entry))
 
-    with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
+    with TemporaryDirectory(prefix='intercept-') as tmp_dir:
         # run the build command
-        environment = setup_environment(args, tmp_dir, bin_dir)
-        logging.debug('run build in environment: %s', environment)
-        exit_code = subprocess.call(args.build, env=environment)
-        logging.info('build finished with exit code: %d', exit_code)
+        environment = setup_environment(args, tmp_dir)
+        exit_code = run_build(args.build, env=environment)
         # read the intercepted exec calls
         exec_traces = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmp_dir, filename))
             for filename in sorted(glob.iglob(os.path.join(tmp_dir, '*.cmd'))))
-        # do post processing only if that was requested
-        if 'raw_entries' not in args or not args.raw_entries:
-            entries = post_processing(exec_traces)
-        else:
-            entries = exec_traces
+        # do post processing
+        entries = post_processing(exec_traces)
         # dump the compilation database
         with open(args.cdb, 'w+') as handle:
             json.dump(list(entries), handle, sort_keys=True, indent=4)
         return exit_code
 
 
-def setup_environment(args, destination, bin_dir):
+def setup_environment(args, destination):
     """ Sets up the environment for the build command.
 
     It sets the required environment variables and execute the given command.
@@ -130,12 +118,10 @@ def setup_environment(args, destination, bin_dir):
 
     if not libear_path:
         logging.debug('intercept gonna use compiler wrappers')
+        environment.update(wrapper_environment(args))
         environment.update({
-            'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-            'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-            'INTERCEPT_BUILD_CC': c_compiler,
-            'INTERCEPT_BUILD_CXX': cxx_compiler,
-            'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
+            'CC': COMPILER_WRAPPER_CC,
+            'CXX': COMPILER_WRAPPER_CXX
         })
     elif sys.platform == 'darwin':
         logging.debug('intercept gonna preload libear on OSX')
@@ -150,42 +136,49 @@ def setup_environment(args, destination, bin_dir):
     return environment
 
 
-def intercept_build_wrapper(cplusplus):
-    """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
+@command_entry_point
+def intercept_compiler_wrapper():
+    """ Entry point for `intercept-cc` and `intercept-c++`. """
 
-    It does generate execution report into target directory. And execute
-    the wrapped compilation with the real compiler. The parameters for
-    report and execution are from environment variables.
+    return compiler_wrapper(intercept_compiler_wrapper_impl)
 
-    Those parameters which for 'libear' library can't have meaningful
-    values are faked. """
 
-    # initialize wrapper logging
-    logging.basicConfig(format='intercept: %(levelname)s: %(message)s',
-                        level=os.getenv('INTERCEPT_BUILD_VERBOSE', 'INFO'))
-    # write report
+def intercept_compiler_wrapper_impl(_, execution):
+    """ Implement intercept compiler wrapper functionality.
+
+    It does generate execution report into target directory.
+    The target directory name is from environment variables. """
+
+    message_prefix = 'execution report might be incomplete: %s'
+
+    target_dir = os.getenv('INTERCEPT_BUILD_TARGET_DIR')
+    if not target_dir:
+        logging.warning(message_prefix, 'missing target directory')
+        return
+    # write current execution info to the pid file
     try:
-        target_dir = os.getenv('INTERCEPT_BUILD_TARGET_DIR')
-        if not target_dir:
-            raise UserWarning('exec report target directory not found')
-        pid = str(os.getpid())
-        target_file = os.path.join(target_dir, pid + '.cmd')
-        logging.debug('writing exec report to: %s', target_file)
-        with open(target_file, 'ab') as handler:
-            working_dir = os.getcwd()
-            command = US.join(sys.argv) + US
-            content = RS.join([pid, pid, 'wrapper', working_dir, command]) + GS
-            handler.write(content.encode('utf-8'))
+        target_file_name = str(os.getpid()) + TRACE_FILE_EXTENSION
+        target_file = os.path.join(target_dir, target_file_name)
+        logging.debug('writing execution report to: %s', target_file)
+        write_exec_trace(target_file, execution)
     except IOError:
-        logging.exception('writing exec report failed')
-    except UserWarning as warning:
-        logging.warning(warning)
-    # execute with real compiler
-    compiler = os.getenv('INTERCEPT_BUILD_CXX', 'c++') if cplusplus \
-        else os.getenv('INTERCEPT_BUILD_CC', 'cc')
-    compilation = [compiler] + sys.argv[1:]
-    logging.debug('execute compiler: %s', compilation)
-    return subprocess.call(compilation)
+        logging.warning(message_prefix, 'io problem')
+
+
+def write_exec_trace(filename, entry):
+    """ Write execution report file.
+
+    This method shall be sync with the execution report writer in interception
+    library. The entry in the file is a JSON objects.
+
+    :param filename:    path to the output execution trace file,
+    :param entry:       the Execution object to append to that file. """
+
+    with open(filename, 'ab') as handler:
+        pid = str(entry.pid)
+        command = US.join(entry.cmd) + US
+        content = RS.join([pid, pid, 'wrapper', entry.cwd, command]) + GS
+        handler.write(content.encode('utf-8'))
 
 
 def parse_exec_trace(filename):
@@ -238,22 +231,19 @@ def is_preload_disabled(platform):
     the path and, if so, (2) whether the output of executing 'csrutil status'
     contains 'System Integrity Protection status: enabled'.
 
-    Same problem on linux when SELinux is enabled. The status query program
-    'sestatus' and the output when it's enabled 'SELinux status: enabled'. """
+    :param platform: name of the platform (returned by sys.platform),
+    :return: True if library preload will fail by the dynamic linker. """
 
-    if platform == 'darwin':
-        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+    if platform in WRAPPER_ONLY_PLATFORMS:
+        return True
+    elif platform == 'darwin':
         command = ['csrutil', 'status']
-    elif platform in {'linux', 'linux2'}:
-        pattern = re.compile(r'SELinux status:\s+enabled')
-        command = ['sestatus']
+        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+        try:
+            return any(pattern.match(line) for line in run_command(command))
+        except:
+            return False
     else:
-        return False
-
-    try:
-        lines = subprocess.check_output(command).decode('utf-8')
-        return any((pattern.match(line) for line in lines.splitlines()))
-    except:
         return False
 
 
@@ -271,69 +261,3 @@ def entry_hash(entry):
     command = ' '.join(decode(entry['command'])[1:])
 
     return '<>'.join([filename, directory, command])
-
-
-def create_parser():
-    """ Command line argument parser factory method. """
-
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from '%(prog)s'. A second and third
-                flag increases verbosity.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        '--append',
-        action='store_true',
-        help="""Append new entries to existing compilation database.""")
-    group.add_argument(
-        '--disable-filter', '-n',
-        dest='raw_entries',
-        action='store_true',
-        help="""Intercepted child process creation calls (exec calls) are all
-                logged to the output. The output is not a compilation database.
-                This flag is for debug purposes.""")
-
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
-        '--override-compiler',
-        action='store_true',
-        help="""Always resort to the compiler wrapper even when better
-                intercept methods are available.""")
-    advanced.add_argument(
-        '--use-cc',
-        metavar='<path>',
-        dest='cc',
-        default='cc',
-        help="""When '%(prog)s' analyzes a project by interposing a compiler
-                wrapper, which executes a real compiler for compilation and
-                do other tasks (record the compiler invocation). Because of
-                this interposing, '%(prog)s' does not know what compiler your
-                project normally uses. Instead, it simply overrides the CC
-                environment variable, and guesses your default compiler.
-
-                If you need '%(prog)s' to use a specific compiler for
-                *compilation* then you can use this option to specify a path
-                to that compiler.""")
-    advanced.add_argument(
-        '--use-c++',
-        metavar='<path>',
-        dest='cxx',
-        default='c++',
-        help="""This is the same as "--use-cc" but for C++ code.""")
-
-    parser.add_argument(
-        dest='build',
-        nargs=argparse.REMAINDER,
-        help="""Command to run.""")
-
-    return parser

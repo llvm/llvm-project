@@ -166,16 +166,19 @@ void AsanThread::FinishSwitchFiber(FakeStack *fake_stack_save,
 }
 
 inline AsanThread::StackBounds AsanThread::GetStackBounds() const {
-  if (!atomic_load(&stack_switching_, memory_order_acquire))
-    return StackBounds{stack_bottom_, stack_top_};  // NOLINT
+  if (!atomic_load(&stack_switching_, memory_order_acquire)) {
+    // Make sure the stack bounds are fully initialized.
+    if (stack_bottom_ >= stack_top_) return {0, 0};
+    return {stack_bottom_, stack_top_};
+  }
   char local;
   const uptr cur_stack = (uptr)&local;
   // Note: need to check next stack first, because FinishSwitchFiber
   // may be in process of overwriting stack_top_/bottom_. But in such case
   // we are already on the next stack.
   if (cur_stack >= next_stack_bottom_ && cur_stack < next_stack_top_)
-    return StackBounds{next_stack_bottom_, next_stack_top_};  // NOLINT
-  return StackBounds{stack_bottom_, stack_top_};              // NOLINT
+    return {next_stack_bottom_, next_stack_top_};
+  return {stack_bottom_, stack_top_};
 }
 
 uptr AsanThread::stack_top() {
@@ -237,7 +240,7 @@ void AsanThread::Init() {
 }
 
 thread_return_t AsanThread::ThreadStart(
-    uptr os_id, atomic_uintptr_t *signal_thread_is_registered) {
+    tid_t os_id, atomic_uintptr_t *signal_thread_is_registered) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, /*workerthread*/ false,
                                    nullptr);
@@ -300,24 +303,27 @@ bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
     return true;
   }
   uptr aligned_addr = addr & ~(SANITIZER_WORDSIZE/8 - 1);  // align addr.
+  uptr mem_ptr = RoundDownTo(aligned_addr, SHADOW_GRANULARITY);
   u8 *shadow_ptr = (u8*)MemToShadow(aligned_addr);
   u8 *shadow_bottom = (u8*)MemToShadow(bottom);
 
   while (shadow_ptr >= shadow_bottom &&
          *shadow_ptr != kAsanStackLeftRedzoneMagic) {
     shadow_ptr--;
+    mem_ptr -= SHADOW_GRANULARITY;
   }
 
   while (shadow_ptr >= shadow_bottom &&
          *shadow_ptr == kAsanStackLeftRedzoneMagic) {
     shadow_ptr--;
+    mem_ptr -= SHADOW_GRANULARITY;
   }
 
   if (shadow_ptr < shadow_bottom) {
     return false;
   }
 
-  uptr* ptr = (uptr*)SHADOW_TO_MEM((uptr)(shadow_ptr + 1));
+  uptr* ptr = (uptr*)(mem_ptr + SHADOW_GRANULARITY);
   CHECK(ptr[0] == kCurrentStackFrameMagic);
   access->offset = addr - (uptr)ptr;
   access->frame_pc = ptr[2];
@@ -392,7 +398,7 @@ void EnsureMainThreadIDIsCorrect() {
     context->os_id = GetTid();
 }
 
-__asan::AsanThread *GetAsanThreadByOsIDLocked(uptr os_id) {
+__asan::AsanThread *GetAsanThreadByOsIDLocked(tid_t os_id) {
   __asan::AsanThreadContext *context = static_cast<__asan::AsanThreadContext *>(
       __asan::asanThreadRegistry().FindThreadContextByOsIDLocked(os_id));
   if (!context) return nullptr;
@@ -402,7 +408,7 @@ __asan::AsanThread *GetAsanThreadByOsIDLocked(uptr os_id) {
 
 // --- Implementation of LSan-specific functions --- {{{1
 namespace __lsan {
-bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
+bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
@@ -418,7 +424,7 @@ bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
   return true;
 }
 
-void ForEachExtraStackRange(uptr os_id, RangeIteratorCallback callback,
+void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
   if (t && t->has_fake_stack())

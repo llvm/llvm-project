@@ -7,6 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// See bugs.llvm.org/PR20183
+//
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.8
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 // <random>
 
 // class random_device;

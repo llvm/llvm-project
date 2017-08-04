@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
 ; SI-DAG: v_mul_lo_i32
 ; SI-DAG: v_mul_hi_i32
 ; SI: s_endpgm
-define void @test_array_ptr_calc(i32 addrspace(1)* noalias %out, [1025 x i32] addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) {
+define amdgpu_kernel void @test_array_ptr_calc(i32 addrspace(1)* noalias %out, [1025 x i32] addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) {
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)
   %a_ptr = getelementptr [1025 x i32], [1025 x i32] addrspace(1)* %inA, i32 %tid, i32 0

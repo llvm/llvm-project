@@ -55,6 +55,18 @@ def main():
                       help='checks filter, when not specified, use clang-tidy '
                       'default',
                       default='')
+  parser.add_argument('-path', dest='build_path',
+                      help='Path used to read a compile command database.')
+  parser.add_argument('-extra-arg', dest='extra_arg',
+                      action='append', default=[],
+                      help='Additional argument to append to the compiler '
+                      'command line.')
+  parser.add_argument('-extra-arg-before', dest='extra_arg_before',
+                      action='append', default=[],
+                      help='Additional argument to prepend to the compiler '
+                      'command line.')
+  parser.add_argument('-quiet', action='store_true', default=False,
+                      help='Run clang-tidy in quiet mode')
   clang_tidy_args = []
   argv = sys.argv[1:]
   if '--' in argv:
@@ -112,7 +124,15 @@ def main():
     command.append('-fix')
   if args.checks != '':
     command.append('-checks=' + quote + args.checks + quote)
+  if args.quiet:
+    command.append('-quiet')
+  if args.build_path is not None:
+    command.append('-p=%s' % args.build_path)
   command.extend(lines_by_file.keys())
+  for arg in args.extra_arg:
+      command.append('-extra-arg=%s' % arg)
+  for arg in args.extra_arg_before:
+      command.append('-extra-arg-before=%s' % arg)
   command.extend(clang_tidy_args)
 
   sys.exit(subprocess.call(' '.join(command), shell=True))

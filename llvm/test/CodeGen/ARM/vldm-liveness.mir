@@ -1,0 +1,40 @@
+# RUN: llc -run-pass arm-ldst-opt -verify-machineinstrs %s -o - | FileCheck %s
+# ARM load store optimizer was dealing with a sequence like:
+#     s1 = VLDRS [r0, 1], Q0<imp-def>
+#     s3 = VLDRS [r0, 2], Q0<imp-use,kill>, Q0<imp-def>
+#     s0 = VLDRS [r0, 0], Q0<imp-use,kill>, Q0<imp-def>
+#     s2 = VLDRS [r0, 4], Q0<imp-use,kill>, Q0<imp-def>
+#
+# It decided to combine the {s0, s1} loads into a single instruction in the
+# third position. However, this leaves the instruction defining s3 with a stray
+# imp-use of Q0, which is undefined.
+#
+# The verifier catches this, so this test just makes sure that appropriate
+# liveness flags are added.
+--- |
+  target triple = "thumbv7-apple-ios"
+  define arm_aapcs_vfpcc <4 x float> @foo(float* %ptr) {
+    ret <4 x float> undef
+  }
+...
+---
+name:            foo
+alignment:       1
+liveins:
+  - { reg: '%r0' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %r0
+
+    %s1 = VLDRS %r0, 1, 14, _, implicit-def %q0 :: (load 4)
+    %s3 = VLDRS %r0, 2, 14, _, implicit killed %q0, implicit-def %q0 :: (load 4)
+    ; CHECK: %s3 = VLDRS %r0, 2, 14, _, implicit killed undef %q0, implicit-def %q0 :: (load 4)
+
+    %s0 = VLDRS %r0, 0, 14, _, implicit killed %q0, implicit-def %q0 :: (load 4)
+    ; CHECK: VLDMSIA %r0, 14, _, def %s0, def %s1, implicit-def _
+
+    %s2 = VLDRS killed %r0, 4, 14, _, implicit killed %q0, implicit-def %q0 :: (load 4)
+    ; CHECK: %s2 = VLDRS killed %r0, 4, 14, _, implicit killed %q0, implicit-def %q0 :: (load 4)
+
+    tBX_RET 14, _, implicit %q0
+...

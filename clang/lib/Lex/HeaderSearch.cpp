@@ -172,8 +172,10 @@ std::string HeaderSearch::getModuleFileName(StringRef ModuleName,
     //
     // To avoid false-negatives, we form as canonical a path as we can, and map
     // to lower-case in case we're on a case-insensitive file system.
-   auto *Dir =
-        FileMgr.getDirectory(llvm::sys::path::parent_path(ModuleMapPath));
+    std::string Parent = llvm::sys::path::parent_path(ModuleMapPath);
+    if (Parent.empty())
+      Parent = ".";
+    auto *Dir = FileMgr.getDirectory(Parent);
     if (!Dir)
       return std::string();
     auto DirName = FileMgr.getCanonicalName(Dir);
@@ -1100,12 +1102,52 @@ void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
 }
 
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
-                                          const FileEntry *File,
-                                          bool isImport, Module *M) {
+                                          const FileEntry *File, bool isImport,
+                                          bool ModulesEnabled, Module *M) {
   ++NumIncluded; // Count # of attempted #includes.
 
   // Get information about this file.
   HeaderFileInfo &FileInfo = getFileInfo(File);
+
+  // FIXME: this is a workaround for the lack of proper modules-aware support
+  // for #import / #pragma once
+  auto TryEnterImported = [&](void) -> bool {
+    if (!ModulesEnabled)
+      return false;
+    // Ensure FileInfo bits are up to date.
+    ModMap.resolveHeaderDirectives(File);
+    // Modules with builtins are special; multiple modules use builtins as
+    // modular headers, example:
+    //
+    //    module stddef { header "stddef.h" export * }
+    //
+    // After module map parsing, this expands to:
+    //
+    //    module stddef {
+    //      header "/path_to_builtin_dirs/stddef.h"
+    //      textual "stddef.h"
+    //    }
+    //
+    // It's common that libc++ and system modules will both define such
+    // submodules. Make sure cached results for a builtin header won't
+    // prevent other builtin modules to potentially enter the builtin header.
+    // Note that builtins are header guarded and the decision to actually
+    // enter them is postponed to the controlling macros logic below.
+    bool TryEnterHdr = false;
+    if (FileInfo.isCompilingModuleHeader && FileInfo.isModuleHeader)
+      TryEnterHdr = File->getDir() == ModMap.getBuiltinDir() &&
+                    ModuleMap::isBuiltinHeader(
+                        llvm::sys::path::filename(File->getName()));
+
+    // Textual headers can be #imported from different modules. Since ObjC
+    // headers find in the wild might rely only on #import and do not contain
+    // controlling macros, be conservative and only try to enter textual headers
+    // if such macro is present.
+    if (!FileInfo.isModuleHeader &&
+        FileInfo.getControllingMacro(ExternalLookup))
+      TryEnterHdr = true;
+    return TryEnterHdr;
+  };
 
   // If this is a #import directive, check that we have not already imported
   // this header.
@@ -1114,11 +1156,12 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     FileInfo.isImport = true;
 
     // Has this already been #import'ed or #include'd?
-    if (FileInfo.NumIncludes) return false;
+    if (FileInfo.NumIncludes && !TryEnterImported())
+      return false;
   } else {
     // Otherwise, if this is a #include of a file that was previously #import'd
     // or if this is the second #include of a #pragma once file, ignore it.
-    if (FileInfo.isImport)
+    if (FileInfo.isImport && !TryEnterImported())
       return false;
   }
 
@@ -1284,14 +1327,28 @@ static const FileEntry *getPrivateModuleMap(const FileEntry *File,
   return FileMgr.getFile(PrivateFilename);
 }
 
-bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem) {
+bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem,
+                                     FileID ID, unsigned *Offset,
+                                     StringRef OriginalModuleMapFile) {
   // Find the directory for the module. For frameworks, that may require going
   // up from the 'Modules' directory.
   const DirectoryEntry *Dir = nullptr;
   if (getHeaderSearchOpts().ModuleMapFileHomeIsCwd)
     Dir = FileMgr.getDirectory(".");
   else {
-    Dir = File->getDir();
+    if (!OriginalModuleMapFile.empty()) {
+      // We're building a preprocessed module map. Find or invent the directory
+      // that it originally occupied.
+      Dir = FileMgr.getDirectory(
+          llvm::sys::path::parent_path(OriginalModuleMapFile));
+      if (!Dir) {
+        auto *FakeFile = FileMgr.getVirtualFile(OriginalModuleMapFile, 0, 0);
+        Dir = FakeFile->getDir();
+      }
+    } else {
+      Dir = File->getDir();
+    }
+
     StringRef DirName(Dir->getName());
     if (llvm::sys::path::filename(DirName) == "Modules") {
       DirName = llvm::sys::path::parent_path(DirName);
@@ -1303,7 +1360,7 @@ bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem) {
     }
   }
 
-  switch (loadModuleMapFileImpl(File, IsSystem, Dir)) {
+  switch (loadModuleMapFileImpl(File, IsSystem, Dir, ID, Offset)) {
   case LMM_AlreadyLoaded:
   case LMM_NewlyLoaded:
     return false;
@@ -1316,7 +1373,8 @@ bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem) {
 
 HeaderSearch::LoadModuleMapResult
 HeaderSearch::loadModuleMapFileImpl(const FileEntry *File, bool IsSystem,
-                                    const DirectoryEntry *Dir) {
+                                    const DirectoryEntry *Dir, FileID ID,
+                                    unsigned *Offset) {
   assert(File && "expected FileEntry");
 
   // Check whether we've already loaded this module map, and mark it as being
@@ -1325,7 +1383,7 @@ HeaderSearch::loadModuleMapFileImpl(const FileEntry *File, bool IsSystem,
   if (!AddResult.second)
     return AddResult.first->second ? LMM_AlreadyLoaded : LMM_InvalidModuleMap;
 
-  if (ModMap.parseModuleMapFile(File, IsSystem, Dir)) {
+  if (ModMap.parseModuleMapFile(File, IsSystem, Dir, ID, Offset)) {
     LoadedModuleMaps[File] = false;
     return LMM_InvalidModuleMap;
   }

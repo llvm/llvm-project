@@ -80,3 +80,10 @@ int h() {
   g(x, 5 ? z : 0); // expected-error 2 {{use of undeclared identifier}}
   (x, 5 ? z : 0);  // expected-error 2 {{use of undeclared identifier}}
 }
+
+__attribute__((overloadable)) void func_overloadable(int);
+__attribute__((overloadable)) void func_overloadable(float);
+
+void overloadable_callexpr(int arg) {
+	func_overloadable(ar); //expected-error{{use of undeclared identifier}}
+}

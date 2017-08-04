@@ -1,9 +1,0 @@
-C++11
-=====
-
-Originally, LLD was developed in C++11 unlike the rest of LLVM. Now, all of
-LLVM, LLD, and Clang are developed using C++11. See the `LLVM Coding
-Standards`_ for details on the precise subset of C++11 supported by the various
-host compilers.
-
-.. _LLVM Coding Standards: http://llvm.org/docs/CodingStandards.html

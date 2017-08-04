@@ -17,6 +17,7 @@
 
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
+#include "llvm/ADT/Triple.h"
 #include <vector>
 
 namespace llvm {
@@ -75,7 +76,7 @@ enum ArchExtKind : unsigned {
   AEK_CRC = 0x2,
   AEK_CRYPTO = 0x4,
   AEK_FP = 0x8,
-  AEK_HWDIV = 0x10,
+  AEK_HWDIVTHUMB = 0x10,
   AEK_HWDIVARM = 0x20,
   AEK_MP = 0x40,
   AEK_SIMD = 0x80,
@@ -84,6 +85,7 @@ enum ArchExtKind : unsigned {
   AEK_DSP = 0x400,
   AEK_FP16 = 0x800,
   AEK_RAS = 0x1000,
+  AEK_SVE = 0x2000,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,
@@ -140,9 +142,11 @@ unsigned parseArchEndian(StringRef Arch);
 unsigned parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 
+StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
+
 } // namespace ARM
 
-// FIXME:This should be made into class design,to avoid dupplication. 
+// FIXME:This should be made into class design,to avoid dupplication.
 namespace AArch64 {
 
 // Arch names.
@@ -163,7 +167,8 @@ enum ArchExtKind : unsigned {
   AEK_FP16 = 0x20,
   AEK_PROFILE = 0x40,
   AEK_RAS = 0x80,
-  AEK_LSE = 0x100
+  AEK_LSE = 0x100,
+  AEK_SVE = 0x200
 };
 
 StringRef getCanonicalArchName(StringRef Arch);

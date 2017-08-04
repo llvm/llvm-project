@@ -6,7 +6,7 @@
 ; CHECK-LABEL: {{^}}simple_if:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSHL * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define void @simple_if(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @simple_if(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %cmp0 = icmp sgt i32 %in, 0
   br i1 %cmp0, label %IF, label %ENDIF
@@ -25,7 +25,7 @@ ENDIF:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define void @simple_if_else(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @simple_if_else(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   br i1 %0, label %IF, label %ELSE
@@ -51,7 +51,7 @@ ENDIF:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Exec
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSHL * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define void @nested_if(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @nested_if(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   br i1 %0, label %IF0, label %ENDIF
@@ -79,7 +79,7 @@ ENDIF:
 ; CHECK: PRED_SET{{[EGN][ET]*}}_INT * Pred,
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
 ; CHECK: LSH{{[LR] \* T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, 1, Pred_sel
-define void @nested_if_else(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @nested_if_else(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   br i1 %0, label %IF0, label %ENDIF

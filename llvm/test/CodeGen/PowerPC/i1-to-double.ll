@@ -7,15 +7,13 @@ define double @test(i1 %X) {
 ; CHECK-LABEL: @test
 
 ; CHECK: andi. {{[0-9]+}}, 3, 1
-; CHECK: bc 12, 1,
-
-; CHECK: li 3, .LCP[[L1:[A-Z0-9_]+]]@l
-; CHECK: addis 3, 3, .LCP[[L1]]@ha
-; CHECK: lfs 1, 0(3)
-; CHECK: blr
-
-; CHECK: li 3, .LCP[[L2:[A-Z0-9_]+]]@l
-; CHECK: addis 3, 3, .LCP[[L2]]@ha
-; CHECK: lfs 1, 0(3)
-; CHECK: blr
-
+; CHECK-NEXT: addis 4, 4, .LCPI
+; CHECK-NEXT: addis 5, 5, .LCPI
+; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK: ori 3, 4, 0
+; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NEXT: [[TRUE]]
+; CHECK-NEXT: addi 3, 5, 0
+; CHECK-NEXT: [[SUCCESSOR]]
+; CHECK-NEXT: lfs 1, 0(3)
+; CHECK-NEXT: blr

@@ -13,6 +13,8 @@
 
 // X& operator*() const throw();
 
+// REQUIRES: c++98 || c++03 || c++11 || c++14
+
 #include <memory>
 #include <cassert>
 

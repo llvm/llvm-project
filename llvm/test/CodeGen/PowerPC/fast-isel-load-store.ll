@@ -196,7 +196,7 @@ define void @t17(i64 %v) nounwind {
   %1 = add nsw i64 %v, 1
   store i64 %1, i64* getelementptr inbounds ([8192 x i64], [8192 x i64]* @i, i32 0, i64 5000), align 8
 ; ELF64: addis
-; ELF64: ld
+; ELF64: addi
 ; ELF64: addi
 ; ELF64: lis
 ; ELF64: ori

@@ -40,9 +40,9 @@ template class llvm::LoopInfoBase<BasicBlock, Loop>;
 
 // Always verify loopinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
-static bool VerifyLoopInfo = true;
+bool llvm::VerifyLoopInfo = true;
 #else
-static bool VerifyLoopInfo = false;
+bool llvm::VerifyLoopInfo = false;
 #endif
 static cl::opt<bool,true>
 VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
@@ -131,13 +131,13 @@ PHINode *Loop::getCanonicalInductionVariable() const {
     PHINode *PN = cast<PHINode>(I);
     if (ConstantInt *CI =
         dyn_cast<ConstantInt>(PN->getIncomingValueForBlock(Incoming)))
-      if (CI->isNullValue())
+      if (CI->isZero())
         if (Instruction *Inc =
             dyn_cast<Instruction>(PN->getIncomingValueForBlock(Backedge)))
           if (Inc->getOpcode() == Instruction::Add &&
                 Inc->getOperand(0) == PN)
             if (ConstantInt *CI = dyn_cast<ConstantInt>(Inc->getOperand(1)))
-              if (CI->equalsInt(1))
+              if (CI->isOne())
                 return PN;
   }
   return nullptr;
@@ -211,9 +211,11 @@ bool Loop::isSafeToClone() const {
 
 MDNode *Loop::getLoopID() const {
   MDNode *LoopID = nullptr;
-  if (isLoopSimplifyForm()) {
-    LoopID = getLoopLatch()->getTerminator()->getMetadata(LLVMContext::MD_loop);
+  if (BasicBlock *Latch = getLoopLatch()) {
+    LoopID = Latch->getTerminator()->getMetadata(LLVMContext::MD_loop);
   } else {
+    assert(!getLoopLatch() &&
+           "The loop should have no single latch at this point");
     // Go through each predecessor of the loop header and check the
     // terminator for the metadata.
     BasicBlock *H = getHeader();
@@ -248,11 +250,12 @@ void Loop::setLoopID(MDNode *LoopID) const {
   assert(LoopID->getNumOperands() > 0 && "Loop ID needs at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "Loop ID should refer to itself");
 
-  if (isLoopSimplifyForm()) {
-    getLoopLatch()->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
+  if (BasicBlock *Latch = getLoopLatch()) {
+    Latch->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
     return;
   }
 
+  assert(!getLoopLatch() && "The loop should have no single latch at this point");
   BasicBlock *H = getHeader();
   for (BasicBlock *BB : this->blocks()) {
     TerminatorInst *TI = BB->getTerminator();
@@ -457,7 +460,7 @@ protected:
 void UnloopUpdater::updateBlockParents() {
   if (Unloop.getNumBlocks()) {
     // Perform a post order CFG traversal of all blocks within this loop,
-    // propagating the nearest loop from sucessors to predecessors.
+    // propagating the nearest loop from successors to predecessors.
     LoopBlocksTraversal Traversal(DFS, LI);
     for (BasicBlock *POI : Traversal) {
 
@@ -606,8 +609,17 @@ Loop *UnloopUpdater::getNearestLoop(BasicBlock *BB, Loop *BBLoop) {
   return NearLoop;
 }
 
-LoopInfo::LoopInfo(const DominatorTreeBase<BasicBlock> &DomTree) {
+LoopInfo::LoopInfo(const DomTreeBase<BasicBlock> &DomTree) {
   analyze(DomTree);
+}
+
+bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                          FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<LoopAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
 }
 
 void LoopInfo::markAsRemoved(Loop *Unloop) {

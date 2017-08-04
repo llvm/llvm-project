@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump pretty -types %p/Inputs/ClassLayoutTest.pdb > %t
+; RUN: llvm-pdbutil pretty -types %p/Inputs/ClassLayoutTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBAL_ENUM
 ; RUN: FileCheck -input-file=%t %s -check-prefix=MEMBER_ENUM
 
@@ -10,7 +10,7 @@
 
 ; MEMBER_ENUM: ---TYPES---
 ; MEMBER_ENUM: Classes:
-; MEMBER_ENUM: struct __vc_attributes::threadingAttribute {
+; MEMBER_ENUM: struct __vc_attributes::threadingAttribute [sizeof = 4] {
 ; MEMBER_ENUM-NEXT: enum threading_e {
 ; MEMBER_ENUM-NEXT: apartment = 1
 ; MEMBER_ENUM-NEXT: single = 2

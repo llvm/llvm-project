@@ -82,10 +82,6 @@ uintptr_t GetCurrentProcess(void);
   #endif
 #endif
 
-#if defined(__linux__) && defined(__arm__)
-  #include <asm/unistd.h>
-#endif
-
 /*
  * The compiler generates calls to __clear_cache() when creating 
  * trampoline functions on the stack for use with nested functions.
@@ -94,7 +90,7 @@ uintptr_t GetCurrentProcess(void);
  */
 
 void __clear_cache(void *start, void *end) {
-#if __i386__ || __x86_64__
+#if __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
 /*
  * Intel processors have a unified instruction and data cache
  * so there is nothing to do
@@ -108,6 +104,15 @@ void __clear_cache(void *start, void *end) {
 
         sysarch(ARM_SYNC_ICACHE, &arg);
     #elif defined(__linux__)
+    /*
+     * We used to include asm/unistd.h for the __ARM_NR_cacheflush define, but
+     * it also brought many other unused defines, as well as a dependency on
+     * kernel headers to be installed.
+     *
+     * This value is stable at least since Linux 3.13 and should remain so for
+     * compatibility reasons, warranting it's re-definition here.
+     */
+    #define __ARM_NR_cacheflush 0x0f0002
          register int start_reg __asm("r0") = (int) (intptr_t) start;
          const register int end_reg __asm("r1") = (int) (intptr_t) end;
          const register int flags __asm("r2") = 0;

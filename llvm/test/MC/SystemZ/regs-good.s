@@ -118,6 +118,25 @@
 	cpya	%a12,%a13
 	cpya	%a14,%a15
 
+#CHECK: lctl	%c0, %c1, 0             # encoding: [0xb7,0x01,0x00,0x00]
+#CHECK: lctl	%c2, %c3, 0             # encoding: [0xb7,0x23,0x00,0x00]
+#CHECK: lctl	%c4, %c5, 0             # encoding: [0xb7,0x45,0x00,0x00]
+#CHECK: lctl	%c6, %c7, 0             # encoding: [0xb7,0x67,0x00,0x00]
+#CHECK: lctl	%c8, %c9, 0             # encoding: [0xb7,0x89,0x00,0x00]
+#CHECK: lctl	%c10, %c11, 0           # encoding: [0xb7,0xab,0x00,0x00]
+#CHECK: lctl	%c12, %c13, 0           # encoding: [0xb7,0xcd,0x00,0x00]
+#CHECK: lctl	%c14, %c15, 0           # encoding: [0xb7,0xef,0x00,0x00]
+
+	lctl	%c0,%c1,0
+	lctl	%c2,%c3,0
+	lctl	%c4,%c5,0
+	lctl	%c6,%c7,0
+	lctl	%c8,%c9,0
+	lctl	%c10,%c11,0
+	lctl	%c12,%c13,0
+	lctl	%c14,%c15,0
+
+
 #CHECK: .cfi_offset %r0, 0
 #CHECK: .cfi_offset %r1, 8
 #CHECK: .cfi_offset %r2, 16
@@ -166,6 +185,22 @@
 #CHECK: .cfi_offset %a13, 308
 #CHECK: .cfi_offset %a14, 312
 #CHECK: .cfi_offset %a15, 316
+#CHECK: .cfi_offset %c0, 318
+#CHECK: .cfi_offset %c1, 326
+#CHECK: .cfi_offset %c2, 334
+#CHECK: .cfi_offset %c3, 342
+#CHECK: .cfi_offset %c4, 350
+#CHECK: .cfi_offset %c5, 358
+#CHECK: .cfi_offset %c6, 366
+#CHECK: .cfi_offset %c7, 374
+#CHECK: .cfi_offset %c8, 382
+#CHECK: .cfi_offset %c9, 390
+#CHECK: .cfi_offset %c10, 398
+#CHECK: .cfi_offset %c11, 406
+#CHECK: .cfi_offset %c12, 414
+#CHECK: .cfi_offset %c13, 422
+#CHECK: .cfi_offset %c14, 430
+#CHECK: .cfi_offset %c15, 438
 
 	.cfi_startproc
 	.cfi_offset %r0,0
@@ -216,4 +251,20 @@
 	.cfi_offset %a13,308
 	.cfi_offset %a14,312
 	.cfi_offset %a15,316
+	.cfi_offset %c0,318
+	.cfi_offset %c1,326
+	.cfi_offset %c2,334
+	.cfi_offset %c3,342
+	.cfi_offset %c4,350
+	.cfi_offset %c5,358
+	.cfi_offset %c6,366
+	.cfi_offset %c7,374
+	.cfi_offset %c8,382
+	.cfi_offset %c9,390
+	.cfi_offset %c10,398
+	.cfi_offset %c11,406
+	.cfi_offset %c12,414
+	.cfi_offset %c13,422
+	.cfi_offset %c14,430
+	.cfi_offset %c15,438
 	.cfi_endproc

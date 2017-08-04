@@ -10,14 +10,14 @@ define i32 @C4_fastcorner9(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C4.fastcorner9(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = fastcorner9({{.*}}, {{.*}})
+; CHECK: = fastcorner9({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.C4.fastcorner9.not(i32, i32)
 define i32 @C4_fastcorner9_not(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C4.fastcorner9.not(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = !fastcorner9({{.*}}, {{.*}})
+; CHECK: = !fastcorner9({{.*}},{{.*}})
 
 ; Logical reductions on predicates
 declare i32 @llvm.hexagon.C2.any8(i32)
@@ -41,70 +41,70 @@ define i32 @C2_and(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C2.and(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, {{.*}})
+; CHECK: = and({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.C4.and.and(i32, i32, i32)
 define i32 @C4_and_and(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.and.and(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, and({{.*}}, {{.*}}))
+; CHECK: = and({{.*}},and({{.*}},{{.*}}))
 
 declare i32 @llvm.hexagon.C2.or(i32, i32)
 define i32 @C2_or(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C2.or(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, {{.*}})
+; CHECK: = or({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.C4.and.or(i32, i32, i32)
 define i32 @C4_and_or(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.and.or(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, or({{.*}}, {{.*}}))
+; CHECK: = and({{.*}},or({{.*}},{{.*}}))
 
 declare i32 @llvm.hexagon.C2.xor(i32, i32)
 define i32 @C2_xor(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C2.xor(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = xor({{.*}}, {{.*}})
+; CHECK: = xor({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.C4.or.and(i32, i32, i32)
 define i32 @C4_or_and(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.or.and(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, and({{.*}}, {{.*}}))
+; CHECK: = or({{.*}},and({{.*}},{{.*}}))
 
 declare i32 @llvm.hexagon.C2.andn(i32, i32)
 define i32 @C2_andn(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C2.andn(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, !{{.*}})
+; CHECK: = and({{.*}},!{{.*}})
 
 declare i32 @llvm.hexagon.C4.or.or(i32, i32, i32)
 define i32 @C4_or_or(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.or.or(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, or({{.*}}, {{.*}}))
+; CHECK: = or({{.*}},or({{.*}},{{.*}}))
 
 declare i32 @llvm.hexagon.C4.and.andn(i32, i32, i32)
 define i32 @C4_and_andn(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.and.andn(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, and({{.*}}, !{{.*}}))
+; CHECK: = and({{.*}},and({{.*}},!{{.*}}))
 
 declare i32 @llvm.hexagon.C4.and.orn(i32, i32, i32)
 define i32 @C4_and_orn(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.and.orn(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, or({{.*}}, !{{.*}}))
+; CHECK: = and({{.*}},or({{.*}},!{{.*}}))
 
 declare i32 @llvm.hexagon.C2.not(i32)
 define i32 @C2_not(i32 %a) {
@@ -118,18 +118,18 @@ define i32 @C4_or_andn(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.or.andn(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, and({{.*}}, !{{.*}}))
+; CHECK: = or({{.*}},and({{.*}},!{{.*}}))
 
 declare i32 @llvm.hexagon.C2.orn(i32, i32)
 define i32 @C2_orn(i32 %a, i32 %b) {
   %z = call i32@llvm.hexagon.C2.orn(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, !{{.*}})
+; CHECK: = or({{.*}},!{{.*}})
 
 declare i32 @llvm.hexagon.C4.or.orn(i32, i32, i32)
 define i32 @C4_or_orn(i32 %a, i32 %b, i32 %c) {
   %z = call i32@llvm.hexagon.C4.or.orn(i32 %a, i32 %b, i32 %c)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, or({{.*}}, !{{.*}}))
+; CHECK: = or({{.*}},or({{.*}},!{{.*}}))

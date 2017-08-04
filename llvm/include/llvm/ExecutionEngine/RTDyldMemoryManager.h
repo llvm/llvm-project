@@ -14,10 +14,10 @@
 #ifndef LLVM_EXECUTIONENGINE_RTDYLDMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_RTDYLDMEMORYMANAGER_H
 
+#include "llvm-c/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm-c/ExecutionEngine.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -69,13 +69,8 @@ public:
   /// Deregister EH frames in the current proces.
   static void deregisterEHFramesInProcess(uint8_t *Addr, size_t Size);
 
-  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
-    registerEHFramesInProcess(Addr, Size);
-  }
-
-  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
-    deregisterEHFramesInProcess(Addr, Size);
-  }
+  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override;
+  void deregisterEHFrames() override;
 
   /// This method returns the address of the specified function or variable in
   /// the current process.
@@ -139,6 +134,14 @@ public:
   /// MCJIT or RuntimeDyld.  Use getSymbolAddress instead.
   virtual void *getPointerToNamedFunction(const std::string &Name,
                                           bool AbortOnFailure = true);
+
+protected:
+  struct EHFrame {
+    uint8_t *Addr;
+    size_t Size;
+  };
+  typedef std::vector<EHFrame> EHFrameInfos;
+  EHFrameInfos EHFrames;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

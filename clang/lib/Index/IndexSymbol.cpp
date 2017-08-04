@@ -69,11 +69,13 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
       case NoLinkage:
-      case VisibleNoLinkage:
       case InternalLinkage:
         return true;
+      case VisibleNoLinkage:
       case UniqueExternalLinkage:
+      case ModuleInternalLinkage:
         llvm_unreachable("Not a sema linkage");
+      case ModuleLinkage:
       case ExternalLinkage:
         return false;
     }
@@ -199,25 +201,22 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
         Info.Properties |= (unsigned)SymbolProperty::UnitTest;
       break;
     }
-    case Decl::ObjCMethod:
-      if (cast<ObjCMethodDecl>(D)->isInstanceMethod()) {
-        const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
-        Info.Kind = SymbolKind::InstanceMethod;
-        if (MD->isPropertyAccessor()) {
-          if (MD->param_size())
-            Info.SubKind = SymbolSubKind::AccessorSetter;
-          else
-            Info.SubKind = SymbolSubKind::AccessorGetter;
-        }
-      } else {
-        Info.Kind = SymbolKind::ClassMethod;
+    case Decl::ObjCMethod: {
+      const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
+      Info.Kind = MD->isInstanceMethod() ? SymbolKind::InstanceMethod : SymbolKind::ClassMethod;
+      if (MD->isPropertyAccessor()) {
+        if (MD->param_size())
+          Info.SubKind = SymbolSubKind::AccessorSetter;
+        else
+          Info.SubKind = SymbolSubKind::AccessorGetter;
       }
       Info.Lang = SymbolLanguage::ObjC;
-      if (isUnitTest(cast<ObjCMethodDecl>(D)))
+      if (isUnitTest(MD))
         Info.Properties |= (unsigned)SymbolProperty::UnitTest;
       if (D->hasAttr<IBActionAttr>())
         Info.Properties |= (unsigned)SymbolProperty::IBAnnotated;
       break;
+    }
     case Decl::ObjCProperty:
       Info.Kind = SymbolKind::InstanceProperty;
       Info.Lang = SymbolLanguage::ObjC;
@@ -299,6 +298,10 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       break;
     case Decl::TypeAlias:
       Info.Kind = SymbolKind::TypeAlias;
+      Info.Lang = SymbolLanguage::CXX;
+      break;
+    case Decl::Binding:
+      Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;
       break;
     default:

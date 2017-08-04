@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -23,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -38,6 +38,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -224,13 +225,10 @@ struct PromoteMem2Reg {
   std::vector<AllocaInst *> Allocas;
   DominatorTree &DT;
   DIBuilder DIB;
-
-  /// An AliasSetTracker object to update.  If null, don't update it.
-  AliasSetTracker *AST;
-
   /// A cache of @llvm.assume intrinsics used by SimplifyInstruction.
   AssumptionCache *AC;
 
+  const SimplifyQuery SQ;
   /// Reverse mapping of Allocas.
   DenseMap<AllocaInst *, unsigned> AllocaLookup;
 
@@ -269,10 +267,11 @@ struct PromoteMem2Reg {
 
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
-                 AliasSetTracker *AST, AssumptionCache *AC)
+                 AssumptionCache *AC)
       : Allocas(Allocas.begin(), Allocas.end()), DT(DT),
         DIB(*DT.getRoot()->getParent()->getParent(), /*AllowUnresolved*/ false),
-        AST(AST), AC(AC) {}
+        AC(AC), SQ(DT.getRoot()->getParent()->getParent()->getDataLayout(),
+                   nullptr, &DT, AC) {}
 
   void run();
 
@@ -300,6 +299,18 @@ private:
 };
 
 } // end of anonymous namespace
+
+/// Given a LoadInst LI this adds assume(LI != null) after it.
+static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
+  Function *AssumeIntrinsic =
+      Intrinsic::getDeclaration(LI->getModule(), Intrinsic::assume);
+  ICmpInst *LoadNotNull = new ICmpInst(ICmpInst::ICMP_NE, LI,
+                                       Constant::getNullValue(LI->getType()));
+  LoadNotNull->insertAfter(LI);
+  CallInst *CI = CallInst::Create(AssumeIntrinsic, {LoadNotNull});
+  CI->insertAfter(LoadNotNull);
+  AC->registerAssumption(CI);
+}
 
 static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
@@ -334,9 +345,8 @@ static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
 /// and thus must be phi-ed with undef. We fall back to the standard alloca
 /// promotion algorithm in that case.
 static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
-                                     LargeBlockInfo &LBI,
-                                     DominatorTree &DT,
-                                     AliasSetTracker *AST) {
+                                     LargeBlockInfo &LBI, DominatorTree &DT,
+                                     AssumptionCache *AC) {
   StoreInst *OnlyStore = Info.OnlyStore;
   bool StoringGlobalVal = !isa<Instruction>(OnlyStore->getOperand(0));
   BasicBlock *StoreBB = OnlyStore->getParent();
@@ -387,9 +397,15 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
     // code.
     if (ReplVal == LI)
       ReplVal = UndefValue::get(LI->getType());
+
+    // If the load was marked as nonnull we don't want to lose
+    // that information when we erase this Load. So we preserve
+    // it with an assume.
+    if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
+        !llvm::isKnownNonNullAt(ReplVal, LI, &DT))
+      addAssumeNonNull(AC, LI);
+
     LI->replaceAllUsesWith(ReplVal);
-    if (AST && LI->getType()->isPointerTy())
-      AST->deleteValue(LI);
     LI->eraseFromParent();
     LBI.deleteValue(LI);
   }
@@ -410,8 +426,6 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
   Info.OnlyStore->eraseFromParent();
   LBI.deleteValue(Info.OnlyStore);
 
-  if (AST)
-    AST->deleteValue(AI);
   AI->eraseFromParent();
   LBI.deleteValue(AI);
   return true;
@@ -435,7 +449,8 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
 ///  }
 static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
                                      LargeBlockInfo &LBI,
-                                     AliasSetTracker *AST) {
+                                     DominatorTree &DT,
+                                     AssumptionCache *AC) {
   // The trickiest case to handle is when we have large blocks. Because of this,
   // this code is optimized assuming that large blocks happen.  This does not
   // significantly pessimize the small block case.  This uses LargeBlockInfo to
@@ -476,13 +491,18 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
         // There is no store before this load, bail out (load may be affected
         // by the following stores - see main comment).
         return false;
-    }
-    else
+    } else {
       // Otherwise, there was a store before this load, the load takes its value.
-      LI->replaceAllUsesWith(std::prev(I)->second->getOperand(0));
+      // Note, if the load was marked as nonnull we don't want to lose that
+      // information when we erase it. So we preserve it with an assume.
+      Value *ReplVal = std::prev(I)->second->getOperand(0);
+      if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
+          !llvm::isKnownNonNullAt(ReplVal, LI, &DT))
+        addAssumeNonNull(AC, LI);
 
-    if (AST && LI->getType()->isPointerTy())
-      AST->deleteValue(LI);
+      LI->replaceAllUsesWith(ReplVal);
+    }
+
     LI->eraseFromParent();
     LBI.deleteValue(LI);
   }
@@ -499,8 +519,6 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
     LBI.deleteValue(SI);
   }
 
-  if (AST)
-    AST->deleteValue(AI);
   AI->eraseFromParent();
   LBI.deleteValue(AI);
 
@@ -517,8 +535,6 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 void PromoteMem2Reg::run() {
   Function &F = *DT.getRoot()->getParent();
 
-  if (AST)
-    PointerAllocaValues.resize(Allocas.size());
   AllocaDbgDeclares.resize(Allocas.size());
 
   AllocaInfo Info;
@@ -536,8 +552,6 @@ void PromoteMem2Reg::run() {
 
     if (AI->use_empty()) {
       // If there are no uses of the alloca, just delete it now.
-      if (AST)
-        AST->deleteValue(AI);
       AI->eraseFromParent();
 
       // Remove the alloca from the Allocas list, since it has been processed
@@ -553,7 +567,7 @@ void PromoteMem2Reg::run() {
     // If there is only a single store to this value, replace any loads of
     // it that are directly dominated by the definition with the value stored.
     if (Info.DefiningBlocks.size() == 1) {
-      if (rewriteSingleStoreAlloca(AI, Info, LBI, DT, AST)) {
+      if (rewriteSingleStoreAlloca(AI, Info, LBI, DT, AC)) {
         // The alloca has been processed, move on.
         RemoveFromAllocasList(AllocaNum);
         ++NumSingleStore;
@@ -564,7 +578,7 @@ void PromoteMem2Reg::run() {
     // If the alloca is only read and written in one basic block, just perform a
     // linear sweep over the block to eliminate it.
     if (Info.OnlyUsedInOneBlock &&
-        promoteSingleBlockAlloca(AI, Info, LBI, AST)) {
+        promoteSingleBlockAlloca(AI, Info, LBI, DT, AC)) {
       // The alloca has been processed, move on.
       RemoveFromAllocasList(AllocaNum);
       continue;
@@ -577,11 +591,6 @@ void PromoteMem2Reg::run() {
       for (auto &BB : F)
         BBNumbers[&BB] = ID++;
     }
-
-    // If we have an AST to keep updated, remember some pointer value that is
-    // stored into the alloca.
-    if (AST)
-      PointerAllocaValues[AllocaNum] = Info.AllocaPointerVal;
 
     // Remember the dbg.declare intrinsic describing this alloca, if any.
     if (Info.DbgDeclare)
@@ -662,12 +671,8 @@ void PromoteMem2Reg::run() {
     // tree. Just delete the users now.
     if (!A->use_empty())
       A->replaceAllUsesWith(UndefValue::get(A->getType()));
-    if (AST)
-      AST->deleteValue(A);
     A->eraseFromParent();
   }
-
-  const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Remove alloca's dbg.declare instrinsics from the function.
   for (unsigned i = 0, e = AllocaDbgDeclares.size(); i != e; ++i)
@@ -693,9 +698,7 @@ void PromoteMem2Reg::run() {
       PHINode *PN = I->second;
 
       // If this PHI node merges one value and/or undefs, get the value.
-      if (Value *V = SimplifyInstruction(PN, DL, nullptr, &DT, AC)) {
-        if (AST && PN->getType()->isPointerTy())
-          AST->deleteValue(PN);
+      if (Value *V = SimplifyInstruction(PN, SQ)) {
         PN->replaceAllUsesWith(V);
         PN->eraseFromParent();
         NewPhiNodes.erase(I++);
@@ -863,10 +866,6 @@ bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
                        &BB->front());
   ++NumPHIInsert;
   PhiToAllocaMap[PN] = AllocaNo;
-
-  if (AST && PN->getType()->isPointerTy())
-    AST->copyValue(PointerAllocaValues[AllocaNo], PN);
-
   return true;
 }
 
@@ -940,10 +939,15 @@ NextIteration:
 
       Value *V = IncomingVals[AI->second];
 
+      // If the load was marked as nonnull we don't want to lose
+      // that information when we erase this Load. So we preserve
+      // it with an assume.
+      if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
+          !llvm::isKnownNonNullAt(V, LI, &DT))
+        addAssumeNonNull(AC, LI);
+
       // Anything using the load now uses the current value.
       LI->replaceAllUsesWith(V);
-      if (AST && LI->getType()->isPointerTy())
-        AST->deleteValue(LI);
       BB->getInstList().erase(LI);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
       // Delete this instruction and mark the name as the current holder of the
@@ -987,10 +991,10 @@ NextIteration:
 }
 
 void llvm::PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
-                           AliasSetTracker *AST, AssumptionCache *AC) {
+                           AssumptionCache *AC) {
   // If there is nothing to do, bail out...
   if (Allocas.empty())
     return;
 
-  PromoteMem2Reg(Allocas, DT, AST, AC).run();
+  PromoteMem2Reg(Allocas, DT, AC).run();
 }

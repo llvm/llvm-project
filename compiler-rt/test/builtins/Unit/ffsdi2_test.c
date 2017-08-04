@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- ffsdi2_test.c - Test __ffsdi2 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

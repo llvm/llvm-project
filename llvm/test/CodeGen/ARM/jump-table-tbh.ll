@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv7m-linux-gnu -o - %s | FileCheck %s --check-prefix=T2
-; RUN: llc -mtriple=thumbv6m-linux-gnu -o - %s | FileCheck %s --check-prefix=T1
+; RUN: llc -mtriple=thumbv7m-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=T2
+; RUN: llc -mtriple=thumbv6m-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=T1
 
 declare void @foo(double)
 declare i32 @llvm.arm.space(i32, i32)
@@ -10,7 +10,7 @@ define i32 @test_tbh(i1 %tst, i32 %sw, i32 %l) {
 ; T2-LABEL: test_tbh:
 ; T2: [[ANCHOR:.LCPI[0-9_]+]]:
 ; T2: tbh [pc, r{{[0-9]+}}, lsl #1]
-; T2-NEXT: @ BB#1
+; T2-NEXT: @ BB#{{[0-9]+}}
 ; T2-NEXT: LJTI
 ; T2-NEXT: .short	(.LBB0_[[x:[0-9]+]]-([[ANCHOR]]+4))/2
 ; T2-NEXT: .short	(.LBB0_{{[0-9]+}}-([[ANCHOR]]+4))/2

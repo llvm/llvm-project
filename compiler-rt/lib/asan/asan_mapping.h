@@ -191,7 +191,6 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 
 #define SHADOW_GRANULARITY (1ULL << SHADOW_SCALE)
 #define MEM_TO_SHADOW(mem) (((mem) >> SHADOW_SCALE) + (SHADOW_OFFSET))
-#define SHADOW_TO_MEM(shadow) (((shadow) - SHADOW_OFFSET) << SHADOW_SCALE)
 
 #define kLowMemBeg      0
 #define kLowMemEnd      (SHADOW_OFFSET ? SHADOW_OFFSET - 1 : 0)

@@ -125,7 +125,10 @@ public:
     return IsUnsigned ? APSInt(lshr(Amt), true) : APSInt(ashr(Amt), false);
   }
   APSInt& operator>>=(unsigned Amt) {
-    *this = *this >> Amt;
+    if (IsUnsigned)
+      lshrInPlace(Amt);
+    else
+      ashrInPlace(Amt);
     return *this;
   }
 
@@ -179,7 +182,7 @@ public:
     return APSInt(static_cast<const APInt&>(*this) << Bits, IsUnsigned);
   }
   APSInt& operator<<=(unsigned Amt) {
-    *this = *this << Amt;
+    static_cast<APInt&>(*this) <<= Amt;
     return *this;
   }
 
@@ -235,19 +238,16 @@ public:
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     return APSInt(static_cast<const APInt&>(*this) & RHS, IsUnsigned);
   }
-  APSInt And(const APSInt &RHS) const { return this->operator&(RHS); }
 
   APSInt operator|(const APSInt& RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     return APSInt(static_cast<const APInt&>(*this) | RHS, IsUnsigned);
   }
-  APSInt Or(const APSInt &RHS) const { return this->operator|(RHS); }
 
   APSInt operator^(const APSInt &RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
     return APSInt(static_cast<const APInt&>(*this) ^ RHS, IsUnsigned);
   }
-  APSInt Xor(const APSInt &RHS) const { return this->operator^(RHS); }
 
   APSInt operator*(const APSInt& RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
@@ -288,12 +288,12 @@ public:
   /// \brief Compare underlying values of two numbers.
   static int compareValues(const APSInt &I1, const APSInt &I2) {
     if (I1.getBitWidth() == I2.getBitWidth() && I1.isSigned() == I2.isSigned())
-      return I1 == I2 ? 0 : I1 > I2 ? 1 : -1;
+      return I1.IsUnsigned ? I1.compare(I2) : I1.compareSigned(I2);
 
     // Check for a bit-width mismatch.
     if (I1.getBitWidth() > I2.getBitWidth())
       return compareValues(I1, I2.extend(I1.getBitWidth()));
-    else if (I2.getBitWidth() > I1.getBitWidth())
+    if (I2.getBitWidth() > I1.getBitWidth())
       return compareValues(I1.extend(I2.getBitWidth()), I2);
 
     // We have a signedness mismatch. Check for negative values and do an
@@ -308,7 +308,7 @@ public:
         return 1;
     }
 
-    return I1.eq(I2) ? 0 : I1.ugt(I2) ? 1 : -1;
+    return I1.compare(I2);
   }
 
   static APSInt get(int64_t X) { return APSInt(APInt(64, X), false); }

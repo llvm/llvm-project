@@ -1,4 +1,4 @@
-//===-- NameAnonGlobals.h - Anonymous Global Naming Pass ----*- C++ -*-=======//
+//===-- NameAnonGlobals.h - Anonymous Global Naming Pass --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,9 +23,11 @@ namespace llvm {
 /// Simple pass that provides a name to every anonymous globals.
 class NameAnonGlobalPass : public PassInfoMixin<NameAnonGlobalPass> {
 public:
-  NameAnonGlobalPass() {}
+  NameAnonGlobalPass() = default;
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_NAMEANONGLOBALS_H

@@ -17,8 +17,10 @@
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "CommandProcessorCheck.h"
+#include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
+#include "PostfixOperatorCheck.h"
 #include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
 #include "StrToNumCheck.h"
@@ -34,9 +36,13 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     // C++ checkers
     // DCL
+    CheckFactories.registerCheck<PostfixOperatorCheck>(
+        "cert-dcl21-cpp");
     CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "cert-dcl54-cpp");
+    CheckFactories.registerCheck<DontModifyStdNamespaceCheck>(
+        "cert-dcl58-cpp");
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // OOP

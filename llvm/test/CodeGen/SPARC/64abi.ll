@@ -24,17 +24,17 @@ define void @intarg(i8  %a0,   ; %i0
                     i32 %a5,   ; %i5
                     i32 signext %a6,   ; [%fp+BIAS+176]
                     i8* %a7) { ; [%fp+BIAS+184]
-  store i8 %a0, i8* %a4
-  store i8 %a1, i8* %a4
+  store volatile i8 %a0, i8* %a4
+  store volatile i8 %a1, i8* %a4
   %p16 = bitcast i8* %a4 to i16*
-  store i16 %a2, i16* %p16
+  store volatile i16 %a2, i16* %p16
   %p32 = bitcast i8* %a4 to i32*
-  store i32 %a3, i32* %p32
+  store volatile i32 %a3, i32* %p32
   %pp = bitcast i8* %a4 to i8**
-  store i8* %a4, i8** %pp
-  store i32 %a5, i32* %p32
-  store i32 %a6, i32* %p32
-  store i8* %a7, i8** %pp
+  store volatile i8* %a4, i8** %pp
+  store volatile i32 %a5, i32* %p32
+  store volatile i32 %a6, i32* %p32
+  store volatile i8* %a7, i8** %pp
   ret void
 }
 
@@ -316,7 +316,7 @@ define void @call_ret_i64_pair(i64* %i0) {
   %rv = call { i64, i64 } @ret_i64_pair(i32 undef, i32 undef,
                                         i64* undef, i64* undef)
   %e0 = extractvalue { i64, i64 } %rv, 0
-  store i64 %e0, i64* %i0
+  store volatile i64 %e0, i64* %i0
   %e1 = extractvalue { i64, i64 } %rv, 1
   store i64 %e1, i64* %i0
   ret void

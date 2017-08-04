@@ -7,7 +7,7 @@
 ; GCN: ds_read_b32
 
 ; EG: LDS_READ_RET
-define void @load_f32_local(float addrspace(1)* %out, float addrspace(3)* %in) #0 {
+define amdgpu_kernel void @load_f32_local(float addrspace(1)* %out, float addrspace(3)* %in) #0 {
 entry:
   %tmp0 = load float, float addrspace(3)* %in
   store float %tmp0, float addrspace(1)* %out
@@ -20,7 +20,7 @@ entry:
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @load_v2f32_local(<2 x float> addrspace(1)* %out, <2 x float> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @load_v2f32_local(<2 x float> addrspace(1)* %out, <2 x float> addrspace(3)* %in) #0 {
 entry:
   %tmp0 = load <2 x float>, <2 x float> addrspace(3)* %in
   store <2 x float> %tmp0, <2 x float> addrspace(1)* %out
@@ -38,7 +38,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v3f32(<3 x float> addrspace(3)* %out, <3 x float> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v3f32(<3 x float> addrspace(3)* %out, <3 x float> addrspace(3)* %in) #0 {
 entry:
   %tmp0 = load <3 x float>, <3 x float> addrspace(3)* %in
   store <3 x float> %tmp0, <3 x float> addrspace(3)* %out
@@ -52,7 +52,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v4f32(<4 x float> addrspace(3)* %out, <4 x float> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v4f32(<4 x float> addrspace(3)* %out, <4 x float> addrspace(3)* %in) #0 {
 entry:
   %tmp0 = load <4 x float>, <4 x float> addrspace(3)* %in
   store <4 x float> %tmp0, <4 x float> addrspace(3)* %out
@@ -71,7 +71,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v8f32(<8 x float> addrspace(3)* %out, <8 x float> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v8f32(<8 x float> addrspace(3)* %out, <8 x float> addrspace(3)* %in) #0 {
 entry:
   %tmp0 = load <8 x float>, <8 x float> addrspace(3)* %in
   store <8 x float> %tmp0, <8 x float> addrspace(3)* %out
@@ -100,7 +100,7 @@ entry:
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
-define void @local_load_v16f32(<16 x float> addrspace(3)* %out, <16 x float> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @local_load_v16f32(<16 x float> addrspace(3)* %out, <16 x float> addrspace(3)* %in) #0 {
 entry:
   %tmp0 = load <16 x float>, <16 x float> addrspace(3)* %in
   store <16 x float> %tmp0, <16 x float> addrspace(3)* %out

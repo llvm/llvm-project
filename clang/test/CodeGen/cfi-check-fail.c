@@ -72,3 +72,8 @@ void caller(void (*f)()) {
 
 // CHECK: [[CONT5]]:
 // CHECK:   ret void
+
+// CHECK: define weak void @__cfi_check(i64, i8*, i8*)
+// CHECK-NOT: }
+// CHECK: call void @llvm.trap()
+// CHECK-NEXT: ret void

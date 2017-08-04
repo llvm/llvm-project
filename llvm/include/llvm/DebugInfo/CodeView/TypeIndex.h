@@ -10,12 +10,19 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEINDEX_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEINDEX_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Endian.h"
 #include <cassert>
 #include <cinttypes>
+#include <functional>
 
 namespace llvm {
+
+class ScopedPrinter;
+
 namespace codeview {
+
+class TypeCollection;
 
 enum class SimpleTypeKind : uint32_t {
   None = 0x0000,          // uncharacterized type (no type)
@@ -106,6 +113,15 @@ public:
 
   bool isNoneType() const { return *this == None(); }
 
+  uint32_t toArrayIndex() const {
+    assert(!isSimple());
+    return getIndex() - FirstNonSimpleIndex;
+  }
+
+  static TypeIndex fromArrayIndex(uint32_t Index) {
+    return TypeIndex(Index + FirstNonSimpleIndex);
+  }
+
   SimpleTypeKind getSimpleKind() const {
     assert(isSimple());
     return static_cast<SimpleTypeKind>(Index & SimpleKindMask);
@@ -159,6 +175,39 @@ public:
   static TypeIndex Float32() { return TypeIndex(SimpleTypeKind::Float32); }
   static TypeIndex Float64() { return TypeIndex(SimpleTypeKind::Float64); }
 
+  TypeIndex &operator+=(unsigned N) {
+    Index += N;
+    return *this;
+  }
+
+  TypeIndex &operator++() {
+    Index += 1;
+    return *this;
+  }
+
+  TypeIndex operator++(int) {
+    TypeIndex Copy = *this;
+    operator++();
+    return Copy;
+  }
+
+  TypeIndex &operator-=(unsigned N) {
+    assert(Index >= N);
+    Index -= N;
+    return *this;
+  }
+
+  TypeIndex &operator--() {
+    Index -= 1;
+    return *this;
+  }
+
+  TypeIndex operator--(int) {
+    TypeIndex Copy = *this;
+    operator--();
+    return Copy;
+  }
+
   friend inline bool operator==(const TypeIndex &A, const TypeIndex &B) {
     return A.getIndex() == B.getIndex();
   }
@@ -183,11 +232,58 @@ public:
     return A.getIndex() >= B.getIndex();
   }
 
+  friend inline TypeIndex operator+(const TypeIndex &A, uint32_t N) {
+    TypeIndex Result(A);
+    Result += N;
+    return Result;
+  }
+
+  friend inline TypeIndex operator-(const TypeIndex &A, uint32_t N) {
+    assert(A.getIndex() >= N);
+    TypeIndex Result(A);
+    Result -= N;
+    return Result;
+  }
+
+  friend inline uint32_t operator-(const TypeIndex &A, const TypeIndex &B) {
+    assert(A >= B);
+    return A.toArrayIndex() - B.toArrayIndex();
+  }
+
+  static StringRef simpleTypeName(TypeIndex TI);
+
 private:
   support::ulittle32_t Index;
 };
 
+// Used for pseudo-indexing an array of type records.  An array of such records
+// sorted by TypeIndex can allow log(N) lookups even though such a type record
+// stream does not provide random access.
+struct TypeIndexOffset {
+  TypeIndex Type;
+  support::ulittle32_t Offset;
+};
+
+void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName, TypeIndex TI,
+                    TypeCollection &Types);
 }
-}
+
+template <> struct DenseMapInfo<codeview::TypeIndex> {
+  static inline codeview::TypeIndex getEmptyKey() {
+    return codeview::TypeIndex{DenseMapInfo<uint32_t>::getEmptyKey()};
+  }
+  static inline codeview::TypeIndex getTombstoneKey() {
+    return codeview::TypeIndex{DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const codeview::TypeIndex &TI) {
+    return DenseMapInfo<uint32_t>::getHashValue(TI.getIndex());
+  }
+  static bool isEqual(const codeview::TypeIndex &LHS,
+                      const codeview::TypeIndex &RHS) {
+    return LHS == RHS;
+  }
+};
+
+} // namespace llvm
 
 #endif

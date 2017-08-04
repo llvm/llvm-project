@@ -48,7 +48,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
   std::vector<CharPairType> CharResults;
 
   for (auto X : llvm::enumerate(foo)) {
-    CharResults.emplace_back(X.Index, X.Value);
+    CharResults.emplace_back(X.index(), X.value());
   }
   ASSERT_EQ(3u, CharResults.size());
   EXPECT_EQ(CharPairType(0u, 'a'), CharResults[0]);
@@ -60,7 +60,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
   std::vector<IntPairType> IntResults;
   const std::vector<int> bar = {1, 2, 3};
   for (auto X : llvm::enumerate(bar)) {
-    IntResults.emplace_back(X.Index, X.Value);
+    IntResults.emplace_back(X.index(), X.value());
   }
   ASSERT_EQ(3u, IntResults.size());
   EXPECT_EQ(IntPairType(0u, 1), IntResults[0]);
@@ -69,9 +69,9 @@ TEST(STLExtrasTest, EnumerateLValue) {
 
   // Test an empty range.
   IntResults.clear();
-  const std::vector<int> baz;
+  const std::vector<int> baz{};
   for (auto X : llvm::enumerate(baz)) {
-    IntResults.emplace_back(X.Index, X.Value);
+    IntResults.emplace_back(X.index(), X.value());
   }
   EXPECT_TRUE(IntResults.empty());
 }
@@ -82,7 +82,7 @@ TEST(STLExtrasTest, EnumerateModifyLValue) {
   std::vector<char> foo = {'a', 'b', 'c'};
 
   for (auto X : llvm::enumerate(foo)) {
-    ++X.Value;
+    ++X.value();
   }
   EXPECT_EQ('b', foo[0]);
   EXPECT_EQ('c', foo[1]);
@@ -97,7 +97,7 @@ TEST(STLExtrasTest, EnumerateRValueRef) {
   auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
 
   for (auto X : llvm::enumerate(std::vector<int>{1, 2, 3})) {
-    Results.emplace_back(X.Index, X.Value);
+    Results.emplace_back(X.index(), X.value());
   }
 
   ASSERT_EQ(3u, Results.size());
@@ -114,8 +114,8 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
   std::vector<PairType> Results;
 
   for (auto X : llvm::enumerate(std::vector<char>{'1', '2', '3'})) {
-    ++X.Value;
-    Results.emplace_back(X.Index, X.Value);
+    ++X.value();
+    Results.emplace_back(X.index(), X.value());
   }
 
   ASSERT_EQ(3u, Results.size());
@@ -253,6 +253,16 @@ TEST(STLExtrasTest, CountAdaptor) {
   EXPECT_EQ(2, count(v, 2));
   EXPECT_EQ(1, count(v, 3));
   EXPECT_EQ(1, count(v, 4));
+}
+
+TEST(STLExtrasTest, ToVector) {
+  std::vector<char> v = {'a', 'b', 'c'};
+  auto Enumerated = to_vector<4>(enumerate(v));
+  ASSERT_EQ(3u, Enumerated.size());
+  for (size_t I = 0; I < v.size(); ++I) {
+    EXPECT_EQ(I, Enumerated[I].index());
+    EXPECT_EQ(v[I], Enumerated[I].value());
+  }
 }
 
 TEST(STLExtrasTest, ConcatRange) {

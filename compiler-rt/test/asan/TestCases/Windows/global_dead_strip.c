@@ -1,6 +1,6 @@
-// RUN: %clang_cl_asan /O0 %s /Fe%t.exe
+// RUN: %clang_cl_asan /Gw /O0 %s /Fe%t.exe
 // RUN: %env_asan_opts=report_globals=2 %t.exe 2>&1 | FileCheck %s --check-prefix=NOSTRIP
-// RUN: %clang_cl_asan /O2 %s /Fe%t.exe -link -opt:ref
+// RUN: %clang_cl_asan /Gw /O2 %s /Fe%t.exe -link -opt:ref
 // RUN: %env_asan_opts=report_globals=2 %t.exe 2>&1 | FileCheck %s --check-prefix=STRIP
 
 #include <stdio.h>

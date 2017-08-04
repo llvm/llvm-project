@@ -141,9 +141,9 @@ int NVPTXTTIImpl::getArithmeticInstrCost(
   }
 }
 
-void NVPTXTTIImpl::getUnrollingPreferences(Loop *L,
+void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::UnrollingPreferences &UP) {
-  BaseT::getUnrollingPreferences(L, UP);
+  BaseT::getUnrollingPreferences(L, SE, UP);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
   // threshold.  This partially unrolls small loops which are often

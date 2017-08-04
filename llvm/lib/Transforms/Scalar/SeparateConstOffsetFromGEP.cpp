@@ -156,27 +156,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -1138,7 +1138,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
   // Add I to DominatingExprs if it's an add/sub that can't sign overflow.
   if (match(I, m_NSWAdd(m_Value(LHS), m_Value(RHS))) ||
       match(I, m_NSWSub(m_Value(LHS), m_Value(RHS)))) {
-    if (isKnownNotFullPoison(I)) {
+    if (programUndefinedIfFullPoison(I)) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
       DominatingExprs[Key].push_back(I);

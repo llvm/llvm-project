@@ -1,4 +1,4 @@
-//===- MachineBlockFrequencyInfo.h - MBB Frequency Analysis -*- C++ -*-----===//
+//===- MachineBlockFrequencyInfo.h - MBB Frequency Analysis -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,26 +17,28 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
-#include <climits>
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 
+template <class BlockT> class BlockFrequencyInfoImpl;
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
+class MachineFunction;
 class MachineLoopInfo;
-template <class BlockT> class BlockFrequencyInfoImpl;
+class raw_ostream;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
 /// to estimate machine basic block frequencies.
 class MachineBlockFrequencyInfo : public MachineFunctionPass {
-  typedef BlockFrequencyInfoImpl<MachineBasicBlock> ImplType;
+  using ImplType = BlockFrequencyInfoImpl<MachineBasicBlock>;
   std::unique_ptr<ImplType> MBFI;
 
 public:
   static char ID;
 
   MachineBlockFrequencyInfo();
-
   ~MachineBlockFrequencyInfo() override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -62,7 +64,7 @@ public:
 
   const MachineFunction *getFunction() const;
   const MachineBranchProbabilityInfo *getMBPI() const;
-  void view() const;
+  void view(const Twine &Name, bool isSimple = true) const;
 
   // Print the block frequency Freq to OS using the current functions entry
   // frequency to convert freq into a relative decimal form.
@@ -74,9 +76,8 @@ public:
                               const MachineBasicBlock *MBB) const;
 
   uint64_t getEntryFreq() const;
-
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H

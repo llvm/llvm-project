@@ -2,11 +2,11 @@
 // License. See LICENSE.TXT for details.
 
 // Test strstr and strcasestr hooks.
-#include <string>
-#include <string.h>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <string.h>
+#include <string>
 
 // Windows does not have strcasestr and memmem, so we are not testing them.
 #ifdef _WIN32

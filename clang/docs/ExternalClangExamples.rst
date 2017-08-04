@@ -85,3 +85,16 @@ List of projects and tools
     errors, fixit hints).  See also `<http://l.rw.rw/clang_plugin>`_ for
     step-by-step instructions."
 
+`<https://phabricator.kde.org/source/clazy>`_
+   "clazy is a compiler plugin which allows clang to understand Qt semantics.
+   You get more than 50 Qt related compiler warnings, ranging from unneeded
+   memory allocations to misusage of API, including fix-its for automatic
+   refactoring."
+
+`<https://gerrit.libreoffice.org/gitweb?p=core.git;a=blob_plain;f=compilerplugins/README;hb=HEAD>`_
+   "LibreOffice uses a Clang plugin infrastructure to check during the build
+   various things, some more, some less specific to the LibreOffice source code.
+   There are currently around 50 such checkers, from flagging C-style casts and
+   uses of reserved identifiers to ensuring that code adheres to lifecycle
+   protocols for certain LibreOffice-specific classes.  They may serve as
+   examples for writing RecursiveASTVisitor-based plugins."

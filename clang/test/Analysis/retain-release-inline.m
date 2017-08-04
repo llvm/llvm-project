@@ -12,7 +12,7 @@
 //
 // It includes the basic definitions for the test cases below.
 //===----------------------------------------------------------------------===//
-
+#define NULL 0
 typedef unsigned int __darwin_natural_t;
 typedef unsigned long uintptr_t;
 typedef unsigned int uint32_t;
@@ -267,6 +267,10 @@ typedef NSUInteger NSStringEncoding;
 
 extern CFStringRef CFStringCreateWithCStringNoCopy(CFAllocatorRef alloc, const char *cStr, CFStringEncoding encoding, CFAllocatorRef contentsDeallocator);
 
+typedef struct {
+  int ref;
+} isl_basic_map;
+
 //===----------------------------------------------------------------------===//
 // Test cases.
 //===----------------------------------------------------------------------===//
@@ -285,6 +289,7 @@ void test() {
   foo(s);
   bar(s);
 }
+
 void test_neg() {
   NSString *s = [[NSString alloc] init]; // no-warning  
   foo(s);
@@ -292,6 +297,55 @@ void test_neg() {
   bar(s);
   bar(s);
   bar(s);
+}
+
+__attribute__((cf_returns_retained)) isl_basic_map *isl_basic_map_cow(__attribute__((cf_consumed)) isl_basic_map *bmap);
+void free(void *);
+
+// As 'isl_basic_map_free' is annotated with 'rc_ownership_trusted_implementation', RetainCountChecker trusts its
+// implementation and doesn't analyze its body. If the annotation 'rc_ownership_trusted_implementation' is removed,
+// a leak warning is raised by RetainCountChecker as the analyzer is unable to detect a decrement in the reference
+// count of 'bmap' along the path in 'isl_basic_map_free' assuming the predicate of the second 'if' branch to be
+// true or assuming both the predicates in the function to be false.
+__attribute__((annotate("rc_ownership_trusted_implementation"))) isl_basic_map *isl_basic_map_free(__attribute__((cf_consumed)) isl_basic_map *bmap) {
+  if (!bmap)
+    return NULL;
+
+  if (--bmap->ref > 0)
+    return NULL;
+
+  free(bmap);
+  return NULL;
+}
+
+// As 'isl_basic_map_copy' is annotated with 'rc_ownership_trusted_implementation', RetainCountChecker trusts its
+// implementation and doesn't analyze its body. If that annotation is removed, a 'use-after-release' warning might
+// be raised by RetainCountChecker as the pointer which is passed as an argument to this function and the pointer
+// which is returned from the function point to the same memory location.
+__attribute__((annotate("rc_ownership_trusted_implementation"))) __attribute__((cf_returns_retained)) isl_basic_map *isl_basic_map_copy(isl_basic_map *bmap) {
+  if (!bmap)
+    return NULL;
+
+  bmap->ref++;
+  return bmap;
+}
+
+void test_use_after_release_with_trusted_implementation_annotate_attribute(__attribute__((cf_consumed)) isl_basic_map *bmap) {
+  // After this call, 'bmap' has a +1 reference count.
+  bmap = isl_basic_map_cow(bmap);
+  // After the call to 'isl_basic_map_copy', 'bmap' has a +1 reference count.
+  isl_basic_map *temp = isl_basic_map_cow(isl_basic_map_copy(bmap));
+  // After this call, 'bmap' has a +0 reference count.
+  isl_basic_map *temp2 = isl_basic_map_cow(bmap); // no-warning
+  isl_basic_map_free(temp2);
+  isl_basic_map_free(temp);
+}
+
+void test_leak_with_trusted_implementation_annotate_attribute(__attribute__((cf_consumed)) isl_basic_map *bmap) {
+  // After this call, 'bmap' has a +1 reference count.
+  bmap = isl_basic_map_cow(bmap); // no-warning
+  // After this call, 'bmap' has a +0 reference count.
+  isl_basic_map_free(bmap);
 }
 
 //===----------------------------------------------------------------------===//

@@ -93,9 +93,10 @@ static void emitThumb2LoadConstPool(MachineBasicBlock &MBB,
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::t2LDRpci))
-    .addReg(DestReg, getDefRegState(true), SubIdx)
-    .addConstantPoolIndex(Idx).addImm((int64_t)ARMCC::AL).addReg(0)
-    .setMIFlags(MIFlags);
+      .addReg(DestReg, getDefRegState(true), SubIdx)
+      .addConstantPoolIndex(Idx)
+      .add(predOps(ARMCC::AL))
+      .setMIFlags(MIFlags);
 }
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the
@@ -145,14 +146,17 @@ static void emitThumbRegPlusImmInReg(
     LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
   if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {
-    AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg))
+    BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg)
+        .add(t1CondCodeOp())
         .addImm(NumBytes)
         .setMIFlags(MIFlags);
   } else if (NumBytes < 0 && NumBytes >= -255 && CanChangeCC) {
-    AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg))
+    BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg)
+        .add(t1CondCodeOp())
         .addImm(NumBytes)
         .setMIFlags(MIFlags);
-    AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tRSB), LdReg))
+    BuildMI(MBB, MBBI, dl, TII.get(ARM::tRSB), LdReg)
+        .add(t1CondCodeOp())
         .addReg(LdReg, RegState::Kill)
         .setMIFlags(MIFlags);
   } else if (ST.genExecuteOnly()) {
@@ -167,12 +171,12 @@ static void emitThumbRegPlusImmInReg(
                     : ((isHigh || !CanChangeCC) ? ARM::tADDhirr : ARM::tADDrr);
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg);
   if (Opc != ARM::tADDhirr)
-    MIB = AddDefaultT1CC(MIB);
+    MIB = MIB.add(t1CondCodeOp());
   if (DestReg == ARM::SP || isSub)
     MIB.addReg(BaseReg).addReg(LdReg, RegState::Kill);
   else
     MIB.addReg(LdReg).addReg(BaseReg, RegState::Kill);
-  AddDefaultPred(MIB);
+  MIB.add(predOps(ARMCC::AL));
 }
 
 /// emitThumbRegPlusImmediate - Emits a series of instructions to materialize
@@ -307,12 +311,12 @@ void llvm::emitThumbRegPlusImmediate(MachineBasicBlock &MBB,
 
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(CopyOpc), DestReg);
     if (CopyNeedsCC)
-      MIB = AddDefaultT1CC(MIB);
+      MIB = MIB.add(t1CondCodeOp());
     MIB.addReg(BaseReg, RegState::Kill);
     if (CopyOpc != ARM::tMOVr) {
       MIB.addImm(CopyImm);
     }
-    AddDefaultPred(MIB.setMIFlags(MIFlags));
+    MIB.setMIFlags(MIFlags).add(predOps(ARMCC::AL));
 
     BaseReg = DestReg;
   }
@@ -324,10 +328,11 @@ void llvm::emitThumbRegPlusImmediate(MachineBasicBlock &MBB,
 
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(ExtraOpc), DestReg);
     if (ExtraNeedsCC)
-      MIB = AddDefaultT1CC(MIB);
-    MIB.addReg(BaseReg).addImm(ExtraImm);
-    MIB = AddDefaultPred(MIB);
-    MIB.setMIFlags(MIFlags);
+      MIB = MIB.add(t1CondCodeOp());
+    MIB.addReg(BaseReg)
+       .addImm(ExtraImm)
+       .add(predOps(ARMCC::AL))
+       .setMIFlags(MIFlags);
   }
 }
 
@@ -460,9 +465,10 @@ bool ThumbRegisterInfo::saveScavengerRegister(
   // a call clobbered register that we know won't be used in Thumb1 mode.
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   DebugLoc DL;
-  AddDefaultPred(BuildMI(MBB, I, DL, TII.get(ARM::tMOVr))
-    .addReg(ARM::R12, RegState::Define)
-    .addReg(Reg, RegState::Kill));
+  BuildMI(MBB, I, DL, TII.get(ARM::tMOVr))
+      .addReg(ARM::R12, RegState::Define)
+      .addReg(Reg, RegState::Kill)
+      .add(predOps(ARMCC::AL));
 
   // The UseMI is where we would like to restore the register. If there's
   // interference with R12 before then, however, we'll need to restore it
@@ -490,8 +496,10 @@ bool ThumbRegisterInfo::saveScavengerRegister(
     }
   }
   // Restore the register from R12
-  AddDefaultPred(BuildMI(MBB, UseMI, DL, TII.get(ARM::tMOVr)).
-    addReg(Reg, RegState::Define).addReg(ARM::R12, RegState::Kill));
+  BuildMI(MBB, UseMI, DL, TII.get(ARM::tMOVr))
+      .addReg(Reg, RegState::Define)
+      .addReg(ARM::R12, RegState::Kill)
+      .add(predOps(ARMCC::AL));
 
   return true;
 }
@@ -621,5 +629,5 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // Add predicate back if it's needed.
   if (MI.isPredicable())
-    AddDefaultPred(MIB);
+    MIB.add(predOps(ARMCC::AL));
 }

@@ -5,8 +5,8 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; Function Attrs: nounwind ssp uwtable
 define i32 @foo(i64 %s.coerce0, i32 %s.coerce1) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.value(metadata i64 %s.coerce0, i64 0, metadata !20, metadata !24), !dbg !21
-  call void @llvm.dbg.value(metadata i32 %s.coerce1, i64 0, metadata !22, metadata !27), !dbg !21
+  call void @llvm.dbg.value(metadata i64 %s.coerce0, metadata !20, metadata !24), !dbg !21
+  call void @llvm.dbg.value(metadata i32 %s.coerce1, metadata !22, metadata !27), !dbg !21
   ret i32 %s.coerce1, !dbg !23
 }
 
@@ -14,7 +14,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
 attributes #1 = { nounwind readnone }

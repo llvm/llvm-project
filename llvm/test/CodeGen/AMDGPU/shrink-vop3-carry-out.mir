@@ -6,92 +6,7 @@
 # that the post-RA run does manage to shrink it, but right now the
 # resume crashes
 
---- |
-  define void @shrink_add_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %tid.ext = sext i32 %tid to i64
-    %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-    %b.ptr = getelementptr i32, i32 addrspace(1)* %a.ptr, i32 1
-    %out.gep = getelementptr i32, i32 addrspace(1)* %out, i64 %tid.ext
-    %a = load volatile i32, i32 addrspace(1)* %a.ptr
-    %b = load volatile i32, i32 addrspace(1)* %b.ptr
-    %result = add i32 %a, %b
-    store volatile i32 %result, i32 addrspace(1)* %out.gep
-    ret void
-  }
-
-  define void @shrink_sub_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %tid.ext = sext i32 %tid to i64
-    %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-    %b.ptr = getelementptr i32, i32 addrspace(1)* %a.ptr, i32 1
-    %out.gep = getelementptr i32, i32 addrspace(1)* %out, i64 %tid.ext
-    %a = load volatile i32, i32 addrspace(1)* %a.ptr
-    %b = load volatile i32, i32 addrspace(1)* %b.ptr
-    %result = sub i32 %a, %b
-    store volatile i32 %result, i32 addrspace(1)* %out.gep
-    ret void
-  }
-
-  define void @shrink_subrev_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %tid.ext = sext i32 %tid to i64
-    %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-    %b.ptr = getelementptr i32, i32 addrspace(1)* %a.ptr, i32 1
-    %out.gep = getelementptr i32, i32 addrspace(1)* %out, i64 %tid.ext
-    %a = load volatile i32, i32 addrspace(1)* %a.ptr
-    %b = load volatile i32, i32 addrspace(1)* %b.ptr
-    %result = sub i32 %a, %b
-    store volatile i32 %result, i32 addrspace(1)* %out.gep
-    ret void
-  }
-
-  define void @check_addc_src2_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %tid.ext = sext i32 %tid to i64
-    %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-    %b.ptr = getelementptr i32, i32 addrspace(1)* %a.ptr, i32 1
-    %out.gep = getelementptr i32, i32 addrspace(1)* %out, i64 %tid.ext
-    %a = load volatile i32, i32 addrspace(1)* %a.ptr
-    %b = load volatile i32, i32 addrspace(1)* %b.ptr
-    %result = add i32 %a, %b
-    store volatile i32 %result, i32 addrspace(1)* %out.gep
-    ret void
-  }
-
-  define void @shrink_addc_vop3(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %tid.ext = sext i32 %tid to i64
-    %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-    %b.ptr = getelementptr i32, i32 addrspace(1)* %a.ptr, i32 1
-    %out.gep = getelementptr i32, i32 addrspace(1)* %out, i64 %tid.ext
-    %a = load volatile i32, i32 addrspace(1)* %a.ptr
-    %b = load volatile i32, i32 addrspace(1)* %b.ptr
-    %result = add i32 %a, %b
-    store volatile i32 %result, i32 addrspace(1)* %out.gep
-    ret void
-  }
-
-  define void @shrink_addc_undef_vcc(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-    %tid.ext = sext i32 %tid to i64
-    %a.ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-    %b.ptr = getelementptr i32, i32 addrspace(1)* %a.ptr, i32 1
-    %out.gep = getelementptr i32, i32 addrspace(1)* %out, i64 %tid.ext
-    %a = load volatile i32, i32 addrspace(1)* %a.ptr
-    %b = load volatile i32, i32 addrspace(1)* %b.ptr
-    %result = add i32 %a, %b
-    store volatile i32 %result, i32 addrspace(1)* %out.gep
-    ret void
-  }
-
-  declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-  attributes #0 = { nounwind }
-  attributes #1 = { nounwind readnone }
-
 ...
----
 # GCN-LABEL: name: shrink_add_vop3{{$}}
 # GCN: %29, %9 = V_ADD_I32_e64 %19, %17, implicit %exec
 # GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
@@ -151,13 +66,13 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %26 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %27 = REG_SEQUENCE %3, 1, %26, 2
     %10 = S_MOV_B32 61440
@@ -166,11 +81,11 @@ body:             |
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
     %28 = V_LSHL_B64 killed %27, 2, implicit %exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.a.ptr)
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.b.ptr)
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec
     %29, %9 = V_ADD_I32_e64 %19, %17, implicit %exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out.gep)
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -235,13 +150,13 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %26 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %27 = REG_SEQUENCE %3, 1, %26, 2
     %10 = S_MOV_B32 61440
@@ -250,11 +165,11 @@ body:             |
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
     %28 = V_LSHL_B64 killed %27, 2, implicit %exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.a.ptr)
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.b.ptr)
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec
     %29, %9 = V_SUB_I32_e64 %19, %17, implicit %exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out.gep)
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -319,13 +234,13 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %26 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %27 = REG_SEQUENCE %3, 1, %26, 2
     %10 = S_MOV_B32 61440
@@ -334,11 +249,11 @@ body:             |
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
     %28 = V_LSHL_B64 killed %27, 2, implicit %exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.a.ptr)
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.b.ptr)
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec
     %29, %9 = V_SUBREV_I32_e64 %19, %17, implicit %exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
-    BUFFER_STORE_DWORD_ADDR64 %29, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out.gep)
+    BUFFER_STORE_DWORD_ADDR64 %29, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
@@ -402,13 +317,13 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %26 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %27 = REG_SEQUENCE %3, 1, %26, 2
     %10 = S_MOV_B32 61440
@@ -417,18 +332,18 @@ body:             |
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
     %28 = V_LSHL_B64 killed %27, 2, implicit %exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.a.ptr)
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.b.ptr)
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec
     %9 = S_MOV_B64 0
     %29, %vcc = V_ADDC_U32_e64 %19, %17, %9, implicit %exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out.gep)
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
 ---
 # GCN-LABEL: name: shrink_addc_vop3{{$}}
-# GCN: %29 = V_ADDC_U32_e32 %17, %19, implicit-def %vcc, implicit %vcc, implicit %exec
+# GCN: %29 = V_ADDC_U32_e32 %19, %17, implicit-def %vcc, implicit %vcc, implicit %exec
 # GCN %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
 
 name:            shrink_addc_vop3
@@ -487,13 +402,13 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %26 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %27 = REG_SEQUENCE %3, 1, %26, 2
     %10 = S_MOV_B32 61440
@@ -502,19 +417,19 @@ body:             |
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
     %28 = V_LSHL_B64 killed %27, 2, implicit %exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.a.ptr)
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.b.ptr)
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec
     %vcc = S_MOV_B64 0
     %29, %vcc = V_ADDC_U32_e64 %19, %17, %vcc, implicit %exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out.gep)
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...
 
 ---
 # GCN-LABEL: name: shrink_addc_undef_vcc{{$}}
-# GCN: %29 = V_ADDC_U32_e32 %17, %19, implicit-def %vcc, implicit undef %vcc, implicit %exec
+# GCN: %29 = V_ADDC_U32_e32 %19, %17, implicit-def %vcc, implicit undef %vcc, implicit %exec
 # GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
 name:            shrink_addc_undef_vcc
 alignment:       0
@@ -572,13 +487,13 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
     %26 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %27 = REG_SEQUENCE %3, 1, %26, 2
     %10 = S_MOV_B32 61440
@@ -587,11 +502,11 @@ body:             |
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
     %28 = V_LSHL_B64 killed %27, 2, implicit %exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.a.ptr)
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec :: (volatile load 4 from %ir.b.ptr)
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, implicit %exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, implicit %exec
     %29, %vcc = V_ADDC_U32_e64 %19, %17, undef %vcc, implicit %exec
     %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec :: (volatile store 4 into %ir.out.gep)
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
 
 ...

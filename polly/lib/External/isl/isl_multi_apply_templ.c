@@ -56,13 +56,16 @@ static __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply),APPLY_DOMBASE)(
 	__isl_take MULTI(BASE) *multi, __isl_take APPLY_DOM *set,
 	__isl_give EL *(*fn)(EL *el, __isl_take APPLY_DOM *set))
 {
+	isl_bool aligned;
 	isl_ctx *ctx;
 
 	if (!multi || !set)
 		goto error;
 
-	if (isl_space_match(multi->space, isl_dim_param,
-			    set->dim, isl_dim_param))
+	aligned = FN(APPLY_DOM,space_has_equal_params)(set, multi->space);
+	if (aligned < 0)
+		goto error;
+	if (aligned)
 		return FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(multi,
 								    set, fn);
 	ctx = FN(MULTI(BASE),get_ctx)(multi);

@@ -40,6 +40,7 @@ Error SymbolRecordMapping::visitSymbolBegin(CVSymbol &Record) {
 }
 
 Error SymbolRecordMapping::visitSymbolEnd(CVSymbol &Record) {
+  error(IO.padToAlignment(alignOf(Container)));
   error(IO.endRecord());
   return Error::success();
 }
@@ -306,7 +307,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 
   error(IO.mapInteger(FrameCookie.CodeOffset));
   error(IO.mapInteger(FrameCookie.Register));
-  error(IO.mapInteger(FrameCookie.CookieKind));
+  error(IO.mapEnum(FrameCookie.CookieKind));
   error(IO.mapInteger(FrameCookie.Flags));
 
   return Error::success();
@@ -360,7 +361,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             PublicSym32 &Public) {
 
-  error(IO.mapInteger(Public.Index));
+  error(IO.mapEnum(Public.Flags));
   error(IO.mapInteger(Public.Offset));
   error(IO.mapInteger(Public.Segment));
   error(IO.mapStringZ(Public.Name));
@@ -438,7 +439,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 
   error(IO.mapInteger(RegRel.Offset));
   error(IO.mapInteger(RegRel.Type));
-  error(IO.mapInteger(RegRel.Register));
+  error(IO.mapEnum(RegRel.Register));
   error(IO.mapStringZ(RegRel.Name));
 
   return Error::success();

@@ -22,7 +22,7 @@
 ; RUN: rm -f %t1.thinlto.bc %t1.bc.imports
 ; RUN: rm -f %t2.thinlto.bc %t2.bc.imports
 ; RUN: rm -f %t3.bc.thinlto.bc %t3.bc.imports
-; RUN: llvm-lto2 %t1.bc %t2.bc %t3.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc %t3.bc -o %t.o -save-temps \
 ; RUN:     -thinlto-distributed-indexes \
 ; RUN:     -r=%t1.bc,g, \
 ; RUN:     -r=%t1.bc,f,px \

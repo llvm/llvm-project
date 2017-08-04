@@ -36,8 +36,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
 
@@ -113,7 +113,7 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
       BuildMI(MF, Root.getDebugLoc(), TII->get(Prev.getOpcode()),
               Root.getOperand(0).getReg())
           .addReg(NVPTX::VRFrameLocal)
-          .addOperand(Prev.getOperand(2));
+          .add(Prev.getOperand(2));
 
   MBB.insert((MachineBasicBlock::iterator)&Root, MIB);
 

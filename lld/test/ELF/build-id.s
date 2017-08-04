@@ -33,6 +33,10 @@
 
 # RUN: ld.lld --build-id=md5 --build-id=none %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: ld.lld --build-id --build-id=none %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: ld.lld --build-id=none --build-id %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
 
 .globl _start
 _start:
@@ -44,15 +48,15 @@ _start:
 # DEFAULT:      Contents of section .note.test:
 # DEFAULT:      Contents of section .note.gnu.build-id:
 # DEFAULT-NEXT: 04000000 08000000 03000000 474e5500  ............GNU.
-# DEFAULT-NEXT: d08dafb4 e6294b62
+# DEFAULT-NEXT: fd36edb1 f6ff02af
 
 # MD5:      Contents of section .note.gnu.build-id:
 # MD5-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.
-# MD5-NEXT: 37
+# MD5-NEXT: fc
 
 # SHA1:      Contents of section .note.gnu.build-id:
 # SHA1-NEXT: 04000000 14000000 03000000 474e5500  ............GNU.
-# SHA1-NEXT: 7a4f4eaf 69ceb948 4a7d6e51 2225e87c
+# SHA1-NEXT: 55b1eedb 03b588e1 09987d1d e9a79be7
 
 # UUID:      Contents of section .note.gnu.build-id:
 # UUID-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.

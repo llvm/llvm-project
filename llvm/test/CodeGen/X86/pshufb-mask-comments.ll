@@ -55,7 +55,7 @@ define <16 x i8> @test5(<16 x i8> %V) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    movd %rax, %xmm1
+; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rax)
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
 ; CHECK-NEXT:    movdqa %xmm1, (%rax)

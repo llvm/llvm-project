@@ -53,10 +53,11 @@ bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 bool PreserveLCSSA);
 
 void computePeelCount(Loop *L, unsigned LoopSize,
-                      TargetTransformInfo::UnrollingPreferences &UP);
+                      TargetTransformInfo::UnrollingPreferences &UP,
+                      unsigned &TripCount);
 
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
-              DominatorTree *DT, bool PreserveLCSSA);
+              DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);
 
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 }

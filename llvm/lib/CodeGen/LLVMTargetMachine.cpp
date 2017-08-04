@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -31,20 +30,10 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
-
-// Enable or disable FastISel. Both options are needed, because
-// FastISel is enabled by default with -fast, and we wish to be
-// able to enable or disable fast-isel independently from -O0.
-static cl::opt<cl::boolOrDefault>
-EnableFastISelOption("fast-isel", cl::Hidden,
-  cl::desc("Enable the \"fast\" instruction selector"));
-
-static cl::opt<cl::boolOrDefault>
-    EnableGlobalISel("global-isel", cl::Hidden,
-                     cl::desc("Enable the \"global\" instruction selector"));
 
 void LLVMTargetMachine::initAsmInfo() {
   MRI = TheTarget.createMCRegInfo(getTargetTriple().str());
@@ -71,8 +60,7 @@ void LLVMTargetMachine::initAsmInfo() {
 
   TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
 
-  if (Options.CompressDebugSections)
-    TmpAsmInfo->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
+  TmpAsmInfo->setCompressDebugSections(Options.CompressDebugSections);
 
   TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
 
@@ -106,111 +94,31 @@ static MCContext *
 addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
                         bool DisableVerify, AnalysisID StartBefore,
                         AnalysisID StartAfter, AnalysisID StopBefore,
-                        AnalysisID StopAfter,
-                        MachineFunctionInitializer *MFInitializer = nullptr) {
-
-  // When in emulated TLS mode, add the LowerEmuTLS pass.
-  if (TM->Options.EmulatedTLS)
-    PM.add(createLowerEmuTLSPass(TM));
-
-  PM.add(createPreISelIntrinsicLoweringPass());
-
-  // Add internal analysis passes from the target machine.
-  PM.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-
+                        AnalysisID StopAfter) {
   // Targets may override createPassConfig to provide a target-specific
   // subclass.
   TargetPassConfig *PassConfig = TM->createPassConfig(PM);
   PassConfig->setStartStopPasses(StartBefore, StartAfter, StopBefore,
                                  StopAfter);
-
   // Set PassConfig options provided by TargetMachine.
   PassConfig->setDisableVerify(DisableVerify);
-
   PM.add(PassConfig);
-
-  PassConfig->addIRPasses();
-
-  PassConfig->addCodeGenPrepare();
-
-  PassConfig->addPassesToHandleExceptions();
-
-  PassConfig->addISelPrepare();
-
   MachineModuleInfo *MMI = new MachineModuleInfo(TM);
-  MMI->setMachineFunctionInitializer(MFInitializer);
   PM.add(MMI);
 
-  // Enable FastISel with -fast, but allow that to be overridden.
-  TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
-  if (EnableFastISelOption == cl::BOU_TRUE ||
-      (TM->getOptLevel() == CodeGenOpt::None &&
-       TM->getO0WantsFastISel()))
-    TM->setFastISel(true);
-
-  // Ask the target for an isel.
-  // Enable GlobalISel if the target wants to, but allow that to be overriden.
-  if (EnableGlobalISel == cl::BOU_TRUE || (EnableGlobalISel == cl::BOU_UNSET &&
-                                           PassConfig->isGlobalISelEnabled())) {
-    if (PassConfig->addIRTranslator())
-      return nullptr;
-
-    PassConfig->addPreLegalizeMachineIR();
-
-    if (PassConfig->addLegalizeMachineIR())
-      return nullptr;
-
-    // Before running the register bank selector, ask the target if it
-    // wants to run some passes.
-    PassConfig->addPreRegBankSelect();
-
-    if (PassConfig->addRegBankSelect())
-      return nullptr;
-
-    PassConfig->addPreGlobalInstructionSelect();
-
-    if (PassConfig->addGlobalInstructionSelect())
-      return nullptr;
-
-    // Pass to reset the MachineFunction if the ISel failed.
-    PM.add(createResetMachineFunctionPass(
-        PassConfig->reportDiagnosticWhenGlobalISelFallback()));
-
-    // Provide a fallback path when we do not want to abort on
-    // not-yet-supported input.
-    if (!PassConfig->isGlobalISelAbortEnabled() &&
-        PassConfig->addInstSelector())
-      return nullptr;
-
-  } else if (PassConfig->addInstSelector())
+  if (PassConfig->addISelPasses())
     return nullptr;
-
   PassConfig->addMachinePasses();
-
   PassConfig->setInitialized();
 
   return &MMI->getContext();
 }
 
-bool LLVMTargetMachine::addPassesToEmitFile(
-    PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
-    bool DisableVerify, AnalysisID StartBefore, AnalysisID StartAfter,
-    AnalysisID StopBefore, AnalysisID StopAfter,
-    MachineFunctionInitializer *MFInitializer) {
-  // Add common CodeGen passes.
-  MCContext *Context =
-      addPassesToGenerateCode(this, PM, DisableVerify, StartBefore, StartAfter,
-                              StopBefore, StopAfter, MFInitializer);
-  if (!Context)
-    return true;
-
-  if (StopBefore || StopAfter) {
-    PM.add(createPrintMIRPass(Out));
-    return false;
-  }
-
+bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
+    raw_pwrite_stream &Out, CodeGenFileType FileType,
+    MCContext &Context) {
   if (Options.MCOptions.MCSaveTempLabels)
-    Context->setAllowTemporaryLabels(false);
+    Context.setAllowTemporaryLabels(false);
 
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCAsmInfo &MAI = *getMCAsmInfo();
@@ -227,14 +135,14 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     // Create a code emitter if asked to show the encoding.
     MCCodeEmitter *MCE = nullptr;
     if (Options.MCOptions.ShowMCEncoding)
-      MCE = getTarget().createMCCodeEmitter(MII, MRI, *Context);
+      MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
 
     MCAsmBackend *MAB =
         getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
                                        Options.MCOptions);
     auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        *Context, std::move(FOut), Options.MCOptions.AsmVerbose,
+        Context, std::move(FOut), Options.MCOptions.AsmVerbose,
         Options.MCOptions.MCUseDwarfDirectory, InstPrinter, MCE, MAB,
         Options.MCOptions.ShowMCInst);
     AsmStreamer.reset(S);
@@ -243,7 +151,7 @@ bool LLVMTargetMachine::addPassesToEmitFile(
   case CGFT_ObjectFile: {
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
-    MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, *Context);
+    MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
     MCAsmBackend *MAB =
         getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
                                        Options.MCOptions);
@@ -251,11 +159,11 @@ bool LLVMTargetMachine::addPassesToEmitFile(
       return true;
 
     // Don't waste memory on names of temp labels.
-    Context->setUseNamesOnTempLabels(false);
+    Context.setUseNamesOnTempLabels(false);
 
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
-        T, *Context, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+        T, Context, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
         Options.MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     break;
@@ -263,7 +171,7 @@ bool LLVMTargetMachine::addPassesToEmitFile(
   case CGFT_Null:
     // The Null output is intended for use for performance analysis and testing,
     // not real users.
-    AsmStreamer.reset(getTarget().createNullStreamer(*Context));
+    AsmStreamer.reset(getTarget().createNullStreamer(Context));
     break;
   }
 
@@ -274,8 +182,28 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     return true;
 
   PM.add(Printer);
-  PM.add(createFreeMachineFunctionPass());
+  return false;
+}
 
+bool LLVMTargetMachine::addPassesToEmitFile(
+    PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
+    bool DisableVerify, AnalysisID StartBefore, AnalysisID StartAfter,
+    AnalysisID StopBefore, AnalysisID StopAfter) {
+  // Add common CodeGen passes.
+  MCContext *Context =
+      addPassesToGenerateCode(this, PM, DisableVerify, StartBefore, StartAfter,
+                              StopBefore, StopAfter);
+  if (!Context)
+    return true;
+
+  if (StopBefore || StopAfter) {
+    PM.add(createPrintMIRPass(Out));
+  } else {
+    if (addAsmPrinter(PM, Out, FileType, *Context))
+      return true;
+  }
+
+  PM.add(createFreeMachineFunctionPass());
   return false;
 }
 

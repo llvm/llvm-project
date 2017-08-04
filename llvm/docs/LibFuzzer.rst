@@ -87,10 +87,16 @@ Some important things to remember about fuzz targets:
 * Usually, the narrower the target the better. E.g. if your target can parse several data formats, split it into several targets, one per format.
 
 
-Building
---------
+Fuzzer Usage
+------------
 
-Next, build the libFuzzer library as a static archive, without any sanitizer
+Very recent versions of Clang (> April 20 2017) include libFuzzer,
+and no installation is necessary.
+In order to fuzz your binary, use the `-fsanitize=fuzzer` flag during the compilation::
+
+   clang -fsanitize=fuzzer,address mytarget.c
+
+Otherwise, build the libFuzzer library as a static archive, without any sanitizer
 options. Note that the libFuzzer library contains the ``main()`` function:
 
 .. code-block:: console
@@ -299,6 +305,10 @@ The most important command line options are:
    - 1 : close ``stdout``
    - 2 : close ``stderr``
    - 3 : close both ``stdout`` and ``stderr``.
+``-print_coverage``
+   If 1, print coverage information as text at exit.
+``-dump_coverage``
+   If 1, dump coverage information as a .sancov file at exit.
 
 For the full list of flags run the fuzzer binary with ``-help=1``.
 
@@ -537,12 +547,19 @@ You can get the coverage for your corpus like this:
 
 .. code-block:: console
 
-  ASAN_OPTIONS=coverage=1 ./fuzzer CORPUS_DIR -runs=0
+  ./fuzzer CORPUS_DIR -runs=0 -print_coverage=1
 
 This will run all tests in the CORPUS_DIR but will not perform any fuzzing.
-At the end of the process it will dump a single ``.sancov`` file with coverage 
-information.  See SanitizerCoverage_ for details on querying the file using the
-``sancov`` tool.
+At the end of the process it will print text describing what code has been covered and what hasn't.
+
+Alternatively, use
+
+.. code-block:: console
+
+  ./fuzzer CORPUS_DIR -runs=0 -dump_coverage=1
+
+which will dump a ``.sancov`` file with coverage information.
+See SanitizerCoverage_ for details on querying the file using the ``sancov`` tool.
 
 You may also use other ways to visualize coverage,
 e.g. using `Clang coverage <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,
@@ -570,7 +587,7 @@ The simplest way is to have a statically initialized global object inside
 
 Alternatively, you may define an optional init function and it will receive
 the program arguments that you can read and modify. Do this **only** if you
-realy need to access ``argv``/``argc``.
+really need to access ``argv``/``argc``.
 
 .. code-block:: c++
 
@@ -728,6 +745,7 @@ to crash on invalid inputs.
 Examples: regular expression matchers, text or binary format parsers, compression,
 network, crypto.
 
+
 Trophies
 ========
 * GLIBC: https://sourceware.org/glibc/wiki/FuzzingLibc
@@ -768,9 +786,11 @@ Trophies
 
 * LLVM: `Clang <https://llvm.org/bugs/show_bug.cgi?id=23057>`_, `Clang-format <https://llvm.org/bugs/show_bug.cgi?id=23052>`_, `libc++ <https://llvm.org/bugs/show_bug.cgi?id=24411>`_, `llvm-as <https://llvm.org/bugs/show_bug.cgi?id=24639>`_, `Demangler <https://bugs.chromium.org/p/chromium/issues/detail?id=606626>`_, Disassembler: http://reviews.llvm.org/rL247405, http://reviews.llvm.org/rL247414, http://reviews.llvm.org/rL247416, http://reviews.llvm.org/rL247417, http://reviews.llvm.org/rL247420, http://reviews.llvm.org/rL247422.
 
-* Tensorflow: `[1] <https://github.com/tensorflow/tensorflow/commit/7231d01fcb2cd9ef9ffbfea03b724892c8a4026e>`__
+* Tensorflow: `[1] <https://da-data.blogspot.com/2017/01/finding-bugs-in-tensorflow-with.html>`__
 
 * Ffmpeg: `[1] <https://github.com/FFmpeg/FFmpeg/commit/c92f55847a3d9cd12db60bfcd0831ff7f089c37c>`__  `[2] <https://github.com/FFmpeg/FFmpeg/commit/25ab1a65f3acb5ec67b53fb7a2463a7368f1ad16>`__  `[3] <https://github.com/FFmpeg/FFmpeg/commit/85d23e5cbc9ad6835eef870a5b4247de78febe56>`__ `[4] <https://github.com/FFmpeg/FFmpeg/commit/04bd1b38ee6b8df410d0ab8d4949546b6c4af26a>`__
+
+* `Wireshark <https://bugs.wireshark.org/bugzilla/buglist.cgi?bug_status=UNCONFIRMED&bug_status=CONFIRMED&bug_status=IN_PROGRESS&bug_status=INCOMPLETE&bug_status=RESOLVED&bug_status=VERIFIED&f0=OP&f1=OP&f2=product&f3=component&f4=alias&f5=short_desc&f7=content&f8=CP&f9=CP&j1=OR&o2=substring&o3=substring&o4=substring&o5=substring&o6=substring&o7=matches&order=bug_id%20DESC&query_format=advanced&v2=libfuzzer&v3=libfuzzer&v4=libfuzzer&v5=libfuzzer&v6=libfuzzer&v7=%22libfuzzer%22>`_
 
 .. _pcre2: http://www.pcre.org/
 .. _AFL: http://lcamtuf.coredump.cx/afl/

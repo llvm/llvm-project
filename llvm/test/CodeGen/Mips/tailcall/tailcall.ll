@@ -2,8 +2,10 @@
 ; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,PIC32
 ; RUN: llc -march=mipsel -relocation-model=static  \
 ; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,STATIC32
-; RUN: llc -march=mips64el -mcpu=mips64r2  \
-; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,N64
+; RUN: llc -march=mips64el -mcpu=mips64r2  -relocation-model=pic \
+; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,PIC64
+; RUN: llc -march=mips64el -mcpu=mips64r2  -relocation-model=static \
+; RUN:     -verify-machineinstrs -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,STATIC64
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic \
 ; RUN:      -verify-machineinstrs -mips-tail-calls=1 < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,PIC16
@@ -15,17 +17,21 @@
 
 ; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 -mips-tail-calls=1 < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,PIC32R6
-; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
+; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r2 \
 ; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,STATIC32
-; RUN: llc -march=mips64el -mcpu=mips64r6  \
-; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,N64R6
+; RUN: llc -march=mips64el -relocation-model=pic -mcpu=mips64r2  \
+; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=PIC64
+; RUN: llc -march=mips64el -relocation-model=pic -mcpu=mips64r6  \
+; RUN:     -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC64
 
 ; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 -mattr=+micromips \
 ; RUN:      -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,PIC32MM
 ; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
 ; RUN:     -mattr=+micromips -mips-tail-calls=1 < %s | FileCheck %s -check-prefixes=ALL,STATIC32
-; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=+micromips -mips-tail-calls=1 < %s \
-; RUN:      | FileCheck %s -check-prefixes=ALL,N64
+; RUN: llc -march=mips64el -relocation-model=pic -mcpu=mips64r6 \
+; RUN:     -mattr=+micromips -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=PIC64R6MM
+; RUN: llc -march=mips64el -relocation-model=static -mcpu=mips64r6 \
+; RUN:     -mattr=+micromips -mips-tail-calls=1 < %s | FileCheck %s -check-prefix=STATIC64
 
 @g0 = common global i32 0, align 4
 @g1 = common global i32 0, align 4
@@ -96,7 +102,8 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
+; PIC64: jalr $25
+; STATIC64: jal
 ; N64R6: jalr $25
 ; PIC16: jalrc
 
@@ -113,8 +120,8 @@ entry:
 ; PIC32R6: jr $25
 ; PIC32MM: jr
 ; STATIC32: j
-; N64: jr $25
-; N64R6: jr $25
+; PIC64: jr $25
+; STATIC64: j
 ; PIC16: jalrc
 
   %0 = load i32, i32* @g0, align 4
@@ -154,8 +161,10 @@ entry:
 ; PIC32R6: jrc $25
 ; PIC32MM: jrc
 ; STATIC32: j
-; N64: jr $25
-; N64R6: jrc $25
+; PIC64: jr $25
+; PIC64R6: jrc $25
+; PIC64R6MM: jr $25
+; STATIC64: j
 ; PIC16: jalrc
 
   %call = tail call fastcc i32 @caller8_1()
@@ -169,8 +178,8 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
-; N64R6: jalr $25
+; PIC64: jalr $25
+; STATIC64: jal
 ; PIC16: jalrc
 
   %call = tail call i32 (i32, ...) @callee8(i32 2, i32 1) nounwind
@@ -190,8 +199,9 @@ entry:
 ; PIC32R6: jrc $25
 ; PIC32MM: jrc
 ; STATIC32: j
-; N64: jr $25
-; N64R6: jrc $25
+; PIC64: jr $25
+; STATIC64: j
+; PIC64R6: jrc $25
 ; PIC16: jalrc
   %call = tail call fastcc i32 @caller9_1()
   ret i32 %call
@@ -204,8 +214,9 @@ entry:
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
-; N64R6: jalrc $25
+; STATIC64: jal
+; PIC64: jalr $25
+; PIC64R6: jalrc $25
 ; PIC16: jalrc
 
   %call = tail call i32 @callee9(%struct.S* byval @gs1) nounwind
@@ -221,8 +232,9 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
-; N64R6: jalr $25
+; STATIC64: jal
+; PIC64: jalr $25
+; PIC64R6: jalr $25
 ; PIC16: jalrc
 
   %call = tail call i32 @callee10(i32 %a8, i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7) nounwind
@@ -238,8 +250,9 @@ entry:
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
-; N64R6: jalrc $25
+; STATIC64: jal
+; PIC64: jalr $25
+; PIC64R6: jalrc $25
 ; PIC16: jalrc
 
   %call = tail call i32 @callee11(%struct.S* byval @gs1) nounwind
@@ -257,8 +270,9 @@ entry:
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
-; N64R6: jalrc $25
+; STATIC64: jal
+; PIC64: jalr $25
+; PIC64R6: jalrc $25
 ; PIC16: jalrc
 
   %0 = bitcast %struct.S* %a0 to i8*
@@ -271,13 +285,14 @@ declare i32 @callee13(i32, ...)
 
 define i32 @caller13() nounwind {
 entry:
-; ALL-LABEL: caller13
+; ALL-LABEL: caller13:
 ; PIC32: jalr $25
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; N64: jalr $25
-; N64R6: jalr $25
+; STATIC64: jal
+; PIC64R6: jalr $25
+; PIC64: jalr $25
 ; PIC16: jalrc
 
   %call = tail call i32 (i32, ...) @callee13(i32 1, i32 2) nounwind

@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
 #include "MCTargetDesc/PPCPredicates.h"
-#include "PPCCallingConv.h"
+#include "PPC.h"
 #include "PPCCCState.h"
+#include "PPCCallingConv.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
@@ -1330,7 +1330,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   // Issue CALLSEQ_START.
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(TII.getCallFrameSetupOpcode()))
-    .addImm(NumBytes);
+    .addImm(NumBytes).addImm(0);
 
   // Prepare to assign register arguments.  Every argument uses up a
   // GPR protocol register even if it's passed in a floating-point
@@ -2246,6 +2246,7 @@ bool PPCFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
     }
 
     case PPC::EXTSW:
+    case PPC::EXTSW_32:
     case PPC::EXTSW_32_64: {
       if (VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8)
         return false;

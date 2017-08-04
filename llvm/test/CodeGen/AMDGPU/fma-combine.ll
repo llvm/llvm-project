@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 
 ; Note: The SI-FMA conversions of type x * (y + 1) --> x * y + x would be
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math
@@ -18,7 +18,7 @@ declare float @llvm.fma.f32(float, float, float) #0
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -46,7 +46,7 @@ define void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addr
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -75,7 +75,7 @@ define void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -99,7 +99,7 @@ define void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addr
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -127,7 +127,7 @@ define void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -156,7 +156,7 @@ define void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, d
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -184,7 +184,7 @@ define void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -213,7 +213,7 @@ define void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, d
 ; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -242,7 +242,7 @@ define void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -276,7 +276,7 @@ define void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %o
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
-define void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -317,7 +317,7 @@ define void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %o
 ; SI-UNSAFE: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[FMA0]]
 
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -358,7 +358,7 @@ define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %
 ; SI-UNSAFE: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[Y]], [[Z]], [[FMA0]]
 
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
@@ -387,10 +387,10 @@ define void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %
 
 ; FUNC-LABEL: {{^}}test_f32_mul_add_x_one_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
   %x = load volatile float, float addrspace(1)* %in1
@@ -403,10 +403,10 @@ define void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_add_x_one:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
   %x = load volatile float, float addrspace(1)* %in1
@@ -419,10 +419,10 @@ define void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_add_x_negone_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
                                            float addrspace(1)* %in1,
                                            float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -435,10 +435,10 @@ define void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_add_x_negone:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
                                            float addrspace(1)* %in1,
                                            float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -451,10 +451,10 @@ define void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_one_x_y:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -467,10 +467,10 @@ define void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_one_x:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -483,10 +483,10 @@ define void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_negone_x_y:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
                                            float addrspace(1)* %in1,
                                            float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -499,10 +499,10 @@ define void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_negone_x:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
                                          float addrspace(1)* %in1,
                                          float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -515,10 +515,10 @@ define void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_x_one_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -531,10 +531,10 @@ define void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_x_one:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
-define void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
                                       float addrspace(1)* %in1,
                                       float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -547,10 +547,10 @@ define void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_x_negone_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
                                          float addrspace(1)* %in1,
                                          float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -563,10 +563,10 @@ define void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_x_negone:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
-define void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
                                          float addrspace(1)* %in1,
                                          float addrspace(1)* %in2) {
   %x = load float, float addrspace(1)* %in1
@@ -583,12 +583,12 @@ define void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_interp:
 ; SI-NOFMA: v_sub_f32_e32 [[VT1:v[0-9]]], 1.0, [[VT:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 [[VTY:v[0-9]]], [[VT1]], [[VY:v[0-9]]]
-; SI-NOFMA: v_mac_f32_e32 [[VTY]], [[VT]], [[VX:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 [[VTY:v[0-9]]], [[VY:v[0-9]]], [[VT1]]
+; SI-NOFMA: v_mac_f32_e32 [[VTY]], [[VX:v[0-9]]], [[VT]]
 ;
 ; SI-FMA: v_fma_f32 [[VR:v[0-9]]], -[[VT:v[0-9]]], [[VY:v[0-9]]], [[VY]]
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VT]], [[VR]]
-define void @test_f32_interp(float addrspace(1)* %out,
+define amdgpu_kernel void @test_f32_interp(float addrspace(1)* %out,
                              float addrspace(1)* %in1,
                              float addrspace(1)* %in2,
                              float addrspace(1)* %in3) {
@@ -610,7 +610,7 @@ define void @test_f32_interp(float addrspace(1)* %out,
 ;
 ; SI-FMA: v_fma_f64 [[VR:v\[[0-9]+:[0-9]+\]]], -[[VT:v\[[0-9]+:[0-9]+\]]], [[VY:v\[[0-9]+:[0-9]+\]]], [[VY]]
 ; SI-FMA: v_fma_f64 v{{\[[0-9]+:[0-9]+\]}}, [[VX:v\[[0-9]+:[0-9]+\]]], [[VT]], [[VR]]
-define void @test_f64_interp(double addrspace(1)* %out,
+define amdgpu_kernel void @test_f64_interp(double addrspace(1)* %out,
                              double addrspace(1)* %in1,
                              double addrspace(1)* %in2,
                              double addrspace(1)* %in3) {

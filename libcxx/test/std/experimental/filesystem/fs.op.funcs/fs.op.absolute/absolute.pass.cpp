@@ -54,7 +54,7 @@ TEST_CASE(absolute_path_test)
         TEST_REQUIRE(not p.has_root_name());
         TEST_REQUIRE(p.has_root_directory());
         TEST_CHECK(p.is_absolute());
-        // ensure absolute(base) is not recursivly called
+        // ensure absolute(base) is not recursively called
         TEST_REQUIRE(base.has_root_name());
         TEST_REQUIRE(base.has_root_directory());
 
@@ -73,7 +73,7 @@ TEST_CASE(absolute_path_test)
         TEST_REQUIRE(p.has_root_name());
         TEST_REQUIRE(not p.has_root_directory());
         TEST_CHECK(not p.is_absolute());
-        // absolute is called recursivly on base. The following conditions
+        // absolute is called recursively on base. The following conditions
         // must be true for it to return base unmodified
         TEST_REQUIRE(base.has_root_name());
         TEST_REQUIRE(base.has_root_directory());

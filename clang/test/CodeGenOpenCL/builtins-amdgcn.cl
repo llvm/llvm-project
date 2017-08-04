@@ -1,5 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown-opencl -S -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
@@ -235,6 +236,34 @@ void test_ds_swizzle(global int* out, int a)
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
 }
 
+// CHECK-LABEL: @test_ds_permute
+// CHECK: call i32 @llvm.amdgcn.ds.permute(i32 %a, i32 %b)
+void test_ds_permute(global int* out, int a, int b)
+{
+  out[0] = __builtin_amdgcn_ds_permute(a, b);
+}
+
+// CHECK-LABEL: @test_ds_bpermute
+// CHECK: call i32 @llvm.amdgcn.ds.bpermute(i32 %a, i32 %b)
+void test_ds_bpermute(global int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_ds_bpermute(a, b);
+}
+
+// CHECK-LABEL: @test_readfirstlane
+// CHECK: call i32 @llvm.amdgcn.readfirstlane(i32 %a)
+void test_readfirstlane(global int* out, int a)
+{
+  *out = __builtin_amdgcn_readfirstlane(a);
+}
+
+// CHECK-LABEL: @test_readlane
+// CHECK: call i32 @llvm.amdgcn.readlane(i32 %a, i32 %b)
+void test_readlane(global int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_readlane(a, b);
+}
+
 // CHECK-LABEL: @test_fcmp_f32
 // CHECK: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 5)
 void test_fcmp_f32(global ulong* out, float a, float b)
@@ -261,6 +290,55 @@ void test_class_f32(global float* out, float a, int b)
 void test_class_f64(global double* out, double a, int b)
 {
   *out = __builtin_amdgcn_class(a, b);
+}
+
+// CHECK-LABEL: @test_buffer_wbinvl1
+// CHECK: call void @llvm.amdgcn.buffer.wbinvl1(
+void test_buffer_wbinvl1()
+{
+  __builtin_amdgcn_buffer_wbinvl1();
+}
+
+// CHECK-LABEL: @test_s_dcache_inv
+// CHECK: call void @llvm.amdgcn.s.dcache.inv(
+void test_s_dcache_inv()
+{
+  __builtin_amdgcn_s_dcache_inv();
+}
+
+// CHECK-LABEL: @test_s_waitcnt
+// CHECK: call void @llvm.amdgcn.s.waitcnt(
+void test_s_waitcnt()
+{
+  __builtin_amdgcn_s_waitcnt(0);
+}
+
+// CHECK-LABEL: @test_s_sendmsg
+// CHECK: call void @llvm.amdgcn.s.sendmsg(
+void test_s_sendmsg()
+{
+  __builtin_amdgcn_s_sendmsg(1, 0);
+}
+
+// CHECK-LABEL: @test_s_sendmsg_var
+// CHECK: call void @llvm.amdgcn.s.sendmsg(
+void test_s_sendmsg_var(int in)
+{
+  __builtin_amdgcn_s_sendmsg(1, in);
+}
+
+// CHECK-LABEL: @test_s_sendmsghalt
+// CHECK: call void @llvm.amdgcn.s.sendmsghalt(
+void test_s_sendmsghalt()
+{
+  __builtin_amdgcn_s_sendmsghalt(1, 0);
+}
+
+// CHECK-LABEL: @test_s_sendmsghalt
+// CHECK: call void @llvm.amdgcn.s.sendmsghalt(
+void test_s_sendmsghalt_var(int in)
+{
+  __builtin_amdgcn_s_sendmsghalt(1, in);
 }
 
 // CHECK-LABEL: @test_s_barrier
@@ -371,6 +449,17 @@ void test_get_group_id(int d, global int *out)
 	}
 }
 
+// CHECK-LABEL: @test_s_getreg(
+// CHECK: tail call i32 @llvm.amdgcn.s.getreg(i32 0)
+// CHECK: tail call i32 @llvm.amdgcn.s.getreg(i32 1)
+// CHECK: tail call i32 @llvm.amdgcn.s.getreg(i32 65535)
+void test_s_getreg(volatile global uint *out)
+{
+  *out = __builtin_amdgcn_s_getreg(0);
+  *out = __builtin_amdgcn_s_getreg(1);
+  *out = __builtin_amdgcn_s_getreg(65535);
+}
+
 // CHECK-LABEL: @test_get_local_id(
 // CHECK: tail call i32 @llvm.amdgcn.workitem.id.x(), !range [[WI_RANGE:![0-9]*]]
 // CHECK: tail call i32 @llvm.amdgcn.workitem.id.y(), !range [[WI_RANGE]]
@@ -383,6 +472,20 @@ void test_get_local_id(int d, global int *out)
 	case 2: *out = __builtin_amdgcn_workitem_id_z(); break;
 	default: *out = 0;
 	}
+}
+
+// CHECK-LABEL: @test_fmed3_f32
+// CHECK: call float @llvm.amdgcn.fmed3.f32(
+void test_fmed3_f32(global float* out, float a, float b, float c)
+{
+  *out = __builtin_amdgcn_fmed3f(a, b, c);
+}
+
+// CHECK-LABEL: @test_s_getpc
+// CHECK: call i64 @llvm.amdgcn.s.getpc()
+void test_s_getpc(global ulong* out)
+{
+  *out = __builtin_amdgcn_s_getpc();
 }
 
 // CHECK-DAG: [[WI_RANGE]] = !{i32 0, i32 1024}

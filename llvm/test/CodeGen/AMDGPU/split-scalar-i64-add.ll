@@ -10,7 +10,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() readnone
 ; FUNC-LABEL: {{^}}imp_def_vcc_split_i64_add_0:
 ; SI: v_add_i32_e32 v{{[0-9]+}}, vcc, 0x18f, v{{[0-9]+}}
 ; SI: v_addc_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
-define void @imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %s.val) {
+define amdgpu_kernel void @imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %s.val) {
   %v.val = load volatile i32, i32 addrspace(1)* %in
   %vec.0 = insertelement <2 x i32> undef, i32 %s.val, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 %v.val, i32 1
@@ -23,7 +23,7 @@ define void @imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 addrspace(1
 ; FUNC-LABEL: {{^}}s_imp_def_vcc_split_i64_add_0:
 ; SI: s_add_u32 {{s[0-9]+}}, {{s[0-9]+}}, 0x18f
 ; SI: s_addc_u32 {{s[0-9]+}}, 0xf423f, 0
-define void @s_imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 %val) {
+define amdgpu_kernel void @s_imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 %val) {
   %vec.0 = insertelement <2 x i32> undef, i32 %val, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 999999, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
@@ -35,7 +35,7 @@ define void @s_imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 %val) {
 ; FUNC-LABEL: {{^}}imp_def_vcc_split_i64_add_1:
 ; SI: v_add_i32
 ; SI: v_addc_u32
-define void @imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %val0, i64 %val1) {
+define amdgpu_kernel void @imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %val0, i64 %val1) {
   %v.val = load volatile i32, i32 addrspace(1)* %in
   %vec.0 = insertelement <2 x i32> undef, i32 %val0, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 %v.val, i32 1
@@ -48,7 +48,7 @@ define void @imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 addrspace(1
 ; FUNC-LABEL: {{^}}s_imp_def_vcc_split_i64_add_1:
 ; SI: s_add_u32 {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
 ; SI: s_addc_u32 {{s[0-9]+}}, 0x1869f, {{s[0-9]+}}
-define void @s_imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 %val0, i64 %val1) {
+define amdgpu_kernel void @s_imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 %val0, i64 %val1) {
   %vec.0 = insertelement <2 x i32> undef, i32 %val0, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 99999, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
@@ -61,7 +61,7 @@ define void @s_imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 %val0, i6
 ; FUNC-LABEL: {{^}}imp_def_vcc_split_i64_add_2:
 ; SI: v_add_i32_e32 {{v[0-9]+}}, vcc, {{s[0-9]+}}, {{v[0-9]+}}
 ; SI: v_addc_u32_e32 {{v[0-9]+}}, vcc, {{v[0-9]+}}, {{v[0-9]+}}, vcc
-define void @imp_def_vcc_split_i64_add_2(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %val0, i64 %val1) {
+define amdgpu_kernel void @imp_def_vcc_split_i64_add_2(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %val0, i64 %val1) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %load = load i32, i32 addrspace(1)* %gep

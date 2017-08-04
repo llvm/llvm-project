@@ -7,7 +7,6 @@
  *
  * ===----------------------------------------------------------------------===
  */
-#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,32 +14,29 @@
 #include "int_lib.h"
 #include "int_util.h"
 
+typedef struct emutls_address_array {
+    uintptr_t size;  /* number of elements in the 'data' array */
+    void* data[];
+} emutls_address_array;
+
+static void emutls_shutdown(emutls_address_array *array);
+
+#ifndef _WIN32
+
+#include <pthread.h>
+
+static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_key_t emutls_pthread_key;
+
+typedef unsigned int gcc_word __attribute__((mode(word)));
+typedef unsigned int gcc_pointer __attribute__((mode(pointer)));
+
 /* Default is not to use posix_memalign, so systems like Android
  * can use thread local data without heavier POSIX memory allocators.
  */
 #ifndef EMUTLS_USE_POSIX_MEMALIGN
 #define EMUTLS_USE_POSIX_MEMALIGN 0
 #endif
-
-/* For every TLS variable xyz,
- * there is one __emutls_control variable named __emutls_v.xyz.
- * If xyz has non-zero initial value, __emutls_v.xyz's "value"
- * will point to __emutls_t.xyz, which has the initial value.
- */
-typedef unsigned int gcc_word __attribute__((mode(word)));
-typedef struct __emutls_control {
-    /* Must use gcc_word here, instead of size_t, to match GCC.  When
-       gcc_word is larger than size_t, the upper extra bits are all
-       zeros.  We can use variables of size_t to operate on size and
-       align.  */
-    gcc_word size;  /* size of the object in bytes */
-    gcc_word align;  /* alignment of the object in bytes */
-    union {
-        uintptr_t index;  /* data[index-1] is the object address */
-        void* address;  /* object address, when in single thread env */
-    } object;
-    void* value;  /* null or non-zero initial value for the object */
-} __emutls_control;
 
 static __inline void *emutls_memalign_alloc(size_t align, size_t size) {
     void *base;
@@ -50,7 +46,7 @@ static __inline void *emutls_memalign_alloc(size_t align, size_t size) {
 #else
     #define EXTRA_ALIGN_PTR_BYTES (align - 1 + sizeof(void*))
     char* object;
-    if ((object = malloc(EXTRA_ALIGN_PTR_BYTES + size)) == NULL)
+    if ((object = (char*)malloc(EXTRA_ALIGN_PTR_BYTES + size)) == NULL)
         abort();
     base = (void*)(((uintptr_t)(object + EXTRA_ALIGN_PTR_BYTES))
                     & ~(uintptr_t)(align - 1));
@@ -69,10 +65,207 @@ static __inline void emutls_memalign_free(void *base) {
 #endif
 }
 
+static void emutls_key_destructor(void* ptr) {
+    emutls_shutdown((emutls_address_array*)ptr);
+    free(ptr);
+}
+
+static __inline void emutls_init(void) {
+    if (pthread_key_create(&emutls_pthread_key, emutls_key_destructor) != 0)
+        abort();
+}
+
+static __inline void emutls_init_once(void) {
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, emutls_init);
+}
+
+static __inline void emutls_lock() {
+    pthread_mutex_lock(&emutls_mutex);
+}
+
+static __inline void emutls_unlock() {
+    pthread_mutex_unlock(&emutls_mutex);
+}
+
+static __inline void emutls_setspecific(emutls_address_array *value) {
+    pthread_setspecific(emutls_pthread_key, (void*) value);
+}
+
+static __inline emutls_address_array* emutls_getspecific() {
+    return (emutls_address_array*) pthread_getspecific(emutls_pthread_key);
+}
+
+#else
+
+#include <windows.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <assert.h>
+#include <immintrin.h>
+
+static LPCRITICAL_SECTION emutls_mutex;
+static DWORD emutls_tls_index = TLS_OUT_OF_INDEXES;
+
+typedef uintptr_t gcc_word;
+typedef void * gcc_pointer;
+
+static void win_error(DWORD last_err, const char *hint) {
+    char *buffer = NULL;
+    if (FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                       FORMAT_MESSAGE_FROM_SYSTEM |
+                       FORMAT_MESSAGE_MAX_WIDTH_MASK,
+                       NULL, last_err, 0, (LPSTR)&buffer, 1, NULL)) {
+        fprintf(stderr, "Windows error: %s\n", buffer);
+    } else {
+        fprintf(stderr, "Unkown Windows error: %s\n", hint);
+    }
+    LocalFree(buffer);
+}
+
+static __inline void win_abort(DWORD last_err, const char *hint) {
+    win_error(last_err, hint);
+    abort();
+}
+
+static __inline void *emutls_memalign_alloc(size_t align, size_t size) {
+    void *base = _aligned_malloc(size, align);
+    if (!base)
+        win_abort(GetLastError(), "_aligned_malloc");
+    return base;
+}
+
+static __inline void emutls_memalign_free(void *base) {
+    _aligned_free(base);
+}
+
+static void emutls_exit(void) {
+    if (emutls_mutex) {
+        DeleteCriticalSection(emutls_mutex);
+        _aligned_free(emutls_mutex);
+        emutls_mutex = NULL;
+    }
+    if (emutls_tls_index != TLS_OUT_OF_INDEXES) {
+        emutls_shutdown((emutls_address_array*)TlsGetValue(emutls_tls_index));
+        TlsFree(emutls_tls_index);
+        emutls_tls_index = TLS_OUT_OF_INDEXES;
+    }
+}
+
+#pragma warning (push)
+#pragma warning (disable : 4100)
+static BOOL CALLBACK emutls_init(PINIT_ONCE p0, PVOID p1, PVOID *p2) {
+    emutls_mutex = (LPCRITICAL_SECTION)_aligned_malloc(sizeof(CRITICAL_SECTION), 16);
+    if (!emutls_mutex) {
+        win_error(GetLastError(), "_aligned_malloc");
+        return FALSE;
+    }
+    InitializeCriticalSection(emutls_mutex);
+
+    emutls_tls_index = TlsAlloc();
+    if (emutls_tls_index == TLS_OUT_OF_INDEXES) {
+        emutls_exit();
+        win_error(GetLastError(), "TlsAlloc");
+        return FALSE;
+    }
+    atexit(&emutls_exit);
+    return TRUE;
+}
+
+static __inline void emutls_init_once(void) {
+    static INIT_ONCE once;
+    InitOnceExecuteOnce(&once, emutls_init, NULL, NULL);
+}
+
+static __inline void emutls_lock() {
+    EnterCriticalSection(emutls_mutex);
+}
+
+static __inline void emutls_unlock() {
+    LeaveCriticalSection(emutls_mutex);
+}
+
+static __inline void emutls_setspecific(emutls_address_array *value) {
+    if (TlsSetValue(emutls_tls_index, (LPVOID) value) == 0)
+        win_abort(GetLastError(), "TlsSetValue");
+}
+
+static __inline emutls_address_array* emutls_getspecific() {
+    LPVOID value = TlsGetValue(emutls_tls_index);
+    if (value == NULL) {
+        const DWORD err = GetLastError();
+        if (err != ERROR_SUCCESS)
+            win_abort(err, "TlsGetValue");
+    }
+    return (emutls_address_array*) value;
+}
+
+/* Provide atomic load/store functions for emutls_get_index if built with MSVC.
+ */
+#if !defined(__ATOMIC_RELEASE)
+
+enum { __ATOMIC_ACQUIRE = 2, __ATOMIC_RELEASE = 3 };
+
+static __inline uintptr_t __atomic_load_n(void *ptr, unsigned type) {
+    assert(type == __ATOMIC_ACQUIRE);
+#ifdef _WIN64
+    return (uintptr_t) _load_be_u64(ptr);
+#else
+    return (uintptr_t) _load_be_u32(ptr);
+#endif
+}
+
+static __inline void __atomic_store_n(void *ptr, uintptr_t val, unsigned type) {
+    assert(type == __ATOMIC_RELEASE);
+#ifdef _WIN64
+    _store_be_u64(ptr, val);
+#else
+    _store_be_u32(ptr, val);
+#endif
+}
+
+#endif
+
+#pragma warning (pop)
+
+#endif
+
+static size_t emutls_num_object = 0;  /* number of allocated TLS objects */
+
+/* Free the allocated TLS data
+ */
+static void emutls_shutdown(emutls_address_array *array) {
+    if (array) {
+        uintptr_t i;
+        for (i = 0; i < array->size; ++i) {
+            if (array->data[i])
+                emutls_memalign_free(array->data[i]);
+        }
+    }
+}
+
+/* For every TLS variable xyz,
+ * there is one __emutls_control variable named __emutls_v.xyz.
+ * If xyz has non-zero initial value, __emutls_v.xyz's "value"
+ * will point to __emutls_t.xyz, which has the initial value.
+ */
+typedef struct __emutls_control {
+    /* Must use gcc_word here, instead of size_t, to match GCC.  When
+       gcc_word is larger than size_t, the upper extra bits are all
+       zeros.  We can use variables of size_t to operate on size and
+       align.  */
+    gcc_word size;  /* size of the object in bytes */
+    gcc_word align;  /* alignment of the object in bytes */
+    union {
+        uintptr_t index;  /* data[index-1] is the object address */
+        void* address;  /* object address, when in single thread env */
+    } object;
+    void* value;  /* null or non-zero initial value for the object */
+} __emutls_control;
+
 /* Emulated TLS objects are always allocated at run-time. */
 static __inline void *emutls_allocate_object(__emutls_control *control) {
     /* Use standard C types, check with gcc's emutls.o. */
-    typedef unsigned int gcc_pointer __attribute__((mode(pointer)));
     COMPILE_TIME_ASSERT(sizeof(uintptr_t) == sizeof(gcc_pointer));
     COMPILE_TIME_ASSERT(sizeof(uintptr_t) == sizeof(void*));
 
@@ -93,45 +286,19 @@ static __inline void *emutls_allocate_object(__emutls_control *control) {
     return base;
 }
 
-static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static size_t emutls_num_object = 0;  /* number of allocated TLS objects */
-
-typedef struct emutls_address_array {
-    uintptr_t size;  /* number of elements in the 'data' array */
-    void* data[];
-} emutls_address_array;
-
-static pthread_key_t emutls_pthread_key;
-
-static void emutls_key_destructor(void* ptr) {
-    emutls_address_array* array = (emutls_address_array*)ptr;
-    uintptr_t i;
-    for (i = 0; i < array->size; ++i) {
-        if (array->data[i])
-            emutls_memalign_free(array->data[i]);
-    }
-    free(ptr);
-}
-
-static void emutls_init(void) {
-    if (pthread_key_create(&emutls_pthread_key, emutls_key_destructor) != 0)
-        abort();
-}
 
 /* Returns control->object.index; set index if not allocated yet. */
 static __inline uintptr_t emutls_get_index(__emutls_control *control) {
     uintptr_t index = __atomic_load_n(&control->object.index, __ATOMIC_ACQUIRE);
     if (!index) {
-        static pthread_once_t once = PTHREAD_ONCE_INIT;
-        pthread_once(&once, emutls_init);
-        pthread_mutex_lock(&emutls_mutex);
+        emutls_init_once();
+        emutls_lock();
         index = control->object.index;
         if (!index) {
             index = ++emutls_num_object;
             __atomic_store_n(&control->object.index, index, __ATOMIC_RELEASE);
         }
-        pthread_mutex_unlock(&emutls_mutex);
+        emutls_unlock();
     }
     return index;
 }
@@ -142,7 +309,7 @@ static __inline void emutls_check_array_set_size(emutls_address_array *array,
     if (array == NULL)
         abort();
     array->size = size;
-    pthread_setspecific(emutls_pthread_key, (void*)array);
+    emutls_setspecific(array);
 }
 
 /* Returns the new 'data' array size, number of elements,
@@ -156,22 +323,29 @@ static __inline uintptr_t emutls_new_data_array_size(uintptr_t index) {
     return ((index + 1 + 15) & ~((uintptr_t)15)) - 1;
 }
 
+/* Returns the size in bytes required for an emutls_address_array with
+ * N number of elements for data field.
+ */
+static __inline uintptr_t emutls_asize(uintptr_t N) {
+    return N * sizeof(void *) + sizeof(emutls_address_array);
+}
+
 /* Returns the thread local emutls_address_array.
  * Extends its size if necessary to hold address at index.
  */
 static __inline emutls_address_array *
 emutls_get_address_array(uintptr_t index) {
-    emutls_address_array* array = pthread_getspecific(emutls_pthread_key);
+    emutls_address_array* array = emutls_getspecific();
     if (array == NULL) {
         uintptr_t new_size = emutls_new_data_array_size(index);
-        array = malloc(new_size * sizeof(void *) + sizeof(emutls_address_array));
+        array = (emutls_address_array*) malloc(emutls_asize(new_size));
         if (array)
             memset(array->data, 0, new_size * sizeof(void*));
         emutls_check_array_set_size(array, new_size);
     } else if (index > array->size) {
         uintptr_t orig_size = array->size;
         uintptr_t new_size = emutls_new_data_array_size(index);
-        array = realloc(array, new_size * sizeof(void *) + sizeof(emutls_address_array));
+        array = (emutls_address_array*) realloc(array, emutls_asize(new_size));
         if (array)
             memset(array->data + orig_size, 0,
                    (new_size - orig_size) * sizeof(void*));
@@ -182,8 +356,8 @@ emutls_get_address_array(uintptr_t index) {
 
 void* __emutls_get_address(__emutls_control* control) {
     uintptr_t index = emutls_get_index(control);
-    emutls_address_array* array = emutls_get_address_array(index);
-    if (array->data[index - 1] == NULL)
-        array->data[index - 1] = emutls_allocate_object(control);
-    return array->data[index - 1];
+    emutls_address_array* array = emutls_get_address_array(index--);
+    if (array->data[index] == NULL)
+        array->data[index] = emutls_allocate_object(control);
+    return array->data[index];
 }

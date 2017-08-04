@@ -18,7 +18,7 @@ define i64 @mod128(i128 %x) {
   ; WIN64-DAG: movq $0, 40(%rsp)
   ; WIN64-DAG: movq $3, 32(%rsp)
   ; WIN64: callq   __modti3
-  ; WIN64: movd    %xmm0, %rax
+  ; WIN64: movq    %xmm0, %rax
 
   %1 = srem i128 %x, 3
   %2 = trunc i128 %1 to i64

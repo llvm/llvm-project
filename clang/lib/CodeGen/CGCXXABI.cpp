@@ -159,10 +159,10 @@ void CGCXXABI::buildThisParam(CodeGenFunction &CGF, FunctionArgList &params) {
 
   // FIXME: I'm not entirely sure I like using a fake decl just for code
   // generation. Maybe we can come up with a better way?
-  ImplicitParamDecl *ThisDecl
-    = ImplicitParamDecl::Create(CGM.getContext(), nullptr, MD->getLocation(),
-                                &CGM.getContext().Idents.get("this"),
-                                MD->getThisType(CGM.getContext()));
+  auto *ThisDecl = ImplicitParamDecl::Create(
+      CGM.getContext(), nullptr, MD->getLocation(),
+      &CGM.getContext().Idents.get("this"), MD->getThisType(CGM.getContext()),
+      ImplicitParamDecl::CXXThis);
   params.push_back(ThisDecl);
   CGF.CXXABIThisDecl = ThisDecl;
 

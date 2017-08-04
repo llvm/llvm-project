@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def cl_Group : OptionGroup<"<clang-cl options>">,
+def cl_Group : OptionGroup<"<clang-cl options>">, Flags<[CLOption]>,
   HelpText<"CL.EXE COMPATIBILITY OPTIONS">;
 
 def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,
@@ -61,6 +61,14 @@ def _SLASH_Brepro_ : CLFlag<"Brepro-">,
 def _SLASH_C : CLFlag<"C">,
   HelpText<"Don't discard comments when preprocessing">, Alias<C>;
 def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;
+def _SLASH_d1reportAllClassLayout : CLFlag<"d1reportAllClassLayout">,
+  HelpText<"Dump record layout information">, Alias<fdump_record_layouts>;
+def _SLASH_diagnostics_caret : CLFlag<"diagnostics:caret">,
+  HelpText<"Enable caret and column diagnostics (on by default)">;
+def _SLASH_diagnostics_column : CLFlag<"diagnostics:column">,
+  HelpText<"Disable caret diagnostics but keep column info">;
+def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
+  HelpText<"Disable column and caret diagnostics">;
 def _SLASH_D : CLJoinedOrSeparate<"D">, HelpText<"Define macro">,
   MetaVarName<"<macro[=value]>">, Alias<D>;
 def _SLASH_E : CLFlag<"E">, HelpText<"Preprocess to stdout">, Alias<E>;
@@ -172,6 +180,12 @@ def _SLASH_Zc_trigraphs : CLFlag<"Zc:trigraphs">,
   HelpText<"Enable trigraphs">, Alias<ftrigraphs>;
 def _SLASH_Zc_trigraphs_off : CLFlag<"Zc:trigraphs-">,
   HelpText<"Disable trigraphs (default)">, Alias<fno_trigraphs>;
+def _SLASH_Zc_twoPhase : CLFlag<"Zc:twoPhase">,
+  HelpText<"Enable two-phase name lookup in templates">,
+  Alias<fno_delayed_template_parsing>;
+def _SLASH_Zc_twoPhase_ : CLFlag<"Zc:twoPhase-">,
+  HelpText<"Disable two-phase name lookup in templates">,
+  Alias<fdelayed_template_parsing>;
 def _SLASH_Z7 : CLFlag<"Z7">,
   HelpText<"Enable CodeView debug information in object files">;
 def _SLASH_Zd : CLFlag<"Zd">,
@@ -316,6 +330,7 @@ def _SLASH_Zc_forScope : CLIgnoredFlag<"Zc:forScope">;
 def _SLASH_Zc_inline : CLIgnoredFlag<"Zc:inline">;
 def _SLASH_Zc_rvalueCast : CLIgnoredFlag<"Zc:rvalueCast">;
 def _SLASH_Zc_wchar_t : CLIgnoredFlag<"Zc:wchar_t">;
+def _SLASH_Zc_ternary : CLIgnoredFlag<"Zc:ternary">;
 def _SLASH_Zm : CLIgnoredJoined<"Zm">;
 def _SLASH_Zo : CLIgnoredFlag<"Zo">;
 def _SLASH_Zo_ : CLIgnoredFlag<"Zo-">;

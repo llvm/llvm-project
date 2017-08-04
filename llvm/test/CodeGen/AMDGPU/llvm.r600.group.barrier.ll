@@ -2,7 +2,7 @@
 
 ; EG-LABEL: {{^}}test_group_barrier:
 ; EG: GROUP_BARRIER
-define void @test_group_barrier(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_group_barrier(i32 addrspace(1)* %out) #0 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x()
   %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp

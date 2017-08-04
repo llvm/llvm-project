@@ -1,0 +1,175 @@
+# Basic machine sched model test for Thumb2 int instructions
+# RUN: llc -o /dev/null %s -mtriple=thumbv7-eabi -mcpu=swift -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_SWIFT
+# RUN: llc -o /dev/null %s -mtriple=thumbv7--eabi -mcpu=cortex-a9 -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_A9
+# RUN: llc -o /dev/null %s -mtriple=thumbv8r-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_R52
+# REQUIRES: asserts
+--- |
+  ; ModuleID = 'foo.ll'
+  source_filename = "foo.ll"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv7---eabi"
+
+  @g1 = common global i32 0, align 4
+  @g2 = common global i32 0, align 4
+
+  define i64 @foo(i16 signext %a, i16 signext %b) {
+  entry:
+    %0 = load i32, i32* @g1, align 4
+    %1 = load i32, i32* @g2, align 4
+    %2 = add nuw nsw i32 %0, %0
+    %3 = sdiv i32 %2, %1
+    store i32 %3, i32* @g1, align 4
+    %d = mul nsw i16 %a, %a
+    %e = mul nsw i16 %b, %b
+    %f = add nuw nsw i16 %e, %d
+    %c = zext i16 %f to i32
+    %mul8 = mul nsw i32 %c, %3
+    %mul9 = mul nsw i32 %mul8, %mul8
+    %add10 = add nuw nsw i32 %mul9, %mul8
+    %conv1130 = zext i32 %add10 to i64
+    %mul12 = mul nuw nsw i64 %conv1130, %conv1130
+    %mul13 = mul nsw i64 %mul12, %mul12
+    %add14 = add nuw nsw i64 %mul13, %mul12
+    ret i64 %add14
+  }
+#
+# CHECK:       ********** MI Scheduling **********
+# CHECK:       SU(2):   %vreg2<def> = t2MOVi32imm <ga:@g1>; rGPR:%vreg2
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 2
+# CHECK_R52:   Latency    : 2
+#
+# CHECK:       SU(3):   %vreg3<def> = t2LDRi12 %vreg2, 0, pred:14, pred:%noreg; mem:LD4[@g1](dereferenceable) rGPR:%vreg3,%vreg2
+# CHECK_A9:    Latency    : 1
+# CHECK_SWIFT: Latency    : 3
+# CHECK_R52:   Latency    : 4
+#
+# CHECK :      SU(6):   %vreg6<def> = t2ADDrr %vreg3, %vreg3, pred:14, pred:%noreg, opt:%noreg; rGPR:%vreg6,%vreg3,%vreg3
+# CHECK_A9:    Latency    : 1
+# CHECK_SWIFT: Latency    : 1
+# CHECK_R52:   Latency    : 3
+
+# CHECK:       SU(7):   %vreg7<def> = t2SDIV %vreg6, %vreg5, pred:14, pred:%noreg; rGPR:%vreg7,%vreg6,%vreg5
+# CHECK_A9:    Latency    : 0
+# CHECK_SWIFT: Latency    : 14
+# CHECK_R52:   Latency    : 8
+
+# CHECK:       SU(8):   t2STRi12 %vreg7, %vreg2, 0, pred:14, pred:%noreg; mem:ST4[@g1] rGPR:%vreg7,%vreg2
+# CHECK_A9:    Latency    : 1
+# CHECK_SWIFT: Latency    : 0
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(9):   %vreg8<def> = t2SMULBB %vreg1, %vreg1, pred:14, pred:%noreg; rGPR:%vreg8,%vreg1,%vreg1
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(10):   %vreg9<def> = t2SMLABB %vreg0, %vreg0, %vreg8, pred:14, pred:%noreg; rGPR:%vreg9,%vreg0,%vreg0,%vreg8
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(11):   %vreg10<def> = t2UXTH %vreg9, 0, pred:14, pred:%noreg; rGPR:%vreg10,%vreg9
+# CHECK_A9:    Latency    : 1
+# CHECK_SWIFT: Latency    : 1
+# CHECK_R52:   Latency    : 3
+#
+# CHECK:       SU(12):   %vreg11<def> = t2MUL %vreg10, %vreg7, pred:14, pred:%noreg; rGPR:%vreg11,%vreg10,%vreg7
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(13):   %vreg12<def> = t2MLA %vreg11, %vreg11, %vreg11, pred:14, pred:%noreg; rGPR:%vreg12,%vreg11,%vreg11,%vreg11
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(14):   %vreg13<def>, %vreg14<def> = t2UMULL %vreg12, %vreg12, pred:14, pred:%noreg; rGPR:%vreg13,%vreg14,%vreg12,%vreg12
+# CHECK_A9:    Latency    : 3
+# CHECK_SWIFT: Latency    : 5
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(18):   %vreg19<def,tied4>, %vreg20<def,tied5> = t2UMLAL %vreg12, %vreg12, %vreg19<tied0>, %vreg20<tied1>, pred:14, pred:%noreg; rGPR:%vreg19,%vreg20,%vreg12,%vreg12,%vreg20
+# CHECK_A9:    Latency    : 3
+# CHECK_SWIFT: Latency    : 7
+# CHECK_R52:   Latency    : 4
+# CHECK:  ** ScheduleDAGMILive::schedule picking next node
+...
+---
+name:            foo
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr }
+  - { id: 1, class: rgpr }
+  - { id: 2, class: rgpr }
+  - { id: 3, class: rgpr }
+  - { id: 4, class: rgpr }
+  - { id: 5, class: rgpr }
+  - { id: 6, class: rgpr }
+  - { id: 7, class: rgpr }
+  - { id: 8, class: rgpr }
+  - { id: 9, class: rgpr }
+  - { id: 10, class: rgpr }
+  - { id: 11, class: rgpr }
+  - { id: 12, class: rgpr }
+  - { id: 13, class: rgpr }
+  - { id: 14, class: rgpr }
+  - { id: 15, class: rgpr }
+  - { id: 16, class: rgpr }
+  - { id: 17, class: rgpr }
+  - { id: 18, class: rgpr }
+  - { id: 19, class: rgpr }
+  - { id: 20, class: rgpr }
+liveins:
+  - { reg: '%r0', virtual-reg: '%0' }
+  - { reg: '%r1', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    liveins: %r0, %r1
+
+    %1 = COPY %r1
+    %0 = COPY %r0
+    %2 = t2MOVi32imm @g1
+    %3 = t2LDRi12 %2, 0, 14, _ :: (dereferenceable load 4 from @g1)
+    %4 = t2MOVi32imm @g2
+    %5 = t2LDRi12 %4, 0, 14, _ :: (dereferenceable load 4 from @g2)
+    %6 = t2ADDrr %3, %3, 14, _, _
+    %7 = t2SDIV %6, %5, 14, _
+    t2STRi12 %7, %2, 0, 14, _ :: (store 4 into @g1)
+    %8 = t2SMULBB %1, %1, 14, _
+    %9 = t2SMLABB %0, %0, %8, 14, _
+    %10 = t2UXTH %9, 0, 14, _
+    %11 = t2MUL %10, %7, 14, _
+    %12 = t2MLA %11, %11, %11, 14, _
+    %13, %14 = t2UMULL %12, %12, 14, _
+    %19, %16 = t2UMULL %13, %13, 14, _
+    %17 = t2MLA %13, %14, %16, 14, _
+    %20 = t2MLA %13, %14, %17, 14, _
+    %19, %20 = t2UMLAL %12, %12, %19, %20, 14, _
+    %r0 = COPY %19
+    %r1 = COPY %20
+    tBX_RET 14, _, implicit %r0, implicit %r1
+
+...

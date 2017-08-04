@@ -388,7 +388,8 @@ define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: test_x86_sse2_storeu_dq:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vpaddb LCPI34_0, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqu %xmm0, (%eax)
 ; CHECK-NEXT:    retl
   %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -403,8 +404,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_storeu_pd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovupd %xmm0, (%eax)
 ; CHECK-NEXT:    retl
@@ -434,9 +435,9 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubb %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, (%eax)
 ; CHECK-NEXT:    vzeroupper

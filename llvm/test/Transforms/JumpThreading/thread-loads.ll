@@ -1,5 +1,5 @@
 ; RUN: opt < %s -jump-threading -S | FileCheck %s
-; RUN: opt < %s -passes=jump-threading -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=jump-threading -S | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin7"
@@ -300,6 +300,229 @@ ret1:
 ret2:
   %xxx = tail call i32 (...) @f1() nounwind
   ret void
+}
+
+define i32 @fn_noalias(i1 %c2,i64* noalias %P, i64* noalias %P2) {
+; CHECK-LABEL: @fn_noalias
+; CHECK-LABEL: cond1:
+; CHECK: %[[LD1:.*]] = load i64, i64* %P
+; CHECK: br i1 %c, label %[[THREAD:.*]], label %end
+; CHECK-LABEL: cond2:
+; CHECK: %[[LD2:.*]] = load i64, i64* %P
+; CHECK-LABEL: cond3:
+; CHECK: %[[PHI:.*]] = phi i64 [ %[[LD1]], %[[THREAD]] ], [ %[[LD2]], %cond2 ]
+; CHECK: call void @fn3(i64 %[[PHI]])
+entry:
+  br i1 %c2, label %cond2, label %cond1
+
+cond1:
+  %l1 = load i64, i64* %P
+  store i64 42, i64* %P2
+  %c = icmp eq i64 %l1, 0
+  br i1 %c, label %cond2, label %end
+
+cond2:
+  %l2 = load i64, i64* %P
+  call void @fn2(i64 %l2)
+  %c3 = icmp eq i64 %l2,  0
+  br i1 %c3, label %cond3, label %end
+
+cond3:
+  call void @fn3(i64 %l2)
+  br label %end
+
+end:
+  ret i32 0
+}
+
+; This tests if we can thread from %sw.bb.i to %do.body.preheader.i67 through
+; %sw.bb21.i. To make this happen, %l2 should be detected as a partically
+; redundant load with %l3 across the store to %phase in %sw.bb21.i.
+
+%struct.NEXT_MOVE = type { i32, i32, i32* }
+@hash_move = unnamed_addr global [65 x i32] zeroinitializer, align 4
+@current_move = internal global [65 x i32] zeroinitializer, align 4
+@last = internal unnamed_addr global [65 x i32*] zeroinitializer, align 8
+@next_status = internal unnamed_addr global [65 x %struct.NEXT_MOVE] zeroinitializer, align 8
+define fastcc i32 @Search(i64 %idxprom.i, i64 %idxprom.i89, i32 %c) {
+; CHECK-LABEL: @Search
+; CHECK-LABEL: sw.bb.i:
+; CHECK: %[[LD1:.*]] = load i32, i32* %arrayidx185, align 4
+; CHECK: %[[C1:.*]] = icmp eq i32 %[[LD1]], 0
+; CHECK: br i1 %[[C1]], label %sw.bb21.i.thread, label %if.then.i64
+; CHECK-LABEL: sw.bb21.i.thread:
+; CHECK: br label %[[THREAD_TO:.*]]
+; CHECK-LABEL: sw.bb21.i:
+; CHECK: %[[LD2:.*]] = load i32, i32* %arrayidx185, align 4
+; CHECK: %[[C2:.*]] = icmp eq i32 %[[LD2]], 0
+; CHECK:br i1 %[[C2]], label %[[THREAD_TO]], label %cleanup
+entry:
+  %arrayidx185 = getelementptr inbounds [65 x i32], [65 x i32]* @hash_move, i64 0, i64 %idxprom.i
+  %arrayidx307 = getelementptr inbounds [65 x i32], [65 x i32]* @current_move, i64 0, i64 %idxprom.i
+  %arrayidx89 = getelementptr inbounds [65 x i32*], [65 x i32*]* @last, i64 0, i64 %idxprom.i
+  %phase = getelementptr inbounds [65 x %struct.NEXT_MOVE], [65 x %struct.NEXT_MOVE]* @next_status, i64 0, i64 %idxprom.i, i32 0
+  br label %cond.true282
+
+cond.true282:
+  switch i32 %c, label %sw.default.i [
+    i32 1, label %sw.bb.i
+    i32 0, label %sw.bb21.i
+  ]
+
+sw.default.i:
+  br label %cleanup
+
+sw.bb.i:
+  %call.i62 = call fastcc i32* @GenerateCheckEvasions()
+  store i32* %call.i62, i32** %arrayidx89, align 8
+  %l2 = load i32, i32* %arrayidx185, align 4
+  %tobool.i63 = icmp eq i32 %l2, 0
+  br i1 %tobool.i63, label %sw.bb21.i, label %if.then.i64
+
+if.then.i64:                                      ; preds = %sw.bb.i
+  store i32 7, i32* %phase, align 8
+  store i32 %l2, i32* %arrayidx307, align 4
+  %call16.i = call fastcc i32 @ValidMove(i32 %l2)
+  %tobool17.i = icmp eq i32 %call16.i, 0
+  br i1 %tobool17.i, label %if.else.i65, label %cleanup
+
+if.else.i65:
+  call void @f65()
+  br label %sw.bb21.i
+
+sw.bb21.i:
+  store i32 10, i32* %phase, align 8
+  %l3= load i32, i32* %arrayidx185, align 4
+  %tobool27.i = icmp eq i32 %l3, 0
+  br i1 %tobool27.i, label %do.body.preheader.i67, label %cleanup
+
+do.body.preheader.i67:
+  call void @f67()
+  ret  i32 67
+
+cleanup:
+  call void @Cleanup()
+  ret  i32 0
+}
+
+declare fastcc i32* @GenerateCheckEvasions()
+declare fastcc i32 @ValidMove(i32 %move)
+declare void @f67()
+declare void @Cleanup()
+declare void @f65()
+
+define i32 @fn_SinglePred(i1 %c2,i64* %P) {
+; CHECK-LABEL: @fn_SinglePred
+; CHECK-LABEL: entry:
+; CHECK: %[[L1:.*]] = load i64, i64* %P
+; CHECK: br i1 %c, label %cond3, label %cond1
+; CHECK-LABEL: cond2:
+; CHECK-NOT: load
+; CHECK: %[[PHI:.*]] = phi i64 [ %[[L1]], %cond1 ]
+; CHECK: call void @fn2(i64 %[[PHI]])
+; CHECK: br label %end
+; CHECK-LABEL: cond3:
+; CHECK: call void @fn2(i64 %l1)
+; CHECK: call void @fn3(i64 %l1)
+
+entry:
+  %l1 = load i64, i64* %P
+  %c = icmp eq i64 %l1, 0
+  br i1 %c, label %cond2, label %cond1
+
+cond1:
+  br i1 %c2, label %cond2, label %end
+
+cond2:
+  %l2 = load i64, i64* %P
+  call void @fn2(i64 %l2)
+  %c3 = icmp eq i64 %l2,  0
+  br i1 %c3, label %cond3, label %end
+
+cond3:
+  call void @fn3(i64 %l2)
+  br label %end
+
+end:
+  ret i32 0
+}
+
+define i32 @fn_SinglePredMultihop(i1 %c1, i1 %c2,i64* %P) {
+; CHECK-LABEL: @fn_SinglePredMultihop
+; CHECK-LABEL: entry:
+; CHECK: %[[L1:.*]] = load i64, i64* %P
+; CHECK: br i1 %c0, label %cond3, label %cond0
+; CHECK-LABEL: cond2:
+; CHECK-NOT: load
+; CHECK: %[[PHI:.*]] = phi i64 [ %[[L1]], %cond1 ]
+; CHECK: call void @fn2(i64 %[[PHI]])
+; CHECK: br label %end
+; CHECK-LABEL: cond3:
+; CHECK: call void @fn2(i64 %l1)
+; CHECK: call void @fn3(i64 %l1)
+
+entry:
+  %l1 = load i64, i64* %P
+  %c0 = icmp eq i64 %l1, 0
+  br i1 %c0, label %cond2, label %cond0
+
+cond0:
+  br i1 %c1, label %cond1, label %end
+
+cond1:
+  br i1 %c2, label %cond2, label %end
+
+cond2:
+  %l2 = load i64, i64* %P
+  call void @fn2(i64 %l2)
+  %c3 = icmp eq i64 %l2,  0
+  br i1 %c3, label %cond3, label %end
+
+cond3:
+  call void @fn3(i64 %l2)
+  br label %end
+
+end:
+  ret i32 0
+}
+
+declare void @fn2(i64)
+declare void @fn3(i64)
+
+
+; Make sure we phi-translate and make the partially redundant load in
+; merge fully redudant and then we can jump-thread the block with the
+; store.
+;
+; CHECK-LABEL: define i32 @phi_translate_partial_redundant_loads(i32, i32*, i32*
+; CHECK: merge.thread:
+; CHECK: store
+; CHECK: br label %left_x
+;
+; CHECK: left_x:
+; CHECK-NEXT: ret i32 20
+define i32 @phi_translate_partial_redundant_loads(i32, i32*, i32*)  {
+  %cmp0 = icmp ne i32 %0, 0
+  br i1 %cmp0, label %left, label %right
+
+left:
+  store i32 1, i32* %1, align 4
+  br label %merge
+
+right:
+  br label %merge
+
+merge:
+  %phiptr = phi i32* [ %1, %left ], [ %2, %right ]
+  %newload = load i32, i32* %phiptr, align 4
+  %cmp1 = icmp slt i32 %newload, 5
+  br i1 %cmp1, label %left_x, label %right_x
+
+left_x:
+  ret i32 20
+
+right_x:
+  ret i32 10
 }
 
 !0 = !{!3, !3, i64 0}

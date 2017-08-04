@@ -27,5 +27,5 @@ lor.lhs.false81:                                  ; preds = %land.lhs.true34, %f
   br label %do.body172
 
 do.body172:                                       ; preds = %lor.lhs.false81
-  unreachable
+  ret void
 }

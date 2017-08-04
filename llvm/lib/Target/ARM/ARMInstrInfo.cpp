@@ -32,8 +32,8 @@ using namespace llvm;
 ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI), RI() {}
 
-/// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-void ARMInstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+/// Return the noop instruction to use for a noop.
+void ARMInstrInfo::getNoop(MCInst &NopInst) const {
   if (hasNOP()) {
     NopInst.setOpcode(ARM::HINT);
     NopInst.addOperand(MCOperand::createImm(0));
@@ -129,8 +129,9 @@ void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI) const {
   MachineMemOperand *MMO = MBB.getParent()->getMachineMemOperand(
       MachinePointerInfo::getGOT(*MBB.getParent()), Flags, 4, 4);
   MIB.addMemOperand(MMO);
-  MIB = BuildMI(MBB, MI, DL, get(ARM::LDRi12), Reg);
-  MIB.addReg(Reg, RegState::Kill).addImm(0);
-  MIB.setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
-  AddDefaultPred(MIB);
+  BuildMI(MBB, MI, DL, get(ARM::LDRi12), Reg)
+      .addReg(Reg, RegState::Kill)
+      .addImm(0)
+      .setMemRefs(MI->memoperands_begin(), MI->memoperands_end())
+      .add(predOps(ARMCC::AL));
 }

@@ -14,8 +14,8 @@ namespace tidy {
 namespace utils {
 namespace lexer {
 
-Token getPreviousNonCommentToken(const ASTContext &Context,
-                                 SourceLocation Location) {
+Token getPreviousToken(const ASTContext &Context, SourceLocation Location,
+                       bool SkipComments) {
   const auto &SourceManager = Context.getSourceManager();
   Token Token;
   Token.setKind(tok::unknown);
@@ -27,7 +27,7 @@ Token getPreviousNonCommentToken(const ASTContext &Context,
                                           Context.getLangOpts());
     if (!Lexer::getRawToken(Location, Token, SourceManager,
                             Context.getLangOpts()) &&
-        !Token.is(tok::comment)) {
+        (!SkipComments || !Token.is(tok::comment))) {
       break;
     }
     Location = Location.getLocWithOffset(-1);

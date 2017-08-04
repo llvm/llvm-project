@@ -4,7 +4,7 @@
 ; allocate scratch registers correctly. Check that this test compiles without
 ; error.
 ; TONGA-LABEL: test
-define void @test(<256 x i32> addrspace(1)* %out, <256 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @test(<256 x i32> addrspace(1)* %out, <256 x i32> addrspace(1)* %in) {
 entry:
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)

@@ -31,7 +31,7 @@ TestCaseList& GetTestCaseList(TestCaseID ID) {
 
 SubMap& GetSubstitutions() {
   // Don't use 'dec_re' from header because it may not yet be initialized.
-  static std::string dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
+  static std::string safe_dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
   static SubMap map = {
       {"%float", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?"},
       {"%int", "[ ]*[0-9]+"},
@@ -39,13 +39,13 @@ SubMap& GetSubstitutions() {
       {"%time", "[ ]*[0-9]{1,5} ns"},
       {"%console_report", "[ ]*[0-9]{1,5} ns [ ]*[0-9]{1,5} ns [ ]*[0-9]+"},
       {"%console_us_report", "[ ]*[0-9] us [ ]*[0-9] us [ ]*[0-9]+"},
-      {"%csv_report", "[0-9]+," + dec_re + "," + dec_re + ",ns,,,,,"},
-      {"%csv_us_report", "[0-9]+," + dec_re + "," + dec_re + ",us,,,,,"},
+      {"%csv_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,,,,,"},
+      {"%csv_us_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",us,,,,,"},
       {"%csv_bytes_report",
-       "[0-9]+," + dec_re + "," + dec_re + ",ns," + dec_re + ",,,,"},
+       "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns," + safe_dec_re + ",,,,"},
       {"%csv_items_report",
-       "[0-9]+," + dec_re + "," + dec_re + ",ns,," + dec_re + ",,,"},
-      {"%csv_label_report_begin", "[0-9]+," + dec_re + "," + dec_re + ",ns,,,"},
+       "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,," + safe_dec_re + ",,,"},
+      {"%csv_label_report_begin", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,,,"},
       {"%csv_label_report_end", ",,"}};
   return map;
 }

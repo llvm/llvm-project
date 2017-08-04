@@ -123,13 +123,6 @@ bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const ReturnInst *Ret,
                                      const TargetLoweringBase &TLI);
 
-// True if GV can be left out of the object symbol table. This is the case
-// for linkonce_odr values whose address is not significant. While legal, it is
-// not normally profitable to omit them from the .o symbol table. Using this
-// analysis makes sense when the information can be passed down to the linker
-// or we are in LTO.
-bool canBeOmittedFromSymbolTable(const GlobalValue *GV);
-
 DenseMap<const MachineBasicBlock *, int>
 getFuncletMembership(const MachineFunction &MF);
 

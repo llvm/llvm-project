@@ -20,8 +20,8 @@ write_reg:
 ; V6M: msr     apsr, {{r[0-9]+}}
 ; V7M: msr     apsr_nzcvq, {{r[0-9]+}}
 ; V7M: msr     apsr_nzcvq, {{r[0-9]+}}
-; V7A: msr     APSR_nzcvqg, {{r[0-9]+}}
-; V7A: msr     APSR_nzcvqg, {{r[0-9]+}}
+; V7A: msr     APSR_nzcvq, {{r[0-9]+}}
+; V7A: msr     APSR_nzcvq, {{r[0-9]+}}
   br label %exit
 
 exit:
@@ -41,8 +41,8 @@ write_reg:
 ; V6M: msr     apsr, {{r[0-9]+}}
 ; V7M: msr     apsr_nzcvq, {{r[0-9]+}}
 ; V7M: msr     apsr_nzcvq, {{r[0-9]+}}
-; V7A: msr     APSR_nzcvqg, {{r[0-9]+}}
-; V7A: msr     APSR_nzcvqg, {{r[0-9]+}}
+; V7A: msr     APSR_nzcvq, {{r[0-9]+}}
+; V7A: msr     APSR_nzcvq, {{r[0-9]+}}
   br label %exit
 
 exit:

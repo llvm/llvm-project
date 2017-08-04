@@ -15,9 +15,9 @@
 #include "Error.h"
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
-#include "llvm/Support/COFF.h"
 
 using namespace llvm::object;
 

@@ -8,5 +8,5 @@ int main() {
   while (true) {
     void *ptr = malloc(200 * 1024 * 1024);  // 200MB
   }
-// CHECK: failed to allocate
+// CHECK: allocator is terminating the process instead of returning 0
 }

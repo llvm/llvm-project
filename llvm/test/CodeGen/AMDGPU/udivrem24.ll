@@ -12,7 +12,7 @@
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define void @udiv24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) {
+define amdgpu_kernel void @udiv24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) {
   %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
   %num = load i8, i8 addrspace(1) * %in
   %den = load i8, i8 addrspace(1) * %den_ptr
@@ -31,7 +31,7 @@ define void @udiv24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) {
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define void @udiv24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
+define amdgpu_kernel void @udiv24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %den_ptr = getelementptr i16, i16 addrspace(1)* %in, i16 1
   %num = load i16, i16 addrspace(1) * %in, align 2
   %den = load i16, i16 addrspace(1) * %den_ptr, align 2
@@ -50,7 +50,7 @@ define void @udiv24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define void @udiv23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @udiv23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -67,7 +67,7 @@ define void @udiv23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 ; SI: v_rcp_iflag
 ; SI-NOT v_rcp_f32
 ; EG-NOT: RECIP_IEEE
-define void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -84,7 +84,7 @@ define void @udiv24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 ; SI: v_rcp_iflag
 ; SI-NOT v_rcp_f32
 ; EG-NOT: RECIP_IEEE
-define void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -101,7 +101,7 @@ define void @no_udiv24_u23_u24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in
 ; SI: v_rcp_iflag
 ; SI-NOT v_rcp_f32
 ; EG-NOT: RECIP_IEEE
-define void @no_udiv24_u24_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @no_udiv24_u24_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -121,7 +121,7 @@ define void @no_udiv24_u24_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in
 
 ; EG-NOT: UINT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @udiv25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @udiv25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -141,7 +141,7 @@ define void @udiv25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 
 ; EG-NOT: UINT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @test_no_udiv24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_no_udiv24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -161,7 +161,7 @@ define void @test_no_udiv24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in)
 
 ; EG-NOT: UINT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @test_no_udiv24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_no_udiv24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -184,7 +184,7 @@ define void @test_no_udiv24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in)
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define void @urem24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) {
+define amdgpu_kernel void @urem24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) {
   %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
   %num = load i8, i8 addrspace(1) * %in
   %den = load i8, i8 addrspace(1) * %den_ptr
@@ -203,7 +203,7 @@ define void @urem24_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) {
 ; EG-DAG: UINT_TO_FLT
 ; EG-DAG: RECIP_IEEE
 ; EG: FLT_TO_UINT
-define void @urem24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
+define amdgpu_kernel void @urem24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %den_ptr = getelementptr i16, i16 addrspace(1)* %in, i16 1
   %num = load i16, i16 addrspace(1) * %in, align 2
   %den = load i16, i16 addrspace(1) * %den_ptr, align 2
@@ -215,7 +215,7 @@ define void @urem24_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
 ; FUNC-LABEL: {{^}}urem24_i32:
 ; SI-NOT: v_rcp_f32
 ; EG-NOT: RECIP_IEEE
-define void @urem24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @urem24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -235,7 +235,7 @@ define void @urem24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 
 ; EG-NOT: UINT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @urem25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @urem25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -255,7 +255,7 @@ define void @urem25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 
 ; EG-NOT: UINT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @test_no_urem24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_no_urem24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -275,7 +275,7 @@ define void @test_no_urem24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in)
 
 ; EG-NOT: UINT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @test_no_urem24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_no_urem24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -294,7 +294,7 @@ define void @test_no_urem24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in)
 ; SI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]],
 
 ; EG: RECIP_IEEE
-define void @test_udiv24_u16_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_udiv24_u16_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -313,7 +313,7 @@ define void @test_udiv24_u16_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; SI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]],
 
 ; EG: RECIP_IEEE
-define void @test_udiv24_u23_u16_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_udiv24_u23_u16_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4

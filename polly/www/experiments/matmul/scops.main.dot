@@ -1,65 +1,50 @@
 digraph "Scop Graph for 'main' function" {
 	label="Scop Graph for 'main' function";
 
-	Node0x17d21a0 [shape=record,label="{entry:\l  call void @init_array()\l  br label %for.cond\l}"];
-	Node0x17d21a0 -> Node0x17d2020;
-	Node0x17d2020 [shape=record,label="{for.cond:                                         \l  %indvar3 = phi i64 [ %indvar.next4, %for.inc28 ], [ 0, %entry ]\l  %exitcond6 = icmp ne i64 %indvar3, 1536\l  br i1 %exitcond6, label %for.body, label %for.end30\l}"];
-	Node0x17d2020 -> Node0x17d3950;
-	Node0x17d2020 -> Node0x17da500;
-	Node0x17d3950 [shape=record,label="{for.body:                                         \l  br label %for.cond1\l}"];
-	Node0x17d3950 -> Node0x17da760;
-	Node0x17da760 [shape=record,label="{for.cond1:                                        \l  %indvar1 = phi i64 [ %indvar.next2, %for.inc25 ], [ 0, %for.body ]\l  %arrayidx5 = getelementptr [1536 x [1536 x float]]* @C, i64 0, i64 %indvar3, i64 %indvar1\l  %exitcond5 = icmp ne i64 %indvar1, 1536\l  br i1 %exitcond5, label %for.body3, label %for.end27\l}"];
-	Node0x17da760 -> Node0x17db1e0;
-	Node0x17da760 -> Node0x17db250;
-	Node0x17db1e0 [shape=record,label="{for.body3:                                        \l  store float 0.000000e+00, float* %arrayidx5, align 4\l  br label %for.cond6\l}"];
-	Node0x17db1e0 -> Node0x17da740;
-	Node0x17da740 [shape=record,label="{for.cond6:                                        \l  %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %for.body3 ]\l  %arrayidx16 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %indvar3, i64 %indvar\l  %arrayidx20 = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %indvar, i64 %indvar1\l  %exitcond = icmp ne i64 %indvar, 1536\l  br i1 %exitcond, label %for.body8, label %for.end\l}"];
-	Node0x17da740 -> Node0x17da5a0;
-	Node0x17da740 -> Node0x17da800;
-	Node0x17da5a0 [shape=record,label="{for.body8:                                        \l  %0 = load float* %arrayidx5, align 4\l  %1 = load float* %arrayidx16, align 4\l  %2 = load float* %arrayidx20, align 4\l  %mul = fmul float %1, %2\l  %add = fadd float %0, %mul\l  store float %add, float* %arrayidx5, align 4\l  br label %for.inc\l}"];
-	Node0x17da5a0 -> Node0x17da5c0;
-	Node0x17da5c0 [shape=record,label="{for.inc:                                          \l  %indvar.next = add i64 %indvar, 1\l  br label %for.cond6\l}"];
-	Node0x17da5c0 -> Node0x17da740[constraint=false];
-	Node0x17da800 [shape=record,label="{for.end:                                          \l  br label %for.inc25\l}"];
-	Node0x17da800 -> Node0x17dae20;
-	Node0x17dae20 [shape=record,label="{for.inc25:                                        \l  %indvar.next2 = add i64 %indvar1, 1\l  br label %for.cond1\l}"];
-	Node0x17dae20 -> Node0x17da760[constraint=false];
-	Node0x17db250 [shape=record,label="{for.end27:                                        \l  br label %for.inc28\l}"];
-	Node0x17db250 -> Node0x17dae80;
-	Node0x17dae80 [shape=record,label="{for.inc28:                                        \l  %indvar.next4 = add i64 %indvar3, 1\l  br label %for.cond\l}"];
-	Node0x17dae80 -> Node0x17d2020[constraint=false];
-	Node0x17da500 [shape=record,label="{for.end30:                                        \l  ret i32 0\l}"];
+	Node0x5b5c850 [shape=record,label="{entry:\l  br label %entry.split\l}"];
+	Node0x5b5c850 -> Node0x5b5a440;
+	Node0x5b5a440 [shape=record,label="{entry.split:                                      \l  tail call void @init_array()\l  br label %for.cond1.preheader\l}"];
+	Node0x5b5a440 -> Node0x5b38cd0;
+	Node0x5b38cd0 [shape=record,label="{for.cond1.preheader:                              \l  %indvars.iv7 = phi i64 [ 0, %entry.split ], [ %indvars.iv.next8, %for.inc28 ]\l  br label %for.body3\l}"];
+	Node0x5b38cd0 -> Node0x5b4bd30;
+	Node0x5b4bd30 [shape=record,label="{for.body3:                                        \l  %indvars.iv4 = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next5,\l... %for.inc25 ]\l  %arrayidx5 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x\l... float]]* @C, i64 0, i64 %indvars.iv7, i64 %indvars.iv4\l  store float 0.000000e+00, float* %arrayidx5, align 4\l  br label %for.body8\l}"];
+	Node0x5b4bd30 -> Node0x5b38c50;
+	Node0x5b38c50 [shape=record,label="{for.body8:                                        \l  %indvars.iv = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next, %for.body8 ]\l  %arrayidx12 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536\l... x float]]* @C, i64 0, i64 %indvars.iv7, i64 %indvars.iv4\l  %0 = load float, float* %arrayidx12, align 4\l  %arrayidx16 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536\l... x float]]* @A, i64 0, i64 %indvars.iv7, i64 %indvars.iv\l  %1 = load float, float* %arrayidx16, align 4\l  %arrayidx20 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536\l... x float]]* @B, i64 0, i64 %indvars.iv, i64 %indvars.iv4\l  %2 = load float, float* %arrayidx20, align 4\l  %mul = fmul float %1, %2\l  %add = fadd float %0, %mul\l  %arrayidx24 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536\l... x float]]* @C, i64 0, i64 %indvars.iv7, i64 %indvars.iv4\l  store float %add, float* %arrayidx24, align 4\l  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1\l  %exitcond = icmp ne i64 %indvars.iv.next, 1536\l  br i1 %exitcond, label %for.body8, label %for.inc25\l}"];
+	Node0x5b38c50 -> Node0x5b38c50[constraint=false];
+	Node0x5b38c50 -> Node0x5b5a290;
+	Node0x5b5a290 [shape=record,label="{for.inc25:                                        \l  %indvars.iv.next5 = add nuw nsw i64 %indvars.iv4, 1\l  %exitcond6 = icmp ne i64 %indvars.iv.next5, 1536\l  br i1 %exitcond6, label %for.body3, label %for.inc28\l}"];
+	Node0x5b5a290 -> Node0x5b4bd30[constraint=false];
+	Node0x5b5a290 -> Node0x5b5a340;
+	Node0x5b5a340 [shape=record,label="{for.inc28:                                        \l  %indvars.iv.next8 = add nuw nsw i64 %indvars.iv7, 1\l  %exitcond9 = icmp ne i64 %indvars.iv.next8, 1536\l  br i1 %exitcond9, label %for.cond1.preheader, label %for.end30\l}"];
+	Node0x5b5a340 -> Node0x5b38cd0[constraint=false];
+	Node0x5b5a340 -> Node0x5b5a3a0;
+	Node0x5b5a3a0 [shape=record,label="{for.end30:                                        \l  ret i32 0\l}"];
 	colorscheme = "paired12"
-        subgraph cluster_0x17d3f30 {
+        subgraph cluster_0x5b5c970 {
           label = "";
           style = solid;
           color = 1
-          subgraph cluster_0x17d38d0 {
+          subgraph cluster_0x5b5c5a0 {
             label = "";
             style = filled;
-            color = 3            subgraph cluster_0x17d3850 {
+            color = 3            subgraph cluster_0x5b5c9f0 {
               label = "";
               style = solid;
               color = 5
-              subgraph cluster_0x17d37d0 {
+              subgraph cluster_0x5b5c110 {
                 label = "";
                 style = solid;
                 color = 7
-                Node0x17da740;
-                Node0x17da5a0;
-                Node0x17da5c0;
+                Node0x5b38c50;
               }
-              Node0x17da760;
-              Node0x17db1e0;
-              Node0x17da800;
-              Node0x17dae20;
+              Node0x5b4bd30;
+              Node0x5b5a290;
             }
-            Node0x17d2020;
-            Node0x17d3950;
-            Node0x17db250;
-            Node0x17dae80;
+            Node0x5b38cd0;
+            Node0x5b5a340;
           }
-          Node0x17d21a0;
-          Node0x17da500;
+          Node0x5b5c850;
+          Node0x5b5a440;
+          Node0x5b5a3a0;
         }
 }

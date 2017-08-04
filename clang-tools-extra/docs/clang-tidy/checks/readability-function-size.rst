@@ -25,3 +25,14 @@ Options
 
    Flag functions exceeding this number of control statements. The default is
    `-1` (ignore the number of branches).
+
+.. option:: ParameterThreshold
+
+   Flag functions that exceed a specified number of parameters. The default
+   is `-1` (ignore the number of parameters).
+
+.. option:: NestingThreshold
+
+    Flag compound statements which create next nesting level after
+    `NestingThreshold`. This may differ significantly from the expected value
+    for macro-heavy code. The default is `-1` (ignore the nesting level).

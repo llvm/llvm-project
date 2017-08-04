@@ -130,8 +130,8 @@ private:
 
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
-      // Parse an unsigned literal.
-      consumeUnsignedLiteral(&Result);
+      // Parse an unsigned and float literal.
+      consumeNumberLiteral(&Result);
       break;
 
     default:
@@ -153,8 +153,16 @@ private:
             break;
           ++TokenLength;
         }
-        Result.Kind = TokenInfo::TK_Ident;
-        Result.Text = Code.substr(0, TokenLength);
+        if (TokenLength == 4 && Code.startswith("true")) {
+          Result.Kind = TokenInfo::TK_Literal;
+          Result.Value = true;
+        } else if (TokenLength == 5 && Code.startswith("false")) {
+          Result.Kind = TokenInfo::TK_Literal;
+          Result.Value = false;
+        } else {
+          Result.Kind = TokenInfo::TK_Ident;
+          Result.Text = Code.substr(0, TokenLength);
+        }
         Code = Code.drop_front(TokenLength);
       } else {
         Result.Kind = TokenInfo::TK_InvalidChar;
@@ -168,8 +176,9 @@ private:
     return Result;
   }
 
-  /// \brief Consume an unsigned literal.
-  void consumeUnsignedLiteral(TokenInfo *Result) {
+  /// \brief Consume an unsigned and float literal.
+  void consumeNumberLiteral(TokenInfo *Result) {
+    bool isFloatingLiteral = false;
     unsigned Length = 1;
     if (Code.size() > 1) {
       // Consume the 'x' or 'b' radix modifier, if present.
@@ -180,20 +189,44 @@ private:
     while (Length < Code.size() && isHexDigit(Code[Length]))
       ++Length;
 
+    // Try to recognize a floating point literal.
+    while (Length < Code.size()) {
+      char c = Code[Length];
+      if (c == '-' || c == '+' || c == '.' || isHexDigit(c)) {
+        isFloatingLiteral = true;
+        Length++;
+      } else {
+        break;
+      }
+    }
+
     Result->Text = Code.substr(0, Length);
     Code = Code.drop_front(Length);
 
-    unsigned Value;
-    if (!Result->Text.getAsInteger(0, Value)) {
-      Result->Kind = TokenInfo::TK_Literal;
-      Result->Value = Value;
+    if (isFloatingLiteral) {
+      char *end;
+      errno = 0;
+      std::string Text = Result->Text.str();
+      double doubleValue = strtod(Text.c_str(), &end);
+      if (*end == 0 && errno == 0) {
+        Result->Kind = TokenInfo::TK_Literal;
+        Result->Value = doubleValue;
+        return;
+      }
     } else {
-      SourceRange Range;
-      Range.Start = Result->Range.Start;
-      Range.End = currentLocation();
-      Error->addError(Range, Error->ET_ParserUnsignedError) << Result->Text;
-      Result->Kind = TokenInfo::TK_Error;
+      unsigned Value;
+      if (!Result->Text.getAsInteger(0, Value)) {
+        Result->Kind = TokenInfo::TK_Literal;
+        Result->Value = Value;
+        return;
+      }
     }
+
+    SourceRange Range;
+    Range.Start = Result->Range.Start;
+    Range.End = currentLocation();
+    Error->addError(Range, Error->ET_ParserNumberError) << Result->Text;
+    Result->Kind = TokenInfo::TK_Error;
   }
 
   /// \brief Consume a string literal.

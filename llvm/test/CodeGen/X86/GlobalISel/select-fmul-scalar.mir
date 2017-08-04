@@ -1,0 +1,119 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                                  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=NO_AVX512F --check-prefix=SSE
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=NO_AVX512F --check-prefix=AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=AVX512ALL --check-prefix=AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512ALL --check-prefix=AVX512VL
+--- |
+
+  define float @test_fmul_float(float %arg1, float %arg2) {
+    %ret = fmul float %arg1, %arg2
+    ret float %ret
+  }
+
+  define double @test_fmul_double(double %arg1, double %arg2) {
+    %ret = fmul double %arg1, %arg2
+    ret double %ret
+  }
+
+...
+---
+name:            test_fmul_float
+# ALL-LABEL: name:  test_fmul_float
+alignment:       4
+legalized:       true
+regBankSelected: true
+# NO_AVX512F:       registers:
+# NO_AVX512F-NEXT:    - { id: 0, class: fr32, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 1, class: fr32, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 2, class: fr32, preferred-register: '' }
+#
+# AVX512ALL:        registers:
+# AVX512ALL-NEXT:     - { id: 0, class: fr32x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 1, class: fr32x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 2, class: fr32x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr, preferred-register: '' }
+  - { id: 1, class: vecr, preferred-register: '' }
+  - { id: 2, class: vecr, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# SSE:                  %0 = COPY %xmm0
+# SSE-NEXT:             %1 = COPY %xmm1
+# SSE-NEXT:             %2 = MULSSrr %0, %1
+# SSE-NEXT:             %xmm0 = COPY %2
+# SSE-NEXT:             RET 0, implicit %xmm0
+#
+# AVX:                  %0 = COPY %xmm0
+# AVX-NEXT:             %1 = COPY %xmm1
+# AVX-NEXT:             %2 = VMULSSrr %0, %1
+# AVX-NEXT:             %xmm0 = COPY %2
+# AVX-NEXT:             RET 0, implicit %xmm0
+#
+# AVX512ALL:            %0 = COPY %xmm0
+# AVX512ALL-NEXT:       %1 = COPY %xmm1
+# AVX512ALL-NEXT:       %2 = VMULSSZrr %0, %1
+# AVX512ALL-NEXT:       %xmm0 = COPY %2
+# AVX512ALL-NEXT:       RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(s32) = COPY %xmm0
+    %1(s32) = COPY %xmm1
+    %2(s32) = G_FMUL %0, %1
+    %xmm0 = COPY %2(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_fmul_double
+# ALL-LABEL: name:  test_fmul_double
+alignment:       4
+legalized:       true
+regBankSelected: true
+# NO_AVX512F:       registers:
+# NO_AVX512F-NEXT:    - { id: 0, class: fr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 1, class: fr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 2, class: fr64, preferred-register: '' }
+#
+# AVX512ALL:        registers:
+# AVX512ALL-NEXT:     - { id: 0, class: fr64x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 1, class: fr64x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 2, class: fr64x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr, preferred-register: '' }
+  - { id: 1, class: vecr, preferred-register: '' }
+  - { id: 2, class: vecr, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# SSE:                  %0 = COPY %xmm0
+# SSE-NEXT:             %1 = COPY %xmm1
+# SSE-NEXT:             %2 = MULSDrr %0, %1
+# SSE-NEXT:             %xmm0 = COPY %2
+# SSE-NEXT:             RET 0, implicit %xmm0
+#
+# AVX:                  %0 = COPY %xmm0
+# AVX-NEXT:             %1 = COPY %xmm1
+# AVX-NEXT:             %2 = VMULSDrr %0, %1
+# AVX-NEXT:             %xmm0 = COPY %2
+# AVX-NEXT:             RET 0, implicit %xmm0
+#
+# AVX512ALL:            %0 = COPY %xmm0
+# AVX512ALL-NEXT:       %1 = COPY %xmm1
+# AVX512ALL-NEXT:       %2 = VMULSDZrr %0, %1
+# AVX512ALL-NEXT:       %xmm0 = COPY %2
+# AVX512ALL-NEXT:       RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(s64) = COPY %xmm0
+    %1(s64) = COPY %xmm1
+    %2(s64) = G_FMUL %0, %1
+    %xmm0 = COPY %2(s64)
+    RET 0, implicit %xmm0
+
+...

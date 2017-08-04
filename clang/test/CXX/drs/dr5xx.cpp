@@ -877,13 +877,25 @@ namespace dr583 { // dr583: 4
 namespace dr585 { // dr585: yes
   template<typename> struct T;
   struct A {
-    friend T; // expected-error {{requires a type specifier}} expected-error {{can only be classes or functions}}
+    friend T;
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{requires a type specifier}} expected-error@-2 {{can only be classes or functions}}
+#else
+    // expected-error@-4 {{use of class template 'T' requires template arguments; argument deduction not allowed in friend declaration}}
+    // expected-note@-7 {{here}}
+#endif
     // FIXME: It's not clear whether the standard allows this or what it means,
     // but the DR585 writeup suggests it as an alternative.
     template<typename U> friend T<U>; // expected-error {{must use an elaborated type}}
   };
   template<template<typename> class T> struct B {
-    friend T; // expected-error {{requires a type specifier}} expected-error {{can only be classes or functions}}
+    friend T;
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{requires a type specifier}} expected-error@-2 {{can only be classes or functions}}
+#else
+    // expected-error@-4 {{use of template template parameter 'T' requires template arguments; argument deduction not allowed in friend declaration}}
+    // expected-note@-6 {{here}}
+#endif
     template<typename U> friend T<U>; // expected-error {{must use an elaborated type}}
   };
 }
@@ -942,7 +954,7 @@ namespace dr591 { // dr591: no
 
   template<typename T> struct A<T>::B::C : A<T> {
     // FIXME: Should find member of non-dependent base class A<T>.
-    M m; // expected-error {{incomplete type 'M' (aka 'void'}}
+    M m; // expected-error {{incomplete type 'dr591::A::B::M' (aka 'void'}}
   };
 }
 

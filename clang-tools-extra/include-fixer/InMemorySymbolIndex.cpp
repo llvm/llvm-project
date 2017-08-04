@@ -9,18 +9,18 @@
 
 #include "InMemorySymbolIndex.h"
 
-using clang::find_all_symbols::SymbolInfo;
+using clang::find_all_symbols::SymbolAndSignals;
 
 namespace clang {
 namespace include_fixer {
 
 InMemorySymbolIndex::InMemorySymbolIndex(
-    const std::vector<SymbolInfo> &Symbols) {
+    const std::vector<SymbolAndSignals> &Symbols) {
   for (const auto &Symbol : Symbols)
-    LookupTable[Symbol.getName()].push_back(Symbol);
+    LookupTable[Symbol.Symbol.getName()].push_back(Symbol);
 }
 
-std::vector<SymbolInfo>
+std::vector<SymbolAndSignals>
 InMemorySymbolIndex::search(llvm::StringRef Identifier) {
   auto I = LookupTable.find(Identifier);
   if (I != LookupTable.end())

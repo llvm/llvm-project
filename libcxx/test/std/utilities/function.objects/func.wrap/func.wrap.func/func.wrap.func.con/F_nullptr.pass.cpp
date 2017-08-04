@@ -14,7 +14,7 @@
 // function(Fp);
 
 // Ensure that __not_null works for all function types.
-// See https://llvm.org/bugs/show_bug.cgi?id=23589
+// See https://bugs.llvm.org/show_bug.cgi?id=23589
 
 //------------------------------------------------------------------------------
 // TESTING std::function<...>::__not_null(Callable)
@@ -31,7 +31,7 @@
 //    types can be null. The other categories are not tested here.
 //  3) '__not_null(Callable)' is well formed when the call signature includes
 //      varargs.
-//  4) '__not_null(Callable)' works for Callable types with all aritys less
+//  4) '__not_null(Callable)' works for Callable types with all arities less
 //     than or equal to 3 in C++03.
 //  5) '__not_null(Callable)' works when 'Callable' is a member function
 //     pointer to a cv or ref qualified function type.

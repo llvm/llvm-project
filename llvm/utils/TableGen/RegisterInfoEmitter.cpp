@@ -93,8 +93,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
   // Register enums are stored as uint16_t in the tables. Make sure we'll fit.
   assert(Registers.size() <= 0xffff && "Too many regs to fit in tables");
 
-  std::string Namespace =
-      Registers.front().TheDef->getValueAsString("Namespace");
+  StringRef Namespace = Registers.front().TheDef->getValueAsString("Namespace");
 
   emitSourceFileHeader("Target Register Enum Values", OS);
 
@@ -354,7 +353,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
     for (unsigned i = I->second.size(), e = maxLength; i != e; ++i)
       I->second.push_back(-1);
 
-  std::string Namespace = Regs.front().TheDef->getValueAsString("Namespace");
+  StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
 
   OS << "// " << Namespace << " Dwarf<->LLVM register mappings.\n";
 
@@ -464,7 +463,7 @@ void RegisterInfoEmitter::EmitRegMapping(
   if (!maxLength)
     return;
 
-  std::string Namespace = Regs.front().TheDef->getValueAsString("Namespace");
+  StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
 
   // Emit reverse information about the dwarf register numbers.
   for (unsigned j = 0; j < 2; ++j) {
@@ -1023,18 +1022,14 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
-    // Asserts to make sure values will fit in table assuming types from
-    // MCRegisterInfo.h
-    assert((RC.SpillSize/8) <= 0xffff && "SpillSize too large.");
-    assert((RC.SpillAlignment/8) <= 0xffff && "SpillAlignment too large.");
-    assert(RC.CopyCost >= -128 && RC.CopyCost <= 127 && "Copy cost too large.");
-
+    assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
+    // Register size and spill size will become independent, but are not at
+    // the moment. For now use SpillSize as the register size.
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
        << RegClassStrings.get(RC.getName()) << ", "
        << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
        << RC.getQualifiedName() + "RegClassID" << ", "
        << RC.SpillSize/8 << ", "
-       << RC.SpillAlignment/8 << ", "
        << RC.CopyCost << ", "
        << ( RC.Allocatable ? "true" : "false" ) << " },\n";
   }
@@ -1200,7 +1195,8 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "\" };\n\n";
 
   // Emit SubRegIndex lane masks, including 0.
-  OS << "\nstatic const LaneBitmask SubRegIndexLaneMaskTable[] = {\n  LaneBitmask::getAll(),\n";
+  OS << "\nstatic const LaneBitmask SubRegIndexLaneMaskTable[] = {\n  "
+        "LaneBitmask::getAll(),\n";
   for (const auto &Idx : SubRegIndices) {
     printMask(OS << "  ", Idx.LaneMask);
     OS << ", // " << Idx.getName() << '\n';
@@ -1239,7 +1235,8 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
     BitVector MaskBV(RegisterClasses.size());
 
     for (const auto &RC : RegisterClasses) {
-      OS << "static const uint32_t " << RC.getName() << "SubClassMask[] = {\n  ";
+      OS << "static const uint32_t " << RC.getName()
+         << "SubClassMask[] = {\n  ";
       printBitVectorAsHex(OS, RC.getSubClasses(), 32);
 
       // Emit super-reg class masks for any relevant SubRegIndices that can
@@ -1316,9 +1313,13 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
        << " {   // Register class instances\n";
 
     for (const auto &RC : RegisterClasses) {
+      assert(isUInt<16>(RC.SpillSize/8) && "SpillSize too large.");
+      assert(isUInt<16>(RC.SpillAlignment/8) && "SpillAlignment too large.");
       OS << "  extern const TargetRegisterClass " << RC.getName()
          << "RegClass = {\n    " << '&' << Target.getName()
          << "MCRegisterClasses[" << RC.getName() << "RegClassID],\n    "
+         << RC.SpillSize/8 << ", /* SpillSize */\n    "
+         << RC.SpillAlignment/8 << ", /* SpillAlignment */\n    "
          << "VTLists + " << VTSeqs.get(RC.VTs) << ",\n    " << RC.getName()
          << "SubClassMask,\n    SuperRegIdxSeqs + "
          << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    ";

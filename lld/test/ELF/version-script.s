@@ -14,7 +14,8 @@
 # RUN: ld.lld --version-script %t3.script -shared %t.o %t2.so -o %t3.so
 # RUN: llvm-readobj -dyn-symbols %t3.so | FileCheck --check-prefix=DSO2 %s
 
-# RUN: echo "VERSION_1.0 { global: foo1; local: *; };" > %t4.script
+## Also check that both "global:" and "global :" forms are accepted
+# RUN: echo "VERSION_1.0 { global : foo1; local : *; };" > %t4.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" >> %t4.script
 # RUN: ld.lld --version-script %t4.script -shared %t.o %t2.so -o %t4.so
 # RUN: llvm-readobj -dyn-symbols %t4.so | FileCheck --check-prefix=VERDSO %s

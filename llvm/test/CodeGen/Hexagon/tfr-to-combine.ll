@@ -8,7 +8,7 @@
 
 ; Function Attrs: nounwind
 define i64 @test1() #0 {
-; CHECK: combine(#10, #0)
+; CHECK: combine(#10,#0)
 entry:
   store i16 0, i16* @a, align 2
   store i16 10, i16* @b, align 2
@@ -17,7 +17,7 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @test2() #0 {
-; CHECK: combine(#0, r{{[0-9]+}})
+; CHECK: combine(#0,r{{[0-9]+}})
 entry:
   store i16 0, i16* @a, align 2
   %0 = load i16, i16* @c, align 2
@@ -27,7 +27,7 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @test4() #0 {
-; CHECK: combine(#0, #100)
+; CHECK: combine(#0,#100)
 entry:
   store i16 100, i16* @b, align 2
   store i16 0, i16* @a, align 2

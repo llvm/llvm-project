@@ -1,0 +1,563 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK
+
+--- |
+  define i32 @test_icmp_eq_i8(i8 %a, i8 %b) {
+    %r = icmp eq i8 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_eq_i16(i16 %a, i16 %b) {
+    %r = icmp eq i16 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_eq_i64(i64 %a, i64 %b) {
+    %r = icmp eq i64 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_eq_i32(i32 %a, i32 %b) {
+    %r = icmp eq i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_ne_i32(i32 %a, i32 %b) {
+    %r = icmp ne i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_ugt_i32(i32 %a, i32 %b) {
+    %r = icmp ugt i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_uge_i32(i32 %a, i32 %b) {
+    %r = icmp uge i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_ult_i32(i32 %a, i32 %b) {
+    %r = icmp ult i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_ule_i32(i32 %a, i32 %b) {
+    %r = icmp ule i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_sgt_i32(i32 %a, i32 %b) {
+    %r = icmp sgt i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_sge_i32(i32 %a, i32 %b) {
+    %r = icmp sge i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_slt_i32(i32 %a, i32 %b) {
+    %r = icmp slt i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+  define i32 @test_icmp_sle_i32(i32 %a, i32 %b) {
+    %r = icmp sle i32 %a, %b
+    %res = zext i1 %r to i32
+    ret i32 %res
+  }
+
+...
+---
+name:            test_icmp_eq_i8
+# CHECK-LABEL: name:  test_icmp_eq_i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %dil
+# CHECK-NEXT:     %1 = COPY %sil
+# CHECK-NEXT:     CMP8rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s8) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s8), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_eq_i16
+# CHECK-LABEL: name:  test_icmp_eq_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %di
+# CHECK-NEXT:     %1 = COPY %si
+# CHECK-NEXT:     CMP16rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s16), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_eq_i64
+# CHECK-LABEL: name:  test_icmp_eq_i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr64, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr64, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %rdi
+# CHECK-NEXT:     %1 = COPY %rsi
+# CHECK-NEXT:     CMP64rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(s64) = COPY %rsi
+    %2(s1) = G_ICMP intpred(eq), %0(s64), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_eq_i32
+# CHECK-LABEL: name:  test_icmp_eq_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_ne_i32
+# CHECK-LABEL: name:  test_icmp_ne_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETNEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(ne), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_ugt_i32
+# CHECK-LABEL: name:  test_icmp_ugt_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETAr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(ugt), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_uge_i32
+# CHECK-LABEL: name:  test_icmp_uge_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETAEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(uge), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_ult_i32
+# CHECK-LABEL: name:  test_icmp_ult_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETBr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(ult), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_ule_i32
+# CHECK-LABEL: name:  test_icmp_ule_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETBEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(ule), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_sgt_i32
+# CHECK-LABEL: name:  test_icmp_sgt_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETGr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(sgt), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_sge_i32
+# CHECK-LABEL: name:  test_icmp_sge_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETGEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(sge), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_slt_i32
+# CHECK-LABEL: name:  test_icmp_slt_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETLr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(slt), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_icmp_sle_i32
+# CHECK-LABEL: name:  test_icmp_sle_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %esi
+# CHECK-NEXT:     CMP32rr %0, %1, implicit-def %eflags
+# CHECK-NEXT:     %2 = SETLEr implicit %eflags
+# CHECK-NEXT:     %4 = SUBREG_TO_REG 0, %2, 1
+# CHECK-NEXT:     %3 = AND32ri8 %4, 1, implicit-def %eflags
+# CHECK-NEXT:     %eax = COPY %3
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(sle), %0(s32), %1
+    %3(s32) = G_ZEXT %2(s1)
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...

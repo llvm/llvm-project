@@ -12,10 +12,10 @@
 #include "lld/Core/File.h"
 #include "lld/Core/Writer.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 

@@ -190,7 +190,7 @@ define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 define i1 @test63(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test63(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 %A, true
-; CHECK-NEXT:    [[C:%.*]] = or i1 %B, [[NOT]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[NOT]], %B
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -201,7 +201,7 @@ define i1 @test63(i1 %A, i1 %B) {
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> %A, <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> %B, [[NOT]]
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[NOT]], %B
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -926,7 +926,7 @@ while.body:
 
 define i32 @test76(i1 %flag, i32* %x) {
 ; The load here must not be speculated around the select. One side of the
-; select is trivially dereferencable but may have a lower alignment than the
+; select is trivially dereferenceable but may have a lower alignment than the
 ; load does.
 ; CHECK-LABEL: @test76(
 ; CHECK: store i32 0, i32* %x
@@ -943,7 +943,7 @@ declare void @scribble_on_i32(i32*)
 
 define i32 @test77(i1 %flag, i32* %x) {
 ; The load here must not be speculated around the select. One side of the
-; select is trivially dereferencable but may have a lower alignment than the
+; select is trivially dereferenceable but may have a lower alignment than the
 ; load does.
 ; CHECK-LABEL: @test77(
 ; CHECK: %[[A:.*]] = alloca i32, align 1
@@ -1220,12 +1220,13 @@ entry:
 }
 
 define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
-  ; CHECK-LABEL: @test_select_select0(
-  ; CHECK: %[[C0:.*]] = icmp sge i32 %a, %v1
-  ; CHECK-NEXT: %[[C1:.*]] = icmp slt i32 %a, %v2
-  ; CHECK-NEXT: %[[C:.*]] = and i1 %[[C1]], %[[C0]]
-  ; CHECK-NEXT: %[[SEL:.*]] = select i1 %[[C]], i32 %r0, i32 %r1
-  ; CHECK-NEXT: ret i32 %[[SEL]]
+; CHECK-LABEL: @test_select_select0(
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, %v1
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 %r1, i32 %r0
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %a, %v2
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 %r1
+; CHECK-NEXT:    ret i32 [[S1]]
+;
   %c0 = icmp sge i32 %a, %v1
   %s0 = select i1 %c0, i32 %r0, i32 %r1
   %c1 = icmp slt i32 %a, %v2
@@ -1234,12 +1235,13 @@ define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 }
 
 define i32 @test_select_select1(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
-  ; CHECK-LABEL: @test_select_select1(
-  ; CHECK: %[[C0:.*]] = icmp sge i32 %a, %v1
-  ; CHECK-NEXT: %[[C1:.*]] = icmp slt i32 %a, %v2
-  ; CHECK-NEXT: %[[C:.*]] = or i1 %[[C1]], %[[C0]]
-  ; CHECK-NEXT: %[[SEL:.*]] = select i1 %[[C]], i32 %r0, i32 %r1
-  ; CHECK-NEXT: ret i32 %[[SEL]]
+; CHECK-LABEL: @test_select_select1(
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, %v1
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 %r1, i32 %r0
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %a, %v2
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 %r0, i32 [[S0]]
+; CHECK-NEXT:    ret i32 [[S1]]
+;
   %c0 = icmp sge i32 %a, %v1
   %s0 = select i1 %c0, i32 %r0, i32 %r1
   %c1 = icmp slt i32 %a, %v2
@@ -1264,11 +1266,10 @@ define i32 @PR23757(i32 %x) {
 define i32 @PR27137(i32 %a) {
 ; CHECK-LABEL: @PR27137(
 ; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 %a, -1
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, 0
+; CHECK-NEXT:    [[C0:%.*]] = icmp sgt i32 [[NOT_A]], -1
 ; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[NOT_A]], i32 -1
 ; CHECK-NEXT:    ret i32 [[S0]]
 ;
-
   %not_a = xor i32 %a, -1
   %c0 = icmp slt i32 %a, 0
   %s0 = select i1 %c0, i32 %not_a, i32 -1
@@ -1299,11 +1300,22 @@ define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
   ret <2 x i32> %x.xor
 }
 
-; Make sure that undef elements of the select condition are translated into undef elements of the shuffle mask.
-
 define <4 x i32> @canonicalize_to_shuffle(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @canonicalize_to_shuffle(
-; CHECK-NEXT:    [[SEL:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 undef, i32 6, i32 undef>
+; CHECK-NEXT:    [[SEL:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %sel = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %sel
+}
+
+; Undef elements of the select condition may not be translated into undef elements of a shuffle mask
+; because undef in a shuffle mask means we can return anything, not just one of the selected values.
+; https://bugs.llvm.org/show_bug.cgi?id=32486
+
+define <4 x i32> @undef_elts_in_condition(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @undef_elts_in_condition(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> <i1 true, i1 undef, i1 false, i1 undef>, <4 x i32> %a, <4 x i32> %b
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %sel = select <4 x i1> <i1 true, i1 undef, i1 false, i1 undef>, <4 x i32> %a, <4 x i32> %b
@@ -1332,3 +1344,36 @@ define <4 x i32> @cannot_canonicalize_to_shuffle2(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %sel
 }
 
+declare void @llvm.assume(i1)
+
+define i8 @assume_cond_true(i1 %cond, i8 %x, i8 %y) {
+; CHECK-LABEL: @assume_cond_true(
+; CHECK-NEXT:    call void @llvm.assume(i1 %cond)
+; CHECK-NEXT:    ret i8 %x
+;
+  call void @llvm.assume(i1 %cond)
+  %sel = select i1 %cond, i8 %x, i8 %y
+  ret i8 %sel
+}
+
+; computeKnownBitsFromAssume() understands the 'not' of an assumed condition.
+
+define i8 @assume_cond_false(i1 %cond, i8 %x, i8 %y) {
+; CHECK-LABEL: @assume_cond_false(
+; CHECK-NEXT:    [[NOTCOND:%.*]] = xor i1 %cond, true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
+; CHECK-NEXT:    ret i8 %y
+;
+  %notcond = xor i1 %cond, true
+  call void @llvm.assume(i1 %notcond)
+  %sel = select i1 %cond, i8 %x, i8 %y
+  ret i8 %sel
+}
+
+; Test case to make sure we don't consider an all ones float values for converting the select into a sext.
+define <4 x float> @PR33721(<4 x float> %w) {
+entry:
+  %0 = fcmp ole <4 x float> %w, zeroinitializer
+  %1 = select <4 x i1> %0, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, <4 x float> zeroinitializer
+  ret <4 x float> %1
+}

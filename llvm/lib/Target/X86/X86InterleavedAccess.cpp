@@ -16,9 +16,11 @@
 
 #include "X86ISelLowering.h"
 #include "X86TargetMachine.h"
+#include "llvm/Analysis/VectorUtils.h"
 
 using namespace llvm;
 
+namespace {
 /// \brief This class holds necessary information to represent an interleaved
 /// access group and supports utilities to lower the group into
 /// X86-specific instructions/intrinsics.
@@ -27,7 +29,6 @@ using namespace llvm;
 ///        %wide.vec = load <8 x i32>, <8 x i32>* %ptr
 ///        %v0 = shuffle <8 x i32> %wide.vec, <8 x i32> undef, <0, 2, 4, 6>
 ///        %v1 = shuffle <8 x i32> %wide.vec, <8 x i32> undef, <1, 3, 5, 7>
-
 class X86InterleavedAccessGroup {
   /// \brief Reference to the wide-load instruction of an interleaved access
   /// group.
@@ -50,9 +51,8 @@ class X86InterleavedAccessGroup {
   IRBuilder<> &Builder;
 
   /// \brief Breaks down a vector \p 'Inst' of N elements into \p NumSubVectors
-  /// sub vectors of type \p T. Returns true and the sub-vectors in
-  /// \p DecomposedVectors if it decomposes the Inst, returns false otherwise.
-  bool decompose(Instruction *Inst, unsigned NumSubVectors, VectorType *T,
+  /// sub vectors of type \p T. Returns the sub-vectors in \p DecomposedVectors.
+  void decompose(Instruction *Inst, unsigned NumSubVectors, VectorType *T,
                  SmallVectorImpl<Instruction *> &DecomposedVectors);
 
   /// \brief Performs matrix transposition on a 4x4 matrix \p InputVectors and
@@ -80,8 +80,7 @@ public:
   /// target information \p STarget.
   explicit X86InterleavedAccessGroup(Instruction *I,
                                      ArrayRef<ShuffleVectorInst *> Shuffs,
-                                     ArrayRef<unsigned> Ind,
-                                     const unsigned F,
+                                     ArrayRef<unsigned> Ind, const unsigned F,
                                      const X86Subtarget &STarget,
                                      IRBuilder<> &B)
       : Inst(I), Shuffles(Shuffs), Indices(Ind), Factor(F), Subtarget(STarget),
@@ -95,54 +94,68 @@ public:
   /// instructions/intrinsics.
   bool lowerIntoOptimizedSequence();
 };
+} // end anonymous namespace
 
 bool X86InterleavedAccessGroup::isSupported() const {
   VectorType *ShuffleVecTy = Shuffles[0]->getType();
   uint64_t ShuffleVecSize = DL.getTypeSizeInBits(ShuffleVecTy);
   Type *ShuffleEltTy = ShuffleVecTy->getVectorElementType();
 
-  if (DL.getTypeSizeInBits(Inst->getType()) < Factor * ShuffleVecSize)
-    return false;
+  // Currently, lowering is supported for 4-element vectors of 64 bits on AVX.
+  uint64_t ExpectedShuffleVecSize;
+  if (isa<LoadInst>(Inst))
+    ExpectedShuffleVecSize = 256;
+  else
+    ExpectedShuffleVecSize = 1024;
 
-  // Currently, lowering is supported for 64 bits on AVX.
-  if (!Subtarget.hasAVX() || ShuffleVecSize != 256 ||
+  if (!Subtarget.hasAVX() || ShuffleVecSize != ExpectedShuffleVecSize ||
       DL.getTypeSizeInBits(ShuffleEltTy) != 64 || Factor != 4)
     return false;
 
   return true;
 }
 
-bool X86InterleavedAccessGroup::decompose(
+void X86InterleavedAccessGroup::decompose(
     Instruction *VecInst, unsigned NumSubVectors, VectorType *SubVecTy,
     SmallVectorImpl<Instruction *> &DecomposedVectors) {
+
+  assert((isa<LoadInst>(VecInst) || isa<ShuffleVectorInst>(VecInst)) &&
+         "Expected Load or Shuffle");
+
   Type *VecTy = VecInst->getType();
   (void)VecTy;
   assert(VecTy->isVectorTy() &&
          DL.getTypeSizeInBits(VecTy) >=
              DL.getTypeSizeInBits(SubVecTy) * NumSubVectors &&
          "Invalid Inst-size!!!");
-  assert(VecTy->getVectorElementType() == SubVecTy->getVectorElementType() &&
-         "Element type mismatched!!!");
 
-  if (!isa<LoadInst>(VecInst))
-    return false;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(VecInst)) {
+    Value *Op0 = SVI->getOperand(0);
+    Value *Op1 = SVI->getOperand(1);
 
+    // Generate N(= NumSubVectors) shuffles of T(= SubVecTy) type.
+    for (unsigned i = 0; i < NumSubVectors; ++i)
+      DecomposedVectors.push_back(
+          cast<ShuffleVectorInst>(Builder.CreateShuffleVector(
+              Op0, Op1, createSequentialMask(Builder, Indices[i],
+                                             SubVecTy->getVectorNumElements(), 0))));
+    return;
+  }
+
+  // Decompose the load instruction.
   LoadInst *LI = cast<LoadInst>(VecInst);
   Type *VecBasePtrTy = SubVecTy->getPointerTo(LI->getPointerAddressSpace());
-
   Value *VecBasePtr =
       Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
 
-  // Generate N loads of T type
+  // Generate N loads of T type.
   for (unsigned i = 0; i < NumSubVectors; i++) {
-    // TODO: Support inbounds GEP
+    // TODO: Support inbounds GEP.
     Value *NewBasePtr = Builder.CreateGEP(VecBasePtr, Builder.getInt32(i));
     Instruction *NewLoad =
         Builder.CreateAlignedLoad(NewBasePtr, LI->getAlignment());
     DecomposedVectors.push_back(NewLoad);
   }
-
-  return true;
 }
 
 void X86InterleavedAccessGroup::transpose_4x4(
@@ -180,21 +193,46 @@ void X86InterleavedAccessGroup::transpose_4x4(
 // instructions/intrinsics.
 bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   SmallVector<Instruction *, 4> DecomposedVectors;
-  VectorType *VecTy = Shuffles[0]->getType();
-  // Try to generate target-sized register(/instruction).
-  if (!decompose(Inst, Factor, VecTy, DecomposedVectors))
-    return false;
-
   SmallVector<Value *, 4> TransposedVectors;
-  // Perform matrix-transposition in order to compute interleaved
-  // results by generating some sort of (optimized) target-specific
-  // instructions.
+  VectorType *ShuffleTy = Shuffles[0]->getType();
+
+  if (isa<LoadInst>(Inst)) {
+    // Try to generate target-sized register(/instruction).
+    decompose(Inst, Factor, ShuffleTy, DecomposedVectors);
+
+    // Perform matrix-transposition in order to compute interleaved
+    // results by generating some sort of (optimized) target-specific
+    // instructions.
+    transpose_4x4(DecomposedVectors, TransposedVectors);
+
+    // Now replace the unoptimized-interleaved-vectors with the
+    // transposed-interleaved vectors.
+    for (unsigned i = 0, e = Shuffles.size(); i < e; ++i)
+      Shuffles[i]->replaceAllUsesWith(TransposedVectors[Indices[i]]);
+
+    return true;
+  }
+
+  Type *ShuffleEltTy = ShuffleTy->getVectorElementType();
+  unsigned NumSubVecElems = ShuffleTy->getVectorNumElements() / Factor;
+
+  // Lower the interleaved stores:
+  //   1. Decompose the interleaved wide shuffle into individual shuffle
+  //   vectors.
+  decompose(Shuffles[0], Factor,
+            VectorType::get(ShuffleEltTy, NumSubVecElems), DecomposedVectors);
+
+  //   2. Transpose the interleaved-vectors into vectors of contiguous
+  //      elements.
   transpose_4x4(DecomposedVectors, TransposedVectors);
 
-  // Now replace the unoptimized-interleaved-vectors with the
-  // transposed-interleaved vectors.
-  for (unsigned i = 0; i < Shuffles.size(); i++)
-    Shuffles[i]->replaceAllUsesWith(TransposedVectors[Indices[i]]);
+  //   3. Concatenate the contiguous-vectors back into a wide vector.
+  Value *WideVec = concatenateVectors(Builder, TransposedVectors);
+
+  //   4. Generate a store instruction for wide-vec.
+  StoreInst *SI = cast<StoreInst>(Inst);
+  Builder.CreateAlignedStore(WideVec, SI->getPointerOperand(),
+                             SI->getAlignment());
 
   return true;
 }
@@ -215,6 +253,32 @@ bool X86TargetLowering::lowerInterleavedLoad(
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
   X86InterleavedAccessGroup Grp(LI, Shuffles, Indices, Factor, Subtarget,
+                                Builder);
+
+  return Grp.isSupported() && Grp.lowerIntoOptimizedSequence();
+}
+
+bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
+                                              ShuffleVectorInst *SVI,
+                                              unsigned Factor) const {
+  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
+         "Invalid interleave factor");
+
+  assert(SVI->getType()->getVectorNumElements() % Factor == 0 &&
+         "Invalid interleaved store");
+
+  // Holds the indices of SVI that correspond to the starting index of each
+  // interleaved shuffle.
+  SmallVector<unsigned, 4> Indices;
+  auto Mask = SVI->getShuffleMask();
+  for (unsigned i = 0; i < Factor; i++)
+    Indices.push_back(Mask[i]);
+
+  ArrayRef<ShuffleVectorInst *> Shuffles = makeArrayRef(SVI);
+
+  // Create an interleaved access group.
+  IRBuilder<> Builder(SI);
+  X86InterleavedAccessGroup Grp(SI, Shuffles, Indices, Factor, Subtarget,
                                 Builder);
 
   return Grp.isSupported() && Grp.lowerIntoOptimizedSequence();

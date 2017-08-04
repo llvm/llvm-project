@@ -14,47 +14,93 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMSUBTARGET_H
 #define LLVM_LIB_TARGET_ARM_ARMSUBTARGET_H
 
-
+#include "ARMBaseInstrInfo.h"
+#include "ARMBaseRegisterInfo.h"
 #include "ARMFrameLowering.h"
 #include "ARMISelLowering.h"
-#include "ARMInstrInfo.h"
 #include "ARMSelectionDAGInfo.h"
-#include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMMCTargetDesc.h"
-#include "Thumb1FrameLowering.h"
-#include "Thumb1InstrInfo.h"
-#include "Thumb2InstrInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <memory>
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "ARMGenSubtargetInfo.inc"
 
 namespace llvm {
+
+class ARMBaseTargetMachine;
 class GlobalValue;
 class StringRef;
-class TargetOptions;
-class ARMBaseTargetMachine;
 
 class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
-    Others, CortexA5, CortexA7, CortexA8, CortexA9, CortexA12, CortexA15,
-    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexR52, CortexM3,
-    CortexA32, CortexA35, CortexA53, CortexA57, CortexA72, CortexA73,
-    Krait, Swift, ExynosM1
+    Others,
+
+    CortexA12,
+    CortexA15,
+    CortexA17,
+    CortexA32,
+    CortexA35,
+    CortexA5,
+    CortexA53,
+    CortexA57,
+    CortexA7,
+    CortexA72,
+    CortexA73,
+    CortexA8,
+    CortexA9,
+    CortexM3,
+    CortexR4,
+    CortexR4F,
+    CortexR5,
+    CortexR52,
+    CortexR7,
+    ExynosM1,
+    Krait,
+    Kryo,
+    Swift
   };
   enum ARMProcClassEnum {
-    None, AClass, RClass, MClass
+    None,
+
+    AClass,
+    MClass,
+    RClass
   };
   enum ARMArchEnum {
-    ARMv2, ARMv2a, ARMv3, ARMv3m, ARMv4, ARMv4t, ARMv5, ARMv5t, ARMv5te,
-    ARMv5tej, ARMv6, ARMv6k, ARMv6kz, ARMv6t2, ARMv6m, ARMv6sm, ARMv7a, ARMv7r,
-    ARMv7m, ARMv7em, ARMv8a, ARMv81a, ARMv82a, ARMv8mMainline, ARMv8mBaseline,
+    ARMv2,
+    ARMv2a,
+    ARMv3,
+    ARMv3m,
+    ARMv4,
+    ARMv4t,
+    ARMv5,
+    ARMv5t,
+    ARMv5te,
+    ARMv5tej,
+    ARMv6,
+    ARMv6k,
+    ARMv6kz,
+    ARMv6m,
+    ARMv6sm,
+    ARMv6t2,
+    ARMv7a,
+    ARMv7em,
+    ARMv7m,
+    ARMv7r,
+    ARMv7ve,
+    ARMv81a,
+    ARMv82a,
+    ARMv8a,
+    ARMv8mBaseline,
+    ARMv8mMainline,
     ARMv8r
   };
 
@@ -162,15 +208,11 @@ protected:
   /// FP registers for VFPv3.
   bool HasD16 = false;
 
-  /// HasHardwareDivide - True if subtarget supports [su]div
-  bool HasHardwareDivide = false;
+  /// HasHardwareDivide - True if subtarget supports [su]div in Thumb mode
+  bool HasHardwareDivideInThumb = false;
 
   /// HasHardwareDivideInARM - True if subtarget supports [su]div in ARM mode
   bool HasHardwareDivideInARM = false;
-
-  /// HasT2ExtractPack - True if subtarget supports thumb2 extract/pack
-  /// instructions.
-  bool HasT2ExtractPack = false;
 
   /// HasDataBarrier - True if the subtarget supports DMB / DSB data barrier
   /// instructions.
@@ -192,6 +234,10 @@ protected:
   /// CPSR setting instruction.
   bool AvoidCPSRPartialUpdate = false;
 
+  /// CheapPredicableCPSRDef - If true, disable +1 predication cost
+  /// for instructions updating CPSR. Enabled for Cortex-A57.
+  bool CheapPredicableCPSRDef = false;
+
   /// AvoidMOVsShifterOperand - If true, codegen should avoid using flag setting
   /// movs with shifter operand (i.e. asr, lsl, lsr).
   bool AvoidMOVsShifterOperand = false;
@@ -199,6 +245,11 @@ protected:
   /// HasRetAddrStack - Some processors perform return stack prediction. CodeGen should
   /// avoid issue "normal" call instructions to callees which do not return.
   bool HasRetAddrStack = false;
+
+  /// HasBranchPredictor - True if the subtarget has a branch predictor. Having
+  /// a branch predictor or not changes the expected cost of taking a branch
+  /// which affects the choice of whether to use predicated instructions.
+  bool HasBranchPredictor = true;
 
   /// HasMPExtension - True if the subtarget supports Multiprocessing
   /// extension (ARMv7 only).
@@ -238,6 +289,10 @@ protected:
 
   /// HasFPAO - if true, processor  does positive address offset computation faster
   bool HasFPAO = false;
+
+  /// HasFuseAES - if true, processor executes back to back AES instruction
+  /// pairs faster.
+  bool HasFuseAES = false;
 
   /// If true, if conversion may decide to leave some instructions unpredicated.
   bool IsProfitableToUnpredicate = false;
@@ -310,6 +365,10 @@ protected:
   /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
   bool UseSjLjEH = false;
 
+  /// Implicitly convert an instruction to a different one if its immediates
+  /// cannot be encoded. For example, ADD r0, r1, #FFFFFFFF -> SUB r0, r1, #1.
+  bool NegativeImmediates = true;
+
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   unsigned stackAlignment = 4;
@@ -362,6 +421,7 @@ public:
   unsigned getMaxInlineSizeThreshold() const {
     return 64;
   }
+
   /// ParseSubtargetFeatures - Parses features string setting specified
   /// subtarget options.  Definition of function is auto generated by tblgen.
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
@@ -373,15 +433,19 @@ public:
   const ARMSelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
+
   const ARMBaseInstrInfo *getInstrInfo() const override {
     return InstrInfo.get();
   }
+
   const ARMTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
+
   const ARMFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
   }
+
   const ARMBaseRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo->getRegisterInfo();
   }
@@ -451,19 +515,21 @@ public:
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
   bool hasVirtualization() const { return HasVirtualization; }
+
   bool useNEONForSinglePrecisionFP() const {
     return hasNEON() && UseNEONForSinglePrecisionFP;
   }
 
-  bool hasDivide() const { return HasHardwareDivide; }
+  bool hasDivideInThumbMode() const { return HasHardwareDivideInThumb; }
   bool hasDivideInARMMode() const { return HasHardwareDivideInARM; }
-  bool hasT2ExtractPack() const { return HasT2ExtractPack; }
   bool hasDataBarrier() const { return HasDataBarrier; }
   bool hasV7Clrex() const { return HasV7Clrex; }
   bool hasAcquireRelease() const { return HasAcquireRelease; }
+
   bool hasAnyDataBarrier() const {
     return HasDataBarrier || (hasV6Ops() && !isThumb());
   }
+
   bool useMulOps() const { return UseMulOps; }
   bool useFPVMLx() const { return !SlowFPVMLx; }
   bool hasVMLxForwarding() const { return HasVMLxForwarding; }
@@ -490,8 +556,10 @@ public:
   bool nonpipelinedVFP() const { return NonpipelinedVFP; }
   bool prefers32BitThumb() const { return Pref32BitThumb; }
   bool avoidCPSRPartialUpdate() const { return AvoidCPSRPartialUpdate; }
+  bool cheapPredicableCPSRDef() const { return CheapPredicableCPSRDef; }
   bool avoidMOVsShifterOperand() const { return AvoidMOVsShifterOperand; }
   bool hasRetAddrStack() const { return HasRetAddrStack; }
+  bool hasBranchPredictor() const { return HasBranchPredictor; }
   bool hasMPExtension() const { return HasMPExtension; }
   bool hasDSP() const { return HasDSP; }
   bool useNaClTrap() const { return UseNaClTrap; }
@@ -502,6 +570,10 @@ public:
   bool hasFP16() const { return HasFP16; }
   bool hasD16() const { return HasD16; }
   bool hasFullFP16() const { return HasFullFP16; }
+
+  bool hasFuseAES() const { return HasFuseAES; }
+  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  bool hasFusion() const { return hasFuseAES(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
@@ -561,9 +633,10 @@ public:
            TargetTriple.getEnvironment() == Triple::EABIHF ||
            isTargetWindows() || isAAPCS16_ABI();
   }
+
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
-  virtual bool isXRaySupported() const override;
+  bool isXRaySupported() const override;
 
   bool isAPCS_ABI() const;
   bool isAAPCS_ABI() const;
@@ -588,6 +661,7 @@ public:
   bool useR7AsFramePointer() const {
     return isTargetDarwin() || (!isTargetWindows() && isThumb());
   }
+
   /// Returns true if the frame setup is split into two separate pushes (first
   /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
   /// to lr. This is always required on Thumb1-only targets, as the push and
@@ -656,6 +730,7 @@ public:
   /// True if fast-isel is used.
   bool useFastISel() const;
 };
-} // End llvm namespace
 
-#endif  // ARMSUBTARGET_H
+} // end namespace llvm
+
+#endif  // LLVM_LIB_TARGET_ARM_ARMSUBTARGET_H

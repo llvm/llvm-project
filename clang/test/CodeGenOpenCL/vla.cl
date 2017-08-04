@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -triple "spir-unknown-unknown" -O0 -cl-std=CL2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple "spir-unknown-unknown" -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,SPIR %s
+// RUN: %clang_cc1 -emit-llvm -triple amdgcn-amd-amdhsa-opencl -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,SPIR %s
+// RUN: %clang_cc1 -emit-llvm -triple amdgcn-amd-amdhsa-amdgizcl -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,GIZ %s
 
 constant int sz0 = 5;
 // CHECK: @sz0 = addrspace(2) constant i32 5
@@ -11,8 +13,12 @@ const constant int sz2 = 8;
 kernel void testvla()
 {
   int vla0[sz0];
-// CHECK: %vla0 = alloca [5 x i32]
+// SPIR: %vla0 = alloca [5 x i32]
+// SPIR-NOT: %vla0 = alloca [5 x i32]{{.*}}addrspace
+// GIZ: %vla0 = alloca [5 x i32]{{.*}}addrspace(5)
   char vla1[sz1];
-// CHECK: %vla1 = alloca [16 x i8]
+// SPIR: %vla1 = alloca [16 x i8]
+// SPIR-NOT: %vla1 = alloca [16 x i8]{{.*}}addrspace
+// GIZ: %vla1 = alloca [16 x i8]{{.*}}addrspace(5)
   local short vla2[sz2];
 }

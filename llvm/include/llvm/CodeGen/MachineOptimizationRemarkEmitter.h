@@ -134,7 +134,7 @@ using MNV = DiagnosticInfoMIROptimization::MachineArgument;
 ///
 /// It allows reporting when optimizations are performed and when they are not
 /// along with the reasons for it.  Hotness information of the corresponding
-/// code region can be included in the remark if DiagnosticHotnessRequested is
+/// code region can be included in the remark if DiagnosticsHotnessRequested is
 /// enabled in the LLVM context.
 class MachineOptimizationRemarkEmitter {
 public:

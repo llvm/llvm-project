@@ -18,9 +18,9 @@
 ; CHECK: !3 = !DICompositeType({{.*}})
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "Class", size: 32, align: 32)
 
-; CHECK-NEXT: !4 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "foo", scope: !0, entity: !1, line: 7)
+; CHECK-NEXT: !4 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "foo", scope: !0, entity: !1, file: !2, line: 7)
 !4 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "foo", scope: !0,
-                       entity: !1, line: 7)
+                       entity: !1, file: !2, line: 7)
 
 ; CHECK-NEXT: !5 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !0)
 !5 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !0)

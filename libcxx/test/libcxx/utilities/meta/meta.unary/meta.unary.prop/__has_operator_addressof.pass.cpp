@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // type_traits
 
 // extension
@@ -16,7 +18,6 @@
 
 #include <type_traits>
 
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
 
 struct A
 {
@@ -54,11 +55,9 @@ struct J
     constexpr J* operator&() const &&;
 };
 
-#endif  // _LIBCPP_HAS_NO_CONSTEXPR
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
     static_assert(std::__has_operator_addressof<int>::value == false, "");
     static_assert(std::__has_operator_addressof<A>::value == false, "");
     static_assert(std::__has_operator_addressof<B>::value == true, "");
@@ -67,5 +66,4 @@ int main()
     static_assert(std::__has_operator_addressof<G>::value == true, "");
     static_assert(std::__has_operator_addressof<H>::value == true, "");
     static_assert(std::__has_operator_addressof<J>::value == true, "");
-#endif  // _LIBCPP_HAS_NO_CONSTEXPR
 }

@@ -30,8 +30,7 @@ entry:
 ; O32-DAG:           lw $2, %lo(float)([[R1]])
 ; N32-DAG:           lui [[R1:\$[0-9]+]], %hi(float)
 ; N32-DAG:           lw $2, %lo(float)([[R1]])
-; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(float)(
-; N64-DAG:           lw $2, 0([[R1]])
+; N64-DAG:           lw $2, %lo(float)([[R1:\$[0-9+]]])
 
 define double @retdouble() nounwind {
 entry:
@@ -44,5 +43,4 @@ entry:
 ; O32-DAG:           addiu [[R2:\$[0-9]+]], [[R1]], %lo(double)
 ; O32-DAG:           lw $3, 4([[R2]])
 ; N32-DAG:           ld $2, %lo(double)([[R1:\$[0-9]+]])
-; N64-DAG:           ld  [[R1:\$[0-9]+]], %got_disp(double)(
-; N64-DAG:           ld $2, 0([[R1]])
+; N64-DAG:           ld $2, %lo(double)([[R1:\$[0-9]+]])

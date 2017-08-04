@@ -26,18 +26,18 @@
 // offset for an add that needs wrapping.
 def regPlusImm : PatFrag<(ops node:$addr, node:$off),
                          (add node:$addr, node:$off),
-                         [{ return N->getFlags()->hasNoUnsignedWrap(); }]>;
+                         [{ return N->getFlags().hasNoUnsignedWrap(); }]>;
 
 // Treat an 'or' node as an 'add' if the or'ed bits are known to be zero.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))
     return CurDAG->MaskedValueIsZero(N->getOperand(0), CN->getAPIntValue());
 
-  APInt KnownZero0, KnownOne0;
-  CurDAG->computeKnownBits(N->getOperand(0), KnownZero0, KnownOne0, 0);
-  APInt KnownZero1, KnownOne1;
-  CurDAG->computeKnownBits(N->getOperand(1), KnownZero1, KnownOne1, 0);
-  return (~KnownZero0 & ~KnownZero1) == 0;
+  KnownBits Known0;
+  CurDAG->computeKnownBits(N->getOperand(0), Known0, 0);
+  KnownBits Known1;
+  CurDAG->computeKnownBits(N->getOperand(1), Known1, 0);
+  return (~Known0.Zero & ~Known1.Zero) == 0;
 }]>;
 
 // GlobalAddresses are conceptually unsigned values, so we can also fold them
@@ -47,7 +47,7 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
 def regPlusGA : PatFrag<(ops node:$addr, node:$off),
                         (add node:$addr, node:$off),
                         [{
-  return N->getFlags()->hasNoUnsignedWrap();
+  return N->getFlags().hasNoUnsignedWrap();
 }]>;
 
 // We don't need a regPlusES because external symbols never have constant
@@ -673,9 +673,9 @@ def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
                          Requires<[HasAddr32]>;
 
 // Grow memory.
-def GROW_MEMORY_I32 : I<(outs), (ins i32imm:$flags, I32:$delta),
+def GROW_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
                         [],
-                        "grow_memory\t$delta", 0x40>,
+                        "grow_memory\t$dst, $delta", 0x40>,
                       Requires<[HasAddr32]>;
 
 } // Defs = [ARGUMENTS]

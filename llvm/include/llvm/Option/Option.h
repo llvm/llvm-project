@@ -1,4 +1,4 @@
-//===--- Option.h - Abstract Driver Options ---------------------*- C++ -*-===//
+//===- Option.h - Abstract Driver Options -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,15 +12,23 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <string>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace opt {
+
 class Arg;
 class ArgList;
+
 /// ArgStringList - Type used for constructing argv lists for subprocesses.
-typedef SmallVector<const char*, 16> ArgStringList;
+using ArgStringList = SmallVector<const char *, 16>;
 
 /// Base flags for all options. Custom flags may be added after.
 enum DriverFlag {
@@ -49,6 +57,7 @@ public:
     UnknownClass,
     FlagClass,
     JoinedClass,
+    ValuesClass,
     SeparateClass,
     RemainingArgsClass,
     RemainingArgsJoinedClass,
@@ -147,6 +156,7 @@ public:
     case CommaJoinedClass:
       return RenderCommaJoinedStyle;
     case FlagClass:
+    case ValuesClass:
     case SeparateClass:
     case MultiArgClass:
     case JoinedOrSeparateClass:
@@ -202,6 +212,7 @@ public:
 };
 
 } // end namespace opt
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_OPTION_OPTION_H

@@ -644,7 +644,7 @@ body:             |
   bb.1.if.then:
     successors: %bb.2.while.body
   
-    ADJCALLSTACKDOWN 0, implicit-def dead %sp, implicit %sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
     CALL @g, csr, implicit-def dead %rca, implicit %sp, implicit-def %sp, implicit-def %rv
     ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
   
@@ -663,7 +663,7 @@ body:             |
   bb.4.if.then4:
     successors: %bb.5.while.body6
   
-    ADJCALLSTACKDOWN 0, implicit-def dead %sp, implicit %sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
     CALL @g, csr, implicit-def dead %rca, implicit %sp, implicit-def %sp, implicit-def %rv
     ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
   

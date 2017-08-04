@@ -32,6 +32,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   const AMDGPUSubtarget *ST;
   const AMDGPUTargetLowering *TLI;
+  bool IsGraphicsShader;
 
   const AMDGPUSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
@@ -62,20 +63,35 @@ public:
   explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(TM->getSubtargetImpl(F)),
-      TLI(ST->getTargetLowering()) {}
+      TLI(ST->getTargetLowering()),
+      IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}
 
   bool hasBranchDivergence() { return true; }
 
-  void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP);
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
     assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
     return TTI::PSK_FastHardware;
   }
 
-  unsigned getNumberOfRegisters(bool Vector);
-  unsigned getRegisterBitWidth(bool Vector);
+  unsigned getHardwareNumberOfRegisters(bool Vector) const;
+  unsigned getNumberOfRegisters(bool Vector) const;
+  unsigned getRegisterBitWidth(bool Vector) const ;
+  unsigned getMinVectorRegisterBitWidth() const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
+
+  bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
+                                  unsigned Alignment,
+                                  unsigned AddrSpace) const;
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                   unsigned Alignment,
+                                   unsigned AddrSpace) const;
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const;
+
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   int getArithmeticInstrCost(
@@ -90,8 +106,21 @@ public:
 
   int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
+  bool isAlwaysUniform(const Value *V) const;
+
+  unsigned getFlatAddressSpace() const {
+    // Don't bother running InferAddressSpaces pass on graphics shaders which
+    // don't use flat addressing.
+    if (IsGraphicsShader)
+      return -1;
+    return ST->hasFlatAddressSpace() ?
+      ST->getAMDGPUAS().FLAT_ADDRESS : ST->getAMDGPUAS().UNKNOWN_ADDRESS_SPACE;
+  }
 
   unsigned getVectorSplitCost() { return 0; }
+
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
+                          Type *SubTp);
 };
 
 } // end namespace llvm

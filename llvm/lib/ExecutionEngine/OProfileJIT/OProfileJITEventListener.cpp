@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Config/config.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/OProfileWrapper.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"

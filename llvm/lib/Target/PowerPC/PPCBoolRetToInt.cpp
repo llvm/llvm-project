@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements converting i1 values to i32 if they could be more
+// This file implements converting i1 values to i32/i64 if they could be more
 // profitably allocated as GPRs rather than CRs. This pass will become totally
 // unnecessary if Register Bank Allocation and Global Instruction Selection ever
 // go upstream.
 //
-// Presently, the pass converts i1 Constants, and Arguments to i32 if the
+// Presently, the pass converts i1 Constants, and Arguments to i32/i64 if the
 // transitive closure of their uses includes only PHINodes, CallInsts, and
 // ReturnInsts. The rational is that arguments are generally passed and returned
-// in GPRs rather than CRs, so casting them to i32 at the LLVM IR level will
+// in GPRs rather than CRs, so casting them to i32/i64 at the LLVM IR level will
 // actually save casts at the Machine Instruction level.
 //
 // It might be useful to expand this pass to add bit-wise operations to the list
@@ -33,11 +33,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
+#include "PPCTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -50,8 +51,9 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Pass.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/Support/Casting.h"
 #include <cassert>
 
 using namespace llvm;
@@ -87,17 +89,19 @@ class PPCBoolRetToInt : public FunctionPass {
     return Defs;
   }
 
-  // Translate a i1 value to an equivalent i32 value:
-  static Value *translate(Value *V) {
-    Type *Int32Ty = Type::getInt32Ty(V->getContext());
+  // Translate a i1 value to an equivalent i32/i64 value:
+  Value *translate(Value *V) {
+    Type *IntTy = ST->isPPC64() ? Type::getInt64Ty(V->getContext())
+                                : Type::getInt32Ty(V->getContext());
+
     if (auto *C = dyn_cast<Constant>(V))
-      return ConstantExpr::getZExt(C, Int32Ty);
+      return ConstantExpr::getZExt(C, IntTy);
     if (auto *P = dyn_cast<PHINode>(V)) {
       // Temporarily set the operands to 0. We'll fix this later in
       // runOnUse.
-      Value *Zero = Constant::getNullValue(Int32Ty);
+      Value *Zero = Constant::getNullValue(IntTy);
       PHINode *Q =
-        PHINode::Create(Int32Ty, P->getNumIncomingValues(), P->getName(), P);
+        PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P);
       for (unsigned i = 0; i < P->getNumOperands(); ++i)
         Q->addIncoming(Zero, P->getIncomingBlock(i));
       return Q;
@@ -109,7 +113,7 @@ class PPCBoolRetToInt : public FunctionPass {
 
     auto InstPt =
       A ? &*A->getParent()->getEntryBlock().begin() : I->getNextNode();
-    return new ZExtInst(V, Int32Ty, "", InstPt);
+    return new ZExtInst(V, IntTy, "", InstPt);
   }
 
   typedef SmallPtrSet<const PHINode *, 8> PHINodeSet;
@@ -185,6 +189,13 @@ class PPCBoolRetToInt : public FunctionPass {
     if (skipFunction(F))
       return false;
 
+    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+    if (!TPC)
+      return false;
+
+    auto &TM = TPC->getTM<PPCTargetMachine>();
+    ST = TM.getSubtargetImpl(F);
+
     PHINodeSet PromotablePHINodes = getPromotablePHINodes(F);
     B2IMap Bool2IntMap;
     bool Changed = false;
@@ -205,7 +216,7 @@ class PPCBoolRetToInt : public FunctionPass {
     return Changed;
   }
 
-  static bool runOnUse(Use &U, const PHINodeSet &PromotablePHINodes,
+  bool runOnUse(Use &U, const PHINodeSet &PromotablePHINodes,
                        B2IMap &BoolToIntMap) {
     auto Defs = findAllDefs(U);
 
@@ -262,13 +273,16 @@ class PPCBoolRetToInt : public FunctionPass {
     AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
+
+private:
+  const PPCSubtarget *ST;
 };
 
 } // end anonymous namespace
 
 char PPCBoolRetToInt::ID = 0;
 INITIALIZE_PASS(PPCBoolRetToInt, "bool-ret-to-int",
-                "Convert i1 constants to i32 if they are returned",
+                "Convert i1 constants to i32/i64 if they are returned",
                 false, false)
 
 FunctionPass *llvm::createPPCBoolRetToIntPass() { return new PPCBoolRetToInt(); }

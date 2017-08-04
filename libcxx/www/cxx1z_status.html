@@ -24,7 +24,7 @@
     <label>Quick Links</label>
     <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a>
     <a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a>
-    <a href="http://llvm.org/bugs/">Bug Reports</a>
+    <a href="https://bugs.llvm.org/">Bug Reports</a>
     <a href="http://llvm.org/svn/llvm-project/libcxx/trunk/">Browse SVN</a>
     <a href="http://llvm.org/viewvc/llvm-project/libcxx/trunk/">Browse ViewVC</a>
   </div>
@@ -35,7 +35,8 @@
   <h1>libc++ C++1z Status</h1>
   <!--*********************************************************************-->
 
-  <p>In November 2014, the C++ standard committee created a draft for the next version of the C++ standard, known here as "C++1z" (probably to be C++17)</p>
+  <p>In November 2014, the C++ standard committee created a draft for the next version of the C++ standard, known here as "C++1z" (probably to be C++17).</p>
+  <p>In February 2017, the C++ standard committee approved this draft, and sent it to ISO for approval as C++17</p>
   <p>This page shows the status of libc++; the status of clang's support of the language features is <a href="http://clang.llvm.org/cxx_status.html#cxx17">here</a>.</p>
 
   <p>The groups that have contributed papers:
@@ -45,7 +46,7 @@
     <li>SG1 - Study group #1 (Concurrency working group)</li>
   </ul>
   </p>
-  
+
   <h3>Paper Status</h3>
   <table id="papers" border="1">
 	<tr><th>Paper #</th><th>Group</th><th>Paper Name</th><th>Meeting</th><th>Status</th><th>First released version</th></tr>
@@ -55,14 +56,14 @@
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3911">N3911</a></td><td>LWG</td></td><td>TransformationTrait Alias <code>void_t</code>.</td><td>Urbana</td><td>Complete</td><td>3.6</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4089">N4089</a></td><td>LWG</td></td><td>Safe conversions in <code>unique_ptr&lt;T[]&gt;</code>.</td><td>Urbana</td><td>In progress</td><td>3.9</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169">N4169</a></td><td>LWG</td></td><td>A proposal to add invoke function template</td><td>Urbana</td><td>Complete</td><td>3.7</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4190">N4190</a></td></td><td>LWG</td><td>Removing auto_ptr, random_shuffle(), And Old <functional> Stuff.</td><td>Urbana</td><td></td><td></td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4190">N4190</a></td></td><td>LWG</td><td>Removing auto_ptr, random_shuffle(), And Old <functional> Stuff.</td><td>Urbana</td><td>In progress</td><td></td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4258">N4258</a></td><td>LWG</td></td><td>Cleaning-up noexcept in the Library.</td><td>Urbana</td><td>In progress</td><td>3.7</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4259">N4259</a></td><td>CWG</td></td><td>Wording for std::uncaught_exceptions</td><td>Urbana</td><td>Complete</td><td>3.7</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4277">N4277</a></td><td>LWG</td></td><td>TriviallyCopyable <code>reference_wrapper</code>.</td><td>Urbana</td><td>Complete</td><td>3.2</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4279">N4279</a></td><td>LWG</td></td><td>Improved insertion interface for unique-key maps.</td><td>Urbana</td><td>Complete</td><td>3.7</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4280">N4280</a></td><td>LWG</td></td><td>Non-member size() and more</td><td>Urbana</td><td>Complete</td><td>3.6</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4284">N4284</a></td><td>LWG</td></td><td>Contiguous Iterators.</td><td>Urbana</td><td>Complete</td><td>3.6</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4285">N4285</a></td><td>CWG</td></td><td>Cleanup for exception-specification and throw-expression.</td><td>Urbana</td><td></td><td></td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4285">N4285</a></td><td>CWG</td></td><td>Cleanup for exception-specification and throw-expression.</td><td>Urbana</td><td>Complete</td><td>4.0</td></tr>
   	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4387">N4387</a></td><td>LWG</td></td><td>improving pair and tuple</td><td>Lenexa</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4389">N4389</a></td><td>LWG</td></td><td>bool_constant</td><td>Lenexa</td><td>Complete</td><td>3.7</td></tr>
@@ -70,18 +71,18 @@
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4366">N4366</a></td><td>LWG</td></td><td>LWG 2228 missing SFINAE rule</td><td>Lenexa</td><td>Complete</td><td>3.1</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4510">N4510</a></td><td>LWG</td></td><td>Minimal incomplete type support for standard containers, revision 4</td><td>Lenexa</td><td>Complete</td><td>3.6</td></tr>
   	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/P0004R1.html">P0004R1</a></td><td>LWG</td><td>Remove Deprecated iostreams aliases.</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0004r1.html">P0004R1</a></td><td>LWG</td><td>Remove Deprecated iostreams aliases.</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
 	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0006r0.html">P0006R0</a></td><td>LWG</td><td>Adopt Type Traits Variable Templates for C++17.</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/P0092R1.html">P0092R1</a></td><td>LWG</td><td>Polishing &lt;chrono&gt;</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/P0007R1.html">P0007R1</a></td><td>LWG</td><td>Constant View: A proposal for a <tt>std::as_const</tt> helper function template.</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0156r0.html" >P0156R0</a></td><td>LWG</td><td>Variadic lock_guard(rev 3).</td><td>Kona</td><td>Complete (ABI V2 Only)</td><td>3.9</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/P0074R0.html">P0074R0</a></td><td>LWG</td><td>Making <tt>std::owner_less</tt> more flexible</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
-	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/P0013R1.html">P0013R1</a></td><td>LWG</td><td>Logical type traits rev 2</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0092r1.html">P0092R1</a></td><td>LWG</td><td>Polishing &lt;chrono&gt;</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0007r1.html">P0007R1</a></td><td>LWG</td><td>Constant View: A proposal for a <tt>std::as_const</tt> helper function template.</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0156r0.html" >P0156R0</a></td><td>LWG</td><td>Variadic lock_guard(rev 3).</td><td>Kona</td><td><I>Reverted in Kona</I></td><td>3.9</td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0074r0.html">P0074R0</a></td><td>LWG</td><td>Making <tt>std::owner_less</tt> more flexible</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0013r1.html">P0013R1</a></td><td>LWG</td><td>Logical type traits rev 2</td><td>Kona</td><td>Complete</td><td>3.8</td></tr>
   	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0024R2">P0024R2</a></td><td>LWG</td><td>The Parallelism TS Should be Standardized</td><td>Jacksonville</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0226R1">P0226R1</a></td><td>LWG</td><td>Mathematical Special Functions for C++17</td><td>Jacksonville</td><td></td><td></td></tr>
-	<tr><td><a href="http://wg21.link/P0220R1">P0220R1</a></td><td>LWG</td><td>Adopt Library Fundamentals V1 TS Components for C++17</td><td>Jacksonville</td><td></td><td></td></tr>
-	<tr><td><a href="http://wg21.link/P0218R1">P0218R1</a></td><td>LWG</td><td>Adopt the File System TS for C++17</td><td>Jacksonville</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0220R1">P0220R1</a></td><td>LWG</td><td>Adopt Library Fundamentals V1 TS Components for C++17</td><td>Jacksonville</td><td>In Progress</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0218R1">P0218R1</a></td><td>LWG</td><td>Adopt the File System TS for C++17</td><td>Jacksonville</td><td>In Progress</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0033R1">P0033R1</a></td><td>LWG</td><td>Re-enabling shared_from_this</td><td>Jacksonville</td><td>Complete</td><td>3.9</td></tr>
 	<tr><td><a href="http://wg21.link/P0005R4">P0005R4</a></td><td>LWG</td><td>Adopt not_fn from Library Fundamentals 2 for C++17</td><td>Jacksonville</td><td>Complete</td><td>3.9</td></tr>
 	<tr><td><a href="http://wg21.link/P0152R1">P0152R1</a></td><td>LWG</td><td>constexpr atomic::is_always_lock_free</td><td>Jacksonville</td><td>Complete</td><td>3.9</td></tr>
@@ -105,7 +106,7 @@
 	<tr><td><a href="http://wg21.link/p0174r2">p0174r2</a></td><td>LWG</td><td>Deprecating Vestigial Library Parts in C++17</td><td>Oulu</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/p0175r1">p0175r1</a></td><td>LWG</td><td>Synopses for the C library</td><td>Oulu</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/p0180r2">p0180r2</a></td><td>LWG</td><td>Reserve a New Library Namespace for Future Standardization</td><td>Oulu</td><td><i>Nothing to do</i></td><td>n/a</td></tr>
-	<tr><td><a href="http://wg21.link/p0181r1">p0181r1</a></td><td>LWG</td><td>Ordered by Default</td><td>Oulu</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/p0181r1">p0181r1</a></td><td>LWG</td><td>Ordered by Default</td><td>Oulu</td><td><i>Removed in Kona</i></td><td>n/a</td></tr>
 	<tr><td><a href="http://wg21.link/p0209r2">p0209r2</a></td><td>LWG</td><td>make_from_tuple: apply for construction</td><td>Oulu</td><td>Complete</td><td>3.9</td></tr>
 	<tr><td><a href="http://wg21.link/p0219r1">p0219r1</a></td><td>LWG</td><td>Relative Paths for Filesystem</td><td>Oulu</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/p0254r2">p0254r2</a></td><td>LWG</td><td>Integrating std::string_view and std::string</td><td>Oulu</td><td>Complete</td><td>4.0</td></tr>
@@ -122,12 +123,12 @@
 	<tr><td><a href="http://wg21.link/p0393r3">p0393r3</a></td><td>LWG</td><td>Making Variant Greater Equal</td><td>Oulu</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0394r4">P0394r4</a></td><td>LWG</td><td>Hotel Parallelifornia: terminate() for Parallel Algorithms Exception Handling</td><td>Oulu</td><td></td><td></td></tr>
   	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-	<tr><td><a href="http://wg21.link/P0003R5">P0003R5</a></td><td>LWG</td><td>Removing Deprecated Exception Specifications from C++17</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0003R5">P0003R5</a></td><td>LWG</td><td>Removing Deprecated Exception Specifications from C++17</td><td>Issaquah</td><td>Complete</td><td>5.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0067R5">P0067R5</a></td><td>LWG</td><td>Elementary string conversions, revision 5</td><td>Issaquah</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0403R1">P0403R1</a></td><td>LWG</td><td>Literal suffixes for <tt>basic_string_view</tt></td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0414R2">P0414R2</a></td><td>LWG</td><td>Merging shared_ptr changes from Library Fundamentals to C++17</td><td>Issaquah</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0418R2">P0418R2</a></td><td>LWG</td><td>Fail or succeed: there is no atomic lattice</td><td>Issaquah</td><td></td><td></td></tr>
-	<tr><td><a href="http://wg21.link/P0426R1">P0426R1</a></td><td>LWG</td><td>Constexpr for <tt>std::char_traits</tt></td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0426R1">P0426R1</a></td><td>LWG</td><td>Constexpr for <tt>std::char_traits</tt></td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0435R1">P0435R1</a></td><td>LWG</td><td>Resolving LWG Issues re <tt>common_type</tt></td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0502R0">P0502R0</a></td><td>LWG</td><td>Throwing out of a parallel algorithm terminates - but how?</td><td>Issaquah</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0503R0">P0503R0</a></td><td>LWG</td><td>Correcting library usage of "literal type"</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
@@ -136,10 +137,33 @@
 	<tr><td><a href="http://wg21.link/P0508R0">P0508R0</a></td><td>LWG</td><td>Wording for GB 58 - structured bindings for node_handles</td><td>Issaquah</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0509R1">P0509R1</a></td><td>LWG</td><td>Updating “Restrictions on exception handling”</td><td>Issaquah</td><td><i>Nothing to do</i></td><td>n/a</td></tr>
 	<tr><td><a href="http://wg21.link/P0510R0">P0510R0</a></td><td>LWG</td><td>Disallowing references, incomplete types, arrays, and empty variants</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
-	<tr><td><a href="http://wg21.link/P0513R0">P0513R0</a></td><td>LWG</td><td>Poisoning the Hash</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0513R0">P0513R0</a></td><td>LWG</td><td>Poisoning the Hash</td><td>Issaquah</td><td>Complete</td><td>5.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0516R0">P0516R0</a></td><td>LWG</td><td>Clarify That shared_future’s Copy Operations have Wide Contracts</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0517R0">P0517R0</a></td><td>LWG</td><td>Make future_error Constructible</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/P0521R0">P0521R0</a></td><td>LWG</td><td>Proposed Resolution for CA 14 (shared_ptr use_count/unique)</td><td>Issaquah</td><td><i>Nothing to do</i></td><td>n/a</td></tr>
+  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0156R2">P0156R2</a></td><td>LWG</td><td>Variadic Lock guard(rev 5)</td><td>Kona</td><td>Complete</td><td>5.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0270R3">P0270R3</a></td><td>CWG</td><td>Removing C dependencies from signal handler wording</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0298R3">P0298R3</a></td><td>CWG</td><td>A byte type definition</td><td>Kona</td><td>Complete</td><td>5.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0317R1">P0317R1</a></td><td>LWG</td><td>Directory Entry Caching for Filesystem</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0430R2">P0430R2</a></td><td>LWG</td><td>File system library on non-POSIX-like operating systems</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0433R2">P0433R2</a></td><td>LWG</td><td>Toward a resolution of US7 and US14: Integrating template deduction for class templates into the standard library</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0452R1">P0452R1</a></td><td>LWG</td><td>Unifying &lt;numeric&gt; Parallel Algorithms</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0467R2">P0467R2</a></td><td>LWG</td><td>Iterator Concerns for Parallel Algorithms</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0492R2">P0492R2</a></td><td>LWG</td><td>Proposed Resolution of C++17 National Body Comments for Filesystems</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0518R1">P0518R1</a></td><td>LWG</td><td>Allowing copies as arguments to function objects given to parallel algorithms in response to CH11</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0523R1">P0523R1</a></td><td>LWG</td><td>Wording for CH 10: Complexity of parallel algorithms</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0548R1">P0548R1</a></td><td>LWG</td><td>common_type and duration</td><td>Kona</td><td>Complete</td><td>5.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0558R1">P0558R1</a></td><td>LWG</td><td>Resolving atomic&lt;T&gt; named base class inconsistencies</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0574R1">P0574R1</a></td><td>LWG</td><td>Algorithm Complexity Constraints and Parallel Overloads</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0599R1">P0599R1</a></td><td>LWG</td><td>noexcept for hash functions</td><td>Kona</td><td>Complete</td><td>5.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0604R0">P0604R0</a></td><td>LWG</td><td>Resolving GB 55, US 84, US 85, US 86</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0607R0">P0607R0</a></td><td>LWG</td><td>Inline Variables for the Standard Library</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0618R0">P0618R0</a></td><td>LWG</td><td>Deprecating &lt;codecvt&gt;</td><td>Kona</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0623R0">P0623R0</a></td><td>LWG</td><td>Final C++17 Parallel Algorithms Fixes</td><td>Kona</td><td></td><td></td></tr>
+  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0682R1">P0682R1</a></td><td>LWG</td><td>Repairing elementary string conversions</td><td>Toronto</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0739R0">P0739R0</a></td><td>LWG</td><td>Some improvements to class template argument deduction integration into the standard library</td><td>Toronto</td><td></td><td></td></tr>
 
 <!--  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr> -->
   </table>
@@ -332,7 +356,7 @@
 	<tr><td><a href="http://wg21.link/LWG2726">2726</a></td><td>[recursive_]directory_iterator::increment(error_code&) is underspecified</td><td>Oulu</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2727">2727</a></td><td>Parallel algorithms with constexpr specifier</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2728">2728</a></td><td>status(p).permissions() and symlink_status(p).permissions() are not specified</td><td>Oulu</td><td>Complete</td></tr>
-<!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
+ 	<tr><td></td><td></td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2062">2062</a></td><td>Effect contradictions w/o no-throw guarantee of std::function swaps</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2166">2166</a></td><td>Heap property underspecified?</td><td>Issaquah</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2221">2221</a></td><td>No formatted output operator for nullptr</td><td>Issaquah</td><td></td></tr>
@@ -356,7 +380,7 @@
 	<tr><td><a href="http://wg21.link/LWG2540">2540</a></td><td>unordered_multimap::insert hint iterator</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2543">2543</a></td><td>LWG 2148 (hash support for enum types) seems under-specified</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2544">2544</a></td><td>istreambuf_iterator(basic_streambuf<charT, traits>* s) effects unclear when s is 0</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2556">2556</a></td><td>Wide contract for future::share()</td><td>Issaquah</td><td>Patch ready</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2556">2556</a></td><td>Wide contract for future::share()</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2562">2562</a></td><td>Consistent total ordering of pointers by comparison functors</td><td>Issaquah</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2567">2567</a></td><td>Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2568">2568</a></td><td>[fund.ts.v2] Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td></td></tr>
@@ -366,10 +390,10 @@
 	<tr><td><a href="http://wg21.link/LWG2584">2584</a></td><td><regex> ECMAScript IdentityEscape is ambiguous</td><td>Issaquah</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2588">2588</a></td><td>[fund.ts.v2] "Convertible to bool" requirement in conjunction and disjunction</td><td>Issaquah</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2589">2589</a></td><td>match_results can't satisfy the requirements of a container</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2591">2591</a></td><td>std::function's member template target() should not lead to undefined behaviour</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2591">2591</a></td><td>std::function's member template target() should not lead to undefined behaviour</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2598">2598</a></td><td>addressof works on temporaries</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2664">2664</a></td><td>operator/ (and other append) semantics not useful if argument has root</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2665">2665</a></td><td>remove_filename() post condition is incorrect</td><td>Issaquah</td><td>See Below</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2665">2665</a></td><td>remove_filename() post condition is incorrect</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2672">2672</a></td><td>Should is_empty use error_code in its specification?</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2678">2678</a></td><td>std::filesystem enum classes overspecified</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2679">2679</a></td><td>Inconsistent Use of Effects and Equivalent To</td><td>Issaquah</td><td>Complete</td></tr>
@@ -384,9 +408,9 @@
 	<tr><td><a href="http://wg21.link/LWG2722">2722</a></td><td>equivalent incorrectly specifies throws clause</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2729">2729</a></td><td>Missing SFINAE on std::pair::operator=</td><td>Issaquah</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2732">2732</a></td><td>Questionable specification of path::operator/= and path::append</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2733">2733</a></td><td>[fund.ts.v2] gcd / lcm and bool</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2733">2733</a></td><td>[fund.ts.v2] gcd / lcm and bool</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2735">2735</a></td><td>std::abs(short), std::abs(signed char) and others should return int instead of double in order to be compatible with C++98 and C</td><td>Issaquah</td><td></td></tr>
-	<tr><td><a href="http://wg21.link/LWG2736">2736</a></td><td>nullopt_t insufficiently constrained</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2736">2736</a></td><td>nullopt_t insufficiently constrained</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2738">2738</a></td><td>is_constructible with void types</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2739">2739</a></td><td>Issue with time_point non-member subtraction with an unsigned duration</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2740">2740</a></td><td>constexpr optional<T>::operator-></td><td>Issaquah</td><td>Complete</td></tr>
@@ -400,16 +424,72 @@
 	<tr><td><a href="http://wg21.link/LWG2752">2752</a></td><td>"Throws:" clauses of async and packaged_task are unimplementable</td><td>Issaquah</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2755">2755</a></td><td>[string.view.io] uses non-existent basic_string_view::to_string function</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2756">2756</a></td><td>C++ WP optional<T> should 'forward' T's implicit conversions</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2758">2758</a></td><td>std::string{}.assign("ABCDE", 0, 1) is ambiguous</td><td>Complete</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2758">2758</a></td><td>std::string{}.assign("ABCDE", 0, 1) is ambiguous</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2759">2759</a></td><td>gcd / lcm and bool for the WP</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2760">2760</a></td><td>non-const basic_string::data should not invalidate iterators</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2765">2765</a></td><td>Did LWG 1123 go too far?</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2765">2765</a></td><td>Did LWG 1123 go too far?</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2767">2767</a></td><td>not_fn call_wrapper can form invalid types</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2769">2769</a></td><td>Redundant const in the return type of any_cast(const any&)</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2771">2771</a></td><td>Broken Effects of some basic_string::compare functions in terms of basic_string_view</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2773">2773</a></td><td>Making std::ignore constexpr</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2773">2773</a></td><td>Making std::ignore constexpr</td><td>Issaquah</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2777">2777</a></td><td>basic_string_view::copy should use char_traits::copy</td><td>Issaquah</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2778">2778</a></td><td>basic_string_view is missing constexpr</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2778">2778</a></td><td>basic_string_view is missing constexpr</td><td>Issaquah</td><td>Complete</td></tr>
+ 	<tr><td></td><td></td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2260">2260</a></td><td>Missing requirement for Allocator::pointer</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2676">2676</a></td><td>Provide filesystem::path overloads for File-based streams</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2768">2768</a></td><td>any_cast and move semantics</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2769">2769</a></td><td>Redundant const in the return type of any_cast(const any&amp;)</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2781">2781</a></td><td>Contradictory requirements for std::function and std::reference_wrapper</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2782">2782</a></td><td>scoped_allocator_adaptor constructors must be constrained</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2784">2784</a></td><td>Resolution to LWG 2484 is missing "otherwise, no effects" and is hard to parse</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2785">2785</a></td><td>quoted should work with basic_string_view</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2786">2786</a></td><td>Annex C should mention shared_ptr changes for array support</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2787">2787</a></td><td>&sect;[file_status.cons] doesn't match class definition</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2788">2788</a></td><td>basic_string range mutators unintentionally require a default constructible allocator</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2789">2789</a></td><td>Equivalence of contained objects</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2790">2790</a></td><td>Missing specification of istreambuf_iterator::operator-&gt;</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2794">2794</a></td><td>Missing requirements for allocator pointers</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2795">2795</a></td><td>&sect;[global.functions] provides incorrect example of ADL use</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2796">2796</a></td><td>tuple should be a literal type</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2801">2801</a></td><td>Default-constructibility of unique_ptr</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2802">2802</a></td><td>shared_ptr constructor requirements for a deleter</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2804">2804</a></td><td>Unconditional constexpr default constructor for istream_iterator</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2806">2806</a></td><td>Base class of bad_optional_access</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2807">2807</a></td><td>std::invoke should use std::is_nothrow_callable</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2812">2812</a></td><td>Range access is available with &lt;string_view&gt;</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2824">2824</a></td><td>list::sort should say that the order of elements is unspecified if an exception is thrown</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2826">2826</a></td><td>string_view iterators use old wording</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2834">2834</a></td><td>Resolution LWG 2223 is missing wording about end iterators</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2835">2835</a></td><td>LWG 2536 seems to misspecify &lt;tgmath.h&gt;</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2837">2837</a></td><td>gcd and lcm should support a wider range of input values</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2838">2838</a></td><td>is_literal_type specification needs a little cleanup</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2842">2842</a></td><td>in_place_t check for optional::optional(U&amp;&amp;) should decay U</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2850">2850</a></td><td>std::function move constructor does unnecessary work</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2853">2853</a></td><td>Possible inconsistency in specification of erase in [vector.modifiers]</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2855">2855</a></td><td>std::throw_with_nested("string_literal")</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2857">2857</a></td><td>{variant,optional,any}::emplace should return the constructed value</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2861">2861</a></td><td>basic_string should require that charT match traits::char_type</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2866">2866</a></td><td>Incorrect derived classes constraints</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2868">2868</a></td><td>Missing specification of bad_any_cast::what()</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2872">2872</a></td><td>Add definition for direct-non-list-initialization</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2873">2873</a></td><td>Add noexcept to several shared_ptr related functions</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2874">2874</a></td><td>Constructor shared_ptr::shared_ptr(Y*) should be constrained</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2875">2875</a></td><td>shared_ptr::shared_ptr(Y*, D, [&hellip;]) constructors should be constrained</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2876">2876</a></td><td>shared_ptr::shared_ptr(const weak_ptr&lt;Y&gt;&amp;) constructor should be constrained</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2878">2878</a></td><td>Missing DefaultConstructible requirement for istream_iterator default constructor</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2890">2890</a></td><td>The definition of 'object state' applies only to class types</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2900">2900</a></td><td>The copy and move constructors of optional are not constexpr</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2903">2903</a></td><td>The form of initialization for the emplace-constructors is not specified</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2904">2904</a></td><td>Make variant move-assignment more exception safe</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2905">2905</a></td><td>is_constructible_v&lt;unique_ptr&lt;P, D&gt;, P, D const &amp;&gt; should be false when D is not copy constructible</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2908">2908</a></td><td>The less-than operator for shared pointers could do more</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2911">2911</a></td><td>An is_aggregate type trait is needed</td><td>Kona</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2921">2921</a></td><td>packaged_task and type-erased allocators</td><td>Kona</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2934">2934</a></td><td>optional&lt;const T&gt; doesn't compare with T</td><td>Kona</td><td>Complete</td></tr>
+ 	<tr><td></td><td></td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2901">2901</a></td><td>Variants cannot properly support allocators</td><td>Toronto</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2955">2955</a></td><td><tt>to_chars / from_chars</tt> depend on <tt>std::string</tt></td><td>Toronto</td><td>Resolved by <a href="https://wg21.link/P0682R1">P0682R1</a></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2956">2956</a></td><td><tt>filesystem::canonical()</tt> still defined in terms of <tt>absolute(p, base)</tt></td><td>Toronto</td><td>Complete</td></tr>
 
 <!--
 	<tr><td><a href="http://wg21.link/LWG1214">1214</a></td><td>Insufficient/inconsistent key immutability requirements for associative containers</td><td>Urbana</td><td></td></tr>
@@ -417,7 +497,7 @@
 <!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
   </table>
 
-  <p>Last Updated: 4-Jan-2017</p>
+  <p>Last Updated: 25-May-2017</p>
 </div>
 </body>
 </html>

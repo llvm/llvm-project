@@ -3,10 +3,10 @@
 
 // Test that libFuzzer itself does not read out of bounds.
 #include <assert.h>
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 
 static volatile int Sink;

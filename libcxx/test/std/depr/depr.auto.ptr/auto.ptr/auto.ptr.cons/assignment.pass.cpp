@@ -13,6 +13,8 @@
 
 // auto_ptr& operator=(auto_ptr& a) throw();
 
+// REQUIRES: c++98 || c++03 || c++11 || c++14
+
 #include <memory>
 #include <cassert>
 

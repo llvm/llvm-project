@@ -14,7 +14,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 
 ; CHECK: %scevgep = getelementptr i32, i32 addrspace(3)* %tmp1, i32 4
 ; CHECK:%tmp14 = load i32, i32 addrspace(3)* %scevgep
-define void @lsr_crash_preserve_addrspace_unknown_type() #0 {
+define amdgpu_kernel void @lsr_crash_preserve_addrspace_unknown_type() #0 {
 bb:
   br label %bb1
 

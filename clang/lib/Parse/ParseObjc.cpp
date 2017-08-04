@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/Parser.h"
-#include "RAIIObjectsForParser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
@@ -1008,6 +1008,10 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
 
   switch (Tok.getKind()) {
   default:
+    return nullptr;
+  case tok::colon:
+    // Empty selector piece uses the location of the ':'.
+    SelectorLoc = Tok.getLocation();
     return nullptr;
   case tok::ampamp:
   case tok::ampequal:
@@ -2257,7 +2261,7 @@ Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
 
 void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
   assert(!Finished);
-  P.Actions.DefaultSynthesizeProperties(P.getCurScope(), Dcl);
+  P.Actions.DefaultSynthesizeProperties(P.getCurScope(), Dcl, AtEnd.getBegin());
   for (size_t i = 0; i < LateParsedObjCMethods.size(); ++i)
     P.ParseLexedObjCMethodDefs(*LateParsedObjCMethods[i], 
                                true/*Methods*/);
@@ -3629,6 +3633,14 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   SourceLocation OrigLoc = Tok.getLocation();
 
   assert(!LM.Toks.empty() && "ParseLexedObjCMethodDef - Empty body!");
+  // Store an artificial EOF token to ensure that we don't run off the end of
+  // the method's body when we come to parse it.
+  Token Eof;
+  Eof.startToken();
+  Eof.setKind(tok::eof);
+  Eof.setEofData(MCDecl);
+  Eof.setLocation(OrigLoc);
+  LM.Toks.push_back(Eof);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   LM.Toks.push_back(Tok);
@@ -3660,7 +3672,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
       Actions.ActOnDefaultCtorInitializers(MCDecl);
     ParseFunctionStatementBody(MCDecl, BodyScope);
   }
-  
+
   if (Tok.getLocation() != OrigLoc) {
     // Due to parsing error, we either went over the cached tokens or
     // there are still cached tokens left. If it's the latter case skip the
@@ -3672,4 +3684,6 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
       while (Tok.getLocation() != OrigLoc && Tok.isNot(tok::eof))
         ConsumeAnyToken();
   }
+  // Clean up the remaining EOF token.
+  ConsumeAnyToken();
 }

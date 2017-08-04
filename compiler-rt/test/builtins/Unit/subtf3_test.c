@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===--------------- subtf3_test.c - Test __subtf3 ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -15,6 +16,7 @@
 
 #if __LDBL_MANT_DIG__ == 113
 
+#include "int_lib.h"
 #include "fp_test.h"
 
 // Returns: a - b

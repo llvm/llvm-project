@@ -14,6 +14,7 @@
 
 #include "sanitizer_allocator.h"
 
+#include "sanitizer_allocator_checks.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
@@ -94,8 +95,7 @@ InternalAllocator *internal_allocator() {
     SpinMutexLock l(&internal_alloc_init_mu);
     if (atomic_load(&internal_allocator_initialized, memory_order_relaxed) ==
         0) {
-      internal_allocator_instance->Init(
-          /* may_return_null */ false, kReleaseToOSIntervalNever);
+      internal_allocator_instance->Init(kReleaseToOSIntervalNever);
       atomic_store(&internal_allocator_initialized, 1, memory_order_release);
     }
   }
@@ -108,9 +108,9 @@ static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache,
   if (cache == 0) {
     SpinMutexLock l(&internal_allocator_cache_mu);
     return internal_allocator()->Allocate(&internal_allocator_cache, size,
-                                          alignment, false);
+                                          alignment);
   }
-  return internal_allocator()->Allocate(cache, size, alignment, false);
+  return internal_allocator()->Allocate(cache, size, alignment);
 }
 
 static void *RawInternalRealloc(void *ptr, uptr size,
@@ -161,8 +161,8 @@ void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
 }
 
 void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
-  if (CallocShouldReturnNullDueToOverflow(count, size))
-    return internal_allocator()->ReturnNullOrDieOnBadRequest();
+  if (UNLIKELY(CheckForCallocOverflow(count, size)))
+    return InternalAllocator::FailureHandler::OnBadRequest();
   void *p = InternalAlloc(count * size, cache);
   if (p) internal_memset(p, 0, count * size);
   return p;
@@ -203,23 +203,51 @@ void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback) {
   low_level_alloc_callback = callback;
 }
 
-bool CallocShouldReturnNullDueToOverflow(uptr size, uptr n) {
-  if (!size) return false;
-  uptr max = (uptr)-1L;
-  return (max / size) < n;
+static atomic_uint8_t allocator_out_of_memory = {0};
+static atomic_uint8_t allocator_may_return_null = {0};
+
+bool IsAllocatorOutOfMemory() {
+  return atomic_load_relaxed(&allocator_out_of_memory);
 }
 
-static atomic_uint8_t reporting_out_of_memory = {0};
-
-bool IsReportingOOM() { return atomic_load_relaxed(&reporting_out_of_memory); }
-
-void NORETURN ReportAllocatorCannotReturnNull(bool out_of_memory) {
-  if (out_of_memory) atomic_store_relaxed(&reporting_out_of_memory, 1);
+// Prints error message and kills the program.
+void NORETURN ReportAllocatorCannotReturnNull() {
   Report("%s's allocator is terminating the process instead of returning 0\n",
          SanitizerToolName);
   Report("If you don't like this behavior set allocator_may_return_null=1\n");
   CHECK(0);
   Die();
+}
+
+bool AllocatorMayReturnNull() {
+  return atomic_load(&allocator_may_return_null, memory_order_relaxed);
+}
+
+void SetAllocatorMayReturnNull(bool may_return_null) {
+  atomic_store(&allocator_may_return_null, may_return_null,
+               memory_order_relaxed);
+}
+
+void *ReturnNullOrDieOnFailure::OnBadRequest() {
+  if (AllocatorMayReturnNull())
+    return nullptr;
+  ReportAllocatorCannotReturnNull();
+}
+
+void *ReturnNullOrDieOnFailure::OnOOM() {
+  atomic_store_relaxed(&allocator_out_of_memory, 1);
+  if (AllocatorMayReturnNull())
+    return nullptr;
+  ReportAllocatorCannotReturnNull();
+}
+
+void NORETURN *DieOnFailure::OnBadRequest() {
+  ReportAllocatorCannotReturnNull();
+}
+
+void NORETURN *DieOnFailure::OnOOM() {
+  atomic_store_relaxed(&allocator_out_of_memory, 1);
+  ReportAllocatorCannotReturnNull();
 }
 
 } // namespace __sanitizer

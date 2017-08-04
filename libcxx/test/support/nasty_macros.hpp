@@ -37,6 +37,14 @@
 #define _Y NASTY_MACRO
 #define _Z NASTY_MACRO
 
+// tchar.h defines these macros on Windows.
+#define _UI   NASTY_MACRO
+#define _PUC  NASTY_MACRO
+#define _CPUC NASTY_MACRO
+#define _PC   NASTY_MACRO
+#define _CRPC NASTY_MACRO
+#define _CPC  NASTY_MACRO
+
 // Test that libc++ doesn't use names reserved by WIN32 API Macros.
 // NOTE: Obviously we can only define these on non-windows platforms.
 #ifndef _WIN32

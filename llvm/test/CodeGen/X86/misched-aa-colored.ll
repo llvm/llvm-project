@@ -143,10 +143,10 @@ declare { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } @_ZN4llvm
 declare void @__assert_fail(i8*, i8*, i32, i8*) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define hidden { %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"*, i32 } @_ZN4llvm16DAGTypeLegalizer18WidenVecRes_BinaryEPNS_6SDNodeE(%"class.llvm::DAGTypeLegalizer.117.717.1077.2037.2157.2397.4197"* %this, %"class.llvm::SDNode.10.610.970.1930.2050.2290.4090"* %N) #2 align 2 {
@@ -155,13 +155,13 @@ entry:
   %ref.tmp.i = alloca %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199", align 8
   %Op.i = alloca %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083", align 8
   %0 = bitcast %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* %ref.tmp.i to i8*
-  call void @llvm.lifetime.start(i64 24, i8* %0) #1
+  call void @llvm.lifetime.start.p0i8(i64 24, i8* %0) #1
   %retval.sroa.0.0.idx.i36 = getelementptr inbounds %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199", %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* %ref.tmp.i, i64 0, i32 1, i32 0, i32 0
   %retval.sroa.0.0.copyload.i37 = load i32, i32* %retval.sroa.0.0.idx.i36, align 8
-  call void @llvm.lifetime.end(i64 24, i8* %0) #1
+  call void @llvm.lifetime.end.p0i8(i64 24, i8* %0) #1
   %agg.tmp8.sroa.2.0.copyload = load i32, i32* undef, align 8
   %1 = bitcast %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* %Op.i to i8*
-  call void @llvm.lifetime.start(i64 16, i8* %1) #1
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %1) #1
   %2 = getelementptr %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083", %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083"* %Op.i, i64 0, i32 1
   store i32 %agg.tmp8.sroa.2.0.copyload, i32* %2, align 8
 

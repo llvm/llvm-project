@@ -228,3 +228,78 @@ struct D {
 void test_default_argument() {
   D(nullptr);
 }
+
+// Test on two neighbour CXXDefaultArgExprs nodes.
+typedef unsigned long long uint64;
+struct ZZ {
+  explicit ZZ(uint64, const uint64* = NULL) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: use nullptr
+// CHECK-FIXES: explicit ZZ(uint64, const uint64* = nullptr) {}
+  operator bool()  { return true; }
+};
+
+uint64 Hash(uint64 seed = 0) { return 0; }
+
+void f() {
+  bool a;
+  a = ZZ(Hash());
+}
+
+// Test on ignoring substituted template types.
+template<typename T>
+class TemplateClass {
+ public:
+  explicit TemplateClass(int a, T default_value = 0) {}
+
+  void h(T *default_value = 0) {}
+
+  void f(int* p = 0) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use nullptr
+// CHECK-FIXES: void f(int* p = nullptr) {}
+};
+
+void IgnoreSubstTemplateType() {
+  TemplateClass<int*> a(1);
+}
+
+// Test on casting nullptr.
+struct G {
+  explicit G(bool, const char * = NULL) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use nullptr
+  // CHECK-FIXES: explicit G(bool, const char * = nullptr) {}
+};
+bool g(const char*);
+void test_cast_nullptr() {
+  G(g(nullptr));
+  G(g((nullptr)));
+  G(g(static_cast<char*>(nullptr)));
+  G(g(static_cast<const char*>(nullptr)));
+}
+
+// Test on recognizing multiple NULLs.
+class H {
+public:
+  H(bool);
+};
+
+#define T(expression) H(expression);
+bool h(int *, int *, int * = nullptr);
+void test_multiple_nulls() {
+  T(h(NULL, NULL));
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr));
+  T(h(NULL, nullptr));
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr));
+  T(h(nullptr, NULL));
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr));
+  T(h(nullptr, nullptr));
+  T(h(NULL, NULL, NULL));
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use nullptr
+// CHECK-MESSAGES: :[[@LINE-3]]:19: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr, nullptr));
+}
+#undef T

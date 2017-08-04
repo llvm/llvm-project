@@ -23,8 +23,7 @@ namespace lld {
 namespace coff {
 class SymbolTable;
 
-void createPDB(llvm::StringRef Path, SymbolTable *Symtab,
-               llvm::ArrayRef<uint8_t> SectionTable,
+void createPDB(SymbolTable *Symtab, llvm::ArrayRef<uint8_t> SectionTable,
                const llvm::codeview::DebugInfo *DI);
 }
 }

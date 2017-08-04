@@ -9,10 +9,11 @@ Introduction
 ============
 
 This document seeks to dispel the mystery and confusion surrounding LLVM's
-`GetElementPtr <LangRef.html#i_getelementptr>`_ (GEP) instruction.  Questions
-about the wily GEP instruction are probably the most frequently occurring
-questions once a developer gets down to coding with LLVM. Here we lay out the
-sources of confusion and show that the GEP instruction is really quite simple.
+`GetElementPtr <LangRef.html#getelementptr-instruction>`_ (GEP) instruction.
+Questions about the wily GEP instruction are probably the most frequently
+occurring questions once a developer gets down to coding with LLVM. Here we lay
+out the sources of confusion and show that the GEP instruction is really quite
+simple.
 
 Address Computation
 ===================
@@ -26,7 +27,7 @@ questions.
 What is the first index of the GEP instruction?
 -----------------------------------------------
 
-Quick answer: The index stepping through the first operand.
+Quick answer: The index stepping through the second operand.
 
 The confusion with the first index usually arises from thinking about the
 GetElementPtr instruction as if it was a C index operator. They aren't the
@@ -58,7 +59,7 @@ Sometimes this question gets rephrased as:
   won't be dereferenced?*
 
 The answer is simply because memory does not have to be accessed to perform the
-computation. The first operand to the GEP instruction must be a value of a
+computation. The second operand to the GEP instruction must be a value of a
 pointer type. The value of the pointer is provided directly to the GEP
 instruction as an operand without any need for accessing memory. It must,
 therefore be indexed and requires an index operand. Consider this example:
@@ -79,8 +80,8 @@ therefore be indexed and requires an index operand. Consider this example:
 
 In this "C" example, the front end compiler (Clang) will generate three GEP
 instructions for the three indices through "P" in the assignment statement.  The
-function argument ``P`` will be the first operand of each of these GEP
-instructions.  The second operand indexes through that pointer.  The third
+function argument ``P`` will be the second operand of each of these GEP
+instructions.  The third operand indexes through that pointer.  The fourth
 operand will be the field offset into the ``struct munger_struct`` type, for
 either the ``f1`` or ``f2`` field. So, in LLVM assembly the ``munge`` function
 looks like:
@@ -99,8 +100,8 @@ looks like:
     ret void
   }
 
-In each case the first operand is the pointer through which the GEP instruction
-starts. The same is true whether the first operand is an argument, allocated
+In each case the second operand is the pointer through which the GEP instruction
+starts. The same is true whether the second operand is an argument, allocated
 memory, or a global variable.
 
 To make this clear, let's consider a more obtuse example:
@@ -158,11 +159,11 @@ confusion:
    i32 }*``. That is, ``%MyStruct`` is a pointer to a structure containing a
    pointer to a ``float`` and an ``i32``.
 
-#. Point #1 is evidenced by noticing the type of the first operand of the GEP
+#. Point #1 is evidenced by noticing the type of the second operand of the GEP
    instruction (``%MyStruct``) which is ``{ float*, i32 }*``.
 
 #. The first index, ``i64 0`` is required to step over the global variable
-   ``%MyStruct``.  Since the first argument to the GEP instruction must always
+   ``%MyStruct``.  Since the second argument to the GEP instruction must always
    be a value of pointer type, the first index steps through that pointer. A
    value of 0 means 0 elements offset from that pointer.
 
@@ -266,7 +267,7 @@ in the IR. In the future, it will probably be outright disallowed.
 What effect do address spaces have on GEPs?
 -------------------------------------------
 
-None, except that the address space qualifier on the first operand pointer type
+None, except that the address space qualifier on the second operand pointer type
 always matches the address space qualifier on the result type.
 
 How is GEP different from ``ptrtoint``, arithmetic, and ``inttoptr``?
@@ -429,7 +430,8 @@ because LLVM has no restrictions on mixing types in addressing, loads or stores.
 
 LLVM's type-based alias analysis pass uses metadata to describe a different type
 system (such as the C type system), and performs type-based aliasing on top of
-that.  Further details are in the `language reference <LangRef.html#tbaa>`_.
+that.  Further details are in the
+`language reference <LangRef.html#tbaa-metadata>`_.
 
 What happens if a GEP computation overflows?
 --------------------------------------------
@@ -524,7 +526,7 @@ instruction:
 #. The GEP instruction never accesses memory, it only provides pointer
    computations.
 
-#. The first operand to the GEP instruction is always a pointer and it must be
+#. The second operand to the GEP instruction is always a pointer and it must be
    indexed.
 
 #. There are no superfluous indices for the GEP instruction.

@@ -60,6 +60,23 @@ static bool IsBetterCanonical(const GlobalVariable &A,
   return A.hasGlobalUnnamedAddr();
 }
 
+static bool hasMetadataOtherThanDebugLoc(const GlobalVariable *GV) {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  GV->getAllMetadata(MDs);
+  for (const auto &V : MDs)
+    if (V.first != LLVMContext::MD_dbg)
+      return true;
+  return false;
+}
+
+static void copyDebugLocMetadata(const GlobalVariable *From,
+                                 GlobalVariable *To) {
+  SmallVector<DIGlobalVariableExpression *, 1> MDs;
+  From->getDebugInfo(MDs);
+  for (auto MD : MDs)
+    To->addDebugInfo(MD);
+}
+
 static unsigned getAlignment(GlobalVariable *GV) {
   unsigned Align = GV->getAlignment();
   if (Align)
@@ -113,6 +130,10 @@ static bool mergeConstants(Module &M) {
       if (GV->isWeakForLinker())
         continue;
 
+      // Don't touch globals with metadata other then !dbg.
+      if (hasMetadataOtherThanDebugLoc(GV))
+        continue;
+
       Constant *Init = GV->getInitializer();
 
       // Check to see if the initializer is already known.
@@ -155,6 +176,9 @@ static bool mergeConstants(Module &M) {
       if (!Slot->hasGlobalUnnamedAddr() && !GV->hasGlobalUnnamedAddr())
         continue;
 
+      if (hasMetadataOtherThanDebugLoc(GV))
+        continue;
+
       if (!GV->hasGlobalUnnamedAddr())
         Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
@@ -177,6 +201,8 @@ static bool mergeConstants(Module &M) {
             std::max(getAlignment(Replacements[i].first),
                      getAlignment(Replacements[i].second)));
       }
+
+      copyDebugLocMetadata(Replacements[i].first, Replacements[i].second);
 
       // Eliminate any uses of the dead global.
       Replacements[i].first->replaceAllUsesWith(Replacements[i].second);

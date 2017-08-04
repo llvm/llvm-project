@@ -407,7 +407,7 @@ def MTVSCR : VXForm_5<1604, (outs), (ins vrrc:$vB),
                       "mtvscr $vB", IIC_LdStLoad,
                       [(int_ppc_altivec_mtvscr v4i32:$vB)]>; 
 
-let PPC970_Unit = 2 in {  // Loads.
+let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {  // Loads.
 def LVEBX: XForm_1<31,   7, (outs vrrc:$vD), (ins memrr:$src),
                    "lvebx $vD, $src", IIC_LdStLoad,
                    [(set v16i8:$vD, (int_ppc_altivec_lvebx xoaddr:$src))]>;
@@ -434,7 +434,7 @@ def LVSR : XForm_1<31,  38, (outs vrrc:$vD), (ins memrr:$src),
                    [(set v16i8:$vD, (int_ppc_altivec_lvsr xoaddr:$src))]>,
                    PPC970_Unit_LSU;
 
-let PPC970_Unit = 2 in {   // Stores.
+let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {   // Stores.
 def STVEBX: XForm_8<31, 135, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvebx $rS, $dst", IIC_LdStStore,
                    [(int_ppc_altivec_stvebx v16i8:$rS, xoaddr:$dst)]>;
@@ -851,6 +851,10 @@ def V_SETALLONES  : VXForm_3<908, (outs vrrc:$vD), (ins),
 // Additional Altivec Patterns
 //
 
+// Extended mnemonics
+def : InstAlias<"vmr $vD, $vA", (VOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
+def : InstAlias<"vnot $vD, $vA", (VNOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
+
 // Loads.
 def : Pat<(v4i32 (load xoaddr:$src)), (LVX xoaddr:$src)>;
 
@@ -983,6 +987,16 @@ def : Pat<(v8i16 (shl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSLH $vA, $vB))>;
 def : Pat<(v4i32 (shl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSLW $vA, $vB))>;
+def : Pat<(v1i128 (shl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSL (VSLO $vA, $vB), (VSPLTB 15, $vB)))>;
+def : Pat<(v16i8 (PPCshl v16i8:$vA, v16i8:$vB)),
+          (v16i8 (VSLB $vA, $vB))>;
+def : Pat<(v8i16 (PPCshl v8i16:$vA, v8i16:$vB)),
+          (v8i16 (VSLH $vA, $vB))>;
+def : Pat<(v4i32 (PPCshl v4i32:$vA, v4i32:$vB)),
+          (v4i32 (VSLW $vA, $vB))>;
+def : Pat<(v1i128 (PPCshl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSL (VSLO $vA, $vB), (VSPLTB 15, $vB)))>;
 
 def : Pat<(v16i8 (srl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRB $vA, $vB))>;
@@ -990,12 +1004,28 @@ def : Pat<(v8i16 (srl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSRH $vA, $vB))>;
 def : Pat<(v4i32 (srl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSRW $vA, $vB))>;
+def : Pat<(v1i128 (srl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSR (VSRO $vA, $vB), (VSPLTB 15, $vB)))>;
+def : Pat<(v16i8 (PPCsrl v16i8:$vA, v16i8:$vB)),
+          (v16i8 (VSRB $vA, $vB))>;
+def : Pat<(v8i16 (PPCsrl v8i16:$vA, v8i16:$vB)),
+          (v8i16 (VSRH $vA, $vB))>;
+def : Pat<(v4i32 (PPCsrl v4i32:$vA, v4i32:$vB)),
+          (v4i32 (VSRW $vA, $vB))>;
+def : Pat<(v1i128 (PPCsrl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSR (VSRO $vA, $vB), (VSPLTB 15, $vB)))>;
 
 def : Pat<(v16i8 (sra v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRAB $vA, $vB))>;
 def : Pat<(v8i16 (sra v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSRAH $vA, $vB))>;
 def : Pat<(v4i32 (sra v4i32:$vA, v4i32:$vB)),
+          (v4i32 (VSRAW $vA, $vB))>;
+def : Pat<(v16i8 (PPCsra v16i8:$vA, v16i8:$vB)),
+          (v16i8 (VSRAB $vA, $vB))>;
+def : Pat<(v8i16 (PPCsra v8i16:$vA, v8i16:$vB)),
+          (v8i16 (VSRAH $vA, $vB))>;
+def : Pat<(v4i32 (PPCsra v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSRAW $vA, $vB))>;
 
 // Float to integer and integer to float conversions
@@ -1068,14 +1098,24 @@ def:Pat<(vmrgow_swapped_shuffle v16i8:$vA, v16i8:$vB),
 // Vector shifts
 def VRLD : VX1_Int_Ty<196, "vrld", int_ppc_altivec_vrld, v2i64>;
 def VSLD : VXForm_1<1476, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                    "vsld $vD, $vA, $vB", IIC_VecGeneral,
-                    [(set v2i64:$vD, (shl v2i64:$vA, v2i64:$vB))]>;
+                    "vsld $vD, $vA, $vB", IIC_VecGeneral, []>;
 def VSRD : VXForm_1<1732, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                   "vsrd $vD, $vA, $vB", IIC_VecGeneral,
-                   [(set v2i64:$vD, (srl v2i64:$vA, v2i64:$vB))]>;
+                   "vsrd $vD, $vA, $vB", IIC_VecGeneral, []>;
 def VSRAD : VXForm_1<964, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                    "vsrad $vD, $vA, $vB", IIC_VecGeneral,
-                    [(set v2i64:$vD, (sra v2i64:$vA, v2i64:$vB))]>;
+                    "vsrad $vD, $vA, $vB", IIC_VecGeneral, []>;
+
+def : Pat<(v2i64 (shl v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VSLD $vA, $vB))>;
+def : Pat<(v2i64 (PPCshl v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VSLD $vA, $vB))>;
+def : Pat<(v2i64 (srl v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VSRD $vA, $vB))>;
+def : Pat<(v2i64 (PPCsrl v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VSRD $vA, $vB))>;
+def : Pat<(v2i64 (sra v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VSRAD $vA, $vB))>;
+def : Pat<(v2i64 (PPCsra v2i64:$vA, v2i64:$vB)),
+          (v2i64 (VSRAD $vA, $vB))>;
 
 // Vector Integer Arithmetic Instructions
 let isCommutable = 1 in {

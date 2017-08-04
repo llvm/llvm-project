@@ -91,7 +91,7 @@ entry:
   ; CHECK-NEXT: %zz = getelementptr inbounds
 
 
-  call void @llvm.lifetime.start(i64 650, i8* %xx)
+  call void @llvm.lifetime.start.p0i8(i64 650, i8* %xx)
   ; 0000...
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 4
   ; ENTRY-UAS-NEXT: call void @__asan_set_shadow_00(i64 [[OFFSET]], i64 81)
@@ -100,39 +100,39 @@ entry:
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i8]]*
   ; ENTRY-UAS-NEXT: store [[TYPE]] 2, [[TYPE]]* [[PTR]], align 1
 
-  ; CHECK-NEXT: call void @llvm.lifetime.start(i64 650, i8* %xx)
+  ; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 650, i8* %xx)
 
   call void @Foo(i8* %xx)
   ; CHECK-NEXT: call void @Foo(i8* %xx)
 
-  call void @llvm.lifetime.end(i64 650, i8* %xx)
+  call void @llvm.lifetime.end.p0i8(i64 650, i8* %xx)
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 4
   ; ENTRY-UAS-NEXT: call void @__asan_set_shadow_f8(i64 [[OFFSET]], i64 82)
 
-  ; CHECK-NEXT: call void @llvm.lifetime.end(i64 650, i8* %xx)
+  ; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 650, i8* %xx)
 
 
-  call void @llvm.lifetime.start(i64 13, i8* %yy)
+  call void @llvm.lifetime.start.p0i8(i64 13, i8* %yy)
   ; 0005
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 102
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i16]]*
   ; ENTRY-UAS-NEXT: store [[TYPE]] 1280, [[TYPE]]* [[PTR]], align 1
 
-  ; CHECK-NEXT: call void @llvm.lifetime.start(i64 13, i8* %yy)
+  ; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 13, i8* %yy)
 
   call void @Foo(i8* %yy)
   ; CHECK-NEXT: call void @Foo(i8* %yy)
 
-  call void @llvm.lifetime.end(i64 13, i8* %yy)
+  call void @llvm.lifetime.end.p0i8(i64 13, i8* %yy)
   ; F8F8
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 102
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i16]]*
   ; ENTRY-UAS-NEXT: store [[TYPE]] -1800, [[TYPE]]* [[PTR]], align 1
 
-  ; CHECK-NEXT: call void @llvm.lifetime.end(i64 13, i8* %yy)
+  ; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 13, i8* %yy)
 
 
-  call void @llvm.lifetime.start(i64 40, i8* %zz)
+  call void @llvm.lifetime.start.p0i8(i64 40, i8* %zz)
   ; 00000000
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 106
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i32]]*
@@ -142,12 +142,12 @@ entry:
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i8]]*
   ; ENTRY-UAS-NEXT: store [[TYPE]] 0, [[TYPE]]* [[PTR]], align 1
 
-  ; CHECK-NEXT: call void @llvm.lifetime.start(i64 40, i8* %zz)
+  ; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 40, i8* %zz)
 
   call void @Foo(i8* %zz)
   ; CHECK-NEXT: call void @Foo(i8* %zz)
 
-  call void @llvm.lifetime.end(i64 40, i8* %zz)
+  call void @llvm.lifetime.end.p0i8(i64 40, i8* %zz)
   ; F8F8F8F8
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 106
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i32]]*
@@ -157,7 +157,7 @@ entry:
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i8]]*
   ; ENTRY-UAS-NEXT: store [[TYPE]] -8, [[TYPE]]* [[PTR]], align 1
 
-  ; CHECK-NEXT: call void @llvm.lifetime.end(i64 40, i8* %zz)
+  ; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 40, i8* %zz)
 
   ; CHECK-LABEL: <label>
 
@@ -209,8 +209,8 @@ entry:
   ; CHECK: ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 ; CHECK-ON: declare void @__asan_set_shadow_00(i64, i64)
 ; CHECK-ON: declare void @__asan_set_shadow_f1(i64, i64)

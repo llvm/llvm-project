@@ -37,7 +37,7 @@
 #if defined(_LIBCPP_WIN32API)
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRA_LEAN
-#include <Windows.h>
+#include <windows.h>
 #if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 #include <winapifamily.h>
 #endif

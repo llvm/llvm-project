@@ -6,7 +6,7 @@
 
 ; CHECK: SET{{[A-Z]+}}_DX10
 
-define void @test(i32 addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test(i32 addrspace(1)* %out, float addrspace(1)* %in) {
 entry:
   %0 = load float, float addrspace(1)* %in
   %cmp = fcmp oeq float %0, 0.000000e+00

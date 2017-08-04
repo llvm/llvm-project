@@ -167,3 +167,10 @@ void returns_nonnull_warning_tests() {
   int and_again = !returns_nonnull_whee(); // expected-warning {{nonnull function call 'returns_nonnull_whee()' will evaluate to 'true' on first encounter}}
   and_again = !returns_nonnull_whee(); // expected-warning {{nonnull function call 'returns_nonnull_whee()' will evaluate to 'true' on first encounter}}
 }
+
+void pr30828(char *p __attribute__((nonnull)));
+void pr30828(char *p) {}
+
+void call_pr30828() {
+  pr30828(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
+}

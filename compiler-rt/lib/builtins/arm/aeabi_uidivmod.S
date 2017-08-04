@@ -29,7 +29,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uidivmod)
         push    {r0, r1, lr}
         bl      SYMBOL_NAME(__aeabi_uidiv)
         pop     {r1, r2, r3}
-        muls    r2, r2, r0 // r2 = quot * denom
+        muls    r2, r0, r2 // r2 = quot * denom
         subs    r1, r1, r2
         JMP     (r3)
 LOCAL_LABEL(case_denom_larger):

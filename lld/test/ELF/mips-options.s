@@ -6,7 +6,7 @@
 # RUN: echo "SECTIONS { \
 # RUN:          . = 0x100000000; \
 # RUN:          .got  : { *(.got) } }" > %t.rel.script
-# RUN: ld.lld %t1.o %t2.o --script %t.rel.script -shared -o %t.so
+# RUN: ld.lld %t1.o %t2.o --gc-sections --script %t.rel.script -shared -o %t.so
 # RUN: llvm-readobj -symbols -mips-options %t.so | FileCheck %s
 
 # REQUIRES: mips

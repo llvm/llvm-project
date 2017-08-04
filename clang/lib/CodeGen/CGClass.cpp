@@ -129,14 +129,14 @@ Address
 CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                                  llvm::Value *memberPtr,
                                       const MemberPointerType *memberPtrType,
-                                                 AlignmentSource *alignSource) {
+                                                 LValueBaseInfo *BaseInfo) {
   // Ask the ABI to compute the actual address.
   llvm::Value *ptr =
     CGM.getCXXABI().EmitMemberDataPointerAddress(*this, E, base,
                                                  memberPtr, memberPtrType);
 
   QualType memberType = memberPtrType->getPointeeType();
-  CharUnits memberAlign = getNaturalTypeAlignment(memberType, alignSource);
+  CharUnits memberAlign = getNaturalTypeAlignment(memberType, BaseInfo);
   memberAlign =
     CGM.getDynamicOffsetAlignment(base.getAlignment(),
                             memberPtrType->getClass()->getAsCXXRecordDecl(),
@@ -1136,10 +1136,11 @@ namespace {
           RHS = EC->getSubExpr();
         if (!RHS)
           return nullptr;
-        MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS);
-        if (dyn_cast<FieldDecl>(ME2->getMemberDecl()) != Field)
-          return nullptr;
-        return Field;
+        if (MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS)) {
+          if (ME2->getMemberDecl() == Field)
+            return Field;
+        }
+        return nullptr;
       } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
         CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
         if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
@@ -1389,6 +1390,20 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CurGD.getDecl());
   CXXDtorType DtorType = CurGD.getDtorType();
 
+  // For an abstract class, non-base destructors are never used (and can't
+  // be emitted in general, because vbase dtors may not have been validated
+  // by Sema), but the Itanium ABI doesn't make them optional and Clang may
+  // in fact emit references to them from other compilations, so emit them
+  // as functions containing a trap instruction.
+  if (DtorType != Dtor_Base && Dtor->getParent()->isAbstract()) {
+    llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
+    TrapCall->setDoesNotReturn();
+    TrapCall->setDoesNotThrow();
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+    return;
+  }
+
   Stmt *Body = Dtor->getBody();
   if (Body)
     incrementProfileCounter(Body);
@@ -1421,9 +1436,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (DtorType) {
-  case Dtor_Comdat:
-    llvm_unreachable("not expecting a COMDAT");
-
+  case Dtor_Comdat: llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting: llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
@@ -1438,7 +1451,9 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
                             /*Delegating=*/false, LoadCXXThisAddress());
       break;
     }
+
     // Fallthrough: act like we're in the base variant.
+    LLVM_FALLTHROUGH;
 
   case Dtor_Base:
     assert(Body);
@@ -1955,7 +1970,11 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
 
   // Add the rest of the user-supplied arguments.
   const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
-  EmitCallArgs(Args, FPT, E->arguments(), E->getConstructor());
+  EvaluationOrder Order = E->isListInitialization()
+                              ? EvaluationOrder::ForceLeftToRight
+                              : EvaluationOrder::Default;
+  EmitCallArgs(Args, FPT, E->arguments(), E->getConstructor(),
+               /*ParamsToSkip*/ 0, Order);
 
   EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args);
 }
@@ -1975,7 +1994,7 @@ static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
 
     // Likewise if they're inalloca.
     const CGFunctionInfo &Info =
-        CGF.CGM.getTypes().arrangeCXXConstructorCall(Args, Ctor, Type, 0);
+        CGF.CGM.getTypes().arrangeCXXConstructorCall(Args, Ctor, Type, 0, 0);
     if (Info.usesInAlloca())
       return false;
   }
@@ -2017,10 +2036,11 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     return;
   }
 
+  bool PassPrototypeArgs = true;
   // Check whether we can actually emit the constructor before trying to do so.
   if (auto Inherited = D->getInheritedConstructor()) {
-    if (getTypes().inheritingCtorHasParams(Inherited, Type) &&
-        !canEmitDelegateCallArgs(*this, D, Type, Args)) {
+    PassPrototypeArgs = getTypes().inheritingCtorHasParams(Inherited, Type);
+    if (PassPrototypeArgs && !canEmitDelegateCallArgs(*this, D, Type, Args)) {
       EmitInlinedInheritingCXXConstructorCall(D, Type, ForVirtualBase,
                                               Delegating, Args);
       return;
@@ -2028,14 +2048,15 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   }
 
   // Insert any ABI-specific implicit constructor arguments.
-  unsigned ExtraArgs = CGM.getCXXABI().addImplicitConstructorArgs(
-      *this, D, Type, ForVirtualBase, Delegating, Args);
+  CGCXXABI::AddedStructorArgs ExtraArgs =
+      CGM.getCXXABI().addImplicitConstructorArgs(*this, D, Type, ForVirtualBase,
+                                                 Delegating, Args);
 
   // Emit the call.
   llvm::Constant *CalleePtr =
     CGM.getAddrOfCXXStructor(D, getFromCtorType(Type));
-  const CGFunctionInfo &Info =
-    CGM.getTypes().arrangeCXXConstructorCall(Args, D, Type, ExtraArgs);
+  const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
+      Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, D);
   EmitCall(Info, Callee, ReturnValueSlot(), Args);
 
@@ -2693,79 +2714,6 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   return Builder.CreateBitCast(
       Builder.CreateExtractValue(CheckedLoad, 0),
       cast<llvm::PointerType>(VTable->getType())->getElementType());
-}
-
-bool
-CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
-                                                   const CXXMethodDecl *MD) {
-  // When building with -fapple-kext, all calls must go through the vtable since
-  // the kernel linker can do runtime patching of vtables.
-  if (getLangOpts().AppleKext)
-    return false;
-
-  // If the member function is marked 'final', we know that it can't be
-  // overridden and can therefore devirtualize it unless it's pure virtual.
-  if (MD->hasAttr<FinalAttr>())
-    return !MD->isPure();
-
-  // If the base expression (after skipping derived-to-base conversions) is a
-  // class prvalue, then we can devirtualize.
-  Base = Base->getBestDynamicClassTypeExpr();
-  if (Base->isRValue() && Base->getType()->isRecordType())
-    return true;
-
-  // If we don't even know what we would call, we can't devirtualize.
-  const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
-  if (!BestDynamicDecl)
-    return false;
-
-  // There may be a method corresponding to MD in a derived class.
-  const CXXMethodDecl *DevirtualizedMethod =
-      MD->getCorrespondingMethodInClass(BestDynamicDecl);
-
-  // If that method is pure virtual, we can't devirtualize. If this code is
-  // reached, the result would be UB, not a direct call to the derived class
-  // function, and we can't assume the derived class function is defined.
-  if (DevirtualizedMethod->isPure())
-    return false;
-
-  // If that method is marked final, we can devirtualize it.
-  if (DevirtualizedMethod->hasAttr<FinalAttr>())
-    return true;
-
-  // Similarly, if the class itself is marked 'final' it can't be overridden
-  // and we can therefore devirtualize the member function call.
-  if (BestDynamicDecl->hasAttr<FinalAttr>())
-    return true;
-
-  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Base)) {
-    if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      // This is a record decl. We know the type and can devirtualize it.
-      return VD->getType()->isRecordType();
-    }
-
-    return false;
-  }
-
-  // We can devirtualize calls on an object accessed by a class member access
-  // expression, since by C++11 [basic.life]p6 we know that it can't refer to
-  // a derived class object constructed in the same location.
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(Base))
-    if (const ValueDecl *VD = dyn_cast<ValueDecl>(ME->getMemberDecl()))
-      return VD->getType()->isRecordType();
-
-  // Likewise for calls on an object accessed by a (non-reference) pointer to
-  // member access.
-  if (auto *BO = dyn_cast<BinaryOperator>(Base)) {
-    if (BO->isPtrMemOp()) {
-      auto *MPT = BO->getRHS()->getType()->castAs<MemberPointerType>();
-      if (MPT->getPointeeType()->isRecordType())
-        return true;
-    }
-  }
-
-  // We can't devirtualize the call.
-  return false;
 }
 
 void CodeGenFunction::EmitForwardingCallToLambda(

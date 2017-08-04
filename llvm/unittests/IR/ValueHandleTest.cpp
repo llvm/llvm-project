@@ -44,11 +44,29 @@ TEST_F(ValueHandle, WeakVH_BasicOperation) {
   // doesn't matter which method.
   EXPECT_EQ(Type::getInt32Ty(Context), WVH->getType());
   EXPECT_EQ(Type::getInt32Ty(Context), (*WVH).getType());
+
+  WVH = BitcastV.get();
+  BitcastV->replaceAllUsesWith(ConstantV);
+  EXPECT_EQ(WVH, BitcastV.get());
+  BitcastV.reset();
+  EXPECT_EQ(WVH, nullptr);
 }
 
-TEST_F(ValueHandle, WeakVH_Comparisons) {
-  WeakVH BitcastWVH(BitcastV.get());
-  WeakVH ConstantWVH(ConstantV);
+TEST_F(ValueHandle, WeakTrackingVH_BasicOperation) {
+  WeakTrackingVH WVH(BitcastV.get());
+  EXPECT_EQ(BitcastV.get(), WVH);
+  WVH = ConstantV;
+  EXPECT_EQ(ConstantV, WVH);
+
+  // Make sure I can call a method on the underlying Value.  It
+  // doesn't matter which method.
+  EXPECT_EQ(Type::getInt32Ty(Context), WVH->getType());
+  EXPECT_EQ(Type::getInt32Ty(Context), (*WVH).getType());
+}
+
+TEST_F(ValueHandle, WeakTrackingVH_Comparisons) {
+  WeakTrackingVH BitcastWVH(BitcastV.get());
+  WeakTrackingVH ConstantWVH(ConstantV);
 
   EXPECT_TRUE(BitcastWVH == BitcastWVH);
   EXPECT_TRUE(BitcastV.get() == BitcastWVH);
@@ -79,20 +97,20 @@ TEST_F(ValueHandle, WeakVH_Comparisons) {
   EXPECT_EQ(BV >= CV, BitcastWVH >= ConstantV);
 }
 
-TEST_F(ValueHandle, WeakVH_FollowsRAUW) {
-  WeakVH WVH(BitcastV.get());
-  WeakVH WVH_Copy(WVH);
-  WeakVH WVH_Recreated(BitcastV.get());
+TEST_F(ValueHandle, WeakTrackingVH_FollowsRAUW) {
+  WeakTrackingVH WVH(BitcastV.get());
+  WeakTrackingVH WVH_Copy(WVH);
+  WeakTrackingVH WVH_Recreated(BitcastV.get());
   BitcastV->replaceAllUsesWith(ConstantV);
   EXPECT_EQ(ConstantV, WVH);
   EXPECT_EQ(ConstantV, WVH_Copy);
   EXPECT_EQ(ConstantV, WVH_Recreated);
 }
 
-TEST_F(ValueHandle, WeakVH_NullOnDeletion) {
-  WeakVH WVH(BitcastV.get());
-  WeakVH WVH_Copy(WVH);
-  WeakVH WVH_Recreated(BitcastV.get());
+TEST_F(ValueHandle, WeakTrackingVH_NullOnDeletion) {
+  WeakTrackingVH WVH(BitcastV.get());
+  WeakTrackingVH WVH_Copy(WVH);
+  WeakTrackingVH WVH_Recreated(BitcastV.get());
   BitcastV.reset();
   Value *null_value = nullptr;
   EXPECT_EQ(null_value, WVH);
@@ -343,11 +361,11 @@ TEST_F(ValueHandle, DestroyingOtherVHOnSameValueDoesntBreakIteration) {
 
   class DestroyingVH final : public CallbackVH {
   public:
-    std::unique_ptr<WeakVH> ToClear[2];
+    std::unique_ptr<WeakTrackingVH> ToClear[2];
     DestroyingVH(Value *V) {
-      ToClear[0].reset(new WeakVH(V));
+      ToClear[0].reset(new WeakTrackingVH(V));
       setValPtr(V);
-      ToClear[1].reset(new WeakVH(V));
+      ToClear[1].reset(new WeakTrackingVH(V));
     }
     void deleted() override {
       ToClear[0].reset();
@@ -361,9 +379,9 @@ TEST_F(ValueHandle, DestroyingOtherVHOnSameValueDoesntBreakIteration) {
   };
 
   {
-    WeakVH ShouldBeVisited1(BitcastV.get());
+    WeakTrackingVH ShouldBeVisited1(BitcastV.get());
     DestroyingVH C(BitcastV.get());
-    WeakVH ShouldBeVisited2(BitcastV.get());
+    WeakTrackingVH ShouldBeVisited2(BitcastV.get());
 
     BitcastV->replaceAllUsesWith(ConstantV);
     EXPECT_EQ(ConstantV, static_cast<Value*>(ShouldBeVisited1));
@@ -371,9 +389,9 @@ TEST_F(ValueHandle, DestroyingOtherVHOnSameValueDoesntBreakIteration) {
   }
 
   {
-    WeakVH ShouldBeVisited1(BitcastV.get());
+    WeakTrackingVH ShouldBeVisited1(BitcastV.get());
     DestroyingVH C(BitcastV.get());
-    WeakVH ShouldBeVisited2(BitcastV.get());
+    WeakTrackingVH ShouldBeVisited2(BitcastV.get());
 
     BitcastV.reset();
     EXPECT_EQ(nullptr, static_cast<Value*>(ShouldBeVisited1));
@@ -412,4 +430,123 @@ TEST_F(ValueHandle, AssertingVHCheckedLast) {
   BitcastV.reset();
 }
 
+TEST_F(ValueHandle, PoisoningVH_BasicOperation) {
+  PoisoningVH<CastInst> VH(BitcastV.get());
+  CastInst *implicit_to_exact_type = VH;
+  (void)implicit_to_exact_type; // Avoid warning.
+
+  PoisoningVH<Value> GenericVH(BitcastV.get());
+  EXPECT_EQ(BitcastV.get(), GenericVH);
+  GenericVH = ConstantV;
+  EXPECT_EQ(ConstantV, GenericVH);
+
+  // Make sure I can call a method on the underlying CastInst.  It
+  // doesn't matter which method.
+  EXPECT_FALSE(VH->mayWriteToMemory());
+  EXPECT_FALSE((*VH).mayWriteToMemory());
+}
+
+TEST_F(ValueHandle, PoisoningVH_Const) {
+  const CastInst *ConstBitcast = BitcastV.get();
+  PoisoningVH<const CastInst> VH(ConstBitcast);
+  const CastInst *implicit_to_exact_type = VH;
+  (void)implicit_to_exact_type; // Avoid warning.
+}
+
+TEST_F(ValueHandle, PoisoningVH_Comparisons) {
+  PoisoningVH<Value> BitcastVH(BitcastV.get());
+  PoisoningVH<Value> ConstantVH(ConstantV);
+
+  EXPECT_TRUE(BitcastVH == BitcastVH);
+  EXPECT_TRUE(BitcastV.get() == BitcastVH);
+  EXPECT_TRUE(BitcastVH == BitcastV.get());
+  EXPECT_FALSE(BitcastVH == ConstantVH);
+
+  EXPECT_TRUE(BitcastVH != ConstantVH);
+  EXPECT_TRUE(BitcastV.get() != ConstantVH);
+  EXPECT_TRUE(BitcastVH != ConstantV);
+  EXPECT_FALSE(BitcastVH != BitcastVH);
+
+  // Cast to Value* so comparisons work.
+  Value *BV = BitcastV.get();
+  Value *CV = ConstantV;
+  EXPECT_EQ(BV < CV, BitcastVH < ConstantVH);
+  EXPECT_EQ(BV <= CV, BitcastVH <= ConstantVH);
+  EXPECT_EQ(BV > CV, BitcastVH > ConstantVH);
+  EXPECT_EQ(BV >= CV, BitcastVH >= ConstantVH);
+
+  EXPECT_EQ(BV < CV, BitcastV.get() < ConstantVH);
+  EXPECT_EQ(BV <= CV, BitcastV.get() <= ConstantVH);
+  EXPECT_EQ(BV > CV, BitcastV.get() > ConstantVH);
+  EXPECT_EQ(BV >= CV, BitcastV.get() >= ConstantVH);
+
+  EXPECT_EQ(BV < CV, BitcastVH < ConstantV);
+  EXPECT_EQ(BV <= CV, BitcastVH <= ConstantV);
+  EXPECT_EQ(BV > CV, BitcastVH > ConstantV);
+  EXPECT_EQ(BV >= CV, BitcastVH >= ConstantV);
+}
+
+TEST_F(ValueHandle, PoisoningVH_DoesNotFollowRAUW) {
+  PoisoningVH<Value> VH(BitcastV.get());
+  BitcastV->replaceAllUsesWith(ConstantV);
+  EXPECT_TRUE(DenseMapInfo<PoisoningVH<Value>>::isEqual(VH, BitcastV.get()));
+}
+
+#ifdef NDEBUG
+
+TEST_F(ValueHandle, PoisoningVH_ReducesToPointer) {
+  EXPECT_EQ(sizeof(CastInst *), sizeof(PoisoningVH<CastInst>));
+}
+
+#else // !NDEBUG
+
+TEST_F(ValueHandle, TrackingVH_Tracks) {
+  TrackingVH<Value> VH(BitcastV.get());
+  BitcastV->replaceAllUsesWith(ConstantV);
+  EXPECT_EQ(VH, ConstantV);
+}
+
+#ifdef GTEST_HAS_DEATH_TEST
+
+TEST_F(ValueHandle, PoisoningVH_Asserts) {
+  PoisoningVH<Value> VH(BitcastV.get());
+
+  // The poisoned handle shouldn't assert when the value is deleted.
+  BitcastV.reset(new BitCastInst(ConstantV, Type::getInt32Ty(Context)));
+  // But should when we access the handle.
+  EXPECT_DEATH((void)*VH, "Accessed a poisoned value handle!");
+
+  // Now check that poison catches RAUW.
+  VH = BitcastV.get();
+  // The replace doesn't trigger anything immediately.
+  BitcastV->replaceAllUsesWith(ConstantV);
+  // But a use does.
+  EXPECT_DEATH((void)*VH, "Accessed a poisoned value handle!");
+
+  // Don't clear anything out here as destroying the handles should be fine.
+}
+
+TEST_F(ValueHandle, TrackingVH_Asserts) {
+  {
+    TrackingVH<Value> VH(BitcastV.get());
+
+    // The tracking handle shouldn't assert when the value is deleted.
+    BitcastV.reset(new BitCastInst(ConstantV, Type::getInt32Ty(Context)));
+    // But should when we access the handle.
+    EXPECT_DEATH((void)*VH,
+                 "TrackingVH must be non-null and valid on dereference!");
+  }
+
+  {
+    TrackingVH<Instruction> VH(BitcastV.get());
+
+    BitcastV->replaceAllUsesWith(ConstantV);
+    EXPECT_DEATH((void)*VH,
+                 "Tracked Value was replaced by one with an invalid type!");
+  }
+}
+
+#endif // GTEST_HAS_DEATH_TEST
+
+#endif // NDEBUG
 }

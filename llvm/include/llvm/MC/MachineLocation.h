@@ -1,4 +1,4 @@
-//===-- llvm/MC/MachineLocation.h -------------------------------*- C++ -*-===//
+//===- llvm/MC/MachineLocation.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,39 +12,33 @@
 // explicitly passing an offset to the constructor.
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_MC_MACHINELOCATION_H
 #define LLVM_MC_MACHINELOCATION_H
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
+#include <cstdint>
+#include <cassert>
 
 namespace llvm {
-  class MCSymbol;
 
 class MachineLocation {
 private:
-  bool IsRegister;                      // True if location is a register.
-  unsigned Register;                    // gcc/gdb register number.
-  int Offset;                           // Displacement if not register.
+  bool IsRegister = false;              ///< True if location is a register.
+  unsigned Register = 0;                ///< gcc/gdb register number.
+
 public:
   enum : uint32_t {
     // The target register number for an abstract frame pointer. The value is
     // an arbitrary value that doesn't collide with any real target register.
     VirtualFP = ~0U
   };
-  MachineLocation()
-    : IsRegister(false), Register(0), Offset(0) {}
+
+  MachineLocation() = default;
   /// Create a direct register location.
-  explicit MachineLocation(unsigned R)
-    : IsRegister(true), Register(R), Offset(0) {}
-  /// Create a register-indirect location with an offset.
-  MachineLocation(unsigned R, int O)
-    : IsRegister(false), Register(R), Offset(O) {}
+  explicit MachineLocation(unsigned R, bool Indirect = false)
+      : IsRegister(!Indirect), Register(R) {}
 
   bool operator==(const MachineLocation &Other) const {
-      return IsRegister == Other.IsRegister && Register == Other.Register &&
-        Offset == Other.Offset;
+    return IsRegister == Other.IsRegister && Register == Other.Register;
   }
 
   // Accessors.
@@ -52,28 +46,14 @@ public:
   bool isIndirect()      const { return !IsRegister; }
   bool isReg()           const { return IsRegister; }
   unsigned getReg()      const { return Register; }
-  int getOffset()        const { return Offset; }
   void setIsRegister(bool Is)  { IsRegister = Is; }
   void setRegister(unsigned R) { Register = R; }
-  void setOffset(int O)        { Offset = O; }
-  /// Make this location a direct register location.
-  void set(unsigned R) {
-    IsRegister = true;
-    Register = R;
-    Offset = 0;
-  }
-  /// Make this location a register-indirect+offset location.
-  void set(unsigned R, int O) {
-    IsRegister = false;
-    Register = R;
-    Offset = O;
-  }
 };
 
 inline bool operator!=(const MachineLocation &LHS, const MachineLocation &RHS) {
   return !(LHS == RHS);
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MACHINELOCATION_H

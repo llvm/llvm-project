@@ -3,9 +3,9 @@
 
 // Simple test for a fuzzer: find interesting value of array index.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <cstddef>
 #include <iostream>
 
 static volatile int Sink;
@@ -14,7 +14,7 @@ int array[kArraySize];
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size < 8) return 0;
-  size_t a = 0;
+  uint64_t a = 0;
   memcpy(&a, Data, 8);
   Sink = array[a % (kArraySize + 1)];
   return 0;

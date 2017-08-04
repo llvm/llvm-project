@@ -1,7 +1,11 @@
 // REQUIRES: x86
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-// RUN: not ld.lld %t -o %t2 2>&1 | FileCheck %s
+// RUN: ld.lld %t -o %t2
+// RUN: llvm-objdump -h %t2 | FileCheck %s
+
+// This resembles what gold -r produces when it discards the section
+// the fde points to.
 
         .section .eh_frame
         .long 0x14
@@ -29,4 +33,4 @@
         .long 0x0
         .long 0x0
 
-// CHECK: FDE doesn't reference another section
+// CHECK:  1 .eh_frame     00000018

@@ -35,10 +35,10 @@ bb10:                                             ; preds = %bb8, %bb3
   br i1 %tmp11, label %bb13, label %bb12
 
 bb12:                                             ; preds = %bb10
-  unreachable
+  ret void
 
 bb13:                                             ; preds = %bb10
-  unreachable
+  ret void
 }
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

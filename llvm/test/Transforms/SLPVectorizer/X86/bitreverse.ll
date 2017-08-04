@@ -22,29 +22,11 @@ declare i16 @llvm.bitreverse.i16(i16)
 declare  i8 @llvm.bitreverse.i8(i8)
 
 define void @bitreverse_2i64() #0 {
-; SSE-LABEL: @bitreverse_2i64(
-; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 0), align 8
-; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 1), align 8
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD1]])
-; SSE-NEXT:    store i64 [[BITREVERSE0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 0), align 8
-; SSE-NEXT:    store i64 [[BITREVERSE1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 1), align 8
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @bitreverse_2i64(
-; AVX-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 0), align 8
-; AVX-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 1), align 8
-; AVX-NEXT:    [[BITREVERSE0:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD0]])
-; AVX-NEXT:    [[BITREVERSE1:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD1]])
-; AVX-NEXT:    store i64 [[BITREVERSE0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 0), align 8
-; AVX-NEXT:    store i64 [[BITREVERSE1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 1), align 8
-; AVX-NEXT:    ret void
-;
-; XOP-LABEL: @bitreverse_2i64(
-; XOP-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([4 x i64]* @src64 to <2 x i64>*), align 8
-; XOP-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP1]])
-; XOP-NEXT:    store <2 x i64> [[TMP2]], <2 x i64>* bitcast ([4 x i64]* @dst64 to <2 x i64>*), align 8
-; XOP-NEXT:    ret void
+; CHECK-LABEL: @bitreverse_2i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([4 x i64]* @src64 to <2 x i64>*), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP1]])
+; CHECK-NEXT:    store <2 x i64> [[TMP2]], <2 x i64>* bitcast ([4 x i64]* @dst64 to <2 x i64>*), align 8
+; CHECK-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 0), align 8
   %ld1 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 1), align 8
@@ -57,40 +39,19 @@ define void @bitreverse_2i64() #0 {
 
 define void @bitreverse_4i64() #0 {
 ; SSE-LABEL: @bitreverse_4i64(
-; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
-; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
-; SSE-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
-; SSE-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD3]])
-; SSE-NEXT:    store i64 [[BITREVERSE0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
-; SSE-NEXT:    store i64 [[BITREVERSE1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
-; SSE-NEXT:    store i64 [[BITREVERSE2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
-; SSE-NEXT:    store i64 [[BITREVERSE3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([4 x i64]* @src64 to <2 x i64>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2) to <2 x i64>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP1]])
+; SSE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> [[TMP2]])
+; SSE-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* bitcast ([4 x i64]* @dst64 to <2 x i64>*), align 4
+; SSE-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* bitcast (i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2) to <2 x i64>*), align 4
 ; SSE-NEXT:    ret void
 ;
-; AVX1-LABEL: @bitreverse_4i64(
-; AVX1-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
-; AVX1-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
-; AVX1-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
-; AVX1-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
-; AVX1-NEXT:    [[BITREVERSE0:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD0]])
-; AVX1-NEXT:    [[BITREVERSE1:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD1]])
-; AVX1-NEXT:    [[BITREVERSE2:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD2]])
-; AVX1-NEXT:    [[BITREVERSE3:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[LD3]])
-; AVX1-NEXT:    store i64 [[BITREVERSE0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
-; AVX1-NEXT:    store i64 [[BITREVERSE1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
-; AVX1-NEXT:    store i64 [[BITREVERSE2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
-; AVX1-NEXT:    store i64 [[BITREVERSE3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @bitreverse_4i64(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([4 x i64]* @src64 to <4 x i64>*), align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> [[TMP1]])
-; AVX2-NEXT:    store <4 x i64> [[TMP2]], <4 x i64>* bitcast ([4 x i64]* @dst64 to <4 x i64>*), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @bitreverse_4i64(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([4 x i64]* @src64 to <4 x i64>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> [[TMP1]])
+; AVX-NEXT:    store <4 x i64> [[TMP2]], <4 x i64>* bitcast ([4 x i64]* @dst64 to <4 x i64>*), align 4
+; AVX-NEXT:    ret void
 ;
 ; XOP-LABEL: @bitreverse_4i64(
 ; XOP-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([4 x i64]* @src64 to <4 x i64>*), align 4
@@ -114,32 +75,11 @@ define void @bitreverse_4i64() #0 {
 }
 
 define void @bitreverse_4i32() #0 {
-; SSE-LABEL: @bitreverse_4i32(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD3]])
-; SSE-NEXT:    store i32 [[BITREVERSE0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
-; SSE-NEXT:    store i32 [[BITREVERSE1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[BITREVERSE2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
-; SSE-NEXT:    store i32 [[BITREVERSE3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @bitreverse_4i32(
-; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
-; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP1]])
-; AVX-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
-; AVX-NEXT:    ret void
-;
-; XOP-LABEL: @bitreverse_4i32(
-; XOP-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
-; XOP-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP1]])
-; XOP-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
-; XOP-NEXT:    ret void
+; CHECK-LABEL: @bitreverse_4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; CHECK-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
@@ -158,30 +98,12 @@ define void @bitreverse_4i32() #0 {
 
 define void @bitreverse_8i32() #0 {
 ; SSE-LABEL: @bitreverse_8i32(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
-; SSE-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
-; SSE-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
-; SSE-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
-; SSE-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
-; SSE-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
-; SSE-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD3]])
-; SSE-NEXT:    [[BITREVERSE4:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD4]])
-; SSE-NEXT:    [[BITREVERSE5:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD5]])
-; SSE-NEXT:    [[BITREVERSE6:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD6]])
-; SSE-NEXT:    [[BITREVERSE7:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[LD7]])
-; SSE-NEXT:    store i32 [[BITREVERSE0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
-; SSE-NEXT:    store i32 [[BITREVERSE7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP1]])
+; SSE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> [[TMP2]])
+; SSE-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @bitreverse_8i32(
@@ -224,44 +146,11 @@ define void @bitreverse_8i32() #0 {
 }
 
 define void @bitreverse_8i16() #0 {
-; SSE-LABEL: @bitreverse_8i16(
-; SSE-NEXT:    [[LD0:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 0), align 2
-; SSE-NEXT:    [[LD1:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 1), align 2
-; SSE-NEXT:    [[LD2:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 2), align 2
-; SSE-NEXT:    [[LD3:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 3), align 2
-; SSE-NEXT:    [[LD4:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 4), align 2
-; SSE-NEXT:    [[LD5:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 5), align 2
-; SSE-NEXT:    [[LD6:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 6), align 2
-; SSE-NEXT:    [[LD7:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 7), align 2
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD3]])
-; SSE-NEXT:    [[BITREVERSE4:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD4]])
-; SSE-NEXT:    [[BITREVERSE5:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD5]])
-; SSE-NEXT:    [[BITREVERSE6:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD6]])
-; SSE-NEXT:    [[BITREVERSE7:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD7]])
-; SSE-NEXT:    store i16 [[BITREVERSE0]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 0), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE1]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 1), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE2]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 2), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE3]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 3), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE4]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 4), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE5]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 5), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE6]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 6), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE7]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 7), align 2
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @bitreverse_8i16(
-; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; AVX-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP1]])
-; AVX-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
-; AVX-NEXT:    ret void
-;
-; XOP-LABEL: @bitreverse_8i16(
-; XOP-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; XOP-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP1]])
-; XOP-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
-; XOP-NEXT:    ret void
+; CHECK-LABEL: @bitreverse_8i16(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP1]])
+; CHECK-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; CHECK-NEXT:    ret void
 ;
   %ld0 = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 0), align 2
   %ld1 = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 1), align 2
@@ -292,54 +181,12 @@ define void @bitreverse_8i16() #0 {
 
 define void @bitreverse_16i16() #0 {
 ; SSE-LABEL: @bitreverse_16i16(
-; SSE-NEXT:    [[LD0:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 0), align 2
-; SSE-NEXT:    [[LD1:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 1), align 2
-; SSE-NEXT:    [[LD2:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 2), align 2
-; SSE-NEXT:    [[LD3:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 3), align 2
-; SSE-NEXT:    [[LD4:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 4), align 2
-; SSE-NEXT:    [[LD5:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 5), align 2
-; SSE-NEXT:    [[LD6:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 6), align 2
-; SSE-NEXT:    [[LD7:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 7), align 2
-; SSE-NEXT:    [[LD8:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8), align 2
-; SSE-NEXT:    [[LD9:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 9), align 2
-; SSE-NEXT:    [[LD10:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 10), align 2
-; SSE-NEXT:    [[LD11:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 11), align 2
-; SSE-NEXT:    [[LD12:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 12), align 2
-; SSE-NEXT:    [[LD13:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 13), align 2
-; SSE-NEXT:    [[LD14:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 14), align 2
-; SSE-NEXT:    [[LD15:%.*]] = load i16, i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 15), align 2
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD3]])
-; SSE-NEXT:    [[BITREVERSE4:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD4]])
-; SSE-NEXT:    [[BITREVERSE5:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD5]])
-; SSE-NEXT:    [[BITREVERSE6:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD6]])
-; SSE-NEXT:    [[BITREVERSE7:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD7]])
-; SSE-NEXT:    [[BITREVERSE8:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD8]])
-; SSE-NEXT:    [[BITREVERSE9:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD9]])
-; SSE-NEXT:    [[BITREVERSE10:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD10]])
-; SSE-NEXT:    [[BITREVERSE11:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD11]])
-; SSE-NEXT:    [[BITREVERSE12:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD12]])
-; SSE-NEXT:    [[BITREVERSE13:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD13]])
-; SSE-NEXT:    [[BITREVERSE14:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD14]])
-; SSE-NEXT:    [[BITREVERSE15:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LD15]])
-; SSE-NEXT:    store i16 [[BITREVERSE0]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 0), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE1]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 1), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE2]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 2), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE3]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 3), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE4]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 4), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE5]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 5), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE6]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 6), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE7]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 7), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE8]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE9]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 9), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE10]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 10), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE11]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 11), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE12]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 12), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE13]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 13), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE14]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 14), align 2
-; SSE-NEXT:    store i16 [[BITREVERSE15]], i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 15), align 2
+; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP1]])
+; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> [[TMP2]])
+; SSE-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8) to <8 x i16>*), align 2
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @bitreverse_16i16(
@@ -406,68 +253,11 @@ define void @bitreverse_16i16() #0 {
 }
 
 define void @bitreverse_16i8() #0 {
-; SSE-LABEL: @bitreverse_16i8(
-; SSE-NEXT:    [[LD0:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 0), align 1
-; SSE-NEXT:    [[LD1:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 1), align 1
-; SSE-NEXT:    [[LD2:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 2), align 1
-; SSE-NEXT:    [[LD3:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 3), align 1
-; SSE-NEXT:    [[LD4:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 4), align 1
-; SSE-NEXT:    [[LD5:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 5), align 1
-; SSE-NEXT:    [[LD6:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 6), align 1
-; SSE-NEXT:    [[LD7:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 7), align 1
-; SSE-NEXT:    [[LD8:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 8), align 1
-; SSE-NEXT:    [[LD9:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 9), align 1
-; SSE-NEXT:    [[LD10:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 10), align 1
-; SSE-NEXT:    [[LD11:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 11), align 1
-; SSE-NEXT:    [[LD12:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 12), align 1
-; SSE-NEXT:    [[LD13:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 13), align 1
-; SSE-NEXT:    [[LD14:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 14), align 1
-; SSE-NEXT:    [[LD15:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 15), align 1
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD3]])
-; SSE-NEXT:    [[BITREVERSE4:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD4]])
-; SSE-NEXT:    [[BITREVERSE5:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD5]])
-; SSE-NEXT:    [[BITREVERSE6:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD6]])
-; SSE-NEXT:    [[BITREVERSE7:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD7]])
-; SSE-NEXT:    [[BITREVERSE8:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD8]])
-; SSE-NEXT:    [[BITREVERSE9:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD9]])
-; SSE-NEXT:    [[BITREVERSE10:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD10]])
-; SSE-NEXT:    [[BITREVERSE11:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD11]])
-; SSE-NEXT:    [[BITREVERSE12:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD12]])
-; SSE-NEXT:    [[BITREVERSE13:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD13]])
-; SSE-NEXT:    [[BITREVERSE14:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD14]])
-; SSE-NEXT:    [[BITREVERSE15:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD15]])
-; SSE-NEXT:    store i8 [[BITREVERSE0]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 0), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE1]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 1), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE2]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 2), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE3]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 3), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE4]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 4), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE5]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 5), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE6]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 6), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE7]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 7), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE8]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 8), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE9]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 9), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE10]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 10), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE11]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 11), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE12]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 12), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE13]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 13), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE14]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 14), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE15]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 15), align 1
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @bitreverse_16i8(
-; AVX-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; AVX-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
-; AVX-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
-; AVX-NEXT:    ret void
-;
-; XOP-LABEL: @bitreverse_16i8(
-; XOP-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; XOP-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
-; XOP-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
-; XOP-NEXT:    ret void
+; CHECK-LABEL: @bitreverse_16i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
+; CHECK-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; CHECK-NEXT:    ret void
 ;
   %ld0  = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64  0), align 1
   %ld1  = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64  1), align 1
@@ -521,122 +311,14 @@ define void @bitreverse_16i8() #0 {
 }
 
 define void @bitreverse_32i8() #0 {
-; SSE-LABEL: @bitreverse_32i8(
-; SSE-NEXT:    [[LD0:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 0), align 1
-; SSE-NEXT:    [[LD1:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 1), align 1
-; SSE-NEXT:    [[LD2:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 2), align 1
-; SSE-NEXT:    [[LD3:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 3), align 1
-; SSE-NEXT:    [[LD4:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 4), align 1
-; SSE-NEXT:    [[LD5:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 5), align 1
-; SSE-NEXT:    [[LD6:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 6), align 1
-; SSE-NEXT:    [[LD7:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 7), align 1
-; SSE-NEXT:    [[LD8:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 8), align 1
-; SSE-NEXT:    [[LD9:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 9), align 1
-; SSE-NEXT:    [[LD10:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 10), align 1
-; SSE-NEXT:    [[LD11:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 11), align 1
-; SSE-NEXT:    [[LD12:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 12), align 1
-; SSE-NEXT:    [[LD13:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 13), align 1
-; SSE-NEXT:    [[LD14:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 14), align 1
-; SSE-NEXT:    [[LD15:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 15), align 1
-; SSE-NEXT:    [[LD16:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16), align 1
-; SSE-NEXT:    [[LD17:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 17), align 1
-; SSE-NEXT:    [[LD18:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 18), align 1
-; SSE-NEXT:    [[LD19:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 19), align 1
-; SSE-NEXT:    [[LD20:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 20), align 1
-; SSE-NEXT:    [[LD21:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 21), align 1
-; SSE-NEXT:    [[LD22:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 22), align 1
-; SSE-NEXT:    [[LD23:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 23), align 1
-; SSE-NEXT:    [[LD24:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 24), align 1
-; SSE-NEXT:    [[LD25:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 25), align 1
-; SSE-NEXT:    [[LD26:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 26), align 1
-; SSE-NEXT:    [[LD27:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 27), align 1
-; SSE-NEXT:    [[LD28:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 28), align 1
-; SSE-NEXT:    [[LD29:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 29), align 1
-; SSE-NEXT:    [[LD30:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 30), align 1
-; SSE-NEXT:    [[LD31:%.*]] = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 31), align 1
-; SSE-NEXT:    [[BITREVERSE0:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD0]])
-; SSE-NEXT:    [[BITREVERSE1:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD1]])
-; SSE-NEXT:    [[BITREVERSE2:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD2]])
-; SSE-NEXT:    [[BITREVERSE3:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD3]])
-; SSE-NEXT:    [[BITREVERSE4:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD4]])
-; SSE-NEXT:    [[BITREVERSE5:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD5]])
-; SSE-NEXT:    [[BITREVERSE6:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD6]])
-; SSE-NEXT:    [[BITREVERSE7:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD7]])
-; SSE-NEXT:    [[BITREVERSE8:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD8]])
-; SSE-NEXT:    [[BITREVERSE9:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD9]])
-; SSE-NEXT:    [[BITREVERSE10:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD10]])
-; SSE-NEXT:    [[BITREVERSE11:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD11]])
-; SSE-NEXT:    [[BITREVERSE12:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD12]])
-; SSE-NEXT:    [[BITREVERSE13:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD13]])
-; SSE-NEXT:    [[BITREVERSE14:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD14]])
-; SSE-NEXT:    [[BITREVERSE15:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD15]])
-; SSE-NEXT:    [[BITREVERSE16:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD16]])
-; SSE-NEXT:    [[BITREVERSE17:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD17]])
-; SSE-NEXT:    [[BITREVERSE18:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD18]])
-; SSE-NEXT:    [[BITREVERSE19:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD19]])
-; SSE-NEXT:    [[BITREVERSE20:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD20]])
-; SSE-NEXT:    [[BITREVERSE21:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD21]])
-; SSE-NEXT:    [[BITREVERSE22:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD22]])
-; SSE-NEXT:    [[BITREVERSE23:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD23]])
-; SSE-NEXT:    [[BITREVERSE24:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD24]])
-; SSE-NEXT:    [[BITREVERSE25:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD25]])
-; SSE-NEXT:    [[BITREVERSE26:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD26]])
-; SSE-NEXT:    [[BITREVERSE27:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD27]])
-; SSE-NEXT:    [[BITREVERSE28:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD28]])
-; SSE-NEXT:    [[BITREVERSE29:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD29]])
-; SSE-NEXT:    [[BITREVERSE30:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD30]])
-; SSE-NEXT:    [[BITREVERSE31:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[LD31]])
-; SSE-NEXT:    store i8 [[BITREVERSE0]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 0), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE1]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 1), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE2]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 2), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE3]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 3), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE4]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 4), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE5]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 5), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE6]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 6), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE7]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 7), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE8]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 8), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE9]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 9), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE10]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 10), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE11]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 11), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE12]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 12), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE13]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 13), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE14]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 14), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE15]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 15), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE16]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE17]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 17), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE18]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 18), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE19]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 19), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE20]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 20), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE21]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 21), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE22]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 22), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE23]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 23), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE24]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 24), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE25]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 25), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE26]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 26), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE27]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 27), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE28]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 28), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE29]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 29), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE30]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 30), align 1
-; SSE-NEXT:    store i8 [[BITREVERSE31]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 31), align 1
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @bitreverse_32i8(
-; AVX-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; AVX-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; AVX-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
-; AVX-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP2]])
-; AVX-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
-; AVX-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
-; AVX-NEXT:    ret void
-;
-; XOP-LABEL: @bitreverse_32i8(
-; XOP-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; XOP-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; XOP-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
-; XOP-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP2]])
-; XOP-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
-; XOP-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
-; XOP-NEXT:    ret void
+; CHECK-LABEL: @bitreverse_32i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP2]])
+; CHECK-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    ret void
 ;
   %ld0  = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64  0), align 1
   %ld1  = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64  1), align 1

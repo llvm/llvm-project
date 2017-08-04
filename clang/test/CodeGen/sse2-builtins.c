@@ -951,6 +951,13 @@ __m128d test_mm_set_pd(double A, double B) {
   return _mm_set_pd(A, B);
 }
 
+__m128d test_mm_set_pd1(double A) {
+  // CHECK-LABEL: test_mm_set_pd1
+  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
+  return _mm_set_pd1(A);
+}
+
 __m128d test_mm_set_sd(double A) {
   // CHECK-LABEL: test_mm_set_sd
   // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
@@ -1455,13 +1462,13 @@ int test_mm_ucomineq_sd(__m128d A, __m128d B) {
 
 __m128d test_mm_undefined_pd() {
   // CHECK-LABEL: @test_mm_undefined_pd
-  // CHECK: ret <2 x double> undef
+  // CHECK: ret <2 x double> zeroinitializer
   return _mm_undefined_pd();
 }
 
 __m128i test_mm_undefined_si128() {
   // CHECK-LABEL: @test_mm_undefined_si128
-  // CHECK: ret <2 x i64> undef
+  // CHECK: ret <2 x i64> zeroinitializer
   return _mm_undefined_si128();
 }
 

@@ -14,10 +14,10 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -197,13 +197,13 @@ bool HexagonGenExtract::convert(Instruction *In) {
     // It is still ok to generate extract, but only if the mask eliminates
     // those bits (i.e. M does not have any bits set beyond U).
     APInt C = APInt::getHighBitsSet(BW, BW-U);
-    if (M.intersects(C) || !APIntOps::isMask(W, M))
+    if (M.intersects(C) || !M.isMask(W))
       return false;
   } else {
     // Check if M starts with a contiguous sequence of W times 1 bits. Get
     // the low U bits of M (which eliminates the 0 bits shifted in on the
     // left), and check if the result is APInt's "mask":
-    if (!APIntOps::isMask(W, M.getLoBits(U)))
+    if (!M.getLoBits(U).isMask(W))
       return false;
   }
 
@@ -221,11 +221,8 @@ bool HexagonGenExtract::convert(Instruction *In) {
 
 bool HexagonGenExtract::visitBlock(BasicBlock *B) {
   // Depth-first, bottom-up traversal.
-  DomTreeNode *DTN = DT->getNode(B);
-  typedef GraphTraits<DomTreeNode*> GTN;
-  typedef GTN::ChildIteratorType Iter;
-  for (Iter I = GTN::child_begin(DTN), E = GTN::child_end(DTN); I != E; ++I)
-    visitBlock((*I)->getBlock());
+  for (auto *DTN : children<DomTreeNode*>(DT->getNode(B)))
+    visitBlock(DTN->getBlock());
 
   // Allow limiting the number of generated extracts for debugging purposes.
   bool HasCutoff = ExtractCutoff.getPosition();

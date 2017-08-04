@@ -10,6 +10,7 @@
 
 // FIXME: only FreeBSD and Linux have verbose log paths now.
 // XFAIL: win32,android
+// UNSUPPORTED: ios
 
 #include <stdlib.h>
 #include <string.h>

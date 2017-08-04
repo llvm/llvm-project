@@ -95,4 +95,22 @@ int main()
         assert((*i2).position() == 0);
         assert((*i2).str() == "555-1234");
     }
+    { // http://llvm.org/PR33681
+        std::regex rex(".*");
+        const char foo[] = "foo";
+    //  The -1 is because we don't want the implicit null from the array.
+        std::cregex_iterator i(std::begin(foo), std::end(foo) - 1, rex);
+        std::cregex_iterator e;
+        assert(i != e);
+        assert((*i).size() == 1);
+        assert((*i).str() == "foo");
+
+        ++i;
+        assert(i != e);
+        assert((*i).size() == 1);
+        assert((*i).str() == "");
+
+        ++i;
+        assert(i == e);
+    }
 }

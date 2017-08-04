@@ -205,9 +205,15 @@ private:
   /// Controls which C++ member functions will be considered for inlining.
   CXXInlineableMemberKind CXXMemberInliningMode;
   
+  /// \sa includeImplicitDtorsInCFG
+  Optional<bool> IncludeImplicitDtorsInCFG;
+
   /// \sa includeTemporaryDtorsInCFG
   Optional<bool> IncludeTemporaryDtorsInCFG;
-  
+
+  /// \sa IncludeLifetimeInCFG
+  Optional<bool> IncludeLifetimeInCFG;
+
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
   
@@ -394,6 +400,20 @@ public:
   /// This is controlled by the 'cfg-temporary-dtors' config option, which
   /// accepts the values "true" and "false".
   bool includeTemporaryDtorsInCFG();
+
+  /// Returns whether or not implicit destructors for C++ objects should
+  /// be included in the CFG.
+  ///
+  /// This is controlled by the 'cfg-implicit-dtors' config option, which
+  /// accepts the values "true" and "false".
+  bool includeImplicitDtorsInCFG();
+
+  /// Returns whether or not end-of-lifetime information should be included in
+  /// the CFG.
+  ///
+  /// This is controlled by the 'cfg-lifetime' config option, which accepts
+  /// the values "true" and "false".
+  bool includeLifetimeInCFG();
 
   /// Returns whether or not C++ standard library functions may be considered
   /// for inlining.

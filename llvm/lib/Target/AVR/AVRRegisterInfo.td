@@ -110,8 +110,6 @@ CoveredBySubRegs = 1 in
 // Register Classes
 //===----------------------------------------------------------------------===//
 
-//:TODO: use proper set instructions instead of using always "add"
-
 // Main 8-bit register class.
 def GPR8 : RegisterClass<"AVR", [i8], 8,
   (
@@ -199,14 +197,11 @@ def PTRDISPREGS : RegisterClass<"AVR", [i16], 8,
 
 // We have a bunch of instructions with an explicit Z register argument. We
 // model this using a register class containing only the Z register.
-// :TODO: Rename to 'ZREG'.
-def ZREGS : RegisterClass<"AVR", [i16], 8, (add R31R30)>;
+def ZREG : RegisterClass<"AVR", [i16], 8, (add R31R30)>;
 
 // Register class used for the stack read pseudo instruction.
 def GPRSP: RegisterClass<"AVR", [i16], 8, (add SP)>;
 
-//:TODO: if we remove this we get an error in tablegen
-//:TODO: this is just a hack, remove it once add16 works!
 // Status register.
 def SREG : AVRReg<14, "FLAGS">, DwarfRegNum<[88]>;
 def CCR : RegisterClass<"AVR", [i8], 8, (add SREG)>

@@ -8,17 +8,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <string>
+#include <vector>
+
 using namespace llvm;
 using namespace yaml;
 
@@ -26,11 +36,9 @@ using namespace yaml;
 //  IO
 //===----------------------------------------------------------------------===//
 
-IO::IO(void *Context) : Ctxt(Context) {
-}
+IO::IO(void *Context) : Ctxt(Context) {}
 
-IO::~IO() {
-}
+IO::~IO() = default;
 
 void *IO::getContext() {
   return Ctxt;
@@ -46,15 +54,21 @@ void IO::setContext(void *Context) {
 
 Input::Input(StringRef InputContent, void *Ctxt,
              SourceMgr::DiagHandlerTy DiagHandler, void *DiagHandlerCtxt)
-    : IO(Ctxt), Strm(new Stream(InputContent, SrcMgr, false, &EC)),
-      CurrentNode(nullptr) {
+    : IO(Ctxt), Strm(new Stream(InputContent, SrcMgr, false, &EC)) {
   if (DiagHandler)
     SrcMgr.setDiagHandler(DiagHandler, DiagHandlerCtxt);
   DocIterator = Strm->begin();
 }
 
-Input::~Input() {
+Input::Input(MemoryBufferRef Input, void *Ctxt,
+             SourceMgr::DiagHandlerTy DiagHandler, void *DiagHandlerCtxt)
+    : IO(Ctxt), Strm(new Stream(Input, SrcMgr, false, &EC)) {
+  if (DiagHandler)
+    SrcMgr.setDiagHandler(DiagHandler, DiagHandlerCtxt);
+  DocIterator = Strm->begin();
 }
+
+Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
 
@@ -398,20 +412,9 @@ bool Input::canElideEmptySequence() {
 //===----------------------------------------------------------------------===//
 
 Output::Output(raw_ostream &yout, void *context, int WrapColumn)
-    : IO(context),
-      Out(yout),
-      WrapColumn(WrapColumn),
-      Column(0),
-      ColumnAtFlowStart(0),
-      ColumnAtMapFlowStart(0),
-      NeedBitValueComma(false),
-      NeedFlowSequenceComma(false),
-      EnumerationMatchFound(false),
-      NeedsNewLine(false) {
-}
+    : IO(context), Out(yout), WrapColumn(WrapColumn) {}
 
-Output::~Output() {
-}
+Output::~Output() = default;
 
 bool Output::outputting() {
   return true;
@@ -462,7 +465,7 @@ std::vector<StringRef> Output::keys() {
 bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
                           bool &UseDefault, void *&) {
   UseDefault = false;
-  if (Required || !SameAsDefault) {
+  if (Required || !SameAsDefault || WriteDefaultValues) {
     auto State = StateStack.back();
     if (State == inFlowMapFirstKey || State == inFlowMapOtherKey) {
       flowKey(Key);
@@ -918,12 +921,9 @@ void ScalarTraits<double>::output(const double &Val, void *, raw_ostream &Out) {
 }
 
 StringRef ScalarTraits<double>::input(StringRef Scalar, void *, double &Val) {
-  SmallString<32> buff(Scalar.begin(), Scalar.end());
-  char *end;
-  Val = strtod(buff.c_str(), &end);
-  if (*end != '\0')
-    return "invalid floating point number";
-  return StringRef();
+  if (to_float(Scalar, Val))
+    return StringRef();
+  return "invalid floating point number";
 }
 
 void ScalarTraits<float>::output(const float &Val, void *, raw_ostream &Out) {
@@ -931,12 +931,9 @@ void ScalarTraits<float>::output(const float &Val, void *, raw_ostream &Out) {
 }
 
 StringRef ScalarTraits<float>::input(StringRef Scalar, void *, float &Val) {
-  SmallString<32> buff(Scalar.begin(), Scalar.end());
-  char *end;
-  Val = strtod(buff.c_str(), &end);
-  if (*end != '\0')
-    return "invalid floating point number";
-  return StringRef();
+  if (to_float(Scalar, Val))
+    return StringRef();
+  return "invalid floating point number";
 }
 
 void ScalarTraits<Hex8>::output(const Hex8 &Val, void *, raw_ostream &Out) {

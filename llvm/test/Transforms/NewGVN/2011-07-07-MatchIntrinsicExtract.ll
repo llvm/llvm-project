@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt < %s -newgvn -S | FileCheck %s
 ;
 
@@ -9,7 +8,8 @@ entry:
   %uadd = tail call %0 @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
   %uadd.0 = extractvalue %0 %uadd, 0
   %add1 = add i64 %a, %b
-  ret i64 %add1
+  %add2 =  add i64 %add1, %uadd.0
+  ret i64 %add2
 }
 
 ; CHECK-LABEL: @test1(
@@ -21,7 +21,8 @@ entry:
   %usub = tail call %0 @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %usub.0 = extractvalue %0 %usub, 0
   %sub1 = sub i64 %a, %b
-  ret i64 %sub1
+  %add2 =  add i64 %sub1, %usub.0
+  ret i64 %add2
 }
 
 ; CHECK-LABEL: @test2(
@@ -33,7 +34,8 @@ entry:
   %umul = tail call %0 @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
   %umul.0 = extractvalue %0 %umul, 0
   %mul1 = mul i64 %a, %b
-  ret i64 %mul1
+  %add2 =  add i64 %mul1, %umul.0
+  ret i64 %add2
 }
 
 ; CHECK-LABEL: @test3(
@@ -45,7 +47,8 @@ entry:
   %sadd = tail call %0 @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
   %sadd.0 = extractvalue %0 %sadd, 0
   %add1 = add i64 %a, %b
-  ret i64 %add1
+  %add2 =  add i64 %add1, %sadd.0
+  ret i64 %add2
 }
 
 ; CHECK-LABEL: @test4(
@@ -57,7 +60,8 @@ entry:
   %ssub = tail call %0 @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
   %ssub.0 = extractvalue %0 %ssub, 0
   %sub1 = sub i64 %a, %b
-  ret i64 %sub1
+  %add2 =  add i64 %sub1, %ssub.0
+  ret i64 %add2
 }
 
 ; CHECK-LABEL: @test5(
@@ -69,7 +73,8 @@ entry:
   %smul = tail call %0 @llvm.smul.with.overflow.i64(i64 %a, i64 %b)
   %smul.0 = extractvalue %0 %smul, 0
   %mul1 = mul i64 %a, %b
-  ret i64 %mul1
+  %add2 =  add i64 %mul1, %smul.0
+  ret i64 %add2
 }
 
 ; CHECK-LABEL: @test6(

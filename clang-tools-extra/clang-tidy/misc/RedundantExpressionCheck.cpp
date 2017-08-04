@@ -239,6 +239,11 @@ static bool rangesFullyCoverDomain(BinaryOperatorKind OpcodeLHS,
       (OpcodeRHS == BO_LT || OpcodeRHS == BO_LE))
     return true;
 
+  // Handle cases where constants are different but both ops are !=, like:
+  // x != 5 || x != 10
+  if (OpcodeLHS == BO_NE && OpcodeRHS == BO_NE)
+    return true;
+
   return false;
 }
 

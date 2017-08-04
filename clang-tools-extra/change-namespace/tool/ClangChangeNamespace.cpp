@@ -39,6 +39,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/YAMLTraits.h"
 
 using namespace clang;
 using namespace llvm;
@@ -63,9 +64,37 @@ cl::opt<std::string> FilePattern(
 cl::opt<bool> Inplace("i", cl::desc("Inplace edit <file>s, if specified."),
                       cl::cat(ChangeNamespaceCategory));
 
+cl::opt<bool>
+    DumpYAML("dump_result",
+         cl::desc("Dump new file contents in YAML, if specified."),
+         cl::cat(ChangeNamespaceCategory));
+
 cl::opt<std::string> Style("style",
                            cl::desc("The style name used for reformatting."),
                            cl::init("LLVM"), cl::cat(ChangeNamespaceCategory));
+
+cl::opt<std::string> WhiteListFile(
+    "whitelist_file",
+    cl::desc("A file containing regexes of symbol names that are not expected "
+             "to be updated when changing namespaces around them."),
+    cl::init(""), cl::cat(ChangeNamespaceCategory));
+
+llvm::ErrorOr<std::vector<std::string>> GetWhiteListedSymbolPatterns() {
+  std::vector<std::string> Patterns;
+  if (WhiteListFile.empty())
+    return Patterns;
+
+  llvm::SmallVector<StringRef, 8> Lines;
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
+      llvm::MemoryBuffer::getFile(WhiteListFile);
+  if (!File)
+    return File.getError();
+  llvm::StringRef Content = File.get()->getBuffer();
+  Content.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (auto Line : Lines)
+    Patterns.push_back(Line.trim());
+  return Patterns;
+}
 
 } // anonymous namespace
 
@@ -75,8 +104,16 @@ int main(int argc, const char **argv) {
                                              ChangeNamespaceCategory);
   const auto &Files = OptionsParser.getSourcePathList();
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(), Files);
+  llvm::ErrorOr<std::vector<std::string>> WhiteListPatterns =
+      GetWhiteListedSymbolPatterns();
+  if (!WhiteListPatterns) {
+    llvm::errs() << "Failed to open whitelist file " << WhiteListFile << ". "
+                 << WhiteListPatterns.getError().message() << "\n";
+    return 1;
+  }
   change_namespace::ChangeNamespaceTool NamespaceTool(
-      OldNamespace, NewNamespace, FilePattern, &Tool.getReplacements(), Style);
+      OldNamespace, NewNamespace, FilePattern, *WhiteListPatterns,
+      &Tool.getReplacements(), Style);
   ast_matchers::MatchFinder Finder;
   NamespaceTool.registerMatchers(&Finder);
   std::unique_ptr<tooling::FrontendActionFactory> Factory =
@@ -101,14 +138,41 @@ int main(int argc, const char **argv) {
   if (Inplace)
     return Rewrite.overwriteChangedFiles();
 
-  for (const auto &File : Files) {
+  std::set<llvm::StringRef> ChangedFiles;
+  for (const auto &it : Tool.getReplacements())
+    ChangedFiles.insert(it.first);
+
+  if (DumpYAML) {
+    auto WriteToYAML = [&](llvm::raw_ostream &OS) {
+      OS << "[\n";
+      for (auto I = ChangedFiles.begin(), E = ChangedFiles.end(); I != E; ++I) {
+        OS << "  {\n";
+        OS << "    \"FilePath\": \"" << *I << "\",\n";
+        const auto *Entry = FileMgr.getFile(*I);
+        auto ID = Sources.getOrCreateFileID(Entry, SrcMgr::C_User);
+        std::string Content;
+        llvm::raw_string_ostream ContentStream(Content);
+        Rewrite.getEditBuffer(ID).write(ContentStream);
+        OS << "    \"SourceText\": \""
+           << llvm::yaml::escape(ContentStream.str()) << "\"\n";
+        OS << "  }";
+        if (I != std::prev(E))
+          OS << ",\n";
+      }
+      OS << "\n]\n";
+    };
+    WriteToYAML(llvm::outs());
+    return 0;
+  }
+
+  for (const auto &File : ChangedFiles) {
     const auto *Entry = FileMgr.getFile(File);
 
     auto ID = Sources.getOrCreateFileID(Entry, SrcMgr::C_User);
-    // FIXME: print results in parsable format, e.g. JSON.
     outs() << "============== " << File << " ==============\n";
     Rewrite.getEditBuffer(ID).write(llvm::outs());
     outs() << "\n============================================\n";
   }
+
   return 0;
 }

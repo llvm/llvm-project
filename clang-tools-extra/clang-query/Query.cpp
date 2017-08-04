@@ -97,10 +97,10 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
           if (R.isValid()) {
             TextDiagnostic TD(OS, AST->getASTContext().getLangOpts(),
                               &AST->getDiagnostics().getDiagnosticOptions());
-            TD.emitDiagnostic(R.getBegin(), DiagnosticsEngine::Note,
-                              "\"" + BI->first + "\" binds here",
-                              CharSourceRange::getTokenRange(R), None,
-                              &AST->getSourceManager());
+            TD.emitDiagnostic(
+                FullSourceLoc(R.getBegin(), AST->getSourceManager()),
+                DiagnosticsEngine::Note, "\"" + BI->first + "\" binds here",
+                CharSourceRange::getTokenRange(R), None);
           }
           break;
         }

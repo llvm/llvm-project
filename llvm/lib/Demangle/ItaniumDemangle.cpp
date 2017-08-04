@@ -36,6 +36,12 @@ enum {
   success
 };
 
+enum {
+  CV_const = (1 << 0),
+  CV_volatile = (1 << 1),
+  CV_restrict = (1 << 2),
+};
+
 template <class C>
 static const char *parse_type(const char *first, const char *last, C &db);
 template <class C>
@@ -436,15 +442,15 @@ static const char *parse_cv_qualifiers(const char *first, const char *last,
   cv = 0;
   if (first != last) {
     if (*first == 'r') {
-      cv |= 4;
+      cv |= CV_restrict;
       ++first;
     }
     if (*first == 'V') {
-      cv |= 2;
+      cv |= CV_volatile;
       ++first;
     }
     if (*first == 'K') {
-      cv |= 1;
+      cv |= CV_const;
       ++first;
     }
   }
@@ -1396,7 +1402,8 @@ static const char *parse_function_type(const char *first, const char *last,
         int ref_qual = 0;
         while (true) {
           if (t == last) {
-            db.names.pop_back();
+            if (!db.names.empty())
+              db.names.pop_back();
             return first;
           }
           if (*t == 'E') {
@@ -1663,27 +1670,30 @@ static const char *parse_type(const char *first, const char *last, C &db) {
           db.subs.emplace_back();
           for (size_t k = k0; k < k1; ++k) {
             if (is_function) {
-              size_t p = db.names[k].second.size();
-              if (db.names[k].second[p - 2] == '&')
-                p -= 3;
-              else if (db.names[k].second.back() == '&')
+              auto &name = db.names[k].second;
+              size_t p = name.size();
+
+              if (name[p - 2] == '&' && name[p - 1] == '&')
                 p -= 2;
-              if (cv & 1) {
-                db.names[k].second.insert(p, " const");
+              else if (name.back() == '&')
+                p -= 1;
+
+              if (cv & CV_const) {
+                name.insert(p, " const");
                 p += 6;
               }
-              if (cv & 2) {
-                db.names[k].second.insert(p, " volatile");
+              if (cv & CV_volatile) {
+                name.insert(p, " volatile");
                 p += 9;
               }
-              if (cv & 4)
-                db.names[k].second.insert(p, " restrict");
+              if (cv & CV_restrict)
+                name.insert(p, " restrict");
             } else {
-              if (cv & 1)
+              if (cv & CV_const)
                 db.names[k].first.append(" const");
-              if (cv & 2)
+              if (cv & CV_volatile)
                 db.names[k].first.append(" volatile");
-              if (cv & 4)
+              if (cv & CV_restrict)
                 db.names[k].first.append(" restrict");
             }
             db.subs.back().push_back(db.names[k]);
@@ -1937,7 +1947,7 @@ static const char *parse_type(const char *first, const char *last, C &db) {
               break;
             }
           }
-        // drop through
+        // falls through
         default:
           // must check for builtin-types before class-enum-types to avoid
           // ambiguities with operator-names
@@ -2515,6 +2525,9 @@ static std::string base_name(std::string &s) {
       ++p0;
       break;
     }
+    if (!isalpha(*p0) && !isdigit(*p0) && *p0 != '_') {
+      return std::string();
+    }
   }
   return std::string(p0, pe);
 }
@@ -2602,39 +2615,45 @@ static const char *parse_unnamed_type_name(const char *first, const char *last,
       first = t0 + 1;
     } break;
     case 'l': {
+      size_t lambda_pos = db.names.size();
       db.names.push_back(std::string("'lambda'("));
       const char *t0 = first + 2;
       if (first[2] == 'v') {
         db.names.back().first += ')';
         ++t0;
       } else {
-        const char *t1 = parse_type(t0, last, db);
-        if (t1 == t0) {
+        bool is_first_it = true;
+        while (true) {
+          long k0 = static_cast<long>(db.names.size());
+          const char *t1 = parse_type(t0, last, db);
+          long k1 = static_cast<long>(db.names.size());
+          if (t1 == t0)
+            break;
+          if (k0 >= k1)
+            return first;
+          // If the call to parse_type above found a pack expansion
+          // substitution, then multiple names could have been
+          // inserted into the name table. Walk through the names,
+          // appending each onto the lambda's parameter list.
+          std::for_each(db.names.begin() + k0, db.names.begin() + k1,
+                        [&](typename C::sub_type::value_type &pair) {
+                          if (pair.empty())
+                            return;
+                          auto &lambda = db.names[lambda_pos].first;
+                          if (!is_first_it)
+                            lambda.append(", ");
+                          is_first_it = false;
+                          lambda.append(pair.move_full());
+                        });
+          db.names.erase(db.names.begin() + k0, db.names.end());
+          t0 = t1;
+        }
+        if (is_first_it) {
           if (!db.names.empty())
             db.names.pop_back();
           return first;
         }
-        if (db.names.size() < 2)
-          return first;
-        auto tmp = db.names.back().move_full();
-        db.names.pop_back();
-        db.names.back().first.append(tmp);
-        t0 = t1;
-        while (true) {
-          t1 = parse_type(t0, last, db);
-          if (t1 == t0)
-            break;
-          if (db.names.size() < 2)
-            return first;
-          tmp = db.names.back().move_full();
-          db.names.pop_back();
-          if (!tmp.empty()) {
-            db.names.back().first.append(", ");
-            db.names.back().first.append(tmp);
-          }
-          t0 = t1;
-        }
-        if (db.names.empty())
+        if (db.names.empty() || db.names.size() - 1 != lambda_pos)
           return first;
         db.names.back().first.append(")");
       }
@@ -3826,6 +3845,8 @@ static const char *parse_call_offset(const char *first, const char *last) {
 //                ::= GV <object name> # Guard variable for one-time
 //                initialization
 //                                     # No <type>
+//                ::= TW <object name> # Thread-local wrapper
+//                ::= TH <object name> # Thread-local initialization
 //      extension ::= TC <first type> <number> _ <second type> # construction
 //      vtable for second-in-first
 //      extension ::= GR <object name> # reference temporary for object
@@ -3919,6 +3940,27 @@ static const char *parse_special_name(const char *first, const char *last,
           }
         }
         break;
+      case 'W':
+        // TW <object name> # Thread-local wrapper
+        t = parse_name(first + 2, last, db);
+        if (t != first + 2) {
+          if (db.names.empty())
+            return first;
+          db.names.back().first.insert(0, "thread-local wrapper routine for ");
+          first = t;
+        }
+        break;
+      case 'H':
+        // TH <object name> # Thread-local initialization
+        t = parse_name(first + 2, last, db);
+        if (t != first + 2) {
+          if (db.names.empty())
+            return first;
+          db.names.back().first.insert(
+              0, "thread-local initialization routine for ");
+          first = t;
+        }
+        break;
       default:
         // T <call-offset> <base encoding>
         {
@@ -3997,6 +4039,8 @@ static const char *parse_encoding(const char *first, const char *last, C &db) {
     save_value<decltype(db.tag_templates)> sb(db.tag_templates);
     if (db.encoding_depth > 1)
       db.tag_templates = true;
+    save_value<decltype(db.parsed_ctor_dtor_cv)> sp(db.parsed_ctor_dtor_cv);
+    db.parsed_ctor_dtor_cv = false;
     switch (*first) {
     case 'G':
     case 'T':
@@ -4074,11 +4118,11 @@ static const char *parse_encoding(const char *first, const char *last, C &db) {
           if (db.names.empty())
             return first;
           db.names.back().first += ')';
-          if (cv & 1)
+          if (cv & CV_const)
             db.names.back().first.append(" const");
-          if (cv & 2)
+          if (cv & CV_volatile)
             db.names.back().first.append(" volatile");
-          if (cv & 4)
+          if (cv & CV_restrict)
             db.names.back().first.append(" restrict");
           if (ref == 1)
             db.names.back().first.append(" &");
@@ -4196,6 +4240,7 @@ template <class StrT> struct string_pair {
   template <size_t N> string_pair(const char (&s)[N]) : first(s, N - 1) {}
 
   size_t size() const { return first.size() + second.size(); }
+  bool empty() const { return first.empty() && second.empty(); }
   StrT full() const { return first + second; }
   StrT move_full() { return std::move(first) + std::move(second); }
 };
@@ -4225,20 +4270,11 @@ char *llvm::itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
       *status = invalid_args;
     return nullptr;
   }
-
-  size_t len = std::strlen(mangled_name);
-  if (len < 2 || strncmp(mangled_name, "_Z", 2)) {
-    if (len < 4 || strncmp(mangled_name, "___Z", 4)) {
-      if (status)
-        *status = invalid_mangled_name;
-      return nullptr;
-    }
-  }
-
   size_t internal_size = buf != nullptr ? *n : 0;
   Db db;
   db.template_param.emplace_back();
   int internal_status = success;
+  size_t len = std::strlen(mangled_name);
   demangle(mangled_name, mangled_name + len, db, internal_status);
   if (internal_status == success && db.fix_forward_references &&
       !db.template_param.empty() && !db.template_param.front().empty()) {

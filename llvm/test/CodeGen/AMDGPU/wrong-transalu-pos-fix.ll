@@ -4,7 +4,7 @@
 ;CHECK: {{^}}fill3d:
 ;CHECK-NOT: MULLO_INT T[0-9]+
 
-define void @fill3d(i32 addrspace(1)* nocapture %out) #0 {
+define amdgpu_kernel void @fill3d(i32 addrspace(1)* nocapture %out) #0 {
 entry:
   %x.i = tail call i32 @llvm.r600.read.global.size.x() #1
   %y.i18 = tail call i32 @llvm.r600.read.global.size.y() #1

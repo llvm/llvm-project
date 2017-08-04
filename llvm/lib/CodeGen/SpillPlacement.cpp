@@ -40,14 +40,14 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "spillplacement"
+#define DEBUG_TYPE "spill-code-placement"
 
 char SpillPlacement::ID = 0;
-INITIALIZE_PASS_BEGIN(SpillPlacement, "spill-code-placement",
+INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(SpillPlacement, "spill-code-placement",
+INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
 char &llvm::SpillPlacementID = SpillPlacement::ID;
@@ -310,7 +310,7 @@ void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
 
 bool SpillPlacement::scanActiveBundles() {
   RecentPositive.clear();
-  for (int n = ActiveNodes->find_first(); n>=0; n = ActiveNodes->find_next(n)) {
+  for (unsigned n : ActiveNodes->set_bits()) {
     update(n);
     // A node that must spill, or a node without any links is not going to
     // change its value ever again, so exclude it from iterations.
@@ -365,7 +365,7 @@ SpillPlacement::finish() {
 
   // Write preferences back to ActiveNodes.
   bool Perfect = true;
-  for (int n = ActiveNodes->find_first(); n>=0; n = ActiveNodes->find_next(n))
+  for (unsigned n : ActiveNodes->set_bits())
     if (!nodes[n].preferReg()) {
       ActiveNodes->reset(n);
       Perfect = false;

@@ -2,8 +2,9 @@
 // memory. Make sure we don't report these leaks.
 
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %run %t 2>&1
-// RUN: not %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts= %run %t 2>&1
+// RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
+// UNSUPPORTED: arm
 
 #include <stdio.h>
 #if defined(__APPLE__)
@@ -23,7 +24,7 @@ void Child() {
 }
 
 int main(int argc, char *argv[]) {
-  char stack_memory[kStackSize + 1];
+  char stack_memory[kStackSize + 1] __attribute__((aligned(16)));
   char *heap_memory = new char[kStackSize + 1];
   char *child_stack = (argc > 1) ? stack_memory : heap_memory;
 

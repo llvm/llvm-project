@@ -44,6 +44,9 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT VT) const override;
 
+  bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                        const SelectionDAG &DAG) const override;
+
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS,
                                       unsigned Align,
                                       bool *IsFast) const override;

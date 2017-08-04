@@ -29,7 +29,6 @@ test(It first, It last)
 {
     typedef typename std::iterator_traits<It>::value_type charT;
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
-    typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
     S s2(first, last);
     LIBCPP_ASSERT(s2.__invariants());
@@ -47,7 +46,6 @@ test(It first, It last, const A& a)
 {
     typedef typename std::iterator_traits<It>::value_type charT;
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
-    typedef typename S::traits_type T;
     S s2(first, last, a);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == static_cast<std::size_t>(std::distance(first, last)));

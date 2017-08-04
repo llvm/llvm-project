@@ -27,13 +27,6 @@
 #include <memory>
 #include <utility>
 
-// For chdir.
-#ifdef LLVM_ON_WIN32
-#  include <direct.h>
-#else
-#  include <unistd.h>
-#endif
-
 using namespace clang;
 using namespace clang::vfs;
 using namespace llvm;
@@ -235,11 +228,7 @@ std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   // difference for example on network filesystems, where symlinks might be
   // switched during runtime of the tool. Fixing this depends on having a
   // file system abstraction that allows openat() style interactions.
-  SmallString<256> Storage;
-  StringRef Dir = Path.toNullTerminatedStringRef(Storage);
-  if (int Err = ::chdir(Dir.data()))
-    return std::error_code(Err, std::generic_category());
-  return std::error_code();
+  return llvm::sys::fs::set_current_path(Path);
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
@@ -249,11 +238,9 @@ IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
 
 namespace {
 class RealFSDirIter : public clang::vfs::detail::DirIterImpl {
-  std::string Path;
   llvm::sys::fs::directory_iterator Iter;
 public:
-  RealFSDirIter(const Twine &_Path, std::error_code &EC)
-      : Path(_Path.str()), Iter(Path, EC) {
+  RealFSDirIter(const Twine &Path, std::error_code &EC) : Iter(Path, EC) {
     if (!EC && Iter != llvm::sys::fs::directory_iterator()) {
       llvm::sys::fs::file_status S;
       EC = Iter->status(S);

@@ -23,6 +23,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "postdomtree"
 
+template class llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
+
 //===----------------------------------------------------------------------===//
 //  PostDominatorTree Implementation
 //===----------------------------------------------------------------------===//
@@ -30,6 +32,15 @@ using namespace llvm;
 char PostDominatorTreeWrapperPass::ID = 0;
 INITIALIZE_PASS(PostDominatorTreeWrapperPass, "postdomtree",
                 "Post-Dominator Tree Construction", true, true)
+
+bool PostDominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
+                                   FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<PostDominatorTreeAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
 
 bool PostDominatorTreeWrapperPass::runOnFunction(Function &F) {
   DT.recalculate(F);

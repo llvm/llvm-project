@@ -9,11 +9,11 @@
 // Mutate a test input.
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerMutate.h"
 #include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
-#include "FuzzerMutate.h"
 #include "FuzzerOptions.h"
 
 namespace fuzzer {
@@ -43,8 +43,6 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
           {&MutationDispatcher::Mutate_CrossOver, "CrossOver"},
           {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
            "ManualDict"},
-          {&MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary,
-           "TempAutoDict"},
           {&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
            "PersAutoDict"},
       });
@@ -81,8 +79,8 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
   const Unit &Other = (*Corpus)[Idx];
   if (Other.empty())
     return 0;
-  MutateInPlaceHere.resize(MaxSize);
-  auto &U = MutateInPlaceHere;
+  CustomCrossOverInPlaceHere.resize(MaxSize);
+  auto &U = CustomCrossOverInPlaceHere;
   size_t NewSize = EF->LLVMFuzzerCustomCrossOver(
       Data, Size, Other.data(), Other.size(), U.data(), U.size(), Rand.Rand());
   if (!NewSize)
@@ -94,21 +92,18 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
 
 size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
                                                size_t MaxSize) {
-  if (Size > MaxSize) return 0;
-  assert(Size);
+  if (Size > MaxSize || Size == 0) return 0;
   size_t ShuffleAmount =
       Rand(std::min(Size, (size_t)8)) + 1; // [1,8] and <= Size.
   size_t ShuffleStart = Rand(Size - ShuffleAmount);
   assert(ShuffleStart + ShuffleAmount <= Size);
-  std::random_shuffle(Data + ShuffleStart, Data + ShuffleStart + ShuffleAmount,
-                      Rand);
+  std::shuffle(Data + ShuffleStart, Data + ShuffleStart + ShuffleAmount, Rand);
   return Size;
 }
 
 size_t MutationDispatcher::Mutate_EraseBytes(uint8_t *Data, size_t Size,
                                              size_t MaxSize) {
-  assert(Size);
-  if (Size == 1) return 0;
+  if (Size <= 1) return 0;
   size_t N = Rand(Size / 2) + 1;
   assert(N < Size);
   size_t Idx = Rand(Size - N + 1);
@@ -168,11 +163,6 @@ size_t MutationDispatcher::Mutate_AddWordFromManualDictionary(uint8_t *Data,
   return AddWordFromDictionary(ManualDictionary, Data, Size, MaxSize);
 }
 
-size_t MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary(
-    uint8_t *Data, size_t Size, size_t MaxSize) {
-  return AddWordFromDictionary(TempAutoDictionary, Data, Size, MaxSize);
-}
-
 size_t MutationDispatcher::ApplyDictionaryEntry(uint8_t *Data, size_t Size,
                                                 size_t MaxSize,
                                                 DictionaryEntry &DE) {
@@ -200,53 +190,84 @@ size_t MutationDispatcher::ApplyDictionaryEntry(uint8_t *Data, size_t Size,
 // It first tries to find one of the arguments (possibly swapped) in the
 // input and if it succeeds it creates a DE with a position hint.
 // Otherwise it creates a DE with one of the arguments w/o a position hint.
-template <class T>
 DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
-    T Arg1, T Arg2, const uint8_t *Data, size_t Size) {
-  ScopedDoingMyOwnMemmem scoped_doing_my_own_memmem;
+    const void *Arg1, const void *Arg2,
+    const void *Arg1Mutation, const void *Arg2Mutation,
+    size_t ArgSize, const uint8_t *Data,
+    size_t Size) {
+  ScopedDoingMyOwnMemOrStr scoped_doing_my_own_mem_os_str;
   bool HandleFirst = Rand.RandBool();
-  T ExistingBytes, DesiredBytes;
+  const void *ExistingBytes, *DesiredBytes;
   Word W;
   const uint8_t *End = Data + Size;
   for (int Arg = 0; Arg < 2; Arg++) {
     ExistingBytes = HandleFirst ? Arg1 : Arg2;
-    DesiredBytes = HandleFirst ? Arg2 : Arg1;
-    DesiredBytes += Rand(-1, 1);
-    if (Rand.RandBool()) ExistingBytes = Bswap(ExistingBytes);
-    if (Rand.RandBool()) DesiredBytes = Bswap(DesiredBytes);
+    DesiredBytes = HandleFirst ? Arg2Mutation : Arg1Mutation;
     HandleFirst = !HandleFirst;
-    W.Set(reinterpret_cast<uint8_t*>(&DesiredBytes), sizeof(T));
+    W.Set(reinterpret_cast<const uint8_t*>(DesiredBytes), ArgSize);
     const size_t kMaxNumPositions = 8;
     size_t Positions[kMaxNumPositions];
     size_t NumPositions = 0;
     for (const uint8_t *Cur = Data;
          Cur < End && NumPositions < kMaxNumPositions; Cur++) {
-      Cur = (uint8_t *)SearchMemory(Cur, End - Cur, &ExistingBytes, sizeof(T));
+      Cur =
+          (const uint8_t *)SearchMemory(Cur, End - Cur, ExistingBytes, ArgSize);
       if (!Cur) break;
       Positions[NumPositions++] = Cur - Data;
     }
-    if (!NumPositions) break;
+    if (!NumPositions) continue;
     return DictionaryEntry(W, Positions[Rand(NumPositions)]);
   }
   DictionaryEntry DE(W);
   return DE;
 }
 
+
+template <class T>
+DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
+    T Arg1, T Arg2, const uint8_t *Data, size_t Size) {
+  if (Rand.RandBool()) Arg1 = Bswap(Arg1);
+  if (Rand.RandBool()) Arg2 = Bswap(Arg2);
+  T Arg1Mutation = Arg1 + Rand(-1, 1);
+  T Arg2Mutation = Arg2 + Rand(-1, 1);
+  return MakeDictionaryEntryFromCMP(&Arg1, &Arg2, &Arg1Mutation, &Arg2Mutation,
+                                    sizeof(Arg1), Data, Size);
+}
+
+DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
+    const Word &Arg1, const Word &Arg2, const uint8_t *Data, size_t Size) {
+  return MakeDictionaryEntryFromCMP(Arg1.data(), Arg2.data(), Arg1.data(),
+                                    Arg2.data(), Arg1.size(), Data, Size);
+}
+
 size_t MutationDispatcher::Mutate_AddWordFromTORC(
     uint8_t *Data, size_t Size, size_t MaxSize) {
   Word W;
   DictionaryEntry DE;
-  if (Rand.RandBool()) {
+  switch (Rand(4)) {
+  case 0: {
     auto X = TPC.TORC8.Get(Rand.Rand());
     DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
-  } else {
+  } break;
+  case 1: {
     auto X = TPC.TORC4.Get(Rand.Rand());
     if ((X.A >> 16) == 0 && (X.B >> 16) == 0 && Rand.RandBool())
-      DE = MakeDictionaryEntryFromCMP((uint16_t)X.A, (uint16_t)X.B, Data,
-                                      Size);
+      DE = MakeDictionaryEntryFromCMP((uint16_t)X.A, (uint16_t)X.B, Data, Size);
     else
       DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
+  } break;
+  case 2: {
+    auto X = TPC.TORCW.Get(Rand.Rand());
+    DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
+  } break;
+  case 3: if (Options.UseMemmem) {
+    auto X = TPC.MMT.Get(Rand.Rand());
+    DE = DictionaryEntry(X);
+  } break;
+  default:
+    assert(0);
   }
+  if (!DE.GetW().size()) return 0;
   Size = ApplyDictionaryEntry(Data, Size, MaxSize, DE);
   if (!Size) return 0;
   DictionaryEntry &DERef =
@@ -317,7 +338,7 @@ size_t MutationDispatcher::InsertPartOf(const uint8_t *From, size_t FromSize,
 
 size_t MutationDispatcher::Mutate_CopyPart(uint8_t *Data, size_t Size,
                                            size_t MaxSize) {
-  if (Size > MaxSize) return 0;
+  if (Size > MaxSize || Size == 0) return 0;
   if (Rand.RandBool())
     return CopyPartOf(Data, Size, Data, Size);
   else
@@ -413,9 +434,9 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
       break;
     case 1:
       NewSize = InsertPartOf(O.data(), O.size(), U.data(), U.size(), MaxSize);
-      if (NewSize)
-        break;
-      // LLVM_FALLTHROUGH;
+      if (!NewSize)
+        NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
+      break;
     case 2:
       NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
       break;
@@ -437,6 +458,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
   for (auto DE : CurrentDictionaryEntrySequence) {
     // PersistentAutoDictionary.AddWithSuccessCountOne(DE);
     DE->IncSuccessCount();
+    assert(DE->GetW().size());
     // Linear search is fine here as this happens seldom.
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
       PersistentAutoDictionary.push_back({DE->GetW(), 1});
@@ -451,6 +473,7 @@ void MutationDispatcher::PrintRecommendedDictionary() {
   if (V.empty()) return;
   Printf("###### Recommended dictionary. ######\n");
   for (auto &DE: V) {
+    assert(DE.GetW().size());
     Printf("\"");
     PrintASCII(DE.GetW(), "\"");
     Printf(" # Uses: %zd\n", DE.GetUseCount());
@@ -485,14 +508,6 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
                                       size_t MaxSize,
                                       const std::vector<Mutator> &Mutators) {
   assert(MaxSize > 0);
-  if (Size == 0) {
-    for (size_t i = 0; i < Min(size_t(4), MaxSize); i++)
-      Data[i] = RandCh(Rand);
-    if (Options.OnlyASCII)
-      ToASCII(Data, MaxSize);
-    return MaxSize;
-  }
-  assert(Size > 0);
   // Some mutations may fail (e.g. can't insert more bytes if Size == MaxSize),
   // in which case they will return 0.
   // Try several times before returning un-mutated data.
@@ -506,22 +521,13 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
       return NewSize;
     }
   }
-  return std::min(Size, MaxSize);
+  *Data = ' ';
+  return 1;   // Fallback, should not happen frequently.
 }
 
 void MutationDispatcher::AddWordToManualDictionary(const Word &W) {
   ManualDictionary.push_back(
       {W, std::numeric_limits<size_t>::max()});
-}
-
-void MutationDispatcher::AddWordToAutoDictionary(DictionaryEntry DE) {
-  static const size_t kMaxAutoDictSize = 1 << 14;
-  if (TempAutoDictionary.size() >= kMaxAutoDictSize) return;
-  TempAutoDictionary.push_back(DE);
-}
-
-void MutationDispatcher::ClearAutoDictionary() {
-  TempAutoDictionary.clear();
 }
 
 }  // namespace fuzzer

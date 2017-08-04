@@ -16,7 +16,7 @@
 // RUN: %clang_cc1 -std=c++11 -debug-info-kind=standalone \
 // RUN:     -dwarf-ext-refs -fmodule-format=obj \
 // RUN:     -triple %itanium_abi_triple \
-// RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll %s
+// RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll
 // RUN: cat %t-pch.ll |  FileCheck %s
 // RUN: cat %t-pch.ll |  FileCheck %s --check-prefix=CHECK-PCH
 
@@ -69,7 +69,11 @@ WithSpecializedBase<int> definedLocally4;
 
 void foo() {
   anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
+  A a;
+  Virtual virt;
 }
+
+// CHECK: ![[CPP:.*]] = !DIFile(filename: {{.*}}ExtDebugInfo.cpp"
 
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum",
 // CHECK-SAME:             scope: ![[NS:[0-9]+]],
@@ -201,10 +205,17 @@ void foo() {
 // CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
 
 
-// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !{{[0-9]+}}, entity: ![[STRUCT]], line: 27)
+// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !{{[0-9]+}}, entity: ![[STRUCT]], file: ![[CPP]], line: 27)
 
 // CHECK: !DICompileUnit(
 // CHECK-SAME:           splitDebugFilename:
 // CHECK-SAME:           dwoId:
 // CHECK-PCH: !DICompileUnit({{.*}}splitDebugFilename:
 // CHECK-PCH:                dwoId: 18446744073709551614
+
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A",
+// CHECK-SAME:             DIFlagFwdDecl, identifier: "_ZTS1A")
+
+// There is a full definition of the type available in the module.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",
+// CHECK-SAME:             DIFlagFwdDecl, identifier: "_ZTS7Virtual")

@@ -56,7 +56,7 @@
 # I386-NEXT:     Link:
 # I386-NEXT:     Info: 0
 # I386-NEXT:     AddressAlignment: 4
-# I386-NEXT:     EntrySize: 4
+# I386-NEXT:     EntrySize: 0
 # I386:      ]
 # I386:      DynamicSymbols [
 # I386:        Symbol {

@@ -1,0 +1,11 @@
+; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
+; RUN: llvm-nm %t.a | FileCheck %s
+
+LIBRARY test.dll
+EXPORTS
+TestFunction==AltTestFunction
+
+; CHECK:      U AltTestFunction
+; CHECK-NEXT: w TestFunction
+; CHECK:      U __imp_AltTestFunction
+; CHECK-NEXT: w __imp_TestFunction

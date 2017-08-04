@@ -327,7 +327,7 @@ to update:
 
     static std::map<std::string, AllocaInst*> NamedValues;
 
-Also, since we will need to create these alloca's, we'll use a helper
+Also, since we will need to create these allocas, we'll use a helper
 function that ensures that the allocas are created in the entry block of
 the function:
 
@@ -339,7 +339,7 @@ the function:
                                               const std::string &VarName) {
       IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                      TheFunction->getEntryBlock().begin());
-      return TmpB.CreateAlloca(Type::getDoubleTy(LLVMContext), 0,
+      return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), 0,
                                VarName.c_str());
     }
 
@@ -348,7 +348,7 @@ the first instruction (.begin()) of the entry block. It then creates an
 alloca with the expected name and returns it. Because all values in
 Kaleidoscope are doubles, there is no need to pass in a type to use.
 
-With this in place, the first functionality change we want to make is to
+With this in place, the first functionality change we want to make belongs to
 variable references. In our new scheme, variables live on the stack, so
 code generating a reference to them actually needs to produce a load
 from the stack slot:
@@ -377,7 +377,7 @@ the unabridged code):
       // Create an alloca for the variable in the entry block.
       AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
 
-        // Emit the start code first, without 'variable' in scope.
+      // Emit the start code first, without 'variable' in scope.
       Value *StartVal = Start->codegen();
       if (!StartVal)
         return nullptr;
@@ -408,21 +408,25 @@ them. The code for this is also pretty simple:
 
 .. code-block:: c++
 
-    /// CreateArgumentAllocas - Create an alloca for each argument and register the
-    /// argument in the symbol table so that references to it will succeed.
-    void PrototypeAST::CreateArgumentAllocas(Function *F) {
-      Function::arg_iterator AI = F->arg_begin();
-      for (unsigned Idx = 0, e = Args.size(); Idx != e; ++Idx, ++AI) {
+    Function *FunctionAST::codegen() {
+      ...
+      Builder.SetInsertPoint(BB);
+
+      // Record the function arguments in the NamedValues map.
+      NamedValues.clear();
+      for (auto &Arg : TheFunction->args()) {
         // Create an alloca for this variable.
-        AllocaInst *Alloca = CreateEntryBlockAlloca(F, Args[Idx]);
+        AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName());
 
         // Store the initial value into the alloca.
-        Builder.CreateStore(AI, Alloca);
+        Builder.CreateStore(&Arg, Alloca);
 
         // Add arguments to variable symbol table.
-        NamedValues[Args[Idx]] = Alloca;
+        NamedValues[Arg.getName()] = Alloca;
       }
-    }
+
+      if (Value *RetVal = Body->codegen()) {
+        ...
 
 For each argument, we make an alloca, store the input value to the
 function into the alloca, and register the alloca as the memory location
@@ -434,15 +438,13 @@ get good codegen once again:
 
 .. code-block:: c++
 
-        // Set up the optimizer pipeline.  Start with registering info about how the
-        // target lays out data structures.
-        OurFPM.add(new DataLayout(*TheExecutionEngine->getDataLayout()));
         // Promote allocas to registers.
-        OurFPM.add(createPromoteMemoryToRegisterPass());
+        TheFPM->add(createPromoteMemoryToRegisterPass());
         // Do simple "peephole" optimizations and bit-twiddling optzns.
-        OurFPM.add(createInstructionCombiningPass());
+        TheFPM->add(createInstructionCombiningPass());
         // Reassociate expressions.
-        OurFPM.add(createReassociatePass());
+        TheFPM->add(createReassociatePass());
+        ...
 
 It is interesting to see what the code looks like before and after the
 mem2reg optimization runs. For example, this is the before/after code
@@ -454,7 +456,7 @@ for our recursive fib function. Before the optimization:
     entry:
       %x1 = alloca double
       store double %x, double* %x1
-      %x2 = load double* %x1
+      %x2 = load double, double* %x1
       %cmptmp = fcmp ult double %x2, 3.000000e+00
       %booltmp = uitofp i1 %cmptmp to double
       %ifcond = fcmp one double %booltmp, 0.000000e+00
@@ -464,10 +466,10 @@ for our recursive fib function. Before the optimization:
       br label %ifcont
 
     else:       ; preds = %entry
-      %x3 = load double* %x1
+      %x3 = load double, double* %x1
       %subtmp = fsub double %x3, 1.000000e+00
       %calltmp = call double @fib(double %subtmp)
-      %x4 = load double* %x1
+      %x4 = load double, double* %x1
       %subtmp5 = fsub double %x4, 2.000000e+00
       %calltmp6 = call double @fib(double %subtmp5)
       %addtmp = fadd double %calltmp, %calltmp6
@@ -677,10 +679,10 @@ var/in, it looks like this:
 
     public:
       VarExprAST(std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
-                 std::unique_ptr<ExprAST> body)
-      : VarNames(std::move(VarNames)), Body(std::move(Body)) {}
+                 std::unique_ptr<ExprAST> Body)
+        : VarNames(std::move(VarNames)), Body(std::move(Body)) {}
 
-      virtual Value *codegen();
+      Value *codegen() override;
     };
 
 var/in allows a list of names to be defined all at once, and each name
@@ -812,7 +814,7 @@ previous value that we replace in OldBindings.
           if (!InitVal)
             return nullptr;
         } else { // If not specified, use 0.0.
-          InitVal = ConstantFP::get(LLVMContext, APFloat(0.0));
+          InitVal = ConstantFP::get(TheContext, APFloat(0.0));
         }
 
         AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);

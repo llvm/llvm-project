@@ -15,8 +15,8 @@
 #include "X86InstComments.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "Utils/X86ShuffleDecode.h"
-#include "llvm/MC/MCInst.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -587,6 +587,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VPSLLDQZ256rr:
   case X86::VPSLLDQZ512rr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
+    LLVM_FALLTHROUGH;
   case X86::VPSLLDQZ128rm:
   case X86::VPSLLDQZ256rm:
   case X86::VPSLLDQZ512rm:
@@ -604,6 +605,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VPSRLDQZ256rr:
   case X86::VPSRLDQZ512rr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
+    LLVM_FALLTHROUGH;
   case X86::VPSRLDQZ128rm:
   case X86::VPSRLDQZ256rm:
   case X86::VPSRLDQZ512rm:
@@ -1036,7 +1038,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::EXTRQI:
     if (MI->getOperand(2).isImm() &&
         MI->getOperand(3).isImm())
-      DecodeEXTRQIMask(MI->getOperand(2).getImm(),
+      DecodeEXTRQIMask(MVT::v16i8, MI->getOperand(2).getImm(),
                        MI->getOperand(3).getImm(),
                        ShuffleMask);
 
@@ -1047,7 +1049,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::INSERTQI:
     if (MI->getOperand(3).isImm() &&
         MI->getOperand(4).isImm())
-      DecodeINSERTQIMask(MI->getOperand(3).getImm(),
+      DecodeINSERTQIMask(MVT::v16i8, MI->getOperand(3).getImm(),
                          MI->getOperand(4).getImm(),
                          ShuffleMask);
 
@@ -1091,6 +1093,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, r)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, m)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, m)
     DecodeSubVectorBroadcast(MVT::v8f32, MVT::v2f32, ShuffleMask);
@@ -1099,6 +1102,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, r)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, m)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, m)
     DecodeSubVectorBroadcast(MVT::v16f32, MVT::v2f32, ShuffleMask);
@@ -1189,8 +1193,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     OS << ']';
     --i; // For loop increments element #.
   }
-  //MI->print(OS, 0);
-  OS << "\n";
 
   // We successfully added a comment to this instruction.
   return true;

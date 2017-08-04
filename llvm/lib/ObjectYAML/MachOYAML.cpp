@@ -12,16 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/MachOYAML.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h"
-
-#include <string.h> // For memcpy, memset and strnlen.
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cinttypes>
+#include <cstdint>
+#include <cstring>
 
 namespace llvm {
 
-MachOYAML::LoadCommand::~LoadCommand() {}
+MachOYAML::LoadCommand::~LoadCommand() = default;
 
 bool MachOYAML::LinkEditData::isEmpty() const {
   return 0 ==
@@ -33,7 +36,7 @@ bool MachOYAML::LinkEditData::isEmpty() const {
 namespace yaml {
 
 void ScalarTraits<char_16>::output(const char_16 &Val, void *,
-                                   llvm::raw_ostream &Out) {
+                                   raw_ostream &Out) {
   auto Len = strnlen(&Val[0], 16);
   Out << StringRef(&Val[0], Len);
 }
@@ -51,8 +54,7 @@ StringRef ScalarTraits<char_16>::input(StringRef Scalar, void *, char_16 &Val) {
 
 bool ScalarTraits<char_16>::mustQuote(StringRef S) { return needsQuotes(S); }
 
-void ScalarTraits<uuid_t>::output(const uuid_t &Val, void *,
-                                  llvm::raw_ostream &Out) {
+void ScalarTraits<uuid_t>::output(const uuid_t &Val, void *, raw_ostream &Out) {
   for (int Idx = 0; Idx < 16; ++Idx) {
     Out << format("%02" PRIX32, Val[Idx]);
     if (Idx == 3 || Idx == 5 || Idx == 7 || Idx == 9)
@@ -154,7 +156,7 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
   IO.mapOptional("BindOpcodes", LinkEditData.BindOpcodes);
   IO.mapOptional("WeakBindOpcodes", LinkEditData.WeakBindOpcodes);
   IO.mapOptional("LazyBindOpcodes", LinkEditData.LazyBindOpcodes);
-  if(LinkEditData.ExportTrie.Children.size() > 0 || !IO.outputting())
+  if (!LinkEditData.ExportTrie.Children.empty() || !IO.outputting())
     IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
   IO.mapOptional("NameList", LinkEditData.NameList);
   IO.mapOptional("StringTable", LinkEditData.StringTable);
@@ -252,7 +254,7 @@ void MappingTraits<MachOYAML::LoadCommand>::mapping(
     break;
 
   switch (LoadCommand.Data.load_command_data.cmd) {
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
   }
   IO.mapOptional("PayloadBytes", LoadCommand.PayloadBytes);
   IO.mapOptional("ZeroPadBytes", LoadCommand.ZeroPadBytes, (uint64_t)0ull);
@@ -308,13 +310,11 @@ void MappingTraits<MachO::dylib_command>::mapping(
 
 void MappingTraits<MachO::dylinker_command>::mapping(
     IO &IO, MachO::dylinker_command &LoadCommand) {
-
   IO.mapRequired("name", LoadCommand.name);
 }
 
 void MappingTraits<MachO::dysymtab_command>::mapping(
     IO &IO, MachO::dysymtab_command &LoadCommand) {
-
   IO.mapRequired("ilocalsym", LoadCommand.ilocalsym);
   IO.mapRequired("nlocalsym", LoadCommand.nlocalsym);
   IO.mapRequired("iextdefsym", LoadCommand.iextdefsym);
@@ -337,7 +337,6 @@ void MappingTraits<MachO::dysymtab_command>::mapping(
 
 void MappingTraits<MachO::encryption_info_command>::mapping(
     IO &IO, MachO::encryption_info_command &LoadCommand) {
-
   IO.mapRequired("cryptoff", LoadCommand.cryptoff);
   IO.mapRequired("cryptsize", LoadCommand.cryptsize);
   IO.mapRequired("cryptid", LoadCommand.cryptid);
@@ -345,7 +344,6 @@ void MappingTraits<MachO::encryption_info_command>::mapping(
 
 void MappingTraits<MachO::encryption_info_command_64>::mapping(
     IO &IO, MachO::encryption_info_command_64 &LoadCommand) {
-
   IO.mapRequired("cryptoff", LoadCommand.cryptoff);
   IO.mapRequired("cryptsize", LoadCommand.cryptsize);
   IO.mapRequired("cryptid", LoadCommand.cryptid);
@@ -354,14 +352,12 @@ void MappingTraits<MachO::encryption_info_command_64>::mapping(
 
 void MappingTraits<MachO::entry_point_command>::mapping(
     IO &IO, MachO::entry_point_command &LoadCommand) {
-
   IO.mapRequired("entryoff", LoadCommand.entryoff);
   IO.mapRequired("stacksize", LoadCommand.stacksize);
 }
 
 void MappingTraits<MachO::fvmfile_command>::mapping(
     IO &IO, MachO::fvmfile_command &LoadCommand) {
-
   IO.mapRequired("name", LoadCommand.name);
   IO.mapRequired("header_addr", LoadCommand.header_addr);
 }
@@ -374,7 +370,6 @@ void MappingTraits<MachO::fvmlib>::mapping(IO &IO, MachO::fvmlib &FVMLib) {
 
 void MappingTraits<MachO::fvmlib_command>::mapping(
     IO &IO, MachO::fvmlib_command &LoadCommand) {
-
   IO.mapRequired("fvmlib", LoadCommand.fvmlib);
 }
 
@@ -383,20 +378,17 @@ void MappingTraits<MachO::ident_command>::mapping(
 
 void MappingTraits<MachO::linkedit_data_command>::mapping(
     IO &IO, MachO::linkedit_data_command &LoadCommand) {
-
   IO.mapRequired("dataoff", LoadCommand.dataoff);
   IO.mapRequired("datasize", LoadCommand.datasize);
 }
 
 void MappingTraits<MachO::linker_option_command>::mapping(
     IO &IO, MachO::linker_option_command &LoadCommand) {
-
   IO.mapRequired("count", LoadCommand.count);
 }
 
 void MappingTraits<MachO::prebind_cksum_command>::mapping(
     IO &IO, MachO::prebind_cksum_command &LoadCommand) {
-
   IO.mapRequired("cksum", LoadCommand.cksum);
 }
 
@@ -405,7 +397,6 @@ void MappingTraits<MachO::load_command>::mapping(
 
 void MappingTraits<MachO::prebound_dylib_command>::mapping(
     IO &IO, MachO::prebound_dylib_command &LoadCommand) {
-
   IO.mapRequired("name", LoadCommand.name);
   IO.mapRequired("nmodules", LoadCommand.nmodules);
   IO.mapRequired("linked_modules", LoadCommand.linked_modules);
@@ -413,7 +404,6 @@ void MappingTraits<MachO::prebound_dylib_command>::mapping(
 
 void MappingTraits<MachO::routines_command>::mapping(
     IO &IO, MachO::routines_command &LoadCommand) {
-
   IO.mapRequired("init_address", LoadCommand.init_address);
   IO.mapRequired("init_module", LoadCommand.init_module);
   IO.mapRequired("reserved1", LoadCommand.reserved1);
@@ -426,7 +416,6 @@ void MappingTraits<MachO::routines_command>::mapping(
 
 void MappingTraits<MachO::routines_command_64>::mapping(
     IO &IO, MachO::routines_command_64 &LoadCommand) {
-
   IO.mapRequired("init_address", LoadCommand.init_address);
   IO.mapRequired("init_module", LoadCommand.init_module);
   IO.mapRequired("reserved1", LoadCommand.reserved1);
@@ -439,7 +428,6 @@ void MappingTraits<MachO::routines_command_64>::mapping(
 
 void MappingTraits<MachO::rpath_command>::mapping(
     IO &IO, MachO::rpath_command &LoadCommand) {
-
   IO.mapRequired("path", LoadCommand.path);
 }
 
@@ -475,7 +463,6 @@ void MappingTraits<MachO::section_64>::mapping(IO &IO,
 
 void MappingTraits<MachO::segment_command>::mapping(
     IO &IO, MachO::segment_command &LoadCommand) {
-
   IO.mapRequired("segname", LoadCommand.segname);
   IO.mapRequired("vmaddr", LoadCommand.vmaddr);
   IO.mapRequired("vmsize", LoadCommand.vmsize);
@@ -489,7 +476,6 @@ void MappingTraits<MachO::segment_command>::mapping(
 
 void MappingTraits<MachO::segment_command_64>::mapping(
     IO &IO, MachO::segment_command_64 &LoadCommand) {
-
   IO.mapRequired("segname", LoadCommand.segname);
   IO.mapRequired("vmaddr", LoadCommand.vmaddr);
   IO.mapRequired("vmsize", LoadCommand.vmsize);
@@ -503,44 +489,37 @@ void MappingTraits<MachO::segment_command_64>::mapping(
 
 void MappingTraits<MachO::source_version_command>::mapping(
     IO &IO, MachO::source_version_command &LoadCommand) {
-
   IO.mapRequired("version", LoadCommand.version);
 }
 
 void MappingTraits<MachO::sub_client_command>::mapping(
     IO &IO, MachO::sub_client_command &LoadCommand) {
-
   IO.mapRequired("client", LoadCommand.client);
 }
 
 void MappingTraits<MachO::sub_framework_command>::mapping(
     IO &IO, MachO::sub_framework_command &LoadCommand) {
-
   IO.mapRequired("umbrella", LoadCommand.umbrella);
 }
 
 void MappingTraits<MachO::sub_library_command>::mapping(
     IO &IO, MachO::sub_library_command &LoadCommand) {
-
   IO.mapRequired("sub_library", LoadCommand.sub_library);
 }
 
 void MappingTraits<MachO::sub_umbrella_command>::mapping(
     IO &IO, MachO::sub_umbrella_command &LoadCommand) {
-
   IO.mapRequired("sub_umbrella", LoadCommand.sub_umbrella);
 }
 
 void MappingTraits<MachO::symseg_command>::mapping(
     IO &IO, MachO::symseg_command &LoadCommand) {
-
   IO.mapRequired("offset", LoadCommand.offset);
   IO.mapRequired("size", LoadCommand.size);
 }
 
 void MappingTraits<MachO::symtab_command>::mapping(
     IO &IO, MachO::symtab_command &LoadCommand) {
-
   IO.mapRequired("symoff", LoadCommand.symoff);
   IO.mapRequired("nsyms", LoadCommand.nsyms);
   IO.mapRequired("stroff", LoadCommand.stroff);
@@ -552,27 +531,23 @@ void MappingTraits<MachO::thread_command>::mapping(
 
 void MappingTraits<MachO::twolevel_hints_command>::mapping(
     IO &IO, MachO::twolevel_hints_command &LoadCommand) {
-
   IO.mapRequired("offset", LoadCommand.offset);
   IO.mapRequired("nhints", LoadCommand.nhints);
 }
 
 void MappingTraits<MachO::uuid_command>::mapping(
     IO &IO, MachO::uuid_command &LoadCommand) {
-
   IO.mapRequired("uuid", LoadCommand.uuid);
 }
 
 void MappingTraits<MachO::version_min_command>::mapping(
     IO &IO, MachO::version_min_command &LoadCommand) {
-
   IO.mapRequired("version", LoadCommand.version);
   IO.mapRequired("sdk", LoadCommand.sdk);
 }
 
 void MappingTraits<MachO::note_command>::mapping(
     IO &IO, MachO::note_command &LoadCommand) {
-
   IO.mapRequired("data_owner", LoadCommand.data_owner);
   IO.mapRequired("offset", LoadCommand.offset);
   IO.mapRequired("size", LoadCommand.size);
@@ -580,13 +555,12 @@ void MappingTraits<MachO::note_command>::mapping(
 
 void MappingTraits<MachO::build_version_command>::mapping(
     IO &IO, MachO::build_version_command &LoadCommand) {
-
   IO.mapRequired("platform", LoadCommand.platform);
   IO.mapRequired("minos", LoadCommand.minos);
   IO.mapRequired("sdk", LoadCommand.sdk);
   IO.mapRequired("ntools", LoadCommand.ntools);
 }
 
-} // namespace llvm::yaml
+} // end namespace yaml
 
-} // namespace llvm
+} // end namespace llvm

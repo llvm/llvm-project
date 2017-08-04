@@ -14,10 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 namespace {
@@ -26,16 +26,15 @@ namespace {
     InstNamer() : FunctionPass(ID) {
       initializeInstNamerPass(*PassRegistry::getPassRegistry());
     }
-    
+
     void getAnalysisUsage(AnalysisUsage &Info) const override {
       Info.setPreservesAll();
     }
 
     bool runOnFunction(Function &F) override {
-      for (Function::arg_iterator AI = F.arg_begin(), AE = F.arg_end();
-           AI != AE; ++AI)
-        if (!AI->hasName() && !AI->getType()->isVoidTy())
-          AI->setName("arg");
+      for (auto &Arg : F.args())
+        if (!Arg.hasName())
+          Arg.setName("arg");
 
       for (BasicBlock &BB : F) {
         if (!BB.hasName())
@@ -48,11 +47,11 @@ namespace {
       return true;
     }
   };
-  
+
   char InstNamer::ID = 0;
 }
 
-INITIALIZE_PASS(InstNamer, "instnamer", 
+INITIALIZE_PASS(InstNamer, "instnamer",
                 "Assign names to anonymous instructions", false, false)
 char &llvm::InstructionNamerID = InstNamer::ID;
 //===----------------------------------------------------------------------===//

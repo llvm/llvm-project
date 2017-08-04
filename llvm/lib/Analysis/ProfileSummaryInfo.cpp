@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -55,22 +56,43 @@ static uint64_t getMinCountForPercentile(SummaryEntryVector &DS,
 // The profile summary metadata may be attached either by the frontend or by
 // any backend passes (IR level instrumentation, for example). This method
 // checks if the Summary is null and if so checks if the summary metadata is now
-// available in the module and parses it to get the Summary object.
-void ProfileSummaryInfo::computeSummary() {
+// available in the module and parses it to get the Summary object. Returns true
+// if a valid Summary is available.
+bool ProfileSummaryInfo::computeSummary() {
   if (Summary)
-    return;
+    return true;
   auto *SummaryMD = M.getProfileSummary();
   if (!SummaryMD)
-    return;
+    return false;
   Summary.reset(ProfileSummary::getFromMD(SummaryMD));
+  return true;
+}
+
+Optional<uint64_t>
+ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
+                                    BlockFrequencyInfo *BFI) {
+  if (!Inst)
+    return None;
+  assert((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
+         "We can only get profile count for call/invoke instruction.");
+  if (hasSampleProfile()) {
+    // In sample PGO mode, check if there is a profile metadata on the
+    // instruction. If it is present, determine hotness solely based on that,
+    // since the sampled entry count may not be accurate.
+    uint64_t TotalCount;
+    if (Inst->extractProfTotalWeight(TotalCount))
+      return TotalCount;
+  }
+  if (BFI)
+    return BFI->getBlockProfileCount(Inst->getParent());
+  return None;
 }
 
 /// Returns true if the function's entry is hot. If it returns false, it
 /// either means it is not hot or it is unknown whether it is hot or not (for
 /// example, no profile data is available).
 bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
-  computeSummary();
-  if (!F || !Summary)
+  if (!F || !computeSummary())
     return false;
   auto FunctionCount = F->getEntryCount();
   // FIXME: The heuristic used below for determining hotness is based on
@@ -79,17 +101,53 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
   return FunctionCount && isHotCount(FunctionCount.getValue());
 }
 
+/// Returns true if the function's entry or total call edge count is hot.
+/// If it returns false, it either means it is not hot or it is unknown
+/// whether it is hot or not (for example, no profile data is available).
+bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F) {
+  if (!F || !computeSummary())
+    return false;
+  if (auto FunctionCount = F->getEntryCount())
+    if (isHotCount(FunctionCount.getValue()))
+      return true;
+
+  uint64_t TotalCallCount = 0;
+  for (const auto &BB : *F)
+    for (const auto &I : BB)
+      if (isa<CallInst>(I) || isa<InvokeInst>(I))
+        if (auto CallCount = getProfileCount(&I, nullptr))
+          TotalCallCount += CallCount.getValue();
+  return isHotCount(TotalCallCount);
+}
+
+/// Returns true if the function's entry and total call edge count is cold.
+/// If it returns false, it either means it is not cold or it is unknown
+/// whether it is cold or not (for example, no profile data is available).
+bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F) {
+  if (!F || !computeSummary())
+    return false;
+  if (auto FunctionCount = F->getEntryCount())
+    if (!isColdCount(FunctionCount.getValue()))
+      return false;
+  
+  uint64_t TotalCallCount = 0;
+  for (const auto &BB : *F)
+    for (const auto &I : BB) 
+      if (isa<CallInst>(I) || isa<InvokeInst>(I))
+        if (auto CallCount = getProfileCount(&I, nullptr))
+          TotalCallCount += CallCount.getValue();
+  return isColdCount(TotalCallCount);
+}
+
 /// Returns true if the function's entry is a cold. If it returns false, it
 /// either means it is not cold or it is unknown whether it is cold or not (for
 /// example, no profile data is available).
 bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) {
-  computeSummary();
   if (!F)
     return false;
-  if (F->hasFnAttribute(Attribute::Cold)) {
+  if (F->hasFnAttribute(Attribute::Cold))
     return true;
-  }
-  if (!Summary)
+  if (!computeSummary())
     return false;
   auto FunctionCount = F->getEntryCount();
   // FIXME: The heuristic used below for determining coldness is based on
@@ -100,9 +158,7 @@ bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) {
 
 /// Compute the hot and cold thresholds.
 void ProfileSummaryInfo::computeThresholds() {
-  if (!Summary)
-    computeSummary();
-  if (!Summary)
+  if (!computeSummary())
     return;
   auto &DetailedSummary = Summary->getDetailedSummary();
   HotCountThreshold =
@@ -125,20 +181,25 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
 
 bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
   auto Count = BFI->getBlockProfileCount(B);
-  if (Count && isHotCount(*Count))
-    return true;
-  // Use extractProfTotalWeight to get BB count.
-  // For Sample PGO, BFI may not provide accurate BB count due to errors
-  // magnified during sample count propagation. This serves as a backup plan
-  // to ensure all hot BB will not be missed.
-  // The query currently has false positives as branch instruction cloning does
-  // not update/scale branch weights. Unlike false negatives, this will not cause
-  // performance problem.
-  uint64_t TotalCount;
-  if (B->getTerminator()->extractProfTotalWeight(TotalCount) &&
-      isHotCount(TotalCount))
-    return true;
-  return false;
+  return Count && isHotCount(*Count);
+}
+
+bool ProfileSummaryInfo::isColdBB(const BasicBlock *B,
+                                  BlockFrequencyInfo *BFI) {
+  auto Count = BFI->getBlockProfileCount(B);
+  return Count && isColdCount(*Count);
+}
+
+bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,
+                                       BlockFrequencyInfo *BFI) {
+  auto C = getProfileCount(CS.getInstruction(), BFI);
+  return C && isHotCount(*C);
+}
+
+bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
+                                        BlockFrequencyInfo *BFI) {
+  auto C = getProfileCount(CS.getInstruction(), BFI);
+  return C && isColdCount(*C);
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

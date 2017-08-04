@@ -3,12 +3,10 @@
 Development
 ===========
 
+Note: this document discuss Mach-O port of LLD. For ELF and COFF,
+see :doc:`index`.
+
 lld is developed as part of the `LLVM <http://llvm.org>`_ project.
-
-Using C++11 in lld
-------------------
-
-:doc:`C++11`.
 
 Creating a Reader
 -----------------
@@ -43,6 +41,5 @@ information on writing documentation for the project, see the
 .. toctree::
    :hidden:
 
-   C++11
    Readers
    Driver

@@ -93,12 +93,7 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
   if (FID.isInvalid())
     return true;
 
-  bool Invalid = false;
-  const SrcMgr::SLocEntry &SEntry = SM.getSLocEntry(FID, &Invalid);
-  if (Invalid || !SEntry.isFile())
-    return true;
-
-  if (SEntry.getFile().getFileCharacteristic() != SrcMgr::C_User) {
+  if (isSystemFile(FID)) {
     switch (IndexOpts.SystemSymbolFilter) {
     case IndexingOptions::SystemSymbolFilterKind::None:
       return true;
@@ -159,6 +154,56 @@ bool IndexingContext::shouldIgnoreIfImplicit(const Decl *D) {
   if (isa<ImportDecl>(D))
     return false;
   return true;
+}
+
+void IndexingContext::setSysrootPath(StringRef path) {
+  // Ignore sysroot path if it points to root, otherwise every header will be
+  // treated as system one.
+  if (path == "/")
+    path = StringRef();
+  SysrootPath = path;
+}
+
+bool IndexingContext::isSystemFile(FileID FID) {
+  if (LastFileCheck.first == FID)
+    return LastFileCheck.second;
+
+  auto result = [&](bool res) -> bool {
+    LastFileCheck = { FID, res };
+    return res;
+  };
+
+  bool Invalid = false;
+  const SrcMgr::SLocEntry &SEntry =
+    Ctx->getSourceManager().getSLocEntry(FID, &Invalid);
+  if (Invalid || !SEntry.isFile())
+    return result(false);
+
+  const SrcMgr::FileInfo &FI = SEntry.getFile();
+  if (FI.getFileCharacteristic() != SrcMgr::C_User)
+    return result(true);
+
+  auto *CC = FI.getContentCache();
+  if (!CC)
+    return result(false);
+  auto *FE = CC->OrigEntry;
+  if (!FE)
+    return result(false);
+
+  if (SysrootPath.empty())
+    return result(false);
+
+  // Check if directory is in sysroot so that we can consider system headers
+  // even the headers found via a user framework search path, pointing inside
+  // sysroot.
+  auto dirEntry = FE->getDir();
+  auto pair = DirEntries.insert(std::make_pair(dirEntry, false));
+  bool &isSystemDir = pair.first->second;
+  bool wasInserted = pair.second;
+  if (wasInserted) {
+    isSystemDir = StringRef(dirEntry->getName()).startswith(SysrootPath);
+  }
+  return result(isSystemDir);
 }
 
 static const CXXRecordDecl *
@@ -229,6 +274,12 @@ static bool isDeclADefinition(const Decl *D, const DeclContext *ContainerDC, AST
   return false;
 }
 
+/// Whether the given NamedDecl should be skipped because it has no name.
+static bool shouldSkipNamelessDecl(const NamedDecl *ND) {
+  return ND->getDeclName().isEmpty() && !isa<TagDecl>(ND) &&
+         !isa<ObjCCategoryDecl>(ND);
+}
+
 static const Decl *adjustParent(const Decl *Parent) {
   if (!Parent)
     return nullptr;
@@ -243,8 +294,8 @@ static const Decl *adjustParent(const Decl *Parent) {
     } else if (auto RD = dyn_cast<RecordDecl>(Parent)) {
       if (RD->isAnonymousStructOrUnion())
         continue;
-    } else if (auto FD = dyn_cast<FieldDecl>(Parent)) {
-      if (FD->getDeclName().isEmpty())
+    } else if (auto ND = dyn_cast<NamedDecl>(Parent)) {
+      if (shouldSkipNamelessDecl(ND))
         continue;
     }
     return Parent;
@@ -254,8 +305,10 @@ static const Decl *adjustParent(const Decl *Parent) {
 static const Decl *getCanonicalDecl(const Decl *D) {
   D = D->getCanonicalDecl();
   if (auto TD = dyn_cast<TemplateDecl>(D)) {
-    D = TD->getTemplatedDecl();
-    assert(D->isCanonicalDecl());
+    if (auto TTD = TD->getTemplatedDecl()) {
+      D = TTD;
+      assert(D->isCanonicalDecl());
+    }
   }
 
   return D;
@@ -293,6 +346,7 @@ static bool shouldReportOccurrenceForSystemDeclOnlyMode(
       case SymbolRole::RelationSpecializationOf:
         return true;
       }
+      llvm_unreachable("Unsupported SymbolRole value!");
     });
     return accept;
   };
@@ -312,11 +366,9 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
                                            const Expr *OrigE,
                                            const Decl *OrigD,
                                            const DeclContext *ContainerDC) {
-  if (D->isImplicit() && !isa<ObjCMethodDecl>(D))
+  if (D->isImplicit() && !(isa<ObjCMethodDecl>(D) || isa<ObjCIvarDecl>(D)))
     return true;
-  if (!isa<NamedDecl>(D) ||
-      (cast<NamedDecl>(D)->getDeclName().isEmpty() &&
-       !isa<TagDecl>(D) && !isa<ObjCCategoryDecl>(D)))
+  if (!isa<NamedDecl>(D) || shouldSkipNamelessDecl(cast<NamedDecl>(D)))
     return true;
 
   SourceManager &SM = Ctx->getSourceManager();
@@ -330,12 +382,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   if (FID.isInvalid())
     return true;
 
-  bool Invalid = false;
-  const SrcMgr::SLocEntry &SEntry = SM.getSLocEntry(FID, &Invalid);
-  if (Invalid || !SEntry.isFile())
-    return true;
-
-  if (SEntry.getFile().getFileCharacteristic() != SrcMgr::C_User) {
+  if (isSystemFile(FID)) {
     switch (IndexOpts.SystemSymbolFilter) {
     case IndexingOptions::SystemSymbolFilterKind::None:
       return true;

@@ -36,7 +36,7 @@ int main()
     assert(error_badbackref_thrown("ab(c)\\2def")); // only one reference
 
 //  this should NOT throw, because we only should look at the '1'
-//  See https://llvm.org/bugs/show_bug.cgi?id=31387
+//  See https://bugs.llvm.org/show_bug.cgi?id=31387
     {
     const char *pat1 = "a(b)c\\1234";
     std::regex re(pat1, pat1 + 7); // extra chars after the end.

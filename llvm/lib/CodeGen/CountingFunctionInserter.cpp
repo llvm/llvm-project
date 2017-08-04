@@ -41,7 +41,7 @@ namespace {
       Type *VoidTy = Type::getVoidTy(F.getContext());
       Constant *CountingFn =
         F.getParent()->getOrInsertFunction(CountingFunctionName,
-                                           VoidTy, nullptr);
+                                           VoidTy);
       CallInst::Create(CountingFn, "", &*F.begin()->getFirstInsertionPt());
       return true;
     }

@@ -3,7 +3,7 @@
 // RUN:         | FileCheck %s -check-prefixes CHECK,CHECK-I386,CHECK-INTEL
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple thumbv7--windows -Oz -emit-llvm %s -o - \
-// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-ARM-X64
+// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-ARM,CHECK-ARM-X64
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--windows -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-X64,CHECK-ARM-X64,CHECK-INTEL
@@ -28,6 +28,20 @@ void test__stosb(unsigned char *Dest, unsigned char Data, size_t Count) {
 // CHECK-X64:   tail call void @llvm.memset.p0i8.i64(i8* %Dest, i8 %Data, i64 %Count, i32 1, i1 true)
 // CHECK-X64:   ret void
 // CHECK-X64: }
+
+void test__ud2(void) {
+  __ud2();
+}
+// CHECK-INTEL-LABEL: define{{.*}} void @test__ud2()
+// CHECK-INTEL: call void @llvm.trap()
+
+void test__int2c(void) {
+  __int2c();
+}
+// CHECK-INTEL-LABEL: define{{.*}} void @test__int2c()
+// CHECK-INTEL: call void asm sideeffect "int $$0x2c", ""() #[[NORETURN:[0-9]+]]
+
+
 #endif
 
 void *test_ReturnAddress() {
@@ -419,3 +433,26 @@ __int64 test_InterlockedDecrement64(__int64 volatile *Addend) {
 // CHECK-ARM-X64: }
 
 #endif
+
+unsigned char test_interlockedbittestandset(volatile long *ptr, long bit) {
+  return _interlockedbittestandset(ptr, bit);
+}
+// CHECK-LABEL: define{{.*}} i8 @test_interlockedbittestandset
+// CHECK: [[MASKBIT:%[0-9]+]] = shl i32 1, %bit
+// CHECK: [[OLD:%[0-9]+]] = atomicrmw or i32* %ptr, i32 [[MASKBIT]] seq_cst
+// CHECK: [[SHIFT:%[0-9]+]] = lshr i32 [[OLD]], %bit
+// CHECK: [[TRUNC:%[0-9]+]] = trunc i32 [[SHIFT]] to i8
+// CHECK: [[AND:%[0-9]+]] = and i8 [[TRUNC]], 1
+// CHECK: ret i8 [[AND]]
+
+void test__fastfail() {
+  __fastfail(42);
+}
+// CHECK-LABEL: define{{.*}} void @test__fastfail()
+// CHECK-ARM: call void asm sideeffect "udf #251", "{r0}"(i32 42) #[[NORETURN:[0-9]+]]
+// CHECK-INTEL: call void asm sideeffect "int $$0x29", "{cx}"(i32 42) #[[NORETURN]]
+
+// Attributes come last.
+
+// CHECK: attributes #[[NORETURN]] = { noreturn{{.*}} }
+

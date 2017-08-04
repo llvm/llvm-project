@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_map>
 
 // template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
@@ -30,7 +32,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef std::pair<int, std::string> P;
         typedef test_allocator<std::pair<const int, std::string>> A;
@@ -113,7 +114,6 @@ int main()
 
         assert(c0.empty());
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::pair<int, std::string> P;
         typedef min_allocator<std::pair<const int, std::string>> A;
@@ -196,6 +196,4 @@ int main()
 
         assert(c0.empty());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

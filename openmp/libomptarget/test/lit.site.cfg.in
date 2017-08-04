@@ -1,0 +1,20 @@
+@AUTO_GEN_COMMENT@
+
+config.test_c_compiler = "@LIBOMPTARGET_TEST_C_COMPILER@"
+config.test_cxx_compiler = "@LIBOMPTARGET_TEST_CXX_COMPILER@"
+config.test_openmp_flag = "@LIBOMPTARGET_TEST_OPENMP_FLAG@"
+# For the moment we still need to pass libomptarget explicitly. Once the driver
+# patch, lands, this is not required anymore.
+config.test_extra_cflags = "-lomptarget @LIBOMPTARGET_TEST_CFLAGS@"
+config.libomptarget_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
+config.omp_header_directory = "@LIBOMPTARGET_OPENMP_HEADER_FOLDER@"
+config.omp_host_rtl_directory = "@LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER@"
+config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.libomptarget_all_targets = "@LIBOMPTARGET_ALL_TARGETS@".split()
+config.libomptarget_system_targets = "@LIBOMPTARGET_SYSTEM_TARGETS@".split()
+config.libomptarget_filecheck = "@LIBOMPTARGET_FILECHECK_EXECUTABLE@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@LIBOMPTARGET_BASE_DIR@/test/lit.cfg")
+

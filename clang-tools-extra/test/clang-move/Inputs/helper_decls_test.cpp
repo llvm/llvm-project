@@ -76,3 +76,22 @@ static int HelperFun5() {
 void Fun1() { HelperFun5(); }
 
 } // namespace a
+
+namespace b {
+namespace {
+void HelperFun7();
+
+class HelperC4;
+} // namespace
+
+void Fun3() {
+  HelperFun7();
+  HelperC4 *t;
+}
+
+namespace {
+void HelperFun7() {}
+
+class HelperC4 {};
+} // namespace
+} // namespace b

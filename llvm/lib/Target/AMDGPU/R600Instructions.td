@@ -316,7 +316,7 @@ class VTX_READ <string name, dag outs, list<dag> pattern>
 class LoadParamFrag <PatFrag load_type> : PatFrag <
   (ops node:$ptr), (load_type node:$ptr),
   [{ return isConstantLoad(cast<LoadSDNode>(N), 0) ||
-            (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::PARAM_I_ADDRESS); }]
+            (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUASI.PARAM_I_ADDRESS); }]
 >;
 
 def vtx_id3_az_extloadi8 : LoadParamFrag<az_extloadi8>;
@@ -326,8 +326,8 @@ def vtx_id3_load : LoadParamFrag<load>;
 class LoadVtxId1 <PatFrag load> : PatFrag <
   (ops node:$ptr), (load node:$ptr), [{
   const MemSDNode *LD = cast<MemSDNode>(N);
-  return LD->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-         (LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+  return LD->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS ||
+         (LD->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
            !isa<GlobalValue>(GetUnderlyingObject(
            LD->getMemOperand()->getValue(), CurDAG->getDataLayout())));
 }]>;
@@ -339,7 +339,7 @@ def vtx_id1_load : LoadVtxId1 <load>;
 class LoadVtxId2 <PatFrag load> : PatFrag <
   (ops node:$ptr), (load node:$ptr), [{
   const MemSDNode *LD = cast<MemSDNode>(N);
-  return LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+  return LD->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
          isa<GlobalValue>(GetUnderlyingObject(
          LD->getMemOperand()->getValue(), CurDAG->getDataLayout()));
 }]>;
@@ -1013,7 +1013,7 @@ multiclass CUBE_Common <bits<11> inst> {
     (outs R600_Reg128:$dst),
     (ins R600_Reg128:$src0),
     "CUBE $dst $src0",
-    [(set v4f32:$dst, (int_AMDGPU_cube v4f32:$src0))],
+    [(set v4f32:$dst, (int_r600_cube v4f32:$src0))],
     VecALU
   > {
     let isPseudo = 1;

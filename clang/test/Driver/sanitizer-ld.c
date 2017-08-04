@@ -409,6 +409,15 @@
 // CHECK-ASAN-DARWIN106-CXX: libclang_rt.asan_osx_dynamic.dylib
 // CHECK-ASAN-DARWIN106-CXX-NOT: -lc++abi
 
+// RUN: %clangxx -fsanitize=leak %s -### -o %t.o 2>&1 \
+// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     -target x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LSAN-DARWIN106-CXX %s
+// CHECK-LSAN-DARWIN106-CXX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LSAN-DARWIN106-CXX: libclang_rt.lsan_osx_dynamic.dylib
+// CHECK-LSAN-DARWIN106-CXX-NOT: -lc++abi
+
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -fuse-ld=ld -fsanitize=safe-stack \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -416,7 +425,9 @@
 //
 // CHECK-SAFESTACK-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SAFESTACK-LINUX-NOT: "-lc"
+// CHECK-SAFESTACK-LINUX-NOT: whole-archive
 // CHECK-SAFESTACK-LINUX: libclang_rt.safestack-x86_64.a"
+// CHECK-SAFESTACK-LINUX: "-u" "__safestack_init"
 // CHECK-SAFESTACK-LINUX: "-lpthread"
 // CHECK-SAFESTACK-LINUX: "-ldl"
 

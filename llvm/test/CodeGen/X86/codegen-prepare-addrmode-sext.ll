@@ -1,5 +1,4 @@
 ; RUN: opt -S -codegenprepare %s -o - | FileCheck %s
-; RUN: opt -S -codegenprepare -addr-sink-using-gep=1 %s -o - | FileCheck -check-prefix=CHECK-GEP %s
 ; This file tests the different cases what are involved when codegen prepare
 ; tries to get sign/zero extension out of the way of addressing mode.
 ; This tests require an actual target as addressing mode decisions depends
@@ -309,33 +308,18 @@ define i8 @twoArgsNoPromotionRemove(i1 %arg1, i8 %arg2, i8* %base) {
 ; CHECK: [[ADD:%[a-zA-Z_0-9-]+]] = add nsw i32 [[SHL]], %arg2
 ; CHECK: [[SEXTADD:%[a-zA-Z_0-9-]+]] = sext i32 [[ADD]] to i64
 ; BB then
-; CHECK: [[BASE1:%[a-zA-Z_0-9-]+]] = add i64 [[SEXTADD]], 48
-; CHECK: [[ADDR1:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[BASE1]] to i32*
+; CHECK: [[BASE1:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[SEXTADD]] to i32*
+; CHECK: [[BCC1:%[a-zA-Z_0-9-]+]] = bitcast i32* [[BASE1]] to i8*
+; CHECK: [[FULL1:%[a-zA-Z_0-9-]+]] = getelementptr i8, i8* [[BCC1]], i64 48
+; CHECK: [[ADDR1:%[a-zA-Z_0-9-]+]] = bitcast i8* [[FULL1]] to i32*
 ; CHECK: load i32, i32* [[ADDR1]]
 ; BB else
-; CHECK: [[BASE2:%[a-zA-Z_0-9-]+]] = add i64 [[SEXTADD]], 48
-; CHECK: [[ADDR2:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[BASE2]] to i32*
+; CHECK: [[BASE2:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[SEXTADD]] to i32*
+; CHECK: [[BCC2:%[a-zA-Z_0-9-]+]] = bitcast i32* [[BASE2]] to i8*
+; CHECK: [[FULL2:%[a-zA-Z_0-9-]+]] = getelementptr i8, i8* [[BCC2]], i64 48
+; CHECK: [[ADDR2:%[a-zA-Z_0-9-]+]] = bitcast i8* [[FULL2]] to i32*
 ; CHECK: load i32, i32* [[ADDR2]]
 ; CHECK: ret
-; CHECK-GEP-LABEL: @checkProfitability
-; CHECK-GEP-NOT: {{%[a-zA-Z_0-9-]+}} = sext i32 %arg1 to i64
-; CHECK-GEP-NOT: {{%[a-zA-Z_0-9-]+}} = sext i32 %arg2 to i64
-; CHECK-GEP: [[SHL:%[a-zA-Z_0-9-]+]] = shl nsw i32 %arg1, 1
-; CHECK-GEP: [[ADD:%[a-zA-Z_0-9-]+]] = add nsw i32 [[SHL]], %arg2
-; CHECK-GEP: [[SEXTADD:%[a-zA-Z_0-9-]+]] = sext i32 [[ADD]] to i64
-; BB then
-; CHECK-GEP: [[BASE1:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[SEXTADD]] to i32*
-; CHECK-GEP: [[BCC1:%[a-zA-Z_0-9-]+]] = bitcast i32* [[BASE1]] to i8*
-; CHECK-GEP: [[FULL1:%[a-zA-Z_0-9-]+]] = getelementptr i8, i8* [[BCC1]], i64 48
-; CHECK-GEP: [[ADDR1:%[a-zA-Z_0-9-]+]] = bitcast i8* [[FULL1]] to i32*
-; CHECK-GEP: load i32, i32* [[ADDR1]]
-; BB else
-; CHECK-GEP: [[BASE2:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[SEXTADD]] to i32*
-; CHECK-GEP: [[BCC2:%[a-zA-Z_0-9-]+]] = bitcast i32* [[BASE2]] to i8*
-; CHECK-GEP: [[FULL2:%[a-zA-Z_0-9-]+]] = getelementptr i8, i8* [[BCC2]], i64 48
-; CHECK-GEP: [[ADDR2:%[a-zA-Z_0-9-]+]] = bitcast i8* [[FULL2]] to i32*
-; CHECK-GEP: load i32, i32* [[ADDR2]]
-; CHECK-GEP: ret
 define i32 @checkProfitability(i32 %arg1, i32 %arg2, i1 %test) {
   %shl = shl nsw i32 %arg1, 1
   %add1 = add nsw i32 %shl, %arg2
@@ -371,11 +355,10 @@ end:
 ; Use it at the starting point for the matching.
 ; CHECK: %conv.i = zext i16 [[PLAIN_OPND:%[.a-zA-Z_0-9-]+]] to i32
 ; CHECK-NEXT: [[PROMOTED_CONV:%[.a-zA-Z_0-9-]+]] = zext i16 [[PLAIN_OPND]] to i64
-; CHECK-NEXT: [[BASE:%[a-zA-Z_0-9-]+]] = ptrtoint %struct.dns_packet* %P to i64
-; CHECK-NEXT: [[ADD:%[a-zA-Z_0-9-]+]] = add i64 [[BASE]], [[PROMOTED_CONV]]
-; CHECK-NEXT: [[ADDR:%[a-zA-Z_0-9-]+]] = add i64 [[ADD]], 7
-; CHECK-NEXT: [[CAST:%[a-zA-Z_0-9-]+]] = inttoptr i64 [[ADDR]] to i8*
-; CHECK-NEXT: load i8, i8* [[CAST]], align 1
+; CHECK-NEXT: [[BASE:%[a-zA-Z_0-9-]+]] = bitcast %struct.dns_packet* %P to i8*
+; CHECK-NEXT: [[ADD:%[a-zA-Z_0-9-]+]] = getelementptr i8, i8* [[BASE]], i64 [[PROMOTED_CONV]]
+; CHECK-NEXT: [[ADDR:%[a-zA-Z_0-9-]+]] = getelementptr i8, i8* [[ADD]], i64 7
+; CHECK-NEXT: load i8, i8* [[ADDR]], align 1
 define signext i16 @fn3(%struct.dns_packet* nocapture readonly %P) {
 entry:
   %tmp = getelementptr inbounds %struct.dns_packet, %struct.dns_packet* %P, i64 0, i32 2

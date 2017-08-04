@@ -28,11 +28,11 @@ for.cond1:                                        ; preds = %for.end9, %for.cond
 
 for.body2:                                        ; preds = %for.cond1
   store i32 %storemerge11, i32* @b, align 4, !dbg !26
-  tail call void @llvm.dbg.value(metadata i32* null, i64 0, metadata !20, metadata !27), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32* null, metadata !20, metadata !27), !dbg !28
   %0 = load i64, i64* @a, align 8, !dbg !29
   %xor = xor i64 %0, %e.1.ph, !dbg !29
   %conv3 = trunc i64 %xor to i32, !dbg !29
-  tail call void @llvm.dbg.value(metadata i32 %conv3, i64 0, metadata !19, metadata !27), !dbg !29
+  tail call void @llvm.dbg.value(metadata i32 %conv3, metadata !19, metadata !27), !dbg !29
   %tobool4 = icmp eq i32 %conv3, 0, !dbg !29
   br i1 %tobool4, label %land.end, label %land.rhs, !dbg !29
 
@@ -70,7 +70,7 @@ declare i32 @fn2(...) #1
 declare i32 @fn3(...) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -8,29 +8,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCFragment.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm)
-  : Assembler(Asm), LastValidFragment()
- {
+MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
   // Compute the section layout order. Virtual sections must go last.
   for (MCSection &Sec : Asm)
     if (!Sec.isVirtualSection())
@@ -145,14 +144,14 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
   MCValue Value;
   if (!Expr->evaluateAsValue(Value, *this)) {
     Assembler.getContext().reportError(
-        SMLoc(), "expression could not be evaluated");
+        Expr->getLoc(), "expression could not be evaluated");
     return nullptr;
   }
 
   const MCSymbolRefExpr *RefB = Value.getSymB();
   if (RefB) {
     Assembler.getContext().reportError(
-        SMLoc(), Twine("symbol '") + RefB->getSymbol().getName() +
+        Expr->getLoc(), Twine("symbol '") + RefB->getSymbol().getName() +
                      "' could not be evaluated in a subtraction expression");
     return nullptr;
   }
@@ -164,8 +163,7 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
   const MCSymbol &ASym = A->getSymbol();
   const MCAssembler &Asm = getAssembler();
   if (ASym.isCommon()) {
-    // FIXME: we should probably add a SMLoc to MCExpr.
-    Asm.getContext().reportError(SMLoc(),
+    Asm.getContext().reportError(Expr->getLoc(),
                                  "Common symbol '" + ASym.getName() +
                                      "' cannot be used in assignment expr");
     return nullptr;
@@ -234,7 +232,7 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 
 void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 
-MCFragment::~MCFragment() { }
+MCFragment::~MCFragment() = default;
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        uint8_t BundlePadding, MCSection *Parent)
@@ -295,8 +293,6 @@ void MCFragment::destroy() {
   }
 }
 
-/* *** */
-
 // Debugging methods
 
 namespace llvm {
@@ -308,11 +304,11 @@ raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
   return OS;
 }
 
-}
+} // end namespace llvm
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCFragment::dump() {
-  raw_ostream &OS = llvm::errs();
+LLVM_DUMP_METHOD void MCFragment::dump() const {
+  raw_ostream &OS = errs();
 
   OS << "<";
   switch (getKind()) {
@@ -332,9 +328,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
-  OS << "<MCFragment " << (void*) this << " LayoutOrder:" << LayoutOrder
+  OS << "<MCFragment " << (const void*) this << " LayoutOrder:" << LayoutOrder
      << " Offset:" << Offset
-     << " HasInstructions:" << hasInstructions() 
+     << " HasInstructions:" << hasInstructions()
      << " BundlePadding:" << static_cast<unsigned>(getBundlePadding()) << ">";
 
   switch (getKind()) {
@@ -386,7 +382,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   }
   case MCFragment::FT_Fill:  {
     const MCFillFragment *FF = cast<MCFillFragment>(this);
-    OS << " Value:" << FF->getValue() << " Size:" << FF->getSize();
+    OS << " Value:" << static_cast<unsigned>(FF->getValue())
+       << " Size:" << FF->getSize();
     break;
   }
   case MCFragment::FT_Relaxable:  {
@@ -399,7 +396,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   case MCFragment::FT_Org:  {
     const MCOrgFragment *OF = cast<MCOrgFragment>(this);
     OS << "\n       ";
-    OS << " Offset:" << OF->getOffset() << " Value:" << OF->getValue();
+    OS << " Offset:" << OF->getOffset()
+       << " Value:" << static_cast<unsigned>(OF->getValue());
     break;
   }
   case MCFragment::FT_Dwarf:  {
@@ -449,19 +447,19 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   OS << ">";
 }
 
-LLVM_DUMP_METHOD void MCAssembler::dump() {
-  raw_ostream &OS = llvm::errs();
+LLVM_DUMP_METHOD void MCAssembler::dump() const{
+  raw_ostream &OS = errs();
 
   OS << "<MCAssembler\n";
   OS << "  Sections:[\n    ";
-  for (iterator it = begin(), ie = end(); it != ie; ++it) {
+  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
     if (it != begin()) OS << ",\n    ";
     it->dump();
   }
   OS << "],\n";
   OS << "  Symbols:[";
 
-  for (symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
+  for (const_symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
     if (it != symbol_begin()) OS << ",\n           ";
     OS << "(";
     it->dump();

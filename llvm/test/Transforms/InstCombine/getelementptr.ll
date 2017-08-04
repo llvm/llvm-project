@@ -883,6 +883,33 @@ define %struct.C* @test46(%struct.C* %c1, %struct.C* %c2, i64 %N) {
 ; CHECK-NEXT:  ret %struct.C* [[GEP]]
 }
 
+define i32* @test47(i32* %I, i64 %C, i64 %D) {
+  %sub = sub i64 %D, %C
+  %A = getelementptr i32, i32* %I, i64 %C
+  %B = getelementptr i32, i32* %A, i64 %sub
+  ret i32* %B
+; CHECK-LABEL: @test47(
+; CHECK-NEXT: %B = getelementptr i32, i32* %I, i64 %D
+}
+
+define i32* @test48(i32* %I, i64 %C, i64 %D) {
+  %sub = sub i64 %D, %C
+  %A = getelementptr i32, i32* %I, i64 %sub
+  %B = getelementptr i32, i32* %A, i64 %C
+  ret i32* %B
+; CHECK-LABEL: @test48(
+; CHECK-NEXT: %B = getelementptr i32, i32* %I, i64 %D
+}
+
+define i32* @test49(i32* %I, i64 %C) {
+  %notC = xor i64 -1, %C
+  %A = getelementptr i32, i32* %I, i64 %C
+  %B = getelementptr i32, i32* %A, i64 %notC
+  ret i32* %B
+; CHECK-LABEL: @test49(
+; CHECK-NEXT: %B = getelementptr i32, i32* %I, i64 -1
+}
+
 define i32 addrspace(1)* @ascast_0_gep(i32* %p) nounwind {
 ; CHECK-LABEL: @ascast_0_gep(
 ; CHECK-NOT: getelementptr
@@ -902,6 +929,17 @@ define i32 addrspace(1)* @ascast_0_0_gep([128 x i32]* %p) nounwind {
   %gep = getelementptr [128 x i32], [128 x i32]* %p, i32 0, i32 0
   %x = addrspacecast i32* %gep to i32 addrspace(1)*
   ret i32 addrspace(1)* %x
+}
+
+define <2 x i32*> @PR32414(i32** %ptr) {
+; CHECK-LABEL: @PR32414(
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32** %ptr to i32*
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    ret <2 x i32*> [[TMP1]]
+;
+  %tmp0 = bitcast i32** %ptr to i32*
+  %tmp1 = getelementptr inbounds i32, i32* %tmp0, <2 x i64> <i64 0, i64 1>
+  ret <2 x i32*> %tmp1
 }
 
 ; CHECK: attributes [[NUW]] = { nounwind }

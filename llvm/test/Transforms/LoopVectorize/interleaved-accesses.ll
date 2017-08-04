@@ -338,7 +338,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; }
 
 ; CHECK-LABEL: @even_load_dynamic_tc(
-; CHECK: min.iters.checked:
+; CHECK: vector.ph:
 ; CHECK:   %n.mod.vf = and i64 %[[N:[a-zA-Z0-9]+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
@@ -579,7 +579,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; }
 
 ; CHECK-LABEL: @PR27626_0(
-; CHECK: min.iters.checked:
+; CHECK: vector.ph:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
@@ -627,7 +627,7 @@ for.end:
 ; }
 
 ; CHECK-LABEL: @PR27626_1(
-; CHECK: min.iters.checked:
+; CHECK: vector.ph:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
@@ -680,7 +680,7 @@ for.end:
 ; }
 
 ; CHECK-LABEL: @PR27626_2(
-; CHECK: min.iters.checked:
+; CHECK: vector.ph:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
@@ -728,7 +728,7 @@ for.end:
 ; }
 
 ; CHECK-LABEL: @PR27626_3(
-; CHECK: min.iters.checked:
+; CHECK: vector.ph:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf

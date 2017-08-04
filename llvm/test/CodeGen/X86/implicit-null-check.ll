@@ -135,6 +135,53 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
   ret i32 200
 }
 
+define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
+; CHECK-LABEL: imp_null_check_gep_load_with_use_dep:
+; CHECK: [[BB0_imp_null_check_gep_load_with_use_dep:L[^:]+]]:
+; CHECK: movl (%rdi), %eax
+; CHECK: addl %edi, %esi
+; CHECK: leal 4(%rax,%rsi), %eax
+; CHECK: retq
+; CHECK: [[BB1_imp_null_check_gep_load_with_use_dep:LBB5_[0-9]+]]:
+; CHECK: movl $42, %eax
+; CHECK: retq
+
+ entry:
+  %c = icmp eq i32* %x, null
+  br i1 %c, label %is_null, label %not_null, !make.implicit !0
+
+ is_null:
+  ret i32 42
+
+ not_null:
+  %x.loc = getelementptr i32, i32* %x, i32 1
+  %y = ptrtoint i32* %x.loc to i32
+  %b = add i32 %a, %y
+  %t = load i32, i32* %x
+  %z = add i32 %t, %b
+  ret i32 %z
+}
+
+define void @imp_null_check_store(i32* %x) {
+; CHECK-LABEL: _imp_null_check_store:
+; CHECK: [[BB0_imp_null_check_store:L[^:]+]]:
+; CHECK: movl $1, (%rdi)
+; CHECK: retq
+; CHECK: [[BB1_imp_null_check_store:LBB6_[0-9]+]]:
+; CHECK: retq
+
+ entry:
+  %c = icmp eq i32* %x, null
+  br i1 %c, label %is_null, label %not_null, !make.implicit !0
+
+ is_null:
+  ret void
+
+ not_null:
+  store i32 1, i32* %x
+  ret void
+}
+
 !0 = !{}
 
 ; CHECK-LABEL: __LLVM_FaultMaps:
@@ -147,7 +194,7 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; CHECK-NEXT: .short 0
 
 ; # functions:
-; CHECK-NEXT: .long 5
+; CHECK-NEXT: .long 7
 
 ; FunctionAddr:
 ; CHECK-NEXT: .quad _imp_null_check_add_result
@@ -176,6 +223,19 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; CHECK-NEXT: .long [[BB1_imp_null_check_gep_load]]-_imp_null_check_gep_load
 
 ; FunctionAddr:
+; CHECK-NEXT: .quad _imp_null_check_gep_load_with_use_dep
+; NumFaultingPCs
+; CHECK-NEXT: .long 1
+; Reserved:
+; CHECK-NEXT: .long 0
+; Fault[0].Type:
+; CHECK-NEXT: .long 1
+; Fault[0].FaultOffset:
+; CHECK-NEXT: .long [[BB0_imp_null_check_gep_load_with_use_dep]]-_imp_null_check_gep_load_with_use_dep
+; Fault[0].HandlerOffset:
+; CHECK-NEXT: .long [[BB1_imp_null_check_gep_load_with_use_dep]]-_imp_null_check_gep_load_with_use_dep
+
+; FunctionAddr:
 ; CHECK-NEXT: .quad _imp_null_check_hoist_over_unrelated_load
 ; NumFaultingPCs
 ; CHECK-NEXT: .long 1
@@ -202,6 +262,19 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; CHECK-NEXT: .long [[BB1_imp_null_check_load]]-_imp_null_check_load
 
 ; FunctionAddr:
+; CHECK-NEXT: .quad _imp_null_check_store
+; NumFaultingPCs
+; CHECK-NEXT: .long 1
+; Reserved:
+; CHECK-NEXT: .long 0
+; Fault[0].Type:
+; CHECK-NEXT: .long 3
+; Fault[0].FaultOffset:
+; CHECK-NEXT: .long [[BB0_imp_null_check_store]]-_imp_null_check_store
+; Fault[0].HandlerOffset:
+; CHECK-NEXT: .long [[BB1_imp_null_check_store]]-_imp_null_check_store
+
+; FunctionAddr:
 ; CHECK-NEXT: .quad     _imp_null_check_via_mem_comparision
 ; NumFaultingPCs
 ; CHECK-NEXT: .long   1
@@ -216,12 +289,18 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 
 ; OBJDUMP: FaultMap table:
 ; OBJDUMP-NEXT: Version: 0x1
-; OBJDUMP-NEXT: NumFunctions: 5
+; OBJDUMP-NEXT: NumFunctions: 7
 ; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
 ; OBJDUMP-NEXT: Fault kind: FaultingLoad, faulting PC offset: 0, handling PC offset: 5
 ; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
 ; OBJDUMP-NEXT: Fault kind: FaultingLoad, faulting PC offset: 0, handling PC offset: 7
 ; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
+; OBJDUMP-NEXT: Fault kind: FaultingLoad, faulting PC offset: 0, handling PC offset: 9
+; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
 ; OBJDUMP-NEXT: Fault kind: FaultingLoad, faulting PC offset: 0, handling PC offset: 7
 ; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
 ; OBJDUMP-NEXT: Fault kind: FaultingLoad, faulting PC offset: 0, handling PC offset: 3
+; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
+; OBJDUMP-NEXT: Fault kind: FaultingStore, faulting PC offset: 0, handling PC offset: 7
+; OBJDUMP-NEXT: FunctionAddress: 0x000000, NumFaultingPCs: 1
+; OBJDUMP-NEXT: Fault kind: FaultingLoad, faulting PC offset: 0, handling PC offset: 11

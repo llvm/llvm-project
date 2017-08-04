@@ -37,9 +37,8 @@ void use_at_available() {
 // CHECK_NO_GUARD-NOT: __clang_at_available_requires_core_foundation_framework
 // CHECK_NO_GUARD-NOT: CFBundleGetVersionNumber
 
-// CHECK_LINK_OPT: !"Linker Options", ![[OPTS:[0-9]+]]
-// CHECK_LINK_OPT: ![[OPTS]] = !{![[FRAMEWORK:[0-9]+]]
+// CHECK_LINK_OPT: !llvm.linker.options = !{![[FRAMEWORK:[0-9]+]]
 // CHECK_LINK_OPT: ![[FRAMEWORK]] = !{!"-framework", !"CoreFoundation"}
 
-// CHECK_NO_GUARD-NOT: "Linker Options"
+// CHECK_NO_GUARD-NOT: !llvm.linker.options
 // CHECK_NO_GUARD-NOT: CoreFoundation

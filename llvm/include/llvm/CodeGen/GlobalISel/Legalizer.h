@@ -59,7 +59,7 @@ public:
                        const TargetInstrInfo &TII);
 
   bool combineMerges(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     const TargetInstrInfo &TII);
+                     const TargetInstrInfo &TII, MachineIRBuilder &MIRBuilder);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };

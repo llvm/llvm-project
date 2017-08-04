@@ -76,9 +76,8 @@ static bool isInteresting(const SCEV *S, const Instruction *I, const Loop *L,
   // An add is interesting if exactly one of its operands is interesting.
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     bool AnyInterestingYet = false;
-    for (SCEVAddExpr::op_iterator OI = Add->op_begin(), OE = Add->op_end();
-         OI != OE; ++OI)
-      if (isInteresting(*OI, I, L, SE, LI)) {
+    for (const auto *Op : Add->operands())
+      if (isInteresting(Op, I, L, SE, LI)) {
         if (AnyInterestingYet)
           return false;
         AnyInterestingYet = true;
@@ -115,6 +114,50 @@ static bool isSimplifiedLoopNest(BasicBlock *BB, const DominatorTree *DT,
   }
   if (NearestLoop)
     SimpleLoopNests.insert(NearestLoop);
+  return true;
+}
+
+/// IVUseShouldUsePostIncValue - We have discovered a "User" of an IV expression
+/// and now we need to decide whether the user should use the preinc or post-inc
+/// value.  If this user should use the post-inc version of the IV, return true.
+///
+/// Choosing wrong here can break dominance properties (if we choose to use the
+/// post-inc value when we cannot) or it can end up adding extra live-ranges to
+/// the loop, resulting in reg-reg copies (if we use the pre-inc value when we
+/// should use the post-inc value).
+static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
+                                       const Loop *L, DominatorTree *DT) {
+  // If the user is in the loop, use the preinc value.
+  if (L->contains(User))
+    return false;
+
+  BasicBlock *LatchBlock = L->getLoopLatch();
+  if (!LatchBlock)
+    return false;
+
+  // Ok, the user is outside of the loop.  If it is dominated by the latch
+  // block, use the post-inc value.
+  if (DT->dominates(LatchBlock, User->getParent()))
+    return true;
+
+  // There is one case we have to be careful of: PHI nodes.  These little guys
+  // can live in blocks that are not dominated by the latch block, but (since
+  // their uses occur in the predecessor block, not the block the PHI lives in)
+  // should still use the post-inc value.  Check for this case now.
+  PHINode *PN = dyn_cast<PHINode>(User);
+  if (!PN || !Operand)
+    return false; // not a phi, not dominated by latch block.
+
+  // Look at all of the uses of Operand by the PHI node.  If any use corresponds
+  // to a block that is not dominated by the latch block, give up and use the
+  // preincremented value.
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+    if (PN->getIncomingValue(i) == Operand &&
+        !DT->dominates(LatchBlock, PN->getIncomingBlock(i)))
+      return false;
+
+  // Okay, all uses of Operand by PN are in predecessor blocks that really are
+  // dominated by the latch block.  Use the post-incremented value.
   return true;
 }
 
@@ -208,10 +251,16 @@ bool IVUsers::AddUsersImpl(Instruction *I,
       // The regular return value here is discarded; instead of recording
       // it, we just recompute it when we need it.
       const SCEV *OriginalISE = ISE;
-      ISE = TransformForPostIncUse(NormalizeAutodetect,
-                                   ISE, User, I,
-                                   NewUse.PostIncLoops,
-                                   *SE, *DT);
+
+      auto NormalizePred = [&](const SCEVAddRecExpr *AR) {
+        auto *L = AR->getLoop();
+        bool Result = IVUseShouldUsePostIncValue(User, I, L, DT);
+        if (Result)
+          NewUse.PostIncLoops.insert(L);
+        return Result;
+      };
+
+      ISE = normalizeForPostIncUseIf(ISE, NormalizePred, *SE);
 
       // PostIncNormalization effectively simplifies the expression under
       // pre-increment assumptions. Those assumptions (no wrapping) might not
@@ -219,8 +268,7 @@ bool IVUsers::AddUsersImpl(Instruction *I,
       // transformation is invertible.
       if (OriginalISE != ISE) {
         const SCEV *DenormalizedISE =
-          TransformForPostIncUse(Denormalize, ISE, User, I,
-              NewUse.PostIncLoops, *SE, *DT);
+            denormalizeForPostIncUse(ISE, NewUse.PostIncLoops, *SE);
 
         // If we normalized the expression, but denormalization doesn't give the
         // original one, discard this user.
@@ -338,11 +386,8 @@ const SCEV *IVUsers::getReplacementExpr(const IVStrideUse &IU) const {
 
 /// getExpr - Return the expression for the use.
 const SCEV *IVUsers::getExpr(const IVStrideUse &IU) const {
-  return
-    TransformForPostIncUse(Normalize, getReplacementExpr(IU),
-                           IU.getUser(), IU.getOperandValToReplace(),
-                           const_cast<PostIncLoopSet &>(IU.getPostIncLoops()),
-                           *SE, *DT);
+  return normalizeForPostIncUse(getReplacementExpr(IU), IU.getPostIncLoops(),
+                                *SE);
 }
 
 static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {
@@ -353,9 +398,8 @@ static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {
   }
 
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
-    for (SCEVAddExpr::op_iterator I = Add->op_begin(), E = Add->op_end();
-         I != E; ++I)
-      if (const SCEVAddRecExpr *AR = findAddRecForLoop(*I, L))
+    for (const auto *Op : Add->operands())
+      if (const SCEVAddRecExpr *AR = findAddRecForLoop(Op, L))
         return AR;
     return nullptr;
   }

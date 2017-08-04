@@ -16,8 +16,10 @@ function(add_polly_unittest test_name)
 
     set_property(TARGET ${test_name} PROPERTY FOLDER "Polly")
   endif()
-  target_link_libraries(${test_name} Polly LLVMCore LLVMSupport LLVMDemangle)
+  target_link_libraries(${test_name} Polly)
 endfunction()
 
 add_subdirectory(Isl)
 add_subdirectory(Flatten)
+add_subdirectory(DeLICM)
+add_subdirectory(ScopPassManager)

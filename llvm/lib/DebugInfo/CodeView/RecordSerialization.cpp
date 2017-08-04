@@ -16,7 +16,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/Support/BinaryByteStream.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -33,7 +33,7 @@ StringRef llvm::codeview::getBytesAsCString(ArrayRef<uint8_t> LeafData) {
   return getBytesAsCharacters(LeafData).split('\0').first;
 }
 
-Error llvm::codeview::consume(msf::StreamReader &Reader, APSInt &Num) {
+Error llvm::codeview::consume(BinaryStreamReader &Reader, APSInt &Num) {
   // Used to avoid overload ambiguity on APInt construtor.
   bool FalseVal = false;
   uint16_t Short;
@@ -103,15 +103,15 @@ Error llvm::codeview::consume(msf::StreamReader &Reader, APSInt &Num) {
 
 Error llvm::codeview::consume(StringRef &Data, APSInt &Num) {
   ArrayRef<uint8_t> Bytes(Data.bytes_begin(), Data.bytes_end());
-  msf::ByteStream S(Bytes);
-  msf::StreamReader SR(S);
+  BinaryByteStream S(Bytes, llvm::support::little);
+  BinaryStreamReader SR(S);
   auto EC = consume(SR, Num);
   Data = Data.take_back(SR.bytesRemaining());
   return EC;
 }
 
 /// Decode a numeric leaf value that is known to be a uint64_t.
-Error llvm::codeview::consume_numeric(msf::StreamReader &Reader,
+Error llvm::codeview::consume_numeric(BinaryStreamReader &Reader,
                                       uint64_t &Num) {
   APSInt N;
   if (auto EC = consume(Reader, N))
@@ -123,27 +123,27 @@ Error llvm::codeview::consume_numeric(msf::StreamReader &Reader,
   return Error::success();
 }
 
-Error llvm::codeview::consume(msf::StreamReader &Reader, uint32_t &Item) {
+Error llvm::codeview::consume(BinaryStreamReader &Reader, uint32_t &Item) {
   return Reader.readInteger(Item);
 }
 
 Error llvm::codeview::consume(StringRef &Data, uint32_t &Item) {
   ArrayRef<uint8_t> Bytes(Data.bytes_begin(), Data.bytes_end());
-  msf::ByteStream S(Bytes);
-  msf::StreamReader SR(S);
+  BinaryByteStream S(Bytes, llvm::support::little);
+  BinaryStreamReader SR(S);
   auto EC = consume(SR, Item);
   Data = Data.take_back(SR.bytesRemaining());
   return EC;
 }
 
-Error llvm::codeview::consume(msf::StreamReader &Reader, int32_t &Item) {
+Error llvm::codeview::consume(BinaryStreamReader &Reader, int32_t &Item) {
   return Reader.readInteger(Item);
 }
 
-Error llvm::codeview::consume(msf::StreamReader &Reader, StringRef &Item) {
+Error llvm::codeview::consume(BinaryStreamReader &Reader, StringRef &Item) {
   if (Reader.empty())
     return make_error<CodeViewError>(cv_error_code::corrupt_record,
                                      "Null terminated string buffer is empty!");
 
-  return Reader.readZeroString(Item);
+  return Reader.readCString(Item);
 }

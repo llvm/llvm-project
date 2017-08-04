@@ -113,6 +113,8 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #pragma GCC system_header
 #endif
 
+
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Size>
@@ -294,6 +296,7 @@ class _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> >
 template <size_t _Ip, class _Tp, size_t _Size>
 class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, array<_Tp, _Size> >
 {
+    static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::array)");
 public:
     typedef _Tp type;
 };
@@ -316,7 +319,7 @@ get(const array<_Tp, _Size>& __a) _NOEXCEPT
     return __a.__elems_[_Ip];
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <size_t _Ip, class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -336,7 +339,7 @@ get(const array<_Tp, _Size>&& __a) _NOEXCEPT
     return _VSTD::move(__a.__elems_[_Ip]);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

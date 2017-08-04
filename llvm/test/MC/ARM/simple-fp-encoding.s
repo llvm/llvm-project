@@ -38,6 +38,18 @@
 @ CHECK: vnmul.f64 d16, d17, d16     @ encoding: [0xe0,0x0b,0x61,0xee]
 @ CHECK: vnmul.f32 s0, s1, s0        @ encoding: [0xc0,0x0a,0x20,0xee]
 
+        vcmp.f64       d17, d16
+        vcmp.f32       s1, s0
+
+@ CHECK: vcmp.f64  d17, d16        @ encoding: [0x60,0x1b,0xf4,0xee]
+@ CHECK: vcmp.f32  s1, s0          @ encoding: [0x40,0x0a,0xf4,0xee]
+
+        vcmp.f64       d17, #0.0
+        vcmp.f32       s1, #0.0
+
+@ CHECK: vcmp.f64  d17, #0         @ encoding: [0x40,0x1b,0xf5,0xee]
+@ CHECK: vcmp.f32  s1, #0          @ encoding: [0x40,0x0a,0xf5,0xee]
+
         vcmpe.f64       d17, d16
         vcmpe.f32       s1, s0
 

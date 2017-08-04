@@ -1,0 +1,57 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - ReturnType:      I32
+        ParamTypes:
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0 ]
+  - Type:            GLOBAL
+    Globals:         
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1
+  - Type:            EXPORT
+    Exports:         
+      - Name:            function_export
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            global_export
+        Kind:            GLOBAL
+        Index:           0
+  - Type:            CUSTOM
+    Name:            linking
+    DataSize:        10
+    DataAlignment:   2
+    SymbolInfo:
+      - Name:            function_export
+        Flags:           1
+      - Name:            global_export
+        Flags:           1
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:   - Type:            EXPORT
+# CHECK:     Exports:         
+# CHECK:       - Name:            function_export
+# CHECK:         Kind:            FUNCTION
+# CHECK:         Index:           1
+# CHECK:       - Name:            global_export
+# CHECK:         Kind:            GLOBAL
+# CHECK:         Index:           0
+# CHECK:   - Type:            CUSTOM
+# CHECK:     Name:            linking
+# CHECK:     DataSize:        10
+# CHECK:     DataAlignment:   2
+# CHECK:     SymbolInfo:
+# CHECK:       - Name:            function_export
+# CHECK:         Flags:           1
+# CHECK:       - Name:            global_export
+# CHECK:         Flags:           1

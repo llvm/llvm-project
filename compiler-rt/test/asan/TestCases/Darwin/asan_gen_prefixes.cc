@@ -4,6 +4,8 @@
 // RUN: %clang_asan %s -S -o %t.s
 // RUN: cat %t.s | FileCheck %s || exit 1
 
+// UNSUPPORTED: ios
+
 int x, y, z;
 int main() { return 0; }
 // CHECK: .section{{.*}}__TEXT,__const

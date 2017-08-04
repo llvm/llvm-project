@@ -6,7 +6,7 @@
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= 1022 }
 ; CHECK-NEXT: WAR dependences:
-; CHECK-NEXT:     {  }
+; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= 1022 }
 ; CHECK-NEXT: WAW dependences:
 ; CHECK-NEXT:     { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= 1022 }
 ; CHECK-NEXT: Reduction dependences:

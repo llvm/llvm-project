@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
 #include "MCTargetDesc/PPCMCExpr.h"
+#include "PPC.h"
 #include "PPCSubtarget.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"

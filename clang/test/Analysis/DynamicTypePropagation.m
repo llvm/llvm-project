@@ -4,6 +4,9 @@
 #  error Compiler does not support Objective-C generics?
 #endif
 
+typedef __typeof(sizeof(int)) size_t;
+void *memset(void *, int, size_t);
+
 #define nil 0
 typedef unsigned long NSUInteger;
 typedef int BOOL;
@@ -21,6 +24,7 @@ __attribute__((objc_root_class))
 @end
 
 @interface NSArray<ObjectType> : NSObject
+- (void) init;
 - (BOOL)contains:(ObjectType)obj;
 - (ObjectType)getObjAtIndex:(NSUInteger)idx;
 - (ObjectType)objectAtIndexedSubscript:(NSUInteger)idx;
@@ -54,4 +58,12 @@ void testArgument(NSArray<MyType *> *arr, id element) {
   // TODO: myFunction currently is not dispatched to MyType. Make it dispatch to
   // MyType!
   [element myFunction:0 myParam:0 ];
+}
+
+// Do not try this at home! The analyzer shouldn't crash though when it
+// tries to figure out the dynamic type behind the alloca's return value.
+void testAlloca(size_t NSArrayClassSizeWeKnowSomehow) {
+  NSArray *arr = __builtin_alloca(NSArrayClassSizeWeKnowSomehow);
+  memset(arr, 0, NSArrayClassSizeWeKnowSomehow);
+  [arr init]; // no-crash
 }

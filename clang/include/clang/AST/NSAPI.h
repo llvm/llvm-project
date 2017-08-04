@@ -49,7 +49,7 @@ public:
     NSStr_initWithString,
     NSStr_initWithUTF8String
   };
-  static const unsigned NumNSStringMethods = 5;
+  static const unsigned NumNSStringMethods = 6;
 
   IdentifierInfo *getNSClassId(NSClassIdKindKind K) const;
 
@@ -112,7 +112,7 @@ public:
     NSMutableDict_setObjectForKeyedSubscript,
     NSMutableDict_setValueForKey
   };
-  static const unsigned NumNSDictionaryMethods = 14;
+  static const unsigned NumNSDictionaryMethods = 13;
   
   /// \brief The Objective-C NSDictionary selectors.
   Selector getNSDictionarySelector(NSDictionaryMethodKind MK) const;

@@ -221,6 +221,15 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SUBE, VT, Expand);
   }
 
+  // LLVM will expand these to atomic_cmp_swap(0)
+  // and atomic_swap, respectively.
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Expand);
+  setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Expand);
+
+  // We need to custom lower some of the intrinsics
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
   setSchedulingPreference(Sched::Source);
 
   setTargetDAGCombine(ISD::FP_ROUND);
@@ -266,7 +275,7 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       NewMI = BuildMI(*BB, I, BB->findDebugLoc(I),
                       TII->get(AMDGPU::getLDSNoRetOp(MI.getOpcode())));
       for (unsigned i = 1, e = MI.getNumOperands(); i < e; ++i) {
-        NewMI.addOperand(MI.getOperand(i));
+        NewMI.add(MI.getOperand(i));
       }
     } else {
       return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
@@ -339,34 +348,34 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::RAT_WRITE_CACHELESS_64_eg:
   case AMDGPU::RAT_WRITE_CACHELESS_128_eg:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
-        .addOperand(MI.getOperand(0))
-        .addOperand(MI.getOperand(1))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
         .addImm(isEOP(I)); // Set End of program bit
     break;
 
   case AMDGPU::RAT_STORE_TYPED_eg:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
-        .addOperand(MI.getOperand(0))
-        .addOperand(MI.getOperand(1))
-        .addOperand(MI.getOperand(2))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
         .addImm(isEOP(I)); // Set End of program bit
     break;
 
   case AMDGPU::BRANCH:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP))
-        .addOperand(MI.getOperand(0));
+        .add(MI.getOperand(0));
     break;
 
   case AMDGPU::BRANCH_COND_f32: {
     MachineInstr *NewMI =
         BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::PRED_X),
                 AMDGPU::PREDICATE_BIT)
-            .addOperand(MI.getOperand(1))
+            .add(MI.getOperand(1))
             .addImm(AMDGPU::PRED_SETNE)
             .addImm(0); // Flags
     TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
-        .addOperand(MI.getOperand(0))
+        .add(MI.getOperand(0))
         .addReg(AMDGPU::PREDICATE_BIT, RegState::Kill);
     break;
   }
@@ -375,12 +384,12 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineInstr *NewMI =
         BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::PRED_X),
                 AMDGPU::PREDICATE_BIT)
-            .addOperand(MI.getOperand(1))
+            .add(MI.getOperand(1))
             .addImm(AMDGPU::PRED_SETNE_INT)
             .addImm(0); // Flags
     TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
-        .addOperand(MI.getOperand(0))
+        .add(MI.getOperand(0))
         .addReg(AMDGPU::PREDICATE_BIT, RegState::Kill);
     break;
   }
@@ -408,13 +417,13 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       return BB;
     unsigned CfInst = (MI.getOpcode() == AMDGPU::EG_ExportSwz) ? 84 : 40;
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
-        .addOperand(MI.getOperand(0))
-        .addOperand(MI.getOperand(1))
-        .addOperand(MI.getOperand(2))
-        .addOperand(MI.getOperand(3))
-        .addOperand(MI.getOperand(4))
-        .addOperand(MI.getOperand(5))
-        .addOperand(MI.getOperand(6))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
+        .add(MI.getOperand(3))
+        .add(MI.getOperand(4))
+        .add(MI.getOperand(5))
+        .add(MI.getOperand(6))
         .addImm(CfInst)
         .addImm(EOP);
     break;
@@ -490,8 +499,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
                          cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     EVT VT = Op.getValueType();
     SDLoc DL(Op);
-    switch(IntrinsicID) {
-    default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
+    switch (IntrinsicID) {
     case AMDGPUIntrinsic::r600_tex:
     case AMDGPUIntrinsic::r600_texc: {
       unsigned TextureOp;
@@ -552,7 +560,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     }
 
     case Intrinsic::r600_implicitarg_ptr: {
-      MVT PtrVT = getPointerTy(DAG.getDataLayout(), AMDGPUAS::PARAM_I_ADDRESS);
+      MVT PtrVT = getPointerTy(DAG.getDataLayout(), AMDGPUASI.PARAM_I_ADDRESS);
       uint32_t ByteOffset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
       return DAG.getConstant(ByteOffset, DL, PtrVT);
     }
@@ -576,29 +584,31 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       return LowerImplicitParameter(DAG, VT, DL, 8);
 
     case Intrinsic::r600_read_tgid_x:
-      return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
-                                  AMDGPU::T1_X, VT);
+      return CreateLiveInRegisterRaw(DAG, &AMDGPU::R600_TReg32RegClass,
+                                     AMDGPU::T1_X, VT);
     case Intrinsic::r600_read_tgid_y:
-      return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
-                                  AMDGPU::T1_Y, VT);
+      return CreateLiveInRegisterRaw(DAG, &AMDGPU::R600_TReg32RegClass,
+                                     AMDGPU::T1_Y, VT);
     case Intrinsic::r600_read_tgid_z:
-      return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
-                                  AMDGPU::T1_Z, VT);
+      return CreateLiveInRegisterRaw(DAG, &AMDGPU::R600_TReg32RegClass,
+                                     AMDGPU::T1_Z, VT);
     case Intrinsic::r600_read_tidig_x:
-      return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
-                                  AMDGPU::T0_X, VT);
+      return CreateLiveInRegisterRaw(DAG, &AMDGPU::R600_TReg32RegClass,
+                                     AMDGPU::T0_X, VT);
     case Intrinsic::r600_read_tidig_y:
-      return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
-                                  AMDGPU::T0_Y, VT);
+      return CreateLiveInRegisterRaw(DAG, &AMDGPU::R600_TReg32RegClass,
+                                     AMDGPU::T0_Y, VT);
     case Intrinsic::r600_read_tidig_z:
-      return CreateLiveInRegister(DAG, &AMDGPU::R600_TReg32RegClass,
-                                  AMDGPU::T0_Z, VT);
+      return CreateLiveInRegisterRaw(DAG, &AMDGPU::R600_TReg32RegClass,
+                                     AMDGPU::T0_Z, VT);
 
     case Intrinsic::r600_recipsqrt_ieee:
       return DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
 
     case Intrinsic::r600_recipsqrt_clamped:
       return DAG.getNode(AMDGPUISD::RSQ_CLAMP, DL, VT, Op.getOperand(1));
+    default:
+      return Op;
     }
 
     // break out of case ISD::INTRINSIC_WO_CHAIN in switch(Op.getOpcode())
@@ -702,12 +712,12 @@ SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
-  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+  if (GSD->getAddressSpace() != AMDGPUASI.CONSTANT_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
 
   const DataLayout &DL = DAG.getDataLayout();
   const GlobalValue *GV = GSD->getGlobal();
-  MVT ConstPtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
+  MVT ConstPtrVT = getPointerTy(DL, AMDGPUASI.CONSTANT_ADDRESS);
 
   SDValue GA = DAG.getTargetGlobalAddress(GV, SDLoc(GSD), ConstPtrVT);
   return DAG.getNode(AMDGPUISD::CONST_DATA_PTR, SDLoc(GSD), ConstPtrVT, GA);
@@ -864,7 +874,7 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
                                                    unsigned DwordOffset) const {
   unsigned ByteOffset = DwordOffset * 4;
   PointerType * PtrType = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                      AMDGPUAS::CONSTANT_BUFFER_0);
+                                      AMDGPUASI.CONSTANT_BUFFER_0);
 
   // We shouldn't be using an offset wider than 16-bits for implicit parameters.
   assert(isInt<16>(ByteOffset));
@@ -911,7 +921,7 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
 
   if (VT == MVT::f32) {
     DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
-    SDValue MinMax = CombineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC, DCI);
+    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC, DCI);
     if (MinMax)
       return MinMax;
   }
@@ -1102,7 +1112,7 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
   //TODO: Who creates the i8 stores?
   assert(Store->isTruncatingStore()
          || Store->getValue().getValueType() == MVT::i8);
-  assert(Store->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS);
+  assert(Store->getAddressSpace() == AMDGPUASI.PRIVATE_ADDRESS);
 
   SDValue Mask;
   if (Store->getMemoryVT() == MVT::i8) {
@@ -1110,7 +1120,7 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
     Mask = DAG.getConstant(0xff, DL, MVT::i32);
   } else if (Store->getMemoryVT() == MVT::i16) {
     assert(Store->getAlignment() >= 2);
-    Mask = DAG.getConstant(0xffff, DL, MVT::i32);;
+    Mask = DAG.getConstant(0xffff, DL, MVT::i32);
   } else {
     llvm_unreachable("Unsupported private trunc store");
   }
@@ -1200,9 +1210,10 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   // Neither LOCAL nor PRIVATE can do vectors at the moment
-  if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS) &&
+  if ((AS == AMDGPUASI.LOCAL_ADDRESS || AS == AMDGPUASI.PRIVATE_ADDRESS) &&
       VT.isVector()) {
-    if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && StoreNode->isTruncatingStore()) {
+    if ((AS == AMDGPUASI.PRIVATE_ADDRESS) &&
+         StoreNode->isTruncatingStore()) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
       // TODO: can the chain be replaced without creating a new store?
@@ -1225,7 +1236,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDValue DWordAddr = DAG.getNode(ISD::SRL, DL, PtrVT, Ptr,
                                   DAG.getConstant(2, DL, PtrVT));
 
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS) {
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS) {
     // It is beneficial to create MSKOR here instead of combiner to avoid
     // artificial dependencies introduced by RMW
     if (StoreNode->isTruncatingStore()) {
@@ -1278,7 +1289,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // GLOBAL_ADDRESS has been handled above, LOCAL_ADDRESS allows all sizes
-  if (AS != AMDGPUAS::PRIVATE_ADDRESS)
+  if (AS != AMDGPUASI.PRIVATE_ADDRESS)
     return SDValue();
 
   if (MemVT.bitsLT(MVT::i32))
@@ -1297,39 +1308,39 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
 // return (512 + (kc_bank << 12)
 static int
-ConstantAddressBlock(unsigned AddressSpace) {
+ConstantAddressBlock(unsigned AddressSpace, AMDGPUAS AMDGPUASI) {
   switch (AddressSpace) {
-  case AMDGPUAS::CONSTANT_BUFFER_0:
+  case AMDGPUASI.CONSTANT_BUFFER_0:
     return 512;
-  case AMDGPUAS::CONSTANT_BUFFER_1:
+  case AMDGPUASI.CONSTANT_BUFFER_1:
     return 512 + 4096;
-  case AMDGPUAS::CONSTANT_BUFFER_2:
+  case AMDGPUASI.CONSTANT_BUFFER_2:
     return 512 + 4096 * 2;
-  case AMDGPUAS::CONSTANT_BUFFER_3:
+  case AMDGPUASI.CONSTANT_BUFFER_3:
     return 512 + 4096 * 3;
-  case AMDGPUAS::CONSTANT_BUFFER_4:
+  case AMDGPUASI.CONSTANT_BUFFER_4:
     return 512 + 4096 * 4;
-  case AMDGPUAS::CONSTANT_BUFFER_5:
+  case AMDGPUASI.CONSTANT_BUFFER_5:
     return 512 + 4096 * 5;
-  case AMDGPUAS::CONSTANT_BUFFER_6:
+  case AMDGPUASI.CONSTANT_BUFFER_6:
     return 512 + 4096 * 6;
-  case AMDGPUAS::CONSTANT_BUFFER_7:
+  case AMDGPUASI.CONSTANT_BUFFER_7:
     return 512 + 4096 * 7;
-  case AMDGPUAS::CONSTANT_BUFFER_8:
+  case AMDGPUASI.CONSTANT_BUFFER_8:
     return 512 + 4096 * 8;
-  case AMDGPUAS::CONSTANT_BUFFER_9:
+  case AMDGPUASI.CONSTANT_BUFFER_9:
     return 512 + 4096 * 9;
-  case AMDGPUAS::CONSTANT_BUFFER_10:
+  case AMDGPUASI.CONSTANT_BUFFER_10:
     return 512 + 4096 * 10;
-  case AMDGPUAS::CONSTANT_BUFFER_11:
+  case AMDGPUASI.CONSTANT_BUFFER_11:
     return 512 + 4096 * 11;
-  case AMDGPUAS::CONSTANT_BUFFER_12:
+  case AMDGPUASI.CONSTANT_BUFFER_12:
     return 512 + 4096 * 12;
-  case AMDGPUAS::CONSTANT_BUFFER_13:
+  case AMDGPUASI.CONSTANT_BUFFER_13:
     return 512 + 4096 * 13;
-  case AMDGPUAS::CONSTANT_BUFFER_14:
+  case AMDGPUASI.CONSTANT_BUFFER_14:
     return 512 + 4096 * 14;
-  case AMDGPUAS::CONSTANT_BUFFER_15:
+  case AMDGPUASI.CONSTANT_BUFFER_15:
     return 512 + 4096 * 15;
   default:
     return -1;
@@ -1397,7 +1408,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   EVT MemVT = LoadNode->getMemoryVT();
   ISD::LoadExtType ExtType = LoadNode->getExtensionType();
 
-  if (AS == AMDGPUAS::PRIVATE_ADDRESS &&
+  if (AS == AMDGPUASI.PRIVATE_ADDRESS &&
       ExtType != ISD::NON_EXTLOAD && MemVT.bitsLT(MVT::i32)) {
     return lowerPrivateExtLoad(Op, DAG);
   }
@@ -1407,13 +1418,14 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = LoadNode->getChain();
   SDValue Ptr = LoadNode->getBasePtr();
 
-  if ((LoadNode->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
-      LoadNode->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) &&
+  if ((LoadNode->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS ||
+      LoadNode->getAddressSpace() == AMDGPUASI.PRIVATE_ADDRESS) &&
       VT.isVector()) {
       return scalarizeVectorLoad(LoadNode, DAG);
   }
 
-  int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace());
+  int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace(),
+      AMDGPUASI);
   if (ConstantBlock > -1 &&
       ((LoadNode->getExtensionType() == ISD::NON_EXTLOAD) ||
        (LoadNode->getExtensionType() == ISD::ZEXTLOAD))) {
@@ -1445,7 +1457,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
                       DAG.getConstant(4, DL, MVT::i32)),
                       DAG.getConstant(LoadNode->getAddressSpace() -
-                                      AMDGPUAS::CONSTANT_BUFFER_0, DL, MVT::i32)
+                                      AMDGPUASI.CONSTANT_BUFFER_0, DL, MVT::i32)
           );
     }
 
@@ -1481,7 +1493,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues(MergedValues, DL);
   }
 
-  if (LoadNode->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS) {
+  if (LoadNode->getAddressSpace() != AMDGPUASI.PRIVATE_ADDRESS) {
     return SDValue();
   }
 
@@ -1535,7 +1547,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
   SmallVector<ISD::InputArg, 8> LocalIns;
 
   if (AMDGPU::isShader(CallConv)) {
-    AnalyzeFormalArguments(CCInfo, Ins);
+    CCInfo.AnalyzeFormalArguments(Ins, CCAssignFnForCall(CallConv, isVarArg));
   } else {
     analyzeFormalArgumentsCompute(CCInfo, Ins);
   }
@@ -1558,7 +1570,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     }
 
     PointerType *PtrTy = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                          AMDGPUAS::CONSTANT_BUFFER_0);
+                                          AMDGPUASI.CONSTANT_BUFFER_0);
 
     // i64 isn't a legal type, so the register type used ends up as i32, which
     // isn't expected here. It attempts to create this sextload, but it ends up
@@ -1604,6 +1616,15 @@ EVT R600TargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
    if (!VT.isVector())
      return MVT::i32;
    return VT.changeVectorElementTypeToInteger();
+}
+
+bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
+                                          const SelectionDAG &DAG) const {
+  // Local and Private addresses do not handle vectors. Limit to i32
+  if ((AS == AMDGPUASI.LOCAL_ADDRESS || AS == AMDGPUASI.PRIVATE_ADDRESS)) {
+    return (MemVT.getSizeInBits() <= 32);
+  }
+  return true;
 }
 
 bool R600TargetLowering::allowsMisalignedMemoryAccesses(EVT VT,

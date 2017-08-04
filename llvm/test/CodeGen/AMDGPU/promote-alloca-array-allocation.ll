@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: @array_alloca(
 ; CHECK: %stack = alloca i32, i32 5, align 4
-define void @array_alloca(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
+define amdgpu_kernel void @array_alloca(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca i32, i32 5, align 4
   %ld0 = load i32, i32 addrspace(1)* %in, align 4
@@ -27,7 +27,7 @@ entry:
 
 ; CHECK-LABEL: @array_alloca_dynamic(
 ; CHECK: %stack = alloca i32, i32 %size, align 4
-define void @array_alloca_dynamic(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %size) #0 {
+define amdgpu_kernel void @array_alloca_dynamic(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in, i32 %size) #0 {
 entry:
   %stack = alloca i32, i32 %size, align 4
   %ld0 = load i32, i32 addrspace(1)* %in, align 4

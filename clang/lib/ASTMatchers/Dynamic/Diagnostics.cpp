@@ -118,8 +118,8 @@ static StringRef errorTypeToFormatString(Diagnostics::ErrorType Type) {
     return "Malformed bind() expression.";
   case Diagnostics::ET_ParserTrailingCode:
     return "Expected end of code.";
-  case Diagnostics::ET_ParserUnsignedError:
-    return "Error parsing unsigned token: <$0>";
+  case Diagnostics::ET_ParserNumberError:
+    return "Error parsing numeric literal: <$0>";
   case Diagnostics::ET_ParserOverloadedType:
     return "Input value has unresolved overloaded type: $0";
 

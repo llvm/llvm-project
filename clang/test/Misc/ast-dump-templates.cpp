@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -ast-print %s > %t
+// RUN: %clang_cc1 -std=c++1z -ast-print %s > %t
 // RUN: FileCheck < %t %s -check-prefix=CHECK1
 // RUN: FileCheck < %t %s -check-prefix=CHECK2
-// RUN: %clang_cc1 -ast-dump %s | FileCheck --check-prefix=DUMP %s
+// RUN: %clang_cc1 -std=c++1z -ast-dump %s | FileCheck --check-prefix=DUMP %s
 
 template <int X, typename Y, int Z = 5>
 struct foo {
@@ -60,4 +60,10 @@ void tmpl() {
 }
 
 // DUMP: UnresolvedLookupExpr {{.*}} <col:3> '<overloaded function type>' lvalue (ADL) = 'func'
+}
+
+namespace test3 {
+  template<typename T> struct A {};
+  template<typename T> A(T) -> A<int>;
+  // CHECK1: template <typename T> A(T) -> A<int>;
 }

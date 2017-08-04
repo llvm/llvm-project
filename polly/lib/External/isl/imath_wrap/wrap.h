@@ -39,7 +39,6 @@
 #define impz_divisible_p	isl_impz_divisible_p
 #define impz_export	isl_impz_export
 #define impz_fdiv_q	isl_impz_fdiv_q
-#define impz_fdiv_q_ui	isl_impz_fdiv_q_ui
 #define impz_fdiv_r	isl_impz_fdiv_r
 #define impz_gcd	isl_impz_gcd
 #define impz_get_si	isl_impz_get_si

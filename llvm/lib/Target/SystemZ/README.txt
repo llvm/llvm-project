@@ -63,7 +63,12 @@ via a register.)
 
 --
 
-We don't use ICM or STCM.
+We don't use ICM, STCM, or CLM.
+
+--
+
+We don't use ADD (LOGICAL) HIGH, SUBTRACT (LOGICAL) HIGH,
+or COMPARE (LOGICAL) HIGH yet.
 
 --
 

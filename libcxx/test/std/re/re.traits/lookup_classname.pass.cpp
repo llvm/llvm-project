@@ -27,39 +27,61 @@ test(const char_type* A,
      typename std::regex_traits<char_type>::char_class_type expected,
      bool icase = false)
 {
+    typedef typename std::regex_traits<char_type>::char_class_type char_class_type;
     std::regex_traits<char_type> t;
     typedef forward_iterator<const char_type*> F;
-    assert(t.lookup_classname(F(A), F(A + t.length(A)), icase) == expected);
+    char_class_type result = t.lookup_classname(F(A), F(A + t.length(A)), icase);
+    assert(result == expected);
+}
+
+template <class char_type>
+void
+test_w(const char_type* A,
+       typename std::regex_traits<char_type>::char_class_type expected,
+        bool icase = false)
+{
+    typedef typename std::regex_traits<char_type>::char_class_type char_class_type;
+    std::regex_traits<char_type> t;
+    typedef forward_iterator<const char_type*> F;
+    char_class_type result = t.lookup_classname(F(A), F(A + t.length(A)), icase);
+    assert((result & expected) == expected);
+    LIBCPP_ASSERT((expected | std::regex_traits<char_type>::__regex_word) == result);
+
+    const bool matches_underscore = t.isctype('_', result);
+    if (result != expected)
+      assert(matches_underscore && "expected to match underscore");
+    else
+      assert(!matches_underscore && "should not match underscore");
 }
 
 int main()
 {
 //  if __regex_word is not distinct from all the classes, bad things happen
-//  See https://llvm.org/bugs/show_bug.cgi?id=26476 for an example.
-    assert((std::ctype_base::space  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::print  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::cntrl  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::upper  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::lower  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::alpha  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::digit  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::punct  & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::xdigit & std::regex_traits<char>::__regex_word) == 0);
-    assert((std::ctype_base::blank  & std::regex_traits<char>::__regex_word) == 0);
+//  See https://bugs.llvm.org/show_bug.cgi?id=26476 for an example.
+    LIBCPP_ASSERT((std::ctype_base::space  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::print  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::cntrl  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::upper  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::lower  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::alpha  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::digit  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::punct  & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::xdigit & std::regex_traits<char>::__regex_word) == 0);
+    LIBCPP_ASSERT((std::ctype_base::blank  & std::regex_traits<char>::__regex_word) == 0);
 
     test("d", std::ctype_base::digit);
     test("D", std::ctype_base::digit);
     test("d", std::ctype_base::digit, true);
     test("D", std::ctype_base::digit, true);
 
-    test("w", std::regex_traits<char>::__regex_word | std::ctype_base::alnum
-                      | std::ctype_base::upper | std::ctype_base::lower);
-    test("W", std::regex_traits<char>::__regex_word | std::ctype_base::alnum
-                      | std::ctype_base::upper | std::ctype_base::lower);
-    test("w", std::regex_traits<char>::__regex_word | std::ctype_base::alnum
-                      | std::ctype_base::upper | std::ctype_base::lower, true);
-    test("W", std::regex_traits<char>::__regex_word | std::ctype_base::alnum
-                      | std::ctype_base::upper | std::ctype_base::lower, true);
+    test_w("w", std::ctype_base::alnum
+              | std::ctype_base::upper | std::ctype_base::lower);
+    test_w("W", std::ctype_base::alnum
+              | std::ctype_base::upper | std::ctype_base::lower);
+    test_w("w", std::ctype_base::alnum
+              | std::ctype_base::upper | std::ctype_base::lower, true);
+    test_w("W", std::ctype_base::alnum
+              | std::ctype_base::upper | std::ctype_base::lower, true);
 
     test("s", std::ctype_base::space);
     test("S", std::ctype_base::space);
@@ -140,13 +162,13 @@ int main()
     test(L"d", std::ctype_base::digit, true);
     test(L"D", std::ctype_base::digit, true);
 
-    test(L"w", std::regex_traits<wchar_t>::__regex_word | std::ctype_base::alnum
+    test_w(L"w", std::ctype_base::alnum
                       | std::ctype_base::upper | std::ctype_base::lower);
-    test(L"W", std::regex_traits<wchar_t>::__regex_word | std::ctype_base::alnum
+    test_w(L"W", std::ctype_base::alnum
                       | std::ctype_base::upper | std::ctype_base::lower);
-    test(L"w", std::regex_traits<wchar_t>::__regex_word | std::ctype_base::alnum
+    test_w(L"w", std::ctype_base::alnum
                       | std::ctype_base::upper | std::ctype_base::lower, true);
-    test(L"W", std::regex_traits<wchar_t>::__regex_word | std::ctype_base::alnum
+    test_w(L"W", std::ctype_base::alnum
                       | std::ctype_base::upper | std::ctype_base::lower, true);
 
     test(L"s", std::ctype_base::space);

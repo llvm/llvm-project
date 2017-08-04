@@ -81,7 +81,7 @@ function initExpandCollapse() {
       expander.onclick = function() {
         expandCollapse(this.id);
         // Hack for Opera - onmouseout callback is not invoked when page 
-        // content changes dinamically and mouse pointer goes out of an element.
+        // content changes dynamically and mouse pointer goes out of an element.
         this.src = imgPath + 
                    (getCellInfo(this.id).expanded ? "arrows_light.gif"
                                                   : "ellipses_light.gif");

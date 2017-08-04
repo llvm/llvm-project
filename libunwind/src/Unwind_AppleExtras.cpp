@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "config.h"
+#include "AddressSpace.hpp"
 #include "DwarfParser.hpp"
 #include "unwind_ext.h"
 
@@ -76,7 +77,7 @@ struct libgcc_object_info {
 #endif
 
 
-#if _LIBUNWIND_BUILD_ZERO_COST_APIS
+#if defined(_LIBUNWIND_BUILD_ZERO_COST_APIS)
 
 //
 // symbols in libSystem.dylib in 10.6 and later, but are in libgcc_s.dylib in
@@ -115,12 +116,12 @@ NEVER_HERE(__register_frame_table)
 NEVER_HERE(__deregister_frame_info)
 NEVER_HERE(__deregister_frame_info_bases)
 
-#endif // _LIBUNWIND_BUILD_ZERO_COST_APIS
+#endif // defined(_LIBUNWIND_BUILD_ZERO_COST_APIS)
 
 
 
 
-#if _LIBUNWIND_BUILD_SJLJ_APIS
+#if defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 //
 // symbols in libSystem.dylib in iOS 5.0 and later, but are in libgcc_s.dylib in
 // earlier versions
@@ -140,7 +141,7 @@ NOT_HERE_BEFORE_5_0(_Unwind_SjLj_RaiseException)
 NOT_HERE_BEFORE_5_0(_Unwind_SjLj_Resume_or_Rethrow)
 NOT_HERE_BEFORE_5_0(_Unwind_SjLj_Unregister)
 
-#endif // _LIBUNWIND_BUILD_SJLJ_APIS
+#endif // defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 
 
 namespace libunwind {
@@ -183,7 +184,7 @@ bool checkKeyMgrRegisteredFDEs(uintptr_t pc, void *&fde) {
 }
 
 
-#if !defined(FOR_DYLD) && _LIBUNWIND_BUILD_SJLJ_APIS
+#if !defined(FOR_DYLD) && defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 
 #ifndef _LIBUNWIND_HAS_NO_THREADS
   #include <System/pthread_machdep.h>

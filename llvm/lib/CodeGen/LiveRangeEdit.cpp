@@ -37,6 +37,8 @@ LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(unsigned OldReg) {
     VRM->setIsSplitFromReg(VReg, VRM->getOriginal(OldReg));
   }
   LiveInterval &LI = LIS.createEmptyInterval(VReg);
+  if (Parent && !Parent->isSpillable())
+    LI.markNotSpillable();
   // Create empty subranges if the OldReg's interval has them. Do not create
   // the main range here---it will be constructed later after the subranges
   // have been finalized.
@@ -52,6 +54,14 @@ unsigned LiveRangeEdit::createFrom(unsigned OldReg) {
   if (VRM) {
     VRM->setIsSplitFromReg(VReg, VRM->getOriginal(OldReg));
   }
+  // FIXME: Getting the interval here actually computes it.
+  // In theory, this may not be what we want, but in practice
+  // the createEmptyIntervalFrom API is used when this is not
+  // the case. Generally speaking we just want to annotate the
+  // LiveInterval when it gets created but we cannot do that at
+  // the moment.
+  if (Parent && !Parent->isSpillable())
+    LIS.getInterval(VReg).markNotSpillable();
   return VReg;
 }
 
@@ -441,9 +451,6 @@ LiveRangeEdit::MRI_NoteNewVirtualRegister(unsigned VReg)
 {
   if (VRM)
     VRM->grow();
-
-  if (Parent && !Parent->isSpillable())
-    LIS.getInterval(VReg).markNotSpillable();
 
   NewRegs.push_back(VReg);
 }

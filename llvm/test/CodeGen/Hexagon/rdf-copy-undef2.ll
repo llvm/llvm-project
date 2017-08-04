@@ -3,8 +3,8 @@
 
 target triple = "hexagon"
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
 declare signext i16 @cat(i16 signext) #1
 declare void @danny(i16 signext, i16 signext, i16 signext, i16* nocapture readonly, i16 signext, i16* nocapture) #1
 declare void @sammy(i16* nocapture readonly, i16* nocapture readonly, i16* nocapture readonly, i32* nocapture, i16* nocapture, i16 signext, i16 signext, i16 signext) #1

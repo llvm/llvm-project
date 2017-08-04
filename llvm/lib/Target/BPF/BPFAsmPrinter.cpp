@@ -18,10 +18,10 @@
 #include "BPFTargetMachine.h"
 #include "InstPrinter/BPFInstPrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
@@ -35,14 +35,15 @@ using namespace llvm;
 namespace {
 class BPFAsmPrinter : public AsmPrinter {
 public:
-  explicit BPFAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
+  explicit BPFAsmPrinter(TargetMachine &TM,
+                         std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)) {}
 
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
 
   void EmitInstruction(const MachineInstr *MI) override;
 };
-}
+} // namespace
 
 void BPFAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 

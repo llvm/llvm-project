@@ -7,20 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Rewrite an existing set of gc.statepoints such that they make potential
-// relocations performed by the garbage collector explicit in the IR.
+// Rewrite call/invoke instructions so as to make potential relocations
+// performed by the garbage collector explicit in the IR.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Pass.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
@@ -28,15 +27,16 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -89,10 +89,10 @@ struct RewriteStatepointsForGC : public ModulePass {
       Changed |= runOnFunction(F);
 
     if (Changed) {
-      // stripNonValidAttributes asserts that shouldRewriteStatepointsIn
+      // stripNonValidAttributesAndMetadata asserts that shouldRewriteStatepointsIn
       // returns true for at least one function in the module.  Since at least
       // one function changed, we know that the precondition is satisfied.
-      stripNonValidAttributes(M);
+      stripNonValidAttributesAndMetadata(M);
     }
 
     return Changed;
@@ -105,20 +105,24 @@ struct RewriteStatepointsForGC : public ModulePass {
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
-  /// The IR fed into RewriteStatepointsForGC may have had attributes implying
-  /// dereferenceability that are no longer valid/correct after
-  /// RewriteStatepointsForGC has run.  This is because semantically, after
+  /// The IR fed into RewriteStatepointsForGC may have had attributes and
+  /// metadata implying dereferenceability that are no longer valid/correct after
+  /// RewriteStatepointsForGC has run. This is because semantically, after
   /// RewriteStatepointsForGC runs, all calls to gc.statepoint "free" the entire
-  /// heap.  stripNonValidAttributes (conservatively) restores correctness
-  /// by erasing all attributes in the module that externally imply
-  /// dereferenceability.
-  /// Similar reasoning also applies to the noalias attributes. gc.statepoint
-  /// can touch the entire heap including noalias objects.
-  void stripNonValidAttributes(Module &M);
+  /// heap. stripNonValidAttributesAndMetadata (conservatively) restores
+  /// correctness by erasing all attributes in the module that externally imply
+  /// dereferenceability. Similar reasoning also applies to the noalias
+  /// attributes and metadata. gc.statepoint can touch the entire heap including
+  /// noalias objects.
+  void stripNonValidAttributesAndMetadata(Module &M);
 
-  // Helpers for stripNonValidAttributes
-  void stripNonValidAttributesFromBody(Function &F);
+  // Helpers for stripNonValidAttributesAndMetadata
+  void stripNonValidAttributesAndMetadataFromBody(Function &F);
   void stripNonValidAttributesFromPrototype(Function &F);
+  // Certain metadata on instructions are invalid after running RS4GC.
+  // Optimizations that run after RS4GC can incorrectly use this metadata to
+  // optimize functions. We drop such metadata on the instruction.
+  void stripInvalidMetadataFromInstruction(Instruction &I);
 };
 } // namespace
 
@@ -364,6 +368,11 @@ findBaseDefiningValueOfVector(Value *I) {
     // TODO: There a number of local optimizations which could be applied here
     // for particular sufflevector patterns.
     return BaseDefiningValueResult(I, false);
+
+  // The behavior of getelementptr instructions is the same for vector and
+  // non-vector data types.
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    return findBaseDefiningValue(GEP->getPointerOperand());
 
   // A PHI or Select is a base defining value.  The outer findBasePointer
   // algorithm is responsible for constructing a base value for this BDV.
@@ -1123,39 +1132,23 @@ normalizeForInvokeSafepoint(BasicBlock *BB, BasicBlock *InvokeParent,
 
 // Create new attribute set containing only attributes which can be transferred
 // from original call to the safepoint.
-static AttributeSet legalizeCallAttributes(AttributeSet AS) {
-  AttributeSet Ret;
+static AttributeList legalizeCallAttributes(AttributeList AL) {
+  if (AL.isEmpty())
+    return AL;
 
-  for (unsigned Slot = 0; Slot < AS.getNumSlots(); Slot++) {
-    unsigned Index = AS.getSlotIndex(Slot);
-
-    if (Index == AttributeSet::ReturnIndex ||
-        Index == AttributeSet::FunctionIndex) {
-
-      for (Attribute Attr : make_range(AS.begin(Slot), AS.end(Slot))) {
-
-        // Do not allow certain attributes - just skip them
-        // Safepoint can not be read only or read none.
-        if (Attr.hasAttribute(Attribute::ReadNone) ||
-            Attr.hasAttribute(Attribute::ReadOnly))
-          continue;
-
-        // These attributes control the generation of the gc.statepoint call /
-        // invoke itself; and once the gc.statepoint is in place, they're of no
-        // use.
-        if (isStatepointDirectiveAttr(Attr))
-          continue;
-
-        Ret = Ret.addAttributes(
-            AS.getContext(), Index,
-            AttributeSet::get(AS.getContext(), Index, AttrBuilder(Attr)));
-      }
-    }
-
-    // Just skip parameter attributes for now
+  // Remove the readonly, readnone, and statepoint function attributes.
+  AttrBuilder FnAttrs = AL.getFnAttributes();
+  FnAttrs.removeAttribute(Attribute::ReadNone);
+  FnAttrs.removeAttribute(Attribute::ReadOnly);
+  for (Attribute A : AL.getFnAttributes()) {
+    if (isStatepointDirectiveAttr(A))
+      FnAttrs.remove(A);
   }
 
-  return Ret;
+  // Just skip parameter and return attributes for now
+  LLVMContext &Ctx = AL.getContext();
+  return AttributeList::get(Ctx, AttributeList::FunctionIndex,
+                            AttributeSet::get(Ctx, FnAttrs));
 }
 
 /// Helper function to place all gc relocates necessary for the given
@@ -1299,12 +1292,11 @@ static StringRef getDeoptLowering(CallSite CS) {
   const char *DeoptLowering = "deopt-lowering";
   if (CS.hasFnAttr(DeoptLowering)) {
     // FIXME: CallSite has a *really* confusing interface around attributes
-    // with values.  
-    const AttributeSet &CSAS = CS.getAttributes();
-    if (CSAS.hasAttribute(AttributeSet::FunctionIndex,
-                          DeoptLowering))
-      return CSAS.getAttribute(AttributeSet::FunctionIndex,
-                               DeoptLowering).getValueAsString();
+    // with values.
+    const AttributeList &CSAS = CS.getAttributes();
+    if (CSAS.hasAttribute(AttributeList::FunctionIndex, DeoptLowering))
+      return CSAS.getAttribute(AttributeList::FunctionIndex, DeoptLowering)
+          .getValueAsString();
     Function *F = CS.getCalledFunction();
     assert(F && F->hasFnAttribute(DeoptLowering));
     return F->getFnAttribute(DeoptLowering).getValueAsString();
@@ -1388,7 +1380,6 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 
   // Create the statepoint given all the arguments
   Instruction *Token = nullptr;
-  AttributeSet ReturnAttrs;
   if (CS.isCall()) {
     CallInst *ToReplace = cast<CallInst>(CS.getInstruction());
     CallInst *Call = Builder.CreateGCStatepointCall(
@@ -1399,12 +1390,10 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     Call->setCallingConv(ToReplace->getCallingConv());
 
     // Currently we will fail on parameter attributes and on certain
-    // function attributes.
-    AttributeSet NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
-    // In case if we can handle this set of attributes - set up function attrs
-    // directly on statepoint and return attrs later for gc_result intrinsic.
-    Call->setAttributes(NewAttrs.getFnAttributes());
-    ReturnAttrs = NewAttrs.getRetAttributes();
+    // function attributes.  In case if we can handle this set of attributes -
+    // set up function attrs directly on statepoint and return attrs later for
+    // gc_result intrinsic.
+    Call->setAttributes(legalizeCallAttributes(ToReplace->getAttributes()));
 
     Token = Call;
 
@@ -1427,12 +1416,10 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     Invoke->setCallingConv(ToReplace->getCallingConv());
 
     // Currently we will fail on parameter attributes and on certain
-    // function attributes.
-    AttributeSet NewAttrs = legalizeCallAttributes(ToReplace->getAttributes());
-    // In case if we can handle this set of attributes - set up function attrs
-    // directly on statepoint and return attrs later for gc_result intrinsic.
-    Invoke->setAttributes(NewAttrs.getFnAttributes());
-    ReturnAttrs = NewAttrs.getRetAttributes();
+    // function attributes.  In case if we can handle this set of attributes -
+    // set up function attrs directly on statepoint and return attrs later for
+    // gc_result intrinsic.
+    Invoke->setAttributes(legalizeCallAttributes(ToReplace->getAttributes()));
 
     Token = Invoke;
 
@@ -1478,7 +1465,9 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
       StringRef Name =
           CS.getInstruction()->hasName() ? CS.getInstruction()->getName() : "";
       CallInst *GCResult = Builder.CreateGCResult(Token, CS.getType(), Name);
-      GCResult->setAttributes(CS.getAttributes().getRetAttributes());
+      GCResult->setAttributes(
+          AttributeList::get(GCResult->getContext(), AttributeList::ReturnIndex,
+                             CS.getAttributes().getRetAttributes()));
 
       // We cannot RAUW or delete CS.getInstruction() because it could be in the
       // live set of some other safepoint, in which case that safepoint's
@@ -1615,8 +1604,10 @@ static void relocationViaAlloca(
 
   // Emit alloca for "LiveValue" and record it in "allocaMap" and
   // "PromotableAllocas"
+  const DataLayout &DL = F.getParent()->getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
-    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(), "",
+    AllocaInst *Alloca = new AllocaInst(LiveValue->getType(),
+                                        DL.getAllocaAddrSpace(), "",
                                         F.getEntryBlock().getFirstNonPHI());
     AllocaMap[LiveValue] = Alloca;
     PromotableAllocas.push_back(Alloca);
@@ -1873,7 +1864,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
              "non noop cast is found during rematerialization");
 
       Type *SrcTy = CI->getOperand(0)->getType();
-      Cost += TTI.getCastInstrCost(CI->getOpcode(), CI->getType(), SrcTy);
+      Cost += TTI.getCastInstrCost(CI->getOpcode(), CI->getType(), SrcTy, CI);
 
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
       // Cost of the address calculation
@@ -1963,7 +1954,7 @@ static void rematerializeLiveValues(CallSite CS,
       // to identify the newly generated AlternateRootPhi (.base version of phi)
       // and RootOfChain (the original phi node itself) are the same, so that we
       // can rematerialize the gep and casts. This is a workaround for the
-      // deficieny in the findBasePointer algorithm.
+      // deficiency in the findBasePointer algorithm.
       if (!AreEquivalentPhiNodes(*OrigRootPhi, *AlternateRootPhi))
         continue;
       // Now that the phi nodes are proved to be the same, assert that
@@ -2003,7 +1994,7 @@ static void rematerializeLiveValues(CallSite CS,
       Instruction *LastClonedValue = nullptr;
       Instruction *LastValue = nullptr;
       for (Instruction *Instr: ChainToBase) {
-        // Only GEP's and casts are suported as we need to be careful to not
+        // Only GEP's and casts are supported as we need to be careful to not
         // introduce any new uses of pointers not in the liveset.
         // Note that it's fine to introduce new uses of pointers which were
         // otherwise not used after this statepoint.
@@ -2107,9 +2098,9 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // live in the IR.  We'll remove all of these when done.
   SmallVector<CallInst *, 64> Holders;
 
-  // Insert a dummy call with all of the arguments to the vm_state we'll need
-  // for the actual safepoint insertion.  This ensures reference arguments in
-  // the deopt argument list are considered live through the safepoint (and
+  // Insert a dummy call with all of the deopt operands we'll need for the
+  // actual safepoint insertion as arguments.  This ensures reference operands
+  // in the deopt argument list are considered live through the safepoint (and
   // thus makes sure they get relocated.)
   for (CallSite CS : ToUpdate) {
     SmallVector<Value *, 64> DeoptValues;
@@ -2299,12 +2290,11 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
   if (AH.getDereferenceableOrNullBytes(Index))
     R.addAttribute(Attribute::get(Ctx, Attribute::DereferenceableOrNull,
                                   AH.getDereferenceableOrNullBytes(Index)));
-  if (AH.doesNotAlias(Index))
+  if (AH.getAttributes().hasAttribute(Index, Attribute::NoAlias))
     R.addAttribute(Attribute::NoAlias);
 
   if (!R.empty())
-    AH.setAttributes(AH.getAttributes().removeAttributes(
-        Ctx, Index, AttributeSet::get(Ctx, Index, R)));
+    AH.setAttributes(AH.getAttributes().removeAttributes(Ctx, Index, R));
 }
 
 void
@@ -2313,18 +2303,50 @@ RewriteStatepointsForGC::stripNonValidAttributesFromPrototype(Function &F) {
 
   for (Argument &A : F.args())
     if (isa<PointerType>(A.getType()))
-      RemoveNonValidAttrAtIndex(Ctx, F, A.getArgNo() + 1);
+      RemoveNonValidAttrAtIndex(Ctx, F,
+                                A.getArgNo() + AttributeList::FirstArgIndex);
 
   if (isa<PointerType>(F.getReturnType()))
-    RemoveNonValidAttrAtIndex(Ctx, F, AttributeSet::ReturnIndex);
+    RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
 }
 
-void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
+void RewriteStatepointsForGC::stripInvalidMetadataFromInstruction(Instruction &I) {
+
+  if (!isa<LoadInst>(I) && !isa<StoreInst>(I))
+    return;
+  // These are the attributes that are still valid on loads and stores after
+  // RS4GC.
+  // The metadata implying dereferenceability and noalias are (conservatively)
+  // dropped.  This is because semantically, after RewriteStatepointsForGC runs,
+  // all calls to gc.statepoint "free" the entire heap. Also, gc.statepoint can
+  // touch the entire heap including noalias objects. Note: The reasoning is
+  // same as stripping the dereferenceability and noalias attributes that are
+  // analogous to the metadata counterparts.
+  // We also drop the invariant.load metadata on the load because that metadata
+  // implies the address operand to the load points to memory that is never
+  // changed once it became dereferenceable. This is no longer true after RS4GC.
+  // Similar reasoning applies to invariant.group metadata, which applies to
+  // loads within a group.
+  unsigned ValidMetadataAfterRS4GC[] = {LLVMContext::MD_tbaa,
+                         LLVMContext::MD_range,
+                         LLVMContext::MD_alias_scope,
+                         LLVMContext::MD_nontemporal,
+                         LLVMContext::MD_nonnull,
+                         LLVMContext::MD_align,
+                         LLVMContext::MD_type};
+
+  // Drops all metadata on the instruction other than ValidMetadataAfterRS4GC.
+  I.dropUnknownNonDebugMetadata(ValidMetadataAfterRS4GC);
+
+}
+
+void RewriteStatepointsForGC::stripNonValidAttributesAndMetadataFromBody(Function &F) {
   if (F.empty())
     return;
 
   LLVMContext &Ctx = F.getContext();
   MDBuilder Builder(Ctx);
+
 
   for (Instruction &I : instructions(F)) {
     if (const MDNode *MD = I.getMetadata(LLVMContext::MD_tbaa)) {
@@ -2346,12 +2368,14 @@ void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
       I.setMetadata(LLVMContext::MD_tbaa, MutableTBAA);
     }
 
+    stripInvalidMetadataFromInstruction(I);
+
     if (CallSite CS = CallSite(&I)) {
       for (int i = 0, e = CS.arg_size(); i != e; i++)
         if (isa<PointerType>(CS.getArgument(i)->getType()))
-          RemoveNonValidAttrAtIndex(Ctx, CS, i + 1);
+          RemoveNonValidAttrAtIndex(Ctx, CS, i + AttributeList::FirstArgIndex);
       if (isa<PointerType>(CS.getType()))
-        RemoveNonValidAttrAtIndex(Ctx, CS, AttributeSet::ReturnIndex);
+        RemoveNonValidAttrAtIndex(Ctx, CS, AttributeList::ReturnIndex);
     }
   }
 }
@@ -2370,7 +2394,7 @@ static bool shouldRewriteStatepointsIn(Function &F) {
     return false;
 }
 
-void RewriteStatepointsForGC::stripNonValidAttributes(Module &M) {
+void RewriteStatepointsForGC::stripNonValidAttributesAndMetadata(Module &M) {
 #ifndef NDEBUG
   assert(any_of(M, shouldRewriteStatepointsIn) && "precondition!");
 #endif
@@ -2379,7 +2403,7 @@ void RewriteStatepointsForGC::stripNonValidAttributes(Module &M) {
     stripNonValidAttributesFromPrototype(F);
 
   for (Function &F : M)
-    stripNonValidAttributesFromBody(F);
+    stripNonValidAttributesAndMetadataFromBody(F);
 }
 
 bool RewriteStatepointsForGC::runOnFunction(Function &F) {

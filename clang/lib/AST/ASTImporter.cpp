@@ -73,7 +73,7 @@ namespace clang {
     QualType VisitEnumType(const EnumType *T);
     QualType VisitAttributedType(const AttributedType *T);
     QualType VisitTemplateTypeParmType(const TemplateTypeParmType *T);
-    // FIXME: SubstTemplateTypeParmType
+    QualType VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
     QualType VisitTemplateSpecializationType(const TemplateSpecializationType *T);
     QualType VisitElaboratedType(const ElaboratedType *T);
     // FIXME: DependentNameType
@@ -279,6 +279,8 @@ namespace clang {
     Expr *VisitArrayInitIndexExpr(ArrayInitIndexExpr *E);
     Expr *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E);
     Expr *VisitCXXNamedCastExpr(CXXNamedCastExpr *E);
+    Expr *VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E);
+
 
     template<typename IIter, typename OIter>
     void ImportArray(IIter Ibegin, IIter Iend, OIter Obegin) {
@@ -317,6 +319,9 @@ namespace clang {
     bool ImportArrayChecked(const InContainerTy &InContainer, OIter Obegin) {
       return ImportArrayChecked(InContainer.begin(), InContainer.end(), Obegin);
     }
+
+    // Importing overrides.
+    void ImportOverrides(CXXMethodDecl *ToMethod, CXXMethodDecl *FromMethod);
   };
 }
 
@@ -705,6 +710,23 @@ QualType ASTNodeImporter::VisitTemplateTypeParmType(
         T->getDepth(), T->getIndex(), T->isParameterPack(), ParmDecl);
 }
 
+QualType ASTNodeImporter::VisitSubstTemplateTypeParmType(
+    const SubstTemplateTypeParmType *T) {
+  const TemplateTypeParmType *Replaced =
+      cast_or_null<TemplateTypeParmType>(Importer.Import(
+        QualType(T->getReplacedParameter(), 0)).getTypePtr());
+  if (!Replaced)
+    return QualType();
+
+  QualType Replacement = Importer.Import(T->getReplacementType());
+  if (Replacement.isNull())
+    return QualType();
+  Replacement = Replacement.getCanonicalType();
+
+  return Importer.getToContext().getSubstTemplateTypeParmType(
+        Replaced, Replacement);
+}
+
 QualType ASTNodeImporter::VisitTemplateSpecializationType(
                                        const TemplateSpecializationType *T) {
   TemplateName ToTemplate = Importer.Import(T->getTemplateName());
@@ -862,6 +884,7 @@ ASTNodeImporter::ImportDeclarationNameLoc(const DeclarationNameInfo &From,
   case DeclarationName::ObjCOneArgSelector:
   case DeclarationName::ObjCMultiArgSelector:
   case DeclarationName::CXXUsingDirective:
+  case DeclarationName::CXXDeductionGuideName:
     return;
 
   case DeclarationName::CXXOperatorName: {
@@ -960,8 +983,10 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     ToData.UserProvidedDefaultConstructor
       = FromData.UserProvidedDefaultConstructor;
     ToData.DeclaredSpecialMembers = FromData.DeclaredSpecialMembers;
-    ToData.ImplicitCopyConstructorHasConstParam
-      = FromData.ImplicitCopyConstructorHasConstParam;
+    ToData.ImplicitCopyConstructorCanHaveConstParamForVBase
+      = FromData.ImplicitCopyConstructorCanHaveConstParamForVBase;
+    ToData.ImplicitCopyConstructorCanHaveConstParamForNonVBase
+      = FromData.ImplicitCopyConstructorCanHaveConstParamForNonVBase;
     ToData.ImplicitCopyAssignmentHasConstParam
       = FromData.ImplicitCopyAssignmentHasConstParam;
     ToData.HasDeclaredCopyConstructorWithConstParam
@@ -1514,7 +1539,7 @@ Decl *ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
   if (!DC->isFunctionOrMethod() && SearchName) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     SmallVector<NamedDecl *, 2> FoundDecls;
-    DC->getRedeclContext()->localUncachedLookup(Name, FoundDecls);
+    DC->getRedeclContext()->localUncachedLookup(SearchName, FoundDecls);
     for (unsigned I = 0, N = FoundDecls.size(); I != N; ++I) {
       if (!FoundDecls[I]->isInIdentifierNamespace(IDNS))
         continue;
@@ -1600,10 +1625,18 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
 
   // We may already have a record of the same name; try to find and match it.
   RecordDecl *AdoptDecl = nullptr;
+  RecordDecl *PrevDecl = nullptr;
   if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     SmallVector<NamedDecl *, 2> FoundDecls;
-    DC->getRedeclContext()->localUncachedLookup(Name, FoundDecls);
+    DC->getRedeclContext()->localUncachedLookup(SearchName, FoundDecls);
+
+    if (!FoundDecls.empty()) {
+      // We're going to have to compare D against potentially conflicting Decls, so complete it.
+      if (D->hasExternalLexicalStorage() && !D->isCompleteDefinition())
+        D->getASTContext().getExternalSource()->CompleteType(D);
+    }
+
     for (unsigned I = 0, N = FoundDecls.size(); I != N; ++I) {
       if (!FoundDecls[I]->isInIdentifierNamespace(IDNS))
         continue;
@@ -1629,6 +1662,8 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
             }
           }
         }
+
+        PrevDecl = FoundRecord;
 
         if (RecordDecl *FoundDef = FoundRecord->getDefinition()) {
           if ((SearchName && !D->isCompleteDefinition())
@@ -1722,6 +1757,10 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
     LexicalDC->addDeclInternal(D2);
     if (D->isAnonymousStructOrUnion())
       D2->setAnonymousStructOrUnion(true);
+    if (PrevDecl) {
+      // FIXME: do this for all Redeclarables, not just RecordDecls.
+      D2->setPreviousDecl(PrevDecl);
+    }
   }
   
   Importer.Imported(D, D2);
@@ -1988,6 +2027,9 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   // Add this function to the lexical context.
   LexicalDC->addDeclInternal(ToFunction);
+
+  if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
+    ImportOverrides(cast<CXXMethodDecl>(ToFunction), FromCXXMethod);
 
   return ToFunction;
 }
@@ -2401,6 +2443,9 @@ Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   if (ImportDefinition(D, ToVar))
     return nullptr;
 
+  if (D->isConstexpr())
+    ToVar->setConstexpr(true);
+
   return ToVar;
 }
 
@@ -2423,10 +2468,9 @@ Decl *ASTNodeImporter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
     return nullptr;
 
   // Create the imported parameter.
-  ImplicitParamDecl *ToParm
-    = ImplicitParamDecl::Create(Importer.getToContext(), DC,
-                                Loc, Name.getAsIdentifierInfo(),
-                                T);
+  auto *ToParm = ImplicitParamDecl::Create(Importer.getToContext(), DC, Loc,
+                                           Name.getAsIdentifierInfo(), T,
+                                           D->getParameterKind());
   return Importer.Imported(D, ToParm);
 }
 
@@ -2454,8 +2498,27 @@ Decl *ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
                                      Importer.Import(D->getInnerLocStart()),
                                             Loc, Name.getAsIdentifierInfo(),
                                             T, TInfo, D->getStorageClass(),
-                                            /*FIXME: Default argument*/nullptr);
+                                            /*DefaultArg*/ nullptr);
+
+  // Set the default argument.
   ToParm->setHasInheritedDefaultArg(D->hasInheritedDefaultArg());
+  ToParm->setKNRPromoted(D->isKNRPromoted());
+
+  Expr *ToDefArg = nullptr;
+  Expr *FromDefArg = nullptr;
+  if (D->hasUninstantiatedDefaultArg()) {
+    FromDefArg = D->getUninstantiatedDefaultArg();
+    ToDefArg = Importer.Import(FromDefArg);
+    ToParm->setUninstantiatedDefaultArg(ToDefArg);
+  } else if (D->hasUnparsedDefaultArg()) {
+    ToParm->setUnparsedDefaultArg();
+  } else if (D->hasDefaultArg()) {
+    FromDefArg = D->getDefaultArg();
+    ToDefArg = Importer.Import(FromDefArg);
+    ToParm->setDefaultArg(ToDefArg);
+  }
+  if (FromDefArg && !ToDefArg)
+    return nullptr;
 
   if (D->isUsed())
     ToParm->setIsUsed();
@@ -3485,12 +3548,46 @@ Decl *ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     }
   } else {
     // Create a new specialization.
-    D2 = ClassTemplateSpecializationDecl::Create(Importer.getToContext(), 
-                                                 D->getTagKind(), DC, 
-                                                 StartLoc, IdLoc,
-                                                 ClassTemplate,
-                                                 TemplateArgs,
-                                                 /*PrevDecl=*/nullptr);
+    if (ClassTemplatePartialSpecializationDecl *PartialSpec =
+        dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
+
+      // Import TemplateArgumentListInfo
+      TemplateArgumentListInfo ToTAInfo;
+      auto &ASTTemplateArgs = *PartialSpec->getTemplateArgsAsWritten();
+      for (unsigned I = 0, E = ASTTemplateArgs.NumTemplateArgs; I < E; ++I) {
+        bool Error = false;
+        auto ToLoc = ImportTemplateArgumentLoc(ASTTemplateArgs[I], Error);
+        if (Error)
+          return nullptr;
+        ToTAInfo.addArgument(ToLoc);
+      }
+
+      QualType CanonInjType = Importer.Import(
+            PartialSpec->getInjectedSpecializationType());
+      if (CanonInjType.isNull())
+        return nullptr;
+      CanonInjType = CanonInjType.getCanonicalType();
+
+      TemplateParameterList *ToTPList = ImportTemplateParameterList(
+            PartialSpec->getTemplateParameters());
+      if (!ToTPList && PartialSpec->getTemplateParameters())
+        return nullptr;
+
+      D2 = ClassTemplatePartialSpecializationDecl::Create(
+            Importer.getToContext(), D->getTagKind(), DC, StartLoc, IdLoc,
+            ToTPList, ClassTemplate,
+            llvm::makeArrayRef(TemplateArgs.data(), TemplateArgs.size()),
+            ToTAInfo, CanonInjType, nullptr);
+
+    } else {
+      D2 = ClassTemplateSpecializationDecl::Create(Importer.getToContext(),
+                                                   D->getTagKind(), DC,
+                                                   StartLoc, IdLoc,
+                                                   ClassTemplate,
+                                                   TemplateArgs,
+                                                   /*PrevDecl=*/nullptr);
+    }
+
     D2->setSpecializationKind(D->getSpecializationKind());
 
     // Add this specialization to the class template.
@@ -3498,13 +3595,31 @@ Decl *ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     
     // Import the qualifier, if any.
     D2->setQualifierInfo(Importer.Import(D->getQualifierLoc()));
-    
+
+    Importer.Imported(D, D2);
+
+    if (auto *TSI = D->getTypeAsWritten()) {
+      TypeSourceInfo *TInfo = Importer.Import(TSI);
+      if (!TInfo)
+        return nullptr;
+      D2->setTypeAsWritten(TInfo);
+      D2->setTemplateKeywordLoc(Importer.Import(D->getTemplateKeywordLoc()));
+      D2->setExternLoc(Importer.Import(D->getExternLoc()));
+    }
+
+    SourceLocation POI = Importer.Import(D->getPointOfInstantiation());
+    if (POI.isValid())
+      D2->setPointOfInstantiation(POI);
+    else if (D->getPointOfInstantiation().isValid())
+      return nullptr;
+
+    D2->setTemplateSpecializationKind(D->getTemplateSpecializationKind());
+
     // Add the specialization to this context.
     D2->setLexicalDeclContext(LexicalDC);
     LexicalDC->addDeclInternal(D2);
   }
   Importer.Imported(D, D2);
-  
   if (D->isCompleteDefinition() && ImportDefinition(D, D2))
     return nullptr;
 
@@ -3742,13 +3857,17 @@ Stmt *ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   SmallVector<IdentifierInfo *, 4> Names;
   for (unsigned I = 0, E = S->getNumOutputs(); I != E; I++) {
     IdentifierInfo *ToII = Importer.Import(S->getOutputIdentifier(I));
-    if (!ToII)
+    // ToII is nullptr when no symbolic name is given for output operand
+    // see ParseStmtAsm::ParseAsmOperandsOpt
+    if (!ToII && S->getOutputIdentifier(I))
       return nullptr;
     Names.push_back(ToII);
   }
   for (unsigned I = 0, E = S->getNumInputs(); I != E; I++) {
     IdentifierInfo *ToII = Importer.Import(S->getInputIdentifier(I));
-    if (!ToII)
+    // ToII is nullptr when no symbolic name is given for input operand
+    // see ParseStmtAsm::ParseAsmOperandsOpt
+    if (!ToII && S->getInputIdentifier(I))
       return nullptr;
     Names.push_back(ToII);
   }
@@ -5365,6 +5484,35 @@ Expr *ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {
   }
 }
 
+
+Expr *ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
+    SubstNonTypeTemplateParmExpr *E) {
+  QualType T = Importer.Import(E->getType());
+  if (T.isNull())
+    return nullptr;
+
+  NonTypeTemplateParmDecl *Param = cast_or_null<NonTypeTemplateParmDecl>(
+        Importer.Import(E->getParameter()));
+  if (!Param)
+    return nullptr;
+
+  Expr *Replacement = Importer.Import(E->getReplacement());
+  if (!Replacement)
+    return nullptr;
+
+  return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
+        T, E->getValueKind(), Importer.Import(E->getExprLoc()), Param,
+        Replacement);
+}
+
+void ASTNodeImporter::ImportOverrides(CXXMethodDecl *ToMethod,
+                                      CXXMethodDecl *FromMethod) {
+  for (auto *FromOverriddenMethod : FromMethod->overridden_methods())
+    ToMethod->addOverriddenMethod(
+      cast<CXXMethodDecl>(Importer.Import(const_cast<CXXMethodDecl*>(
+                                            FromOverriddenMethod))));
+}
+
 ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
                          ASTContext &FromContext, FileManager &FromFileManager,
                          bool MinimalImport)
@@ -5571,14 +5719,14 @@ NestedNameSpecifier *ASTImporter::Import(NestedNameSpecifier *FromNNS) {
 
   case NestedNameSpecifier::Namespace:
     if (NamespaceDecl *NS = 
-          cast<NamespaceDecl>(Import(FromNNS->getAsNamespace()))) {
+          cast_or_null<NamespaceDecl>(Import(FromNNS->getAsNamespace()))) {
       return NestedNameSpecifier::Create(ToContext, prefix, NS);
     }
     return nullptr;
 
   case NestedNameSpecifier::NamespaceAlias:
     if (NamespaceAliasDecl *NSAD = 
-          cast<NamespaceAliasDecl>(Import(FromNNS->getAsNamespaceAlias()))) {
+          cast_or_null<NamespaceAliasDecl>(Import(FromNNS->getAsNamespaceAlias()))) {
       return NestedNameSpecifier::Create(ToContext, prefix, NSAD);
     }
     return nullptr;
@@ -5588,7 +5736,7 @@ NestedNameSpecifier *ASTImporter::Import(NestedNameSpecifier *FromNNS) {
 
   case NestedNameSpecifier::Super:
     if (CXXRecordDecl *RD =
-            cast<CXXRecordDecl>(Import(FromNNS->getAsRecordDecl()))) {
+            cast_or_null<CXXRecordDecl>(Import(FromNNS->getAsRecordDecl()))) {
       return NestedNameSpecifier::SuperSpecifier(ToContext, RD);
     }
     return nullptr;
@@ -5610,8 +5758,74 @@ NestedNameSpecifier *ASTImporter::Import(NestedNameSpecifier *FromNNS) {
 }
 
 NestedNameSpecifierLoc ASTImporter::Import(NestedNameSpecifierLoc FromNNS) {
-  // FIXME: Implement!
-  return NestedNameSpecifierLoc();
+  // Copied from NestedNameSpecifier mostly.
+  SmallVector<NestedNameSpecifierLoc , 8> NestedNames;
+  NestedNameSpecifierLoc NNS = FromNNS;
+
+  // Push each of the nested-name-specifiers's onto a stack for
+  // serialization in reverse order.
+  while (NNS) {
+    NestedNames.push_back(NNS);
+    NNS = NNS.getPrefix();
+  }
+
+  NestedNameSpecifierLocBuilder Builder;
+
+  while (!NestedNames.empty()) {
+    NNS = NestedNames.pop_back_val();
+    NestedNameSpecifier *Spec = Import(NNS.getNestedNameSpecifier());
+    if (!Spec)
+      return NestedNameSpecifierLoc();
+
+    NestedNameSpecifier::SpecifierKind Kind = Spec->getKind();
+    switch (Kind) {
+    case NestedNameSpecifier::Identifier:
+      Builder.Extend(getToContext(),
+                     Spec->getAsIdentifier(),
+                     Import(NNS.getLocalBeginLoc()),
+                     Import(NNS.getLocalEndLoc()));
+      break;
+
+    case NestedNameSpecifier::Namespace:
+      Builder.Extend(getToContext(),
+                     Spec->getAsNamespace(),
+                     Import(NNS.getLocalBeginLoc()),
+                     Import(NNS.getLocalEndLoc()));
+      break;
+
+    case NestedNameSpecifier::NamespaceAlias:
+      Builder.Extend(getToContext(),
+                     Spec->getAsNamespaceAlias(),
+                     Import(NNS.getLocalBeginLoc()),
+                     Import(NNS.getLocalEndLoc()));
+      break;
+
+    case NestedNameSpecifier::TypeSpec:
+    case NestedNameSpecifier::TypeSpecWithTemplate: {
+      TypeSourceInfo *TSI = getToContext().getTrivialTypeSourceInfo(
+            QualType(Spec->getAsType(), 0));
+      Builder.Extend(getToContext(),
+                     Import(NNS.getLocalBeginLoc()),
+                     TSI->getTypeLoc(),
+                     Import(NNS.getLocalEndLoc()));
+      break;
+    }
+
+    case NestedNameSpecifier::Global:
+      Builder.MakeGlobal(getToContext(), Import(NNS.getLocalBeginLoc()));
+      break;
+
+    case NestedNameSpecifier::Super: {
+      SourceRange ToRange = Import(NNS.getSourceRange());
+      Builder.MakeSuper(getToContext(),
+                        Spec->getAsRecordDecl(),
+                        ToRange.getBegin(),
+                        ToRange.getEnd());
+    }
+  }
+  }
+
+  return Builder.getWithLocInContext(getToContext());
 }
 
 TemplateName ASTImporter::Import(TemplateName From) {
@@ -5905,6 +6119,14 @@ DeclarationName ASTImporter::Import(DeclarationName FromName) {
 
     return ToContext.DeclarationNames.getCXXDestructorName(
                                                ToContext.getCanonicalType(T));
+  }
+
+  case DeclarationName::CXXDeductionGuideName: {
+    TemplateDecl *Template = cast_or_null<TemplateDecl>(
+        Import(FromName.getCXXDeductionGuideTemplate()));
+    if (!Template)
+      return DeclarationName();
+    return ToContext.DeclarationNames.getCXXDeductionGuideName(Template);
   }
 
   case DeclarationName::CXXConversionFunctionName: {

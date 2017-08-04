@@ -4,7 +4,7 @@
 ; Test that the common merging (size + alignment) is properly handled
 
 ; Client marked the "large with little alignment" one as prevailing
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,x \
 ; RUN:  -r %t2.bc,v,px \
 ; RUN:  -r %t1.bc,foo,px \
@@ -12,7 +12,7 @@
 ; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=LARGE-PREVAILED
 
 ; Same as before, but reversing the order of the inputs
-; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t2.bc %t1.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,x \
 ; RUN:  -r %t2.bc,v,px \
 ; RUN:  -r %t1.bc,foo,px \
@@ -20,7 +20,7 @@
 ; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=LARGE-PREVAILED
 
 ; Client marked the "small with large alignment" one as prevailing
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,px \
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
@@ -28,7 +28,7 @@
 ; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=SMALL-PREVAILED
 
 ; Same as before, but reversing the order of the inputs
-; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t2.bc %t1.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,px \
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
@@ -37,7 +37,7 @@
 
 
 ; Client didn't mark any as prevailing, we keep the first one we see as "external"
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,x \
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
@@ -45,7 +45,7 @@
 ; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s --check-prefix=NONE-PREVAILED1
 
 ; Same as before, but reversing the order of the inputs
-; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t2.bc %t1.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,x \
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
@@ -55,7 +55,7 @@
 
 
 ; Client marked both as prevailing
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,px \
 ; RUN:  -r %t2.bc,v,px \
 ; RUN:  -r %t1.bc,foo,px \
@@ -63,7 +63,7 @@
 ; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=BOTH-PREVAILED1
 
 ; Same as before, but reversing the order of the inputs
-; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run %t2.bc %t1.bc -o %t.o -save-temps \
 ; RUN:  -r %t1.bc,v,px \
 ; RUN:  -r %t2.bc,v,px \
 ; RUN:  -r %t1.bc,foo,px \

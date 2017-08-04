@@ -15,6 +15,7 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/ARCMigrate/ARCMTActions.h"
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -22,6 +23,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -85,7 +87,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case PrintDeclContext:       return llvm::make_unique<DeclContextPrintAction>();
   case PrintPreamble:          return llvm::make_unique<PrintPreambleAction>();
   case PrintPreprocessedInput: {
-    if (CI.getPreprocessorOutputOpts().RewriteIncludes)
+    if (CI.getPreprocessorOutputOpts().RewriteIncludes ||
+        CI.getPreprocessorOutputOpts().RewriteImports)
       return llvm::make_unique<RewriteIncludesAction>();
     return llvm::make_unique<PrintPreprocessedAction>();
   }
@@ -162,6 +165,12 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
+  if (!FEOpts.IndexStorePath.empty()) {
+#if defined(__APPLE__)
+    Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
+#endif
+  }
+
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
@@ -174,7 +183,7 @@ CreateFrontendAction(CompilerInstance &CI) {
 bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
-    std::unique_ptr<OptTable> Opts(driver::createDriverOptTable());
+    std::unique_ptr<OptTable> Opts = driver::createDriverOptTable();
     Opts->PrintHelp(llvm::outs(), "clang -cc1",
                     "LLVM 'Clang' Compiler: http://clang.llvm.org",
                     /*Include=*/ driver::options::CC1Option, /*Exclude=*/ 0);

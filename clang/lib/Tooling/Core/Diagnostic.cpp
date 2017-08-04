@@ -35,9 +35,9 @@ Diagnostic::Diagnostic(llvm::StringRef DiagnosticName,
       BuildDirectory(BuildDirectory) {}
 
 Diagnostic::Diagnostic(llvm::StringRef DiagnosticName,
-                       DiagnosticMessage &Message,
-                       llvm::StringMap<Replacements> &Fix,
-                       SmallVector<DiagnosticMessage, 1> &Notes,
+                       const DiagnosticMessage &Message,
+                       const llvm::StringMap<Replacements> &Fix,
+                       const SmallVector<DiagnosticMessage, 1> &Notes,
                        Level DiagLevel, llvm::StringRef BuildDirectory)
     : DiagnosticName(DiagnosticName), Message(Message), Fix(Fix), Notes(Notes),
       DiagLevel(DiagLevel), BuildDirectory(BuildDirectory) {}

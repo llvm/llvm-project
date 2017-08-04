@@ -10,7 +10,7 @@
 # RUN: llvm-ar rcs %t1.a %t1
 # RUN: llvm-ar rcs %t2.a %t2
 
-# RUN: ld.lld -y foo -trace-symbol=common -trace-symbol=hsymbol \
+# RUN: ld.lld -y foo -trace-symbol common -trace-symbol=hsymbol \
 # RUN:   %t %t1 %t2 -o %t3 2>&1 | FileCheck -check-prefix=OBJECTRFOO %s
 # OBJECTRFOO: trace-symbols.s.tmp: reference to foo
 

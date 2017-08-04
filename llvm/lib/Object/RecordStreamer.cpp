@@ -1,4 +1,4 @@
-//===-- RecordStreamer.cpp - Record asm definde and used symbols ----------===//
+//===-- RecordStreamer.cpp - Record asm defined and used symbols ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,6 +9,7 @@
 
 #include "RecordStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+
 using namespace llvm;
 
 void RecordStreamer::markDefined(const MCSymbol &Symbol) {
@@ -69,16 +70,16 @@ void RecordStreamer::markUsed(const MCSymbol &Symbol) {
 
 void RecordStreamer::visitUsedSymbol(const MCSymbol &Sym) { markUsed(Sym); }
 
+RecordStreamer::RecordStreamer(MCContext &Context) : MCStreamer(Context) {}
+
 RecordStreamer::const_iterator RecordStreamer::begin() {
   return Symbols.begin();
 }
 
 RecordStreamer::const_iterator RecordStreamer::end() { return Symbols.end(); }
 
-RecordStreamer::RecordStreamer(MCContext &Context) : MCStreamer(Context) {}
-
 void RecordStreamer::EmitInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
+                                     const MCSubtargetInfo &STI, bool) {
   MCStreamer::EmitInstruction(Inst, STI);
 }
 
@@ -109,4 +110,9 @@ void RecordStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
 void RecordStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                       unsigned ByteAlignment) {
   markDefined(*Symbol);
+}
+
+void RecordStreamer::emitELFSymverDirective(MCSymbol *Alias,
+                                            const MCSymbol *Aliasee) {
+  SymverAliasMap[Aliasee].push_back(Alias);
 }

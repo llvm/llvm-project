@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -faltivec -triple powerpc-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s
-// RUN: %clang_cc1 -faltivec -triple powerpc64-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s
-// RUN: %clang_cc1 -faltivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -ferror-limit 0 -DNO_ALTIVEC -o - 2>&1 \
@@ -3419,28 +3419,40 @@ void test6() {
 
   /* vec_sl */
   res_vsc = vec_sl(vsc, vuc);
-// CHECK: shl <16 x i8>
-// CHECK-LE: shl <16 x i8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vuc = vec_sl(vuc, vuc);
-// CHECK: shl <16 x i8>
-// CHECK-LE: shl <16 x i8>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <16 x i8> {{[0-9a-zA-Z%.]+}}, <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>
+// CHECK-LE: shl <16 x i8> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vs  = vec_sl(vs, vus);
-// CHECK: shl <8 x i16>
-// CHECK-LE: shl <8 x i16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vus = vec_sl(vus, vus);
-// CHECK: shl <8 x i16>
-// CHECK-LE: shl <8 x i16>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <8 x i16> {{[0-9a-zA-Z%.]+}}, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+// CHECK-LE: shl <8 x i16> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vi  = vec_sl(vi, vui);
-// CHECK: shl <4 x i32>
-// CHECK-LE: shl <4 x i32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vui = vec_sl(vui, vui);
-// CHECK: shl <4 x i32>
-// CHECK-LE: shl <4 x i32>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <4 x i32> {{[0-9a-zA-Z%.]+}}, <i32 32, i32 32, i32 32, i32 32>
+// CHECK-LE: shl <4 x i32> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 
   res_vsc = vec_vslb(vsc, vuc);
 // CHECK: shl <16 x i8>

@@ -149,8 +149,11 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
+  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
+
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition()))
+  while (I != E && (I->isPHI() || I->isPosition() ||
+                    TII->isBasicBlockPrologue(*I)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels
   // inside the bundle.
@@ -161,8 +164,11 @@ MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I) {
+  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
+
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue()))
+  while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue() ||
+                    TII->isBasicBlockPrologue(*I)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.
@@ -222,11 +228,17 @@ LLVM_DUMP_METHOD void MachineBasicBlock::dump() const {
 }
 #endif
 
+bool MachineBasicBlock::isLegalToHoistInto() const {
+  if (isReturnBlock() || hasEHPadSuccessor())
+    return false;
+  return true;
+}
+
 StringRef MachineBasicBlock::getName() const {
   if (const BasicBlock *LBB = getBasicBlock())
     return LBB->getName();
   else
-    return "(null)";
+    return StringRef("", 0);
 }
 
 /// Return a hopefully unique identifier for this block.
@@ -342,6 +354,13 @@ void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {
   I->LaneMask &= ~LaneMask;
   if (I->LaneMask.none())
     LiveIns.erase(I);
+}
+
+MachineBasicBlock::livein_iterator
+MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
+  // Get non-const version of iterator.
+  LiveInVector::iterator LI = LiveIns.begin() + (I - LiveIns.begin());
+  return LiveIns.erase(LI);
 }
 
 bool MachineBasicBlock::isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) const {
@@ -682,16 +701,16 @@ bool MachineBasicBlock::isLayoutSuccessor(const MachineBasicBlock *MBB) const {
   return std::next(I) == MachineFunction::const_iterator(MBB);
 }
 
-bool MachineBasicBlock::canFallThrough() {
+MachineBasicBlock *MachineBasicBlock::getFallThrough() {
   MachineFunction::iterator Fallthrough = getIterator();
   ++Fallthrough;
   // If FallthroughBlock is off the end of the function, it can't fall through.
   if (Fallthrough == getParent()->end())
-    return false;
+    return nullptr;
 
   // If FallthroughBlock isn't a successor, no fallthrough is possible.
   if (!isSuccessor(&*Fallthrough))
-    return false;
+    return nullptr;
 
   // Analyze the branches, if any, at the end of the block.
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
@@ -703,25 +722,31 @@ bool MachineBasicBlock::canFallThrough() {
     // is possible. The isPredicated check is needed because this code can be
     // called during IfConversion, where an instruction which is normally a
     // Barrier is predicated and thus no longer an actual control barrier.
-    return empty() || !back().isBarrier() || TII->isPredicated(back());
+    return (empty() || !back().isBarrier() || TII->isPredicated(back()))
+               ? &*Fallthrough
+               : nullptr;
   }
 
   // If there is no branch, control always falls through.
-  if (!TBB) return true;
+  if (!TBB) return &*Fallthrough;
 
   // If there is some explicit branch to the fallthrough block, it can obviously
   // reach, even though the branch should get folded to fall through implicitly.
   if (MachineFunction::iterator(TBB) == Fallthrough ||
       MachineFunction::iterator(FBB) == Fallthrough)
-    return true;
+    return &*Fallthrough;
 
   // If it's an unconditional branch to some block not the fall through, it
   // doesn't fall through.
-  if (Cond.empty()) return false;
+  if (Cond.empty()) return nullptr;
 
   // Otherwise, if it is conditional and has no explicit false block, it falls
   // through.
-  return FBB == nullptr;
+  return (FBB == nullptr) ? &*Fallthrough : nullptr;
+}
+
+bool MachineBasicBlock::canFallThrough() {
+  return getFallThrough() != nullptr;
 }
 
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,

@@ -12,18 +12,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/TableGen/SetTheory.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/SMLoc.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/SetTheory.h"
+#include <algorithm>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 
 // Define the standard operators.
 namespace {
 
-typedef SetTheory::RecSet RecSet;
-typedef SetTheory::RecVec RecVec;
+using RecSet = SetTheory::RecSet;
+using RecVec = SetTheory::RecVec;
 
 // (add a, b, ...) Evaluate and union all arguments.
 struct AddOp : public SetTheory::Operator {
@@ -237,12 +248,12 @@ struct FieldExpander : public SetTheory::Expander {
     ST.evaluate(Def->getValueInit(FieldName), Elts, Def->getLoc());
   }
 };
+
 } // end anonymous namespace
 
 // Pin the vtables to this file.
 void SetTheory::Operator::anchor() {}
 void SetTheory::Expander::anchor() {}
-
 
 SetTheory::SetTheory() {
   addOperator("add", llvm::make_unique<AddOp>());
@@ -321,4 +332,3 @@ const RecVec *SetTheory::expand(Record *Set) {
   // Set is not expandable.
   return nullptr;
 }
-

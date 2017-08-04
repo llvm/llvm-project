@@ -255,6 +255,22 @@ def test_is_virtual_method():
     assert foo.is_virtual_method()
     assert not bar.is_virtual_method()
 
+def test_is_scoped_enum():
+    """Ensure Cursor.is_scoped_enum works."""
+    source = 'class X {}; enum RegularEnum {}; enum class ScopedEnum {};'
+    tu = get_tu(source, lang='cpp')
+
+    cls = get_cursor(tu, 'X')
+    regular_enum = get_cursor(tu, 'RegularEnum')
+    scoped_enum = get_cursor(tu, 'ScopedEnum')
+    assert cls is not None
+    assert regular_enum is not None
+    assert scoped_enum is not None
+
+    assert not cls.is_scoped_enum()
+    assert not regular_enum.is_scoped_enum()
+    assert scoped_enum.is_scoped_enum()
+
 def test_underlying_type():
     tu = get_tu('typedef int foo;')
     typedef = get_cursor(tu, 'foo')

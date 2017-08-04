@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/PassManager.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -209,6 +209,13 @@ TEST(PreservedAnalysesTest, Basic) {
     auto PAC = PA4.getChecker<TestFunctionAnalysis>();
     EXPECT_FALSE(PAC.preserved());
     EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
+  auto PA5 = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
+  {
+    auto PAC = PA5.getChecker<TestFunctionAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_TRUE(PAC.preservedSet<AllAnalysesOn<Function>>());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Module>>());
   }
 }
 

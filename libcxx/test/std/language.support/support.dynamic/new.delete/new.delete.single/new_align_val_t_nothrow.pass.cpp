@@ -9,11 +9,23 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
 // FIXME turn this into an XFAIL
-// UNSUPPORTED: no-aligned-allocation
+// UNSUPPORTED: no-aligned-allocation && !gcc
+
+// On Windows libc++ doesn't provide its own definitions for new/delete
+// but instead depends on the ones in VCRuntime. However VCRuntime does not
+// yet provide aligned new/delete definitions so this test fails to compile/link.
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // test operator new (nothrow)
 
@@ -29,7 +41,7 @@ constexpr auto OverAligned = alignof(std::max_align_t) * 2;
 
 int new_handler_called = 0;
 
-void new_handler()
+void my_new_handler()
 {
     ++new_handler_called;
     std::set_new_handler(0);
@@ -44,7 +56,7 @@ struct alignas(OverAligned) A
 };
 
 void test_max_alloc() {
-    std::set_new_handler(new_handler);
+    std::set_new_handler(my_new_handler);
     auto do_test = []() {
         void* vp = operator new (std::numeric_limits<std::size_t>::max(),
                                  std::align_val_t(OverAligned),

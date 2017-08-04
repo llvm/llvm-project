@@ -6,7 +6,7 @@ declare i16 @llvm.amdgcn.frexp.exp.i16.f16(half %a)
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; VI:  v_frexp_exp_i16_f16_e32 v[[R_I16:[0-9]+]], v[[A_F16]]
 ; GCN: buffer_store_short v[[R_I16]]
-define void @frexp_exp_f16(
+define amdgpu_kernel void @frexp_exp_f16(
     i16 addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -21,7 +21,7 @@ entry:
 ; VI:  v_frexp_exp_i16_f16_e32 v[[R_I16:[0-9]+]], v[[A_F16]]
 ; VI:  v_bfe_i32 v[[R_I32:[0-9]+]], v[[R_I16]], 0, 16{{$}}
 ; GCN: buffer_store_dword v[[R_I32]]
-define void @frexp_exp_f16_sext(
+define amdgpu_kernel void @frexp_exp_f16_sext(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:
@@ -37,7 +37,7 @@ entry:
 ; VI:  v_frexp_exp_i16_f16_e32 v[[R_I16:[0-9]+]], v[[A_F16]]
 ; VI:  v_and_b32_e32 v[[R_I32:[0-9]+]], 0xffff, v[[R_I16]]
 ; GCN: buffer_store_dword v[[R_I32]]
-define void @frexp_exp_f16_zext(
+define amdgpu_kernel void @frexp_exp_f16_zext(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a) {
 entry:

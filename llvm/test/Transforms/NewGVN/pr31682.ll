@@ -12,7 +12,6 @@ define void @bar() {
 ; CHECK-NEXT:    [[TMP:%.*]] = load %struct.foo*, %struct.foo** @global
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.foo* [[TMP]], i64 0, i32 1
 ; CHECK-NEXT:    br i1 undef, label [[BB2]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[BB10:%.*]]

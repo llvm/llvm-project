@@ -3,15 +3,15 @@
 
 // FIXME: This is in p11 (?) in C++1y.
 void f() {
-  decltype(auto) a = a; // expected-error{{variable 'a' declared with 'decltype(auto)' type cannot appear in its own initializer}}
-  if (decltype(auto) b = b) {} // expected-error {{variable 'b' declared with 'decltype(auto)' type cannot appear in its own initializer}}
-  decltype(auto) c = ({ decltype(auto) d = c; 0; }); // expected-error {{variable 'c' declared with 'decltype(auto)' type cannot appear in its own initializer}}
+  decltype(auto) a = a; // expected-error{{variable 'a' declared with deduced type 'decltype(auto)' cannot appear in its own initializer}}
+  if (decltype(auto) b = b) {} // expected-error {{variable 'b' declared with deduced type 'decltype(auto)' cannot appear in its own initializer}}
+  decltype(auto) c = ({ decltype(auto) d = c; 0; }); // expected-error {{variable 'c' declared with deduced type 'decltype(auto)' cannot appear in its own initializer}}
 }
 
 void g() {
-  decltype(auto) a; // expected-error{{declaration of variable 'a' with type 'decltype(auto)' requires an initializer}}
+  decltype(auto) a; // expected-error{{declaration of variable 'a' with deduced type 'decltype(auto)' requires an initializer}}
   
-  decltype(auto) *b; // expected-error{{cannot form pointer to 'decltype(auto)'}} expected-error{{declaration of variable 'b' with type 'decltype(auto) *' requires an initializer}}
+  decltype(auto) *b; // expected-error{{cannot form pointer to 'decltype(auto)'}} expected-error{{declaration of variable 'b' with deduced type 'decltype(auto) *' requires an initializer}}
 
   if (decltype(auto) b) {} // expected-error {{must have an initializer}}
   for (;decltype(auto) b;) {} // expected-error {{must have an initializer}}

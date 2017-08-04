@@ -597,11 +597,13 @@ uint32_t LatticeCell::properties() const {
   return Ps;
 }
 
+#ifndef NDEBUG
 void MachineConstPropagator::CellMap::print(raw_ostream &os,
       const TargetRegisterInfo &TRI) const {
   for (auto &I : Map)
     dbgs() << "  " << PrintReg(I.first, &TRI) << " -> " << I.second << '\n';
 }
+#endif
 
 void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
   const MachineBasicBlock *MB = PN.getParent();
@@ -2244,6 +2246,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &BrI,
     case Hexagon::J2_jumpfnew:
     case Hexagon::J2_jumpfnewpt:
       Negated = true;
+      LLVM_FALLTHROUGH;
     case Hexagon::J2_jumpt:
     case Hexagon::J2_jumptnew:
     case Hexagon::J2_jumptnewpt:
@@ -2276,7 +2279,7 @@ Undetermined:
       goto Undetermined;
 
     uint32_t Props = PredC.properties();
-    bool CTrue = false, CFalse = false;;
+    bool CTrue = false, CFalse = false;
     if (Props & ConstantProperties::Zero)
       CFalse = true;
     else if (Props & ConstantProperties::NonZero)

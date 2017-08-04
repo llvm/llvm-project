@@ -124,7 +124,7 @@ public:
   /// Returns the type of the APSInt used to store values of the given QualType.
   APSIntType getAPSIntType(QualType T) const {
     assert(T->isIntegralOrEnumerationType() || Loc::isLocType(T));
-    return APSIntType(Ctx.getTypeSize(T),
+    return APSIntType(Ctx.getIntWidth(T),
                       !T->isSignedIntegerOrEnumerationType());
   }
 
@@ -178,6 +178,11 @@ public:
     llvm::APSInt X = V;
     --X;
     return getValue(X);
+  }
+
+  inline const llvm::APSInt& getZeroWithTypeSize(QualType T) {
+    assert(T->isScalarType());
+    return getValue(0, Ctx.getTypeSize(T), true);
   }
 
   inline const llvm::APSInt& getZeroWithPtrWidth(bool isUnsigned = true) {

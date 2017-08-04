@@ -1,4 +1,4 @@
-//===- PDBExtras.cpp - helper functions and classes for PDBs -----*- C++-*-===//
+//===- PDBExtras.cpp - helper functions and classes for PDBs --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
-
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -266,25 +267,6 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_UdtType &Type) {
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_UdtType, Interface, "interface", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_UdtType, Union, "union", OS)
   }
-  return OS;
-}
-
-raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_UniqueId &Id) {
-  static const char *Lookup = "0123456789ABCDEF";
-
-  static_assert(sizeof(PDB_UniqueId) == 16, "Expected 16-byte GUID");
-  ArrayRef<uint8_t> GuidBytes(reinterpret_cast<const uint8_t*>(&Id), 16);
-  OS << "{";
-  for (int i=0; i < 16;) {
-    uint8_t Byte = GuidBytes[i];
-    uint8_t HighNibble = (Byte >> 4) & 0xF;
-    uint8_t LowNibble = Byte & 0xF;
-    OS << Lookup[HighNibble] << Lookup[LowNibble];
-    ++i;
-    if (i>=4 && i<=10 && i%2==0)
-      OS << "-";
-  }
-  OS << "}";
   return OS;
 }
 

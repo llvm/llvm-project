@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_BITTRACKER_H
 #define LLVM_LIB_TARGET_HEXAGON_BITTRACKER_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -68,10 +69,11 @@ private:
   typedef std::set<const MachineInstr *> InstrSetType;
   typedef std::queue<CFGEdge> EdgeQueueType;
 
-  EdgeSetType EdgeExec;       // Executable flow graph edges.
-  InstrSetType InstrExec;     // Executable instructions.
-  EdgeQueueType FlowQ;        // Work queue of CFG edges.
-  bool Trace;                 // Enable tracing for debugging.
+  EdgeSetType EdgeExec;         // Executable flow graph edges.
+  InstrSetType InstrExec;       // Executable instructions.
+  EdgeQueueType FlowQ;          // Work queue of CFG edges.
+  DenseSet<unsigned> ReachedBB; // Cache of reached blocks.
+  bool Trace;                   // Enable tracing for debugging.
 
   const MachineEvaluator &ME;
   MachineFunction &MF;
@@ -282,6 +284,9 @@ struct BitTracker::RegisterCell {
   bool operator!= (const RegisterCell &RC) const {
     return !operator==(RC);
   }
+
+  // Replace the ref-to-reg-0 bit values with the given register.
+  RegisterCell &regify(unsigned R);
 
   // Generate a "ref" cell for the corresponding register. In the resulting
   // cell each bit will be described as being the same as the corresponding

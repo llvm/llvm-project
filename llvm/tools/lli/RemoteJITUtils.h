@@ -84,7 +84,7 @@ public:
     this->MemMgr = std::move(MemMgr);
   }
 
-  void setResolver(std::unique_ptr<JITSymbolResolver> Resolver) {
+  void setResolver(std::shared_ptr<JITSymbolResolver> Resolver) {
     this->Resolver = std::move(Resolver);
   }
 
@@ -118,9 +118,8 @@ public:
     MemMgr->registerEHFrames(Addr, LoadAddr, Size);
   }
 
-  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                          size_t Size) override {
-    MemMgr->deregisterEHFrames(Addr, LoadAddr, Size);
+  void deregisterEHFrames() override {
+    MemMgr->deregisterEHFrames();
   }
 
   bool finalizeMemory(std::string *ErrMsg = nullptr) override {
@@ -146,7 +145,7 @@ public:
 
 private:
   std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr;
-  std::unique_ptr<JITSymbolResolver> Resolver;
+  std::shared_ptr<JITSymbolResolver> Resolver;
 };
 }
 

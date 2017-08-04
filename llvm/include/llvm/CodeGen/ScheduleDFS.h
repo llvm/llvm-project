@@ -14,16 +14,16 @@
 #ifndef LLVM_CODEGEN_SCHEDULEDFS_H
 #define LLVM_CODEGEN_SCHEDULEDFS_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Support/DataTypes.h"
+#include <cassert>
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
 
 class raw_ostream;
-class IntEqClasses;
-class ScheduleDAGInstrs;
-class SUnit;
 
 /// \brief Represent the ILP of the subDAG rooted at a DAG node.
 ///
@@ -75,18 +75,18 @@ class SchedDFSResult {
   /// interior node. Finally, it is set to a representative subtree ID during
   /// finalization.
   struct NodeData {
-    unsigned InstrCount;
-    unsigned SubtreeID;
+    unsigned InstrCount = 0;
+    unsigned SubtreeID = InvalidSubtreeID;
 
-    NodeData(): InstrCount(0), SubtreeID(InvalidSubtreeID) {}
+    NodeData() = default;
   };
 
   /// \brief Per-Subtree data computed during DFS.
   struct TreeData {
-    unsigned ParentTreeID;
-    unsigned SubInstrCount;
+    unsigned ParentTreeID = InvalidSubtreeID;
+    unsigned SubInstrCount = 0;
 
-    TreeData(): ParentTreeID(InvalidSubtreeID), SubInstrCount(0) {}
+    TreeData() = default;
   };
 
   /// \brief Record a connection between subtrees and the connection level.
@@ -107,7 +107,7 @@ class SchedDFSResult {
 
   // For each subtree discovered during DFS, record its connections to other
   // subtrees.
-  std::vector<SmallVector<Connection, 4> > SubtreeConnections;
+  std::vector<SmallVector<Connection, 4>> SubtreeConnections;
 
   /// Cache the current connection level of each subtree.
   /// This mutable array is updated during scheduling.
@@ -189,6 +189,6 @@ public:
 
 raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val);
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SCHEDULEDFS_H

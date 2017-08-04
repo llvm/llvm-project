@@ -10,7 +10,7 @@ Chapter 2 Introduction
 
 Welcome to Chapter 2 of the "`Implementing a language with
 LLVM <index.html>`_" tutorial. This chapter shows you how to use the
-lexer, built in `Chapter 1 <LangImpl1.html>`_, to build a full
+lexer, built in `Chapter 1 <LangImpl01.html>`_, to build a full
 `parser <http://en.wikipedia.org/wiki/Parsing>`_ for our Kaleidoscope
 language. Once we have a parser, we'll define and build an `Abstract
 Syntax Tree <http://en.wikipedia.org/wiki/Abstract_syntax_tree>`_ (AST).
@@ -119,6 +119,8 @@ way to talk about functions themselves:
     public:
       PrototypeAST(const std::string &name, std::vector<std::string> Args)
         : Name(name), Args(std::move(Args)) {}
+
+      const std::string &getName() const { return Name; }
     };
 
     /// FunctionAST - This class represents a function definition itself.

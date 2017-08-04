@@ -227,7 +227,7 @@ private:
     }
 
     static inline void fs_helper_run(std::string const& raw_cmd) {
-        // check that the fs test root in the enviroment matches what we were
+        // check that the fs test root in the environment matches what we were
         // compiled with.
         static bool checked = checkDynamicTestRoot();
         ((void)checked);
@@ -246,7 +246,7 @@ private:
             std::abort();
         }
         if (std::string(fs_root) != LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT) {
-            std::printf("ERROR: LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT enviroment variable"
+            std::printf("ERROR: LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT environment variable"
                         " must have the same value as when the test was compiled.\n");
             std::printf("   Current Value:  '%s'\n", fs_root);
             std::printf("   Expected Value: '%s'\n", LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT);
@@ -381,7 +381,7 @@ bool checkCollectionsEqualBackwards(
 }
 
 // We often need to test that the error_code was cleared if no error occurs
-// this function returns a error_code which is set to an error that will
+// this function returns an error_code which is set to an error that will
 // never be returned by the filesystem functions.
 inline std::error_code GetTestEC() {
     return std::make_error_code(std::errc::address_family_not_supported);

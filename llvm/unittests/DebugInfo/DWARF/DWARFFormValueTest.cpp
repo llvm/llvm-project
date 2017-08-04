@@ -10,7 +10,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
 #include "gtest/gtest.h"
@@ -23,43 +23,52 @@ namespace {
 TEST(DWARFFormValue, FixedFormSizes) {
   Optional<uint8_t> RefSize;
   Optional<uint8_t> AddrSize;
+
   // Test 32 bit DWARF version 2 with 4 byte addresses.
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 2, 4, DWARF32);
-  AddrSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 2, 4, DWARF32);
+  DWARFFormParams Params_2_4_32 = {2, 4, DWARF32};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_4_32);
+  AddrSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_4_32);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_TRUE(AddrSize.hasValue());
   EXPECT_EQ(*RefSize, *AddrSize);
 
   // Test 32 bit DWARF version 2 with 8 byte addresses.
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 2, 8, DWARF32);
-  AddrSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 2, 8, DWARF32);
+  DWARFFormParams Params_2_8_32 = {2, 8, DWARF32};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_8_32);
+  AddrSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_2_8_32);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_TRUE(AddrSize.hasValue());
   EXPECT_EQ(*RefSize, *AddrSize);
 
   // DW_FORM_ref_addr is 4 bytes in DWARF 32 in DWARF version 3 and beyond.
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 3, 4, DWARF32);
+  DWARFFormParams Params_3_4_32 = {3, 4, DWARF32};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_3_4_32);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_EQ(*RefSize, 4);
 
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 4, 4, DWARF32);
+  DWARFFormParams Params_4_4_32 = {4, 4, DWARF32};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_4_4_32);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_EQ(*RefSize, 4);
 
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 5, 4, DWARF32);
+  DWARFFormParams Params_5_4_32 = {5, 4, DWARF32};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_5_4_32);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_EQ(*RefSize, 4);
 
   // DW_FORM_ref_addr is 8 bytes in DWARF 64 in DWARF version 3 and beyond.
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 3, 8, DWARF64);
+  DWARFFormParams Params_3_8_64 = {3, 8, DWARF64};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_3_8_64);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_EQ(*RefSize, 8);
 
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 4, 8, DWARF64);
+  DWARFFormParams Params_4_8_64 = {4, 8, DWARF64};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_4_8_64);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_EQ(*RefSize, 8);
 
-  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, 5, 8, DWARF64);
+  DWARFFormParams Params_5_8_64 = {5, 8, DWARF64};
+  RefSize = DWARFFormValue::getFixedByteSize(DW_FORM_ref_addr, Params_5_8_64);
   EXPECT_TRUE(RefSize.hasValue());
   EXPECT_EQ(*RefSize, 8);
 }
@@ -88,8 +97,8 @@ DWARFFormValue createDataXFormValue(dwarf::Form Form, RawTypeT Value) {
   memcpy(Raw, &Value, sizeof(RawTypeT));
   uint32_t Offset = 0;
   DWARFFormValue Result(Form);
-  DataExtractor Data(StringRef(Raw, sizeof(RawTypeT)),
-                     sys::IsLittleEndianHost, sizeof(void*));
+  DWARFDataExtractor Data(StringRef(Raw, sizeof(RawTypeT)),
+                          sys::IsLittleEndianHost, sizeof(void *));
   Result.extractValue(Data, &Offset, nullptr);
   return Result;
 }
@@ -100,7 +109,7 @@ DWARFFormValue createULEBFormValue(uint64_t Value) {
   encodeULEB128(Value, OS);
   uint32_t Offset = 0;
   DWARFFormValue Result(DW_FORM_udata);
-  DataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void*));
+  DWARFDataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void *));
   Result.extractValue(Data, &Offset, nullptr);
   return Result;
 }
@@ -111,7 +120,7 @@ DWARFFormValue createSLEBFormValue(int64_t Value) {
   encodeSLEB128(Value, OS);
   uint32_t Offset = 0;
   DWARFFormValue Result(DW_FORM_sdata);
-  DataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void*));
+  DWARFDataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void *));
   Result.extractValue(Data, &Offset, nullptr);
   return Result;
 }

@@ -6,7 +6,7 @@
 ; CHECK: call void @llvm.amdgcn.s.barrier()
 ; CHECK: call void @llvm.amdgcn.s.barrier()
 ; CHECK-NOT: br
-define void @test_unroll_convergent_barrier(i32 addrspace(1)* noalias nocapture %out, i32 addrspace(1)* noalias nocapture %in) #0 {
+define amdgpu_kernel void @test_unroll_convergent_barrier(i32 addrspace(1)* noalias nocapture %out, i32 addrspace(1)* noalias nocapture %in) #0 {
 entry:
   br label %for.body
 

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
@@ -269,6 +270,34 @@ TEST_F(StringMapTest, InsertRehashingPairTest) {
   EXPECT_EQ(42u, It->second);
 }
 
+TEST_F(StringMapTest, IterMapKeys) {
+  StringMap<int> Map;
+  Map["A"] = 1;
+  Map["B"] = 2;
+  Map["C"] = 3;
+  Map["D"] = 3;
+
+  auto Keys = to_vector<4>(Map.keys());
+  std::sort(Keys.begin(), Keys.end());
+
+  SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
+  EXPECT_EQ(Expected, Keys);
+}
+
+TEST_F(StringMapTest, IterSetKeys) {
+  StringSet<> Set;
+  Set.insert("A");
+  Set.insert("B");
+  Set.insert("C");
+  Set.insert("D");
+
+  auto Keys = to_vector<4>(Set.keys());
+  std::sort(Keys.begin(), Keys.end());
+
+  SmallVector<StringRef, 4> Expected = {"A", "B", "C", "D"};
+  EXPECT_EQ(Expected, Keys);
+}
+
 // Create a non-default constructable value
 struct StringMapTestStruct {
   StringMapTestStruct(int i) : i(i) {}
@@ -425,7 +454,7 @@ TEST(StringMapCustomTest, InitialSizeTest) {
       Map.insert(std::pair<std::string, CountCtorCopyAndMove>(
           std::piecewise_construct, std::forward_as_tuple(Twine(i).str()),
           std::forward_as_tuple(i)));
-    // After the inital move, the map will move the Elts in the Entry.
+    // After the initial move, the map will move the Elts in the Entry.
     EXPECT_EQ((unsigned)Size * 2, CountCtorCopyAndMove::Move);
     // We copy once the pair from the Elts vector
     EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);

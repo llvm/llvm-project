@@ -1,10 +1,10 @@
 ; RUN: opt < %s -inline -inline-threshold=0 -inlinehint-threshold=100 -S | FileCheck %s
-; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -inline-threshold=0 -inlinehint-threshold=100 -S | FileCheck %s
 
-; This tests that a hot callee gets the (higher) inlinehint-threshold even without
-; inline hints and gets inlined because the cost is less than inlinehint-threshold.
-; A cold callee with identical body does not get inlined because cost exceeds the
-; inline-threshold
+; This tests that a hot callee gets the (higher) inlinehint-threshold even
+; without inline hints and gets inlined because the cost is less than
+; inlinehint-threshold. A cold callee with identical body does not get inlined
+; because cost exceeds the inline-threshold. This test is relevant only when the
+; old pass manager is used.
 
 define i32 @callee1(i32 %x) !prof !21 {
   %x1 = add i32 %x, 1

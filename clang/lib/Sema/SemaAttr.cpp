@@ -126,6 +126,36 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
   PackStack.Act(PragmaLoc, Action, StringRef(), Alignment);
 }
 
+void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionAction Action,
+                                   PragmaClangSectionKind SecKind, StringRef SecName) {
+  PragmaClangSection *CSec;
+  switch (SecKind) {
+    case PragmaClangSectionKind::PCSK_BSS:
+      CSec = &PragmaClangBSSSection;
+      break;
+    case PragmaClangSectionKind::PCSK_Data:
+      CSec = &PragmaClangDataSection;
+      break;
+    case PragmaClangSectionKind::PCSK_Rodata:
+      CSec = &PragmaClangRodataSection;
+      break;
+    case PragmaClangSectionKind::PCSK_Text:
+      CSec = &PragmaClangTextSection;
+      break;
+    default:
+      llvm_unreachable("invalid clang section kind");
+  }
+
+  if (Action == PragmaClangSectionAction::PCSA_Clear) {
+    CSec->Valid = false;
+    return;
+  }
+
+  CSec->Valid = true;
+  CSec->SectionName = SecName;
+  CSec->PragmaLocation = PragmaLoc;
+}
+
 void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
                            StringRef SlotLabel, Expr *alignment) {
   Expr *Alignment = static_cast<Expr *>(alignment);
@@ -414,9 +444,9 @@ attrMatcherRuleListToString(ArrayRef<attr::SubjectMatchRule> Rules) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   for (const auto &I : llvm::enumerate(Rules)) {
-    if (I.Index)
-      OS << (I.Index == Rules.size() - 1 ? ", and " : ", ");
-    OS << "'" << attr::getSubjectMatchRuleSpelling(I.Value) << "'";
+    if (I.index())
+      OS << (I.index() == Rules.size() - 1 ? ", and " : ", ");
+    OS << "'" << attr::getSubjectMatchRuleSpelling(I.value()) << "'";
   }
   return OS.str();
 }

@@ -312,7 +312,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
   bool IsInNonspecializedTemplate =
-    !ActiveTemplateInstantiations.empty() || CurContext->isDependentContext();
+      inTemplateInstantiation() || CurContext->isDependentContext();
   switch (Kind) {
   case Normal: {
     //  -- the bodies of non-exported nonspecialized template functions
@@ -337,6 +337,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
       return nullptr;
     }
     // Fall through to get the current context.
+    LLVM_FALLTHROUGH;
 
   case DataMember:
     //  -- the in-class initializers of class members
@@ -763,7 +764,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
   // call-operator.
   Result = ActOnFinishFullExpr(Init, Loc, /*DiscardedValue*/ false,
                                /*IsConstexpr*/ false,
-                               /*IsLambdaInitCaptureInitalizer*/ true);
+                               /*IsLambdaInitCaptureInitializer*/ true);
   if (Result.isInvalid())
     return QualType();
 
@@ -1127,7 +1128,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
-  PushExpressionEvaluationContext(PotentiallyEvaluated);  
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
@@ -1384,7 +1386,7 @@ static void addBlockPointerConversion(Sema &S,
 }
 
 static ExprResult performLambdaVarCaptureInitialization(
-    Sema &S, LambdaScopeInfo::Capture &Capture, FieldDecl *Field) {
+    Sema &S, const LambdaScopeInfo::Capture &Capture, FieldDecl *Field) {
   assert(Capture.isVariableCapture() && "not a variable capture");
 
   auto *Var = Capture.getVariable();
@@ -1438,6 +1440,43 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
   llvm_unreachable("Unknown implicit capture style");
 }
 
+bool Sema::CaptureHasSideEffects(const LambdaScopeInfo::Capture &From) {
+  if (!From.isVLATypeCapture()) {
+    Expr *Init = From.getInitExpr();
+    if (Init && Init->HasSideEffects(Context))
+      return true;
+  }
+
+  if (!From.isCopyCapture())
+    return false;
+
+  const QualType T = From.isThisCapture()
+                         ? getCurrentThisType()->getPointeeType()
+                         : From.getCaptureType();
+
+  if (T.isVolatileQualified())
+    return true;
+
+  const Type *BaseT = T->getBaseElementTypeUnsafe();
+  if (const CXXRecordDecl *RD = BaseT->getAsCXXRecordDecl())
+    return !RD->isCompleteDefinition() || !RD->hasTrivialCopyConstructor() ||
+           !RD->hasTrivialDestructor();
+
+  return false;
+}
+
+void Sema::DiagnoseUnusedLambdaCapture(const LambdaScopeInfo::Capture &From) {
+  if (CaptureHasSideEffects(From))
+    return;
+
+  auto diag = Diag(From.getLocation(), diag::warn_unused_lambda_capture);
+  if (From.isThisCapture())
+    diag << "'this'";
+  else
+    diag << From.getVariable();
+  diag << From.isNonODRUsed();
+}
+
 ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                  LambdaScopeInfo *LSI) {
   // Collect information from the lambda scope.
@@ -1453,6 +1492,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
   bool ExplicitResultType;
   CleanupInfo LambdaCleanup;
   bool ContainsUnexpandedParameterPack;
+  bool IsGenericLambda;
   {
     CallOperator = LSI->CallOperator;
     Class = LSI->Lambda;
@@ -1461,7 +1501,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     ExplicitResultType = !LSI->HasImplicitReturnType;
     LambdaCleanup = LSI->Cleanup;
     ContainsUnexpandedParameterPack = LSI->ContainsUnexpandedParameterPack;
-    
+    IsGenericLambda = Class->isGenericLambda();
+
     CallOperator->setLexicalDeclContext(Class);
     Decl *TemplateOrNonTemplateCallOperatorDecl = 
         CallOperator->getDescribedFunctionTemplate()  
@@ -1476,9 +1517,18 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // Translate captures.
     auto CurField = Class->field_begin();
     for (unsigned I = 0, N = LSI->Captures.size(); I != N; ++I, ++CurField) {
-      LambdaScopeInfo::Capture From = LSI->Captures[I];
+      const LambdaScopeInfo::Capture &From = LSI->Captures[I];
       assert(!From.isBlockCapture() && "Cannot capture __block variables");
       bool IsImplicit = I >= LSI->NumExplicitCaptures;
+
+      // Warn about unused explicit captures.
+      if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed()) {
+        // Initialized captures that are non-ODR used may not be eliminated.
+        bool NonODRUsedInitCapture =
+            IsGenericLambda && From.isNonODRUsed() && From.getInitExpr();
+        if (!NonODRUsedInitCapture)
+          DiagnoseUnusedLambdaCapture(From);
+      }
 
       // Handle 'this' capture.
       if (From.isThisCapture()) {
@@ -1525,8 +1575,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     //   same parameter and return types as the closure type's function call
     //   operator.
     // FIXME: Fix generic lambda to block conversions.
-    if (getLangOpts().Blocks && getLangOpts().ObjC1 && 
-                                              !Class->isGenericLambda())
+    if (getLangOpts().Blocks && getLangOpts().ObjC1 && !IsGenericLambda)
       addBlockPointerConversion(*this, IntroducerRange, Class, CallOperator);
     
     // Finalize the lambda class.
@@ -1546,9 +1595,10 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                           ContainsUnexpandedParameterPack);
   // If the lambda expression's call operator is not explicitly marked constexpr
   // and we are not in a dependent context, analyze the call operator to infer
-  // its constexpr-ness, supressing diagnostics while doing so.
+  // its constexpr-ness, suppressing diagnostics while doing so.
   if (getLangOpts().CPlusPlus1z && !CallOperator->isInvalidDecl() &&
       !CallOperator->isConstexpr() &&
+      !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
       !Class->getDeclContext()->isDependentContext()) {
     TentativeAnalysisScope DiagnosticScopeGuard(*this);
     CallOperator->setConstexpr(
@@ -1564,9 +1614,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // C++11 [expr.prim.lambda]p2:
     //   A lambda-expression shall not appear in an unevaluated operand
     //   (Clause 5).
-    case Unevaluated:
-    case UnevaluatedList:
-    case UnevaluatedAbstract:
+    case ExpressionEvaluationContext::Unevaluated:
+    case ExpressionEvaluationContext::UnevaluatedList:
+    case ExpressionEvaluationContext::UnevaluatedAbstract:
     // C++1y [expr.const]p2:
     //   A conditional-expression e is a core constant expression unless the
     //   evaluation of e, following the rules of the abstract machine, would
@@ -1576,16 +1626,16 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // where this should be allowed.  We should probably fix this when DR1607 is
     // ratified, it lays out the exact set of conditions where we shouldn't
     // allow a lambda-expression.
-    case ConstantEvaluated:
+    case ExpressionEvaluationContext::ConstantEvaluated:
       // We don't actually diagnose this case immediately, because we
       // could be within a context where we might find out later that
       // the expression is potentially evaluated (e.g., for typeid).
       ExprEvalContexts.back().Lambdas.push_back(Lambda);
       break;
 
-    case DiscardedStatement:
-    case PotentiallyEvaluated:
-    case PotentiallyEvaluatedIfUsed:
+    case ExpressionEvaluationContext::DiscardedStatement:
+    case ExpressionEvaluationContext::PotentiallyEvaluated:
+    case ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
       break;
     }
   }

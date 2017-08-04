@@ -37,14 +37,22 @@ endif()
 add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${SOURCES})
 
 list(REMOVE_DUPLICATES LIB_NAMES)
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" OR MINGW) # FIXME: It should be "GNU ld for elf"
+if(("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux") OR (MINGW) OR (HAIKU) OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD") OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "DragonFly")) # FIXME: It should be "GNU ld for elf"
+  configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+  ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+
   # GNU ld doesn't resolve symbols in the version script.
-  set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
+  set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
   set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
 endif()
 
 target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
+
+if (LLVM_DYLIB_SYMBOL_VERSIONING)
+  set_property(TARGET LLVM APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--default-symver")
+endif()
 
 if (APPLE)
   set_property(TARGET LLVM APPEND_STRING PROPERTY

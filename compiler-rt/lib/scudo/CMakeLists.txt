@@ -14,10 +14,19 @@ set(SCUDO_SOURCES
   scudo_interceptors.cpp
   scudo_new_delete.cpp
   scudo_termination.cpp
+  scudo_tls_android.cpp
+  scudo_tls_linux.cpp
   scudo_utils.cpp)
 
+# Enable the SSE 4.2 instruction set for scudo_crc32.cpp, if available.
 if (COMPILER_RT_HAS_MSSE4_2_FLAG)
   set_source_files_properties(scudo_crc32.cpp PROPERTIES COMPILE_FLAGS -msse4.2)
+endif()
+
+# Enable the AArch64 CRC32 feature for scudo_crc32.cpp, if available.
+# Note that it is enabled by default starting with armv8.1-a.
+if (COMPILER_RT_HAS_MCRC_FLAG)
+  set_source_files_properties(scudo_crc32.cpp PROPERTIES COMPILE_FLAGS -mcrc)
 endif()
 
 if(COMPILER_RT_HAS_SCUDO)

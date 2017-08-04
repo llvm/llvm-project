@@ -1,4 +1,4 @@
-//===-- lib/Codegen/MachineRegisterInfo.cpp -------------------------------===//
+//===- lib/Codegen/MachineRegisterInfo.cpp --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,12 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -28,9 +42,9 @@ static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF), TheDelegate(nullptr),
-      TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
-                           EnableSubRegLiveness) {
+    : MF(MF), TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
+                                   EnableSubRegLiveness),
+      IsUpdatedCSRsInitialized(false) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);
@@ -542,4 +556,48 @@ bool MachineRegisterInfo::isPhysRegUsed(unsigned PhysReg) const {
       return true;
   }
   return false;
+}
+
+void MachineRegisterInfo::disableCalleeSavedRegister(unsigned Reg) {
+
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  assert(Reg && (Reg < TRI->getNumRegs()) &&
+         "Trying to disable an invalid register");
+
+  if (!IsUpdatedCSRsInitialized) {
+    const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
+    for (const MCPhysReg *I = CSR; *I; ++I)
+      UpdatedCSRs.push_back(*I);
+
+    // Zero value represents the end of the register list
+    // (no more registers should be pushed).
+    UpdatedCSRs.push_back(0);
+
+    IsUpdatedCSRsInitialized = true;
+  }
+
+  // Remove the register (and its aliases from the list).
+  for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+    UpdatedCSRs.erase(std::remove(UpdatedCSRs.begin(), UpdatedCSRs.end(), *AI),
+                      UpdatedCSRs.end());
+}
+
+const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
+  if (IsUpdatedCSRsInitialized)
+    return UpdatedCSRs.data();
+
+  return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+}
+
+void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
+  if (IsUpdatedCSRsInitialized)
+    UpdatedCSRs.clear();
+
+  for (MCPhysReg Reg : CSRs)
+    UpdatedCSRs.push_back(Reg);
+
+  // Zero value represents the end of the register list
+  // (no more registers should be pushed).
+  UpdatedCSRs.push_back(0);
+  IsUpdatedCSRsInitialized = true;
 }

@@ -110,6 +110,16 @@ public:
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *PE) {
     return Visit(PE->getReplacement());
   }
+  ComplexPairTy VisitCoawaitExpr(CoawaitExpr *S) {
+    return CGF.EmitCoawaitExpr(*S).getComplexVal();
+  }
+  ComplexPairTy VisitCoyieldExpr(CoyieldExpr *S) {
+    return CGF.EmitCoyieldExpr(*S).getComplexVal();
+  }
+  ComplexPairTy VisitUnaryCoawait(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+
 
   // l-values.
   ComplexPairTy VisitDeclRefExpr(DeclRefExpr *E) {
@@ -198,7 +208,11 @@ public:
   ComplexPairTy VisitExprWithCleanups(ExprWithCleanups *E) {
     CGF.enterFullExpression(E);
     CodeGenFunction::RunCleanupsScope Scope(CGF);
-    return Visit(E->getSubExpr());
+    ComplexPairTy Vals = Visit(E->getSubExpr());
+    // Defend against dominance problems caused by jumps out of expression
+    // evaluation through the shared cleanup block.
+    Scope.ForceCleanup({&Vals.first, &Vals.second});
+    return Vals;
   }
   ComplexPairTy VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
     assert(E->getType()->isAnyComplexType() && "Expected complex type!");

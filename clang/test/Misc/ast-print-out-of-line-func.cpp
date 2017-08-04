@@ -52,3 +52,44 @@ void Wrapper::Inner::staticMember() { }
 // CHECK: void Wrapper::Inner::staticMember()
 
 }
+
+template<int x, typename T>
+class TemplateRecord {
+  void function();
+  template<typename U> void functionTemplate(T, U);
+};
+
+template<int x, typename T>
+void TemplateRecord<x, T>::function() { }
+// CHECK: template <int x, typename T> void TemplateRecord<x, T>::function()
+
+template<int x, typename T>
+template<typename U>
+void TemplateRecord<x, T>::functionTemplate(T, U) { }
+// CHECK: template <int x, typename T> template <typename U> void TemplateRecord<x, T>::functionTemplate(T, U)
+
+template<>
+class TemplateRecord<0, int> {
+  void function();
+  template<typename U> void functionTemplate(int, U);
+};
+
+void TemplateRecord<0, int>::function() { }
+// CHECK: void TemplateRecord<0, int>::function()
+
+template<typename U>
+void TemplateRecord<0, int>::functionTemplate(int, U) { }
+// CHECK: template <typename U> void TemplateRecord<0, int>::functionTemplate(int, U)
+
+template<typename T>
+struct OuterTemplateRecord {
+  template<typename U>
+  struct Inner {
+    void function();
+  };
+};
+
+template<typename T>
+template<typename U>
+void OuterTemplateRecord<T>::Inner<U>::function() { }
+// CHECK: template <typename T> template <typename U> void OuterTemplateRecord<T>::Inner<U>::function()

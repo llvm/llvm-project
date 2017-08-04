@@ -5,6 +5,9 @@
 // RUN: ld.lld %t.o %t2.so -o %t3
 // RUN: llvm-readobj -t -s -r %t3 | FileCheck %s
 
+// Test that -z nocopyreloc doesn't prevent the plt hack.
+// RUN: ld.lld %t.o %t2.so -o %t3 -z nocopyreloc
+
 .globl _start
 _start:
 movabsq	$set_data, %rax

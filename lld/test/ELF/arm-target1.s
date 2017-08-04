@@ -22,11 +22,15 @@
 .text
   .word patatino(target1)
   patatino:
-
+        .word 32
+// Force generation of $d.0 as section is not all data
+  nop
 // RELATIVE: Disassembly of section .text:
 // RELATIVE: $d.0:
 // RELATIVE:     1000:       04 00 00 00     .word   0x00000004
 // RELATIVE: SYMBOL TABLE:
 // RELATIVE: 00001004         .text           00000000 patatino
 
-// ABS: {{.*}}.o:(.text+0x0): can't create dynamic relocation R_ARM_TARGET1 against symbol 'patatino' defined in {{.*}}.o
+// ABS: can't create dynamic relocation R_ARM_TARGET1 against symbol: patatino
+// ABS: >>> defined in {{.*}}.o
+// ABS: >>> referenced by {{.*}}.o:(.text+0x0)

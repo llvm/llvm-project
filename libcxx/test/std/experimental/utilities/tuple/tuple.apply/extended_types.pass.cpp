@@ -13,7 +13,7 @@
 
 // template <class F, class T> constexpr decltype(auto) apply(F &&, T &&)
 
-// Testing extended function types. The extented function types are those
+// Testing extended function types. The extended function types are those
 // named by INVOKE but that are not actual callable objects. These include
 // bullets 1-4 of invoke.
 

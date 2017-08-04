@@ -16,15 +16,9 @@
 ; RUN: llc -mtriple=thumbv4t-none--eabi < %s | FileCheck %s --check-prefix=CHECK-NOLOLOMOV
 ; RUN: llc -mtriple=thumbv5-none--eabi < %s | FileCheck %s --check-prefix=CHECK-NOLOLOMOV
 ; CHECK-NOLOLOMOV-LABEL: foo
-; CHECK-NOLOLOMOV-NOT:   mov [[TMP:r[0-7]]], [[SRC1:r[01]]]
-; CHECK-NOLOLOMOV:       push  {[[SRC1:r[01]]]}
-; CHECK-NOLOLOMOV-NEXT:  pop {[[TMP:r[0-7]]]}
-; CHECK-NOLOLOMOV-NOT:   mov [[TMP:r[0-7]]], [[SRC1:r[01]]]
-; CHECK-NOLOLOMOV:       push  {[[SRC2:r[01]]]}
-; CHECK-NOLOLOMOV-NEXT:  pop {[[SRC1]]}
-; CHECK-NOLOLOMOV-NOT:   mov [[TMP:r[0-7]]], [[SRC1:r[01]]]
-; CHECK-NOLOLOMOV:       push  {[[TMP]]}
-; CHECK-NOLOLOMOV-NEXT:  pop {[[SRC2]]}
+; CHECK-NOLOLOMOV:       movs [[TMP:r[0-7]]], [[SRC1:r[01]]]
+; CHECK-NOLOLOMOV-NEXT:  movs [[SRC1]], [[SRC2:r[01]]]
+; CHECK-NOLOLOMOV-NEXT:  movs [[SRC2]], [[TMP]]
 ; CHECK-NOLOLOMOV-LABEL: bar
 ; CHECK-NOLOLOMOV-LABEL: fnend
 

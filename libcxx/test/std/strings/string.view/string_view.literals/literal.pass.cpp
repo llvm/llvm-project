@@ -48,7 +48,7 @@ int main()
     Lfoo =  L"ABC"sv;     assert(Lfoo ==  L"ABC");   assert(Lfoo == std::wstring_view  ( L"ABC"));
     ufoo =  u"ABC"sv;     assert(ufoo ==  u"ABC");   assert(ufoo == std::u16string_view( u"ABC"));
     Ufoo =  U"ABC"sv;     assert(Ufoo ==  U"ABC");   assert(Ufoo == std::u32string_view( U"ABC"));
-    
+
     static_assert(  "ABC"sv.size() == 3, "");
     static_assert(u8"ABC"sv.size() == 3, "");
     static_assert( L"ABC"sv.size() == 3, "");

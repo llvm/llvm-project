@@ -10,7 +10,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; Additional check in case the move ends up in the last slot
 ; R600-NOT: MOV * TO.X
 
-define void @work_item_info(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @work_item_info(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = alloca [2 x i32]
   %1 = getelementptr [2 x i32], [2 x i32]* %0, i32 0, i32 0

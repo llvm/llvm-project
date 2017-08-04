@@ -4,6 +4,9 @@
 // RUN: %clangxx_asan %s -o %t -fsanitize-recover=address
 // RUN: %env_asan_opts=print_module_map=2:halt_on_error=0     %run %t 2>&1 | FileCheck %s
 
+// We can't run system("otool") in the simulator.
+// UNSUPPORTED: ios
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

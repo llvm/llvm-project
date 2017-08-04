@@ -31,6 +31,8 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+#define DEBUG_TYPE "dwarfdebug"
+
 //===----------------------------------------------------------------------===//
 // DIEAbbrevData Implementation
 //===----------------------------------------------------------------------===//
@@ -42,6 +44,8 @@ void DIEAbbrevData::Profile(FoldingSetNodeID &ID) const {
   // overloads.  Otherwise MSVC 2010 thinks this call is ambiguous.
   ID.AddInteger(unsigned(Attribute));
   ID.AddInteger(unsigned(Form));
+  if (Form == dwarf::DW_FORM_implicit_const)
+    ID.AddInteger(Value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,15 +81,22 @@ void DIEAbbrev::Emit(const AsmPrinter *AP) const {
                     dwarf::AttributeString(AttrData.getAttribute()).data());
 
     // Emit form type.
+#ifndef NDEBUG
+    // Could be an assertion, but this way we can see the failing form code
+    // easily, which helps track down where it came from.
+    if (!dwarf::isValidFormForVersion(AttrData.getForm(),
+                                      AP->getDwarfVersion())) {
+      DEBUG(dbgs() << "Invalid form " << format("0x%x", AttrData.getForm())
+                   << " for DWARF version " << AP->getDwarfVersion() << "\n");
+      llvm_unreachable("Invalid form for specified DWARF version");
+    }
+#endif
     AP->EmitULEB128(AttrData.getForm(),
                     dwarf::FormEncodingString(AttrData.getForm()).data());
 
     // Emit value for DW_FORM_implicit_const.
-    if (AttrData.getForm() == dwarf::DW_FORM_implicit_const) {
-      assert(AP->getDwarfVersion() >= 5 &&
-            "DW_FORM_implicit_const is supported starting from DWARFv5");
+    if (AttrData.getForm() == dwarf::DW_FORM_implicit_const)
       AP->EmitSLEB128(AttrData.getValue());
-    }
   }
 
   // Mark end of abbreviation.
@@ -94,7 +105,7 @@ void DIEAbbrev::Emit(const AsmPrinter *AP) const {
 }
 
 LLVM_DUMP_METHOD
-void DIEAbbrev::print(raw_ostream &O) {
+void DIEAbbrev::print(raw_ostream &O) const {
   O << "Abbreviation @"
     << format("0x%lx", (long)(intptr_t)this)
     << "  "
@@ -107,13 +118,17 @@ void DIEAbbrev::print(raw_ostream &O) {
     O << "  "
       << dwarf::AttributeString(Data[i].getAttribute())
       << "  "
-      << dwarf::FormEncodingString(Data[i].getForm())
-      << '\n';
+      << dwarf::FormEncodingString(Data[i].getForm());
+
+    if (Data[i].getForm() == dwarf::DW_FORM_implicit_const)
+      O << " " << Data[i].getValue();
+
+    O << '\n';
   }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void DIEAbbrev::dump() {
+LLVM_DUMP_METHOD void DIEAbbrev::dump() const {
   print(dbgs());
 }
 #endif
@@ -253,7 +268,7 @@ void DIE::print(raw_ostream &O, unsigned IndentCount) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void DIE::dump() {
+LLVM_DUMP_METHOD void DIE::dump() const {
   print(dbgs());
 }
 #endif
@@ -359,57 +374,42 @@ LLVM_DUMP_METHOD void DIEValue::dump() const {
 void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   switch (Form) {
   case dwarf::DW_FORM_implicit_const:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_flag_present:
     // Emit something to keep the lines and comments in sync.
     // FIXME: Is there a better way to do this?
     Asm->OutStreamer->AddBlankLine();
     return;
   case dwarf::DW_FORM_flag:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref1:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data1:
-    LLVM_FALLTHROUGH;
+  case dwarf::DW_FORM_strx1:
+  case dwarf::DW_FORM_addrx1:
   case dwarf::DW_FORM_ref2:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data2:
-    LLVM_FALLTHROUGH;
+  case dwarf::DW_FORM_strx2:
+  case dwarf::DW_FORM_addrx2:
   case dwarf::DW_FORM_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref4:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data4:
-    LLVM_FALLTHROUGH;
+  case dwarf::DW_FORM_ref_sup4:
+  case dwarf::DW_FORM_strx4:
+  case dwarf::DW_FORM_addrx4:
   case dwarf::DW_FORM_ref8:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_sig8:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data8:
-    LLVM_FALLTHROUGH;
+  case dwarf::DW_FORM_ref_sup8:
   case dwarf::DW_FORM_GNU_ref_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_strp_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_line_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_sec_offset:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp_sup:
-    LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_ref_sup:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_addr:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_addr:
     Asm->OutStreamer->EmitIntValue(Integer, SizeOf(Asm, Form));
     return;
   case dwarf::DW_FORM_GNU_str_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_addr_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_udata:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_udata:
     Asm->EmitULEB128(Integer);
     return;
@@ -424,35 +424,41 @@ void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
 ///
 unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   switch (Form) {
-  case dwarf::DW_FORM_implicit_const: LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_flag_present: return 0;
-  case dwarf::DW_FORM_flag:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_ref1:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data1: return sizeof(int8_t);
-  case dwarf::DW_FORM_ref2:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data2: return sizeof(int16_t);
-  case dwarf::DW_FORM_ref4:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data4: return sizeof(int32_t);
-  case dwarf::DW_FORM_ref8:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_ref_sig8:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data8: return sizeof(int64_t);
+  case dwarf::DW_FORM_implicit_const:
+  case dwarf::DW_FORM_flag_present:
+    return 0;
+  case dwarf::DW_FORM_flag:
+  case dwarf::DW_FORM_ref1:
+  case dwarf::DW_FORM_data1:
+  case dwarf::DW_FORM_strx1:
+  case dwarf::DW_FORM_addrx1:
+    return sizeof(int8_t);
+  case dwarf::DW_FORM_ref2:
+  case dwarf::DW_FORM_data2:
+  case dwarf::DW_FORM_strx2:
+  case dwarf::DW_FORM_addrx2:
+    return sizeof(int16_t);
+  case dwarf::DW_FORM_ref4:
+  case dwarf::DW_FORM_data4:
+  case dwarf::DW_FORM_ref_sup4:
+  case dwarf::DW_FORM_strx4:
+  case dwarf::DW_FORM_addrx4:
+    return sizeof(int32_t);
+  case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_sig8:
+  case dwarf::DW_FORM_data8:
+  case dwarf::DW_FORM_ref_sup8:
+    return sizeof(int64_t);
   case dwarf::DW_FORM_ref_addr:
     if (AP->getDwarfVersion() == 2)
       return AP->getPointerSize();
     LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_ref_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_strp_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_line_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_sec_offset:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp_sup:
-    LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_ref_sup:
     switch (AP->OutStreamer->getContext().getDwarfFormat()) {
     case dwarf::DWARF32:
       return 4;
@@ -461,11 +467,8 @@ unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     }
     llvm_unreachable("Invalid DWARF format");
   case dwarf::DW_FORM_GNU_str_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_addr_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_udata:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_udata:
     return getULEB128Size(Integer);
   case dwarf::DW_FORM_sdata:
@@ -489,7 +492,7 @@ void DIEInteger::print(raw_ostream &O) const {
 /// EmitValue - Emit expression value.
 ///
 void DIEExpr::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
-  AP->EmitDebugValue(Expr, SizeOf(AP, Form));
+  AP->EmitDebugThreadLocal(Expr, SizeOf(AP, Form));
 }
 
 /// SizeOf - Determine size of expression value in bytes.
@@ -524,7 +527,7 @@ unsigned DIELabel::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_data4) return 4;
   if (Form == dwarf::DW_FORM_sec_offset) return 4;
   if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->getPointerSize();
+  return AP->MAI->getCodePointerSize();
 }
 
 LLVM_DUMP_METHOD
@@ -546,7 +549,7 @@ unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_data4) return 4;
   if (Form == dwarf::DW_FORM_sec_offset) return 4;
   if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->getPointerSize();
+  return AP->MAI->getCodePointerSize();
 }
 
 LLVM_DUMP_METHOD
@@ -652,20 +655,12 @@ void DIEEntry::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_ref_addr: {
     // Get the absolute offset for this DIE within the debug info/types section.
     unsigned Addr = Entry->getDebugSectionOffset();
-    if (AP->MAI->doesDwarfUseRelocationsAcrossSections()) {
-      const DwarfDebug *DD = AP->getDwarfDebug();
-      if (DD)
-        assert(!DD->useSplitDwarf() &&
-               "TODO: dwo files can't have relocations.");
-      const DIEUnit *Unit = Entry->getUnit();
-      assert(Unit && "CUDie should belong to a CU.");
-      MCSection *Section = Unit->getSection();
-      if (Section) {
-        const MCSymbol *SectionSym = Section->getBeginSymbol();
-        AP->EmitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form), true);
-        return;
-      }
+    if (const MCSymbol *SectionSym =
+            Entry->getUnit()->getCrossSectionRelativeBaseAddress()) {
+      AP->EmitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form), true);
+      return;
     }
+
     AP->OutStreamer->EmitIntValue(Addr, SizeOf(AP, Form));
     return;
   }
@@ -688,7 +683,7 @@ unsigned DIEEntry::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     return getULEB128Size(Entry->getOffset());
   case dwarf::DW_FORM_ref_addr:
     if (AP->getDwarfVersion() == 2)
-      return AP->getPointerSize();
+      return AP->MAI->getCodePointerSize();
     switch (AP->OutStreamer->getContext().getDwarfFormat()) {
     case dwarf::DWARF32:
       return 4;
@@ -814,7 +809,7 @@ unsigned DIELocList::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     return 4;
   if (Form == dwarf::DW_FORM_sec_offset)
     return 4;
-  return AP->getPointerSize();
+  return AP->MAI->getCodePointerSize();
 }
 
 /// EmitValue - Emit label value.

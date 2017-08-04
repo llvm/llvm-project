@@ -10,6 +10,13 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // <variant>
 
 // template <size_t I, class... Types>
@@ -36,7 +43,7 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42);
-#ifndef __clang__ // Avoid https://llvm.org/bugs/show_bug.cgi?id=15481
+#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
     ASSERT_NOEXCEPT(std::get<0>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
@@ -52,7 +59,7 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42l);
-#ifndef __clang__ // Avoid https://llvm.org/bugs/show_bug.cgi?id=15481
+#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
     ASSERT_NOEXCEPT(std::get<1>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<1>(v)), const long &);

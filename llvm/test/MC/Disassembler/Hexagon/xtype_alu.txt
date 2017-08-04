@@ -11,137 +11,137 @@
 
 # Add and accumulate
 0xff 0xd1 0x35 0xdb
-# CHECK: r17 = add(r21, add(r31, #23))
+# CHECK: r17 = add(r21,add(r31,#23))
 0xff 0xd1 0xb5 0xdb
-# CHECK: r17 = add(r21, sub(#23, r31))
+# CHECK: r17 = add(r21,sub(#23,r31))
 0xf1 0xc2 0x15 0xe2
-# CHECK: r17 += add(r21, #23)
+# CHECK: r17 += add(r21,#23)
 0xf1 0xc2 0x95 0xe2
-# CHECK: r17 -= add(r21, #23)
+# CHECK: r17 -= add(r21,#23)
 0x31 0xdf 0x15 0xef
-# CHECK: r17 += add(r21, r31)
+# CHECK: r17 += add(r21,r31)
 0x31 0xdf 0x95 0xef
-# CHECK: r17 -= add(r21, r31)
+# CHECK: r17 -= add(r21,r31)
 
 # Add doublewords
 0xf0 0xde 0x14 0xd3
-# CHECK: r17:16 = add(r21:20, r31:30)
+# CHECK: r17:16 = add(r21:20,r31:30)
 0xb0 0xde 0x74 0xd3
-# CHECK: r17:16 = add(r21:20, r31:30):sat
+# CHECK: r17:16 = add(r21:20,r31:30):sat
 0xd0 0xde 0x74 0xd3
-# CHECK: r17:16 = add(r21:20, r31:30):raw:lo
+# CHECK: r17:16 = add(r21:20,r31:30):raw:lo
 0xf0 0xde 0x74 0xd3
-# CHECK: r17:16 = add(r21:20, r31:30):raw:hi
+# CHECK: r17:16 = add(r21:20,r31:30):raw:hi
 
 # Add halfword
 0x11 0xd5 0x1f 0xd5
-# CHECK: r17 = add(r21.l, r31.l)
+# CHECK: r17 = add(r21.l,r31.l)
 0x51 0xd5 0x1f 0xd5
-# CHECK: r17 = add(r21.l, r31.h)
+# CHECK: r17 = add(r21.l,r31.h)
 0x91 0xd5 0x1f 0xd5
-# CHECK: r17 = add(r21.l, r31.l):sat
+# CHECK: r17 = add(r21.l,r31.l):sat
 0xd1 0xd5 0x1f 0xd5
-# CHECK: r17 = add(r21.l, r31.h):sat
+# CHECK: r17 = add(r21.l,r31.h):sat
 0x11 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.l, r31.l):<<16
+# CHECK: r17 = add(r21.l,r31.l):<<16
 0x31 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.l, r31.h):<<16
+# CHECK: r17 = add(r21.l,r31.h):<<16
 0x51 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.h, r31.l):<<16
+# CHECK: r17 = add(r21.h,r31.l):<<16
 0x71 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.h, r31.h):<<16
+# CHECK: r17 = add(r21.h,r31.h):<<16
 0x91 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.l, r31.l):sat:<<16
+# CHECK: r17 = add(r21.l,r31.l):sat:<<16
 0xb1 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.l, r31.h):sat:<<16
+# CHECK: r17 = add(r21.l,r31.h):sat:<<16
 0xd1 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.h, r31.l):sat:<<16
+# CHECK: r17 = add(r21.h,r31.l):sat:<<16
 0xf1 0xd5 0x5f 0xd5
-# CHECK: r17 = add(r21.h, r31.h):sat:<<16
+# CHECK: r17 = add(r21.h,r31.h):sat:<<16
 
 # Add or subtract doublewords with carry
 0x70 0xde 0xd4 0xc2
-# CHECK: r17:16 = add(r21:20, r31:30, p3):carry
+# CHECK: r17:16 = add(r21:20,r31:30,p3):carry
 0x70 0xde 0xf4 0xc2
-# CHECK: r17:16 = sub(r21:20, r31:30, p3):carry
+# CHECK: r17:16 = sub(r21:20,r31:30,p3):carry
 
 # Logical doublewords
 0x90 0xc0 0x94 0x80
 # CHECK: r17:16 = not(r21:20)
 0x10 0xde 0xf4 0xd3
-# CHECK: r17:16 = and(r21:20, r31:30)
+# CHECK: r17:16 = and(r21:20,r31:30)
 0x30 0xd4 0xfe 0xd3
-# CHECK: r17:16 = and(r21:20, ~r31:30)
+# CHECK: r17:16 = and(r21:20,~r31:30)
 0x50 0xde 0xf4 0xd3
-# CHECK: r17:16 = or(r21:20, r31:30)
+# CHECK: r17:16 = or(r21:20,r31:30)
 0x70 0xd4 0xfe 0xd3
-# CHECK: r17:16 = or(r21:20, ~r31:30)
+# CHECK: r17:16 = or(r21:20,~r31:30)
 0x90 0xde 0xf4 0xd3
-# CHECK: r17:16 = xor(r21:20, r31:30)
+# CHECK: r17:16 = xor(r21:20,r31:30)
 
 # Logical-logical doublewords
 0x10 0xde 0x94 0xca
-# CHECK: r17:16 ^= xor(r21:20, r31:30)
+# CHECK: r17:16 ^= xor(r21:20,r31:30)
 
 # Logical-logical words
 0xf1 0xc3 0x15 0xda
-# CHECK: r17 |= and(r21, #31)
+# CHECK: r17 |= and(r21,#31)
 0xf5 0xc3 0x51 0xda
-# CHECK: r17 = or(r21, and(r17, #31))
+# CHECK: r17 = or(r21,and(r17,#31))
 0xf1 0xc3 0x95 0xda
-# CHECK: r17 |= or(r21, #31)
+# CHECK: r17 |= or(r21,#31)
 0x11 0xdf 0x35 0xef
-# CHECK: r17 |= and(r21, ~r31)
+# CHECK: r17 |= and(r21,~r31)
 0x31 0xdf 0x35 0xef
-# CHECK: r17 &= and(r21, ~r31)
+# CHECK: r17 &= and(r21,~r31)
 0x51 0xdf 0x35 0xef
-# CHECK: r17 ^= and(r21, ~r31)
+# CHECK: r17 ^= and(r21,~r31)
 0x11 0xdf 0x55 0xef
-# CHECK: r17 &= and(r21, r31)
+# CHECK: r17 &= and(r21,r31)
 0x31 0xdf 0x55 0xef
-# CHECK: r17 &= or(r21, r31)
+# CHECK: r17 &= or(r21,r31)
 0x51 0xdf 0x55 0xef
-# CHECK: r17 &= xor(r21, r31)
+# CHECK: r17 &= xor(r21,r31)
 0x71 0xdf 0x55 0xef
-# CHECK: r17 |= and(r21, r31)
+# CHECK: r17 |= and(r21,r31)
 0x71 0xdf 0x95 0xef
-# CHECK: r17 ^= xor(r21, r31)
+# CHECK: r17 ^= xor(r21,r31)
 0x11 0xdf 0xd5 0xef
-# CHECK: r17 |= or(r21, r31)
+# CHECK: r17 |= or(r21,r31)
 0x31 0xdf 0xd5 0xef
-# CHECK: r17 |= xor(r21, r31)
+# CHECK: r17 |= xor(r21,r31)
 0x51 0xdf 0xd5 0xef
-# CHECK: r17 ^= and(r21, r31)
+# CHECK: r17 ^= and(r21,r31)
 0x71 0xdf 0xd5 0xef
-# CHECK: r17 ^= or(r21, r31)
+# CHECK: r17 ^= or(r21,r31)
 
 # Maximum words
 0x11 0xdf 0xd5 0xd5
-# CHECK: r17 = max(r21, r31)
+# CHECK: r17 = max(r21,r31)
 0x91 0xdf 0xd5 0xd5
-# CHECK: r17 = maxu(r21, r31)
+# CHECK: r17 = maxu(r21,r31)
 
 # Maximum doublewords
 0x90 0xde 0xd4 0xd3
-# CHECK: r17:16 = max(r21:20, r31:30)
+# CHECK: r17:16 = max(r21:20,r31:30)
 0xb0 0xde 0xd4 0xd3
-# CHECK: r17:16 = maxu(r21:20, r31:30)
+# CHECK: r17:16 = maxu(r21:20,r31:30)
 
 # Minimum words
 0x11 0xd5 0xbf 0xd5
-# CHECK: r17 = min(r21, r31)
+# CHECK: r17 = min(r21,r31)
 0x91 0xd5 0xbf 0xd5
-# CHECK: r17 = minu(r21, r31)
+# CHECK: r17 = minu(r21,r31)
 
 # Minimum doublewords
 0xd0 0xd4 0xbe 0xd3
-# CHECK: r17:16 = min(r21:20, r31:30)
+# CHECK: r17:16 = min(r21:20,r31:30)
 0xf0 0xd4 0xbe 0xd3
-# CHECK: r17:16 = minu(r21:20, r31:30)
+# CHECK: r17:16 = minu(r21:20,r31:30)
 
 # Module wrap
 0xf1 0xdf 0xf5 0xd3
-# CHECK: r17 = modwrap(r21, r31)
+# CHECK: r17 = modwrap(r21,r31)
 
 # Negate
 0xb0 0xc0 0x94 0x80
@@ -153,51 +153,51 @@
 0x31 0xc0 0xd4 0x88
 # CHECK: r17 = round(r21:20):sat
 0x11 0xdf 0xf5 0x8c
-# CHECK: r17 = cround(r21, #31)
+# CHECK: r17 = cround(r21,#31)
 0x91 0xdf 0xf5 0x8c
-# CHECK: r17 = round(r21, #31)
+# CHECK: r17 = round(r21,#31)
 0xd1 0xdf 0xf5 0x8c
-# CHECK: r17 = round(r21, #31):sat
+# CHECK: r17 = round(r21,#31):sat
 0x11 0xdf 0xd5 0xc6
-# CHECK: r17 = cround(r21, r31)
+# CHECK: r17 = cround(r21,r31)
 0x91 0xdf 0xd5 0xc6
-# CHECK: r17 = round(r21, r31)
+# CHECK: r17 = round(r21,r31)
 0xd1 0xdf 0xd5 0xc6
-# CHECK: r17 = round(r21, r31):sat
+# CHECK: r17 = round(r21,r31):sat
 
 # Subtract doublewords
 0xf0 0xd4 0x3e 0xd3
-# CHECK: r17:16 = sub(r21:20, r31:30)
+# CHECK: r17:16 = sub(r21:20,r31:30)
 
 # Subtract and accumulate words
 0x71 0xd5 0x1f 0xef
-# CHECK: r17 += sub(r21, r31)
+# CHECK: r17 += sub(r21,r31)
 
 # Subtract halfword
 0x11 0xd5 0x3f 0xd5
-# CHECK: r17 = sub(r21.l, r31.l)
+# CHECK: r17 = sub(r21.l,r31.l)
 0x51 0xd5 0x3f 0xd5
-# CHECK: r17 = sub(r21.l, r31.h)
+# CHECK: r17 = sub(r21.l,r31.h)
 0x91 0xd5 0x3f 0xd5
-# CHECK: r17 = sub(r21.l, r31.l):sat
+# CHECK: r17 = sub(r21.l,r31.l):sat
 0xd1 0xd5 0x3f 0xd5
-# CHECK: r17 = sub(r21.l, r31.h):sat
+# CHECK: r17 = sub(r21.l,r31.h):sat
 0x11 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.l, r31.l):<<16
+# CHECK: r17 = sub(r21.l,r31.l):<<16
 0x31 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.l, r31.h):<<16
+# CHECK: r17 = sub(r21.l,r31.h):<<16
 0x51 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.h, r31.l):<<16
+# CHECK: r17 = sub(r21.h,r31.l):<<16
 0x71 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.h, r31.h):<<16
+# CHECK: r17 = sub(r21.h,r31.h):<<16
 0x91 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.l, r31.l):sat:<<16
+# CHECK: r17 = sub(r21.l,r31.l):sat:<<16
 0xb1 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.l, r31.h):sat:<<16
+# CHECK: r17 = sub(r21.l,r31.h):sat:<<16
 0xd1 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.h, r31.l):sat:<<16
+# CHECK: r17 = sub(r21.h,r31.l):sat:<<16
 0xf1 0xd5 0x7f 0xd5
-# CHECK: r17 = sub(r21.h, r31.h):sat:<<16
+# CHECK: r17 = sub(r21.h,r31.h):sat:<<16
 
 # Sign extend word to doubleword
 0x10 0xc0 0x55 0x84
@@ -217,179 +217,179 @@
 
 # Vector absolute difference halfwords
 0x10 0xd4 0x7e 0xe8
-# CHECK: r17:16 = vabsdiffh(r21:20, r31:30)
+# CHECK: r17:16 = vabsdiffh(r21:20,r31:30)
 
 # Vector absolute difference words
 0x10 0xd4 0x3e 0xe8
-# CHECK: r17:16 = vabsdiffw(r21:20, r31:30)
+# CHECK: r17:16 = vabsdiffw(r21:20,r31:30)
 
 # Vector add halfwords
 0x50 0xde 0x14 0xd3
-# CHECK: r17:16 = vaddh(r21:20, r31:30)
+# CHECK: r17:16 = vaddh(r21:20,r31:30)
 0x70 0xde 0x14 0xd3
-# CHECK: r17:16 = vaddh(r21:20, r31:30):sat
+# CHECK: r17:16 = vaddh(r21:20,r31:30):sat
 0x90 0xde 0x14 0xd3
-# CHECK: r17:16 = vadduh(r21:20, r31:30):sat
+# CHECK: r17:16 = vadduh(r21:20,r31:30):sat
 
 # Vector add halfwords with saturate and pack to unsigned bytes
 0x31 0xde 0x54 0xc1
-# CHECK: r17 = vaddhub(r21:20, r31:30):sat
+# CHECK: r17 = vaddhub(r21:20,r31:30):sat
 
 # Vector reduce add unsigned bytes
 0x30 0xde 0x54 0xe8
-# CHECK: r17:16 = vraddub(r21:20, r31:30)
+# CHECK: r17:16 = vraddub(r21:20,r31:30)
 0x30 0xde 0x54 0xea
-# CHECK: r17:16 += vraddub(r21:20, r31:30)
+# CHECK: r17:16 += vraddub(r21:20,r31:30)
 
 # Vector reduce add halfwords
 0x31 0xde 0x14 0xe9
-# CHECK: r17 = vradduh(r21:20, r31:30)
+# CHECK: r17 = vradduh(r21:20,r31:30)
 0xf1 0xde 0x34 0xe9
-# CHECK: r17 = vraddh(r21:20, r31:30)
+# CHECK: r17 = vraddh(r21:20,r31:30)
 
 # Vector add bytes
 0x10 0xde 0x14 0xd3
-# CHECK: r17:16 = vaddub(r21:20, r31:30)
+# CHECK: r17:16 = vaddub(r21:20,r31:30)
 0x30 0xde 0x14 0xd3
-# CHECK: r17:16 = vaddub(r21:20, r31:30):sat
+# CHECK: r17:16 = vaddub(r21:20,r31:30):sat
 
 # Vector add words
 0xb0 0xde 0x14 0xd3
-# CHECK: r17:16 = vaddw(r21:20, r31:30)
+# CHECK: r17:16 = vaddw(r21:20,r31:30)
 0xd0 0xde 0x14 0xd3
-# CHECK: r17:16 = vaddw(r21:20, r31:30):sat
+# CHECK: r17:16 = vaddw(r21:20,r31:30):sat
 
 # Vector average halfwords
 0x50 0xde 0x54 0xd3
-# CHECK: r17:16 = vavgh(r21:20, r31:30)
+# CHECK: r17:16 = vavgh(r21:20,r31:30)
 0x70 0xde 0x54 0xd3
-# CHECK: r17:16 = vavgh(r21:20, r31:30):rnd
+# CHECK: r17:16 = vavgh(r21:20,r31:30):rnd
 0x90 0xde 0x54 0xd3
-# CHECK: r17:16 = vavgh(r21:20, r31:30):crnd
+# CHECK: r17:16 = vavgh(r21:20,r31:30):crnd
 0xb0 0xde 0x54 0xd3
-# CHECK: r17:16 = vavguh(r21:20, r31:30)
+# CHECK: r17:16 = vavguh(r21:20,r31:30)
 0xd0 0xde 0x54 0xd3
-# CHECK: r17:16 = vavguh(r21:20, r31:30):rnd
+# CHECK: r17:16 = vavguh(r21:20,r31:30):rnd
 0x10 0xd4 0x9e 0xd3
-# CHECK: r17:16 = vnavgh(r21:20, r31:30)
+# CHECK: r17:16 = vnavgh(r21:20,r31:30)
 0x30 0xd4 0x9e 0xd3
-# CHECK: r17:16 = vnavgh(r21:20, r31:30):rnd:sat
+# CHECK: r17:16 = vnavgh(r21:20,r31:30):rnd:sat
 0x50 0xd4 0x9e 0xd3
-# CHECK: r17:16 = vnavgh(r21:20, r31:30):crnd:sat
+# CHECK: r17:16 = vnavgh(r21:20,r31:30):crnd:sat
 
 # Vector average unsigned bytes
 0x10 0xde 0x54 0xd3
-# CHECK: r17:16 = vavgub(r21:20, r31:30)
+# CHECK: r17:16 = vavgub(r21:20,r31:30)
 0x30 0xde 0x54 0xd3
-# CHECK: r17:16 = vavgub(r21:20, r31:30):rnd
+# CHECK: r17:16 = vavgub(r21:20,r31:30):rnd
 
 # Vector average words
 0x10 0xde 0x74 0xd3
-# CHECK: r17:16 = vavgw(r21:20, r31:30)
+# CHECK: r17:16 = vavgw(r21:20,r31:30)
 0x30 0xde 0x74 0xd3
-# CHECK: r17:16 = vavgw(r21:20, r31:30):rnd
+# CHECK: r17:16 = vavgw(r21:20,r31:30):rnd
 0x50 0xde 0x74 0xd3
-# CHECK: r17:16 = vavgw(r21:20, r31:30):crnd
+# CHECK: r17:16 = vavgw(r21:20,r31:30):crnd
 0x70 0xde 0x74 0xd3
-# CHECK: r17:16 = vavguw(r21:20, r31:30)
+# CHECK: r17:16 = vavguw(r21:20,r31:30)
 0x90 0xde 0x74 0xd3
-# CHECK: r17:16 = vavguw(r21:20, r31:30):rnd
+# CHECK: r17:16 = vavguw(r21:20,r31:30):rnd
 0x70 0xd4 0x9e 0xd3
-# CHECK: r17:16 = vnavgw(r21:20, r31:30)
+# CHECK: r17:16 = vnavgw(r21:20,r31:30)
 0x90 0xd4 0x9e 0xd3
-# CHECK: r17:16 = vnavgw(r21:20, r31:30):rnd:sat
+# CHECK: r17:16 = vnavgw(r21:20,r31:30):rnd:sat
 0xd0 0xd4 0x9e 0xd3
-# CHECK: r17:16 = vnavgw(r21:20, r31:30):crnd:sat
+# CHECK: r17:16 = vnavgw(r21:20,r31:30):crnd:sat
 
 # Vector conditional negate
 0x50 0xdf 0xd4 0xc3
-# CHECK: r17:16 = vcnegh(r21:20, r31)
+# CHECK: r17:16 = vcnegh(r21:20,r31)
 
 0xf0 0xff 0x34 0xcb
-# CHECK: r17:16 += vrcnegh(r21:20, r31)
+# CHECK: r17:16 += vrcnegh(r21:20,r31)
 
 # Vector maximum bytes
 0x10 0xd4 0xde 0xd3
-# CHECK: r17:16 = vmaxub(r21:20, r31:30)
+# CHECK: r17:16 = vmaxub(r21:20,r31:30)
 0xd0 0xd4 0xde 0xd3
-# CHECK: r17:16 = vmaxb(r21:20, r31:30)
+# CHECK: r17:16 = vmaxb(r21:20,r31:30)
 
 # Vector maximum halfwords
 0x30 0xd4 0xde 0xd3
-# CHECK: r17:16 = vmaxh(r21:20, r31:30)
+# CHECK: r17:16 = vmaxh(r21:20,r31:30)
 0x50 0xd4 0xde 0xd3
-# CHECK: r17:16 = vmaxuh(r21:20, r31:30)
+# CHECK: r17:16 = vmaxuh(r21:20,r31:30)
 
 # Vector reduce maximum halfwords
 0x3f 0xd0 0x34 0xcb
-# CHECK: r17:16 = vrmaxh(r21:20, r31)
+# CHECK: r17:16 = vrmaxh(r21:20,r31)
 0x3f 0xf0 0x34 0xcb
-# CHECK: r17:16 = vrmaxuh(r21:20, r31)
+# CHECK: r17:16 = vrmaxuh(r21:20,r31)
 
 # Vector reduce maximum words
 0x5f 0xd0 0x34 0xcb
-# CHECK: r17:16 = vrmaxw(r21:20, r31)
+# CHECK: r17:16 = vrmaxw(r21:20,r31)
 0x5f 0xf0 0x34 0xcb
-# CHECK: r17:16 = vrmaxuw(r21:20, r31)
+# CHECK: r17:16 = vrmaxuw(r21:20,r31)
 
 # Vector maximum words
 0xb0 0xd4 0xbe 0xd3
-# CHECK: r17:16 = vmaxuw(r21:20, r31:30)
+# CHECK: r17:16 = vmaxuw(r21:20,r31:30)
 0x70 0xd4 0xde 0xd3
-# CHECK: r17:16 = vmaxw(r21:20, r31:30)
+# CHECK: r17:16 = vmaxw(r21:20,r31:30)
 
 # Vector minimum bytes
 0x10 0xd4 0xbe 0xd3
-# CHECK: r17:16 = vminub(r21:20, r31:30)
+# CHECK: r17:16 = vminub(r21:20,r31:30)
 0xf0 0xd4 0xde 0xd3
-# CHECK: r17:16 = vminb(r21:20, r31:30)
+# CHECK: r17:16 = vminb(r21:20,r31:30)
 
 # Vector minimum halfwords
 0x30 0xd4 0xbe 0xd3
-# CHECK: r17:16 = vminh(r21:20, r31:30)
+# CHECK: r17:16 = vminh(r21:20,r31:30)
 0x50 0xd4 0xbe 0xd3
-# CHECK: r17:16 = vminuh(r21:20, r31:30)
+# CHECK: r17:16 = vminuh(r21:20,r31:30)
 
 # Vector reduce minimum halfwords
 0xbf 0xd0 0x34 0xcb
-# CHECK: r17:16 = vrminh(r21:20, r31)
+# CHECK: r17:16 = vrminh(r21:20,r31)
 0xbf 0xf0 0x34 0xcb
-# CHECK: r17:16 = vrminuh(r21:20, r31)
+# CHECK: r17:16 = vrminuh(r21:20,r31)
 
 # Vector reduce minimum words
 0xdf 0xd0 0x34 0xcb
-# CHECK: r17:16 = vrminw(r21:20, r31)
+# CHECK: r17:16 = vrminw(r21:20,r31)
 0xdf 0xf0 0x34 0xcb
-# CHECK: r17:16 = vrminuw(r21:20, r31)
+# CHECK: r17:16 = vrminuw(r21:20,r31)
 
 # Vector minimum words
 0x70 0xd4 0xbe 0xd3
-# CHECK: r17:16 = vminw(r21:20, r31:30)
+# CHECK: r17:16 = vminw(r21:20,r31:30)
 0x90 0xd4 0xbe 0xd3
-# CHECK: r17:16 = vminuw(r21:20, r31:30)
+# CHECK: r17:16 = vminuw(r21:20,r31:30)
 
 # Vector sum of absolute differences unsigned bytes
 0x50 0xde 0x54 0xe8
-# CHECK: r17:16 = vrsadub(r21:20, r31:30)
+# CHECK: r17:16 = vrsadub(r21:20,r31:30)
 0x50 0xde 0x54 0xea
-# CHECK: r17:16 += vrsadub(r21:20, r31:30)
+# CHECK: r17:16 += vrsadub(r21:20,r31:30)
 
 # Vector subtract halfwords
 0x50 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubh(r21:20, r31:30)
+# CHECK: r17:16 = vsubh(r21:20,r31:30)
 0x70 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubh(r21:20, r31:30):sat
+# CHECK: r17:16 = vsubh(r21:20,r31:30):sat
 0x90 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubuh(r21:20, r31:30):sat
+# CHECK: r17:16 = vsubuh(r21:20,r31:30):sat
 
 # Vector subtract bytes
 0x10 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubub(r21:20, r31:30)
+# CHECK: r17:16 = vsubub(r21:20,r31:30)
 0x30 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubub(r21:20, r31:30):sat
+# CHECK: r17:16 = vsubub(r21:20,r31:30):sat
 
 # Vector subtract words
 0xb0 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubw(r21:20, r31:30)
+# CHECK: r17:16 = vsubw(r21:20,r31:30)
 0xd0 0xd4 0x3e 0xd3
-# CHECK: r17:16 = vsubw(r21:20, r31:30):sat
+# CHECK: r17:16 = vsubw(r21:20,r31:30):sat

@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Value.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 using namespace llvm;
@@ -40,7 +40,7 @@ TEST(ValueTest, UsedInBasicBlock) {
   Function *F = M->getFunction("f");
 
   EXPECT_FALSE(F->isUsedInBasicBlock(&F->front()));
-  EXPECT_TRUE((++F->arg_begin())->isUsedInBasicBlock(&F->front()));
+  EXPECT_TRUE(std::next(F->arg_begin())->isUsedInBasicBlock(&F->front()));
   EXPECT_TRUE(F->arg_begin()->isUsedInBasicBlock(&F->front()));
 }
 

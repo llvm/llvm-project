@@ -19,11 +19,13 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     std::chrono::duration<double> d(5);
     assert(d.count() == 5);
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     constexpr std::chrono::duration<double> d2(5);
     static_assert(d2.count() == 5, "");
 #endif

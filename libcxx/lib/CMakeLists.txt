@@ -1,6 +1,7 @@
 set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
 
 # Get sources
+# FIXME: Don't use glob here
 file(GLOB LIBCXX_SOURCES ../src/*.cpp)
 if(WIN32)
   file(GLOB LIBCXX_WIN32_SOURCES ../src/support/win32/*.cpp)
@@ -32,6 +33,10 @@ endif()
 add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH
                   "${CMAKE_LIBRARY_PATH_FLAG}${LIBCXX_CXX_ABI_LIBRARY_PATH}")
 
+
+if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
+  find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
+endif()
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
 if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
@@ -62,12 +67,7 @@ if (APPLE AND LLVM_USE_SANITIZER)
     message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
   endif()
   if (LIBFILE)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=lib OUTPUT_VARIABLE LIBDIR RESULT_VARIABLE Result)
-    if (NOT ${Result} EQUAL "0")
-      message(FATAL "Failed to find library resource directory")
-    endif()
-    string(STRIP "${LIBDIR}" LIBDIR)
-    set(LIBDIR "${LIBDIR}/darwin/")
+    find_compiler_rt_dir(LIBDIR)
     if (NOT IS_DIRECTORY "${LIBDIR}")
       message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
     endif()
@@ -84,14 +84,19 @@ add_library_flags_if(LIBCXX_HAS_PTHREAD_LIB pthread)
 add_library_flags_if(LIBCXX_HAS_C_LIB c)
 add_library_flags_if(LIBCXX_HAS_M_LIB m)
 add_library_flags_if(LIBCXX_HAS_RT_LIB rt)
-add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
+if (LIBCXX_USE_COMPILER_RT)
+  find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+  add_library_flags_if(LIBCXX_BUILTINS_LIBRARY "${LIBCXX_BUILTINS_LIBRARY}")
+else()
+  add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
+endif()
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Add the unwinder library.
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  if (TARGET unwind_shared)
+  if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
     add_interface_library(unwind_shared)
-  elseif (TARGET unwind_static)
+  elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
     add_interface_library(unwind_static)
   else()
     add_interface_library(unwind)
@@ -102,7 +107,26 @@ endif()
 if (NOT WIN32)
   add_flags_if_supported(-fPIC)
 endif()
+
 add_link_flags_if_supported(-nodefaultlibs)
+
+if (LIBCXX_TARGETING_MSVC)
+  if (LIBCXX_DEBUG_BUILD)
+    set(LIB_SUFFIX "d")
+  else()
+    set(LIB_SUFFIX "")
+  endif()
+  add_compile_flags(/Zl)
+  add_link_flags(/nodefaultlib)
+
+  add_library_flags(ucrt${LIB_SUFFIX}) # Universal C runtime
+  add_library_flags(vcruntime${LIB_SUFFIX}) # C++ runtime
+  add_library_flags(msvcrt${LIB_SUFFIX}) # C runtime startup files
+  add_library_flags(msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
+  # Required for standards-complaint wide character formatting functions
+  # (e.g. `printfw`/`scanfw`)
+  add_library_flags(iso_stdio_wide_specifiers)
+endif()
 
 if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
@@ -133,7 +157,7 @@ if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
       "/usr/lib/libSystem.B.dylib")
   else()
-    if (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
+	  if (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
       list(FIND CMAKE_OSX_ARCHITECTURES "armv7" OSX_HAS_ARMV7)
       if (NOT OSX_HAS_ARMV7 EQUAL -1)
         set(OSX_RE_EXPORT_LINE
@@ -145,8 +169,10 @@ if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
       endif()
     else()
       set(OSX_RE_EXPORT_LINE "/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
+      if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+        add_link_flags("/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
+      endif()
     endif()
-
     add_link_flags(
       "-compatibility_version 1"
       "-install_name /usr/lib/libc++.1.dylib"
@@ -160,7 +186,7 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
-# Add a object library that contains the compiled source files.
+# Add an object library that contains the compiled source files.
 add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 if(WIN32 AND NOT MINGW)
   target_compile_definitions(cxx_objects
@@ -217,11 +243,13 @@ endif()
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC $<TARGET_OBJECTS:cxx_objects>)
   target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
+  set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
   )
+
   list(APPEND LIBCXX_TARGETS "cxx_static")
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
@@ -229,7 +257,8 @@ if (LIBCXX_ENABLE_STATIC)
     if (LIBCXX_CXX_ABI_LIBRARY_PATH)
       set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
     endif()
-    if (TARGET ${LIBCXX_CXX_ABI_LIBRARY})
+    if ((TARGET ${LIBCXX_CXX_ABI_LIBRARY}) OR
+        (${LIBCXX_CXX_ABI_LIBRARY} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI))
       set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_ABI_LIBRARY}>")
     else()
       set(MERGE_ARCHIVES_ABI_TARGET
@@ -300,7 +329,9 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   set(LIBCXX_INTERFACE_LIBRARY_NAMES)
   foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
     # FIXME: Handle cxxabi_static and unwind_static.
-    if (TARGET ${lib})
+    if (TARGET ${lib} OR
+        (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
+        (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
       list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
     else()
       list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
@@ -311,7 +342,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # after cxx builds.
   add_custom_command(TARGET cxx_shared POST_BUILD
     COMMAND
-      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
+      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
       ${LIBCXX_INTERFACE_LIBRARY_NAMES}
@@ -324,8 +355,8 @@ if (LIBCXX_INSTALL_LIBRARY)
     set(experimental_lib cxx_experimental)
   endif()
   install(TARGETS ${LIBCXX_TARGETS} ${experimental_lib}
-    LIBRARY DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
-    ARCHIVE DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
+    LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
+    ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     )
   # NOTE: This install command must go after the cxx install command otherwise
   # it will not be executed after the library symlinks are installed.
@@ -333,7 +364,7 @@ if (LIBCXX_INSTALL_LIBRARY)
     # Replace the libc++ filename with $<TARGET_LINKER_FILE:cxx>
     # after we required CMake 3.0.
     install(FILES "${LIBCXX_LIBRARY_DIR}/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}"
-      DESTINATION lib${LIBCXX_LIBDIR_SUFFIX}
+      DESTINATION ${LIBCXX_INSTALL_PREFIX}lib${LIBCXX_LIBDIR_SUFFIX}
       COMPONENT libcxx)
   endif()
 endif()

@@ -29,9 +29,15 @@ entry:
 ; PIC-N64: ld  $[[R0:[0-9]+]], %got_page(s1)
 ; PIC-N64: lw  ${{[0-9]+}}, %got_ofst(s1)($[[R0]])
 ; PIC-N64: ld  ${{[0-9]+}}, %got_disp(g1)
-; STATIC-N64: ld  $[[R1:[0-9]+]], %got_page(s1)
-; STATIC-N64: lw  ${{[0-9]+}}, %got_ofst(s1)($[[R1]])
-; STATIC-N64: ld  ${{[0-9]+}}, %got_disp(g1)
+; STATIC-N64: lui $[[R1:[0-9]+]], %highest(s1)
+; STATIC-N64: daddiu ${{[0-9]+}}, ${{[0-9]+}}, %higher(s1)
+; STATIC-N64: daddiu ${{[0-9]+}}, ${{[0-9]+}}, %hi(s1)
+; STATIC-N64: dsll $[[R2:[0-9]+]], $[[R1]], 16
+; STATIC-N64: lw  ${{[0-9]+}}, %lo(s1)($[[R2]])
+; STATIC-N64: lui $[[R3:[0-9]+]], %highest(g1)
+; STATIC-N64: daddiu $[[R3]], $[[R3]], %higher(g1)
+; STATIC-N64: daddiu $[[R3]], $[[R3]], %hi(g1)
+; STATIC-N64: lw  ${{[0-9]+}}, %lo(g1)($[[R3]])
 
   %0 = load i32, i32* @s1, align 4
   tail call void @foo1(i32 %0) nounwind

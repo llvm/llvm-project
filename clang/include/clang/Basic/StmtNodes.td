@@ -43,7 +43,7 @@ def ObjCAtSynchronizedStmt : Stmt;
 def ObjCForCollectionStmt : Stmt;
 def ObjCAutoreleasePoolStmt : Stmt;
 
-// C++ statments
+// C++ statements
 def CXXCatchStmt : Stmt;
 def CXXTryStmt : Stmt;
 def CXXForRangeStmt : Stmt;
@@ -150,6 +150,7 @@ def CXXFoldExpr : DStmt<Expr>;
 // C++ Coroutines TS expressions
 def CoroutineSuspendExpr : DStmt<Expr, 1>;
 def CoawaitExpr : DStmt<CoroutineSuspendExpr>;
+def DependentCoawaitExpr : DStmt<Expr>;
 def CoyieldExpr : DStmt<CoroutineSuspendExpr>;
 
 // Obj-C Expressions.

@@ -3,7 +3,7 @@
 @internal_group = internal addrspace(3) global i32 undef
 @external_group = addrspace(3) global i32 undef
 
-define void @test() {
+define amdgpu_kernel void @test() {
 entry:
   store i32 0, i32 addrspace(3)* @internal_group
   store i32 0, i32 addrspace(3)* @external_group

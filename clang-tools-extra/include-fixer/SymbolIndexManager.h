@@ -30,7 +30,7 @@ namespace clang {
 namespace include_fixer {
 
 /// This class provides an interface for finding the header files corresponding
-/// to an indentifier in the source code from multiple symbol databases.
+/// to an identifier in the source code from multiple symbol databases.
 class SymbolIndexManager {
 public:
   void addSymbolIndex(std::function<std::unique_ptr<SymbolIndex>()> F) {

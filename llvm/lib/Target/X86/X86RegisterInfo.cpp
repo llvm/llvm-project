@@ -80,7 +80,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
 
 bool
 X86RegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  // ExeDepsFixer and PostRAScheduler require liveness.
+  // ExecutionDepsFixer and PostRAScheduler require liveness.
   return true;
 }
 
@@ -137,25 +137,29 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case X86::FR32RegClassID:
     case X86::FR64RegClassID:
       // If AVX-512 isn't supported we should only inflate to these classes.
-      if (!Subtarget.hasAVX512() && Super->getSize() == RC->getSize())
+      if (!Subtarget.hasAVX512() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::VR128RegClassID:
     case X86::VR256RegClassID:
       // If VLX isn't supported we should only inflate to these classes.
-      if (!Subtarget.hasVLX() && Super->getSize() == RC->getSize())
+      if (!Subtarget.hasVLX() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::VR128XRegClassID:
     case X86::VR256XRegClassID:
       // If VLX isn't support we shouldn't inflate to these classes.
-      if (Subtarget.hasVLX() && Super->getSize() == RC->getSize())
+      if (Subtarget.hasVLX() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::FR32XRegClassID:
     case X86::FR64XRegClassID:
       // If AVX-512 isn't support we shouldn't inflate to these classes.
-      if (Subtarget.hasAVX512() && Super->getSize() == RC->getSize())
+      if (Subtarget.hasAVX512() &&
+          getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
       break;
     case X86::GR8RegClassID:
@@ -168,7 +172,7 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case X86::VR512RegClassID:
       // Don't return a super-class that would shrink the spill size.
       // That can happen with the vector and float classes.
-      if (Super->getSize() == RC->getSize())
+      if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
     Super = *I++;
@@ -220,7 +224,7 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
 const TargetRegisterClass *
 X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
   const Function *F = MF.getFunction();
-  if (IsWin64 || (F && F->getCallingConv() == CallingConv::X86_64_Win64))
+  if (IsWin64 || (F && F->getCallingConv() == CallingConv::Win64))
     return &X86::GR64_TCW64RegClass;
   else if (Is64Bit)
     return &X86::GR64_TCRegClass;
@@ -272,7 +276,14 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasAVX512 = Subtarget.hasAVX512();
   bool CallsEHReturn = MF->callsEHReturn();
 
-  switch (MF->getFunction()->getCallingConv()) {
+  CallingConv::ID CC = MF->getFunction()->getCallingConv();
+
+  // If attribute NoCallerSavedRegisters exists then we set X86_INTR calling
+  // convention because it has the CSR list.
+  if (MF->getFunction()->hasFnAttribute("no_caller_saved_registers"))
+    CC = CallingConv::X86_INTR;
+
+  switch (CC) {
   case CallingConv::GHC:
   case CallingConv::HiPE:
     return CSR_NoRegs_SaveList;
@@ -309,21 +320,21 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_SaveList : 
+        return (HasSSE ? CSR_Win64_RegCall_SaveList :
                          CSR_Win64_RegCall_NoSSE_SaveList);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_SaveList : 
+        return (HasSSE ? CSR_SysV64_RegCall_SaveList :
                          CSR_SysV64_RegCall_NoSSE_SaveList);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_SaveList : 
+      return (HasSSE ? CSR_32_RegCall_SaveList :
                        CSR_32_RegCall_NoSSE_SaveList);
     }
   case CallingConv::Cold:
     if (Is64Bit)
       return CSR_64_MostRegs_SaveList;
     break;
-  case CallingConv::X86_64_Win64:
+  case CallingConv::Win64:
     if (!HasSSE)
       return CSR_Win64_NoSSE_SaveList;
     return CSR_Win64_SaveList;
@@ -337,7 +348,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         return CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_SaveList;
-      return CSR_64_AllRegs_SaveList;
+      if (HasSSE)
+        return CSR_64_AllRegs_SaveList;
+      return CSR_64_AllRegs_NoSSE_SaveList;
     } else {
       if (HasAVX512)
         return CSR_32_AllRegs_AVX512_SaveList;
@@ -422,22 +435,22 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_64_HHVM_RegMask;
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
-      if (IsWin64) { 
-        return (HasSSE ? CSR_Win64_RegCall_RegMask : 
+      if (IsWin64) {
+        return (HasSSE ? CSR_Win64_RegCall_RegMask :
                          CSR_Win64_RegCall_NoSSE_RegMask);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_RegMask : 
+        return (HasSSE ? CSR_SysV64_RegCall_RegMask :
                          CSR_SysV64_RegCall_NoSSE_RegMask);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_RegMask : 
+      return (HasSSE ? CSR_32_RegCall_RegMask :
                        CSR_32_RegCall_NoSSE_RegMask);
     }
   case CallingConv::Cold:
     if (Is64Bit)
       return CSR_64_MostRegs_RegMask;
     break;
-  case CallingConv::X86_64_Win64:
+  case CallingConv::Win64:
     return CSR_Win64_RegMask;
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
@@ -447,7 +460,9 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
         return CSR_64_AllRegs_AVX512_RegMask;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_RegMask;
-      return CSR_64_AllRegs_RegMask;
+      if (HasSSE)
+        return CSR_64_AllRegs_RegMask;
+      return CSR_64_AllRegs_NoSSE_RegMask;
     } else {
       if (HasAVX512)
         return CSR_32_AllRegs_AVX512_RegMask;
@@ -665,32 +680,28 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineFunction &MF = *MI.getParent()->getParent();
   const X86FrameLowering *TFI = getFrameLowering(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+
+  // Determine base register and offset.
+  int FIOffset;
   unsigned BasePtr;
-
-  unsigned Opc = MI.getOpcode();
-  bool AfterFPPop = Opc == X86::TAILJMPm64 || Opc == X86::TAILJMPm ||
-                    Opc == X86::TCRETURNmi || Opc == X86::TCRETURNmi64;
-
-  if (hasBasePointer(MF))
-    BasePtr = (FrameIndex < 0 ? FramePtr : getBaseRegister());
-  else if (needsStackRealignment(MF))
-    BasePtr = (FrameIndex < 0 ? FramePtr : StackPtr);
-  else if (AfterFPPop)
-    BasePtr = StackPtr;
-  else
-    BasePtr = (TFI->hasFP(MF) ? FramePtr : StackPtr);
+  if (MI.isReturn()) {
+    assert((!needsStackRealignment(MF) ||
+           MF.getFrameInfo().isFixedObjectIndex(FrameIndex)) &&
+           "Return instruction can only reference SP relative frame objects");
+    FIOffset = TFI->getFrameIndexReferenceSP(MF, FrameIndex, BasePtr, 0);
+  } else {
+    FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, BasePtr);
+  }
 
   // LOCAL_ESCAPE uses a single offset, with no register. It only works in the
   // simple FP case, and doesn't work with stack realignment. On 32-bit, the
   // offset is from the traditional base pointer location.  On 64-bit, the
   // offset is from the SP at the end of the prologue, not the FP location. This
   // matches the behavior of llvm.frameaddress.
-  unsigned IgnoredFrameReg;
+  unsigned Opc = MI.getOpcode();
   if (Opc == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
-    int Offset;
-    Offset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
-    FI.ChangeToImmediate(Offset);
+    FI.ChangeToImmediate(FIOffset);
     return;
   }
 
@@ -705,15 +716,6 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // This must be part of a four operand memory reference.  Replace the
   // FrameIndex with base register.  Add an offset to the offset.
   MI.getOperand(FIOperandNum).ChangeToRegister(MachineBasePtr, false);
-
-  // Now add the frame object offset to the offset from EBP.
-  int FIOffset;
-  if (AfterFPPop) {
-    // Tail call jmp happens after FP is popped.
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    FIOffset = MFI.getObjectOffset(FrameIndex) - TFI->getOffsetOfLocalArea();
-  } else
-    FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
 
   if (BasePtr == StackPtr)
     FIOffset += SPAdj;

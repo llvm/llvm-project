@@ -329,3 +329,12 @@ void g13(void) {
   uint32_t *p32;
   p32 = &a[0].x; // no-warning
 }
+
+struct Invalid0 {
+  void *x;
+  struct fwd f; // expected-error {{incomplete type}} expected-note {{forward declaration}}
+} __attribute__((packed));
+
+void *g14(struct Invalid0 *ivl) {
+  return &(ivl->x);
+}

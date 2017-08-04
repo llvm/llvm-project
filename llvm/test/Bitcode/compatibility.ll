@@ -3,7 +3,7 @@
 ; Please update this file when making any IR changes. Information on the
 ; release process for this file is available here:
 ;
-;     http://llvm.org/docs/DeveloperPolicy.html#ir-backwards-compatibility 
+;     http://llvm.org/docs/DeveloperPolicy.html#ir-backwards-compatibility
 
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN-PR24755: verify-uselistorder < %s
@@ -425,9 +425,9 @@ declare cc78 void @f.cc78()
 declare x86_64_sysvcc void @f.x86_64_sysvcc()
 ; CHECK: declare x86_64_sysvcc void @f.x86_64_sysvcc()
 declare cc79 void @f.cc79()
-; CHECK: declare x86_64_win64cc void @f.cc79()
-declare x86_64_win64cc void @f.x86_64_win64cc()
-; CHECK: declare x86_64_win64cc void @f.x86_64_win64cc()
+; CHECK: declare win64cc void @f.cc79()
+declare win64cc void @f.win64cc()
+; CHECK: declare win64cc void @f.win64cc()
 declare cc80 void @f.cc80()
 ; CHECK: declare x86_vectorcallcc void @f.cc80()
 declare x86_vectorcallcc void @f.x86_vectorcallcc()
@@ -472,6 +472,10 @@ declare cc91 void @f.cc91()
 ; CHECK: declare amdgpu_kernel void @f.cc91()
 declare amdgpu_kernel void @f.amdgpu_kernel()
 ; CHECK: declare amdgpu_kernel void @f.amdgpu_kernel()
+declare cc93 void @f.cc93()
+; CHECK: declare amdgpu_hs void @f.cc93()
+declare amdgpu_hs void @f.amdgpu_hs()
+; CHECK: declare amdgpu_hs void @f.amdgpu_hs()
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -701,8 +705,8 @@ define void @atomics(i32* %word) {
   ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
   %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
   ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 singlethread seq_cst monotonic
-  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 singlethread seq_cst monotonic
+  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
   %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
   ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
   %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
@@ -721,32 +725,32 @@ define void @atomics(i32* %word) {
   ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
   %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
   ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 singlethread monotonic
-  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 singlethread monotonic
-  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 singlethread monotonic
-  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 singlethread monotonic
+  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
   fence acquire
   ; CHECK: fence acquire
   fence release
   ; CHECK: fence release
   fence acq_rel
   ; CHECK: fence acq_rel
-  fence singlethread seq_cst
-  ; CHECK: fence singlethread seq_cst
+  fence syncscope("singlethread") seq_cst
+  ; CHECK: fence syncscope("singlethread") seq_cst
 
   %ld.1 = load atomic i32, i32* %word monotonic, align 4
   ; CHECK: %ld.1 = load atomic i32, i32* %word monotonic, align 4
   %ld.2 = load atomic volatile i32, i32* %word acquire, align 8
   ; CHECK: %ld.2 = load atomic volatile i32, i32* %word acquire, align 8
-  %ld.3 = load atomic volatile i32, i32* %word singlethread seq_cst, align 16
-  ; CHECK: %ld.3 = load atomic volatile i32, i32* %word singlethread seq_cst, align 16
+  %ld.3 = load atomic volatile i32, i32* %word syncscope("singlethread") seq_cst, align 16
+  ; CHECK: %ld.3 = load atomic volatile i32, i32* %word syncscope("singlethread") seq_cst, align 16
 
   store atomic i32 23, i32* %word monotonic, align 4
   ; CHECK: store atomic i32 23, i32* %word monotonic, align 4
   store atomic volatile i32 24, i32* %word monotonic, align 4
   ; CHECK: store atomic volatile i32 24, i32* %word monotonic, align 4
-  store atomic volatile i32 25, i32* %word singlethread monotonic, align 4
-  ; CHECK: store atomic volatile i32 25, i32* %word singlethread monotonic, align 4
+  store atomic volatile i32 25, i32* %word syncscope("singlethread") monotonic, align 4
+  ; CHECK: store atomic volatile i32 25, i32* %word syncscope("singlethread") monotonic, align 4
   ret void
 }
 
@@ -1246,7 +1250,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #40
+  ; CHECK: call void @f.nobuiltin() #42
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1611,7 +1615,10 @@ normal:
 
 
 declare void @f.writeonly() writeonly
-; CHECK: declare void @f.writeonly() #39
+; CHECK: declare void @f.writeonly() #40
+
+declare void @f.speculatable() speculatable
+; CHECK: declare void @f.speculatable() #41
 
 ;; Constant Expressions
 
@@ -1659,8 +1666,10 @@ define i8** @constexpr() {
 ; CHECK: attributes #36 = { argmemonly nounwind readonly }
 ; CHECK: attributes #37 = { argmemonly nounwind }
 ; CHECK: attributes #38 = { nounwind readonly }
-; CHECK: attributes #39 = { writeonly }
-; CHECK: attributes #40 = { builtin }
+; CHECK: attributes #39 = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK: attributes #40 = { writeonly }
+; CHECK: attributes #41 = { speculatable }
+; CHECK: attributes #42 = { builtin }
 
 ;; Metadata
 

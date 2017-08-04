@@ -60,6 +60,8 @@ MCObjectWriter *createAArch64MachObjectWriter(raw_pwrite_stream &OS,
                                               uint32_t CPUType,
                                               uint32_t CPUSubtype);
 
+MCObjectWriter *createAArch64WinCOFFObjectWriter(raw_pwrite_stream &OS);
+
 MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint,

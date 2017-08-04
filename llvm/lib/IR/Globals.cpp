@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMContextImpl.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -24,7 +25,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "LLVMContextImpl.h"
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -69,6 +69,30 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
   setDLLStorageClass(Src->getDLLStorageClass());
 }
 
+void GlobalValue::removeFromParent() {
+  switch (getValueID()) {
+#define HANDLE_GLOBAL_VALUE(NAME)                                              \
+  case Value::NAME##Val:                                                       \
+    return static_cast<NAME *>(this)->removeFromParent();
+#include "llvm/IR/Value.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a global");
+}
+
+void GlobalValue::eraseFromParent() {
+  switch (getValueID()) {
+#define HANDLE_GLOBAL_VALUE(NAME)                                              \
+  case Value::NAME##Val:                                                       \
+    return static_cast<NAME *>(this)->eraseFromParent();
+#include "llvm/IR/Value.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a global");
+}
+
 unsigned GlobalValue::getAlignment() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
@@ -93,24 +117,10 @@ void GlobalObject::setAlignment(unsigned Align) {
   assert(getAlignment() == Align && "Alignment representation error!");
 }
 
-unsigned GlobalObject::getGlobalObjectSubClassData() const {
-  unsigned ValueData = getGlobalValueSubClassData();
-  return ValueData >> GlobalObjectBits;
-}
-
-void GlobalObject::setGlobalObjectSubClassData(unsigned Val) {
-  unsigned OldData = getGlobalValueSubClassData();
-  setGlobalValueSubClassData((OldData & GlobalObjectMask) |
-                             (Val << GlobalObjectBits));
-  assert(getGlobalObjectSubClassData() == Val && "representation error");
-}
-
-void GlobalObject::copyAttributesFrom(const GlobalValue *Src) {
+void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
   GlobalValue::copyAttributesFrom(Src);
-  if (const auto *GV = dyn_cast<GlobalObject>(Src)) {
-    setAlignment(GV->getAlignment());
-    setSection(GV->getSection());
-  }
+  setAlignment(Src->getAlignment());
+  setSection(Src->getSection());
 }
 
 std::string GlobalValue::getGlobalIdentifier(StringRef Name,
@@ -152,7 +162,7 @@ StringRef GlobalValue::getSection() const {
   return cast<GlobalObject>(this)->getSection();
 }
 
-Comdat *GlobalValue::getComdat() {
+const Comdat *GlobalValue::getComdat() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
     if (const GlobalObject *GO = GA->getBaseObject())
@@ -177,7 +187,9 @@ void GlobalObject::setSection(StringRef S) {
 
   // Get or create a stable section name string and put it in the table in the
   // context.
-  S = getContext().pImpl->SectionStrings.insert(S).first->first();
+  if (!S.empty()) {
+    S = getContext().pImpl->SectionStrings.insert(S).first->first();
+  }
   getContext().pImpl->GlobalObjectSections[this] = S;
 
   // Update the HasSectionHashEntryBit. Setting the section to the empty string
@@ -240,10 +252,10 @@ bool GlobalValue::canIncreaseAlignment() const {
   return true;
 }
 
-GlobalObject *GlobalValue::getBaseObject() {
+const GlobalObject *GlobalValue::getBaseObject() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
     return GO;
-  if (auto *GA = dyn_cast<GlobalAlias>(this))
+  if (auto *GA = dyn_cast<GlobalIndirectSymbol>(this))
     return GA->getBaseObject();
   return nullptr;
 }
@@ -281,6 +293,8 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
                    InitVal != nullptr, Link, Name, AddressSpace),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
+  assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
+         "invalid type for global variable");
   setThreadLocalMode(TLMode);
   if (InitVal) {
     assert(InitVal->getType() == Ty &&
@@ -299,6 +313,8 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                    InitVal != nullptr, Link, Name, AddressSpace),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
+  assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
+         "invalid type for global variable");
   setThreadLocalMode(TLMode);
   if (InitVal) {
     assert(InitVal->getType() == Ty &&
@@ -343,12 +359,11 @@ void GlobalVariable::setInitializer(Constant *InitVal) {
 
 /// Copy all additional attributes (those not needed to create a GlobalVariable)
 /// from the GlobalVariable Src to this one.
-void GlobalVariable::copyAttributesFrom(const GlobalValue *Src) {
+void GlobalVariable::copyAttributesFrom(const GlobalVariable *Src) {
   GlobalObject::copyAttributesFrom(Src);
-  if (const GlobalVariable *SrcVar = dyn_cast<GlobalVariable>(Src)) {
-    setThreadLocalMode(SrcVar->getThreadLocalMode());
-    setExternallyInitialized(SrcVar->isExternallyInitialized());
-  }
+  setThreadLocalMode(Src->getThreadLocalMode());
+  setExternallyInitialized(Src->isExternallyInitialized());
+  setAttributes(Src->getAttributes());
 }
 
 void GlobalVariable::dropAllReferences() {

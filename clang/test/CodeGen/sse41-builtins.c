@@ -354,7 +354,7 @@ __m128 test_mm_round_ss(__m128 x, __m128 y) {
 
 __m128i test_mm_stream_load_si128(__m128i const *a) {
   // CHECK-LABEL: test_mm_stream_load_si128
-  // CHECK: call <2 x i64> @llvm.x86.sse41.movntdqa(i8* %{{.*}})
+  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16, !nontemporal
   return _mm_stream_load_si128(a);
 }
 

@@ -5,12 +5,12 @@
 // Test that we hit a guard page when writing past the end of a chunk
 // allocated by the Secondary allocator, or writing too far in front of it.
 
+#include <assert.h>
 #include <malloc.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>
-#include <assert.h>
 
 void handler(int signo, siginfo_t *info, void *uctx) {
   if (info->si_code == SEGV_ACCERR) {
@@ -33,8 +33,7 @@ int main(int argc, char **argv)
   a.sa_flags = SA_SIGINFO;
 
   char *p = (char *)malloc(size);
-  if (!p)
-    return 1;
+  assert(p);
   memset(p, 'A', size); // This should not trigger anything.
   // Set up the SIGSEGV handler now, as the rest should trigger an AV.
   sigaction(SIGSEGV, &a, nullptr);

@@ -8,8 +8,8 @@
 define i32* @get_var() {
   ret i32* @var
 
-; CHECK: movz    x0, #:abs_g3:var        // encoding: [0bAAA00000,A,0b111AAAAA,0xd2]
-; CHECK: movk    x0, #:abs_g2_nc:var     // encoding: [0bAAA00000,A,0b110AAAAA,0xf2]
-; CHECK: movk    x0, #:abs_g1_nc:var     // encoding: [0bAAA00000,A,0b101AAAAA,0xf2]
-; CHECK: movk    x0, #:abs_g0_nc:var     // encoding: [0bAAA00000,A,0b100AAAAA,0xf2]
+; CHECK: movz    x0, #:abs_g0_nc:var // encoding: [0bAAA00000,A,0b100AAAAA,0xd2]
+; CHECK: movk    x0, #:abs_g1_nc:var // encoding: [0bAAA00000,A,0b101AAAAA,0xf2]
+; CHECK: movk    x0, #:abs_g2_nc:var // encoding: [0bAAA00000,A,0b110AAAAA,0xf2]
+; CHECK: movk    x0, #:abs_g3:var    // encoding: [0bAAA00000,A,0b111AAAAA,0xf2]
 }

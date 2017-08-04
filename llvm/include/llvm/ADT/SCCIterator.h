@@ -1,4 +1,4 @@
-//===---- ADT/SCCIterator.h - Strongly Connected Comp. Iter. ----*- C++ -*-===//
+//===- ADT/SCCIterator.h - Strongly Connected Comp. Iter. -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -43,10 +43,10 @@ template <class GraphT, class GT = GraphTraits<GraphT>>
 class scc_iterator : public iterator_facade_base<
                          scc_iterator<GraphT, GT>, std::forward_iterator_tag,
                          const std::vector<typename GT::NodeRef>, ptrdiff_t> {
-  typedef typename GT::NodeRef NodeRef;
-  typedef typename GT::ChildIteratorType ChildItTy;
-  typedef std::vector<NodeRef> SccTy;
-  typedef typename scc_iterator::reference reference;
+  using NodeRef = typename GT::NodeRef;
+  using ChildItTy = typename GT::ChildIteratorType;
+  using SccTy = std::vector<NodeRef>;
+  using reference = typename scc_iterator::reference;
 
   /// Element of VisitStack during DFS.
   struct StackElement {
@@ -230,16 +230,6 @@ template <class T> scc_iterator<T> scc_begin(const T &G) {
 /// \brief Construct the end iterator for a deduced graph type T.
 template <class T> scc_iterator<T> scc_end(const T &G) {
   return scc_iterator<T>::end(G);
-}
-
-/// \brief Construct the begin iterator for a deduced graph type T's Inverse<T>.
-template <class T> scc_iterator<Inverse<T>> scc_begin(const Inverse<T> &G) {
-  return scc_iterator<Inverse<T>>::begin(G);
-}
-
-/// \brief Construct the end iterator for a deduced graph type T's Inverse<T>.
-template <class T> scc_iterator<Inverse<T>> scc_end(const Inverse<T> &G) {
-  return scc_iterator<Inverse<T>>::end(G);
 }
 
 } // end namespace llvm

@@ -1,4 +1,4 @@
-//===-- CodeGen/MachineInstBuilder.h - Simplify creation of MIs -*- C++ -*-===//
+//===- CodeGen/MachineInstrBuilder.h - Simplify creation of MIs --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,9 +19,18 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTRBUILDER_H
 #define LLVM_CODEGEN_MACHINEINSTRBUILDER_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
 
@@ -29,6 +38,7 @@ class MCInstrDesc;
 class MDNode;
 
 namespace RegState {
+
   enum {
     Define         = 0x2,
     Implicit       = 0x4,
@@ -42,13 +52,15 @@ namespace RegState {
     ImplicitDefine = Implicit | Define,
     ImplicitKill   = Implicit | Kill
   };
-}
+
+} // end namespace RegState
 
 class MachineInstrBuilder {
-  MachineFunction *MF;
-  MachineInstr *MI;
+  MachineFunction *MF = nullptr;
+  MachineInstr *MI = nullptr;
+
 public:
-  MachineInstrBuilder() : MF(nullptr), MI(nullptr) {}
+  MachineInstrBuilder() = default;
 
   /// Create a MachineInstrBuilder for manipulating an existing instruction.
   /// F must be the machine function that was used to allocate I.
@@ -187,13 +199,16 @@ public:
     return *this;
   }
 
-  const MachineInstrBuilder &addOperand(const MachineOperand &MO) const {
+  const MachineInstrBuilder &add(const MachineOperand &MO) const {
     MI->addOperand(*MF, MO);
     return *this;
   }
 
-  const MachineInstrBuilder &add(const MachineOperand &MO) const {
-    return addOperand(MO);
+  const MachineInstrBuilder &add(ArrayRef<MachineOperand> MOs) const {
+    for (const MachineOperand &MO : MOs) {
+      MI->addOperand(*MF, MO);
+    }
+    return *this;
   }
 
   const MachineInstrBuilder &addMetadata(const MDNode *MD) const {
@@ -381,22 +396,22 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB, const DebugLoc &DL,
 }
 
 /// This version of the builder builds a DBG_VALUE intrinsic
-/// for either a value in a register or a register-indirect+offset
+/// for either a value in a register or a register-indirect
 /// address.  The convention is that a DBG_VALUE is indirect iff the
 /// second operand is an immediate.
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            unsigned Reg, unsigned Offset,
-                            const MDNode *Variable, const MDNode *Expr);
+                            unsigned Reg, const MDNode *Variable,
+                            const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
-/// for either a value in a register or a register-indirect+offset
+/// for either a value in a register or a register-indirect
 /// address and inserts it at position I.
 MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             MachineBasicBlock::iterator I, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            unsigned Reg, unsigned Offset,
-                            const MDNode *Variable, const MDNode *Expr);
+                            unsigned Reg, const MDNode *Variable,
+                            const MDNode *Expr);
 
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
@@ -520,6 +535,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEINSTRBUILDER_H

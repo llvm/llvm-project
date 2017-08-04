@@ -96,7 +96,7 @@ static void BuildSignatureCall(StringRef SymName, BasicBlock &BB, Function &F) {
   Value *FunctionName = CreateStringPtr(BB, F.getName());
 
   Value *Args[] = {FunctionName,
-                   ConstantInt::get(I16, F.getArgumentList().size())};
+                   ConstantInt::get(I16, F.arg_size())};
   CallInst::Create(Fn, Args, "", &BB);
 }
 

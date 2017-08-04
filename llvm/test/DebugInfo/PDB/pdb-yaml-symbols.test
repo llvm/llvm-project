@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump pdb2yaml -dbi-module-syms %p/Inputs/empty.pdb \
+; RUN: llvm-pdbutil pdb2yaml -module-syms %p/Inputs/empty.pdb \
 ; RUN:   | FileCheck -check-prefix=YAML %s
 
 
@@ -55,6 +55,7 @@ YAML:               CodeSize:        10
 YAML:               DbgStart:        3
 YAML:               DbgEnd:          8
 YAML:               FunctionType:    4097
+YAML:               Offset:          16
 YAML:               Segment:         1
 YAML:               Flags:           [ HasFP ]
 YAML:               DisplayName:     main

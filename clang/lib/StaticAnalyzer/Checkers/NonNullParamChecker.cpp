@@ -73,7 +73,7 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
   for (unsigned idx = 0; idx < NumArgs; ++idx) {
 
     // Check if the parameter is a reference. We want to report when reference
-    // to a null pointer is passed as a paramter.
+    // to a null pointer is passed as a parameter.
     bool haveRefTypeParam = false;
     if (TyI != TyE) {
       haveRefTypeParam = (*TyI)->isReferenceType();

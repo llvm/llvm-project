@@ -55,8 +55,8 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
         llvm::sys::path::remove_leading_dotslash(FE->getName());
 
     DepCollector.maybeAddDependency(Filename, /*FromModule*/false,
-                                   FileType != SrcMgr::C_User,
-                                   /*IsModuleFile*/false, /*IsMissing*/false);
+                                    isSystem(FileType),
+                                    /*IsModuleFile*/false, /*IsMissing*/false);
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -265,7 +265,7 @@ bool DFGImpl::FileMatchesDepCriteria(const char *Filename,
   if (IncludeSystemHeaders)
     return true;
 
-  return FileType == SrcMgr::C_User;
+  return !isSystem(FileType);
 }
 
 void DFGImpl::FileChanged(SourceLocation Loc,

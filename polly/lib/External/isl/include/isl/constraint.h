@@ -68,13 +68,13 @@ __isl_give isl_map *isl_map_add_constraint(__isl_take isl_map *map,
 __isl_give isl_set *isl_set_add_constraint(__isl_take isl_set *set,
 	__isl_take isl_constraint *constraint);
 
-int isl_basic_map_has_defining_equality(
+isl_bool isl_basic_map_has_defining_equality(
 	__isl_keep isl_basic_map *bmap, enum isl_dim_type type, int pos,
 	__isl_give isl_constraint **c);
-int isl_basic_set_has_defining_equality(
+isl_bool isl_basic_set_has_defining_equality(
 	struct isl_basic_set *bset, enum isl_dim_type type, int pos,
 	struct isl_constraint **constraint);
-int isl_basic_set_has_defining_inequalities(
+isl_bool isl_basic_set_has_defining_inequalities(
 	struct isl_basic_set *bset, enum isl_dim_type type, int pos,
 	struct isl_constraint **lower,
 	struct isl_constraint **upper);
@@ -121,8 +121,8 @@ isl_bool isl_constraint_is_upper_bound(__isl_keep isl_constraint *constraint,
 
 __isl_give isl_basic_map *isl_basic_map_from_constraint(
 	__isl_take isl_constraint *constraint);
-struct isl_basic_set *isl_basic_set_from_constraint(
-	struct isl_constraint *constraint);
+__isl_give isl_basic_set *isl_basic_set_from_constraint(
+	__isl_take isl_constraint *constraint);
 
 __isl_give isl_aff *isl_constraint_get_bound(
 	__isl_keep isl_constraint *constraint, enum isl_dim_type type, int pos);
@@ -130,10 +130,6 @@ __isl_give isl_aff *isl_constraint_get_aff(
 	__isl_keep isl_constraint *constraint);
 __isl_give isl_constraint *isl_equality_from_aff(__isl_take isl_aff *aff);
 __isl_give isl_constraint *isl_inequality_from_aff(__isl_take isl_aff *aff);
-
-ISL_DEPRECATED
-__isl_give isl_basic_set *isl_basic_set_drop_constraint(
-	__isl_take isl_basic_set *bset, __isl_take isl_constraint *constraint);
 
 int isl_constraint_plain_cmp(__isl_keep isl_constraint *c1,
 	__isl_keep isl_constraint *c2);

@@ -1,5 +1,7 @@
 ; XUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-DENORM %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-FLUSH %s
+
 
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
 ; make add an instruction if the fadd has more than one use.
@@ -19,9 +21,9 @@ declare float @llvm.fabs.f32(float) #1
 ; VI: v_cmp_gt_f32_e64 vcc, |v{{[0-9]+}}|, |v{{[0-9]+}}|
 ; VI: v_cndmask_b32_e32
 ; VI: v_add_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, |v{{[0-9]+}}|
-; VI: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; VI: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
-define void @multiple_fadd_use_test_f32(float addrspace(1)* %out, float %x, float %y, float %z) #0 {
+; VI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+define amdgpu_kernel void @multiple_fadd_use_test_f32(float addrspace(1)* %out, float %x, float %y, float %z) #0 {
   %a11 = fadd fast float %y, -1.0
   %a12 = call float @llvm.fabs.f32(float %a11)
   %a13 = fadd fast float %x, -1.0
@@ -42,7 +44,7 @@ define void @multiple_fadd_use_test_f32(float addrspace(1)* %out, float %x, floa
 ; GCN-DAG: buffer_store_dword [[MUL2]]
 ; GCN-DAG: buffer_store_dword [[MAD]]
 ; GCN: s_endpgm
-define void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, float %x, float %y) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
   %mad = fadd fast float %mul2, %y
@@ -57,7 +59,7 @@ define void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, float %x, floa
 ; GCN-DAG: buffer_store_dword [[MUL2]]
 ; GCN-DAG: buffer_store_dword [[MAD]]
 ; GCN: s_endpgm
-define void @multiple_use_fadd_fmad_f32(float addrspace(1)* %out, float %x, float %y) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmad_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %x.abs = call float @llvm.fabs.f32(float %x)
   %mul2 = fmul fast float %x.abs, 2.0
@@ -70,7 +72,7 @@ define void @multiple_use_fadd_fmad_f32(float addrspace(1)* %out, float %x, floa
 ; GCN-LABEL: {{^}}multiple_use_fadd_multi_fmad_f32:
 ; GCN: v_mad_f32 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
 ; GCN: v_mad_f32 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
-define void @multiple_use_fadd_multi_fmad_f32(float addrspace(1)* %out, float %x, float %y, float %z) #0 {
+define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(float addrspace(1)* %out, float %x, float %y, float %z) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %x.abs = call float @llvm.fabs.f32(float %x)
   %mul2 = fmul fast float %x.abs, 2.0
@@ -85,7 +87,7 @@ define void @multiple_use_fadd_multi_fmad_f32(float addrspace(1)* %out, float %x
 ; GCN: v_mul_f32_e64 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], -4.0
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @fmul_x2_xn2_f32(float addrspace(1)* %out, float %x, float %y) #0 {
+define amdgpu_kernel void @fmul_x2_xn2_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
   %muln2 = fmul fast float %x, -2.0
@@ -99,7 +101,7 @@ define void @fmul_x2_xn2_f32(float addrspace(1)* %out, float %x, float %y) #0 {
 ; GCN: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], [[K]]
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @fmul_x2_xn3_f32(float addrspace(1)* %out, float %x, float %y) #0 {
+define amdgpu_kernel void @fmul_x2_xn3_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
   %muln2 = fmul fast float %x, -3.0
@@ -114,9 +116,10 @@ define void @fmul_x2_xn3_f32(float addrspace(1)* %out, float %x, float %y) #0 {
 ; VI: v_cmp_gt_f16_e64 vcc, |v{{[0-9]+}}|, |v{{[0-9]+}}|
 ; VI: v_cndmask_b32_e32
 ; VI: v_add_f16_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, |v{{[0-9]+}}|
-; VI: v_mul_f16_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; VI: v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
-define void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
+; VI: v_mul_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+; VI-DENORM: v_fma_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+define amdgpu_kernel void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %z = bitcast i16 %z.arg to half
@@ -136,11 +139,14 @@ define void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i16 zeroext %x.
 
 ; GCN-LABEL: {{^}}multiple_use_fadd_fmac_f16:
 ; GCN-DAG: v_add_f16_e64 [[MUL2:v[0-9]+]], [[X:s[0-9]+]], s{{[0-9]+}}
-; GCN-DAG: v_mac_f16_e64 [[MAD:v[0-9]+]], [[X]], 2.0
+
+; VI-FLUSH-DAG: v_mac_f16_e64 [[MAD:v[0-9]+]], [[X]], 2.0
+; VI-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, v{{[0-9]+}}
+
 ; GCN-DAG: buffer_store_short [[MUL2]]
 ; GCN-DAG: buffer_store_short [[MAD]]
 ; GCN: s_endpgm
-define void @multiple_use_fadd_fmac_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmac_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
@@ -153,11 +159,14 @@ define void @multiple_use_fadd_fmac_f16(half addrspace(1)* %out, i16 zeroext %x.
 
 ; GCN-LABEL: {{^}}multiple_use_fadd_fmad_f16:
 ; GCN-DAG: v_add_f16_e64 [[MUL2:v[0-9]+]], |[[X:s[0-9]+]]|, |s{{[0-9]+}}|
-; GCN-DAG: v_mad_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
+
+; VI-FLUSH-DAG: v_mad_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
+; VI-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
+
 ; GCN-DAG: buffer_store_short [[MUL2]]
 ; GCN-DAG: buffer_store_short [[MAD]]
 ; GCN: s_endpgm
-define void @multiple_use_fadd_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
@@ -170,9 +179,13 @@ define void @multiple_use_fadd_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.
 }
 
 ; GCN-LABEL: {{^}}multiple_use_fadd_multi_fmad_f16:
-; GCN: v_mad_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
-; GCN: v_mad_f16 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
-define void @multiple_use_fadd_multi_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
+; VI-FLUSH: v_mad_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
+; VI-FLUSH: v_mad_f16 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
+
+; VI-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
+; VI-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
+
+define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %z = bitcast i16 %z.arg to half
@@ -190,7 +203,7 @@ define void @multiple_use_fadd_multi_fmad_f16(half addrspace(1)* %out, i16 zeroe
 ; GCN: v_mul_f16_e64 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], -4.0
 ; GCN: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
 ; GCN: buffer_store_short [[RESULT]]
-define void @fmul_x2_xn2_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @fmul_x2_xn2_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
@@ -206,7 +219,7 @@ define void @fmul_x2_xn2_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 ze
 ; GCN: v_mul_f16_e32 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], [[K]]
 ; GCN: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
 ; GCN: buffer_store_short [[RESULT]]
-define void @fmul_x2_xn3_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
+define amdgpu_kernel void @fmul_x2_xn3_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1

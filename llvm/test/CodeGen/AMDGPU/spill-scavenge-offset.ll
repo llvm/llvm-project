@@ -11,7 +11,7 @@
 
 ; Just test that it compiles successfully.
 ; CHECK-LABEL: test
-define void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
 entry:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -20,13 +20,13 @@ entry:
   %a = load <1280 x i32>, <1280 x i32> addrspace(1)* %aptr
 
 ; mark most VGPR registers as used to increase register pressure
-  call void asm sideeffect "", "~{VGPR4},~{VGPR8},~{VGPR12},~{VGPR16},~{VGPR20},~{VGPR24},~{VGPR28},~{VGPR32}" ()
-  call void asm sideeffect "", "~{VGPR36},~{VGPR40},~{VGPR44},~{VGPR48},~{VGPR52},~{VGPR56},~{VGPR60},~{VGPR64}" ()
-  call void asm sideeffect "", "~{VGPR68},~{VGPR72},~{VGPR76},~{VGPR80},~{VGPR84},~{VGPR88},~{VGPR92},~{VGPR96}" ()
-  call void asm sideeffect "", "~{VGPR100},~{VGPR104},~{VGPR108},~{VGPR112},~{VGPR116},~{VGPR120},~{VGPR124},~{VGPR128}" ()
-  call void asm sideeffect "", "~{VGPR132},~{VGPR136},~{VGPR140},~{VGPR144},~{VGPR148},~{VGPR152},~{VGPR156},~{VGPR160}" ()
-  call void asm sideeffect "", "~{VGPR164},~{VGPR168},~{VGPR172},~{VGPR176},~{VGPR180},~{VGPR184},~{VGPR188},~{VGPR192}" ()
-  call void asm sideeffect "", "~{VGPR196},~{VGPR200},~{VGPR204},~{VGPR208},~{VGPR212},~{VGPR216},~{VGPR220},~{VGPR224}" ()
+  call void asm sideeffect "", "~{v4},~{v8},~{v12},~{v16},~{v20},~{v24},~{v28},~{v32}" ()
+  call void asm sideeffect "", "~{v36},~{v40},~{v44},~{v48},~{v52},~{v56},~{v60},~{v64}" ()
+  call void asm sideeffect "", "~{v68},~{v72},~{v76},~{v80},~{v84},~{v88},~{v92},~{v96}" ()
+  call void asm sideeffect "", "~{v100},~{v104},~{v108},~{v112},~{v116},~{v120},~{v124},~{v128}" ()
+  call void asm sideeffect "", "~{v132},~{v136},~{v140},~{v144},~{v148},~{v152},~{v156},~{v160}" ()
+  call void asm sideeffect "", "~{v164},~{v168},~{v172},~{v176},~{v180},~{v184},~{v188},~{v192}" ()
+  call void asm sideeffect "", "~{v196},~{v200},~{v204},~{v208},~{v212},~{v216},~{v220},~{v224}" ()
 
   %outptr = getelementptr <1280 x i32>, <1280 x i32> addrspace(1)* %out, i32 %tid
   store <1280 x i32> %a, <1280 x i32> addrspace(1)* %outptr

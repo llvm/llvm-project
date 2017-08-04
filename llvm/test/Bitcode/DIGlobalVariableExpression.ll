@@ -14,7 +14,7 @@
 ; CHECK: ![[HVAR:[0-9]+]] = distinct !DIGlobalVariable(name: "h",
 ; CHECK: ![[IMPORTS]] = !{![[CIMPORT:[0-9]+]]}
 ; CHECK: ![[CIMPORT]] = !DIImportedEntity({{.*}}entity: ![[HVAR]]
-; CHECK: ![[GEXPR]] = !DIExpression(DW_OP_plus, 1)
+; CHECK: ![[GEXPR]] = !DIExpression(DW_OP_plus_uconst, 1)
 ; CHECK: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]])
 
 @g = common global i32 0, align 4, !dbg !0
@@ -36,4 +36,4 @@
 !9 = !{!"clang version 4.0.0 (trunk 286129) (llvm/trunk 286128)"}
 !10 = distinct !DIGlobalVariable(name: "c", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true, expr: !DIExpression(DW_OP_constu, 23, DW_OP_stack_value))
 !11 = distinct !DIGlobalVariable(name: "h", scope: !1, file: !2, line: 2, type: !5, isLocal: false, isDefinition: true)
-!12 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 1, scope: !1, entity: !11)
+!12 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !2, line: 1, scope: !1, entity: !11)

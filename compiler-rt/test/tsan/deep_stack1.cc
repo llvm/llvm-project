@@ -24,6 +24,10 @@ void *Thread(void *p) {
   return 0;
 }
 
+static size_t RoundUp(size_t n, size_t to) {
+  return ((n + to - 1) / to) * to;
+}
+
 int main() {
   barrier_init(&barrier, 2);
   N = 50000;
@@ -31,7 +35,10 @@ int main() {
   pthread_t t;
   pthread_attr_t a;
   pthread_attr_init(&a);
-  pthread_attr_setstacksize(&a, N * 256 + (1 << 20));
+  size_t stack_size = N * 256 + (1 << 20);
+  stack_size = RoundUp(stack_size, 0x10000);  // round the stack size to 64k
+  int ret = pthread_attr_setstacksize(&a, stack_size);
+  if (ret) abort();
   pthread_create(&t, &a, Thread, 0);
 #ifdef ORDER2
   barrier_wait(&barrier);

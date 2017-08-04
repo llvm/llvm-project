@@ -26,14 +26,9 @@ _start:
  .section .R_ARM_MOVT_ABS, "ax",%progbits
  movt r0, :upper16:label
  movt r1, :upper16:label1
-// FIXME: We shouldn't need to multiply by 65536.
-// arguably llvm-mc incorrectly assembles addends for
-// SHT_REL relocated movt instructions. When there is a relocation
-// the interpretation of the addend for SHT_REL is not shifted
- movt r2, :upper16:label2 + (4 * 65536)
+ movt r2, :upper16:label2 + 4
  movt r3, :upper16:label3
-// FIXME: We shouldn't need to multiply by 65536 see comment above.
- movt r4, :upper16:label3 + (4 * 65536)
+ movt r4, :upper16:label3 + 4
 // CHECK: Disassembly of section .R_ARM_MOVT_ABS
 // CHECK: movt	r0, #2
 // CHECK: movt	r1, #2

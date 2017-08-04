@@ -1934,14 +1934,14 @@ __isl_give isl_schedule_node *isl_schedule_node_band_sink(
 	type = isl_schedule_node_get_type(node);
 	if (type != isl_schedule_node_band)
 		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
-			"not a band node", isl_schedule_node_free(node));
+			"not a band node", return isl_schedule_node_free(node));
 	anchored = isl_schedule_node_is_subtree_anchored(node);
 	if (anchored < 0)
 		return isl_schedule_node_free(node);
 	if (anchored)
 		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
 			"cannot sink band node in anchored subtree",
-			isl_schedule_node_free(node));
+			return isl_schedule_node_free(node));
 	if (isl_schedule_tree_n_children(node->tree) == 0)
 		return node;
 
@@ -2205,12 +2205,14 @@ __isl_give isl_schedule_node *isl_schedule_node_sequence_splice_child(
 		return NULL;
 	if (isl_schedule_node_get_type(node) != isl_schedule_node_sequence)
 		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
-			"not a sequence node", isl_schedule_node_free(node));
+			"not a sequence node",
+			return isl_schedule_node_free(node));
 	node = isl_schedule_node_child(node, pos);
 	node = isl_schedule_node_child(node, 0);
 	if (isl_schedule_node_get_type(node) != isl_schedule_node_sequence)
 		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
-			"not a sequence node", isl_schedule_node_free(node));
+			"not a sequence node",
+			return isl_schedule_node_free(node));
 	child = isl_schedule_node_copy(node);
 	node = isl_schedule_node_parent(node);
 	filter = isl_schedule_node_filter_get_filter(node);
@@ -2252,7 +2254,6 @@ static __isl_give isl_schedule_node *update_ancestors(
 {
 	int i, n;
 	int is_leaf;
-	isl_ctx *ctx;
 	isl_schedule_tree *tree;
 	isl_schedule_node *pos = NULL;
 
@@ -2263,7 +2264,6 @@ static __isl_give isl_schedule_node *update_ancestors(
 	if (!node)
 		return isl_schedule_node_free(pos);
 
-	ctx = isl_schedule_node_get_ctx(node);
 	n = isl_schedule_tree_list_n_schedule_tree(node->ancestors);
 	tree = isl_schedule_tree_copy(node->tree);
 
@@ -3137,7 +3137,7 @@ __isl_give isl_schedule_node *isl_schedule_node_group(
 	if (!disjoint)
 		isl_die(isl_schedule_node_get_ctx(node), isl_error_invalid,
 			"group instances already reach node",
-			isl_schedule_node_free(node));
+			return isl_schedule_node_free(node));
 
 	return node;
 error:

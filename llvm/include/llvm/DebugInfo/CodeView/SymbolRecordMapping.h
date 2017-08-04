@@ -14,16 +14,18 @@
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 
 namespace llvm {
-namespace msf {
-class StreamReader;
-class StreamWriter;
-}
+class BinaryStreamReader;
+class BinaryStreamWriter;
 
 namespace codeview {
 class SymbolRecordMapping : public SymbolVisitorCallbacks {
 public:
-  explicit SymbolRecordMapping(msf::StreamReader &Reader) : IO(Reader) {}
-  explicit SymbolRecordMapping(msf::StreamWriter &Writer) : IO(Writer) {}
+  explicit SymbolRecordMapping(BinaryStreamReader &Reader,
+                               CodeViewContainer Container)
+      : IO(Reader), Container(Container) {}
+  explicit SymbolRecordMapping(BinaryStreamWriter &Writer,
+                               CodeViewContainer Container)
+      : IO(Writer), Container(Container) {}
 
   Error visitSymbolBegin(CVSymbol &Record) override;
   Error visitSymbolEnd(CVSymbol &Record) override;
@@ -31,12 +33,13 @@ public:
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \
   Error visitKnownRecord(CVSymbol &CVR, Name &Record) override;
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
   Optional<SymbolKind> Kind;
 
   CodeViewRecordIO IO;
+  CodeViewContainer Container;
 };
 }
 }

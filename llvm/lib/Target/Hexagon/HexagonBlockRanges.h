@@ -14,8 +14,8 @@
 #include <cassert>
 #include <map>
 #include <set>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 

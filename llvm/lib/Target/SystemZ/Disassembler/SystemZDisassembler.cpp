@@ -7,12 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -21,17 +25,19 @@ using namespace llvm;
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 namespace {
+
 class SystemZDisassembler : public MCDisassembler {
 public:
   SystemZDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
     : MCDisassembler(STI, Ctx) {}
-  ~SystemZDisassembler() override {}
+  ~SystemZDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
+
 } // end anonymous namespace
 
 static MCDisassembler *createSystemZDisassembler(const Target &T,
@@ -154,6 +160,12 @@ static DecodeStatus DecodeAR32BitRegisterClass(MCInst &Inst, uint64_t RegNo,
                                                uint64_t Address,
                                                const void *Decoder) {
   return decodeRegisterClass(Inst, RegNo, SystemZMC::AR32Regs, 16);
+}
+
+static DecodeStatus DecodeCR64BitRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, SystemZMC::CR64Regs, 16);
 }
 
 template<unsigned N>
@@ -321,6 +333,18 @@ static DecodeStatus decodeBDXAddr20Operand(MCInst &Inst, uint64_t Field,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeBDLAddr12Len4Operand(MCInst &Inst, uint64_t Field,
+                                               const unsigned *Regs) {
+  uint64_t Length = Field >> 16;
+  uint64_t Base = (Field >> 12) & 0xf;
+  uint64_t Disp = Field & 0xfff;
+  assert(Length < 16 && "Invalid BDLAddr12Len4");
+  Inst.addOperand(MCOperand::createReg(Base == 0 ? 0 : Regs[Base]));
+  Inst.addOperand(MCOperand::createImm(Disp));
+  Inst.addOperand(MCOperand::createImm(Length + 1));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeBDLAddr12Len8Operand(MCInst &Inst, uint64_t Field,
                                                const unsigned *Regs) {
   uint64_t Length = Field >> 16;
@@ -391,6 +415,13 @@ static DecodeStatus decodeBDXAddr64Disp20Operand(MCInst &Inst, uint64_t Field,
                                                  uint64_t Address,
                                                  const void *Decoder) {
   return decodeBDXAddr20Operand(Inst, Field, SystemZMC::GR64Regs);
+}
+
+static DecodeStatus decodeBDLAddr64Disp12Len4Operand(MCInst &Inst,
+                                                     uint64_t Field,
+                                                     uint64_t Address,
+                                                     const void *Decoder) {
+  return decodeBDLAddr12Len4Operand(Inst, Field, SystemZMC::GR64Regs);
 }
 
 static DecodeStatus decodeBDLAddr64Disp12Len8Operand(MCInst &Inst,

@@ -1,4 +1,4 @@
-//===---- CGBuiltin.cpp - Emit LLVM Code for builtins ---------------------===//
+//===---- CGObjC.cpp - Emit LLVM Code for Objective-C ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -162,7 +162,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
       const Expr *Rhs = ALE->getElement(i);
       LValue LV = MakeAddrLValue(
           Builder.CreateConstArrayGEP(Objects, i, getPointerSize()),
-          ElementType, AlignmentSource::Decl);
+          ElementType, LValueBaseInfo(AlignmentSource::Decl, false));
 
       llvm::Value *value = EmitScalarExpr(Rhs);
       EmitStoreThroughLValue(RValue::get(value), LV, true);
@@ -174,7 +174,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
       const Expr *Key = DLE->getKeyValueElement(i).Key;
       LValue KeyLV = MakeAddrLValue(
           Builder.CreateConstArrayGEP(Keys, i, getPointerSize()),
-          ElementType, AlignmentSource::Decl);
+          ElementType, LValueBaseInfo(AlignmentSource::Decl, false));
       llvm::Value *keyValue = EmitScalarExpr(Key);
       EmitStoreThroughLValue(RValue::get(keyValue), KeyLV, /*isInit=*/true);
 
@@ -182,7 +182,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
       const Expr *Value = DLE->getKeyValueElement(i).Value;
       LValue ValueLV = MakeAddrLValue(
           Builder.CreateConstArrayGEP(Objects, i, getPointerSize()),
-          ElementType, AlignmentSource::Decl);
+          ElementType, LValueBaseInfo(AlignmentSource::Decl, false));
       llvm::Value *valueValue = EmitScalarExpr(Value);
       EmitStoreThroughLValue(RValue::get(valueValue), ValueLV, /*isInit=*/true);
       if (TrackNeededObjects) {
@@ -1816,26 +1816,45 @@ void CodeGenFunction::EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values) {
 }
 
 
-static llvm::Constant *createARCRuntimeFunction(CodeGenModule &CGM,
-                                                llvm::FunctionType *type,
-                                                StringRef fnName) {
-  llvm::Constant *fn = CGM.CreateRuntimeFunction(type, fnName);
+static bool IsForwarding(StringRef Name) {
+  return llvm::StringSwitch<bool>(Name)
+      .Cases("objc_autoreleaseReturnValue",             // ARCInstKind::AutoreleaseRV
+             "objc_autorelease",                        // ARCInstKind::Autorelease
+             "objc_retainAutoreleaseReturnValue",       // ARCInstKind::FusedRetainAutoreleaseRV
+             "objc_retainAutoreleasedReturnValue",      // ARCInstKind::RetainRV
+             "objc_retainAutorelease",                  // ARCInstKind::FusedRetainAutorelease
+             "objc_retainedObject",                     // ARCInstKind::NoopCast
+             "objc_retain",                             // ARCInstKind::Retain
+             "objc_unretainedObject",                   // ARCInstKind::NoopCast
+             "objc_unretainedPointer",                  // ARCInstKind::NoopCast
+             "objc_unsafeClaimAutoreleasedReturnValue", // ARCInstKind::ClaimRV
+             true)
+      .Default(false);
+}
 
-  if (llvm::Function *f = dyn_cast<llvm::Function>(fn)) {
+static llvm::Constant *createARCRuntimeFunction(CodeGenModule &CGM,
+                                                llvm::FunctionType *FTy,
+                                                StringRef Name) {
+  llvm::Constant *RTF = CGM.CreateRuntimeFunction(FTy, Name);
+
+  if (auto *F = dyn_cast<llvm::Function>(RTF)) {
     // If the target runtime doesn't naturally support ARC, emit weak
     // references to the runtime support library.  We don't really
     // permit this to fail, but we need a particular relocation style.
     if (!CGM.getLangOpts().ObjCRuntime.hasNativeARC() &&
         !CGM.getTriple().isOSBinFormatCOFF()) {
-      f->setLinkage(llvm::Function::ExternalWeakLinkage);
-    } else if (fnName == "objc_retain" || fnName  == "objc_release") {
+      F->setLinkage(llvm::Function::ExternalWeakLinkage);
+    } else if (Name == "objc_retain" || Name  == "objc_release") {
       // If we have Native ARC, set nonlazybind attribute for these APIs for
       // performance.
-      f->addFnAttr(llvm::Attribute::NonLazyBind);
+      F->addFnAttr(llvm::Attribute::NonLazyBind);
     }
+
+    if (IsForwarding(Name))
+      F->arg_begin()->addAttr(llvm::Attribute::Returned);
   }
 
-  return fn;
+  return RTF;
 }
 
 /// Perform an operation having the signature
@@ -1846,7 +1865,8 @@ static llvm::Value *emitARCValueOperation(CodeGenFunction &CGF,
                                           llvm::Constant *&fn,
                                           StringRef fnName,
                                           bool isTailCall = false) {
-  if (isa<llvm::ConstantPointerNull>(value)) return value;
+  if (isa<llvm::ConstantPointerNull>(value))
+    return value;
 
   if (!fn) {
     llvm::FunctionType *fnType =
@@ -2393,6 +2413,12 @@ void CodeGenFunction::destroyARCWeak(CodeGenFunction &CGF,
                                      Address addr,
                                      QualType type) {
   CGF.EmitARCDestroyWeak(addr);
+}
+
+void CodeGenFunction::emitARCIntrinsicUse(CodeGenFunction &CGF, Address addr,
+                                          QualType type) {
+  llvm::Value *value = CGF.Builder.CreateLoad(addr);
+  CGF.EmitARCIntrinsicUse(value);
 }
 
 namespace {
@@ -3220,10 +3246,12 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   SrcTy = C.getPointerType(SrcTy);
   
   FunctionArgList args;
-  ImplicitParamDecl dstDecl(getContext(), FD, SourceLocation(), nullptr,DestTy);
-  args.push_back(&dstDecl);
-  ImplicitParamDecl srcDecl(getContext(), FD, SourceLocation(), nullptr, SrcTy);
-  args.push_back(&srcDecl);
+  ImplicitParamDecl DstDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            DestTy, ImplicitParamDecl::Other);
+  args.push_back(&DstDecl);
+  ImplicitParamDecl SrcDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            SrcTy, ImplicitParamDecl::Other);
+  args.push_back(&SrcDecl);
 
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
@@ -3239,12 +3267,12 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
 
   StartFunction(FD, C.VoidTy, Fn, FI, args);
   
-  DeclRefExpr DstExpr(&dstDecl, false, DestTy,
+  DeclRefExpr DstExpr(&DstDecl, false, DestTy,
                       VK_RValue, SourceLocation());
   UnaryOperator DST(&DstExpr, UO_Deref, DestTy->getPointeeType(),
                     VK_LValue, OK_Ordinary, SourceLocation());
   
-  DeclRefExpr SrcExpr(&srcDecl, false, SrcTy,
+  DeclRefExpr SrcExpr(&SrcDecl, false, SrcTy,
                       VK_RValue, SourceLocation());
   UnaryOperator SRC(&SrcExpr, UO_Deref, SrcTy->getPointeeType(),
                     VK_LValue, OK_Ordinary, SourceLocation());
@@ -3301,10 +3329,12 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   SrcTy = C.getPointerType(SrcTy);
   
   FunctionArgList args;
-  ImplicitParamDecl dstDecl(getContext(), FD, SourceLocation(), nullptr,DestTy);
-  args.push_back(&dstDecl);
-  ImplicitParamDecl srcDecl(getContext(), FD, SourceLocation(), nullptr, SrcTy);
-  args.push_back(&srcDecl);
+  ImplicitParamDecl DstDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            DestTy, ImplicitParamDecl::Other);
+  args.push_back(&DstDecl);
+  ImplicitParamDecl SrcDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            SrcTy, ImplicitParamDecl::Other);
+  args.push_back(&SrcDecl);
 
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
@@ -3319,7 +3349,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
 
   StartFunction(FD, C.VoidTy, Fn, FI, args);
   
-  DeclRefExpr SrcExpr(&srcDecl, false, SrcTy,
+  DeclRefExpr SrcExpr(&SrcDecl, false, SrcTy,
                       VK_RValue, SourceLocation());
   
   UnaryOperator SRC(&SrcExpr, UO_Deref, SrcTy->getPointeeType(),
@@ -3345,7 +3375,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                              CXXConstExpr->getConstructionKind(),
                              SourceRange());
   
-  DeclRefExpr DstExpr(&dstDecl, false, DestTy,
+  DeclRefExpr DstExpr(&DstDecl, false, DestTy,
                       VK_RValue, SourceLocation());
   
   RValue DV = EmitAnyExpr(&DstExpr);

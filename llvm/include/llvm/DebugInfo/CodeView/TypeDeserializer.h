@@ -16,8 +16,8 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
@@ -29,20 +29,37 @@ namespace codeview {
 class TypeDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(ArrayRef<uint8_t> RecordData)
-        : Stream(RecordData), Reader(Stream), Mapping(Reader) {}
+        : Stream(RecordData, llvm::support::little), Reader(Stream),
+          Mapping(Reader) {}
 
-    msf::ByteStream Stream;
-    msf::StreamReader Reader;
+    BinaryByteStream Stream;
+    BinaryStreamReader Reader;
     TypeRecordMapping Mapping;
   };
 
 public:
   TypeDeserializer() = default;
 
+  template <typename T> static Error deserializeAs(CVType &CVT, T &Record) {
+    Record.Kind = static_cast<TypeRecordKind>(CVT.kind());
+    MappingInfo I(CVT.content());
+    if (auto EC = I.Mapping.visitTypeBegin(CVT))
+      return EC;
+    if (auto EC = I.Mapping.visitKnownRecord(CVT, Record))
+      return EC;
+    if (auto EC = I.Mapping.visitTypeEnd(CVT))
+      return EC;
+    return Error::success();
+  }
+
   Error visitTypeBegin(CVType &Record) override {
     assert(!Mapping && "Already in a type mapping!");
     Mapping = llvm::make_unique<MappingInfo>(Record.content());
     return Mapping->Mapping.visitTypeBegin(Record);
+  }
+
+  Error visitTypeBegin(CVType &Record, TypeIndex Index) override {
+    return visitTypeBegin(Record);
   }
 
   Error visitTypeEnd(CVType &Record) override {
@@ -59,7 +76,7 @@ public:
 #define MEMBER_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 
 private:
   template <typename RecordType>
@@ -72,16 +89,16 @@ private:
 
 class FieldListDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
-    explicit MappingInfo(msf::StreamReader &R)
+    explicit MappingInfo(BinaryStreamReader &R)
         : Reader(R), Mapping(Reader), StartOffset(0) {}
 
-    msf::StreamReader &Reader;
+    BinaryStreamReader &Reader;
     TypeRecordMapping Mapping;
     uint32_t StartOffset;
   };
 
 public:
-  explicit FieldListDeserializer(msf::StreamReader &Reader) : Mapping(Reader) {
+  explicit FieldListDeserializer(BinaryStreamReader &Reader) : Mapping(Reader) {
     CVType FieldList;
     FieldList.Type = TypeLeafKind::LF_FIELDLIST;
     consumeError(Mapping.Mapping.visitTypeBegin(FieldList));
@@ -111,7 +128,7 @@ public:
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 
 private:
   template <typename RecordType>

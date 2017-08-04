@@ -21,8 +21,11 @@
 
 // Only use SANITIZER_*ATTRIBUTE* before the function return type!
 #if SANITIZER_WINDOWS
+#if SANITIZER_IMPORT_INTERFACE
+# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
+#else
 # define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
-// FIXME find out what we need on Windows, if anything.
+#endif
 # define SANITIZER_WEAK_ATTRIBUTE
 #elif SANITIZER_GO
 # define SANITIZER_INTERFACE_ATTRIBUTE
@@ -32,11 +35,46 @@
 # define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
 #endif
 
-#if (SANITIZER_LINUX || SANITIZER_MAC || SANITIZER_WINDOWS) && !SANITIZER_GO
+//--------------------------- WEAK FUNCTIONS ---------------------------------//
+// When working with weak functions, to simplify the code and make it more
+// portable, when possible define a default implementation using this macro:
+//
+// SANITIZER_INTERFACE_WEAK_DEF(<return_type>, <name>, <parameter list>)
+//
+// For example:
+//   SANITIZER_INTERFACE_WEAK_DEF(bool, compare, int a, int b) { return a > b; }
+//
+#if SANITIZER_WINDOWS
+#include "sanitizer_win_defs.h"
+# define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...)                   \
+  WIN_WEAK_EXPORT_DEF(ReturnType, Name, __VA_ARGS__)
+#else
+# define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...)                   \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE            \
+  ReturnType Name(__VA_ARGS__)
+#endif
+
+// SANITIZER_SUPPORTS_WEAK_HOOKS means that we support real weak functions that
+// will evaluate to a null pointer when not defined.
+#if (SANITIZER_LINUX || SANITIZER_MAC) && !SANITIZER_GO
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 1
 #else
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 0
 #endif
+// For some weak hooks that will be called very often and we want to avoid the
+// overhead of executing the default implementation when it is not necessary,
+// we can use the flag SANITIZER_SUPPORTS_WEAK_HOOKS to only define the default
+// implementation for platforms that doesn't support weak symbols. For example:
+//
+//   #if !SANITIZER_SUPPORT_WEAK_HOOKS
+//     SANITIZER_INTERFACE_WEAK_DEF(bool, compare_hook, int a, int b) {
+//       return a > b;
+//     }
+//   #endif
+//
+// And then use it as: if (compare_hook) compare_hook(a, b);
+//----------------------------------------------------------------------------//
+
 
 // We can use .preinit_array section on Linux to call sanitizer initialization
 // functions very early in the process startup (unless PIC macro is defined).
@@ -114,6 +152,12 @@ typedef u32 operator_new_size_type;
 # endif
 #endif
 
+#if SANITIZER_MAC
+// On Darwin, thread IDs are 64-bit even on 32-bit systems.
+typedef u64 tid_t;
+#else
+typedef uptr tid_t;
+#endif
 
 // ----------- ATTENTION -------------
 // This header should NOT include any other headers to avoid portability issues.
@@ -289,7 +333,12 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 enum LinkerInitialized { LINKER_INITIALIZED = 0 };
 
 #if !defined(_MSC_VER) || defined(__clang__)
+#if SANITIZER_S390_31
+#define GET_CALLER_PC() \
+  (__sanitizer::uptr) __builtin_extract_return_addr(__builtin_return_address(0))
+#else
 #define GET_CALLER_PC() (__sanitizer::uptr) __builtin_return_address(0)
+#endif
 #define GET_CURRENT_FRAME() (__sanitizer::uptr) __builtin_frame_address(0)
 inline void Trap() {
   __builtin_trap();

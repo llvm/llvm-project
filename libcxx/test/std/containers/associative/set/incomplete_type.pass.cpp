@@ -9,7 +9,7 @@
 
 // <set>
 
-// Check that std::set and it's iterators can be instantiated with an incomplete
+// Check that std::set and its iterators can be instantiated with an incomplete
 // type.
 
 #include <set>

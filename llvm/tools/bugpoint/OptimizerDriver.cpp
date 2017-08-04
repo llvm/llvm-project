@@ -47,14 +47,13 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
     cl::init(true), cl::Hidden);
 
-namespace {
 // ChildOutput - This option captures the name of the child output file that
 // is set up by the parent bugpoint process
-cl::opt<std::string> ChildOutput("child-output", cl::ReallyHidden);
-cl::opt<std::string> OptCmd("opt-command", cl::init(""),
-                            cl::desc("Path to opt. (default: search path "
-                                     "for 'opt'.)"));
-}
+static cl::opt<std::string> ChildOutput("child-output", cl::ReallyHidden);
+static cl::opt<std::string>
+    OptCmd("opt-command", cl::init(""),
+           cl::desc("Path to opt. (default: search path "
+                    "for 'opt'.)"));
 
 /// writeProgramToFile - This writes the current "Program" to the named bitcode
 /// file.  If an error occurs, true is returned.
@@ -203,10 +202,11 @@ bool BugDriver::runPasses(Module *Program,
   } else
     Args.push_back(tool.c_str());
 
-  Args.push_back("-o");
-  Args.push_back(OutputFilename.c_str());
   for (unsigned i = 0, e = OptArgs.size(); i != e; ++i)
     Args.push_back(OptArgs[i].c_str());
+  Args.push_back("-disable-symbolication");
+  Args.push_back("-o");
+  Args.push_back(OutputFilename.c_str());
   std::vector<std::string> pass_args;
   for (unsigned i = 0, e = PluginLoader::getNumPlugins(); i != e; ++i) {
     pass_args.push_back(std::string("-load"));

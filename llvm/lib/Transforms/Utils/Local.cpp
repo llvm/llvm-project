@@ -22,10 +22,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
@@ -45,6 +46,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -126,21 +128,20 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // If the default is unreachable, ignore it when searching for TheOnlyDest.
     if (isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg()) &&
         SI->getNumCases() > 0) {
-      TheOnlyDest = SI->case_begin().getCaseSuccessor();
+      TheOnlyDest = SI->case_begin()->getCaseSuccessor();
     }
 
     // Figure out which case it goes to.
-    for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
-         i != e; ++i) {
+    for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
       // Found case matching a constant operand?
-      if (i.getCaseValue() == CI) {
-        TheOnlyDest = i.getCaseSuccessor();
+      if (i->getCaseValue() == CI) {
+        TheOnlyDest = i->getCaseSuccessor();
         break;
       }
 
       // Check to see if this branch is going to the same place as the default
       // dest.  If so, eliminate it as an explicit compare.
-      if (i.getCaseSuccessor() == DefaultDest) {
+      if (i->getCaseSuccessor() == DefaultDest) {
         MDNode *MD = SI->getMetadata(LLVMContext::MD_prof);
         unsigned NCases = SI->getNumCases();
         // Fold the case metadata into the default if there will be any branches
@@ -154,7 +155,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
             Weights.push_back(CI->getValue().getZExtValue());
           }
           // Merge weight of this case to the default weight.
-          unsigned idx = i.getCaseIndex();
+          unsigned idx = i->getCaseIndex();
           Weights[0] += Weights[idx+1];
           // Remove weight for this case.
           std::swap(Weights[idx+1], Weights.back());
@@ -165,15 +166,19 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         }
         // Remove this entry.
         DefaultDest->removePredecessor(SI->getParent());
-        SI->removeCase(i);
-        --i; --e;
+        i = SI->removeCase(i);
+        e = SI->case_end();
         continue;
       }
 
       // Otherwise, check to see if the switch only branches to one destination.
       // We do this by reseting "TheOnlyDest" to null when we find two non-equal
       // destinations.
-      if (i.getCaseSuccessor() != TheOnlyDest) TheOnlyDest = nullptr;
+      if (i->getCaseSuccessor() != TheOnlyDest)
+        TheOnlyDest = nullptr;
+
+      // Increment this iterator as we haven't removed the case.
+      ++i;
     }
 
     if (CI && !TheOnlyDest) {
@@ -209,7 +214,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     if (SI->getNumCases() == 1) {
       // Otherwise, we can fold this switch into a conditional branch
       // instruction if it has only one non-default destination.
-      SwitchInst::CaseIt FirstCase = SI->case_begin();
+      auto FirstCase = *SI->case_begin();
       Value *Cond = Builder.CreateICmpEQ(SI->getCondition(),
           FirstCase.getCaseValue(), "cond");
 
@@ -287,7 +292,15 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 ///
 bool llvm::isInstructionTriviallyDead(Instruction *I,
                                       const TargetLibraryInfo *TLI) {
-  if (!I->use_empty() || isa<TerminatorInst>(I)) return false;
+  if (!I->use_empty())
+    return false;
+  return wouldInstructionBeTriviallyDead(I, TLI);
+}
+
+bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
+                                           const TargetLibraryInfo *TLI) {
+  if (isa<TerminatorInst>(I))
+    return false;
 
   // We don't want the landingpad-like instructions removed by anything this
   // general.
@@ -307,7 +320,8 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
     return true;
   }
 
-  if (!I->mayHaveSideEffects()) return true;
+  if (!I->mayHaveSideEffects())
+    return true;
 
   // Special case intrinsics that "may have side effects" but can be deleted
   // when dead.
@@ -334,7 +348,8 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
     }
   }
 
-  if (isAllocLikeFn(I, TLI)) return true;
+  if (isAllocLikeFn(I, TLI))
+    return true;
 
   if (CallInst *CI = isFreeCall(I, TLI))
     if (Constant *C = dyn_cast<Constant>(CI->getArgOperand(0)))
@@ -548,7 +563,7 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred) {
   // that can be removed.
   BB->removePredecessor(Pred, true);
 
-  WeakVH PhiIt = &BB->front();
+  WeakTrackingVH PhiIt = &BB->front();
   while (PHINode *PN = dyn_cast<PHINode>(PhiIt)) {
     PhiIt = &*++BasicBlock::iterator(cast<Instruction>(PhiIt));
     Value *OldPhiIt = PhiIt;
@@ -1023,17 +1038,15 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
                                           const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
-  unsigned BitWidth = DL.getPointerTypeSizeInBits(V->getType());
 
-  APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-  computeKnownBits(V, KnownZero, KnownOne, DL, 0, AC, CxtI, DT);
-  unsigned TrailZ = KnownZero.countTrailingOnes();
+  KnownBits Known = computeKnownBits(V, DL, 0, AC, CxtI, DT);
+  unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.
   TrailZ = std::min(TrailZ, unsigned(sizeof(unsigned) * CHAR_BIT - 1));
 
-  unsigned Align = 1u << std::min(BitWidth - 1, TrailZ);
+  unsigned Align = 1u << std::min(Known.getBitWidth() - 1, TrailZ);
 
   // LLVM doesn't support alignments larger than this currently.
   Align = std::min(Align, +Value::MaximumAlignment);
@@ -1060,7 +1073,6 @@ static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
     --PrevI;
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(PrevI))
       if (DVI->getValue() == I->getOperand(0) &&
-          DVI->getOffset() == 0 &&
           DVI->getVariable() == DIVar &&
           DVI->getExpression() == DIExpr)
         return true;
@@ -1069,7 +1081,7 @@ static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
 }
 
 /// See if there is a dbg.value intrinsic for DIVar for the PHI node.
-static bool PhiHasDebugValue(DILocalVariable *DIVar, 
+static bool PhiHasDebugValue(DILocalVariable *DIVar,
                              DIExpression *DIExpr,
                              PHINode *APN) {
   // Since we can't guarantee that the original dbg.declare instrinsic
@@ -1079,7 +1091,6 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
   findDbgValues(DbgValues, APN);
   for (auto *DVI : DbgValues) {
     assert(DVI->getValue() == APN);
-    assert(DVI->getOffset() == 0);
     if ((DVI->getVariable() == DIVar) && (DVI->getExpression() == DIExpr))
       return true;
   }
@@ -1091,8 +1102,9 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            StoreInst *SI, DIBuilder &Builder) {
   auto *DIVar = DDI->getVariable();
-  auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
+  auto *DIExpr = DDI->getExpression();
+  Value *DV = SI->getOperand(0);
 
   // If an argument is zero extended then use argument directly. The ZExt
   // may be zapped by an optimization pass in future.
@@ -1102,34 +1114,28 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   if (SExtInst *SExt = dyn_cast<SExtInst>(SI->getOperand(0)))
     ExtendedArg = dyn_cast<Argument>(SExt->getOperand(0));
   if (ExtendedArg) {
-    // We're now only describing a subset of the variable. The fragment we're
-    // describing will always be smaller than the variable size, because
-    // VariableSize == Size of Alloca described by DDI. Since SI stores
-    // to the alloca described by DDI, if it's first operand is an extend,
-    // we're guaranteed that before extension, the value was narrower than
-    // the size of the alloca, hence the size of the described variable.
-    SmallVector<uint64_t, 3> Ops;
-    unsigned FragmentOffset = 0;
-    // If this already is a bit fragment, we drop the bit fragment from the
-    // expression and record the offset.
-    auto Fragment = DIExpr->getFragmentInfo();
-    if (Fragment) {
-      Ops.append(DIExpr->elements_begin(), DIExpr->elements_end()-3);
-      FragmentOffset = Fragment->OffsetInBits;
-    } else {
-      Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+    // If this DDI was already describing only a fragment of a variable, ensure
+    // that fragment is appropriately narrowed here.
+    // But if a fragment wasn't used, describe the value as the original
+    // argument (rather than the zext or sext) so that it remains described even
+    // if the sext/zext is optimized away. This widens the variable description,
+    // leaving it up to the consumer to know how the smaller value may be
+    // represented in a larger register.
+    if (auto Fragment = DIExpr->getFragmentInfo()) {
+      unsigned FragmentOffset = Fragment->OffsetInBits;
+      SmallVector<uint64_t, 3> Ops(DIExpr->elements_begin(),
+                                   DIExpr->elements_end() - 3);
+      Ops.push_back(dwarf::DW_OP_LLVM_fragment);
+      Ops.push_back(FragmentOffset);
+      const DataLayout &DL = DDI->getModule()->getDataLayout();
+      Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType()));
+      DIExpr = Builder.createExpression(Ops);
     }
-    Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-    Ops.push_back(FragmentOffset);
-    const DataLayout &DL = DDI->getModule()->getDataLayout();
-    Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType()));
-    auto NewDIExpr = Builder.createExpression(Ops);
-    if (!LdStHasDebugValue(DIVar, NewDIExpr, SI))
-      Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar, NewDIExpr,
-                                      DDI->getDebugLoc(), SI);
-  } else if (!LdStHasDebugValue(DIVar, DIExpr, SI))
-    Builder.insertDbgValueIntrinsic(SI->getOperand(0), 0, DIVar, DIExpr,
-                                    DDI->getDebugLoc(), SI);
+    DV = ExtendedArg;
+  }
+  if (!LdStHasDebugValue(DIVar, DIExpr, SI))
+    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, DDI->getDebugLoc(),
+                                    SI);
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
@@ -1148,11 +1154,11 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
   Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
-      LI, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
+      LI, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
   DbgValue->insertAfter(LI);
 }
 
-/// Inserts a llvm.dbg.value intrinsic after a phi 
+/// Inserts a llvm.dbg.value intrinsic after a phi
 /// that has an associated llvm.dbg.decl intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            PHINode *APN, DIBuilder &Builder) {
@@ -1170,7 +1176,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   // insertion point.
   // FIXME: Insert dbg.value markers in the successors when appropriate.
   if (InsertionPt != BB->end())
-    Builder.insertDbgValueIntrinsic(APN, 0, DIVar, DIExpr, DDI->getDebugLoc(),
+    Builder.insertDbgValueIntrinsic(APN, DIVar, DIExpr, DDI->getDebugLoc(),
                                     &*InsertionPt);
 }
 
@@ -1214,7 +1220,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
           // This is a call by-value or some other instruction that
           // takes a pointer to the variable. Insert a *value*
           // intrinsic that describes the alloca.
-          DIB.insertDbgValueIntrinsic(AI, 0, DDI->getVariable(),
+          DIB.insertDbgValueIntrinsic(AI, DDI->getVariable(),
                                       DDI->getExpression(), DDI->getDebugLoc(),
                                       CI);
         }
@@ -1294,8 +1300,7 @@ static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
     DIExpr = Builder.createExpression(Ops);
   }
 
-  Builder.insertDbgValueIntrinsic(NewAddress, DVI->getOffset(), DIVar, DIExpr,
-                                  Loc, DVI);
+  Builder.insertDbgValueIntrinsic(NewAddress, DIVar, DIExpr, Loc, DVI);
   DVI->eraseFromParent();
 }
 
@@ -1318,8 +1323,8 @@ void llvm::salvageDebugInfo(Instruction &I) {
     return MetadataAsValue::get(I.getContext(), ValueAsMetadata::get(V));
   };
 
-  if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
-    findDbgValues(DbgValues, BitCast);
+  if (isa<BitCastInst>(&I)) {
+    findDbgValues(DbgValues, &I);
     for (auto *DVI : DbgValues) {
       // Bitcasts are entirely irrelevant for debug info. Rewrite the dbg.value
       // to use the cast's source.
@@ -1327,7 +1332,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
       DEBUG(dbgs() << "SALVAGE: " << *DVI << '\n');
     }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    findDbgValues(DbgValues, GEP);
+    findDbgValues(DbgValues, &I);
     for (auto *DVI : DbgValues) {
       unsigned BitWidth =
           M.getDataLayout().getPointerSizeInBits(GEP->getPointerAddressSpace());
@@ -1343,19 +1348,19 @@ void llvm::salvageDebugInfo(Instruction &I) {
                                        Offset.getSExtValue(),
                                        DIExpression::WithStackValue);
         DVI->setOperand(0, MDWrap(I.getOperand(0)));
-        DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));
+        DVI->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
         DEBUG(dbgs() << "SALVAGE: " << *DVI << '\n');
       }
     }
-  } else if (auto *Load = dyn_cast<LoadInst>(&I)) {
-    findDbgValues(DbgValues, Load);
+  } else if (isa<LoadInst>(&I)) {
+    findDbgValues(DbgValues, &I);
     for (auto *DVI : DbgValues) {
       // Rewrite the load into DW_OP_deref.
       auto *DIExpr = DVI->getExpression();
       DIBuilder DIB(M, /*AllowUnresolved*/ false);
       DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
       DVI->setOperand(0, MDWrap(I.getOperand(0)));
-      DVI->setOperand(3, MetadataAsValue::get(I.getContext(), DIExpr));
+      DVI->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
       DEBUG(dbgs() << "SALVAGE:  " << *DVI << '\n');
     }
   }
@@ -1462,7 +1467,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   II->setAttributes(CI->getAttributes());
 
   // Make sure that anything using the call now uses the invoke!  This also
-  // updates the CallGraph if present, because it uses a WeakVH.
+  // updates the CallGraph if present, because it uses a WeakTrackingVH.
   CI->replaceAllUsesWith(II);
 
   // Delete the original call
@@ -1654,9 +1659,10 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
   TI->eraseFromParent();
 }
 
-/// removeUnreachableBlocksFromFn - Remove blocks that are not reachable, even
+/// removeUnreachableBlocks - Remove blocks that are not reachable, even
 /// if they are in a dead cycle.  Return true if a change was made, false
-/// otherwise.
+/// otherwise. If `LVI` is passed, this function preserves LazyValueInfo
+/// after modifying the CFG.
 bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
   SmallPtrSet<BasicBlock*, 16> Reachable;
   bool Changed = markAliveBlocks(F, Reachable);
@@ -1735,12 +1741,12 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !invariant.group in K.
         break;
       case LLVMContext::MD_align:
-        K->setMetadata(Kind, 
+        K->setMetadata(Kind,
           MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_dereferenceable:
       case LLVMContext::MD_dereferenceable_or_null:
-        K->setMetadata(Kind, 
+        K->setMetadata(Kind,
           MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
     }
@@ -1767,44 +1773,60 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J) {
   combineMetadata(K, J, KnownIDs);
 }
 
-unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
-                                        DominatorTree &DT,
-                                        const BasicBlockEdge &Root) {
-  assert(From->getType() == To->getType());
-  
-  unsigned Count = 0;
-  for (Value::use_iterator UI = From->use_begin(), UE = From->use_end();
-       UI != UE; ) {
-    Use &U = *UI++;
-    if (DT.dominates(Root, U)) {
-      U.set(To);
-      DEBUG(dbgs() << "Replace dominated use of '"
-            << From->getName() << "' as "
-            << *To << " in " << *U << "\n");
-      ++Count;
-    }
-  }
-  return Count;
-}
-
-unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
-                                        DominatorTree &DT,
-                                        const BasicBlock *BB) {
+template <typename RootType, typename DominatesFn>
+static unsigned replaceDominatedUsesWith(Value *From, Value *To,
+                                         const RootType &Root,
+                                         const DominatesFn &Dominates) {
   assert(From->getType() == To->getType());
 
   unsigned Count = 0;
   for (Value::use_iterator UI = From->use_begin(), UE = From->use_end();
        UI != UE;) {
     Use &U = *UI++;
-    auto *I = cast<Instruction>(U.getUser());
-    if (DT.properlyDominates(BB, I->getParent())) {
-      U.set(To);
-      DEBUG(dbgs() << "Replace dominated use of '" << From->getName() << "' as "
-                   << *To << " in " << *U << "\n");
-      ++Count;
-    }
+    if (!Dominates(Root, U))
+      continue;
+    U.set(To);
+    DEBUG(dbgs() << "Replace dominated use of '" << From->getName() << "' as "
+                 << *To << " in " << *U << "\n");
+    ++Count;
   }
   return Count;
+}
+
+unsigned llvm::replaceNonLocalUsesWith(Instruction *From, Value *To) {
+   assert(From->getType() == To->getType());
+   auto *BB = From->getParent();
+   unsigned Count = 0;
+
+  for (Value::use_iterator UI = From->use_begin(), UE = From->use_end();
+       UI != UE;) {
+    Use &U = *UI++;
+    auto *I = cast<Instruction>(U.getUser());
+    if (I->getParent() == BB)
+      continue;
+    U.set(To);
+    ++Count;
+  }
+  return Count;
+}
+
+unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
+                                        DominatorTree &DT,
+                                        const BasicBlockEdge &Root) {
+  auto Dominates = [&DT](const BasicBlockEdge &Root, const Use &U) {
+    return DT.dominates(Root, U);
+  };
+  return ::replaceDominatedUsesWith(From, To, Root, Dominates);
+}
+
+unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
+                                        DominatorTree &DT,
+                                        const BasicBlock *BB) {
+  auto ProperlyDominates = [&DT](const BasicBlock *BB, const Use &U) {
+    auto *I = cast<Instruction>(U.getUser())->getParent();
+    return DT.properlyDominates(BB, I);
+  };
+  return ::replaceDominatedUsesWith(From, To, BB, ProperlyDominates);
 }
 
 bool llvm::callsGCLeafFunction(ImmutableCallSite CS) {
@@ -1822,6 +1844,49 @@ bool llvm::callsGCLeafFunction(ImmutableCallSite CS) {
   }
 
   return false;
+}
+
+void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
+                               LoadInst &NewLI) {
+  auto *NewTy = NewLI.getType();
+
+  // This only directly applies if the new type is also a pointer.
+  if (NewTy->isPointerTy()) {
+    NewLI.setMetadata(LLVMContext::MD_nonnull, N);
+    return;
+  }
+
+  // The only other translation we can do is to integral loads with !range
+  // metadata.
+  if (!NewTy->isIntegerTy())
+    return;
+
+  MDBuilder MDB(NewLI.getContext());
+  const Value *Ptr = OldLI.getPointerOperand();
+  auto *ITy = cast<IntegerType>(NewTy);
+  auto *NullInt = ConstantExpr::getPtrToInt(
+      ConstantPointerNull::get(cast<PointerType>(Ptr->getType())), ITy);
+  auto *NonNullInt = ConstantExpr::getAdd(NullInt, ConstantInt::get(ITy, 1));
+  NewLI.setMetadata(LLVMContext::MD_range,
+                    MDB.createRange(NonNullInt, NullInt));
+}
+
+void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
+                             MDNode *N, LoadInst &NewLI) {
+  auto *NewTy = NewLI.getType();
+
+  // Give up unless it is converted to a pointer where there is a single very
+  // valuable mapping we can do reliably.
+  // FIXME: It would be nice to propagate this in more ways, but the type
+  // conversions make it hard.
+  if (!NewTy->isPointerTy())
+    return;
+
+  unsigned BitWidth = DL.getTypeSizeInBits(NewTy);
+  if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
+    MDNode *NN = MDNode::get(OldLI.getContext(), None);
+    NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
+  }
 }
 
 namespace {
@@ -1945,7 +2010,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       unsigned NumMaskedBits = AndMask.countPopulation();
       if (!MatchBitReversals && NumMaskedBits % 8 != 0)
         return Result;
-      
+
       auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
                                   MatchBitReversals, BPS);
       if (!Res)
@@ -2080,9 +2145,63 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
     CallInst *CI, const TargetLibraryInfo *TLI) {
   Function *F = CI->getCalledFunction();
-  LibFunc::Func Func;
+  LibFunc Func;
   if (F && !F->hasLocalLinkage() && F->hasName() &&
       TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
       !F->doesNotAccessMemory())
-    CI->addAttribute(AttributeSet::FunctionIndex, Attribute::NoBuiltin);
+    CI->addAttribute(AttributeList::FunctionIndex, Attribute::NoBuiltin);
+}
+
+bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
+  // We can't have a PHI with a metadata type.
+  if (I->getOperand(OpIdx)->getType()->isMetadataTy())
+    return false;
+
+  // Early exit.
+  if (!isa<Constant>(I->getOperand(OpIdx)))
+    return true;
+
+  switch (I->getOpcode()) {
+  default:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+    // Can't handle inline asm. Skip it.
+    if (isa<InlineAsm>(ImmutableCallSite(I).getCalledValue()))
+      return false;
+    // Many arithmetic intrinsics have no issue taking a
+    // variable, however it's hard to distingish these from
+    // specials such as @llvm.frameaddress that require a constant.
+    if (isa<IntrinsicInst>(I))
+      return false;
+
+    // Constant bundle operands may need to retain their constant-ness for
+    // correctness.
+    if (ImmutableCallSite(I).isBundleOperand(OpIdx))
+      return false;
+    return true;
+  case Instruction::ShuffleVector:
+    // Shufflevector masks are constant.
+    return OpIdx != 2;
+  case Instruction::Switch:
+  case Instruction::ExtractValue:
+    // All operands apart from the first are constant.
+    return OpIdx == 0;
+  case Instruction::InsertValue:
+    // All operands apart from the first and the second are constant.
+    return OpIdx < 2;
+  case Instruction::Alloca:
+    // Static allocas (constant size in the entry block) are handled by
+    // prologue/epilogue insertion so they're free anyway. We definitely don't
+    // want to make them non-constant.
+    return !dyn_cast<AllocaInst>(I)->isStaticAlloca();
+  case Instruction::GetElementPtr:
+    if (OpIdx == 0)
+      return true;
+    gep_type_iterator It = gep_type_begin(I);
+    for (auto E = std::next(It, OpIdx); It != E; ++It)
+      if (It.isStruct())
+        return false;
+    return true;
+  }
 }

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <random>
 
 // class seed_seq;
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     std::seed_seq s= {5, 4, 3, 2, 1};
     assert(s.size() == 5);
     unsigned b[5] = {0};
@@ -29,5 +30,4 @@ int main()
     assert(b[2] == 3);
     assert(b[3] == 2);
     assert(b[4] == 1);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

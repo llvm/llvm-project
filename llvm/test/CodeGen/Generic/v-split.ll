@@ -1,4 +1,5 @@
 ; RUN: llc < %s
+
 %f8 = type <8 x float>
 
 define void @test_f8(%f8 *%P, %f8* %Q, %f8 *%S) {

@@ -580,56 +580,74 @@ bool EEVT::TypeSet::EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VTOperand,
   return MadeChange;
 }
 
-/// EnforceVectorSameNumElts - 'this' is now constrained to
-/// be a vector with same num elements as VTOperand.
-bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
-                                             TreePattern &TP) {
+/// EnforceameNumElts - If VTOperand is a scalar, then 'this' is a scalar. If
+/// VTOperand is a vector, then 'this' must have the same number of elements.
+bool EEVT::TypeSet::EnforceSameNumElts(EEVT::TypeSet &VTOperand,
+                                       TreePattern &TP) {
   if (TP.hasError())
     return false;
 
-  // "This" must be a vector and "VTOperand" must be a vector.
   bool MadeChange = false;
-  MadeChange |= EnforceVector(TP);
-  MadeChange |= VTOperand.EnforceVector(TP);
 
-  // If we know one of the vector types, it forces the other type to agree.
+  if (isCompletelyUnknown())
+    MadeChange = FillWithPossibleTypes(TP);
+
+  if (VTOperand.isCompletelyUnknown())
+    MadeChange = VTOperand.FillWithPossibleTypes(TP);
+
+  // If one contains vectors but the other doesn't pull vectors out.
+  if (!hasVectorTypes())
+    MadeChange |= VTOperand.EnforceScalar(TP);
+  else if (!hasScalarTypes())
+    MadeChange |= VTOperand.EnforceVector(TP);
+  if (!VTOperand.hasVectorTypes())
+    MadeChange |= EnforceScalar(TP);
+  else if (!VTOperand.hasScalarTypes())
+    MadeChange |= EnforceVector(TP);
+
+  // If one type is a vector, make sure the other has the same element count.
+  // If this a scalar, then we are already done with the above.
   if (isConcrete()) {
     MVT IVT = getConcrete();
-    unsigned NumElems = IVT.getVectorNumElements();
+    if (IVT.isVector()) {
+      unsigned NumElems = IVT.getVectorNumElements();
 
-    // Only keep types that have same elements as 'this'.
-    TypeSet InputSet(VTOperand);
+      // Only keep types that have same elements as 'this'.
+      TypeSet InputSet(VTOperand);
 
-    auto I = remove_if(VTOperand.TypeVec, [NumElems](MVT VVT) {
-      return VVT.getVectorNumElements() != NumElems;
-    });
-    MadeChange |= I != VTOperand.TypeVec.end();
-    VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
+      auto I = remove_if(VTOperand.TypeVec, [NumElems](MVT VVT) {
+        return VVT.getVectorNumElements() != NumElems;
+      });
+      MadeChange |= I != VTOperand.TypeVec.end();
+      VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
 
-    if (VTOperand.TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
-      TP.error("Type inference contradiction found, forcing '" +
-               InputSet.getName() + "' to have same number elements as '" +
-               getName() + "'");
-      return false;
+      if (VTOperand.TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
+        TP.error("Type inference contradiction found, forcing '" +
+                 InputSet.getName() + "' to have same number elements as '" +
+                 getName() + "'");
+        return false;
+      }
     }
   } else if (VTOperand.isConcrete()) {
     MVT IVT = VTOperand.getConcrete();
-    unsigned NumElems = IVT.getVectorNumElements();
+    if (IVT.isVector()) {
+      unsigned NumElems = IVT.getVectorNumElements();
 
-    // Only keep types that have same elements as VTOperand.
-    TypeSet InputSet(*this);
+      // Only keep types that have same elements as VTOperand.
+      TypeSet InputSet(*this);
 
-    auto I = remove_if(TypeVec, [NumElems](MVT VVT) {
-      return VVT.getVectorNumElements() != NumElems;
-    });
-    MadeChange |= I != TypeVec.end();
-    TypeVec.erase(I, TypeVec.end());
+      auto I = remove_if(TypeVec, [NumElems](MVT VVT) {
+        return VVT.getVectorNumElements() != NumElems;
+      });
+      MadeChange |= I != TypeVec.end();
+      TypeVec.erase(I, TypeVec.end());
 
-    if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
-      TP.error("Type inference contradiction found, forcing '" +
-               InputSet.getName() + "' to have same number elements than '" +
-               VTOperand.getName() + "'");
-      return false;
+      if (TypeVec.empty()) {  // FIXME: Really want an SMLoc here!
+        TP.error("Type inference contradiction found, forcing '" +
+                 InputSet.getName() + "' to have same number elements than '" +
+                 VTOperand.getName() + "'");
+        return false;
+      }
     }
   }
 
@@ -643,6 +661,12 @@ bool EEVT::TypeSet::EnforceSameSize(EEVT::TypeSet &VTOperand,
     return false;
 
   bool MadeChange = false;
+
+  if (isCompletelyUnknown())
+    MadeChange = FillWithPossibleTypes(TP);
+
+  if (VTOperand.isCompletelyUnknown())
+    MadeChange = VTOperand.FillWithPossibleTypes(TP);
 
   // If we know one of the types, it forces the other type agree.
   if (isConcrete()) {
@@ -869,7 +893,9 @@ std::string PatternToMatch::getPredicateCheck() const {
   for (Record *Pred : PredicateRecs) {
     if (!PredicateCheck.empty())
       PredicateCheck += " && ";
-    PredicateCheck += "(" + Pred->getValueAsString("CondString") + ")";
+    PredicateCheck += "(";
+    PredicateCheck += Pred->getValueAsString("CondString");
+    PredicateCheck += ")";
   }
 
   return PredicateCheck.str();
@@ -1058,7 +1084,7 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode *N,
       getOperandNum(x.SDTCisSameNumEltsAs_Info.OtherOperandNum,
                     N, NodeInfo, OResNo);
     return OtherNode->getExtType(OResNo).
-      EnforceVectorSameNumElts(NodeToApply->getExtType(ResNo), TP);
+      EnforceSameNumElts(NodeToApply->getExtType(ResNo), TP);
   }
   case SDTCisSameSizeAs: {
     unsigned OResNo = 0;
@@ -2426,7 +2452,7 @@ void CodeGenDAGPatterns::ParseNodeTransforms() {
   while (!Xforms.empty()) {
     Record *XFormNode = Xforms.back();
     Record *SDNode = XFormNode->getValueAsDef("Opcode");
-    std::string Code = XFormNode->getValueAsString("XFormFunction");
+    StringRef Code = XFormNode->getValueAsString("XFormFunction");
     SDNodeXForms.insert(std::make_pair(XFormNode, NodeXForm(SDNode, Code)));
 
     Xforms.pop_back();
@@ -2736,8 +2762,8 @@ public:
     AnalyzeNode(Pat->getTree(0));
   }
 
-  void Analyze(const PatternToMatch *Pat) {
-    AnalyzeNode(Pat->getSrcPattern());
+  void Analyze(const PatternToMatch &Pat) {
+    AnalyzeNode(Pat.getSrcPattern());
   }
 
 private:
@@ -2804,7 +2830,8 @@ public:
       if (IntInfo->ModRef & CodeGenIntrinsic::MR_Mod)
         mayStore = true;// Intrinsics that can write to memory are 'mayStore'.
 
-      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteMem)
+      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteMem ||
+          IntInfo->hasSideEffects)
         // ReadWriteMem intrinsics can have other strange effects.
         hasSideEffects = true;
     }
@@ -3193,7 +3220,7 @@ static void FindNames(const TreePatternNode *P,
 }
 
 void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
-                                           const PatternToMatch &PTM) {
+                                           PatternToMatch &&PTM) {
   // Do some sanity checking on the pattern we're about to match.
   std::string Reason;
   if (!PTM.getSrcPattern()->canPatternMatch(Reason, *this)) {
@@ -3232,7 +3259,7 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
         SrcNames[Entry.first].second == 1)
       Pattern->error("Pattern has dead named input: $" + Entry.first);
 
-  PatternsToMatch.push_back(PTM);
+  PatternsToMatch.push_back(std::move(PTM));
 }
 
 
@@ -3262,9 +3289,7 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 
   // Second, look for single-instruction patterns defined outside the
   // instruction.
-  for (ptm_iterator I = ptm_begin(), E = ptm_end(); I != E; ++I) {
-    const PatternToMatch &PTM = *I;
-
+  for (const PatternToMatch &PTM : ptms()) {
     // We can only infer from single-instruction patterns, otherwise we won't
     // know which instruction should get the flags.
     SmallVector<Record*, 8> PatInstrs;
@@ -3280,7 +3305,7 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
       continue;
 
     InstAnalyzer PatInfo(*this);
-    PatInfo.Analyze(&PTM);
+    PatInfo.Analyze(PTM);
     Errors += InferFromPattern(InstInfo, PatInfo, PTM.getSrcRecord());
   }
 
@@ -3340,7 +3365,7 @@ void CodeGenDAGPatterns::VerifyInstructionFlags() {
 
     // Analyze the source pattern.
     InstAnalyzer PatInfo(*this);
-    PatInfo.Analyze(&PTM);
+    PatInfo.Analyze(PTM);
 
     // Collect error messages.
     SmallVector<std::string, 4> Msgs;
@@ -3526,14 +3551,12 @@ void CodeGenDAGPatterns::ParsePatterns() {
     TreePattern Temp(Result.getRecord(), DstPattern, false, *this);
     Temp.InferAllTypes();
 
-
-    AddPatternToMatch(Pattern,
-                    PatternToMatch(CurPattern,
-                                   CurPattern->getValueAsListInit("Predicates"),
-                                   Pattern->getTree(0),
-                                   Temp.getOnlyTree(), InstImpResults,
-                                   CurPattern->getValueAsInt("AddedComplexity"),
-                                   CurPattern->getID()));
+    AddPatternToMatch(
+        Pattern,
+        PatternToMatch(
+            CurPattern, CurPattern->getValueAsListInit("Predicates"),
+            Pattern->getTree(0), Temp.getOnlyTree(), std::move(InstImpResults),
+            CurPattern->getValueAsInt("AddedComplexity"), CurPattern->getID()));
   }
 }
 
@@ -3781,9 +3804,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
                        DepVars);
 
     assert(!Variants.empty() && "Must create at least original variant!");
-    Variants.erase(Variants.begin());  // Remove the original pattern.
-
-    if (Variants.empty())  // No variants for this pattern.
+    if (Variants.size() == 1)  // No additional variants for this pattern.
       continue;
 
     DEBUG(errs() << "FOUND VARIANTS OF: ";
@@ -3816,11 +3837,11 @@ void CodeGenDAGPatterns::GenerateVariants() {
       if (AlreadyExists) continue;
 
       // Otherwise, add it to the list of patterns we have.
-      PatternsToMatch.emplace_back(
+      PatternsToMatch.push_back(PatternToMatch(
           PatternsToMatch[i].getSrcRecord(), PatternsToMatch[i].getPredicates(),
           Variant, PatternsToMatch[i].getDstPattern(),
           PatternsToMatch[i].getDstRegs(),
-          PatternsToMatch[i].getAddedComplexity(), Record::getNewUID());
+          PatternsToMatch[i].getAddedComplexity(), Record::getNewUID()));
     }
 
     DEBUG(errs() << "\n");

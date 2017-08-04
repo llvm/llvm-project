@@ -137,7 +137,7 @@ namespace inalloca_nonvirt {
   // WIN32: call {{.*}} @"\01??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(%{{[^,]*}}, <{{.*}}>* inalloca %[[ARGMEM]])
   // WIN32: call void @llvm.stackrestore(
   // WIN32: call {{.*}} @"\01??0Z@@QAE@XZ"(
-  // WIN32: call {{.*}} @"\01??_DQ@@QAE@XZ"(
+  // WIN32: call {{.*}} @"\01??_DQ@@QAEXXZ"(
 
   // On Win64, the Q arguments would be destroyed in the callee. We don't yet
   // support that in the non-inlined case, so we force inlining.
@@ -150,7 +150,7 @@ namespace inalloca_nonvirt {
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"\01??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
-  // WIN64: call void @"\01??_DQ@@QEAA@XZ"({{.*}}* %[[TMP]])
+  // WIN64: call void @"\01??_DQ@@QEAAXXZ"({{.*}}* %[[TMP]])
 
   struct C : B { using B::B; };
   C c(1, 2, 3, 4);
@@ -173,7 +173,7 @@ namespace inalloca_nonvirt {
   // WIN32: call {{.*}} @"\01??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(%{{[^,]*}}, <{{.*}}>* inalloca %[[ARGMEM]])
   // WIN32: call void @llvm.stackrestore(
   // WIN32: call {{.*}} @"\01??0Z@@QAE@XZ"(
-  // WIN32: call {{.*}} @"\01??_DQ@@QAE@XZ"(
+  // WIN32: call {{.*}} @"\01??_DQ@@QAEXXZ"(
 
   // On Win64, the Q arguments would be destroyed in the callee. We don't yet
   // support that in the non-inlined case, so we force inlining.
@@ -186,7 +186,7 @@ namespace inalloca_nonvirt {
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"\01??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(%{{.*}}, %{{.*}}* %[[ARG1]], i32 2, %{{.*}}* %[[ARG3]], %{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
-  // WIN64: call void @"\01??_DQ@@QEAA@XZ"({{.*}}* %[[TMP]])
+  // WIN64: call void @"\01??_DQ@@QEAAXXZ"({{.*}}* %[[TMP]])
 }
 
 namespace inalloca_virt {
@@ -224,7 +224,7 @@ namespace inalloca_virt {
   // destroy the parameters, but that's not actually possible.
   // WIN32: call {{.*}} @"\01??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"\01??0Z@@QAE@XZ"(
-  // WIN32: call {{.*}} @"\01??_DQ@@QAE@XZ"(
+  // WIN32: call {{.*}} @"\01??_DQ@@QAEXXZ"(
 
   // On Win64, the Q arguments would be destroyed in the callee. We don't yet
   // support that in the non-inlined case, so we force inlining.
@@ -239,7 +239,7 @@ namespace inalloca_virt {
   // WIN64: br
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
-  // WIN64: call void @"\01??_DQ@@QEAA@XZ"({{.*}}* %[[TMP]])
+  // WIN64: call void @"\01??_DQ@@QEAAXXZ"({{.*}}* %[[TMP]])
 
   struct C : B { using B::B; };
   C c(1, 2, 3, 4);
@@ -281,7 +281,7 @@ namespace inalloca_virt {
   //
   // WIN32: call {{.*}} @"\01??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"\01??0Z@@QAE@XZ"(
-  // WIN32: call {{.*}} @"\01??_DQ@@QAE@XZ"(
+  // WIN32: call {{.*}} @"\01??_DQ@@QAEXXZ"(
 
   // On Win64, the Q arguments would be destroyed in the callee. We don't yet
   // support that in the non-inlined case, so we force inlining.
@@ -301,7 +301,7 @@ namespace inalloca_virt {
   // WIN64: br
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"\01??0Z@@QEAA@XZ"(
-  // WIN64: call void @"\01??_DQ@@QEAA@XZ"({{.*}}* %[[TMP]])
+  // WIN64: call void @"\01??_DQ@@QEAAXXZ"({{.*}}* %[[TMP]])
 }
 
 namespace inline_nonvirt {

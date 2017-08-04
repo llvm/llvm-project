@@ -161,7 +161,11 @@ def main(builtinParameters = {}):
         main_with_tmp(builtinParameters)
     finally:
         if lit_tmp:
-            shutil.rmtree(lit_tmp)
+            try:
+                shutil.rmtree(lit_tmp)
+            except:
+                # FIXME: Re-try after timeout on Windows.
+                pass
 
 def main_with_tmp(builtinParameters):
     parser = argparse.ArgumentParser()
@@ -195,6 +199,12 @@ def main_with_tmp(builtinParameters):
     format_group.add_argument("-v", "--verbose", dest="showOutput",
                      help="Show test output for failures",
                      action="store_true", default=False)
+    format_group.add_argument("-vv", "--echo-all-commands",
+                     dest="echoAllCommands",
+                     action="store_true", default=False,
+                     help="Echo all commands as they are executed to stdout.\
+                     In case of failure, last command shown will be the\
+                     failing one.")
     format_group.add_argument("-a", "--show-all", dest="showAllOutput",
                      help="Display all commandlines and output",
                      action="store_true", default=False)
@@ -258,7 +268,16 @@ def main_with_tmp(builtinParameters):
     selection_group.add_argument("--filter", metavar="REGEX",
                      help=("Only run tests with paths matching the given "
                            "regular expression"),
-                     action="store", default=None)
+                     action="store",
+                     default=os.environ.get("LIT_FILTER"))
+    selection_group.add_argument("--num-shards", dest="numShards", metavar="M",
+                     help="Split testsuite into M pieces and only run one",
+                     action="store", type=int,
+                     default=os.environ.get("LIT_NUM_SHARDS"))
+    selection_group.add_argument("--run-shard", dest="runShard", metavar="N",
+                     help="Run shard #N of the testsuite",
+                     action="store", type=int,
+                     default=os.environ.get("LIT_RUN_SHARD"))
 
     debug_group = parser.add_argument_group("Debug and Experimental Options")
     debug_group.add_argument("--debug",
@@ -270,12 +289,9 @@ def main_with_tmp(builtinParameters):
     debug_group.add_argument("--show-tests", dest="showTests",
                       help="Show all discovered tests",
                       action="store_true", default=False)
-    debug_group.add_argument("--use-processes", dest="useProcesses",
+    debug_group.add_argument("--use-processes", dest="executionStrategy",
                       help="Run tests in parallel with processes (not threads)",
-                      action="store_true", default=True)
-    debug_group.add_argument("--use-threads", dest="useProcesses",
-                      help="Run tests in parallel with threads (not processes)",
-                      action="store_false", default=True)
+                      action="store_const", const="PROCESSES")
 
     opts = parser.parse_args()
     args = opts.test_paths
@@ -292,6 +308,9 @@ def main_with_tmp(builtinParameters):
 
     if opts.maxFailures == 0:
         parser.error("Setting --max-failures to 0 does not have any effect.")
+
+    if opts.echoAllCommands:
+        opts.showOutput = True
 
     inputs = args
 
@@ -328,7 +347,8 @@ def main_with_tmp(builtinParameters):
         config_prefix = opts.configPrefix,
         maxIndividualTestTime = maxIndividualTestTime,
         maxFailures = opts.maxFailures,
-        parallelism_groups = {})
+        parallelism_groups = {},
+        echo_all_commands = opts.echoAllCommands)
 
     # Perform test discovery.
     run = lit.run.Run(litConfig,
@@ -400,6 +420,29 @@ def main_with_tmp(builtinParameters):
     else:
         run.tests.sort(key = lambda t: (not t.isEarlyTest(), t.getFullName()))
 
+    # Then optionally restrict our attention to a shard of the tests.
+    if (opts.numShards is not None) or (opts.runShard is not None):
+        if (opts.numShards is None) or (opts.runShard is None):
+            parser.error("--num-shards and --run-shard must be used together")
+        if opts.numShards <= 0:
+            parser.error("--num-shards must be positive")
+        if (opts.runShard < 1) or (opts.runShard > opts.numShards):
+            parser.error("--run-shard must be between 1 and --num-shards (inclusive)")
+        num_tests = len(run.tests)
+        # Note: user views tests and shard numbers counting from 1.
+        test_ixs = range(opts.runShard - 1, num_tests, opts.numShards)
+        run.tests = [run.tests[i] for i in test_ixs]
+        # Generate a preview of the first few test indices in the shard
+        # to accompany the arithmetic expression, for clarity.
+        preview_len = 3
+        ix_preview = ", ".join([str(i+1) for i in test_ixs[:preview_len]])
+        if len(test_ixs) > preview_len:
+            ix_preview += ", ..."
+        litConfig.note('Selecting shard %d/%d = size %d/%d = tests #(%d*k)+%d = [%s]' %
+                       (opts.runShard, opts.numShards,
+                        len(run.tests), num_tests,
+                        opts.numShards, opts.runShard, ix_preview))
+
     # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:
         run.tests = run.tests[:opts.maxTests]
@@ -449,8 +492,7 @@ def main_with_tmp(builtinParameters):
     startTime = time.time()
     display = TestingProgressDisplay(opts, len(run.tests), progressBar)
     try:
-        run.execute_tests(display, opts.numThreads, opts.maxTime,
-                          opts.useProcesses)
+        run.execute_tests(display, opts.numThreads, opts.maxTime)
     except KeyboardInterrupt:
         sys.exit(2)
     display.finish()

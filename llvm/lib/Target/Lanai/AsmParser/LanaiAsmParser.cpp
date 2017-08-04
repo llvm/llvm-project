@@ -28,8 +28,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -787,6 +787,7 @@ std::unique_ptr<LanaiOperand> LanaiAsmParser::parseImmediate() {
   case AsmToken::Dot:
     if (!Parser.parseExpression(ExprVal))
       return LanaiOperand::createImm(ExprVal, Start, End);
+    LLVM_FALLTHROUGH;
   default:
     return nullptr;
   }
@@ -1096,7 +1097,7 @@ StringRef LanaiAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
   return Mnemonic;
 }
 
-bool IsMemoryAssignmentError(const OperandVector &Operands) {
+static bool IsMemoryAssignmentError(const OperandVector &Operands) {
   // Detects if a memory operation has an erroneous base register modification.
   // Memory operations are detected by matching the types of operands.
   //

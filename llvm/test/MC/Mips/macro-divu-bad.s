@@ -8,7 +8,7 @@
 # RUN: FileCheck %s --check-prefix=NOT-R6
 
   .text
-  divu $25, $11
+  divu $25, 11
   # R6: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
 
   divu $25, $0

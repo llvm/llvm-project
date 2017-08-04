@@ -1092,7 +1092,7 @@ Function *FunctionAST::codegen() {
   TheFunction->eraseFromParent();
 
   if (P.isBinaryOp())
-    BinopPrecedence.erase(Proto->getOperatorName());
+    BinopPrecedence.erase(P.getOperatorName());
   return nullptr;
 }
 
@@ -1110,7 +1110,8 @@ static void HandleDefinition() {
   if (auto FnAST = ParseDefinition()) {
     if (auto *FnIR = FnAST->codegen()) {
       fprintf(stderr, "Read function definition:");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
       TheJIT->addModule(std::move(TheModule));
       InitializeModule();
     }
@@ -1124,7 +1125,8 @@ static void HandleExtern() {
   if (auto ProtoAST = ParseExtern()) {
     if (auto *FnIR = ProtoAST->codegen()) {
       fprintf(stderr, "Read extern: ");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
       FunctionProtos[ProtoAST->getName()] = std::move(ProtoAST);
     }
   } else {
@@ -1148,7 +1150,7 @@ static void HandleTopLevelExpression() {
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      double (*FP)() = (double (*)())(intptr_t)ExprSymbol.getAddress();
+      double (*FP)() = (double (*)())(intptr_t)cantFail(ExprSymbol.getAddress());
       fprintf(stderr, "Evaluated to %f\n", FP());
 
       // Delete the anonymous expression module from the JIT.

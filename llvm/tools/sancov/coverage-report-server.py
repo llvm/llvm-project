@@ -138,7 +138,7 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
                 if not file_coverage:
                     continue
                 filelist.append(
-                        "<tr><td><a href=\"/{name}\">{name}</a></td>"
+                        "<tr><td><a href=\"./{name}\">{name}</a></td>"
                         "<td>{coverage}%</td></tr>".format(
                             name=html.escape(filename, quote=True), 
                             coverage=format_pct(file_coverage)))
@@ -165,7 +165,7 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
                         ["<span class='{cls}'>{line}&nbsp;</span>".format(
                             line=html.escape(line.rstrip()), 
                             cls=linemap.get(line_no, ""))
-                            for line_no, line in enumerate(f)])
+                            for line_no, line in enumerate(f, start=1)])
 
             response = string.Template(CONTENT_PAGE_TMPL).safe_substitute(
                 path=self.path[1:],

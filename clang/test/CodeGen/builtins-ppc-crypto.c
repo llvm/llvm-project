@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -faltivec -triple powerpc64le-unknown-unknown \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown \
 // RUN: -target-feature +crypto -target-feature +power8-vector \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -faltivec -triple powerpc64-unknown-unknown \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown \
 // RUN: -target-feature +crypto -target-feature +power8-vector \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 #include <altivec.h>

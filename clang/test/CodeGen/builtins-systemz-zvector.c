@@ -294,6 +294,16 @@ void test_core(void) {
   vec_scatter_element(vd, vul, ptrd, 0);
   vec_scatter_element(vd, vul, ptrd, 1);
 
+  vsc = vec_xl(idx, cptrsc);
+  vuc = vec_xl(idx, cptruc);
+  vss = vec_xl(idx, cptrss);
+  vus = vec_xl(idx, cptrus);
+  vsi = vec_xl(idx, cptrsi);
+  vui = vec_xl(idx, cptrui);
+  vsl = vec_xl(idx, cptrsl);
+  vul = vec_xl(idx, cptrul);
+  vd = vec_xl(idx, cptrd);
+
   vsc = vec_xld2(idx, cptrsc);
   vuc = vec_xld2(idx, cptruc);
   vss = vec_xld2(idx, cptrss);
@@ -310,6 +320,16 @@ void test_core(void) {
   vus = vec_xlw4(idx, cptrus);
   vsi = vec_xlw4(idx, cptrsi);
   vui = vec_xlw4(idx, cptrui);
+
+  vec_xst(vsc, idx, ptrsc);
+  vec_xst(vuc, idx, ptruc);
+  vec_xst(vss, idx, ptrss);
+  vec_xst(vus, idx, ptrus);
+  vec_xst(vsi, idx, ptrsi);
+  vec_xst(vui, idx, ptrui);
+  vec_xst(vsl, idx, ptrsl);
+  vec_xst(vul, idx, ptrul);
+  vec_xst(vd, idx, ptrd);
 
   vec_xstd2(vsc, idx, ptrsc);
   vec_xstd2(vuc, idx, ptruc);
@@ -1841,6 +1861,10 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   vuc = vec_sld(vuc, vuc, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
+  vbc = vec_sld(vbc, vbc, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  vbc = vec_sld(vbc, vbc, 15);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   vss = vec_sld(vss, vss, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   vss = vec_sld(vss, vss, 15);
@@ -1848,6 +1872,10 @@ void test_integer(void) {
   vus = vec_sld(vus, vus, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   vus = vec_sld(vus, vus, 15);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
+  vbs = vec_sld(vbs, vbs, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  vbs = vec_sld(vbs, vbs, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   vsi = vec_sld(vsi, vsi, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
@@ -1857,6 +1885,10 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   vui = vec_sld(vui, vui, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
+  vbi = vec_sld(vbi, vbi, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  vbi = vec_sld(vbi, vbi, 15);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   vsl = vec_sld(vsl, vsl, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   vsl = vec_sld(vsl, vsl, 15);
@@ -1864,6 +1896,10 @@ void test_integer(void) {
   vul = vec_sld(vul, vul, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   vul = vec_sld(vul, vul, 15);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
+  vbl = vec_sld(vbl, vbl, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  vbl = vec_sld(vbl, vbl, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
   vd = vec_sld(vd, vd, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
@@ -2943,6 +2979,16 @@ void test_float(void) {
   // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, <double 0x41E0000000000000, double 0x41E0000000000000>
   // CHECK: fptoui <2 x double> [[VAL]] to <2 x i64>
 
+  vd = vec_double(vsl);
+  // CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
+  vd = vec_double(vul);
+  // CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>
+
+  vsl = vec_signed(vd);
+  // CHECK: fptosi <2 x double> %{{.*}} to <2 x i64>
+  vul = vec_unsigned(vd);
+  // CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
+
   vd = vec_roundp(vd);
   // CHECK: call <2 x double> @llvm.ceil.v2f64(<2 x double> %{{.*}})
   vd = vec_ceil(vd);
@@ -2957,6 +3003,8 @@ void test_float(void) {
   // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}})
   vd = vec_roundc(vd);
   // CHECK: call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %{{.*}})
+  vd = vec_rint(vd);
+  // CHECK: call <2 x double> @llvm.rint.v2f64(<2 x double> %{{.*}})
   vd = vec_round(vd);
   // CHECK: call <2 x double> @llvm.s390.vfidb(<2 x double> %{{.*}}, i32 4, i32 4)
 
@@ -2964,4 +3012,44 @@ void test_float(void) {
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 0)
   vbl = vec_fp_test_data_class(vd, 4095, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 4095)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_ZERO_P, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 2048)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_ZERO_N, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 1024)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_ZERO, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 3072)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_NORMAL_P, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 512)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_NORMAL_N, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 256)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_NORMAL, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 768)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_SUBNORMAL_P, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 128)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_SUBNORMAL_N, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 64)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_SUBNORMAL, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 192)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_INFINITY_P, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 32)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_INFINITY_N, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 16)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_INFINITY, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 48)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_QNAN_P, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 8)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_QNAN_N, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 4)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_QNAN, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 12)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_SNAN_P, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 2)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_SNAN_N, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 1)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_SNAN, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 3)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_NAN, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 15)
+  vbl = vec_fp_test_data_class(vd, __VEC_CLASS_FP_NOT_NORMAL, &cc);
+  // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 3327)
 }

@@ -15,7 +15,7 @@ struct C { void *field; };
 
 struct D { ~D(); };
 
-// CHECK: @__dso_handle = external global i8
+// CHECK: @__dso_handle = external hidden global i8
 // CHECK: @c = global %struct.C zeroinitializer, align 8
 
 // PR6205: The casts should not require global initializers

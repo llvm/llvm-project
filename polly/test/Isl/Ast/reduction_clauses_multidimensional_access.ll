@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
-; CHECK: #pragma known-parallel reduction (^ : sum)
+; CHECK: #pragma known-parallel reduction (^ : MemRef_sum)
 ;        void f(int N, int M, int P, int sum[P][M]) {
 ; PINFO:   for.cond: Loop is not parallel.
 ;          for (int i = 0; i < N; i++)

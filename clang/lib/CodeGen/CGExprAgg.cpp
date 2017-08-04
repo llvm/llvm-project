@@ -111,6 +111,13 @@ public:
   void VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     Visit(GE->getResultExpr());
   }
+  void VisitCoawaitExpr(CoawaitExpr *E) {
+    CGF.EmitCoawaitExpr(*E, Dest, IsResultUnused);
+  }
+  void VisitCoyieldExpr(CoyieldExpr *E) {
+    CGF.EmitCoyieldExpr(*E, Dest, IsResultUnused);
+  }
+  void VisitUnaryCoawait(UnaryOperator *E) { Visit(E->getSubExpr()); }
   void VisitUnaryExtension(UnaryOperator *E) { Visit(E->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
     return Visit(E->getReplacement());
@@ -1275,7 +1282,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
       // Store the initializer into the field.
       EmitInitializationToLValue(E->getInit(curInitIndex++), LV);
     } else {
-      // We're out of initalizers; default-initialize to null
+      // We're out of initializers; default-initialize to null
       EmitNullInitializationToLValue(LV);
     }
 

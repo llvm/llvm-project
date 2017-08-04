@@ -3,12 +3,12 @@
 @known_constant = internal unnamed_addr constant [9 x i32] [i32 0, i32 -1, i32 0, i32 -1, i32 5, i32 -1, i32 0, i32 -1, i32 0], align 16
 
 ; CHECK-LABEL: @bar_prof
-; CHECK: loop.prol:
 ; CHECK: loop:
 ; CHECK: %mul = mul
 ; CHECK: %mul.1 = mul
 ; CHECK: %mul.2 = mul
 ; CHECK: %mul.3 = mul
+; CHECK: loop.epil:
 define i32 @bar_prof(i32* noalias nocapture readonly %src, i64 %c) !prof !1 {
 entry:
   br label %loop
@@ -32,7 +32,7 @@ loop.end:
 }
 
 ; CHECK-LABEL: @bar_prof_flat
-; CHECK-NOT: loop.prol
+; CHECK-NOT: loop.epil
 define i32 @bar_prof_flat(i32* noalias nocapture readonly %src, i64 %c) !prof !1 {
 entry:
   br label %loop

@@ -30,7 +30,7 @@ void SuspiciousSemicolonCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
-  if (Result.Context->getDiagnostics().hasErrorOccurred())
+  if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
     return;
 
   const auto *Semicolon = Result.Nodes.getNodeAs<NullStmt>("semi");
@@ -40,7 +40,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   ASTContext &Ctxt = *Result.Context;
-  auto Token = utils::lexer::getPreviousNonCommentToken(Ctxt, LocStart);
+  auto Token = utils::lexer::getPreviousToken(Ctxt, LocStart);
   auto &SM = *Result.SourceManager;
   unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
 

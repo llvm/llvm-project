@@ -1,0 +1,142 @@
+#
+#//===----------------------------------------------------------------------===//
+#//
+#//                     The LLVM Compiler Infrastructure
+#//
+#// This file is dual licensed under the MIT and the University of Illinois Open
+#// Source Licenses. See LICENSE.txt for details.
+#//
+#//===----------------------------------------------------------------------===//
+#
+
+=====================================================================
+How to Build the LLVM* OpenMP* Offloading Runtime Library using CMake
+=====================================================================
+
+==== Version of CMake required: v2.8.0 or above ====
+ 
+============================================
+How to call cmake initially, then repeatedly
+============================================
+- When calling cmake for the first time, all needed compiler options
+  must be specified on the command line.  After this initial call to
+  cmake, the compiler definitions must not be included for further calls
+  to cmake.  Other options can be specified on the command line multiple
+  times including all definitions in the Build options section below.
+- Example of configuring, building, reconfiguring, rebuilding:
+  $ mkdir build
+  $ cd build
+  $ cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..  # Initial configuration
+  $ make
+  ...
+  $ make clean
+  $ cmake -DCMAKE_BUILD_TYPE=Debug ..                         # Second configuration
+  $ make
+  ...
+  $ rm -rf *
+  $ cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..  # Third configuration
+  $ make
+- Notice in the example how the compiler definitions are only specified
+  for an empty build directory, but other Build options are used at any time.
+- The file CMakeCache.txt which is created after the first call to cmake
+  is a configuration file which holds all the values for the Build options.
+  These configuration values can be changed using a text editor to modify 
+  CMakeCache.txt as opposed to using definitions on the command line.
+- To have cmake create a particular type of build generator file simply 
+  inlude the -G <Generator name> option:
+  $ cmake -G "Unix Makefiles" ...
+  You can see a list of generators cmake supports by executing cmake with
+  no arguments and a list will be printed.
+
+=====================
+Instructions to Build
+=====================
+ $ cd libomptarget_top_level/ [ directory with plugins/ , deviceRTLs/ , etc. ]
+ $ mkdir build
+ $ cd build
+
+ [ Unix* Libraries ]
+ $ cmake -DCMAKE_C_COMPILER=<C Compiler> -DCMAKE_CXX_COMPILER=<C++ Compiler> ..
+
+ $ make
+ $ make install
+
+===========
+Tests
+===========
+After the library has been built, there are optional tests that can be 
+performed.  Some will be skipped based upon the platform.
+To run the tests,
+$ make check-libomptarget
+
+=============
+CMake options
+=============
+-DCMAKE_C_COMPILER=<C compiler name>
+Specify the C compiler
+
+-DCMAKE_CXX_COMPILER=<C++ compiler name>
+Specify the C++ compiler
+
+==== First values listed are the default value ====
+-DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo
+Build type can be Release, Debug, or RelWithDebInfo.
+
+-DLIBOMPTARGET_ENABLE_WERROR=true|false
+Should consider warnings as errors.
+
+-DLIBOMPTARGET_LLVM_LIT_EXECUTABLE=""
+Full path to the llvm-lit tool. Required for testing in out-of-tree builds.
+
+-DLIBOMPTARGET_FILECHECK_EXECUTABLE=""
+Full path to the FileCheck tool. Required for testing in out-of-tree builds.
+
+-DLIBOMPTARGET_OPENMP_HEADER_FOLDER=""
+Path of the folder that contains omp.h. This is required for testing 
+out-of-tree builds.
+
+-DLIBOMPTARGET_OPENMP_HOST_RTL_FOLDER=""
+Path of the folder that contains libomp.so. This is required for testing 
+out-of-tree builds.
+
+==== NVPTX device RTL specific ====
+-DLIBOMPTARGET_NVPTX_ENABLE_BCLIB=false|true
+Enable CUDA LLVM bitcode offloading device RTL. This is used for
+link time optimization of the omp runtime and application code.
+
+-DLIBOMPTARGET_NVPTX_CUDA_COMPILER=<CUDA compiler name>
+Location of a CUDA compiler capable of emitting LLVM bitcode.
+Currently only the Clang compiler is supported. This is only used
+when building the CUDA LLVM bitcode offloading device RTL. If
+unspecified, the default paths are inspected.
+
+-DLIBOMPTARGET_NVPTX_BC_LINKER=<LLVM bitcode linker>
+Location of a linker capable of linking LLVM bitcode objects.
+This is only used when building the CUDA LLVM bitcode offloading
+device RTL. If unspecified, the default paths are inspected.
+
+-DLIBOMPTARGET_NVPTX_ALTERNATE_HOST_COMPILER=""
+Host compiler to use with NVCC. This compiler is not going to be used to produce
+any binary. Instead, this is used to overcome the input compiler checks done by
+NVCC. E.g. if using a default host compiler that is not compatible with NVCC,
+this option can be use to pass to NVCC a valid compiler to avoid the error. 
+
+-DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITY="35"
+Comma-separated list of CUDA compute capabilities that should be supported by
+the NVPTX device RTL. E.g. for compute capabilities 3.0 and 3.5, the option 
+"30,35" should be used.
+
+=======================
+Example usages of CMake
+=======================
+---- Typical usage ----
+cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
+
+---- Request an NVPTX runtime library that supports compute capability 5.0 ----
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITY="50"
+
+=========
+Footnotes
+=========
+[*] Other names and brands may be claimed as the property of others.

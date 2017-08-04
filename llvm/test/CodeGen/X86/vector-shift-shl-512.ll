@@ -230,8 +230,7 @@ define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512DQ-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512DQ-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0,0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0]
-; AVX512DQ-NEXT:    vpsllw $5, %ymm4, %ymm4
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm4 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
 ; AVX512DQ-NEXT:    vpblendvb %ymm4, %ymm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsllw $2, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
@@ -253,7 +252,7 @@ define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_shift_v64i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpsllw $5, {{.*}}(%rip), %zmm1
+; AVX512BW-NEXT:    vmovdqu8 {{.*#+}} zmm1 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
 ; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; AVX512BW-NEXT:    vpsllw $4, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2

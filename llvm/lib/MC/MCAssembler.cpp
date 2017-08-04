@@ -8,8 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -19,24 +22,34 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <cstring>
 #include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "assembler"
 
 namespace {
 namespace stats {
+
 STATISTIC(EmittedFragments, "Number of emitted assembler fragments - total");
 STATISTIC(EmittedRelaxableFragments,
           "Number of emitted assembler fragments - relaxable");
@@ -55,8 +68,9 @@ STATISTIC(FragmentLayouts, "Number of fragment layouts");
 STATISTIC(ObjectBytes, "Number of emitted object file bytes");
 STATISTIC(RelaxationSteps, "Number of assembler layout and relaxation steps");
 STATISTIC(RelaxedInstructions, "Number of relaxed instructions");
-}
-}
+
+} // end namespace stats
+} // end anonymous namespace
 
 // FIXME FIXME FIXME: There are number of places in this file where we convert
 // what is a 64-bit assembler value used for computation into a value in the
@@ -73,8 +87,7 @@ MCAssembler::MCAssembler(MCContext &Context, MCAsmBackend &Backend,
   VersionMinInfo.Major = 0; // Major version == 0 for "none specified"
 }
 
-MCAssembler::~MCAssembler() {
-}
+MCAssembler::~MCAssembler() = default;
 
 void MCAssembler::reset() {
   Sections.clear();
@@ -114,10 +127,16 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   if (!Symbol->isVariable())
     return false;
 
-  // FIXME: It looks like gas supports some cases of the form "foo + 2". It
-  // is not clear if that is a bug or a feature.
   const MCExpr *Expr = Symbol->getVariableValue();
-  const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(Expr);
+
+  MCValue V;
+  if (!Expr->evaluateAsRelocatable(V, nullptr, nullptr))
+    return false;
+
+  if (V.getSymB() || V.getRefKind() != MCSymbolRefExpr::VK_None)
+    return false;
+
+  const MCSymbolRefExpr *Ref = V.getSymA();
   if (!Ref)
     return false;
 
@@ -174,13 +193,22 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   // FIXME: This code has some duplication with recordRelocation. We should
   // probably merge the two into a single callback that tries to evaluate a
   // fixup and records a relocation if one is needed.
+
+  // On error claim to have completely evaluated the fixup, to prevent any
+  // further processing from being done.
   const MCExpr *Expr = Fixup.getValue();
+  MCContext &Ctx = getContext();
+  Value = 0;
   if (!Expr->evaluateAsRelocatable(Target, &Layout, &Fixup)) {
-    getContext().reportError(Fixup.getLoc(), "expected relocatable expression");
-    // Claim to have completely evaluated the fixup, to prevent any further
-    // processing from being done.
-    Value = 0;
+    Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
+  }
+  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
+    if (RefB->getKind() != MCSymbolRefExpr::VK_None) {
+      Ctx.reportError(Fixup.getLoc(),
+                      "unsupported subtraction of qualified symbol");
+      return true;
+    }
   }
 
   bool IsPCRel = Backend.getFixupKindInfo(
@@ -219,7 +247,6 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
       Value -= Layout.getSymbolOffset(Sym);
   }
 
-
   bool ShouldAlignPC = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
                          MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
   assert((ShouldAlignPC ? IsPCRel : true) &&
@@ -234,10 +261,9 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
     Value -= Offset;
   }
 
-  // Let the backend adjust the fixup value if necessary, including whether
-  // we need a relocation.
-  Backend.processFixupValue(*this, Layout, Fixup, DF, Target, Value,
-                            IsResolved);
+  // Let the backend force a relocation if needed.
+  if (IsResolved && Backend.shouldForceRelocation(*this, Fixup, Target))
+    IsResolved = false;
 
   return IsResolved;
 }
@@ -621,27 +647,25 @@ void MCAssembler::writeSectionData(const MCSection *Sec,
          Layout.getSectionAddressSize(Sec));
 }
 
-std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
-                                                   MCFragment &F,
-                                                   const MCFixup &Fixup) {
+std::tuple<MCValue, uint64_t, bool>
+MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
+                         const MCFixup &Fixup) {
   // Evaluate the fixup.
   MCValue Target;
   uint64_t FixedValue;
-  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
-  if (!evaluateFixup(Layout, Fixup, &F, Target, FixedValue)) {
+  bool IsResolved = evaluateFixup(Layout, Fixup, &F, Target, FixedValue);
+  if (!IsResolved) {
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
     // fixup value if need be.
-    getWriter().recordRelocation(*this, Layout, &F, Fixup, Target, IsPCRel,
-                                 FixedValue);
+    getWriter().recordRelocation(*this, Layout, &F, Fixup, Target, FixedValue);
   }
-  return std::make_pair(FixedValue, IsPCRel);
+  return std::make_tuple(Target, FixedValue, IsResolved);
 }
 
 void MCAssembler::layout(MCAsmLayout &Layout) {
   DEBUG_WITH_TYPE("mc-dump", {
-      llvm::errs() << "assembler backend - pre-layout\n--\n";
+      errs() << "assembler backend - pre-layout\n--\n";
       dump(); });
 
   // Create dummy fragments and assign section ordinals.
@@ -671,14 +695,14 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       return;
 
   DEBUG_WITH_TYPE("mc-dump", {
-      llvm::errs() << "assembler backend - post-relaxation\n--\n";
+      errs() << "assembler backend - post-relaxation\n--\n";
       dump(); });
 
   // Finalize the layout, including fragment lowering.
   finishLayout(Layout);
 
   DEBUG_WITH_TYPE("mc-dump", {
-      llvm::errs() << "assembler backend - final-layout\n--\n";
+      errs() << "assembler backend - final-layout\n--\n";
       dump(); });
 
   // Allow the object writer a chance to perform post-layout binding (for
@@ -712,10 +736,12 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         llvm_unreachable("Unknown fragment with fixups!");
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
-        bool IsPCRel;
-        std::tie(FixedValue, IsPCRel) = handleFixup(Layout, Frag, Fixup);
-        getBackend().applyFixup(Fixup, Contents.data(),
-                                Contents.size(), FixedValue, IsPCRel);
+        bool IsResolved;
+        MCValue Target;
+        std::tie(Target, FixedValue, IsResolved) =
+            handleFixup(Layout, Frag, Fixup);
+        getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
+                                IsResolved);
       }
     }
   }
@@ -741,6 +767,10 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   MCValue Target;
   uint64_t Value;
   bool Resolved = evaluateFixup(Layout, Fixup, DF, Target, Value);
+  if (Target.getSymA() &&
+      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
+      Fixup.getKind() == FK_Data_1)
+    return false;
   return getBackend().fixupNeedsRelaxationAdvanced(Fixup, Resolved, Value, DF,
                                                    Layout);
 }

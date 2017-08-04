@@ -3,7 +3,7 @@
 ; EG-LABEL: {{^}}and_setcc_setcc_i32:
 ; EG: AND_INT
 ; EG-NEXT: SETE_INT
-define void @and_setcc_setcc_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define amdgpu_kernel void @and_setcc_setcc_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   %cmp1 = icmp eq i32 %a, -1
   %cmp2 = icmp eq i32 %b, -1
   %and = and i1 %cmp1, %cmp2
@@ -20,7 +20,7 @@ define void @and_setcc_setcc_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 ; EG: SETE_INT
 ; EG: AND_INT
 ; EG: SETE_INT
-define void @and_setcc_setcc_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, <4 x i32> %b) {
+define amdgpu_kernel void @and_setcc_setcc_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, <4 x i32> %b) {
   %cmp1 = icmp eq <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %cmp2 = icmp eq <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
   %and = and <4 x i1> %cmp1, %cmp2

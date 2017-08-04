@@ -1,4 +1,4 @@
-//==- ScheduleDAGInstrs.h - MachineInstr Scheduling --------------*- C++ -*-==//
+//===- ScheduleDAGInstrs.h - MachineInstr Scheduling ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,29 +7,46 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the ScheduleDAGInstrs class, which implements
-// scheduling for a MachineInstr-based dependency graph.
+/// \file Implements the ScheduleDAGInstrs class, which implements scheduling
+/// for a MachineInstr-based dependency graph.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/SparseSet.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
 #include <list>
+#include <utility>
+#include <vector>
 
 namespace llvm {
+
+  class LiveIntervals;
   class MachineFrameInfo;
+  class MachineFunction;
+  class MachineInstr;
   class MachineLoopInfo;
-  class MachineDominatorTree;
-  class RegPressureTracker;
+  class MachineOperand;
+  struct MCSchedClassDesc;
   class PressureDiffs;
+  class PseudoSourceValue;
+  class RegPressureTracker;
+  class UndefValue;
+  class Value;
 
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
@@ -69,34 +86,36 @@ namespace llvm {
   /// Use a SparseMultiSet to track physical registers. Storage is only
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
-  typedef SparseMultiSet<PhysRegSUOper, llvm::identity<unsigned>, uint16_t>
-  Reg2SUnitsMap;
+  using Reg2SUnitsMap =
+      SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
 
   /// Use SparseSet as a SparseMap by relying on the fact that it never
   /// compares ValueT's, only unsigned keys. This allows the set to be cleared
   /// between scheduling regions in constant time as long as ValueT does not
   /// require a destructor.
-  typedef SparseSet<VReg2SUnit, VirtReg2IndexFunctor> VReg2SUnitMap;
+  using VReg2SUnitMap = SparseSet<VReg2SUnit, VirtReg2IndexFunctor>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire
   /// vreg use list.
-  typedef SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor> VReg2SUnitMultiMap;
+  using VReg2SUnitMultiMap = SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor>;
 
-  typedef SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>
-    VReg2SUnitOperIdxMultiMap;
+  using VReg2SUnitOperIdxMultiMap =
+      SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>;
 
-  typedef PointerUnion<const Value *, const PseudoSourceValue *> ValueType;
+  using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
+
   struct UnderlyingObject : PointerIntPair<ValueType, 1, bool> {
     UnderlyingObject(ValueType V, bool MayAlias)
         : PointerIntPair<ValueType, 1, bool>(V, MayAlias) {}
+
     ValueType getValue() const { return getPointer(); }
     bool mayAlias() const { return getInt(); }
   };
-  typedef SmallVector<UnderlyingObject, 4> UnderlyingObjectsVector;
 
-  /// ScheduleDAGInstrs - A ScheduleDAG subclass for scheduling lists of
-  /// MachineInstrs.
+  using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
+
+  /// A ScheduleDAG for scheduling lists of MachineInstr.
   class ScheduleDAGInstrs : public ScheduleDAG {
   protected:
     const MachineLoopInfo *MLI;
@@ -114,13 +133,13 @@ namespace llvm {
     /// reordering. A specialized scheduler can override
     /// TargetInstrInfo::isSchedulingBoundary then enable this flag to indicate
     /// it has taken responsibility for scheduling the terminator correctly.
-    bool CanHandleTerminators;
+    bool CanHandleTerminators = false;
 
     /// Whether lane masks should get tracked.
-    bool TrackLaneMasks;
+    bool TrackLaneMasks = false;
 
-    /// State specific to the current scheduling region.
-    /// ------------------------------------------------
+    // State specific to the current scheduling region.
+    // ------------------------------------------------
 
     /// The block in which to insert instructions
     MachineBasicBlock *BB;
@@ -138,8 +157,8 @@ namespace llvm {
     /// scheduling region is mapped to an SUnit.
     DenseMap<MachineInstr*, SUnit*> MISUnitMap;
 
-    /// State internal to DAG building.
-    /// -------------------------------
+    // State internal to DAG building.
+    // -------------------------------
 
     /// Defs, Uses - Remember where defs and uses of each register are as we
     /// iterate upward through the instructions. This is allocated here instead
@@ -155,160 +174,165 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    AliasAnalysis *AAForDep;
+    AliasAnalysis *AAForDep = nullptr;
 
     /// Remember a generic side-effecting instruction as we proceed.
     /// No other SU ever gets scheduled around it (except in the special
     /// case of a huge region that gets reduced).
-    SUnit *BarrierChain;
+    SUnit *BarrierChain = nullptr;
 
   public:
-
     /// A list of SUnits, used in Value2SUsMap, during DAG construction.
     /// Note: to gain speed it might be worth investigating an optimized
     /// implementation of this data structure, such as a singly linked list
     /// with a memory pool (SmallVector was tried but slow and SparseSet is not
     /// applicable).
-    typedef std::list<SUnit *> SUList;
+    using SUList = std::list<SUnit *>;
+
   protected:
-    /// A map from ValueType to SUList, used during DAG construction,
-    /// as a means of remembering which SUs depend on which memory
-    /// locations.
+    /// \brief A map from ValueType to SUList, used during DAG construction, as
+    /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
 
-    /// Remove in FIFO order some SUs from huge maps.
+    /// Reduces maps in FIFO order, by N SUs. This is better than turning
+    /// every Nth memory SU into BarrierChain in buildSchedGraph(), since
+    /// it avoids unnecessary edges between seen SUs above the new BarrierChain,
+    /// and those below it.
     void reduceHugeMemNodeMaps(Value2SUsMap &stores,
                                Value2SUsMap &loads, unsigned N);
 
-    /// Add a chain edge between SUa and SUb, but only if both AliasAnalysis
-    /// and Target fail to deny the dependency.
+    /// \brief Adds a chain edge between SUa and SUb, but only if both
+    /// AliasAnalysis and Target fail to deny the dependency.
     void addChainDependency(SUnit *SUa, SUnit *SUb,
                             unsigned Latency = 0);
 
-    /// Add dependencies as needed from all SUs in list to SU.
-    void addChainDependencies(SUnit *SU, SUList &sus, unsigned Latency) {
-      for (auto *su : sus)
-        addChainDependency(SU, su, Latency);
+    /// Adds dependencies as needed from all SUs in list to SU.
+    void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency) {
+      for (SUnit *Entry : SUs)
+        addChainDependency(SU, Entry, Latency);
     }
 
-    /// Add dependencies as needed from all SUs in map, to SU.
+    /// Adds dependencies as needed from all SUs in map, to SU.
     void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap);
 
-    /// Add dependencies as needed to SU, from all SUs mapped to V.
+    /// Adds dependencies as needed to SU, from all SUs mapped to V.
     void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap,
                               ValueType V);
 
-    /// Add barrier chain edges from all SUs in map, and then clear
-    /// the map. This is equivalent to insertBarrierChain(), but
-    /// optimized for the common case where the new BarrierChain (a
-    /// global memory object) has a higher NodeNum than all SUs in
-    /// map. It is assumed BarrierChain has been set before calling
-    /// this.
+    /// Adds barrier chain edges from all SUs in map, and then clear the map.
+    /// This is equivalent to insertBarrierChain(), but optimized for the common
+    /// case where the new BarrierChain (a global memory object) has a higher
+    /// NodeNum than all SUs in map. It is assumed BarrierChain has been set
+    /// before calling this.
     void addBarrierChain(Value2SUsMap &map);
 
-    /// Insert a barrier chain in a huge region, far below current
-    /// SU. Add barrier chain edges from all SUs in map with higher
-    /// NodeNums than this new BarrierChain, and remove them from
-    /// map. It is assumed BarrierChain has been set before calling
-    /// this.
+    /// Inserts a barrier chain in a huge region, far below current SU.
+    /// Adds barrier chain edges from all SUs in map with higher NodeNums than
+    /// this new BarrierChain, and remove them from map. It is assumed
+    /// BarrierChain has been set before calling this.
     void insertBarrierChain(Value2SUsMap &map);
 
     /// For an unanalyzable memory access, this Value is used in maps.
     UndefValue *UnknownValue;
 
-    /// DbgValues - Remember instruction that precedes DBG_VALUE.
+    using DbgValueVector =
+        std::vector<std::pair<MachineInstr *, MachineInstr *>>;
+    /// Remember instruction that precedes DBG_VALUE.
     /// These are generated by buildSchedGraph but persist so they can be
     /// referenced when emitting the final schedule.
-    typedef std::vector<std::pair<MachineInstr *, MachineInstr *> >
-      DbgValueVector;
     DbgValueVector DbgValues;
-    MachineInstr *FirstDbgValue;
+    MachineInstr *FirstDbgValue = nullptr;
 
     /// Set of live physical registers for updating kill flags.
-    BitVector LiveRegs;
+    LivePhysRegs LiveRegs;
 
   public:
     explicit ScheduleDAGInstrs(MachineFunction &mf,
                                const MachineLoopInfo *mli,
                                bool RemoveKillFlags = false);
 
-    ~ScheduleDAGInstrs() override {}
+    ~ScheduleDAGInstrs() override = default;
 
-    /// \brief Get the machine model for instruction scheduling.
+    /// Gets the machine model for instruction scheduling.
     const TargetSchedModel *getSchedModel() const { return &SchedModel; }
 
-    /// \brief Resolve and cache a resolved scheduling class for an SUnit.
+    /// Resolves and cache a resolved scheduling class for an SUnit.
     const MCSchedClassDesc *getSchedClass(SUnit *SU) const {
       if (!SU->SchedClass && SchedModel.hasInstrSchedModel())
         SU->SchedClass = SchedModel.resolveSchedClass(SU->getInstr());
       return SU->SchedClass;
     }
 
-    /// begin - Return an iterator to the top of the current scheduling region.
+    /// Returns an iterator to the top of the current scheduling region.
     MachineBasicBlock::iterator begin() const { return RegionBegin; }
 
-    /// end - Return an iterator to the bottom of the current scheduling region.
+    /// Returns an iterator to the bottom of the current scheduling region.
     MachineBasicBlock::iterator end() const { return RegionEnd; }
 
-    /// newSUnit - Creates a new SUnit and return a ptr to it.
+    /// Creates a new SUnit and return a ptr to it.
     SUnit *newSUnit(MachineInstr *MI);
 
-    /// getSUnit - Return an existing SUnit for this MI, or NULL.
+    /// Returns an existing SUnit for this MI, or nullptr.
     SUnit *getSUnit(MachineInstr *MI) const;
 
-    /// startBlock - Prepare to perform scheduling in the given block.
+    /// Prepares to perform scheduling in the given block.
     virtual void startBlock(MachineBasicBlock *BB);
 
-    /// finishBlock - Clean up after scheduling in the given block.
+    /// Cleans up after scheduling in the given block.
     virtual void finishBlock();
 
-    /// Initialize the scheduler state for the next scheduling region.
+    /// \brief Initialize the DAG and common scheduler state for a new
+    /// scheduling region. This does not actually create the DAG, only clears
+    /// it. The scheduling driver may call BuildSchedGraph multiple times per
+    /// scheduling region.
     virtual void enterRegion(MachineBasicBlock *bb,
                              MachineBasicBlock::iterator begin,
                              MachineBasicBlock::iterator end,
                              unsigned regioninstrs);
 
-    /// Notify that the scheduler has finished scheduling the current region.
+    /// Called when the scheduler has finished scheduling the current region.
     virtual void exitRegion();
 
-    /// buildSchedGraph - Build SUnits from the MachineBasicBlock that we are
-    /// input.
+    /// Builds SUnits for the current region.
+    /// If \p RPTracker is non-null, compute register pressure as a side effect.
+    /// The DAG builder is an efficient place to do it because it already visits
+    /// operands.
     void buildSchedGraph(AliasAnalysis *AA,
                          RegPressureTracker *RPTracker = nullptr,
                          PressureDiffs *PDiffs = nullptr,
                          LiveIntervals *LIS = nullptr,
                          bool TrackLaneMasks = false);
 
-    /// addSchedBarrierDeps - Add dependencies from instructions in the current
-    /// list of instructions being scheduled to scheduling barrier. We want to
-    /// make sure instructions which define registers that are either used by
-    /// the terminator or are live-out are properly scheduled. This is
-    /// especially important when the definition latency of the return value(s)
-    /// are too high to be hidden by the branch or when the liveout registers
-    /// used by instructions in the fallthrough block.
+    /// \brief Adds dependencies from instructions in the current list of
+    /// instructions being scheduled to scheduling barrier. We want to make sure
+    /// instructions which define registers that are either used by the
+    /// terminator or are live-out are properly scheduled. This is especially
+    /// important when the definition latency of the return value(s) are too
+    /// high to be hidden by the branch or when the liveout registers used by
+    /// instructions in the fallthrough block.
     void addSchedBarrierDeps();
 
-    /// schedule - Order nodes according to selected style, filling
-    /// in the Sequence member.
+    /// Orders nodes according to selected style.
     ///
     /// Typically, a scheduling algorithm will implement schedule() without
     /// overriding enterRegion() or exitRegion().
     virtual void schedule() = 0;
 
-    /// finalizeSchedule - Allow targets to perform final scheduling actions at
-    /// the level of the whole MachineFunction. By default does nothing.
+    /// Allow targets to perform final scheduling actions at the level of the
+    /// whole MachineFunction. By default does nothing.
     virtual void finalizeSchedule() {}
 
     void dumpNode(const SUnit *SU) const override;
 
-    /// Return a label for a DAG node that points to an instruction.
+    /// Returns a label for a DAG node that points to an instruction.
     std::string getGraphNodeLabel(const SUnit *SU) const override;
 
-    /// Return a label for the region of code covered by the DAG.
+    /// Returns a label for the region of code covered by the DAG.
     std::string getDAGName() const override;
 
-    /// \brief Fix register kill flags that scheduling has made invalid.
-    void fixupKills(MachineBasicBlock *MBB);
+    /// Fixes register kill flags that scheduling has made invalid.
+    void fixupKills(MachineBasicBlock &MBB);
+
   protected:
     void initSUnits();
     void addPhysRegDataDeps(SUnit *SU, unsigned OperIdx);
@@ -316,21 +340,22 @@ namespace llvm {
     void addVRegDefDeps(SUnit *SU, unsigned OperIdx);
     void addVRegUseDeps(SUnit *SU, unsigned OperIdx);
 
-    /// \brief PostRA helper for rewriting kill flags.
+    /// Initializes register live-range state for updating kills.
+    /// PostRA helper for rewriting kill flags.
     void startBlockForKills(MachineBasicBlock *BB);
 
-    /// \brief Toggle a register operand kill flag.
+    /// Toggles a register operand kill flag.
     ///
     /// Other adjustments may be made to the instruction if necessary. Return
     /// true if the operand has been deleted, false if not.
-    bool toggleKillFlag(MachineInstr *MI, MachineOperand &MO);
+    void toggleKillFlag(MachineInstr &MI, MachineOperand &MO);
 
     /// Returns a mask for which lanes get read/written by the given (register)
     /// machine operand.
     LaneBitmask getLaneMaskForMO(const MachineOperand &MO) const;
   };
 
-  /// newSUnit - Creates a new SUnit and return a ptr to it.
+  /// Creates a new SUnit and return a ptr to it.
   inline SUnit *ScheduleDAGInstrs::newSUnit(MachineInstr *MI) {
 #ifndef NDEBUG
     const SUnit *Addr = SUnits.empty() ? nullptr : &SUnits[0];
@@ -341,13 +366,14 @@ namespace llvm {
     return &SUnits.back();
   }
 
-  /// getSUnit - Return an existing SUnit for this MI, or NULL.
+  /// Returns an existing SUnit for this MI, or nullptr.
   inline SUnit *ScheduleDAGInstrs::getSUnit(MachineInstr *MI) const {
     DenseMap<MachineInstr*, SUnit*>::const_iterator I = MISUnitMap.find(MI);
     if (I == MISUnitMap.end())
       return nullptr;
     return I->second;
   }
-} // namespace llvm
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_SCHEDULEDAGINSTRS_H

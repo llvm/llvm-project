@@ -46,7 +46,7 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
     if (Allocas.empty())
       break;
 
-    PromoteMemToReg(Allocas, DT, nullptr, &AC);
+    PromoteMemToReg(Allocas, DT, &AC);
     NumPromoted += Allocas.size();
     Changed = true;
   }
@@ -59,8 +59,9 @@ PreservedAnalyses PromotePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!promoteMemoryToRegister(F, DT, AC))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {

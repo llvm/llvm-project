@@ -1,8 +1,8 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; CHECK: r5:4 = combine(#6, #5)
-; CHECK: r3:2 = combine(#4, #3)
-; CHECK: r1:0 = combine(#2, #1)
-; CHECK: memw(r29+#0)=#7
+; CHECK: r5:4 = combine(#6,#5)
+; CHECK: r3:2 = combine(#4,#3)
+; CHECK: r1:0 = combine(#2,#1)
+; CHECK: memw(r29+#0) = #7
 
 
 define void @foo() nounwind {

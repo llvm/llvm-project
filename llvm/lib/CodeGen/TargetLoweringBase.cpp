@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -53,6 +53,18 @@ static cl::opt<unsigned> MinimumJumpTableEntries
 static cl::opt<unsigned> MaximumJumpTableSize
   ("max-jump-table-size", cl::init(0), cl::Hidden,
    cl::desc("Set maximum size of jump tables; zero for no limit."));
+
+/// Minimum jump table density for normal functions.
+static cl::opt<unsigned>
+    JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
+                     cl::desc("Minimum density for building a jump table in "
+                              "a normal function"));
+
+/// Minimum jump table density for -Os or -Oz functions.
+static cl::opt<unsigned> OptsizeJumpTableDensity(
+    "optsize-jump-table-density", cl::init(40), cl::Hidden,
+    cl::desc("Minimum density for building a jump table in "
+             "an optsize function"));
 
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
@@ -362,11 +374,36 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::MEMCPY] = "memcpy";
   Names[RTLIB::MEMMOVE] = "memmove";
   Names[RTLIB::MEMSET] = "memset";
-  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_1] = "__llvm_memcpy_element_atomic_1";
-  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_2] = "__llvm_memcpy_element_atomic_2";
-  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_4] = "__llvm_memcpy_element_atomic_4";
-  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_8] = "__llvm_memcpy_element_atomic_8";
-  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_16] = "__llvm_memcpy_element_atomic_16";
+  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_1] =
+      "__llvm_memcpy_element_unordered_atomic_1";
+  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_2] =
+      "__llvm_memcpy_element_unordered_atomic_2";
+  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_4] =
+      "__llvm_memcpy_element_unordered_atomic_4";
+  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_8] =
+      "__llvm_memcpy_element_unordered_atomic_8";
+  Names[RTLIB::MEMCPY_ELEMENT_UNORDERED_ATOMIC_16] =
+      "__llvm_memcpy_element_unordered_atomic_16";
+  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_1] =
+      "__llvm_memmove_element_unordered_atomic_1";
+  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_2] =
+      "__llvm_memmove_element_unordered_atomic_2";
+  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_4] =
+      "__llvm_memmove_element_unordered_atomic_4";
+  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_8] =
+      "__llvm_memmove_element_unordered_atomic_8";
+  Names[RTLIB::MEMMOVE_ELEMENT_UNORDERED_ATOMIC_16] =
+      "__llvm_memmove_element_unordered_atomic_16";
+  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_1] =
+      "__llvm_memset_element_unordered_atomic_1";
+  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_2] =
+      "__llvm_memset_element_unordered_atomic_2";
+  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_4] =
+      "__llvm_memset_element_unordered_atomic_4";
+  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_8] =
+      "__llvm_memset_element_unordered_atomic_8";
+  Names[RTLIB::MEMSET_ELEMENT_UNORDERED_ATOMIC_16] =
+      "__llvm_memset_element_unordered_atomic_16";
   Names[RTLIB::UNWIND_RESUME] = "_Unwind_Resume";
   Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_1] = "__sync_val_compare_and_swap_1";
   Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_2] = "__sync_val_compare_and_swap_2";
@@ -769,22 +806,55 @@ RTLIB::Libcall RTLIB::getSYNC(unsigned Opc, MVT VT) {
   return UNKNOWN_LIBCALL;
 }
 
-RTLIB::Libcall RTLIB::getMEMCPY_ELEMENT_ATOMIC(uint64_t ElementSize) {
+RTLIB::Libcall RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   switch (ElementSize) {
   case 1:
-    return MEMCPY_ELEMENT_ATOMIC_1;
+    return MEMCPY_ELEMENT_UNORDERED_ATOMIC_1;
   case 2:
-    return MEMCPY_ELEMENT_ATOMIC_2;
+    return MEMCPY_ELEMENT_UNORDERED_ATOMIC_2;
   case 4:
-    return MEMCPY_ELEMENT_ATOMIC_4;
+    return MEMCPY_ELEMENT_UNORDERED_ATOMIC_4;
   case 8:
-    return MEMCPY_ELEMENT_ATOMIC_8;
+    return MEMCPY_ELEMENT_UNORDERED_ATOMIC_8;
   case 16:
-    return MEMCPY_ELEMENT_ATOMIC_16;
+    return MEMCPY_ELEMENT_UNORDERED_ATOMIC_16;
   default:
     return UNKNOWN_LIBCALL;
   }
+}
 
+RTLIB::Libcall RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
+  switch (ElementSize) {
+  case 1:
+    return MEMMOVE_ELEMENT_UNORDERED_ATOMIC_1;
+  case 2:
+    return MEMMOVE_ELEMENT_UNORDERED_ATOMIC_2;
+  case 4:
+    return MEMMOVE_ELEMENT_UNORDERED_ATOMIC_4;
+  case 8:
+    return MEMMOVE_ELEMENT_UNORDERED_ATOMIC_8;
+  case 16:
+    return MEMMOVE_ELEMENT_UNORDERED_ATOMIC_16;
+  default:
+    return UNKNOWN_LIBCALL;
+  }
+}
+
+RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
+  switch (ElementSize) {
+  case 1:
+    return MEMSET_ELEMENT_UNORDERED_ATOMIC_1;
+  case 2:
+    return MEMSET_ELEMENT_UNORDERED_ATOMIC_2;
+  case 4:
+    return MEMSET_ELEMENT_UNORDERED_ATOMIC_4;
+  case 8:
+    return MEMSET_ELEMENT_UNORDERED_ATOMIC_8;
+  case 16:
+    return MEMSET_ELEMENT_UNORDERED_ATOMIC_16;
+  default:
+    return UNKNOWN_LIBCALL;
+  }
 }
 
 /// InitCmpLibcallCCs - Set default comparison libcall CC.
@@ -830,9 +900,10 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   initActions();
 
   // Perform these initializations only once.
-  MaxStoresPerMemset = MaxStoresPerMemcpy = MaxStoresPerMemmove = 8;
-  MaxStoresPerMemsetOptSize = MaxStoresPerMemcpyOptSize
-    = MaxStoresPerMemmoveOptSize = 4;
+  MaxStoresPerMemset = MaxStoresPerMemcpy = MaxStoresPerMemmove =
+      MaxLoadsPerMemcmp = 8;
+  MaxStoresPerMemsetOptSize = MaxStoresPerMemcpyOptSize =
+      MaxStoresPerMemmoveOptSize = MaxLoadsPerMemcmpOptSize = 4;
   UseUnderscoreSetJmp = false;
   UseUnderscoreLongJmp = false;
   HasMultipleConditionRegisters = false;
@@ -851,7 +922,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   MinFunctionAlignment = 0;
   PrefFunctionAlignment = 0;
   PrefLoopAlignment = 0;
-  GatherAllAliasesMaxDepth = 6;
+  GatherAllAliasesMaxDepth = 18;
   MinStackArgumentAlignment = 1;
   // TODO: the default will be switched to 0 in the next commit, along
   // with the Target-specific changes necessary.
@@ -901,6 +972,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SMAX, VT, Expand);
     setOperationAction(ISD::UMIN, VT, Expand);
     setOperationAction(ISD::UMAX, VT, Expand);
+    setOperationAction(ISD::ABS, VT, Expand);
 
     // Overflow operations default to expand
     setOperationAction(ISD::SADDO, VT, Expand);
@@ -910,6 +982,11 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SMULO, VT, Expand);
     setOperationAction(ISD::UMULO, VT, Expand);
 
+    // ADDCARRY operations default to expand
+    setOperationAction(ISD::ADDCARRY, VT, Expand);
+    setOperationAction(ISD::SUBCARRY, VT, Expand);
+    setOperationAction(ISD::SETCCCARRY, VT, Expand);
+
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
@@ -918,6 +995,7 @@ void TargetLoweringBase::initActions() {
     
     // These library functions default to expand.
     setOperationAction(ISD::FROUND, VT, Expand);
+    setOperationAction(ISD::FPOWI, VT, Expand);
 
     // These operations default to expand for vector types.
     if (VT.isVector()) {
@@ -1184,12 +1262,11 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
 
 /// isLegalRC - Return true if the value types that can be represented by the
 /// specified register class are all legal.
-bool TargetLoweringBase::isLegalRC(const TargetRegisterClass *RC) const {
-  for (TargetRegisterClass::vt_iterator I = RC->vt_begin(), E = RC->vt_end();
-       I != E; ++I) {
+bool TargetLoweringBase::isLegalRC(const TargetRegisterInfo &TRI,
+                                   const TargetRegisterClass &RC) const {
+  for (auto I = TRI.legalclasstypes_begin(RC); *I != MVT::Other; ++I)
     if (isTypeLegal(*I))
       return true;
-  }
   return false;
 }
 
@@ -1227,7 +1304,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
 
     // Copy operands before the frame-index.
     for (unsigned i = 0; i < OperIdx; ++i)
-      MIB.addOperand(MI->getOperand(i));
+      MIB.add(MI->getOperand(i));
     // Add frame index operands recognized by stackmaps.cpp
     if (MFI.isStatepointSpillSlotObjectIndex(FI)) {
       // indirect-mem-ref tag, size, #FI, offset.
@@ -1237,18 +1314,18 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
       assert(MI->getOpcode() == TargetOpcode::STATEPOINT && "sanity");
       MIB.addImm(StackMaps::IndirectMemRefOp);
       MIB.addImm(MFI.getObjectSize(FI));
-      MIB.addOperand(MI->getOperand(OperIdx));
+      MIB.add(MI->getOperand(OperIdx));
       MIB.addImm(0);
     } else {
       // direct-mem-ref tag, #FI, offset.
       // Used by patchpoint, and direct alloca arguments to statepoints
       MIB.addImm(StackMaps::DirectMemRefOp);
-      MIB.addOperand(MI->getOperand(OperIdx));
+      MIB.add(MI->getOperand(OperIdx));
       MIB.addImm(0);
     }
     // Copy the operands after the frame index.
     for (unsigned i = OperIdx + 1; i != MI->getNumOperands(); ++i)
-      MIB.addOperand(MI->getOperand(i));
+      MIB.add(MI->getOperand(i));
 
     // Inherit previous memory operands.
     MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
@@ -1296,12 +1373,12 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
   // Find the first legal register class with the largest spill size.
   const TargetRegisterClass *BestRC = RC;
-  for (int i = SuperRegRC.find_first(); i >= 0; i = SuperRegRC.find_next(i)) {
+  for (unsigned i : SuperRegRC.set_bits()) {
     const TargetRegisterClass *SuperRC = TRI->getRegClass(i);
     // We want the largest possible spill size.
-    if (SuperRC->getSize() <= BestRC->getSize())
+    if (TRI->getSpillSize(*SuperRC) <= TRI->getSpillSize(*BestRC))
       continue;
-    if (!isLegalRC(SuperRC))
+    if (!isLegalRC(*TRI, *SuperRC))
       continue;
     BestRC = SuperRC;
   }
@@ -1437,6 +1514,7 @@ void TargetLoweringBase::computeRegisterProperties(
       }
       if (IsLegalWiderType)
         break;
+      LLVM_FALLTHROUGH;
     }
     case TypeWidenVector: {
       // Try to widen the vector.
@@ -1454,6 +1532,7 @@ void TargetLoweringBase::computeRegisterProperties(
       }
       if (IsLegalWiderType)
         break;
+      LLVM_FALLTHROUGH;
     }
     case TypeSplitVector:
     case TypeScalarizeVector: {
@@ -1589,7 +1668,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
 /// type of the given function.  This does not require a DAG or a return value,
 /// and is suitable for use before any DAGs for the function are constructed.
 /// TODO: Move this out of TargetLowering.cpp.
-void llvm::GetReturnInfo(Type *ReturnType, AttributeSet attr,
+void llvm::GetReturnInfo(Type *ReturnType, AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
   SmallVector<EVT, 4> ValueVTs;
@@ -1601,9 +1680,9 @@ void llvm::GetReturnInfo(Type *ReturnType, AttributeSet attr,
     EVT VT = ValueVTs[j];
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
-    if (attr.hasAttribute(AttributeSet::ReturnIndex, Attribute::SExt))
+    if (attr.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
       ExtendKind = ISD::SIGN_EXTEND;
-    else if (attr.hasAttribute(AttributeSet::ReturnIndex, Attribute::ZExt))
+    else if (attr.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt))
       ExtendKind = ISD::ZERO_EXTEND;
 
     // FIXME: C calling convention requires the return type to be promoted to
@@ -1616,18 +1695,20 @@ void llvm::GetReturnInfo(Type *ReturnType, AttributeSet attr,
         VT = MinVT;
     }
 
-    unsigned NumParts = TLI.getNumRegisters(ReturnType->getContext(), VT);
-    MVT PartVT = TLI.getRegisterType(ReturnType->getContext(), VT);
+    unsigned NumParts =
+        TLI.getNumRegistersForCallingConv(ReturnType->getContext(), VT);
+    MVT PartVT =
+        TLI.getRegisterTypeForCallingConv(ReturnType->getContext(), VT);
 
     // 'inreg' on function refers to return value
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
-    if (attr.hasAttribute(AttributeSet::ReturnIndex, Attribute::InReg))
+    if (attr.hasAttribute(AttributeList::ReturnIndex, Attribute::InReg))
       Flags.setInReg();
 
     // Propagate extension type if any
-    if (attr.hasAttribute(AttributeSet::ReturnIndex, Attribute::SExt))
+    if (attr.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
       Flags.setSExt();
-    else if (attr.hasAttribute(AttributeSet::ReturnIndex, Attribute::ZExt))
+    else if (attr.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt))
       Flags.setZExt();
 
     for (unsigned i = 0; i < NumParts; ++i)
@@ -1818,7 +1899,7 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Type *StackPtrTy = Type::getInt8PtrTy(M->getContext());
   Value *Fn = M->getOrInsertFunction("__safestack_pointer_address",
-                                     StackPtrTy->getPointerTo(0), nullptr);
+                                     StackPtrTy->getPointerTo(0));
   return IRB.CreateCall(Fn);
 }
 
@@ -1902,6 +1983,10 @@ void TargetLoweringBase::setMinimumJumpTableEntries(unsigned Val) {
   MinimumJumpTableEntries = Val;
 }
 
+unsigned TargetLoweringBase::getMinimumJumpTableDensity(bool OptForSize) const {
+  return OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
+}
+
 unsigned TargetLoweringBase::getMaximumJumpTableSize() const {
   return MaximumJumpTableSize;
 }
@@ -1918,11 +2003,7 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 /// override the target defaults.
 static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
   const Function *F = MF.getFunction();
-  StringRef RecipAttrName = "reciprocal-estimates";
-  if (!F->hasFnAttribute(RecipAttrName))
-    return StringRef();
-
-  return F->getFnAttribute(RecipAttrName).getValueAsString();
+  return F->getFnAttribute("reciprocal-estimates").getValueAsString();
 }
 
 /// Construct a string for the given reciprocal operation of the given type.

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -o - %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-eif=0 < %s | FileCheck %s
 target triple = "hexagon"
 
 %struct.0 = type { i16, i16 }
@@ -15,7 +15,7 @@ entry:
   br i1 %cmp199, label %if.then200, label %if.else201
 
 ; CHECK-DAG: [[R4:r[0-9]+]] = #4
-; CHECK: p0 = cmp.eq(r0, #0)
+; CHECK: p0 = cmp.eq(r0,#0)
 ; CHECK: if (!p0.new) [[R3:r[0-9]+]] = #3
 ; CHECK-DAG: if (!p0) memh(##t) = [[R3]]
 ; CHECK-DAG: if (p0) memh(##t) = [[R4]]

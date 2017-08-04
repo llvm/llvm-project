@@ -60,7 +60,7 @@ define <2 x i64> @splat_v2i64(<2 x i64> %x) #1 {
 ; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
-  %add = add <2 x i64> %x, <i64 1, i64 1>
+  %add = add <2 x i64> %x, <i64 2, i64 2>
   ret <2 x i64> %add
 }
 
@@ -81,7 +81,7 @@ define <4 x i64> @splat_v4i64(<4 x i64> %x) #0 {
 ; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
-  %add = add <4 x i64> %x, <i64 1, i64 1, i64 1, i64 1>
+  %add = add <4 x i64> %x, <i64 2, i64 2, i64 2, i64 2>
   ret <4 x i64> %add
 }
 
@@ -98,7 +98,7 @@ define <4 x i32> @splat_v4i32(<4 x i32> %x) #1 {
 ; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
-  %add = add <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %add = add <4 x i32> %x, <i32 2, i32 2, i32 2, i32 2>
   ret <4 x i32> %add
 }
 
@@ -118,7 +118,7 @@ define <8 x i32> @splat_v8i32(<8 x i32> %x) #0 {
 ; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
-  %add = add <8 x i32> %x, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %add = add <8 x i32> %x, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   ret <8 x i32> %add
 }
 
@@ -134,7 +134,7 @@ define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 ; AVX2-NEXT:    vpbroadcastw {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
-  %add = add <8 x i16> %x, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %add = add <8 x i16> %x, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   ret <8 x i16> %add
 }
 
@@ -143,7 +143,7 @@ define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX-LABEL: splat_v16i16:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -154,7 +154,7 @@ define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX2-NEXT:    vpbroadcastw {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
-  %add = add <16 x i16> %x, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %add = add <16 x i16> %x, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   ret <16 x i16> %add
 }
 
@@ -170,7 +170,7 @@ define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 ; AVX2-NEXT:    vpbroadcastb {{.*}}(%rip), %xmm1
 ; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
-  %add = add <16 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %add = add <16 x i8> %x, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
   ret <16 x i8> %add
 }
 
@@ -179,7 +179,7 @@ define <32 x i8> @splat_v32i8(<32 x i8> %x) #0 {
 ; AVX-LABEL: splat_v32i8:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -190,7 +190,7 @@ define <32 x i8> @splat_v32i8(<32 x i8> %x) #0 {
 ; AVX2-NEXT:    vpbroadcastb {{.*}}(%rip), %ymm1
 ; AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
-  %add = add <32 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %add = add <32 x i8> %x, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
   ret <32 x i8> %add
 }
 

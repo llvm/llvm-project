@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_ABIINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_ABIINFO_H
 
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
@@ -148,7 +149,6 @@ namespace swiftcall {
       return info->supportsSwift();
     }
   };
-
 }  // end namespace CodeGen
 }  // end namespace clang
 

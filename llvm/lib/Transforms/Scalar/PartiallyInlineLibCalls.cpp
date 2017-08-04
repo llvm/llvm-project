@@ -66,7 +66,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // Add attribute "readnone" so that backend can use a native sqrt instruction
   // for this call. Insert a FP compare instruction and a conditional branch
   // at the end of CurrBB.
-  Call->addAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone);
+  Call->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
   CurrBB.getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(&CurrBB);
   Value *FCmp = Builder.CreateFCmpOEQ(Call, Call);
@@ -98,14 +98,14 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
 
       // Skip if function either has local linkage or is not a known library
       // function.
-      LibFunc::Func LibFunc;
+      LibFunc LF;
       if (CalledFunc->hasLocalLinkage() || !CalledFunc->hasName() ||
-          !TLI->getLibFunc(CalledFunc->getName(), LibFunc))
+          !TLI->getLibFunc(CalledFunc->getName(), LF))
         continue;
 
-      switch (LibFunc) {
-      case LibFunc::sqrtf:
-      case LibFunc::sqrt:
+      switch (LF) {
+      case LibFunc_sqrtf:
+      case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
             optimizeSQRT(Call, CalledFunc, *CurrBB, BB))
           break;

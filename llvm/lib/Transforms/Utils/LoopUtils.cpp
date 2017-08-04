@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -29,6 +30,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -87,8 +89,7 @@ RecurrenceDescriptor::lookThroughAnd(PHINode *Phi, Type *&RT,
 
   // Matches either I & 2^x-1 or 2^x-1 & I. If we find a match, we update RT
   // with a new integer type of the corresponding bit width.
-  if (match(J, m_CombineOr(m_And(m_Instruction(I), m_APInt(M)),
-                           m_And(m_APInt(M), m_Instruction(I))))) {
+  if (match(J, m_c_And(m_Instruction(I), m_APInt(M)))) {
     int32_t Bits = (*M + 1).exactLogBase2();
     if (Bits > 0) {
       RT = IntegerType::get(Phi->getContext(), Bits);
@@ -230,8 +231,9 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
   //      - PHI:
   //        - All uses of the PHI must be the reduction (safe).
   //        - Otherwise, not safe.
-  //  - By one instruction outside of the loop (safe).
-  //  - By further instructions outside of the loop (not safe).
+  //  - By instructions outside of the loop (safe).
+  //      * One value may have several outside users, but all outside
+  //        uses must be of the same value.
   //  - By an instruction that is not part of the reduction (not safe).
   //    This is either:
   //      * An instruction type other than PHI or the reduction operation.
@@ -297,10 +299,15 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
       // Check if we found the exit user.
       BasicBlock *Parent = UI->getParent();
       if (!TheLoop->contains(Parent)) {
-        // Exit if you find multiple outside users or if the header phi node is
-        // being used. In this case the user uses the value of the previous
-        // iteration, in which case we would loose "VF-1" iterations of the
-        // reduction operation if we vectorize.
+        // If we already know this instruction is used externally, move on to
+        // the next user.
+        if (ExitInstruction == Cur)
+          continue;
+
+        // Exit if you find multiple values used outside or if the header phi
+        // node is being used. In this case the user uses the value of the
+        // previous iteration, in which case we would loose "VF-1" iterations of
+        // the reduction operation if we vectorize.
         if (ExitInstruction != nullptr || Cur == Phi)
           return false;
 
@@ -521,8 +528,9 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   return false;
 }
 
-bool RecurrenceDescriptor::isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                                  DominatorTree *DT) {
+bool RecurrenceDescriptor::isFirstOrderRecurrence(
+    PHINode *Phi, Loop *TheLoop,
+    DenseMap<Instruction *, Instruction *> &SinkAfter, DominatorTree *DT) {
 
   // Ensure the phi node is in the loop header and has two incoming values.
   if (Phi->getParent() != TheLoop->getHeader() ||
@@ -544,16 +552,29 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // Get the previous value. The previous value comes from the latch edge while
   // the initial value comes form the preheader edge.
   auto *Previous = dyn_cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous) ||
+      SinkAfter.count(Previous)) // Cannot rely on dominance due to motion.
     return false;
 
-  // Ensure every user of the phi node is dominated by the previous value. The
-  // dominance requirement ensures the loop vectorizer will not need to
+  // Ensure every user of the phi node is dominated by the previous value.
+  // The dominance requirement ensures the loop vectorizer will not need to
   // vectorize the initial value prior to the first iteration of the loop.
+  // TODO: Consider extending this sinking to handle other kinds of instructions
+  // and expressions, beyond sinking a single cast past Previous.
+  if (Phi->hasOneUse()) {
+    auto *I = Phi->user_back();
+    if (I->isCast() && (I->getParent() == Phi->getParent()) && I->hasOneUse() &&
+        DT->dominates(Previous, I->user_back())) {
+      SinkAfter[I] = Previous;
+      return true;
+    }
+  }
+
   for (User *U : Phi->users())
-    if (auto *I = dyn_cast<Instruction>(U))
+    if (auto *I = dyn_cast<Instruction>(U)) {
       if (!DT->dominates(Previous, I))
         return false;
+    }
 
   return true;
 }
@@ -916,6 +937,69 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
   return true;
 }
 
+bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                                   bool PreserveLCSSA) {
+  bool Changed = false;
+
+  // We re-use a vector for the in-loop predecesosrs.
+  SmallVector<BasicBlock *, 4> InLoopPredecessors;
+
+  auto RewriteExit = [&](BasicBlock *BB) {
+    assert(InLoopPredecessors.empty() &&
+           "Must start with an empty predecessors list!");
+    auto Cleanup = make_scope_exit([&] { InLoopPredecessors.clear(); });
+
+    // See if there are any non-loop predecessors of this exit block and
+    // keep track of the in-loop predecessors.
+    bool IsDedicatedExit = true;
+    for (auto *PredBB : predecessors(BB))
+      if (L->contains(PredBB)) {
+        if (isa<IndirectBrInst>(PredBB->getTerminator()))
+          // We cannot rewrite exiting edges from an indirectbr.
+          return false;
+
+        InLoopPredecessors.push_back(PredBB);
+      } else {
+        IsDedicatedExit = false;
+      }
+
+    assert(!InLoopPredecessors.empty() && "Must have *some* loop predecessor!");
+
+    // Nothing to do if this is already a dedicated exit.
+    if (IsDedicatedExit)
+      return false;
+
+    auto *NewExitBB = SplitBlockPredecessors(
+        BB, InLoopPredecessors, ".loopexit", DT, LI, PreserveLCSSA);
+
+    if (!NewExitBB)
+      DEBUG(dbgs() << "WARNING: Can't create a dedicated exit block for loop: "
+                   << *L << "\n");
+    else
+      DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
+                   << NewExitBB->getName() << "\n");
+    return true;
+  };
+
+  // Walk the exit blocks directly rather than building up a data structure for
+  // them, but only visit each one once.
+  SmallPtrSet<BasicBlock *, 4> Visited;
+  for (auto *BB : L->blocks())
+    for (auto *SuccBB : successors(BB)) {
+      // We're looking for exit blocks so skip in-loop successors.
+      if (L->contains(SuccBB))
+        continue;
+
+      // Visit each exit block exactly once.
+      if (!Visited.insert(SuccBB).second)
+        continue;
+
+      Changed |= RewriteExit(SuccBB);
+    }
+
+  return Changed;
+}
+
 /// \brief Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> llvm::findDefsUsedOutsideOfLoop(Loop *L) {
   SmallVector<Instruction *, 8> UsedOutside;
@@ -1104,4 +1188,209 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
     return (TrueVal + (FalseVal / 2)) / FalseVal;
   else
     return (FalseVal + (TrueVal / 2)) / TrueVal;
+}
+
+/// \brief Adds a 'fast' flag to floating point operations.
+static Value *addFastMathFlag(Value *V) {
+  if (isa<FPMathOperator>(V)) {
+    FastMathFlags Flags;
+    Flags.setUnsafeAlgebra();
+    cast<Instruction>(V)->setFastMathFlags(Flags);
+  }
+  return V;
+}
+
+// Helper to generate a log2 shuffle reduction.
+Value *
+llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
+                          RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
+                          ArrayRef<Value *> RedOps) {
+  unsigned VF = Src->getType()->getVectorNumElements();
+  // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
+  // and vector ops, reducing the set of values being computed by half each
+  // round.
+  assert(isPowerOf2_32(VF) &&
+         "Reduction emission only supported for pow2 vectors!");
+  Value *TmpVec = Src;
+  SmallVector<Constant *, 32> ShuffleMask(VF, nullptr);
+  for (unsigned i = VF; i != 1; i >>= 1) {
+    // Move the upper half of the vector to the lower half.
+    for (unsigned j = 0; j != i / 2; ++j)
+      ShuffleMask[j] = Builder.getInt32(i / 2 + j);
+
+    // Fill the rest of the mask with undef.
+    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(),
+              UndefValue::get(Builder.getInt32Ty()));
+
+    Value *Shuf = Builder.CreateShuffleVector(
+        TmpVec, UndefValue::get(TmpVec->getType()),
+        ConstantVector::get(ShuffleMask), "rdx.shuf");
+
+    if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
+      // Floating point operations had to be 'fast' to enable the reduction.
+      TmpVec = addFastMathFlag(Builder.CreateBinOp((Instruction::BinaryOps)Op,
+                                                   TmpVec, Shuf, "bin.rdx"));
+    } else {
+      assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
+             "Invalid min/max");
+      TmpVec = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind, TmpVec,
+                                                    Shuf);
+    }
+    if (!RedOps.empty())
+      propagateIRFlags(TmpVec, RedOps);
+  }
+  // The result is in the first element of the vector.
+  return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
+}
+
+/// Create a simple vector reduction specified by an opcode and some
+/// flags (if generating min/max reductions).
+Value *llvm::createSimpleTargetReduction(
+    IRBuilder<> &Builder, const TargetTransformInfo *TTI, unsigned Opcode,
+    Value *Src, TargetTransformInfo::ReductionFlags Flags,
+    ArrayRef<Value *> RedOps) {
+  assert(isa<VectorType>(Src->getType()) && "Type must be a vector");
+
+  Value *ScalarUdf = UndefValue::get(Src->getType()->getVectorElementType());
+  std::function<Value*()> BuildFunc;
+  using RD = RecurrenceDescriptor;
+  RD::MinMaxRecurrenceKind MinMaxKind = RD::MRK_Invalid;
+  // TODO: Support creating ordered reductions.
+  FastMathFlags FMFUnsafe;
+  FMFUnsafe.setUnsafeAlgebra();
+
+  switch (Opcode) {
+  case Instruction::Add:
+    BuildFunc = [&]() { return Builder.CreateAddReduce(Src); };
+    break;
+  case Instruction::Mul:
+    BuildFunc = [&]() { return Builder.CreateMulReduce(Src); };
+    break;
+  case Instruction::And:
+    BuildFunc = [&]() { return Builder.CreateAndReduce(Src); };
+    break;
+  case Instruction::Or:
+    BuildFunc = [&]() { return Builder.CreateOrReduce(Src); };
+    break;
+  case Instruction::Xor:
+    BuildFunc = [&]() { return Builder.CreateXorReduce(Src); };
+    break;
+  case Instruction::FAdd:
+    BuildFunc = [&]() {
+      auto Rdx = Builder.CreateFAddReduce(ScalarUdf, Src);
+      cast<CallInst>(Rdx)->setFastMathFlags(FMFUnsafe);
+      return Rdx;
+    };
+    break;
+  case Instruction::FMul:
+    BuildFunc = [&]() {
+      auto Rdx = Builder.CreateFMulReduce(ScalarUdf, Src);
+      cast<CallInst>(Rdx)->setFastMathFlags(FMFUnsafe);
+      return Rdx;
+    };
+    break;
+  case Instruction::ICmp:
+    if (Flags.IsMaxOp) {
+      MinMaxKind = Flags.IsSigned ? RD::MRK_SIntMax : RD::MRK_UIntMax;
+      BuildFunc = [&]() {
+        return Builder.CreateIntMaxReduce(Src, Flags.IsSigned);
+      };
+    } else {
+      MinMaxKind = Flags.IsSigned ? RD::MRK_SIntMin : RD::MRK_UIntMin;
+      BuildFunc = [&]() {
+        return Builder.CreateIntMinReduce(Src, Flags.IsSigned);
+      };
+    }
+    break;
+  case Instruction::FCmp:
+    if (Flags.IsMaxOp) {
+      MinMaxKind = RD::MRK_FloatMax;
+      BuildFunc = [&]() { return Builder.CreateFPMaxReduce(Src, Flags.NoNaN); };
+    } else {
+      MinMaxKind = RD::MRK_FloatMin;
+      BuildFunc = [&]() { return Builder.CreateFPMinReduce(Src, Flags.NoNaN); };
+    }
+    break;
+  default:
+    llvm_unreachable("Unhandled opcode");
+    break;
+  }
+  if (TTI->useReductionIntrinsic(Opcode, Src->getType(), Flags))
+    return BuildFunc();
+  return getShuffleReduction(Builder, Src, Opcode, MinMaxKind, RedOps);
+}
+
+/// Create a vector reduction using a given recurrence descriptor.
+Value *llvm::createTargetReduction(IRBuilder<> &Builder,
+                                   const TargetTransformInfo *TTI,
+                                   RecurrenceDescriptor &Desc, Value *Src,
+                                   bool NoNaN) {
+  // TODO: Support in-order reductions based on the recurrence descriptor.
+  RecurrenceDescriptor::RecurrenceKind RecKind = Desc.getRecurrenceKind();
+  TargetTransformInfo::ReductionFlags Flags;
+  Flags.NoNaN = NoNaN;
+  auto getSimpleRdx = [&](unsigned Opc) {
+    return createSimpleTargetReduction(Builder, TTI, Opc, Src, Flags);
+  };
+  switch (RecKind) {
+  case RecurrenceDescriptor::RK_FloatAdd:
+    return getSimpleRdx(Instruction::FAdd);
+  case RecurrenceDescriptor::RK_FloatMult:
+    return getSimpleRdx(Instruction::FMul);
+  case RecurrenceDescriptor::RK_IntegerAdd:
+    return getSimpleRdx(Instruction::Add);
+  case RecurrenceDescriptor::RK_IntegerMult:
+    return getSimpleRdx(Instruction::Mul);
+  case RecurrenceDescriptor::RK_IntegerAnd:
+    return getSimpleRdx(Instruction::And);
+  case RecurrenceDescriptor::RK_IntegerOr:
+    return getSimpleRdx(Instruction::Or);
+  case RecurrenceDescriptor::RK_IntegerXor:
+    return getSimpleRdx(Instruction::Xor);
+  case RecurrenceDescriptor::RK_IntegerMinMax: {
+    switch (Desc.getMinMaxRecurrenceKind()) {
+    case RecurrenceDescriptor::MRK_SIntMax:
+      Flags.IsSigned = true;
+      Flags.IsMaxOp = true;
+      break;
+    case RecurrenceDescriptor::MRK_UIntMax:
+      Flags.IsMaxOp = true;
+      break;
+    case RecurrenceDescriptor::MRK_SIntMin:
+      Flags.IsSigned = true;
+      break;
+    case RecurrenceDescriptor::MRK_UIntMin:
+      break;
+    default:
+      llvm_unreachable("Unhandled MRK");
+    }
+    return getSimpleRdx(Instruction::ICmp);
+  }
+  case RecurrenceDescriptor::RK_FloatMinMax: {
+    Flags.IsMaxOp =
+        Desc.getMinMaxRecurrenceKind() == RecurrenceDescriptor::MRK_FloatMax;
+    return getSimpleRdx(Instruction::FCmp);
+  }
+  default:
+    llvm_unreachable("Unhandled RecKind");
+  }
+}
+
+void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue) {
+  auto *VecOp = dyn_cast<Instruction>(I);
+  if (!VecOp)
+    return;
+  auto *Intersection = (OpValue == nullptr) ? dyn_cast<Instruction>(VL[0])
+                                            : dyn_cast<Instruction>(OpValue);
+  if (!Intersection)
+    return;
+  const unsigned Opcode = Intersection->getOpcode();
+  VecOp->copyIRFlags(Intersection);
+  for (auto *V : VL) {
+    auto *Instr = dyn_cast<Instruction>(V);
+    if (!Instr)
+      continue;
+    if (OpValue == nullptr || Opcode == Instr->getOpcode())
+      VecOp->andIRFlags(V);
+  }
 }

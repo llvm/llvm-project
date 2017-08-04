@@ -45,15 +45,19 @@ target triple = "armv7--linux-gnueabi"
 ; CHECK: @ %while.cond2
 ; CHECK: add
 ; CHECK-NEXT: cmp r{{[0-1]+}}, #1
-; Set the return value.
-; CHECK-NEXT: moveq r0,
-; CHECK-NEXT: popeq
+; Jump to the return block
+; CHECK-NEXT: beq [[RETURN_BLOCK:[.a-zA-Z0-9_]+]]
 ;
 ; Use the back edge to check we get the label of the loop right.
 ; This is to make sure we check the right loop pattern.
 ; CHECK:  @ %while.body24.land.rhs14_crit_edge
 ; CHECK: cmp r{{[0-9]+}}, #192
 ; CHECK-NEXT bhs [[LOOP_HEADER]]
+;
+; CHECK: [[RETURN_BLOCK]]:
+; Set the return value.
+; CHECK-NEXT: mov r0,
+; CHECK-NEXT: pop
 define fastcc i8* @wrongUseOfPostDominate(i8* readonly %s, i32 %off, i8* readnone %lim) {
 entry:
   %cmp = icmp sgt i32 %off, -1

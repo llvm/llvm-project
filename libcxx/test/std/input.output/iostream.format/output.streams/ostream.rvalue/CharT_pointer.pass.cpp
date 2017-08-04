@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <ostream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -19,7 +21,6 @@
 #include <ostream>
 #include <cassert>
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class CharT>
 class testbuf
@@ -53,11 +54,9 @@ protected:
         }
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         testbuf<char> sb;
         std::ostream(&sb) << "testing...";
@@ -68,5 +67,4 @@ int main()
         std::wostream(&sb) << L"123";
         assert(sb.str() == L"123");
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

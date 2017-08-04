@@ -151,13 +151,24 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   return MCOperand::createExpr(Expr);
 }
 
+MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
+                                                     MCSymbol *Sym) const {
+  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, RefKind, Ctx);
+  if (!MO.isJTI() && MO.getOffset())
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+  return MCOperand::createExpr(Expr);
+}
+
 MCOperand AArch64MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                  MCSymbol *Sym) const {
   if (Printer.TM.getTargetTriple().isOSDarwin())
     return lowerSymbolOperandDarwin(MO, Sym);
+  if (Printer.TM.getTargetTriple().isOSBinFormatCOFF())
+    return lowerSymbolOperandCOFF(MO, Sym);
 
-  assert(Printer.TM.getTargetTriple().isOSBinFormatELF() &&
-         "Expect Darwin or ELF target");
+  assert(Printer.TM.getTargetTriple().isOSBinFormatELF() && "Invalid target");
   return lowerSymbolOperandELF(MO, Sym);
 }
 

@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -52,9 +52,9 @@ TEST(VerifierTest, InvalidRetAttribute) {
   Module M("M", C);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), /*isVarArg=*/false);
   Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
-  AttributeSet AS = F->getAttributes();
-  F->setAttributes(AS.addAttribute(C, AttributeSet::ReturnIndex,
-                                   Attribute::UWTable));
+  AttributeList AS = F->getAttributes();
+  F->setAttributes(
+      AS.addAttribute(C, AttributeList::ReturnIndex, Attribute::UWTable));
 
   std::string Error;
   raw_string_ostream ErrorOS(Error);

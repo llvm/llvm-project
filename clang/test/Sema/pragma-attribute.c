@@ -29,12 +29,12 @@ void test5_3(); // expected-note 3 {{when applied to this declaration}}
 #pragma clang attribute push (__attribute__((optnone)), apply_to = function) // expected-note 2 {{conflicting attribute is here}}
 
 __attribute__((always_inline)) void optnone1() { } // expected-warning {{'always_inline' attribute ignored}}
-// expected-note@-1 2 {{when applied to this declaration}}
+// expected-note@-1 {{when applied to this declaration}}
 
 void optnone2() { }
 
 __attribute__((always_inline)) void optnone3() { } // expected-warning {{'always_inline' attribute ignored}}
-// expected-note@-1 2 {{when applied to this declaration}}
+// expected-note@-1 {{when applied to this declaration}}
 
 #pragma clang attribute pop
 

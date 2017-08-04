@@ -18,7 +18,7 @@ Source level debugging uses formatted data that helps a debugger
 translate from binary and the state of the machine back to the
 source that the programmer wrote. In LLVM we generally use a format
 called `DWARF <http://dwarfstd.org>`_. DWARF is a compact encoding
-that represents types, source locations, and variable locations. 
+that represents types, source locations, and variable locations.
 
 The short summary of this chapter is that we'll go through the
 various things you have to add to a programming language to
@@ -94,14 +94,14 @@ Then we're going to remove the command line code wherever it exists:
          return;
   @@ -1184,7 +1183,6 @@ int main() {
      BinopPrecedence['*'] = 40; // highest.
- 
+
      // Prime the first token.
   -  fprintf(stderr, "ready> ");
      getNextToken();
- 
+
 Lastly we're going to disable all of the optimization passes and the JIT so
 that the only thing that happens after we're done parsing and generating
-code is that the llvm IR goes to standard error:
+code is that the LLVM IR goes to standard error:
 
 .. code-block:: udiff
 
@@ -140,7 +140,7 @@ code is that the llvm IR goes to standard error:
   -
   +  #endif
      OurFPM.doInitialization();
- 
+
      // Set the global so the code gen can use this.
 
 This relatively small set of changes get us to the point that we can compile
@@ -166,8 +166,8 @@ DWARF Emission Setup
 
 Similar to the ``IRBuilder`` class we have a
 `DIBuilder <http://llvm.org/doxygen/classllvm_1_1DIBuilder.html>`_ class
-that helps in constructing debug metadata for an llvm IR file. It
-corresponds 1:1 similarly to ``IRBuilder`` and llvm IR, but with nicer names.
+that helps in constructing debug metadata for an LLVM IR file. It
+corresponds 1:1 similarly to ``IRBuilder`` and LLVM IR, but with nicer names.
 Using it does require that you be more familiar with DWARF terminology than
 you needed to be with ``IRBuilder`` and ``Instruction`` names, but if you
 read through the general documentation on the
@@ -194,7 +194,7 @@ expressions:
   } KSDbgInfo;
 
   DIType *DebugInfo::getDoubleTy() {
-    if (DblTy.isValid())
+    if (DblTy)
       return DblTy;
 
     DblTy = DBuilder->createBasicType("double", 64, 64, dwarf::DW_ATE_float);
@@ -214,7 +214,7 @@ There are a couple of things to note here. First, while we're producing a
 compile unit for a language called Kaleidoscope we used the language
 constant for C. This is because a debugger wouldn't necessarily understand
 the calling conventions or default ABI for a language it doesn't recognize
-and we follow the C ABI in our llvm code generation so it's the closest
+and we follow the C ABI in our LLVM code generation so it's the closest
 thing to accurate. This ensures we can actually call functions from the
 debugger and have them execute. Secondly, you'll see the "fib.ks" in the
 call to ``createCompileUnit``. This is a default hard coded value since
@@ -259,10 +259,11 @@ information) and construct our function definition:
   unsigned LineNo = 0;
   unsigned ScopeLine = 0;
   DISubprogram *SP = DBuilder->createFunction(
-      FContext, Name, StringRef(), Unit, LineNo,
-      CreateFunctionType(Args.size(), Unit), false /* internal linkage */,
-      true /* definition */, ScopeLine, DINode::FlagPrototyped, false);
-  F->setSubprogram(SP);
+      FContext, P.getName(), StringRef(), Unit, LineNo,
+      CreateFunctionType(TheFunction->arg_size(), Unit),
+      false /* internal linkage */, true /* definition */, ScopeLine,
+      DINode::FlagPrototyped, false);
+  TheFunction->setSubprogram(SP);
 
 and we now have an DISubprogram that contains a reference to all of our
 metadata for the function.
@@ -326,10 +327,9 @@ that we pass down through when we create a new expression:
 
 giving us locations for each of our expressions and variables.
 
-From this we can make sure to tell ``DIBuilder`` when we're at a new source
-location so it can use that when we generate the rest of our code and make
-sure that each instruction has source location information. We do this
-by constructing another small function:
+To make sure that every instruction gets proper source location information,
+we have to tell ``Builder`` whenever we're at a new source location.
+We use a small helper function for this:
 
 .. code-block:: c++
 
@@ -343,40 +343,23 @@ by constructing another small function:
         DebugLoc::get(AST->getLine(), AST->getCol(), Scope));
   }
 
-that both tells the main ``IRBuilder`` where we are, but also what scope
-we're in. Since we've just created a function above we can either be in
-the main file scope (like when we created our function), or now we can be
-in the function scope we just created. To represent this we create a stack
-of scopes:
+This both tells the main ``IRBuilder`` where we are, but also what scope
+we're in. The scope can either be on compile-unit level or be the nearest
+enclosing lexical block like the current function.
+To represent this we create a stack of scopes:
 
 .. code-block:: c++
 
    std::vector<DIScope *> LexicalBlocks;
-   std::map<const PrototypeAST *, DIScope *> FnScopeMap;
 
-and keep a map of each function to the scope that it represents (an
-DISubprogram is also an DIScope).
-
-Then we make sure to:
+and push the scope (function) to the top of the stack when we start
+generating the code for each function:
 
 .. code-block:: c++
 
-   KSDbgInfo.emitLocation(this);
+  KSDbgInfo.LexicalBlocks.push_back(SP);
 
-emit the location every time we start to generate code for a new AST, and
-also:
-
-.. code-block:: c++
-
-  KSDbgInfo.FnScopeMap[this] = SP;
-
-store the scope (function) when we create it and use it:
-
-  KSDbgInfo.LexicalBlocks.push_back(&KSDbgInfo.FnScopeMap[Proto]);
-
-when we start generating the code for each function.
-
-also, don't forget to pop the scope back off of your scope stack at the
+Also, we may not forget to pop the scope back off of the scope stack at the
 end of the code generation for the function:
 
 .. code-block:: c++
@@ -385,6 +368,13 @@ end of the code generation for the function:
   // unconditionally.
   KSDbgInfo.LexicalBlocks.pop_back();
 
+Then we make sure to emit the location every time we start to generate code
+for a new AST object:
+
+.. code-block:: c++
+
+   KSDbgInfo.emitLocation(this);
+
 Variables
 =========
 
@@ -392,25 +382,37 @@ Now that we have functions, we need to be able to print out the variables
 we have in scope. Let's get our function arguments set up so we can get
 decent backtraces and see how our functions are being called. It isn't
 a lot of code, and we generally handle it when we're creating the
-argument allocas in ``PrototypeAST::CreateArgumentAllocas``.
+argument allocas in ``FunctionAST::codegen``.
 
 .. code-block:: c++
 
-  DIScope *Scope = KSDbgInfo.LexicalBlocks.back();
-  DIFile *Unit = DBuilder->createFile(KSDbgInfo.TheCU.getFilename(),
-                                      KSDbgInfo.TheCU.getDirectory());
-  DILocalVariable D = DBuilder->createParameterVariable(
-      Scope, Args[Idx], Idx + 1, Unit, Line, KSDbgInfo.getDoubleTy(), true);
+    // Record the function arguments in the NamedValues map.
+    NamedValues.clear();
+    unsigned ArgIdx = 0;
+    for (auto &Arg : TheFunction->args()) {
+      // Create an alloca for this variable.
+      AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName());
 
-  DBuilder->insertDeclare(Alloca, D, DBuilder->createExpression(),
-                          DebugLoc::get(Line, 0, Scope),
-                          Builder.GetInsertBlock());
+      // Create a debug descriptor for the variable.
+      DILocalVariable *D = DBuilder->createParameterVariable(
+          SP, Arg.getName(), ++ArgIdx, Unit, LineNo, KSDbgInfo.getDoubleTy(),
+          true);
 
-Here we're doing a few things. First, we're grabbing our current scope
-for the variable so we can say what range of code our variable is valid
-through. Second, we're creating the variable, giving it the scope,
+      DBuilder->insertDeclare(Alloca, D, DBuilder->createExpression(),
+                              DebugLoc::get(LineNo, 0, SP),
+                              Builder.GetInsertBlock());
+
+      // Store the initial value into the alloca.
+      Builder.CreateStore(&Arg, Alloca);
+
+      // Add arguments to variable symbol table.
+      NamedValues[Arg.getName()] = Alloca;
+    }
+
+
+Here we're first creating the variable, giving it the scope (``SP``),
 the name, source location, type, and since it's an argument, the argument
-index. Third, we create an ``lvm.dbg.declare`` call to indicate at the IR
+index. Next, we create an ``lvm.dbg.declare`` call to indicate at the IR
 level that we've got a variable in an alloca (and it gives a starting
 location for the variable), and setting a source location for the
 beginning of the scope on the declare.
@@ -420,7 +422,7 @@ assumptions based on how code and debug information was generated for them
 in the past. In this case we need to do a little bit of a hack to avoid
 generating line information for the function prologue so that the debugger
 knows to skip over those instructions when setting a breakpoint. So in
-``FunctionAST::CodeGen`` we add a couple of lines:
+``FunctionAST::CodeGen`` we add some more lines:
 
 .. code-block:: c++
 
@@ -434,7 +436,7 @@ body of the function:
 
 .. code-block:: c++
 
-  KSDbgInfo.emitLocation(Body);
+  KSDbgInfo.emitLocation(Body.get());
 
 With this we have enough debug information to set breakpoints in functions,
 print out argument variables, and call functions. Not too bad for just a

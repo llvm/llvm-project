@@ -31,6 +31,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-explicit-locals"
 
+// A command-line option to disable this pass. Note that this produces output
+// which is not valid WebAssembly, though it may be more convenient for writing
+// LLVM unit tests with.
+static cl::opt<bool> DisableWebAssemblyExplicitLocals(
+    "disable-wasm-explicit-locals", cl::ReallyHidden,
+    cl::desc("WebAssembly: Disable emission of get_local/set_local."),
+    cl::init(false));
+
 namespace {
 class WebAssemblyExplicitLocals final : public MachineFunctionPass {
   StringRef getPassName() const override {
@@ -60,7 +68,25 @@ FunctionPass *llvm::createWebAssemblyExplicitLocals() {
 /// if it doesn't yet have one.
 static unsigned getLocalId(DenseMap<unsigned, unsigned> &Reg2Local,
                            unsigned &CurLocal, unsigned Reg) {
-  return Reg2Local.insert(std::make_pair(Reg, CurLocal++)).first->second;
+  auto P = Reg2Local.insert(std::make_pair(Reg, CurLocal));
+  if (P.second)
+    ++CurLocal;
+  return P.first->second;
+}
+
+/// Get the appropriate drop opcode for the given register class.
+static unsigned getDropOpcode(const TargetRegisterClass *RC) {
+  if (RC == &WebAssembly::I32RegClass)
+    return WebAssembly::DROP_I32;
+  if (RC == &WebAssembly::I64RegClass)
+    return WebAssembly::DROP_I64;
+  if (RC == &WebAssembly::F32RegClass)
+    return WebAssembly::DROP_F32;
+  if (RC == &WebAssembly::F64RegClass)
+    return WebAssembly::DROP_F64;
+  if (RC == &WebAssembly::V128RegClass)
+    return WebAssembly::DROP_V128;
+  llvm_unreachable("Unexpected register class");
 }
 
 /// Get the appropriate get_local opcode for the given register class.
@@ -146,6 +172,10 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
                   "********** Function: "
                << MF.getName() << '\n');
 
+  // Disable this pass if directed to do so.
+  if (DisableWebAssemblyExplicitLocals)
+    return false;
+
   // Disable this pass if we aren't doing direct wasm object emission.
   if (MF.getSubtarget<WebAssemblySubtarget>()
         .getTargetTriple().isOSBinFormatELF())
@@ -175,6 +205,12 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
   // Start assigning local numbers after the last parameter.
   unsigned CurLocal = MFI.getParams().size();
+
+  // Precompute the set of registers that are unused, so that we can insert
+  // drops to their defs.
+  BitVector UseEmpty(MRI.getNumVirtRegs());
+  for (unsigned i = 0, e = MRI.getNumVirtRegs(); i < e; ++i)
+    UseEmpty[i] = MRI.use_empty(TargetRegisterInfo::index2VirtReg(i));
 
   // Visit each instruction in the function.
   for (MachineBasicBlock &MBB : MF) {
@@ -224,15 +260,26 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       assert(MI.getDesc().getNumDefs() <= 1);
       if (MI.getDesc().getNumDefs() == 1) {
         unsigned OldReg = MI.getOperand(0).getReg();
-        if (!MFI.isVRegStackified(OldReg) && !MRI.use_empty(OldReg)) {
-          unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+        if (!MFI.isVRegStackified(OldReg)) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
           auto InsertPt = std::next(MachineBasicBlock::iterator(&MI));
-          unsigned Opc = getSetLocalOpcode(RC);
-          BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
-              .addImm(LocalId)
-              .addReg(NewReg);
+          if (MI.getOpcode() == WebAssembly::IMPLICIT_DEF) {
+            MI.eraseFromParent();
+            Changed = true;
+            continue;
+          }
+          if (UseEmpty[TargetRegisterInfo::virtReg2Index(OldReg)]) {
+            unsigned Opc = getDropOpcode(RC);
+            BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
+                .addReg(NewReg);
+          } else {
+            unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+            unsigned Opc = getSetLocalOpcode(RC);
+            BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
+                .addImm(LocalId)
+                .addReg(NewReg);
+          }
           MI.getOperand(0).setReg(NewReg);
           MFI.stackifyVReg(NewReg);
           Changed = true;
@@ -278,13 +325,16 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Define the locals.
+  // TODO: Sort the locals for better compression.
+  MFI.setNumLocals(CurLocal - MFI.getParams().size());
   for (size_t i = 0, e = MRI.getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
     auto I = Reg2Local.find(Reg);
     if (I == Reg2Local.end() || I->second < MFI.getParams().size())
       continue;
 
-    MFI.addLocal(typeForRegClass(MRI.getRegClass(Reg)));
+    MFI.setLocal(I->second - MFI.getParams().size(),
+                 typeForRegClass(MRI.getRegClass(Reg)));
     Changed = true;
   }
 

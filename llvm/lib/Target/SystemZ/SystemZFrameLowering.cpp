@@ -277,8 +277,21 @@ void SystemZFrameLowering::
 processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                     RegScavenger *RS) const {
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
-  uint64_t MaxReach = (MFFrame.estimateStackSize(MF) +
-                       SystemZMC::CallFrameSize * 2);
+  // Get the size of our stack frame to be allocated ...
+  uint64_t StackSize = (MFFrame.estimateStackSize(MF) +
+                        SystemZMC::CallFrameSize);
+  // ... and the maximum offset we may need to reach into the
+  // caller's frame to access the save area or stack arguments.
+  int64_t MaxArgOffset = SystemZMC::CallFrameSize;
+  for (int I = MFFrame.getObjectIndexBegin(); I != 0; ++I)
+    if (MFFrame.getObjectOffset(I) >= 0) {
+      int64_t ArgOffset = SystemZMC::CallFrameSize +
+                          MFFrame.getObjectOffset(I) +
+                          MFFrame.getObjectSize(I);
+      MaxArgOffset = std::max(MaxArgOffset, ArgOffset);
+    }
+
+  uint64_t MaxReach = StackSize + MaxArgOffset;
   if (!isUInt<12>(MaxReach)) {
     // We may need register scavenging slots if some parts of the frame
     // are outside the reach of an unsigned 12-bit displacement.

@@ -7,11 +7,11 @@ define void @f_f___un_3C_unf_3E_un_3C_unf_3E_() {
 ; CHECK-NEXT:    vmovapd 0, %zmm0
 ; CHECK-NEXT:    vmovapd 64, %zmm1
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
-; CHECK-NEXT:    kshiftrw $8, %k0, %k1
-; CHECK-NEXT:    vorpd %zmm2, %zmm1, %zmm1 {%k1}
 ; CHECK-NEXT:    vorpd %zmm2, %zmm0, %zmm0 {%k1}
-; CHECK-NEXT:    vmovapd %zmm0, 0
+; CHECK-NEXT:    vorpd %zmm2, %zmm1, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, 64
+; CHECK-NEXT:    vmovapd %zmm0, 0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
   %a_load22 = load <16 x i64>, <16 x i64>* null, align 1
   %bitop = or <16 x i64> %a_load22, <i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736, i64 68719476736>

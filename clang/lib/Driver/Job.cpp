@@ -49,7 +49,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   // arguments.  Therefore, we need to skip the flag and the next argument.
   bool ShouldSkip = llvm::StringSwitch<bool>(Flag)
     .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
-    .Cases("-o", "-coverage-file", "-dependency-file", true)
+    .Cases("-o", "-dependency-file", true)
     .Cases("-fdebug-compilation-dir", "-diagnostic-log-file", true)
     .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
     .Default(false);
@@ -67,6 +67,8 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     .Default(false);
   if (IsInclude)
     return HaveCrashVFS ? false : true;
+  if (StringRef(Flag).startswith("-index-store-path"))
+    return true;
 
   // The remaining flags are treated as a single argument.
 
@@ -221,6 +223,7 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
   }
 
   bool HaveCrashVFS = CrashInfo && !CrashInfo->VFSPath.empty();
+  bool HaveIndexStorePath = CrashInfo && !CrashInfo->IndexStorePath.empty();
   for (size_t i = 0, e = Args.size(); i < e; ++i) {
     const char *const Arg = Args[i];
 
@@ -284,6 +287,24 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     printArg(OS, ModCachePath, Quote);
   }
 
+  if (CrashInfo && HaveIndexStorePath) {
+    SmallString<128> IndexStoreDir;
+
+    if (HaveCrashVFS) {
+      IndexStoreDir = llvm::sys::path::parent_path(
+          llvm::sys::path::parent_path(CrashInfo->VFSPath));
+      llvm::sys::path::append(IndexStoreDir, "index-store");
+    } else {
+      IndexStoreDir = "index-store";
+    }
+
+    OS << ' ';
+    printArg(OS, "-index-store-path", Quote);
+    OS << ' ';
+    printArg(OS, IndexStoreDir.c_str(), Quote);
+  }
+
+
   if (ResponseFile != nullptr) {
     OS << "\n Arguments passed via response file:\n";
     writeResponseFile(OS);
@@ -303,19 +324,33 @@ void Command::setResponseFile(const char *FileName) {
   ResponseFileFlag += FileName;
 }
 
+void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
+  Environment.reserve(NewEnvironment.size() + 1);
+  Environment.assign(NewEnvironment.begin(), NewEnvironment.end());
+  Environment.push_back(nullptr);
+}
+
 int Command::Execute(const StringRef **Redirects, std::string *ErrMsg,
                      bool *ExecutionFailed) const {
   SmallVector<const char*, 128> Argv;
+
+  const char **Envp;
+  if (Environment.empty()) {
+    Envp = nullptr;
+  } else {
+    assert(Environment.back() == nullptr &&
+           "Environment vector should be null-terminated by now");
+    Envp = const_cast<const char **>(Environment.data());
+  }
 
   if (ResponseFile == nullptr) {
     Argv.push_back(Executable);
     Argv.append(Arguments.begin(), Arguments.end());
     Argv.push_back(nullptr);
 
-    return llvm::sys::ExecuteAndWait(Executable, Argv.data(), /*env*/ nullptr,
-                                     Redirects, /*secondsToWait*/ 0,
-                                     /*memoryLimit*/ 0, ErrMsg,
-                                     ExecutionFailed);
+    return llvm::sys::ExecuteAndWait(
+        Executable, Argv.data(), Envp, Redirects, /*secondsToWait*/ 0,
+        /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
   }
 
   // We need to put arguments in a response file (command is too large)
@@ -339,8 +374,8 @@ int Command::Execute(const StringRef **Redirects, std::string *ErrMsg,
     return -1;
   }
 
-  return llvm::sys::ExecuteAndWait(Executable, Argv.data(), /*env*/ nullptr,
-                                   Redirects, /*secondsToWait*/ 0,
+  return llvm::sys::ExecuteAndWait(Executable, Argv.data(), Envp, Redirects,
+                                   /*secondsToWait*/ 0,
                                    /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
 }
 

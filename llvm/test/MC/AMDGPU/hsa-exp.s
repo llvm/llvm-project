@@ -65,7 +65,7 @@ amd_kernel_code_t_minimal:
 // ASM-LABEL: {{^}}amd_kernel_code_t_minimal:
 // ASM: .amd_kernel_code_t
 // ASM:	amd_code_version_major = 7
-// ASM:	amd_code_version_minor = 0
+// ASM:	amd_code_version_minor = 1
 // ASM:	amd_machine_kind = 1
 // ASM:	amd_machine_version_major = 7
 // ASM:	amd_machine_version_minor = 0
@@ -124,6 +124,6 @@ amd_kernel_code_t_minimal:
 // ASM:	group_segment_alignment = 4
 // ASM:	private_segment_alignment = 4
 // ASM:	wavefront_size = 6
-// ASM:	call_convention = 0
+// ASM:	call_convention = -1
 // ASM:	runtime_loader_kernel_symbol = 0
 // ASM: .end_amd_kernel_code_t

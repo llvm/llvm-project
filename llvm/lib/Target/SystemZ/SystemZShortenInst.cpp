@@ -14,9 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetMachine.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -167,10 +167,10 @@ bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
     MI.RemoveOperand(0);
     MI.setDesc(TII->get(Opcode));
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
-      .addOperand(Dest)
-      .addOperand(Mode)
-      .addOperand(Src)
-      .addOperand(Suppress);
+        .add(Dest)
+        .add(Mode)
+        .add(Src)
+        .add(Suppress);
     return true;
   }
   return false;
@@ -200,12 +200,24 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
       Changed |= shortenOn001AddCC(MI, SystemZ::ADBR);
       break;
 
+    case SystemZ::WFASB:
+      Changed |= shortenOn001AddCC(MI, SystemZ::AEBR);
+      break;
+
     case SystemZ::WFDDB:
       Changed |= shortenOn001(MI, SystemZ::DDBR);
       break;
 
+    case SystemZ::WFDSB:
+      Changed |= shortenOn001(MI, SystemZ::DEBR);
+      break;
+
     case SystemZ::WFIDB:
       Changed |= shortenFPConv(MI, SystemZ::FIDBRA);
+      break;
+
+    case SystemZ::WFISB:
+      Changed |= shortenFPConv(MI, SystemZ::FIEBRA);
       break;
 
     case SystemZ::WLDEB:
@@ -220,28 +232,56 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
       Changed |= shortenOn001(MI, SystemZ::MDBR);
       break;
 
+    case SystemZ::WFMSB:
+      Changed |= shortenOn001(MI, SystemZ::MEEBR);
+      break;
+
     case SystemZ::WFLCDB:
       Changed |= shortenOn01(MI, SystemZ::LCDFR);
+      break;
+
+    case SystemZ::WFLCSB:
+      Changed |= shortenOn01(MI, SystemZ::LCDFR_32);
       break;
 
     case SystemZ::WFLNDB:
       Changed |= shortenOn01(MI, SystemZ::LNDFR);
       break;
 
+    case SystemZ::WFLNSB:
+      Changed |= shortenOn01(MI, SystemZ::LNDFR_32);
+      break;
+
     case SystemZ::WFLPDB:
       Changed |= shortenOn01(MI, SystemZ::LPDFR);
+      break;
+
+    case SystemZ::WFLPSB:
+      Changed |= shortenOn01(MI, SystemZ::LPDFR_32);
       break;
 
     case SystemZ::WFSQDB:
       Changed |= shortenOn01(MI, SystemZ::SQDBR);
       break;
 
+    case SystemZ::WFSQSB:
+      Changed |= shortenOn01(MI, SystemZ::SQEBR);
+      break;
+
     case SystemZ::WFSDB:
       Changed |= shortenOn001AddCC(MI, SystemZ::SDBR);
       break;
 
+    case SystemZ::WFSSB:
+      Changed |= shortenOn001AddCC(MI, SystemZ::SEBR);
+      break;
+
     case SystemZ::WFCDB:
       Changed |= shortenOn01(MI, SystemZ::CDBR);
+      break;
+
+    case SystemZ::WFCSB:
+      Changed |= shortenOn01(MI, SystemZ::CEBR);
       break;
 
     case SystemZ::VL32:

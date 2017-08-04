@@ -1,4 +1,4 @@
-//===-------- StackMapParser.h - StackMap Parsing Support -------*- C++ -*-===//
+//===- StackMapParser.h - StackMap Parsing Support --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,11 @@
 #define LLVM_CODEGEN_STACKMAPPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Endian.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -19,12 +23,11 @@ namespace llvm {
 template <support::endianness Endianness>
 class StackMapV2Parser {
 public:
-
   template <typename AccessorT>
   class AccessorIterator {
   public:
-
     AccessorIterator(AccessorT A) : A(A) {}
+
     AccessorIterator& operator++() { A = A.next(); return *this; }
     AccessorIterator operator++(int) {
       auto tmp = *this;
@@ -48,8 +51,8 @@ public:
   /// Accessor for function records.
   class FunctionAccessor {
     friend class StackMapV2Parser;
-  public:
 
+  public:
     /// Get the function address.
     uint64_t getFunctionAddress() const {
       return read<uint64_t>(P);
@@ -80,13 +83,12 @@ public:
   /// Accessor for constants.
   class ConstantAccessor {
     friend class StackMapV2Parser;
-  public:
 
+  public:
     /// Return the value of this constant.
     uint64_t getValue() const { return read<uint64_t>(P); }
 
   private:
-
     ConstantAccessor(const uint8_t *P) : P(P) {}
 
     const static int ConstantAccessorSize = sizeof(uint64_t);
@@ -98,20 +100,16 @@ public:
     const uint8_t *P;
   };
 
-  // Forward-declare RecordAccessor so we can friend it below.
-  class RecordAccessor;
-
   enum class LocationKind : uint8_t {
     Register = 1, Direct = 2, Indirect = 3, Constant = 4, ConstantIndex = 5
   };
-
 
   /// Accessor for location records.
   class LocationAccessor {
     friend class StackMapV2Parser;
     friend class RecordAccessor;
-  public:
 
+  public:
     /// Get the Kind for this location.
     LocationKind getKind() const {
       return LocationKind(P[KindOffset]);
@@ -144,7 +142,6 @@ public:
     }
 
   private:
-
     LocationAccessor(const uint8_t *P) : P(P) {}
 
     LocationAccessor next() const {
@@ -163,8 +160,8 @@ public:
   class LiveOutAccessor {
     friend class StackMapV2Parser;
     friend class RecordAccessor;
-  public:
 
+  public:
     /// Get the Dwarf register number for this live-out.
     uint16_t getDwarfRegNum() const {
       return read<uint16_t>(P + DwarfRegNumOffset);
@@ -176,7 +173,6 @@ public:
     }
 
   private:
-
     LiveOutAccessor(const uint8_t *P) : P(P) {}
 
     LiveOutAccessor next() const {
@@ -194,10 +190,10 @@ public:
   /// Accessor for stackmap records.
   class RecordAccessor {
     friend class StackMapV2Parser;
-  public:
 
-    typedef AccessorIterator<LocationAccessor> location_iterator;
-    typedef AccessorIterator<LiveOutAccessor> liveout_iterator;
+  public:
+    using location_iterator = AccessorIterator<LocationAccessor>;
+    using liveout_iterator = AccessorIterator<LiveOutAccessor>;
 
     /// Get the patchpoint/stackmap ID for this record.
     uint64_t getID() const {
@@ -254,7 +250,6 @@ public:
       return liveout_iterator(getLiveOut(0));
     }
 
-
     /// End iterator for live-outs.
     liveout_iterator liveouts_end() const {
       return liveout_iterator(getLiveOut(getNumLiveOuts()));
@@ -266,7 +261,6 @@ public:
     }
 
   private:
-
     RecordAccessor(const uint8_t *P) : P(P) {}
 
     unsigned getNumLiveOutsOffset() const {
@@ -316,9 +310,9 @@ public:
     }
   }
 
-  typedef AccessorIterator<FunctionAccessor> function_iterator;
-  typedef AccessorIterator<ConstantAccessor> constant_iterator;
-  typedef AccessorIterator<RecordAccessor> record_iterator;
+  using function_iterator = AccessorIterator<FunctionAccessor>;
+  using constant_iterator = AccessorIterator<ConstantAccessor>;
+  using record_iterator = AccessorIterator<RecordAccessor>;
 
   /// Get the version number of this stackmap. (Always returns 2).
   unsigned getVersion() const { return 2; }
@@ -413,7 +407,6 @@ public:
   }
 
 private:
-
   template <typename T>
   static T read(const uint8_t *P) {
     return support::endian::read<T, Endianness, 1>(P);
@@ -441,6 +434,6 @@ private:
   std::vector<unsigned> StackMapRecordOffsets;
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_STACKMAPPARSER_H

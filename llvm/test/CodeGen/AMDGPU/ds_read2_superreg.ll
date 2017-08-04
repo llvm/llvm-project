@@ -12,7 +12,7 @@
 ; CI: s_waitcnt lgkmcnt(0)
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; CI: s_endpgm
-define void @simple_read2_v2f32_superreg_align4(<2 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v2f32_superreg_align4(<2 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds  [512 x <2 x float>], [512 x <2 x float>] addrspace(3)* @lds.v2, i32 0, i32 %x.i
   %val0 = load <2 x float>, <2 x float> addrspace(3)* %arrayidx0, align 4
@@ -26,7 +26,7 @@ define void @simple_read2_v2f32_superreg_align4(<2 x float> addrspace(1)* %out) 
 ; CI: s_waitcnt lgkmcnt(0)
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; CI: s_endpgm
-define void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <2 x float>], [512 x <2 x float>] addrspace(3)* @lds.v2, i32 0, i32 %x.i
   %val0 = load <2 x float>, <2 x float> addrspace(3)* %arrayidx0
@@ -38,12 +38,12 @@ define void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)* %out) #0 {
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_Z:[0-9]+]]:[[REG_W:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
-; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_Z]], v[[REG_X]]
-; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_W]], v[[REG_Y]]
-; CI: v_add_f32_e32 v[[ADD2:[0-9]+]], v[[ADD1]], v[[ADD0]]
+; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_X]], v[[REG_Z]]
+; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_Y]], v[[REG_W]]
+; CI: v_add_f32_e32 v[[ADD2:[0-9]+]], v[[ADD0]], v[[ADD1]]
 ; CI: buffer_store_dword v[[ADD2]]
 ; CI: s_endpgm
-define void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <4 x float>], [512 x <4 x float>] addrspace(3)* @lds.v4, i32 0, i32 %x.i
   %val0 = load <4 x float>, <4 x float> addrspace(3)* %arrayidx0, align 4
@@ -64,11 +64,11 @@ define void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
 ; CI-LABEL: {{^}}simple_read2_v3f32_superreg_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read_b32 v[[REG_Z:[0-9]+]], v{{[0-9]+}} offset:8{{$}}
-; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_Z]], v[[REG_X]]
-; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_Y]], v[[ADD0]]
+; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_X]], v[[REG_Z]]
+; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[ADD0]], v[[REG_Y]]
 ; CI: buffer_store_dword v[[ADD1]]
 ; CI: s_endpgm
-define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <3 x float>], [512 x <3 x float>] addrspace(3)* @lds.v3, i32 0, i32 %x.i
   %val0 = load <3 x float>, <3 x float> addrspace(3)* %arrayidx0, align 4
@@ -88,7 +88,7 @@ define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
 ; CI: ds_read2_b64 [[REG_ZW:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
 ; CI: buffer_store_dwordx4 [[REG_ZW]]
 ; CI: s_endpgm
-define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <4 x float>], [512 x <4 x float>] addrspace(3)* @lds.v4, i32 0, i32 %x.i
   %val0 = load <4 x float>, <4 x float> addrspace(3)* %arrayidx0, align 8
@@ -101,7 +101,7 @@ define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) 
 ; CI-DAG: ds_read2_b64 [[REG_ZW:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
 ; CI: buffer_store_dwordx4 [[REG_ZW]]
 ; CI: s_endpgm
-define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <4 x float>], [512 x <4 x float>] addrspace(3)* @lds.v4, i32 0, i32 %x.i
   %val0 = load <4 x float>, <4 x float> addrspace(3)* %arrayidx0
@@ -117,7 +117,7 @@ define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
 ; CI-DAG: buffer_store_dwordx4 [[VEC_HI]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
 ; CI-DAG: buffer_store_dwordx4 [[VEC_LO]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64{{$}}
 ; CI: s_endpgm
-define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <8 x float>], [512 x <8 x float>] addrspace(3)* @lds.v8, i32 0, i32 %x.i
   %val0 = load <8 x float>, <8 x float> addrspace(3)* %arrayidx0
@@ -138,7 +138,7 @@ define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
 ; CI-DAG: buffer_store_dwordx4 [[VEC8_11]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:32
 ; CI-DAG: buffer_store_dwordx4 [[VEC12_15]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:48
 ; CI: s_endpgm
-define void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <16 x float>], [512 x <16 x float>] addrspace(3)* @lds.v16, i32 0, i32 %x.i
   %val0 = load <16 x float>, <16 x float> addrspace(3)* %arrayidx0
@@ -150,10 +150,10 @@ define void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
 ; Do scalar loads into the super register we need.
 ; CI-LABEL: {{^}}simple_read2_v2f32_superreg_scalar_loads_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT0:[0-9]+]]:[[REG_ELT1:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
-; CI-NOT: v_mov
+; CI-NOT: v_mov {{v[0-9]+}}, {{[sv][0-9]+}}
 ; CI: buffer_store_dwordx2 v{{\[}}[[REG_ELT0]]:[[REG_ELT1]]{{\]}}
 ; CI: s_endpgm
-define void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %arrayidx1 = getelementptr inbounds float, float addrspace(3)* %arrayidx0, i32 1
@@ -173,10 +173,10 @@ define void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x float> addrspa
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_scalar_loads_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT0:[0-9]+]]:[[REG_ELT1:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT2:[0-9]+]]:[[REG_ELT3:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
-; CI-NOT: v_mov
+; CI-NOT: v_mov {{v[0-9]+}}, {{[sv][0-9]+}}
 ; CI: buffer_store_dwordx4 v{{\[}}[[REG_ELT0]]:[[REG_ELT3]]{{\]}}
 ; CI: s_endpgm
-define void @simple_read2_v4f32_superreg_scalar_loads_align4(<4 x float> addrspace(1)* %out) #0 {
+define amdgpu_kernel void @simple_read2_v4f32_superreg_scalar_loads_align4(<4 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %arrayidx1 = getelementptr inbounds float, float addrspace(3)* %arrayidx0, i32 1

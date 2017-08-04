@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm-c/Core.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm-c/Core.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -178,14 +178,15 @@ TEST(ConstantsTest, PointerCast) {
             ConstantExpr::getAddrSpaceCast(NullInt32Ptr1, Int32PtrTy));
 }
 
-#define CHECK(x, y) {                                         		\
-    std::string __s;                                            	\
-    raw_string_ostream __o(__s);                                	\
-    Instruction *__I = cast<ConstantExpr>(x)->getAsInstruction();	\
-    __I->print(__o);      						\
-    delete __I; 							\
-    __o.flush();                                                	\
-    EXPECT_EQ(std::string("  <badref> = " y), __s);             	\
+#define CHECK(x, y)                                                            \
+  {                                                                            \
+    std::string __s;                                                           \
+    raw_string_ostream __o(__s);                                               \
+    Instruction *__I = cast<ConstantExpr>(x)->getAsInstruction();              \
+    __I->print(__o);                                                           \
+    __I->deleteValue();                                                        \
+    __o.flush();                                                               \
+    EXPECT_EQ(std::string("  <badref> = " y), __s);                            \
   }
 
 TEST(ConstantsTest, AsInstructionsTest) {

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TrigramIndex.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 #include <string>

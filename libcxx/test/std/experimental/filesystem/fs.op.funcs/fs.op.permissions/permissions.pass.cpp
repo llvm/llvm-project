@@ -144,7 +144,7 @@ TEST_CASE(test_no_resolve_symlink_on_symlink)
         std::error_code expected_ec;
 #else
         // On linux symlink permissions are not supported. The error code should
-        // be 'operation_not_supported' and the sylink permissions should be
+        // be 'operation_not_supported' and the symlink permissions should be
         // unchanged.
         const auto expected_link_perms = symlink_status(sym).permissions();
         std::error_code expected_ec = std::make_error_code(std::errc::operation_not_supported);

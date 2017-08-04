@@ -27,5 +27,5 @@ entry:
   ret i64 %0
   ; CHECK: test2
 	; CHECK: movq {{.*}}, %xmm7
-	; CHECK: movd %xmm7, %rax
+	; CHECK: movq %xmm7, %rax
 }

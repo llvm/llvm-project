@@ -31,6 +31,8 @@ public:
              "bytes.";
     case cv_error_code::corrupt_record:
       return "The CodeView record is corrupted.";
+    case cv_error_code::no_records:
+      return "There are no records";
     case cv_error_code::operation_unsupported:
       return "The requested operation is not supported.";
     case cv_error_code::unknown_member_record:

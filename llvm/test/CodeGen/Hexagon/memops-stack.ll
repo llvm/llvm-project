@@ -9,13 +9,13 @@ define void @test0() #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = add nsw i32 %1, 1
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -25,13 +25,13 @@ define void @test1() #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = sub nsw i32 %1, 1
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -41,13 +41,13 @@ define void @test2() #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = or i32 %1, 1
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -57,13 +57,13 @@ define void @test3() #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = and i32 %1, -2
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -73,13 +73,13 @@ define void @test4(i32 %a) #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = add nsw i32 %1, %a
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -89,13 +89,13 @@ define void @test5(i32 %a) #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = sub nsw i32 %1, %a
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -105,13 +105,13 @@ define void @test6(i32 %a) #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = or i32 %1, %a
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
@@ -121,20 +121,20 @@ define void @test7(i32 %a) #0 {
 entry:
   %x = alloca i32, align 4
   %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %0) #3
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3
   call void @foo(i32* nonnull %x) #3
   %1 = load i32, i32* %x, align 4, !tbaa !1
   %inc = and i32 %1, %a
   store i32 %inc, i32* %x, align 4, !tbaa !1
   call void @foo(i32* nonnull %x) #3
-  call void @llvm.lifetime.end(i64 4, i8* %0) #3
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #3
   ret void
 }
 
 
 declare void @foo(i32*) #2
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

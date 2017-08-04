@@ -61,9 +61,9 @@ class _LIBCPP_HIDDEN __libcpp_refstring
 
     bool __uses_refcount() const;
 public:
-    explicit __libcpp_refstring(const char* msg);
-    __libcpp_refstring(const __libcpp_refstring& s) _NOEXCEPT;
-    __libcpp_refstring& operator=(const __libcpp_refstring& s) _NOEXCEPT;
+    explicit __libcpp_refstring(const char* __msg);
+    __libcpp_refstring(const __libcpp_refstring& __s) _NOEXCEPT;
+    __libcpp_refstring& operator=(const __libcpp_refstring& __s) _NOEXCEPT;
     ~__libcpp_refstring();
 
     const char* c_str() const _NOEXCEPT {return __imp_;}

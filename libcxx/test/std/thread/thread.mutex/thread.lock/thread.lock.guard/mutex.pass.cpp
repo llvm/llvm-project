@@ -15,10 +15,15 @@
 
 // explicit lock_guard(mutex_type& m);
 
+// template<class _Mutex> lock_guard(lock_guard<_Mutex>)
+//     -> lock_guard<_Mutex>;  // C++17
+
 #include <mutex>
 #include <thread>
 #include <cstdlib>
 #include <cassert>
+
+#include "test_macros.h"
 
 std::mutex m;
 
@@ -47,4 +52,9 @@ int main()
     std::this_thread::sleep_for(ms(250));
     m.unlock();
     t.join();
+
+#ifdef __cpp_deduction_guides
+    std::lock_guard lg(m);
+    static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
+#endif
 }

@@ -2,7 +2,6 @@
 // RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj < %s -o - | \
 // RUN:   llvm-readobj -r -t | FileCheck --check-prefix=CHECK-ELF %s
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // TLS initial-exec forms
 ////////////////////////////////////////////////////////////////////////////////
@@ -159,6 +158,15 @@
 // CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLE_LDST64_TPREL_LO12 [[VARSYM]]
 // CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC [[VARSYM]]
 
+   ldr q24, [x23, :tprel_lo12:var]
+   str q22, [x21, :tprel_lo12_nc:var]
+// CHECK: ldr     q24, [x23, :tprel_lo12:var] // encoding: [0xf8,0bAAAAAA10,0b11AAAAAA,0x3d]
+// CHECK-NEXT:                                 //   fixup A - offset: 0, value: :tprel_lo12:var, kind: fixup_aarch64_ldst_imm12_scale16
+// CHECK: str     q22, [x21, :tprel_lo12_nc:var] // encoding: [0xb6,0bAAAAAA10,0b10AAAAAA,0x3d]
+// CHECK-NEXT:                                 //   fixup A - offset: 0, value: :tprel_lo12_nc:var, kind: fixup_aarch64_ldst_imm12_scale16
+
+// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLE_LDST128_TPREL_LO12 [[VARSYM]]
+// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC [[VARSYM]]
 
 ////////////////////////////////////////////////////////////////////////////////
 // TLS local-dynamic forms
@@ -283,6 +291,16 @@
 // CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLD_LDST64_DTPREL_LO12 [[VARSYM]]
 // CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLD_LDST64_DTPREL_LO12_NC [[VARSYM]]
 
+        ldr q24, [x23, #:dtprel_lo12:var]
+        str q22, [x21, #:dtprel_lo12_nc:var]
+// CHECK: ldr     q24, [x23, :dtprel_lo12:var] // encoding: [0xf8,0bAAAAAA10,0b11AAAAAA,0x3d]
+// CHECK-NEXT:                                 //   fixup A - offset: 0, value: :dtprel_lo12:var, kind: fixup_aarch64_ldst_imm12_scale16
+// CHECK: str     q22, [x21, :dtprel_lo12_nc:var] // encoding: [0xb6,0bAAAAAA10,0b10AAAAAA,0x3d]
+// CHECK-NEXT:                                 //   fixup A - offset: 0, value: :dtprel_lo12_nc:var, kind: fixup_aarch64_ldst_imm12_scale16
+
+// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLD_LDST128_DTPREL_LO12 [[VARSYM]]
+// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSLD_LDST128_DTPREL_LO12_NC [[VARSYM]]
+
 ////////////////////////////////////////////////////////////////////////////////
 // TLS descriptor forms
 ////////////////////////////////////////////////////////////////////////////////
@@ -305,8 +323,8 @@
 
 
 // CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSDESC_ADR_PAGE21 [[VARSYM]]
-// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSDESC_LD64_LO12_NC [[VARSYM]]
-// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSDESC_ADD_LO12_NC [[VARSYM]]
+// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSDESC_LD64_LO12 [[VARSYM]]
+// CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSDESC_ADD_LO12 [[VARSYM]]
 // CHECK-ELF-NEXT:     {{0x[0-9A-F]+}} R_AARCH64_TLSDESC_CALL [[VARSYM]]
 
         // Make sure symbol 5 has type STT_TLS:

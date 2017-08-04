@@ -10,6 +10,7 @@ REGENERATE: $ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
 REGENERATE: $ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
 
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s
+RUN: llvm-profdata show %p/Inputs/c-general.profraw --topn=3 -o - | FileCheck %s --check-prefix=TOPN
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | FileCheck %s -check-prefix=SWITCHES -check-prefix=CHECK
 
 SWITCHES-LABEL: Counters:
@@ -22,3 +23,6 @@ SWITCHES-LABEL: Functions shown: 1
 CHECK-LABEL: Total functions: 12
 CHECK-NEXT: Maximum function count: 1
 CHECK-NEXT: Maximum internal block count: 100
+TOPN: boolean_operators, max count = 100
+TOPN-NEXT: simple_loops, max count = 100
+TOPN-NEXT:  conditionals, max count = 100

@@ -5,17 +5,17 @@
 define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* %p, i64 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* %p, i64 2
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* %p, i64 3
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* %p, i64 4
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* %p, i64 5
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* %p, i64 6
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* %p, i64 7
-; CHECK-NEXT:    br label %for.body
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %entry ], [ %add.7, %for.body ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* %p to <8 x i32>*
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[BIN_EXTRA:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>, [[TMP1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 undef, [[SUM]]
@@ -32,10 +32,11 @@ define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 [[TMP3]], [[SUM]]
-; CHECK-NEXT:    br i1 true, label %for.end, label %for.body
+; CHECK-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP3]], [[SUM]]
+; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 undef, [[ADD_6]]
+; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 [[ADD_7]]
+; CHECK-NEXT:    ret i32 [[BIN_EXTRA]]
 ;
 entry:
   %arrayidx.1 = getelementptr inbounds i32, i32* %p, i64 1

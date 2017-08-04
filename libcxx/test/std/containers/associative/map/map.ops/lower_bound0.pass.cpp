@@ -28,7 +28,12 @@
 
 int main()
 {
+    {
     typedef std::map<int, double, transparent_less> M;
-
     M().lower_bound(C2Int{5});
+    }
+    {
+    typedef std::map<int, double, transparent_less_not_referenceable> M;
+    M().lower_bound(C2Int{5});
+    }
 }

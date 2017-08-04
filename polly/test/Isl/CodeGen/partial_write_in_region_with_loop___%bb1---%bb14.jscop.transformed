@@ -1,0 +1,52 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_xptr",
+         "sizes" : [ "*" ],
+         "type" : "i64"
+      },
+      {
+         "name" : "MemRef_B",
+         "sizes" : [ "*" ],
+         "type" : "float"
+      }
+   ],
+   "context" : "{  :  }",
+   "name" : "%bb1---%bb14",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_bb2[i0] -> MemRef_xptr[0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_bb2[i0] -> MemRef_j_0__phi[] }"
+            }
+         ],
+         "domain" : "{ Stmt_bb2[i0] : 0 <= i0 <= 1023 }",
+         "name" : "Stmt_bb2",
+         "schedule" : "{ Stmt_bb2[i0] -> [i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_bb3__TO__bb11[i0] -> MemRef_j_0__phi[] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_bb3__TO__bb11[i0] -> MemRef_B[42] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_bb3__TO__bb11[i0] -> MemRef_B[42] : i0 < 10 }"
+            }
+         ],
+         "domain" : "{ Stmt_bb3__TO__bb11[i0] : 0 <= i0 <= 1023 }",
+         "name" : "Stmt_bb3__TO__bb11",
+         "schedule" : "{ Stmt_bb3__TO__bb11[i0] -> [i0, 1] }"
+      }
+   ]
+}

@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../rep.h"
 
 template <class D>
@@ -26,7 +27,7 @@ void test()
     Rep zero_rep = std::chrono::duration_values<Rep>::zero();
     assert(D::zero().count() == zero_rep);
     }
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     {
     typedef typename D::rep Rep;
     constexpr Rep zero_rep = std::chrono::duration_values<Rep>::zero();

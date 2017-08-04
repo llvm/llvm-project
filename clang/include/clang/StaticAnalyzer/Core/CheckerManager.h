@@ -286,7 +286,7 @@ public:
   void runCheckersForEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                                  ExprEngine &Eng);
 
-  /// \brief Run checkers on begining of function.
+  /// \brief Run checkers on beginning of function.
   void runCheckersForBeginFunction(ExplodedNodeSet &Dst,
                                    const BlockEdge &L,
                                    ExplodedNode *Pred,

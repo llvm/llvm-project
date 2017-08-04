@@ -111,10 +111,8 @@ entry:
 define i64 @f14(i64 %a, i64 %b) nounwind readnone {
 entry:
 ; ALL-LABEL: f14:
-; ALL-DAG:       ld $[[P0:[0-9]+]], %got_disp(gll0)(
-; ALL-DAG:       ld $[[P1:[0-9]+]], %got_disp(gll1)(
-; ALL-DAG:       ld $[[T0:[0-9]+]], 0($[[P0]])
-; ALL-DAG:       ld $[[T1:[0-9]+]], 0($[[P1]])
+; ALL-DAG:       ld $[[T0:[0-9]+]], %lo(gll0)(${{[0-9]+}})
+; ALL-DAG:       ld $[[T1:[0-9]+]], %lo(gll1)(${{[0-9]+}})
 
 ; ACCMULDIV:     ddiv $zero, $[[T0]], $[[T1]]
 ; ACCMULDIV:     teq $[[T1]], $zero, 7
@@ -132,10 +130,8 @@ entry:
 define i64 @f15() nounwind readnone {
 entry:
 ; ALL-LABEL: f15:
-; ALL-DAG:       ld $[[P0:[0-9]+]], %got_disp(gll0)(
-; ALL-DAG:       ld $[[P1:[0-9]+]], %got_disp(gll1)(
-; ALL-DAG:       ld $[[T0:[0-9]+]], 0($[[P0]])
-; ALL-DAG:       ld $[[T1:[0-9]+]], 0($[[P1]])
+; ALL-DAG:       ld $[[T0:[0-9]+]], %lo(gll0)(${{[0-9]+}})
+; ALL-DAG:       ld $[[T1:[0-9]+]], %lo(gll1)(${{[0-9]+}})
 
 ; ACCMULDIV:     ddivu $zero, $[[T0]], $[[T1]]
 ; ACCMULDIV:     teq $[[T1]], $zero, 7

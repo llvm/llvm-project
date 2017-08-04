@@ -51,8 +51,7 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
   if (rv.isComplex()) {
     CodeGenFunction::ComplexPairTy V = rv.getComplexVal();
     llvm::Type *ComplexTy =
-      llvm::StructType::get(V.first->getType(), V.second->getType(),
-                            (void*) nullptr);
+        llvm::StructType::get(V.first->getType(), V.second->getType());
     Address addr = CGF.CreateDefaultAlignTempAlloca(ComplexTy, "saved-complex");
     CGF.Builder.CreateStore(V.first,
                             CGF.Builder.CreateStructGEP(addr, 0, CharUnits()));
@@ -418,11 +417,15 @@ void CodeGenFunction::ResolveBranchFixups(llvm::BasicBlock *Block) {
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.
-void CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old) {
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
   assert(Old.isValid());
 
+  bool HadBranches = false;
   while (EHStack.stable_begin() != Old) {
     EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.begin());
+    HadBranches |= Scope.hasBranches();
 
     // As long as Old strictly encloses the scope's enclosing normal
     // cleanup, we're going to emit another normal cleanup which
@@ -432,14 +435,48 @@ void CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old) {
 
     PopCleanupBlock(FallThroughIsBranchThrough);
   }
+
+  // If we didn't have any branches, the insertion point before cleanups must
+  // dominate the current insertion point and we don't need to reload any
+  // values.
+  if (!HadBranches)
+    return;
+
+  // Spill and reload all values that the caller wants to be live at the current
+  // insertion point.
+  for (llvm::Value **ReloadedValue : ValuesToReload) {
+    auto *Inst = dyn_cast_or_null<llvm::Instruction>(*ReloadedValue);
+    if (!Inst)
+      continue;
+
+    // Don't spill static allocas, they dominate all cleanups. These are created
+    // by binding a reference to a local variable or temporary.
+    auto *AI = dyn_cast<llvm::AllocaInst>(Inst);
+    if (AI && AI->isStaticAlloca())
+      continue;
+
+    Address Tmp =
+        CreateDefaultAlignTempAlloca(Inst->getType(), "tmp.exprcleanup");
+
+    // Find an insertion point after Inst and spill it to the temporary.
+    llvm::BasicBlock::iterator InsertBefore;
+    if (auto *Invoke = dyn_cast<llvm::InvokeInst>(Inst))
+      InsertBefore = Invoke->getNormalDest()->getFirstInsertionPt();
+    else
+      InsertBefore = std::next(Inst->getIterator());
+    CGBuilderTy(CGM, &*InsertBefore).CreateStore(Inst, Tmp);
+
+    // Reload the value at the current insertion point.
+    *ReloadedValue = Builder.CreateLoad(Tmp);
+  }
 }
 
 /// Pops cleanup blocks until the given savepoint is reached, then add the
 /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
-void
-CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old,
-                                  size_t OldLifetimeExtendedSize) {
-  PopCleanupBlocks(Old);
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
+  PopCleanupBlocks(Old, ValuesToReload);
 
   // Move our deferred cleanups onto the EH stack.
   for (size_t I = OldLifetimeExtendedSize,
@@ -578,7 +615,7 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
     llvm::SwitchInst *si = cast<llvm::SwitchInst>(use.getUser());
     if (si->getNumCases() == 1 && si->getDefaultDest() == unreachableBB) {
       // Replace the switch with a branch.
-      llvm::BranchInst::Create(si->case_begin().getCaseSuccessor(), si);
+      llvm::BranchInst::Create(si->case_begin()->getCaseSuccessor(), si);
 
       // The switch operand is a load from the cleanup-dest alloca.
       llvm::LoadInst *condition = cast<llvm::LoadInst>(si->getCondition());

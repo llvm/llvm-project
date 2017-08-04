@@ -72,7 +72,7 @@ typedef struct unw_cursor_t unw_cursor_t;
 typedef struct unw_addr_space *unw_addr_space_t;
 
 typedef int unw_regnum_t;
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
 typedef uint32_t unw_word_t;
 typedef uint64_t unw_fpreg_t;
 #else

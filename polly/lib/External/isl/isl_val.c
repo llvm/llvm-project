@@ -916,6 +916,31 @@ error:
 }
 
 /* Divide "v1" by "v2".
+ */
+__isl_give isl_val *isl_val_div_ui(__isl_take isl_val *v1, unsigned long v2)
+{
+	if (!v1)
+		return NULL;
+	if (isl_val_is_nan(v1))
+		return v1;
+	if (v2 == 0)
+		return isl_val_set_nan(v1);
+	if (v2 == 1)
+		return v1;
+	if (isl_val_is_zero(v1))
+		return v1;
+	if (isl_val_is_infty(v1) || isl_val_is_neginfty(v1))
+		return v1;
+	v1 = isl_val_cow(v1);
+	if (!v1)
+		return NULL;
+
+	isl_int_mul_ui(v1->d, v1->d, v2);
+
+	return isl_val_normalize(v1);
+}
+
+/* Divide "v1" by "v2".
  *
  * This is a private copy of isl_val_div for use in the generic
  * isl_multi_*_scale_down_val instantiated for isl_val.
@@ -1169,6 +1194,9 @@ isl_bool isl_val_is_one(__isl_keep isl_val *v)
 {
 	if (!v)
 		return isl_bool_error;
+
+	if (isl_val_is_nan(v))
+		return isl_bool_false;
 
 	return isl_int_eq(v->n, v->d);
 }
@@ -1578,31 +1606,32 @@ __isl_give isl_val *isl_val_zero_on_domain(__isl_take isl_local_space *ls)
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
  * space.  Since an isl_val does not have an associated space, this function
- * simply returns 1, except if "v" or "space" are NULL.
+ * simply returns true, except if "v" or "space" are NULL.
  */
-int isl_val_matching_params(__isl_keep isl_val *v, __isl_keep isl_space *space)
+isl_bool isl_val_matching_params(__isl_keep isl_val *v,
+	__isl_keep isl_space *space)
 {
 	if (!v || !space)
-		return -1;
-	return 1;
+		return isl_bool_error;
+	return isl_bool_true;
 }
 
 /* Check that the domain space of "v" matches "space".
- *
- * Return 0 on success and -1 on error.
  *
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
  * space.  Since an isl_val does not have an associated space, this function
  * simply returns 0, except if "v" or "space" are NULL.
  */
-int isl_val_check_match_domain_space(__isl_keep isl_val *v,
+isl_stat isl_val_check_match_domain_space(__isl_keep isl_val *v,
 	__isl_keep isl_space *space)
 {
 	if (!v || !space)
-		return -1;
-	return 0;
+		return isl_stat_error;
+	return isl_stat_ok;
 }
+
+#define isl_val_involves_nan isl_val_is_nan
 
 #undef BASE
 #define BASE val

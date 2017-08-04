@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) #0
 declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) #0
@@ -7,7 +7,7 @@ declare i8* @llvm.invariant.group.barrier(i8*) #1
 ; GCN-LABEL: {{^}}use_invariant_promotable_lds:
 ; GCN: buffer_load_dword
 ; GCN: ds_write_b32
-define void @use_invariant_promotable_lds(i32 addrspace(1)* %arg) #2 {
+define amdgpu_kernel void @use_invariant_promotable_lds(i32 addrspace(1)* %arg) #2 {
 bb:
   %tmp = alloca i32, align 4
   %tmp1 = bitcast i32* %tmp to i8*

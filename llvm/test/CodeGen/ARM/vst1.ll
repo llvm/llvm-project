@@ -39,7 +39,7 @@ define void @vst1f(float* %A, <2 x float>* %B) nounwind {
 ;Check for a post-increment updating store.
 define void @vst1f_update(float** %ptr, <2 x float>* %B) nounwind {
 ;CHECK-LABEL: vst1f_update:
-;CHECK: vst1.32 {d16}, [r1]!
+;CHECK: vst1.32 {d16}, [r{{[0-9]+}}]!
 	%A = load float*, float** %ptr
 	%tmp0 = bitcast float* %A to i8*
 	%tmp1 = load <2 x float>, <2 x float>* %B

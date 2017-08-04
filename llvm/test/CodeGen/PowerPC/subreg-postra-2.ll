@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -31,10 +32,16 @@ while.end418:                                     ; preds = %wait_on_buffer.exit
   br i1 %tobool419, label %if.end421, label %if.then420
 
 ; CHECK-LABEL: @jbd2_journal_commit_transaction
+; CHECK-NO-ISEL-LABEL: @jbd2_journal_commit_transaction
 ; CHECK: andi.
 ; CHECK: crmove [[REG:[0-9]+]], 1
 ; CHECK: stdcx.
 ; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK-NO-ISEL: bc 12, 20, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 4, 7, 0
+; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NO-ISEL: [[TRUE]]
+; CHECK-NO-ISEL-NEXT: addi 4, 3, 0
 
 if.then420:                                       ; preds = %while.end418
   unreachable

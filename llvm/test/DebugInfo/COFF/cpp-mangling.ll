@@ -12,12 +12,12 @@
 ;   fn_tmpl<int, foo::bar>();
 ; }
 
-; CHECK:        ProcStart {
+; CHECK:        {{.*}}Proc{{.*}}Sym {
 ; CHECK:         FunctionType: bar ({{.*}})
 ; CHECK:         DisplayName: foo::bar{{$}}
 ; CHECK-NEXT:    LinkageName: ?bar@foo@@YAHH@Z
 
-; CHECK:        ProcStart {
+; CHECK:        {{.*}}Proc{{.*}}Sym {
 ; CHECK:         FunctionType: fn_tmpl ({{.*}})
 ; CHECK:         DisplayName: foo::fn_tmpl<int,&foo::bar>
 ; CHECK-NEXT:    LinkageName: ??$fn_tmpl@H$1?bar@foo@@YAHH@Z@foo@@YAXXZ

@@ -14,6 +14,7 @@
 
 #include "FuzzerDefs.h"
 #include "FuzzerDictionary.h"
+#include "FuzzerOptions.h"
 #include "FuzzerRandom.h"
 
 namespace fuzzer {
@@ -51,10 +52,6 @@ public:
   size_t Mutate_AddWordFromManualDictionary(uint8_t *Data, size_t Size,
                                             size_t MaxSize);
 
-  /// Mutates data by adding a word from the temporary automatic dictionary.
-  size_t Mutate_AddWordFromTemporaryAutoDictionary(uint8_t *Data, size_t Size,
-                                                   size_t MaxSize);
-
   /// Mutates data by adding a word from the TORC.
   size_t Mutate_AddWordFromTORC(uint8_t *Data, size_t Size, size_t MaxSize);
 
@@ -83,8 +80,6 @@ public:
 
   void AddWordToManualDictionary(const Word &W);
 
-  void AddWordToAutoDictionary(DictionaryEntry DE);
-  void ClearAutoDictionary();
   void PrintRecommendedDictionary();
 
   void SetCorpus(const InputCorpus *Corpus) { this->Corpus = Corpus; }
@@ -113,9 +108,16 @@ private:
   template <class T>
   DictionaryEntry MakeDictionaryEntryFromCMP(T Arg1, T Arg2,
                                              const uint8_t *Data, size_t Size);
+  DictionaryEntry MakeDictionaryEntryFromCMP(const Word &Arg1, const Word &Arg2,
+                                             const uint8_t *Data, size_t Size);
+  DictionaryEntry MakeDictionaryEntryFromCMP(const void *Arg1, const void *Arg2,
+                                             const void *Arg1Mutation,
+                                             const void *Arg2Mutation,
+                                             size_t ArgSize,
+                                             const uint8_t *Data, size_t Size);
 
   Random &Rand;
-  const FuzzingOptions &Options;
+  const FuzzingOptions Options;
 
   // Dictionary provided by the user via -dict=DICT_FILE.
   Dictionary ManualDictionary;
@@ -135,6 +137,9 @@ private:
 
   const InputCorpus *Corpus = nullptr;
   std::vector<uint8_t> MutateInPlaceHere;
+  // CustomCrossOver needs its own buffer as a custom implementation may call
+  // LLVMFuzzerMutate, which in turn may resize MutateInPlaceHere.
+  std::vector<uint8_t> CustomCrossOverInPlaceHere;
 
   std::vector<Mutator> Mutators;
   std::vector<Mutator> DefaultMutators;

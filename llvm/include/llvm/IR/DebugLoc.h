@@ -90,12 +90,6 @@ namespace llvm {
                                     DenseMap<const MDNode *, MDNode *> &Cache,
                                     bool ReplaceLast = false);
 
-    /// Reparent all debug locations referenced by \c I that belong to \c OrigSP
-    /// to become (possibly indirect) children of \c NewSP.
-    static void reparentDebugInfo(Instruction &I, DISubprogram *OrigSP,
-                                  DISubprogram *NewSP,
-                                  DenseMap<const MDNode *, MDNode *> &Cache);
-
     unsigned getLine() const;
     unsigned getCol() const;
     MDNode *getScope() const;

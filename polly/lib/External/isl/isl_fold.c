@@ -169,6 +169,16 @@ error:
 	return NULL;
 }
 
+/* Given a dimension type for an isl_qpolynomial_fold,
+ * return the corresponding type for the domain.
+ */
+static enum isl_dim_type domain_type(enum isl_dim_type type)
+{
+	if (type == isl_dim_in)
+		return isl_dim_set;
+	return type;
+}
+
 __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_drop_dims(
 	__isl_take isl_qpolynomial_fold *fold,
 	enum isl_dim_type type, unsigned first, unsigned n)
@@ -181,7 +191,7 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_drop_dims(
 	if (n == 0)
 		return fold;
 
-	set_type = type == isl_dim_in ? isl_dim_set : type;
+	set_type = domain_type(type);
 
 	fold = isl_qpolynomial_fold_cow(fold);
 	if (!fold)
@@ -652,6 +662,8 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_gist_params(
 	return isl_qpolynomial_fold_gist(fold, dom_context);
 }
 
+#define isl_qpolynomial_fold_involves_nan isl_qpolynomial_fold_is_nan
+
 #define HAS_TYPE
 
 #undef PW
@@ -934,10 +946,8 @@ __isl_give isl_union_pw_qpolynomial_fold *isl_union_pw_qpolynomial_fold_fold_pw_
 
 	if (!part || !u)
 		goto error;
-
-	isl_assert(u->space->ctx,
-	    isl_space_match(part->dim, isl_dim_param, u->space, isl_dim_param),
-	    goto error);
+	if (isl_space_check_equal_params(part->dim, u->space) < 0)
+		goto error;
 
 	entry = isl_union_pw_qpolynomial_fold_find_part_entry(u, part->dim, 1);
 	if (!entry)
@@ -1366,6 +1376,7 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_move_dims(
 	enum isl_dim_type src_type, unsigned src_pos, unsigned n)
 {
 	int i;
+	enum isl_dim_type set_src_type, set_dst_type;
 
 	if (n == 0)
 		return fold;
@@ -1374,8 +1385,11 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_move_dims(
 	if (!fold)
 		return NULL;
 
-	fold->dim = isl_space_move_dims(fold->dim, dst_type, dst_pos,
-						src_type, src_pos, n);
+	set_src_type = domain_type(src_type);
+	set_dst_type = domain_type(dst_type);
+
+	fold->dim = isl_space_move_dims(fold->dim, set_dst_type, dst_pos,
+						set_src_type, src_pos, n);
 	if (!fold->dim)
 		goto error;
 
@@ -1424,14 +1438,12 @@ error:
 
 static isl_stat add_pwqp(__isl_take isl_pw_qpolynomial *pwqp, void *user)
 {
-	isl_ctx *ctx;
 	isl_pw_qpolynomial_fold *pwf;
 	isl_union_pw_qpolynomial_fold **upwf;
 	struct isl_hash_table_entry *entry;
 
 	upwf = (isl_union_pw_qpolynomial_fold **)user;
 
-	ctx = pwqp->dim->ctx;
 	entry = isl_union_pw_qpolynomial_fold_find_part_entry(*upwf,
 			 pwqp->dim, 1);
 	if (!entry)
@@ -1481,13 +1493,15 @@ error:
 	return NULL;
 }
 
-static int join_compatible(__isl_keep isl_space *dim1, __isl_keep isl_space *dim2)
+static isl_bool join_compatible(__isl_keep isl_space *space1,
+	__isl_keep isl_space *space2)
 {
-	int m;
-	m = isl_space_match(dim1, isl_dim_param, dim2, isl_dim_param);
+	isl_bool m;
+	m = isl_space_has_equal_params(space1, space2);
 	if (m < 0 || !m)
 		return m;
-	return isl_space_tuple_is_equal(dim1, isl_dim_out, dim2, isl_dim_in);
+	return isl_space_tuple_is_equal(space1, isl_dim_out,
+					space2, isl_dim_in);
 }
 
 /* Compute the intersection of the range of the map and the domain
@@ -1508,7 +1522,7 @@ __isl_give isl_pw_qpolynomial_fold *isl_map_apply_pw_qpolynomial_fold(
 	isl_space *map_dim;
 	isl_space *pwf_dim;
 	unsigned n_in;
-	int ok;
+	isl_bool ok;
 
 	ctx = isl_map_get_ctx(map);
 	if (!ctx)
@@ -1519,6 +1533,8 @@ __isl_give isl_pw_qpolynomial_fold *isl_map_apply_pw_qpolynomial_fold(
 	ok = join_compatible(map_dim, pwf_dim);
 	isl_space_free(map_dim);
 	isl_space_free(pwf_dim);
+	if (ok < 0)
+		goto error;
 	if (!ok)
 		isl_die(ctx, isl_error_invalid, "incompatible dimensions",
 			goto error);
@@ -1560,7 +1576,7 @@ static isl_stat pw_qpolynomial_fold_apply(
 	isl_space *map_dim;
 	isl_space *pwf_dim;
 	struct isl_apply_fold_data *data = user;
-	int ok;
+	isl_bool ok;
 
 	map_dim = isl_map_get_space(data->map);
 	pwf_dim = isl_pw_qpolynomial_fold_get_space(pwf);
@@ -1568,6 +1584,8 @@ static isl_stat pw_qpolynomial_fold_apply(
 	isl_space_free(map_dim);
 	isl_space_free(pwf_dim);
 
+	if (ok < 0)
+		return isl_stat_error;
 	if (ok) {
 		pwf = isl_map_apply_pw_qpolynomial_fold(isl_map_copy(data->map),
 				    pwf, data->tight ? &data->tight : NULL);

@@ -25,10 +25,10 @@
 #include "ABIInfo.h"
 
 namespace llvm {
-  class AttributeSet;
-  class Function;
-  class Type;
-  class Value;
+class AttributeList;
+class Function;
+class Type;
+class Value;
 }
 
 namespace clang {
@@ -39,28 +39,27 @@ namespace clang {
   class VarDecl;
 
 namespace CodeGen {
-  typedef SmallVector<llvm::AttributeSet, 8> AttributeListType;
 
-  /// Abstract information about a function or function prototype.
-  class CGCalleeInfo {
-    /// \brief The function prototype of the callee.
-    const FunctionProtoType *CalleeProtoTy;
-    /// \brief The function declaration of the callee.
-    const Decl *CalleeDecl;
+/// Abstract information about a function or function prototype.
+class CGCalleeInfo {
+  /// \brief The function prototype of the callee.
+  const FunctionProtoType *CalleeProtoTy;
+  /// \brief The function declaration of the callee.
+  const Decl *CalleeDecl;
 
-  public:
-    explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl(nullptr) {}
-    CGCalleeInfo(const FunctionProtoType *calleeProtoTy, const Decl *calleeDecl)
-        : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
-    CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
-        : CalleeProtoTy(calleeProtoTy), CalleeDecl(nullptr) {}
-    CGCalleeInfo(const Decl *calleeDecl)
-        : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
+public:
+  explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl(nullptr) {}
+  CGCalleeInfo(const FunctionProtoType *calleeProtoTy, const Decl *calleeDecl)
+      : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
+  CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
+      : CalleeProtoTy(calleeProtoTy), CalleeDecl(nullptr) {}
+  CGCalleeInfo(const Decl *calleeDecl)
+      : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
 
-    const FunctionProtoType *getCalleeFunctionProtoType() const {
-      return CalleeProtoTy;
-    }
-    const Decl *getCalleeDecl() const { return CalleeDecl; }
+  const FunctionProtoType *getCalleeFunctionProtoType() const {
+    return CalleeProtoTy;
+  }
+  const Decl *getCalleeDecl() const { return CalleeDecl; }
   };
 
   /// All available information about a concrete callee.

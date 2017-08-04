@@ -57,6 +57,7 @@ std::unique_ptr<ASTConsumer>
 ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return CreateASTDumper(CI.getFrontendOpts().ASTDumpFilter,
                          CI.getFrontendOpts().ASTDumpDecls,
+                         CI.getFrontendOpts().ASTDumpAll,
                          CI.getFrontendOpts().ASTDumpLookups);
 }
 
@@ -133,8 +134,7 @@ bool GeneratePCHAction::shouldEraseOutputFiles() {
   return ASTFrontendAction::shouldEraseOutputFiles();
 }
 
-bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI,
-                                              StringRef Filename) {
+bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   CI.getLangOpts().CompilingPCH = true;
   return true;
 }
@@ -163,247 +163,14 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
-bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI, 
-                                                 StringRef Filename) {
-  // Set up embedding for any specified files. Do this before we load any
-  // source files, including the primary module map for the compilation.
-  for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
-    if (const auto *FE = CI.getFileManager().getFile(F, /*openFile*/true))
-      CI.getSourceManager().setFileIsTransient(FE);
-    else
-      CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
-  }
-  if (CI.getFrontendOpts().ModulesEmbedAllFiles)
-    CI.getSourceManager().setAllFilesAreTransient(true);
-
-  return true;
-}
-
-
-static SmallVectorImpl<char> &
-operator+=(SmallVectorImpl<char> &Includes, StringRef RHS) {
-  Includes.append(RHS.begin(), RHS.end());
-  return Includes;
-}
-
-static void addHeaderInclude(StringRef HeaderName,
-                             SmallVectorImpl<char> &Includes,
-                             const LangOptions &LangOpts,
-                             bool IsExternC) {
-  if (IsExternC && LangOpts.CPlusPlus)
-    Includes += "extern \"C\" {\n";
-  if (LangOpts.ObjC1)
-    Includes += "#import \"";
-  else
-    Includes += "#include \"";
-
-  Includes += HeaderName;
-
-  Includes += "\"\n";
-  if (IsExternC && LangOpts.CPlusPlus)
-    Includes += "}\n";
-}
-
-/// \brief Collect the set of header includes needed to construct the given 
-/// module and update the TopHeaders file set of the module.
-///
-/// \param Module The module we're collecting includes from.
-///
-/// \param Includes Will be augmented with the set of \#includes or \#imports
-/// needed to load all of the named headers.
-static std::error_code
-collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
-                            ModuleMap &ModMap, clang::Module *Module,
-                            SmallVectorImpl<char> &Includes) {
-  // Don't collect any headers for unavailable modules.
-  if (!Module->isAvailable())
-    return std::error_code();
-
-  // Add includes for each of these headers.
-  for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
-    for (Module::Header &H : Module->Headers[HK]) {
-      Module->addTopHeader(H.Entry);
-      // Use the path as specified in the module map file. We'll look for this
-      // file relative to the module build directory (the directory containing
-      // the module map file) so this will find the same file that we found
-      // while parsing the module map.
-      addHeaderInclude(H.NameAsWritten, Includes, LangOpts, Module->IsExternC);
-    }
-  }
-  // Note that Module->PrivateHeaders will not be a TopHeader.
-
-  if (Module::Header UmbrellaHeader = Module->getUmbrellaHeader()) {
-    Module->addTopHeader(UmbrellaHeader.Entry);
-    if (Module->Parent)
-      // Include the umbrella header for submodules.
-      addHeaderInclude(UmbrellaHeader.NameAsWritten, Includes, LangOpts,
-                       Module->IsExternC);
-  } else if (Module::DirectoryName UmbrellaDir = Module->getUmbrellaDir()) {
-    // Add all of the headers we find in this subdirectory.
-    std::error_code EC;
-    SmallString<128> DirNative;
-    llvm::sys::path::native(UmbrellaDir.Entry->getName(), DirNative);
-
-    vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-    for (vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
-         Dir != End && !EC; Dir.increment(EC)) {
-      // Check whether this entry has an extension typically associated with 
-      // headers.
-      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->getName()))
-          .Cases(".h", ".H", ".hh", ".hpp", true)
-          .Default(false))
-        continue;
-
-      const FileEntry *Header = FileMgr.getFile(Dir->getName());
-      // FIXME: This shouldn't happen unless there is a file system race. Is
-      // that worth diagnosing?
-      if (!Header)
-        continue;
-
-      // If this header is marked 'unavailable' in this module, don't include 
-      // it.
-      if (ModMap.isHeaderUnavailableInModule(Header, Module))
-        continue;
-
-      // Compute the relative path from the directory to this file.
-      SmallVector<StringRef, 16> Components;
-      auto PathIt = llvm::sys::path::rbegin(Dir->getName());
-      for (int I = 0; I != Dir.level() + 1; ++I, ++PathIt)
-        Components.push_back(*PathIt);
-      SmallString<128> RelativeHeader(UmbrellaDir.NameAsWritten);
-      for (auto It = Components.rbegin(), End = Components.rend(); It != End;
-           ++It)
-        llvm::sys::path::append(RelativeHeader, *It);
-
-      // Include this header as part of the umbrella directory.
-      Module->addTopHeader(Header);
-      addHeaderInclude(RelativeHeader, Includes, LangOpts, Module->IsExternC);
-    }
-
-    if (EC)
-      return EC;
-  }
-
-  // Recurse into submodules.
-  for (clang::Module::submodule_iterator Sub = Module->submodule_begin(),
-                                      SubEnd = Module->submodule_end();
-       Sub != SubEnd; ++Sub)
-    if (std::error_code Err = collectModuleHeaderIncludes(
-            LangOpts, FileMgr, ModMap, *Sub, Includes))
-      return Err;
-
-  return std::error_code();
-}
-
 bool GenerateModuleFromModuleMapAction::BeginSourceFileAction(
-    CompilerInstance &CI, StringRef Filename) {
-  CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleMap);
-
-  if (!GenerateModuleAction::BeginSourceFileAction(CI, Filename))
-    return false;
-
-  // Find the module map file.
-  const FileEntry *ModuleMap =
-      CI.getFileManager().getFile(Filename, /*openFile*/true);
-  if (!ModuleMap)  {
-    CI.getDiagnostics().Report(diag::err_module_map_not_found)
-      << Filename;
-    return false;
-  }
-  
-  // Parse the module map file.
-  HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-  if (HS.loadModuleMapFile(ModuleMap, IsSystem))
-    return false;
-  
-  if (CI.getLangOpts().CurrentModule.empty()) {
-    CI.getDiagnostics().Report(diag::err_missing_module_name);
-    
-    // FIXME: Eventually, we could consider asking whether there was just
-    // a single module described in the module map, and use that as a 
-    // default. Then it would be fairly trivial to just "compile" a module
-    // map with a single module (the common case).
+    CompilerInstance &CI) {
+  if (!CI.getLangOpts().Modules) {
+    CI.getDiagnostics().Report(diag::err_module_build_requires_fmodules);
     return false;
   }
 
-  // If we're being run from the command-line, the module build stack will not
-  // have been filled in yet, so complete it now in order to allow us to detect
-  // module cycles.
-  SourceManager &SourceMgr = CI.getSourceManager();
-  if (SourceMgr.getModuleBuildStack().empty())
-    SourceMgr.pushModuleBuildStack(CI.getLangOpts().CurrentModule,
-                                   FullSourceLoc(SourceLocation(), SourceMgr));
-
-  // Dig out the module definition.
-  Module = HS.lookupModule(CI.getLangOpts().CurrentModule, 
-                           /*AllowSearch=*/false);
-  if (!Module) {
-    CI.getDiagnostics().Report(diag::err_missing_module)
-      << CI.getLangOpts().CurrentModule << Filename;
-    
-    return false;
-  }
-
-  // Check whether we can build this module at all.
-  clang::Module::Requirement Requirement;
-  clang::Module::UnresolvedHeaderDirective MissingHeader;
-  clang::Module *ShadowingModule = nullptr;
-  if (!Module->isAvailable(CI.getLangOpts(), CI.getTarget(), Requirement,
-                           MissingHeader, ShadowingModule)) {
-
-    assert(!ShadowingModule &&
-           "lookup of module by name should never find shadowed module");
-
-    if (MissingHeader.FileNameLoc.isValid()) {
-      CI.getDiagnostics().Report(MissingHeader.FileNameLoc,
-                                 diag::err_module_header_missing)
-        << MissingHeader.IsUmbrella << MissingHeader.FileName;
-    } else {
-      CI.getDiagnostics().Report(diag::err_module_unavailable)
-        << Module->getFullModuleName()
-        << Requirement.second << Requirement.first;
-    }
-
-    return false;
-  }
-
-  if (ModuleMapForUniquing && ModuleMapForUniquing != ModuleMap) {
-    Module->IsInferred = true;
-    HS.getModuleMap().setInferredModuleAllowedBy(Module, ModuleMapForUniquing);
-  } else {
-    ModuleMapForUniquing = ModuleMap;
-  }
-
-  FileManager &FileMgr = CI.getFileManager();
-
-  // Collect the set of #includes we need to build the module.
-  SmallString<256> HeaderContents;
-  std::error_code Err = std::error_code();
-  if (Module::Header UmbrellaHeader = Module->getUmbrellaHeader())
-    addHeaderInclude(UmbrellaHeader.NameAsWritten, HeaderContents,
-                     CI.getLangOpts(), Module->IsExternC);
-  Err = collectModuleHeaderIncludes(
-        CI.getLangOpts(), FileMgr,
-        CI.getPreprocessor().getHeaderSearchInfo().getModuleMap(), Module,
-        HeaderContents);
-
-  if (Err) {
-    CI.getDiagnostics().Report(diag::err_module_cannot_create_includes)
-      << Module->getFullModuleName() << Err.message();
-    return false;
-  }
-
-  // Inform the preprocessor that includes from within the input buffer should
-  // be resolved relative to the build directory of the module map file.
-  CI.getPreprocessor().setMainFileDir(Module->Directory);
-
-  std::unique_ptr<llvm::MemoryBuffer> InputBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
-                                           Module::getModuleInputBufferName());
-  // Ownership of InputBuffer will be transferred to the SourceManager.
-  setCurrentInput(FrontendInputFile(InputBuffer.release(), getCurrentFileKind(),
-                                    Module->IsSystem));
-  return true;
+  return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
 std::unique_ptr<raw_pwrite_stream>
@@ -412,10 +179,13 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
   // If no output file was provided, figure out where this module would go
   // in the module cache.
   if (CI.getFrontendOpts().OutputFile.empty()) {
+    StringRef ModuleMapFile = CI.getFrontendOpts().OriginalModuleMap;
+    if (ModuleMapFile.empty())
+      ModuleMapFile = InFile;
+
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     CI.getFrontendOpts().OutputFile =
-        HS.getModuleFileName(CI.getLangOpts().CurrentModule,
-                             ModuleMapForUniquing->getName(),
+        HS.getModuleFileName(CI.getLangOpts().CurrentModule, ModuleMapFile,
                              /*UsePrebuiltPath=*/false);
   }
 
@@ -428,8 +198,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                              /*CreateMissingDirectories=*/true);
 }
 
-bool GenerateModuleInterfaceAction::BeginSourceFileAction(CompilerInstance &CI,
-                                                          StringRef Filename) {
+bool GenerateModuleInterfaceAction::BeginSourceFileAction(
+    CompilerInstance &CI) {
   if (!CI.getLangOpts().ModulesTS) {
     CI.getDiagnostics().Report(diag::err_module_interface_requires_modules_ts);
     return false;
@@ -437,7 +207,7 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(CompilerInstance &CI,
 
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
 
-  return GenerateModuleAction::BeginSourceFileAction(CI, Filename);
+  return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
 std::unique_ptr<raw_pwrite_stream>
@@ -470,7 +240,7 @@ void VerifyPCHAction::ExecuteAction() {
   bool Preamble = CI.getPreprocessorOpts().PrecompiledPreambleBytes.first != 0;
   const std::string &Sysroot = CI.getHeaderSearchOpts().Sysroot;
   std::unique_ptr<ASTReader> Reader(new ASTReader(
-      CI.getPreprocessor(), CI.getASTContext(), CI.getPCHContainerReader(),
+      CI.getPreprocessor(), &CI.getASTContext(), CI.getPCHContainerReader(),
       CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       /*DisableValidation*/ false,
@@ -757,7 +527,7 @@ void PrintPreprocessedAction::ExecuteAction() {
     // file.  This is mostly a sanity check in case the file has no 
     // newlines whatsoever.
     if (end - cur > 256) end = cur + 256;
-	  
+
     while (next < end) {
       if (*cur == 0x0D) {  // CR
         if (*next == 0x0A)  // CRLF
@@ -776,33 +546,46 @@ void PrintPreprocessedAction::ExecuteAction() {
       CI.createDefaultOutputFile(BinaryMode, getCurrentFile());
   if (!OS) return;
 
+  // If we're preprocessing a module map, start by dumping the contents of the
+  // module itself before switching to the input buffer.
+  auto &Input = getCurrentInput();
+  if (Input.getKind().getFormat() == InputKind::ModuleMap) {
+    if (Input.isFile()) {
+      (*OS) << "# 1 \"";
+      OS->write_escaped(Input.getFile());
+      (*OS) << "\"\n";
+    }
+    // FIXME: Include additional information here so that we don't need the
+    // original source files to exist on disk.
+    getCurrentModule()->print(*OS);
+    (*OS) << "#pragma clang module contents\n";
+  }
+
   DoPrintPreprocessedInput(CI.getPreprocessor(), OS.get(),
                            CI.getPreprocessorOutputOpts());
 }
 
 void PrintPreambleAction::ExecuteAction() {
-  switch (getCurrentFileKind()) {
-  case IK_C:
-  case IK_CXX:
-  case IK_ObjC:
-  case IK_ObjCXX:
-  case IK_OpenCL:
-  case IK_CUDA:
+  switch (getCurrentFileKind().getLanguage()) {
+  case InputKind::C:
+  case InputKind::CXX:
+  case InputKind::ObjC:
+  case InputKind::ObjCXX:
+  case InputKind::OpenCL:
+  case InputKind::CUDA:
     break;
       
-  case IK_None:
-  case IK_Asm:
-  case IK_PreprocessedC:
-  case IK_PreprocessedCuda:
-  case IK_PreprocessedCXX:
-  case IK_PreprocessedObjC:
-  case IK_PreprocessedObjCXX:
-  case IK_AST:
-  case IK_LLVM_IR:
-  case IK_RenderScript:
+  case InputKind::Unknown:
+  case InputKind::Asm:
+  case InputKind::LLVM_IR:
+  case InputKind::RenderScript:
     // We can't do anything with these.
     return;
   }
+
+  // We don't expect to find any #include directives in a preprocessed input.
+  if (getCurrentFileKind().isPreprocessed())
+    return;
 
   CompilerInstance &CI = getCompilerInstance();
   auto Buffer = CI.getFileManager().getBufferForFile(getCurrentFile());

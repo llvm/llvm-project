@@ -85,9 +85,11 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     UsesToRewrite.clear();
 
     Instruction *I = Worklist.pop_back_val();
+    assert(!I->getType()->isTokenTy() && "Tokens shouldn't be in the worklist");
     BasicBlock *InstBB = I->getParent();
     Loop *L = LI.getLoopFor(InstBB);
-    if (!LoopExitBlocks.count(L))   
+    assert(L && "Instruction belongs to a BB that's not part of a loop");
+    if (!LoopExitBlocks.count(L))
       L->getExitBlocks(LoopExitBlocks[L]);
     assert(LoopExitBlocks.count(L));
     const SmallVectorImpl<BasicBlock *> &ExitBlocks = LoopExitBlocks[L];
@@ -95,17 +97,10 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     if (ExitBlocks.empty())
       continue;
 
-    // Tokens cannot be used in PHI nodes, so we skip over them.
-    // We can run into tokens which are live out of a loop with catchswitch
-    // instructions in Windows EH if the catchswitch has one catchpad which
-    // is inside the loop and another which is not.
-    if (I->getType()->isTokenTy())
-      continue;
-
     for (Use &U : I->uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
-      if (PHINode *PN = dyn_cast<PHINode>(User))
+      if (auto *PN = dyn_cast<PHINode>(User))
         UserBB = PN->getIncomingBlock(U);
 
       if (InstBB != UserBB && !L->contains(UserBB))
@@ -123,7 +118,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     // DomBB dominates the value, so adjust DomBB to the normal destination
     // block, which is effectively where the value is first usable.
     BasicBlock *DomBB = InstBB;
-    if (InvokeInst *Inv = dyn_cast<InvokeInst>(I))
+    if (auto *Inv = dyn_cast<InvokeInst>(I))
       DomBB = Inv->getNormalDest();
 
     DomTreeNode *DomNode = DT.getNode(DomBB);
@@ -188,7 +183,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       // block.
       Instruction *User = cast<Instruction>(UseToRewrite->getUser());
       BasicBlock *UserBB = User->getParent();
-      if (PHINode *PN = dyn_cast<PHINode>(User))
+      if (auto *PN = dyn_cast<PHINode>(User))
         UserBB = PN->getIncomingBlock(*UseToRewrite);
 
       if (isa<PHINode>(UserBB->begin()) && isExitBlock(UserBB, ExitBlocks)) {
@@ -213,13 +208,9 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
     // Post process PHI instructions that were inserted into another disjoint
     // loop and update their exits properly.
-    for (auto *PostProcessPN : PostProcessPHIs) {
-      if (PostProcessPN->use_empty())
-        continue;
-
-      // Reprocess each PHI instruction.
-      Worklist.push_back(PostProcessPN);
-    }
+    for (auto *PostProcessPN : PostProcessPHIs)
+      if (!PostProcessPN->use_empty())
+        Worklist.push_back(PostProcessPN);
 
     // Keep track of PHI nodes that we want to remove because they did not have
     // any uses rewritten.
@@ -237,46 +228,88 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
   return Changed;
 }
 
-/// Return true if the specified block dominates at least
-/// one of the blocks in the specified list.
-static bool
-blockDominatesAnExit(BasicBlock *BB,
-                     DominatorTree &DT,
-                     const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
-  DomTreeNode *DomNode = DT.getNode(BB);
-  return any_of(ExitBlocks, [&](BasicBlock *EB) {
-    return DT.dominates(DomNode, DT.getNode(EB));
-  });
+// Compute the set of BasicBlocks in the loop `L` dominating at least one exit.
+static void computeBlocksDominatingExits(
+    Loop &L, DominatorTree &DT, SmallVector<BasicBlock *, 8> &ExitBlocks,
+    SmallSetVector<BasicBlock *, 8> &BlocksDominatingExits) {
+  SmallVector<BasicBlock *, 8> BBWorklist;
+
+  // We start from the exit blocks, as every block trivially dominates itself
+  // (not strictly).
+  for (BasicBlock *BB : ExitBlocks)
+    BBWorklist.push_back(BB);
+
+  while (!BBWorklist.empty()) {
+    BasicBlock *BB = BBWorklist.pop_back_val();
+
+    // Check if this is a loop header. If this is the case, we're done.
+    if (L.getHeader() == BB)
+      continue;
+
+    // Otherwise, add its immediate predecessor in the dominator tree to the
+    // worklist, unless we visited it already.
+    BasicBlock *IDomBB = DT.getNode(BB)->getIDom()->getBlock();
+
+    // Exit blocks can have an immediate dominator not beloinging to the
+    // loop. For an exit block to be immediately dominated by another block
+    // outside the loop, it implies not all paths from that dominator, to the
+    // exit block, go through the loop.
+    // Example:
+    //
+    // |---- A
+    // |     |
+    // |     B<--
+    // |     |  |
+    // |---> C --
+    //       |
+    //       D
+    //
+    // C is the exit block of the loop and it's immediately dominated by A,
+    // which doesn't belong to the loop.
+    if (!L.contains(IDomBB))
+      continue;
+
+    if (BlocksDominatingExits.insert(IDomBB))
+      BBWorklist.push_back(IDomBB);
+  }
 }
 
 bool llvm::formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
                      ScalarEvolution *SE) {
   bool Changed = false;
 
-  // Get the set of exiting blocks.
   SmallVector<BasicBlock *, 8> ExitBlocks;
   L.getExitBlocks(ExitBlocks);
-
   if (ExitBlocks.empty())
     return false;
+
+  SmallSetVector<BasicBlock *, 8> BlocksDominatingExits;
+
+  // We want to avoid use-scanning leveraging dominance informations.
+  // If a block doesn't dominate any of the loop exits, the none of the values
+  // defined in the loop can be used outside.
+  // We compute the set of blocks fullfilling the conditions in advance
+  // walking the dominator tree upwards until we hit a loop header.
+  computeBlocksDominatingExits(L, DT, ExitBlocks, BlocksDominatingExits);
 
   SmallVector<Instruction *, 8> Worklist;
 
   // Look at all the instructions in the loop, checking to see if they have uses
   // outside the loop.  If so, put them into the worklist to rewrite those uses.
-  for (BasicBlock *BB : L.blocks()) {
-    // For large loops, avoid use-scanning by using dominance information:  In
-    // particular, if a block does not dominate any of the loop exits, then none
-    // of the values defined in the block could be used outside the loop.
-    if (!blockDominatesAnExit(BB, DT, ExitBlocks))
-      continue;
-
+  for (BasicBlock *BB : BlocksDominatingExits) {
     for (Instruction &I : *BB) {
       // Reject two common cases fast: instructions with no uses (like stores)
       // and instructions with one use that is in the same block as this.
       if (I.use_empty() ||
           (I.hasOneUse() && I.user_back()->getParent() == BB &&
            !isa<PHINode>(I.user_back())))
+        continue;
+
+      // Tokens cannot be used in PHI nodes, so we skip over them.
+      // We can run into tokens which are live out of a loop with catchswitch
+      // instructions in Windows EH if the catchswitch has one catchpad which
+      // is inside the loop and another which is not.
+      if (I.getType()->isTokenTy())
         continue;
 
       Worklist.push_back(&I);
@@ -395,8 +428,8 @@ PreservedAnalyses LCSSAPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!formLCSSAOnAllLoops(&LI, DT, SE))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
   PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<BasicAA>();
   PA.preserve<GlobalsAA>();
   PA.preserve<SCEVAA>();

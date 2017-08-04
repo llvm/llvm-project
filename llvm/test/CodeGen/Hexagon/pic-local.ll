@@ -9,11 +9,11 @@ define internal void @f2() {
 }
 
 define void()* @get_f1() {
-  ; CHECK:  r0 = add(pc, ##.Lf1@PCREL)
+  ; CHECK:  r0 = add(pc,##.Lf1@PCREL)
   ret void()* @f1
 }
 
 define void()* @get_f2() {
-  ; CHECK: r0 = add(pc, ##f2@PCREL)
+  ; CHECK: r0 = add(pc,##f2@PCREL)
   ret void()* @f2
 }

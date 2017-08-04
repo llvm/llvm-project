@@ -15,30 +15,42 @@
 #ifndef LLVM_UNITTESTS_EXECUTIONENGINE_ORC_ORCTESTCOMMON_H
 #define LLVM_UNITTESTS_EXECUTIONENGINE_ORC_ORCTESTCOMMON_H
 
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/TypeBuilder.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/TargetSelect.h"
 #include <memory>
 
 namespace llvm {
 
-// Base class for Orc tests that will execute code.
-class OrcExecutionTest {
+class OrcNativeTarget {
 public:
-
-  OrcExecutionTest() {
+  static void initialize() {
     if (!NativeTargetInitialized) {
       InitializeNativeTarget();
       InitializeNativeTargetAsmParser();
       InitializeNativeTargetAsmPrinter();
       NativeTargetInitialized = true;
     }
+  }
+
+private:
+  static bool NativeTargetInitialized;
+};
+
+// Base class for Orc tests that will execute code.
+class OrcExecutionTest {
+public:
+
+  OrcExecutionTest() {
+
+    // Initialize the native target if it hasn't been done already.
+    OrcNativeTarget::initialize();
 
     // Try to select a TargetMachine for the host.
     TM.reset(EngineBuilder().selectTarget());
@@ -56,8 +68,6 @@ public:
 protected:
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
-private:
-  static bool NativeTargetInitialized;
 };
 
 class ModuleBuilder {
@@ -91,83 +101,94 @@ class TypeBuilder<DummyStruct, XCompile> {
 public:
   static StructType *get(LLVMContext &Context) {
     return StructType::get(
-      TypeBuilder<types::i<32>[256], XCompile>::get(Context), nullptr);
+        TypeBuilder<types::i<32>[256], XCompile>::get(Context));
   }
 };
 
 template <typename HandleT,
-          typename AddModuleSetFtor,
-          typename RemoveModuleSetFtor,
+          typename AddModuleFtor,
+          typename RemoveModuleFtor,
           typename FindSymbolFtor,
           typename FindSymbolInFtor>
 class MockBaseLayer {
 public:
 
-  typedef HandleT ModuleSetHandleT;
+  typedef HandleT ModuleHandleT;
 
-  MockBaseLayer(AddModuleSetFtor &&AddModuleSet,
-                RemoveModuleSetFtor &&RemoveModuleSet,
+  MockBaseLayer(AddModuleFtor &&AddModule,
+                RemoveModuleFtor &&RemoveModule,
                 FindSymbolFtor &&FindSymbol,
                 FindSymbolInFtor &&FindSymbolIn)
-      : AddModuleSet(AddModuleSet), RemoveModuleSet(RemoveModuleSet),
-        FindSymbol(FindSymbol), FindSymbolIn(FindSymbolIn)
+      : AddModule(std::move(AddModule)),
+        RemoveModule(std::move(RemoveModule)),
+        FindSymbol(std::move(FindSymbol)),
+        FindSymbolIn(std::move(FindSymbolIn))
   {}
 
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
+  template <typename ModuleT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ModuleSetHandleT addModuleSet(ModuleSetT Ms, MemoryManagerPtrT MemMgr,
-                                SymbolResolverPtrT Resolver) {
-    return AddModuleSet(std::move(Ms), std::move(MemMgr), std::move(Resolver));
+  Expected<ModuleHandleT> addModule(ModuleT Ms, MemoryManagerPtrT MemMgr,
+                                    SymbolResolverPtrT Resolver) {
+    return AddModule(std::move(Ms), std::move(MemMgr), std::move(Resolver));
   }
 
-  void removeModuleSet(ModuleSetHandleT H) {
-    RemoveModuleSet(H);
+  Error removeModule(ModuleHandleT H) {
+    return RemoveModule(H);
   }
 
   JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     return FindSymbol(Name, ExportedSymbolsOnly);
   }
 
-  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return FindSymbolIn(H, Name, ExportedSymbolsOnly);
   }
 
 private:
-  AddModuleSetFtor AddModuleSet;
-  RemoveModuleSetFtor RemoveModuleSet;
+  AddModuleFtor AddModule;
+  RemoveModuleFtor RemoveModule;
   FindSymbolFtor FindSymbol;
   FindSymbolInFtor FindSymbolIn;
 };
 
-template <typename ModuleSetHandleT,
-          typename AddModuleSetFtor,
-          typename RemoveModuleSetFtor,
+template <typename ModuleHandleT,
+          typename AddModuleFtor,
+          typename RemoveModuleFtor,
           typename FindSymbolFtor,
           typename FindSymbolInFtor>
-MockBaseLayer<ModuleSetHandleT, AddModuleSetFtor, RemoveModuleSetFtor,
+MockBaseLayer<ModuleHandleT, AddModuleFtor, RemoveModuleFtor,
               FindSymbolFtor, FindSymbolInFtor>
-createMockBaseLayer(AddModuleSetFtor &&AddModuleSet,
-                    RemoveModuleSetFtor &&RemoveModuleSet,
+createMockBaseLayer(AddModuleFtor &&AddModule,
+                    RemoveModuleFtor &&RemoveModule,
                     FindSymbolFtor &&FindSymbol,
                     FindSymbolInFtor &&FindSymbolIn) {
-  return MockBaseLayer<ModuleSetHandleT, AddModuleSetFtor, RemoveModuleSetFtor,
+  return MockBaseLayer<ModuleHandleT, AddModuleFtor, RemoveModuleFtor,
                        FindSymbolFtor, FindSymbolInFtor>(
-                         std::forward<AddModuleSetFtor>(AddModuleSet),
-                         std::forward<RemoveModuleSetFtor>(RemoveModuleSet),
+                         std::forward<AddModuleFtor>(AddModule),
+                         std::forward<RemoveModuleFtor>(RemoveModule),
                          std::forward<FindSymbolFtor>(FindSymbol),
                          std::forward<FindSymbolInFtor>(FindSymbolIn));
 }
 
+
+class ReturnNullJITSymbol {
+public:
+  template <typename... Args>
+  JITSymbol operator()(Args...) const {
+    return nullptr;
+  }
+};
+
 template <typename ReturnT>
 class DoNothingAndReturn {
 public:
-  DoNothingAndReturn(ReturnT Val) : Val(Val) {}
+  DoNothingAndReturn(ReturnT Ret) : Ret(std::move(Ret)) {}
 
   template <typename... Args>
-  ReturnT operator()(Args...) const { return Val; }
+  void operator()(Args...) const { return Ret; }
 private:
-  ReturnT Val;
+  ReturnT Ret;
 };
 
 template <>

@@ -314,9 +314,9 @@ declare %t14* @_ZN4llvm9MCContext16CreateTempSymbolEv(%t2*)
 
 declare void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(%t10*, %t21* byval align 4, %t13*)
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
 
 ; PR10463
 ; Spilling a virtual register with <undef> uses.

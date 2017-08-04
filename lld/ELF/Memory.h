@@ -61,7 +61,7 @@ inline void freeArena() {
     Alloc->reset();
   BAlloc.Reset();
 }
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

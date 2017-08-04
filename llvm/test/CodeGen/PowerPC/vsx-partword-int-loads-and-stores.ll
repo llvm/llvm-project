@@ -321,8 +321,8 @@ entry:
 ; CHECK: lxsibzx 34, 0, 3
 ; CHECK-NEXT: vspltb 2, 2, 7
 ; CHECK-BE-LABEL: vecucus
-; CHECK-BE: li [[OFFSET:[0-9]+]], 1
-; CHECK-BE-NEXT: lxsibzx 34, 3, [[OFFSET]]
+; CHECK-BE: addi [[OFFSET:[0-9]+]], [[OFFSET]], 1
+; CHECK-BE-NEXT: lxsibzx 34, 0, [[OFFSET]]
 ; CHECK-BE-NEXT: vspltb 2, 2, 7
 }
 
@@ -385,8 +385,8 @@ entry:
 ; CHECK: lxsibzx 34, 0, 3
 ; CHECK-NEXT: vspltb 2, 2, 7
 ; CHECK-BE-LABEL: vecscus
-; CHECK-BE: li [[OFFSET:[0-9]+]], 1
-; CHECK-BE-NEXT: lxsibzx 34, 3, [[OFFSET]]
+; CHECK-BE: addi [[OFFSET:[0-9]+]], [[OFFSET]], 1
+; CHECK-BE-NEXT: lxsibzx 34, 0, [[OFFSET]]
 ; CHECK-BE-NEXT: vspltb 2, 2, 7
 }
 
@@ -487,8 +487,8 @@ entry:
 ; CHECK: lxsibzx 34, 0, 3
 ; CHECK-NEXT: vspltb 2, 2, 7
 ; CHECK-BE-LABEL: vecucss
-; CHECK-BE: li [[OFFSET:[0-9]+]], 1
-; CHECK-BE-NEXT: lxsibzx 34, 3, [[OFFSET]]
+; CHECK-BE: addi [[OFFSET:[0-9]+]], [[OFFSET]], 1
+; CHECK-BE-NEXT: lxsibzx 34, 0, [[OFFSET]]
 ; CHECK-BE-NEXT: vspltb 2, 2, 7
 }
 
@@ -540,8 +540,8 @@ entry:
 ; CHECK: lxsibzx 34, 0, 3
 ; CHECK-NEXT: vspltb 2, 2, 7
 ; CHECK-BE-LABEL: vecscss
-; CHECK-BE: li [[OFFSET:[0-9]+]], 1
-; CHECK-BE-NEXT: lxsibzx 34, 3, [[OFFSET]]
+; CHECK-BE: addi [[OFFSET:[0-9]+]], [[OFFSET]], 1
+; CHECK-BE-NEXT: lxsibzx 34, 0, [[OFFSET]]
 ; CHECK-BE-NEXT: vspltb 2, 2, 7
 }
 

@@ -54,6 +54,22 @@ public:
   virtual void dump(const PDBSymbolUnknown &Symbol);
   virtual void dump(const PDBSymbolUsingNamespace &Symbol);
 
+  virtual void dumpRight(const PDBSymbolTypeArray &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeBaseClass &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeBuiltin &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeCustom &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeDimension &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeEnum &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeFriend &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeFunctionArg &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeFunctionSig &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeManaged &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypePointer &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeTypedef &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeUDT &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeVTable &Symbol) {}
+  virtual void dumpRight(const PDBSymbolTypeVTableShape &Symbol) {}
+
 private:
   bool RequireImpl;
 };

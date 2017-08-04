@@ -46,13 +46,13 @@ foo2:1000
 foo2:20000
 
 #ICTXT: Indirect Call Site Count: 3
-#ICTXT-NEXT:    Indirect Target Results: 
+#ICTXT-NEXT:    Indirect Target Results:
 #ICTXT-NEXT:	[ 1, foo, 100 ]
 #ICTXT-NEXT:	[ 1, foo2, 1000 ]
 #ICTXT-NEXT:	[ 2, foo2, 20000 ]
 
 #IC: Indirect Call Site Count: 3
-#IC-NEXT:    Indirect Target Results: 
+#IC-NEXT:    Indirect Target Results:
 #IC-NEXT:	[ 1, foo2, 1000 ]
 #IC-NEXT:	[ 1, foo, 100 ]
 #IC-NEXT:	[ 2, foo2, 20000 ]
@@ -63,10 +63,19 @@ foo2:20000
 #ICTEXT-NEXT: foo2:20000
 #
 
-#ICSUM: Total Number of Indirect Call Sites : 3
-#ICSUM: Total Number of Sites With Values : 2
-#ICSUM: Total Number of Profiled Values : 3
-#ICSUM:	NumTargets, SiteCount
-#ICSUM	1, 1
-#ICSUM	2, 1
+bar
+# Func Hash:
+10
+# Num Counters:
+2
+# Counter Values:
+999000
+359800
 
+#ICSUM: Statistics for indirect call sites profile:
+#ICSUM: Total number of sites: 3
+#ICSUM: Total number of sites with values: 2
+#ICSUM: Total number of profiled values: 3
+#ICSUM:	NumTargets, SiteCount
+#ICSUM	  1, 1
+#ICSUM	  2, 1

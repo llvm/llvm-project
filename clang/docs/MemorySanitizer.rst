@@ -27,7 +27,7 @@ executable, so make sure to use ``clang`` (not ``ld``) for the final
 link step. When linking shared libraries, the MemorySanitizer run-time
 is not linked, so ``-Wl,-z,defs`` may cause link errors (don't use it
 with MemorySanitizer). To get a reasonable performance add ``-O1`` or
-higher. To get meaninful stack traces in error messages add
+higher. To get meaningful stack traces in error messages add
 ``-fno-omit-frame-pointer``. To get perfect stack traces you may need
 to disable inlining (just use ``-O1``) and tail call elimination
 (``-fno-optimize-sibling-calls``).

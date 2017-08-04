@@ -16,5 +16,5 @@ $ rm -f src/gtest_main.cc
 $ mv LICENSE LICENSE.TXT
 
 Modified as follows:
-* Added support for Minix and Haiku.
+* Added support for NetBSD, Minix and Haiku.
 * Added raw_os_ostream support to include/gtest/internal/custom/gtest-printers.h.

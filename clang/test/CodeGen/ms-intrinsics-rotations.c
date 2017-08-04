@@ -12,7 +12,17 @@
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--linux -emit-llvm %s -o - \
-// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-64BIT-LONG
+// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+// RUN: %clang_cc1 -ffreestanding -fms-extensions \
+// RUN:         -triple x86_64--darwin -emit-llvm %s -o - \
+// RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-32BIT-LONG
+
+// LP64 targets use 'long' as 'int' for MS intrinsics (-fms-extensions)
+#ifdef __LP64__
+#define LONG int
+#else
+#define LONG long
+#endif
 
 // rotate left
 
@@ -58,7 +68,7 @@ unsigned int test_rotl(unsigned int value, int shift) {
 // CHECK:   ret i32 [[RESULT]]
 // CHECK  }
 
-unsigned long test_lrotl(unsigned long value, int shift) {
+unsigned LONG test_lrotl(unsigned LONG value, int shift) {
   return _lrotl(value, shift);
 }
 // CHECK-32BIT-LONG: i32 @test_lrotl
@@ -71,17 +81,6 @@ unsigned long test_lrotl(unsigned long value, int shift) {
 // CHECK-32BIT-LONG:   [[RESULT:%[0-9]+]] = select i1 [[ISZERO]], i32 [[VALUE]], i32 [[ROTATED]]
 // CHECK-32BIT-LONG:   ret i32 [[RESULT]]
 // CHECK-32BIT-LONG  }
-
-// CHECK-64BIT-LONG: i64 @test_lrotl
-// CHECK-64BIT-LONG:   [[SHIFT:%[0-9]+]] = and i64 %{{[0-9]+}}, 63
-// CHECK-64BIT-LONG:   [[NEGSHIFT:%[0-9]+]] = sub i64 64, [[SHIFT]]
-// CHECK-64BIT-LONG:   [[HIGH:%[0-9]+]] = shl i64 [[VALUE:%[0-9]+]], [[SHIFT]]
-// CHECK-64BIT-LONG:   [[LOW:%[0-9]+]] = lshr i64 [[VALUE]], [[NEGSHIFT]]
-// CHECK-64BIT-LONG:   [[ROTATED:%[0-9]+]] = or i64 [[HIGH]], [[LOW]]
-// CHECK-64BIT-LONG:   [[ISZERO:%[0-9]+]] = icmp eq i64 [[SHIFT]], 0
-// CHECK-64BIT-LONG:   [[RESULT:%[0-9]+]] = select i1 [[ISZERO]], i64 [[VALUE]], i64 [[ROTATED]]
-// CHECK-64BIT-LONG:   ret i64 [[RESULT]]
-// CHECK-64BIT-LONG  }
 
 unsigned __int64 test_rotl64(unsigned __int64 value, int shift) {
   return _rotl64(value, shift);
@@ -141,7 +140,7 @@ unsigned int test_rotr(unsigned int value, int shift) {
 // CHECK:   ret i32 [[RESULT]]
 // CHECK  }
 
-unsigned long test_lrotr(unsigned long value, int shift) {
+unsigned LONG test_lrotr(unsigned LONG value, int shift) {
   return _lrotr(value, shift);
 }
 // CHECK-32BIT-LONG: i32 @test_lrotr
@@ -154,17 +153,6 @@ unsigned long test_lrotr(unsigned long value, int shift) {
 // CHECK-32BIT-LONG:   [[RESULT:%[0-9]+]] = select i1 [[ISZERO]], i32 [[VALUE]], i32 [[ROTATED]]
 // CHECK-32BIT-LONG:   ret i32 [[RESULT]]
 // CHECK-32BIT-LONG  }
-
-// CHECK-64BIT-LONG: i64 @test_lrotr
-// CHECK-64BIT-LONG:   [[SHIFT:%[0-9]+]] = and i64 %{{[0-9]+}}, 63
-// CHECK-64BIT-LONG:   [[NEGSHIFT:%[0-9]+]] = sub i64 64, [[SHIFT]]
-// CHECK-64BIT-LONG:   [[LOW:%[0-9]+]] = lshr i64 [[VALUE:%[0-9]+]], [[SHIFT]]
-// CHECK-64BIT-LONG:   [[HIGH:%[0-9]+]] = shl i64 [[VALUE]], [[NEGSHIFT]]
-// CHECK-64BIT-LONG:   [[ROTATED:%[0-9]+]] = or i64 [[HIGH]], [[LOW]]
-// CHECK-64BIT-LONG:   [[ISZERO:%[0-9]+]] = icmp eq i64 [[SHIFT]], 0
-// CHECK-64BIT-LONG:   [[RESULT:%[0-9]+]] = select i1 [[ISZERO]], i64 [[VALUE]], i64 [[ROTATED]]
-// CHECK-64BIT-LONG:   ret i64 [[RESULT]]
-// CHECK-64BIT-LONG  }
 
 unsigned __int64 test_rotr64(unsigned __int64 value, int shift) {
   return _rotr64(value, shift);

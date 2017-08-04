@@ -333,6 +333,23 @@ public:
 
   bool hasAddressSpace() const { return Mask & AddressSpaceMask; }
   unsigned getAddressSpace() const { return Mask >> AddressSpaceShift; }
+  bool hasTargetSpecificAddressSpace() const {
+    return getAddressSpace() >= LangAS::FirstTargetAddressSpace;
+  }
+  /// Get the address space attribute value to be printed by diagnostics.
+  unsigned getAddressSpaceAttributePrintValue() const {
+    auto Addr = getAddressSpace();
+    // This function is not supposed to be used with language specific
+    // address spaces. If that happens, the diagnostic message should consider
+    // printing the QualType instead of the address space value.
+    assert(Addr == 0 || hasTargetSpecificAddressSpace());
+    if (Addr)
+      return Addr - LangAS::FirstTargetAddressSpace;
+    // TODO: The diagnostic messages where Addr may be 0 should be fixed
+    // since it cannot differentiate the situation where 0 denotes the default
+    // address space or user specified __attribute__((address_space(0))).
+    return 0;
+  }
   void setAddressSpace(unsigned space) {
     assert(space <= MaxAddressSpace);
     Mask = (Mask & ~AddressSpaceMask)
@@ -1382,7 +1399,7 @@ protected:
 
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
-    unsigned ExtInfo : 10;
+    unsigned ExtInfo : 11;
 
     /// Used only by FunctionProtoType, put here to pack with the
     /// other bitfields.
@@ -1735,6 +1752,7 @@ public:
   bool isTemplateTypeParmType() const;          // C++ template type parameter
   bool isNullPtrType() const;                   // C++11 std::nullptr_t
   bool isAlignValT() const;                     // C++17 std::align_val_t
+  bool isStdByteType() const;                   // C++17 std::byte
   bool isAtomicType() const;                    // C11 _Atomic()
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
@@ -1747,7 +1765,6 @@ public:
   bool isEventT() const;                        // OpenCL event_t
   bool isClkEventT() const;                     // OpenCL clk_event_t
   bool isQueueT() const;                        // OpenCL queue_t
-  bool isNDRangeT() const;                      // OpenCL ndrange_t
   bool isReserveIDT() const;                    // OpenCL reserve_id_t
 
   bool isPipeType() const;                      // OpenCL pipe type
@@ -1788,7 +1805,8 @@ public:
   }
 
   /// \brief Determine whether this type is an undeduced type, meaning that
-  /// it somehow involves a C++11 'auto' type which has not yet been deduced.
+  /// it somehow involves a C++11 'auto' type or similar which has not yet been
+  /// deduced.
   bool isUndeducedType() const;
 
   /// \brief Whether this type is a variably-modified type (C99 6.7.5).
@@ -1865,10 +1883,22 @@ public:
   /// not refer to a CXXRecordDecl, returns NULL.
   const CXXRecordDecl *getPointeeCXXRecordDecl() const;
 
+  /// Get the DeducedType whose type will be deduced for a variable with
+  /// an initializer of this type. This looks through declarators like pointer
+  /// types, but not through decltype or typedefs.
+  DeducedType *getContainedDeducedType() const;
+
   /// Get the AutoType whose type will be deduced for a variable with
   /// an initializer of this type. This looks through declarators like pointer
   /// types, but not through decltype or typedefs.
-  AutoType *getContainedAutoType() const;
+  AutoType *getContainedAutoType() const {
+    return dyn_cast_or_null<AutoType>(getContainedDeducedType());
+  }
+
+  /// Determine whether this type was written with a leading 'auto'
+  /// corresponding to a trailing return type (possibly for a nested
+  /// function type within a pointer to function type or similar).
+  bool hasAutoForTrailingReturnType() const;
 
   /// Member-template getAs<specific type>'.  Look through sugar for
   /// an instance of \<specific type>.   This scheme will eventually
@@ -1982,10 +2012,11 @@ public:
   Optional<NullabilityKind> getNullability(const ASTContext &context) const;
 
   /// Determine whether the given type can have a nullability
-  /// specifier applied to it, i.e., if it is any kind of pointer type
-  /// or a dependent type that could instantiate to any kind of
-  /// pointer type.
-  bool canHaveNullability() const;
+  /// specifier applied to it, i.e., if it is any kind of pointer type.
+  ///
+  /// \param ResultIfUnknown The value to return if we don't yet know whether
+  ///        this type can have nullability because it is dependent.
+  bool canHaveNullability(bool ResultIfUnknown = true) const;
 
   /// Retrieve the set of substitutions required when accessing a member
   /// of the Objective-C receiver type that is declared in the given context.
@@ -2067,7 +2098,7 @@ public:
     : Type(Builtin, QualType(), /*Dependent=*/(K == Dependent),
            /*InstantiationDependent=*/(K == Dependent),
            /*VariablyModified=*/false,
-           /*Unexpanded paramter pack=*/false) {
+           /*Unexpanded parameter pack=*/false) {
     BuiltinTypeBits.Kind = K;
   }
 
@@ -2915,19 +2946,23 @@ class FunctionType : public Type {
   // * AST read and write
   // * Codegen
   class ExtInfo {
-    // Feel free to rearrange or add bits, but if you go over 10,
+    // Feel free to rearrange or add bits, but if you go over 11,
     // you'll need to adjust both the Bits field below and
     // Type::FunctionTypeBitfields.
 
-    //   |  CC  |noreturn|produces|regparm|
-    //   |0 .. 4|   5    |    6   | 7 .. 9|
+    //   |  CC  |noreturn|produces|nocallersavedregs|regparm|
+    //   |0 .. 4|   5    |    6   |       7         |8 .. 10|
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
     enum { CallConvMask = 0x1F };
     enum { NoReturnMask = 0x20 };
     enum { ProducesResultMask = 0x40 };
-    enum { RegParmMask = ~(CallConvMask | NoReturnMask | ProducesResultMask),
-           RegParmOffset = 7 }; // Assumed to be the last field
+    enum { NoCallerSavedRegsMask = 0x80 };
+    enum {
+      RegParmMask = ~(CallConvMask | NoReturnMask | ProducesResultMask |
+                      NoCallerSavedRegsMask),
+      RegParmOffset = 8
+    }; // Assumed to be the last field
 
     uint16_t Bits;
 
@@ -2938,13 +2973,13 @@ class FunctionType : public Type {
    public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
-    ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
-            bool producesResult) {
-      assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
-      Bits = ((unsigned) cc) |
-             (noReturn ? NoReturnMask : 0) |
-             (producesResult ? ProducesResultMask : 0) |
-             (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0);
+     ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
+             bool producesResult, bool noCallerSavedRegs) {
+       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
+       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
+              (producesResult ? ProducesResultMask : 0) |
+              (noCallerSavedRegs ? NoCallerSavedRegsMask : 0) |
+              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0);
     }
 
     // Constructor with all defaults. Use when for example creating a
@@ -2957,6 +2992,7 @@ class FunctionType : public Type {
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
+    bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
     bool getHasRegParm() const { return (Bits >> RegParmOffset) != 0; }
     unsigned getRegParm() const {
       unsigned RegParm = Bits >> RegParmOffset;
@@ -2988,6 +3024,13 @@ class FunctionType : public Type {
         return ExtInfo(Bits | ProducesResultMask);
       else
         return ExtInfo(Bits & ~ProducesResultMask);
+    }
+
+    ExtInfo withNoCallerSavedRegs(bool noCallerSavedRegs) const {
+      if (noCallerSavedRegs)
+        return ExtInfo(Bits | NoCallerSavedRegsMask);
+      else
+        return ExtInfo(Bits & ~NoCallerSavedRegsMask);
     }
 
     ExtInfo withRegParm(unsigned RegParm) const {
@@ -3107,9 +3150,11 @@ public:
   class ExtParameterInfo {
     enum {
       ABIMask         = 0x0F,
-      IsConsumed      = 0x10
+      IsConsumed      = 0x10,
+      HasPassObjSize  = 0x20,
     };
     unsigned char Data;
+
   public:
     ExtParameterInfo() : Data(0) {}
 
@@ -3136,6 +3181,15 @@ public:
         copy.Data &= ~IsConsumed;
       }
       return copy;
+    }
+
+    bool hasPassObjectSize() const {
+      return Data & HasPassObjSize;
+    }
+    ExtParameterInfo withHasPassObjectSize() const {
+      ExtParameterInfo Copy = *this;
+      Copy.Data |= HasPassObjSize;
+      return Copy;
     }
 
     unsigned char getOpaqueValue() const { return Data; }
@@ -3825,6 +3879,7 @@ public:
     attr_sptr,
     attr_uptr,
     attr_nonnull,
+    attr_ns_returns_retained,
     attr_nullable,
     attr_null_unspecified,
     attr_objc_kindof,
@@ -4099,25 +4154,60 @@ public:
   }
 };
 
-/// \brief Represents a C++11 auto or C++14 decltype(auto) type.
+/// \brief Common base class for placeholders for types that get replaced by
+/// placeholder type deduction: C++11 auto, C++14 decltype(auto), C++17 deduced
+/// class template types, and (eventually) constrained type names from the C++
+/// Concepts TS.
 ///
 /// These types are usually a placeholder for a deduced type. However, before
 /// the initializer is attached, or (usually) if the initializer is
-/// type-dependent, there is no deduced type and an auto type is canonical. In
+/// type-dependent, there is no deduced type and the type is canonical. In
 /// the latter case, it is also a dependent type.
-class AutoType : public Type, public llvm::FoldingSetNode {
-  AutoType(QualType DeducedType, AutoTypeKeyword Keyword, bool IsDependent)
-    : Type(Auto, DeducedType.isNull() ? QualType(this, 0) : DeducedType,
-           /*Dependent=*/IsDependent, /*InstantiationDependent=*/IsDependent,
-           /*VariablyModified=*/false, /*ContainsParameterPack=*/false) {
-    if (!DeducedType.isNull()) {
-      if (DeducedType->isDependentType())
+class DeducedType : public Type {
+protected:
+  DeducedType(TypeClass TC, QualType DeducedAsType, bool IsDependent,
+              bool IsInstantiationDependent, bool ContainsParameterPack)
+      : Type(TC,
+             // FIXME: Retain the sugared deduced type?
+             DeducedAsType.isNull() ? QualType(this, 0)
+                                    : DeducedAsType.getCanonicalType(),
+             IsDependent, IsInstantiationDependent,
+             /*VariablyModified=*/false, ContainsParameterPack) {
+    if (!DeducedAsType.isNull()) {
+      if (DeducedAsType->isDependentType())
         setDependent();
-      if (DeducedType->isInstantiationDependentType())
+      if (DeducedAsType->isInstantiationDependentType())
         setInstantiationDependent();
-      if (DeducedType->containsUnexpandedParameterPack())
+      if (DeducedAsType->containsUnexpandedParameterPack())
         setContainsUnexpandedParameterPack();
     }
+  }
+
+public:
+  bool isSugared() const { return !isCanonicalUnqualified(); }
+  QualType desugar() const { return getCanonicalTypeInternal(); }
+
+  /// \brief Get the type deduced for this placeholder type, or null if it's
+  /// either not been deduced or was deduced to a dependent type.
+  QualType getDeducedType() const {
+    return !isCanonicalUnqualified() ? getCanonicalTypeInternal() : QualType();
+  }
+  bool isDeduced() const {
+    return !isCanonicalUnqualified() || isDependentType();
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == Auto ||
+           T->getTypeClass() == DeducedTemplateSpecialization;
+  }
+};
+
+/// \brief Represents a C++11 auto or C++14 decltype(auto) type.
+class AutoType : public DeducedType, public llvm::FoldingSetNode {
+  AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
+           bool IsDeducedAsDependent)
+      : DeducedType(Auto, DeducedAsType, IsDeducedAsDependent,
+                    IsDeducedAsDependent, /*ContainsPack=*/false) {
     AutoTypeBits.Keyword = (unsigned)Keyword;
   }
 
@@ -4129,18 +4219,6 @@ public:
   }
   AutoTypeKeyword getKeyword() const {
     return (AutoTypeKeyword)AutoTypeBits.Keyword;
-  }
-
-  bool isSugared() const { return !isCanonicalUnqualified(); }
-  QualType desugar() const { return getCanonicalTypeInternal(); }
-
-  /// \brief Get the type deduced for this auto type, or null if it's either
-  /// not been deduced or was deduced to a dependent type.
-  QualType getDeducedType() const {
-    return !isCanonicalUnqualified() ? getCanonicalTypeInternal() : QualType();
-  }
-  bool isDeduced() const {
-    return !isCanonicalUnqualified() || isDependentType();
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -4156,6 +4234,43 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
+  }
+};
+
+/// \brief Represents a C++17 deduced template specialization type.
+class DeducedTemplateSpecializationType : public DeducedType,
+                                          public llvm::FoldingSetNode {
+  /// The name of the template whose arguments will be deduced.
+  TemplateName Template;
+
+  DeducedTemplateSpecializationType(TemplateName Template,
+                                    QualType DeducedAsType,
+                                    bool IsDeducedAsDependent)
+      : DeducedType(DeducedTemplateSpecialization, DeducedAsType,
+                    IsDeducedAsDependent || Template.isDependent(),
+                    IsDeducedAsDependent || Template.isInstantiationDependent(),
+                    Template.containsUnexpandedParameterPack()),
+        Template(Template) {}
+
+  friend class ASTContext;  // ASTContext creates these
+
+public:
+  /// Retrieve the name of the template that we are deducing.
+  TemplateName getTemplateName() const { return Template;}
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getTemplateName(), getDeducedType(), isDependentType());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Template,
+                      QualType Deduced, bool IsDependent) {
+    Template.Profile(ID);
+    ID.AddPointer(Deduced.getAsOpaquePtr());
+    ID.AddBoolean(IsDependent);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == DeducedTemplateSpecialization;
   }
 };
 
@@ -4354,6 +4469,9 @@ public:
   QualType getInjectedSpecializationType() const { return InjectedType; }
   const TemplateSpecializationType *getInjectedTST() const {
     return cast<TemplateSpecializationType>(InjectedType.getTypePtr());
+  }
+  TemplateName getTemplateName() const {
+    return getInjectedTST()->getTemplateName();
   }
 
   CXXRecordDecl *getDecl() const;
@@ -5728,10 +5846,6 @@ inline bool Type::isQueueT() const {
   return isSpecificBuiltinType(BuiltinType::OCLQueue);
 }
 
-inline bool Type::isNDRangeT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLNDRange);
-}
-
 inline bool Type::isReserveIDT() const {
   return isSpecificBuiltinType(BuiltinType::OCLReserveID);
 }
@@ -5749,7 +5863,7 @@ inline bool Type::isPipeType() const {
 
 inline bool Type::isOpenCLSpecificType() const {
   return isSamplerT() || isEventT() || isImageType() || isClkEventT() ||
-         isQueueT() || isNDRangeT() || isReserveIDT() || isPipeType();
+         isQueueT() || isReserveIDT() || isPipeType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {
@@ -5859,8 +5973,8 @@ inline bool Type::isBooleanType() const {
 }
 
 inline bool Type::isUndeducedType() const {
-  const AutoType *AT = getContainedAutoType();
-  return AT && !AT->isDeduced();
+  auto *DT = getContainedDeducedType();
+  return DT && !DT->isDeduced();
 }
 
 /// \brief Determines whether this is a type for which one can define

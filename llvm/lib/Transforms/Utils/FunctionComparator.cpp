@@ -15,8 +15,8 @@
 #include "llvm/Transforms/Utils/FunctionComparator.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -74,14 +74,16 @@ int FunctionComparator::cmpMem(StringRef L, StringRef R) const {
   return L.compare(R);
 }
 
-int FunctionComparator::cmpAttrs(const AttributeSet L,
-                                 const AttributeSet R) const {
-  if (int Res = cmpNumbers(L.getNumSlots(), R.getNumSlots()))
+int FunctionComparator::cmpAttrs(const AttributeList L,
+                                 const AttributeList R) const {
+  if (int Res = cmpNumbers(L.getNumAttrSets(), R.getNumAttrSets()))
     return Res;
 
-  for (unsigned i = 0, e = L.getNumSlots(); i != e; ++i) {
-    AttributeSet::iterator LI = L.begin(i), LE = L.end(i), RI = R.begin(i),
-                           RE = R.end(i);
+  for (unsigned i = L.index_begin(), e = L.index_end(); i != e; ++i) {
+    AttributeSet LAS = L.getAttributes(i);
+    AttributeSet RAS = R.getAttributes(i);
+    AttributeSet::iterator LI = LAS.begin(), LE = LAS.end();
+    AttributeSet::iterator RI = RAS.begin(), RE = RAS.end();
     for (; LI != LE && RI != RE; ++LI, ++RI) {
       Attribute LA = *LI;
       Attribute RA = *RI;
@@ -511,8 +513,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpOrderings(LI->getOrdering(), cast<LoadInst>(R)->getOrdering()))
       return Res;
-    if (int Res =
-            cmpNumbers(LI->getSynchScope(), cast<LoadInst>(R)->getSynchScope()))
+    if (int Res = cmpNumbers(LI->getSyncScopeID(),
+                             cast<LoadInst>(R)->getSyncScopeID()))
       return Res;
     return cmpRangeMetadata(LI->getMetadata(LLVMContext::MD_range),
         cast<LoadInst>(R)->getMetadata(LLVMContext::MD_range));
@@ -527,7 +529,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpOrderings(SI->getOrdering(), cast<StoreInst>(R)->getOrdering()))
       return Res;
-    return cmpNumbers(SI->getSynchScope(), cast<StoreInst>(R)->getSynchScope());
+    return cmpNumbers(SI->getSyncScopeID(),
+                      cast<StoreInst>(R)->getSyncScopeID());
   }
   if (const CmpInst *CI = dyn_cast<CmpInst>(L))
     return cmpNumbers(CI->getPredicate(), cast<CmpInst>(R)->getPredicate());
@@ -582,7 +585,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpOrderings(FI->getOrdering(), cast<FenceInst>(R)->getOrdering()))
       return Res;
-    return cmpNumbers(FI->getSynchScope(), cast<FenceInst>(R)->getSynchScope());
+    return cmpNumbers(FI->getSyncScopeID(),
+                      cast<FenceInst>(R)->getSyncScopeID());
   }
   if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(L)) {
     if (int Res = cmpNumbers(CXI->isVolatile(),
@@ -599,8 +603,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
             cmpOrderings(CXI->getFailureOrdering(),
                          cast<AtomicCmpXchgInst>(R)->getFailureOrdering()))
       return Res;
-    return cmpNumbers(CXI->getSynchScope(),
-                      cast<AtomicCmpXchgInst>(R)->getSynchScope());
+    return cmpNumbers(CXI->getSyncScopeID(),
+                      cast<AtomicCmpXchgInst>(R)->getSyncScopeID());
   }
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(L)) {
     if (int Res = cmpNumbers(RMWI->getOperation(),
@@ -612,8 +616,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                              cast<AtomicRMWInst>(R)->getOrdering()))
       return Res;
-    return cmpNumbers(RMWI->getSynchScope(),
-                      cast<AtomicRMWInst>(R)->getSynchScope());
+    return cmpNumbers(RMWI->getSyncScopeID(),
+                      cast<AtomicRMWInst>(R)->getSyncScopeID());
   }
   if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
     const PHINode *PNR = cast<PHINode>(R);

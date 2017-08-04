@@ -66,13 +66,18 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK:  ba   .LBB1_1
 ; CHECK:  nop
 ; CHECK:.LBB1_1:                                ! %entry
-; CHECK:  ba   .LBB1_3
 ; CHECK:  mov  %g0, %i0
-; CHECK:.LBB1_2:                                ! Block address taken
-; CHECK:  mov  1, %i0
-; CHECK:.LBB1_3:                                ! %entry
+; CHECK:                                        ! %entry
 ; CHECK:  cmp %i0, 0
 ; CHECK:  be   .LBB1_5
+; CHECK:  nop
+; CHECK:.LBB1_4:
+; CHECK:  mov  1, %i0
+; CHECK:  ba .LBB1_6
+; CHECK:.LBB1_2:                                ! Block address taken
+; CHECK:  mov  1, %i0
+; CHECK:  cmp %i0, 0
+; CHECK:  bne  .LBB1_4
 ; CHECK:  nop
 }
 declare i8* @llvm.frameaddress(i32) #2

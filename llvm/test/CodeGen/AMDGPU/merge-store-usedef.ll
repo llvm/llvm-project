@@ -11,13 +11,13 @@ define amdgpu_vs void @test1(i32 %v) #0 {
 
   store i32 %v, i32 addrspace(3)* %p0
 
-  call void @llvm.SI.tbuffer.store.i32(<16 x i8> undef, i32 %v, i32 1, i32 undef, i32 undef, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
+  call void @llvm.amdgcn.tbuffer.store.i32(i32 %v, <4 x i32> undef, i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i1 1, i1 0)
 
   %w = load i32, i32 addrspace(3)* %p0
   store i32 %w, i32 addrspace(3)* %p1
   ret void
 }
 
-declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1) #0
 
 attributes #0 = { nounwind }

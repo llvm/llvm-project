@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -19,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,7 +27,7 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "codegen-cp"
+#define DEBUG_TYPE "machine-cp"
 
 STATISTIC(NumDeletes, "Number of dead copies deleted");
 
@@ -79,7 +79,7 @@ namespace {
 char MachineCopyPropagation::ID = 0;
 char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 
-INITIALIZE_PASS(MachineCopyPropagation, "machine-cp",
+INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
                 "Machine Copy Propagation Pass", false, false)
 
 /// Remove any entry in \p Map where the register is a subregister or equal to
@@ -291,17 +291,9 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       if (MO.isDef()) {
         Defs.push_back(Reg);
-      } else {
+        continue;
+      } else if (MO.readsReg())
         ReadRegister(Reg);
-      }
-      // Treat undef use like defs for copy propagation but not for
-      // dead copy. We would need to do a liveness check to be sure the copy
-      // is dead for undef uses.
-      // The backends are allowed to do whatever they want with undef value
-      // and we cannot be sure this register will not be rewritten to break
-      // some false dependencies for the hardware for instance.
-      if (MO.isUndef())
-        Defs.push_back(Reg);
     }
 
     // The instruction has a register mask operand which means that it clobbers

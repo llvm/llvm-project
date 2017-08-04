@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Sparc.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "Sparc.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"

@@ -336,7 +336,12 @@ CAMLprim LLVMContextRef llvm_type_context(LLVMTypeRef Ty) {
 
 /* lltype -> unit */
 CAMLprim value llvm_dump_type(LLVMTypeRef Val) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVMDumpType(Val);
+#else
+  caml_raise_with_arg(*caml_named_value("Llvm.FeatureDisabled"),
+      caml_copy_string("dump"));
+#endif
   return Val_unit;
 }
 
@@ -505,6 +510,20 @@ CAMLprim value llvm_is_opaque(LLVMTypeRef StructTy) {
 }
 
 /*--... Operations on array, pointer, and vector types .....................--*/
+
+/* lltype -> lltype array */
+CAMLprim value llvm_subtypes(LLVMTypeRef Ty) {
+    CAMLparam0();
+    CAMLlocal1(Arr);
+
+    unsigned Size = LLVMGetNumContainedTypes(Ty);
+
+    Arr = caml_alloc(Size, 0);
+
+    LLVMGetSubtypes(Ty, (LLVMTypeRef *) Arr);
+
+    CAMLreturn(Arr);
+}
 
 /* lltype -> int -> lltype */
 CAMLprim LLVMTypeRef llvm_array_type(LLVMTypeRef ElementTy, value Count) {

@@ -15,17 +15,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
-#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -310,11 +310,11 @@ unsigned MemoryDependenceResults::getLoadLoadClobberFullWidthSize(
 }
 
 static bool isVolatile(Instruction *Inst) {
-  if (LoadInst *LI = dyn_cast<LoadInst>(Inst))
+  if (auto *LI = dyn_cast<LoadInst>(Inst))
     return LI->isVolatile();
-  else if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
+  if (auto *SI = dyn_cast<StoreInst>(Inst))
     return SI->isVolatile();
-  else if (AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(Inst))
+  if (auto *AI = dyn_cast<AtomicCmpXchgInst>(Inst))
     return AI->isVolatile();
   return false;
 }
@@ -691,6 +691,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // load query, we can safely ignore it (scan past it).
       if (isLoad)
         continue;
+      LLVM_FALLTHROUGH;
     default:
       // Otherwise, there is a potential dependence.  Return a clobber.
       return MemDepResult::getClobber(Inst);

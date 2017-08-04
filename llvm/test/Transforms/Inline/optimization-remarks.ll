@@ -9,8 +9,7 @@
 ; NO_HOTNESS-NOT: fox will not be inlined into bar because its definition is unavailable
 ; CHECK: foo should always be inlined (cost=always)
 ; CHECK: foo inlined into bar
-; CHECK: foz should never be inlined (cost=never)
-; CHECK: foz will not be inlined into bar
+; CHECK: foz not inlined into bar because it should never be inlined (cost=never)
 
 ; Function Attrs: alwaysinline nounwind uwtable
 define i32 @foo(i32 %x, i32 %y) #0 {

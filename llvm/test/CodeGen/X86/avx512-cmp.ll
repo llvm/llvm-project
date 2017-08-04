@@ -14,6 +14,7 @@ define double @test1(double %a, double %b) nounwind {
 ; ALL-NEXT:  LBB0_2: ## %l2
 ; ALL-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
+; ALL-NEXT:    ## -- End function
   %tobool = fcmp une double %a, %b
   br i1 %tobool, label %l1, label %l2
 
@@ -36,6 +37,7 @@ define float @test2(float %a, float %b) nounwind {
 ; ALL-NEXT:  LBB1_2: ## %l2
 ; ALL-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
+; ALL-NEXT:    ## -- End function
   %tobool = fcmp olt float %a, %b
   br i1 %tobool, label %l1, label %l2
 
@@ -47,16 +49,20 @@ l2:
   ret float %c1
 }
 
-; FIXME: Can use vcmpeqss and extract from the mask here in AVX512.
 define i32 @test3(float %a, float %b) {
-; ALL-LABEL: test3:
-; ALL:       ## BB#0:
-; ALL-NEXT:    vucomiss %xmm1, %xmm0
-; ALL-NEXT:    setnp %al
-; ALL-NEXT:    sete %cl
-; ALL-NEXT:    andb %al, %cl
-; ALL-NEXT:    movzbl %cl, %eax
-; ALL-NEXT:    retq
+; KNL-LABEL: test3:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movzbl %al, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test3:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    movzbl %al, %eax
+; SKX-NEXT:    retq
 
   %cmp10.i = fcmp oeq float %a, %b
   %conv11.i = zext i1 %cmp10.i to i32
@@ -69,13 +75,14 @@ define float @test5(float %p) #0 {
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vucomiss %xmm1, %xmm0
 ; ALL-NEXT:    jne LBB3_1
-; ALL-NEXT:    jnp LBB3_2
+; ALL-NEXT:    jp LBB3_1
+; ALL-NEXT:  ## BB#2: ## %return
+; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB3_1: ## %if.end
 ; ALL-NEXT:    seta %al
 ; ALL-NEXT:    movzbl %al, %eax
 ; ALL-NEXT:    leaq {{.*}}(%rip), %rcx
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:  LBB3_2: ## %return
 ; ALL-NEXT:    retq
 entry:
   %cmp = fcmp oeq float %p, 0.000000e+00
@@ -119,12 +126,12 @@ entry:
 define i32 @test8(i32 %a1, i32 %a2, i32 %a3) {
 ; ALL-LABEL: test8:
 ; ALL:       ## BB#0:
+; ALL-NEXT:    notl %edi
+; ALL-NEXT:    xorl $-2147483648, %esi ## imm = 0x80000000
 ; ALL-NEXT:    testl %edx, %edx
 ; ALL-NEXT:    movl $1, %eax
 ; ALL-NEXT:    cmovel %eax, %edx
-; ALL-NEXT:    cmpl $-2147483648, %esi ## imm = 0x80000000
-; ALL-NEXT:    cmovnel %edx, %eax
-; ALL-NEXT:    cmpl $-1, %edi
+; ALL-NEXT:    orl %edi, %esi
 ; ALL-NEXT:    cmovnel %edx, %eax
 ; ALL-NEXT:    retq
   %tmp1 = icmp eq i32 %a1, -1
@@ -159,17 +166,13 @@ B:
 define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-LABEL: test10:
 ; ALL:       ## BB#0:
-; ALL-NEXT:    andl $1, %edx
-; ALL-NEXT:    kmovw %edx, %k0
+; ALL-NEXT:    movl %edx, %eax
+; ALL-NEXT:    andb $1, %al
 ; ALL-NEXT:    cmpq %rsi, %rdi
-; ALL-NEXT:    sete %al
-; ALL-NEXT:    andl $1, %eax
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    korw %k1, %k0, %k1
-; ALL-NEXT:    kxorw %k1, %k0, %k0
-; ALL-NEXT:    kmovw %k0, %eax
-; ALL-NEXT:    andl $1, %eax
-; ALL-NEXT:    testb %al, %al
+; ALL-NEXT:    sete %cl
+; ALL-NEXT:    orb %dl, %cl
+; ALL-NEXT:    andb $1, %cl
+; ALL-NEXT:    cmpb %cl, %al
 ; ALL-NEXT:    je LBB8_1
 ; ALL-NEXT:  ## BB#2: ## %if.end.i
 ; ALL-NEXT:    movl $6, %eax

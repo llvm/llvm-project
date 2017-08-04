@@ -1,25 +1,43 @@
-@ RUN: llvm-mc < %s -triple thumbv5-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -r | FileCheck %s
+@ RUN: not llvm-mc %s -triple thumbv5-linux-gnueabi -filetype=obj -o /dev/null 2>&1 | FileCheck %s
 
+        .code 16
 
         bl      end
-        .space 0x3fffff
+        .space 0x1ffffff
 end:
 
         bl      end2
-        .space 0x3fffff
+        .space 0x1ffffff
         .global end2
 end2:
 
         bl      end3
-        .space 0x400000
+        .space 0x2000000
         .global end3
 end3:
 
+// CHECK-NOT: error
+// CHECK: [[@LINE+1]]:{{[0-9]}}: error: Relocation out of range
         bl      end4
-        .space 0x400000
+// CHECK-NOT: error
+        .space 0x2000000
 end4:
 
-@ CHECK: 0x400003 R_ARM_THM_CALL end2 0x0
-@ CHECK: 0x800006 R_ARM_THM_CALL end3 0x0
-@ CHECK: 0xC0000A R_ARM_THM_CALL end4 0x0
+start1:
+        .space 0x1fffffc
+        bl start1
+
+        .global start2
+start2:
+        .space 0x1fffffc
+        bl start2
+
+        .global start3
+start3:
+        .space 0x1fffffd
+        bl start3
+
+start4:
+        .space 0x1fffffd
+// CHECK: [[@LINE+1]]:{{[0-9]}}: error: Relocation out of range
+        bl start4

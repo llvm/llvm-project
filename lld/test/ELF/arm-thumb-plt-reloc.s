@@ -30,7 +30,7 @@ _start:
 // CHECK-NEXT:   11002: 70 47   bx      lr
 // CHECK: func3:
 // CHECK-NEXT:   11004: 70 47   bx      lr
-// CHECK-NEXT:   11006: 00 00   movs    r0, r0
+// CHECK-NEXT:   11006: d4 d4
 // CHECK: _start:
 // 11008 + 4 -12 = 0x11000 = func1
 // CHECK-NEXT:   11008: ff f7 fa ff     bl      #-12
@@ -49,7 +49,7 @@ _start:
 // DSOTHUMB-NEXT:    1002:       70 47   bx      lr
 // DSOTHUMB: func3:
 // DSOTHUMB-NEXT:    1004:       70 47   bx      lr
-// DSOTHUMB-NEXT:    1006:       00 00   movs    r0, r0
+// DSOTHUMB-NEXT:    1006:       d4 d4
 // DSOTHUMB: _start:
 // 0x1008 + 0x28 + 4 = 0x1034 = PLT func1
 // DSOTHUMB-NEXT:    1008:       00 f0 14 e8     blx     #40
@@ -58,27 +58,34 @@ _start:
 // 0x1010 + 0x40 + 4 = 0x1054 = PLT func3
 // DSOTHUMB-NEXT:    1010:       00 f0 20 e8     blx     #64
 // DSOARM: Disassembly of section .plt:
-// DSOARM: .plt:
+// DSOARM-NEXT: $a:
 // DSOARM-NEXT:    1020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // DSOARM-NEXT:    1024:       04 e0 9f e5     ldr     lr, [pc, #4]
 // DSOARM-NEXT:    1028:       0e e0 8f e0     add     lr, pc, lr
 // DSOARM-NEXT:    102c:       08 f0 be e5     ldr     pc, [lr, #8]!
-// DSOARM-NEXT:    1030:       d0 0f 00 00
+// DSOARM: $d:
+// DSOARM-NEXT:    1030:       d0 0f 00 00      .word   0x00000fd0
 // 0x1028 + 8 + 0fd0 = 0x2000
+// DSOARM: $a:
 // DSOARM-NEXT:    1034:       04 c0 9f e5     ldr     r12, [pc, #4]
 // DSOARM-NEXT:    1038:       0f c0 8c e0     add     r12, r12, pc
 // DSOARM-NEXT:    103c:       00 f0 9c e5     ldr     pc, [r12]
-// DSOARM-NEXT:    1040:       cc 0f 00 00
+// DSOARM: $d:
+// DSOARM-NEXT:    1040:       cc 0f 00 00     .word   0x00000fcc
 // 0x1038 + 8 + 0fcc = 0x200c
+// DSOARM: $a:
 // DSOARM-NEXT:    1044:       04 c0 9f e5     ldr     r12, [pc, #4]
 // DSOARM-NEXT:    1048:       0f c0 8c e0     add     r12, r12, pc
 // DSOARM-NEXT:    104c:       00 f0 9c e5     ldr     pc, [r12]
-// DSOARM-NEXT:    1050:       c0 0f 00 00
+// DSOARM: $d:
+// DSOARM-NEXT:    1050:       c0 0f 00 00     .word   0x00000fc0
 // 0x1048 + 8 + 0fc0 = 0x2010
+// DSOARM: $a:
 // DSOARM-NEXT:    1054:       04 c0 9f e5     ldr     r12, [pc, #4]
 // DSOARM-NEXT:    1058:       0f c0 8c e0     add     r12, r12, pc
 // DSOARM-NEXT:    105c:       00 f0 9c e5     ldr     pc, [r12]
-// DSOARM-NEXT:    1060:       b4 0f 00 00
+// DSOARM: $d:
+// DSOARM-NEXT:    1060:       b4 0f 00 00     .word   0x00000fb4
 // 0x1058 + 8 + 0fb4 = 0x2014
 
 // DSOREL:    Name: .got.plt

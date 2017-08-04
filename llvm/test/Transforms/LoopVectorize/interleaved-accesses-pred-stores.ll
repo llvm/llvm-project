@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; CHECK-LABEL: @interleaved_with_cond_store_0(
 ;
-; CHECK: min.iters.checked
+; CHECK: vector.ph
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 1
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:.+]] = select i1 %[[IsZero]], i64 2, i64 %n.mod.vf
@@ -58,7 +58,7 @@ for.end:
 ;
 ; CHECK-LABEL: @interleaved_with_cond_store_1(
 ;
-; CHECK: min.iters.checked
+; CHECK: vector.ph
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 1
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:.+]] = select i1 %[[IsZero]], i64 2, i64 %n.mod.vf
@@ -117,7 +117,7 @@ for.end:
 ;
 ; CHECK-LABEL: @interleaved_with_cond_store_2(
 ;
-; CHECK: min.iters.checked
+; CHECK: vector.ph
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 1
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:.+]] = select i1 %[[IsZero]], i64 2, i64 %n.mod.vf

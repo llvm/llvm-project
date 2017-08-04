@@ -11,7 +11,7 @@
 #define LLVM_LIB_TARGET_ARM_ARMASMBACKENDDARWIN_H
 
 #include "ARMAsmBackend.h"
-#include "llvm/Support/MachO.h"
+#include "llvm/BinaryFormat/MachO.h"
 
 namespace llvm {
 class ARMAsmBackendDarwin : public ARMAsmBackend {

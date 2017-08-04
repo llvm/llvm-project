@@ -3,7 +3,7 @@
 // Build PCH using A, with adjacent private module APrivate, which winds up being implicitly referenced
 // RUN: %clang_cc1 -verify -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -F %S/Inputs/implicit-private-with-different-name -emit-pch -o %t-A.pch %s
 
-// Use the PCH with no explicit way to resolve PrivateA, still pick it up through MODULE_DIRECTORY reference in PCH control block
+// Use the PCH with no explicit way to resolve APrivate, still pick it up by automatic second-chance search for "A" with "Private" appended
 // RUN: %clang_cc1 -verify -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -F %S/Inputs/implicit-private-with-different-name -include-pch %t-A.pch %s -fsyntax-only
 
 // Check the fixit

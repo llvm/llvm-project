@@ -4,6 +4,8 @@
 
 // REQUIRES: osx-autointerception
 
+// XFAIL: ios
+
 // RUN: %clangxx_tsan %s -o %t.so -shared -DSHARED_LIB
 // RUN: %clangxx_tsan -fno-sanitize=thread %s -o %t
 

@@ -89,15 +89,10 @@ if.end:                                           ; preds = %if.then, %for.end
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 
-; Negative test. At the moment we will optimistically assume RED[0] in the conditional after the
-; loop might be invariant and expand the SCoP from the loop to include the conditional. However,
-; during SCoP generation we will realize that RED[0] is in fact not invariant and bail.
-;
-; Possible solutions could be:
-;   - Do not optimistically assume it to be invariant (as before this commit), however we would loose
-;     a lot of invariant cases due to possible aliasing.
-;   - Reduce the size of the SCoP if an assumed invariant access is in fact not invariant instead of
-;     rejecting the whole region.
+; This is a negative test. We can prove that RED[0] in the conditional after
+; the loop is dereferencable and consequently expand the SCoP from the
+; loop to include the conditional. However, during SCoP generation we realize
+; that, while RED[0] is invariant, it is written to as part of the same scop
+; and can consequently not be hoisted. Hence, we invalidate the scop.
 ;
 ; CHECK-NOT: for (int c0 = 0; c0 <= 1018; c0 += 1)
-; CHECK-NOT:   Stmt_for_body(c0);

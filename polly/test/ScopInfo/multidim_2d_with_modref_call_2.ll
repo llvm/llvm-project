@@ -113,7 +113,7 @@
 ; NONAFFINE-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_arg4[o0] };
 ; NONAFFINE-NEXT:            MayWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_arg4[o0] : -1152921504606846976 <= o0 <= 1152921504606846975 };
+; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_arg4[o0] };
 ; NONAFFINE-NEXT:    }
 
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"

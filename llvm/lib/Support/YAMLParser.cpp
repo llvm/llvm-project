@@ -1,4 +1,4 @@
-//===--- YAMLParser.cpp - Simple YAML parser ------------------------------===//
+//===- YAMLParser.cpp - Simple YAML parser --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,16 +12,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/ADT/AllocatorList.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/AllocatorList.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
 
 using namespace llvm;
 using namespace yaml;
@@ -37,7 +51,7 @@ enum UnicodeEncodingForm {
 
 /// EncodingInfo - Holds the encoding type and length of the byte order mark if
 ///                it exists. Length is in {0, 2, 3, 4}.
-typedef std::pair<UnicodeEncodingForm, unsigned> EncodingInfo;
+using EncodingInfo = std::pair<UnicodeEncodingForm, unsigned>;
 
 /// getUnicodeEncoding - Reads up to the first 4 bytes to determine the Unicode
 ///                      encoding form of \a Input.
@@ -46,7 +60,7 @@ typedef std::pair<UnicodeEncodingForm, unsigned> EncodingInfo;
 /// @returns An EncodingInfo indicating the Unicode encoding form of the input
 ///          and how long the byte order mark is if one exists.
 static EncodingInfo getUnicodeEncoding(StringRef Input) {
-  if (Input.size() == 0)
+  if (Input.empty())
     return std::make_pair(UEF_Unknown, 0);
 
   switch (uint8_t(Input[0])) {
@@ -95,8 +109,6 @@ static EncodingInfo getUnicodeEncoding(StringRef Input) {
   return std::make_pair(UEF_UTF8, 0);
 }
 
-namespace llvm {
-namespace yaml {
 /// Pin the vtables to this file.
 void Node::anchor() {}
 void NullNode::anchor() {}
@@ -106,6 +118,9 @@ void KeyValueNode::anchor() {}
 void MappingNode::anchor() {}
 void SequenceNode::anchor() {}
 void AliasNode::anchor() {}
+
+namespace llvm {
+namespace yaml {
 
 /// Token - A single YAML token.
 struct Token {
@@ -133,7 +148,7 @@ struct Token {
     TK_Alias,
     TK_Anchor,
     TK_Tag
-  } Kind;
+  } Kind = TK_Error;
 
   /// A string of length 0 or more whose begin() points to the logical location
   /// of the token in the input.
@@ -142,14 +157,16 @@ struct Token {
   /// The value of a block scalar node.
   std::string Value;
 
-  Token() : Kind(TK_Error) {}
+  Token() = default;
 };
-}
-}
 
-typedef llvm::BumpPtrList<Token> TokenQueueT;
+} // end namespace yaml
+} // end namespace llvm
+
+using TokenQueueT = BumpPtrList<Token>;
 
 namespace {
+
 /// @brief This struct is used to track simple keys.
 ///
 /// Simple keys are handled by creating an entry in SimpleKeys for each Token
@@ -170,12 +187,13 @@ struct SimpleKey {
     return Tok == Other.Tok;
   }
 };
-}
+
+} // end anonymous namespace
 
 /// @brief The Unicode scalar value of a UTF-8 minimal well-formed code unit
 ///        subsequence and the subsequence's length in code units (uint8_t).
 ///        A length of 0 represents an error.
-typedef std::pair<uint32_t, unsigned> UTF8Decoded;
+using UTF8Decoded = std::pair<uint32_t, unsigned>;
 
 static UTF8Decoded decodeUTF8(StringRef Range) {
   StringRef::iterator Position= Range.begin();
@@ -229,6 +247,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
 
 namespace llvm {
 namespace yaml {
+
 /// @brief Scans YAML tokens from a MemoryBuffer.
 class Scanner {
 public:
@@ -350,7 +369,8 @@ private:
   ///          ns-char.
   StringRef::iterator skip_ns_char(StringRef::iterator Position);
 
-  typedef StringRef::iterator (Scanner::*SkipWhileFunc)(StringRef::iterator);
+  using SkipWhileFunc = StringRef::iterator (Scanner::*)(StringRef::iterator);
+
   /// @brief Skip minimal well-formed code unit subsequences until Func
   ///        returns its input.
   ///
@@ -655,10 +675,10 @@ bool yaml::dumpTokens(StringRef Input, raw_ostream &OS) {
 }
 
 bool yaml::scanTokens(StringRef Input) {
-  llvm::SourceMgr SM;
-  llvm::yaml::Scanner scanner(Input, SM);
-  for (;;) {
-    llvm::yaml::Token T = scanner.getNext();
+  SourceMgr SM;
+  Scanner scanner(Input, SM);
+  while (true) {
+    Token T = scanner.getNext();
     if (T.Kind == Token::TK_StreamEnd)
       break;
     else if (T.Kind == Token::TK_Error)
@@ -1744,7 +1764,7 @@ Stream::Stream(MemoryBufferRef InputBuffer, SourceMgr &SM, bool ShowColors,
                std::error_code *EC)
     : scanner(new Scanner(InputBuffer, SM, ShowColors, EC)), CurrentDoc() {}
 
-Stream::~Stream() {}
+Stream::~Stream() = default;
 
 bool Stream::failed() { return scanner->failed(); }
 
@@ -1850,8 +1870,6 @@ void Node::setError(const Twine &Msg, Token &Tok) const {
 bool Node::failed() const {
   return Doc->failed();
 }
-
-
 
 StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
   // TODO: Handle newlines properly. We need to remove leading whitespace.
@@ -2116,6 +2134,7 @@ void MappingNode::increment() {
       break;
     default:
       setError("Unexpected token. Expected Key or Block End", T);
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       IsAtEnd = true;
       CurrentEntry = nullptr;
@@ -2128,6 +2147,7 @@ void MappingNode::increment() {
       return increment();
     case Token::TK_FlowMappingEnd:
       getNext();
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       // Set this to end iterator.
       IsAtEnd = true;
@@ -2170,6 +2190,7 @@ void SequenceNode::increment() {
     default:
       setError( "Unexpected token. Expected Block Entry or Block End."
               , T);
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       IsAtEnd = true;
       CurrentEntry = nullptr;
@@ -2198,6 +2219,7 @@ void SequenceNode::increment() {
       return increment();
     case Token::TK_FlowSequenceEnd:
       getNext();
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       // Set this to end iterator.
       IsAtEnd = true;

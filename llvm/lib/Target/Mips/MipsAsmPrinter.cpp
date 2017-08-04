@@ -12,17 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MipsAsmPrinter.h"
 #include "InstPrinter/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
-#include "MipsAsmPrinter.h"
 #include "MipsInstrInfo.h"
 #include "MipsMCInstLower.h"
 #include "MipsTargetMachine.h"
 #include "MipsTargetStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -39,10 +40,10 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -79,6 +80,9 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     NaClAlignIndirectJumpTargets(MF);
 
   AsmPrinter::runOnMachineFunction(MF);
+
+  emitXRayTable();
+
   return true;
 }
 
@@ -132,6 +136,7 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
 
 void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MipsTargetStreamer &TS = getTargetStreamer();
+  unsigned Opc = MI->getOpcode();
   TS.forbidModuleDirective();
 
   if (MI->isDebugValue()) {
@@ -143,20 +148,20 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
 
   // If we just ended a constant pool, mark it as such.
-  if (InConstantPool && MI->getOpcode() != Mips::CONSTPOOL_ENTRY) {
+  if (InConstantPool && Opc != Mips::CONSTPOOL_ENTRY) {
     OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
     InConstantPool = false;
   }
-  if (MI->getOpcode() == Mips::CONSTPOOL_ENTRY) {
+  if (Opc == Mips::CONSTPOOL_ENTRY) {
     // CONSTPOOL_ENTRY - This instruction represents a floating
-    //constant pool in the function.  The first operand is the ID#
+    // constant pool in the function.  The first operand is the ID#
     // for this instruction, the second is the index into the
     // MachineConstantPool that this is, the third is the size in
     // bytes of this constant pool entry.
     // The required alignment is specified on the basic block holding this MI.
     //
     unsigned LabelId = (unsigned)MI->getOperand(0).getImm();
-    unsigned CPIdx   = (unsigned)MI->getOperand(1).getIndex();
+    unsigned CPIdx = (unsigned)MI->getOperand(1).getIndex();
 
     // If this is the first entry of the pool, mark it.
     if (!InConstantPool) {
@@ -174,6 +179,17 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  switch (Opc) {
+  case Mips::PATCHABLE_FUNCTION_ENTER:
+    LowerPATCHABLE_FUNCTION_ENTER(*MI);
+    return;
+  case Mips::PATCHABLE_FUNCTION_EXIT:
+    LowerPATCHABLE_FUNCTION_EXIT(*MI);
+    return;
+  case Mips::PATCHABLE_TAIL_CALL:
+    LowerPATCHABLE_TAIL_CALL(*MI);
+    return;
+  }
 
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
@@ -257,9 +273,9 @@ void MipsAsmPrinter::printSavedRegsBitmask() {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   // size of stack area to which FP callee-saved regs are saved.
-  unsigned CPURegSize = Mips::GPR32RegClass.getSize();
-  unsigned FGR32RegSize = Mips::FGR32RegClass.getSize();
-  unsigned AFGR64RegSize = Mips::AFGR64RegClass.getSize();
+  unsigned CPURegSize = TRI->getRegSizeInBits(Mips::GPR32RegClass) / 8;
+  unsigned FGR32RegSize = TRI->getRegSizeInBits(Mips::FGR32RegClass) / 8;
+  unsigned AFGR64RegSize = TRI->getRegSizeInBits(Mips::AFGR64RegClass) / 8;
   bool HasAFGR64Reg = false;
   unsigned CSFPRegsSize = 0;
 
@@ -574,6 +590,8 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   case MipsII::MO_GOT:      O << "%got(";    break;
   case MipsII::MO_ABS_HI:   O << "%hi(";     break;
   case MipsII::MO_ABS_LO:   O << "%lo(";     break;
+  case MipsII::MO_HIGHER:   O << "%higher("; break;
+  case MipsII::MO_HIGHEST:  O << "%highest(("; break;
   case MipsII::MO_TLSGD:    O << "%tlsgd(";  break;
   case MipsII::MO_GOTTPREL: O << "%gottprel("; break;
   case MipsII::MO_TPREL_HI: O << "%tprel_hi("; break;
@@ -698,7 +716,7 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
     //        Ideally it should test for properties of the ABI and not the ABI
     //        itself.
     //        For the moment, I'm only correcting enough to make MIPS-IV work.
-    if (!isPositionIndependent() && !ABI.IsN64())
+    if (!isPositionIndependent() && STI.hasSym32())
       TS.emitDirectiveOptionPic0();
   }
 
@@ -1032,6 +1050,116 @@ void MipsAsmPrinter::EmitEndOfAsmFile(Module &M) {
   OutStreamer->SwitchSection(OutContext.getObjectFileInfo()->getTextSection());
 }
 
+void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
+  const uint8_t NoopsInSledCount = Subtarget->isGP64bit() ? 15 : 11;
+  // For mips32 we want to emit the following pattern:
+  //
+  // .Lxray_sled_N:
+  //   ALIGN
+  //   B .tmpN
+  //   11 NOP instructions (44 bytes)
+  //   ADDIU T9, T9, 52 
+  // .tmpN
+  //
+  // We need the 44 bytes (11 instructions) because at runtime, we'd
+  // be patching over the full 48 bytes (12 instructions) with the following
+  // pattern:
+  //
+  //   ADDIU	SP, SP, -8
+  //   NOP
+  //   SW	RA, 4(SP)
+  //   SW       T9, 0(SP)
+  //   LUI      T9, %hi(__xray_FunctionEntry/Exit)
+  //   ORI      T9, T9, %lo(__xray_FunctionEntry/Exit)
+  //   LUI      T0, %hi(function_id)
+  //   JALR	T9
+  //   ORI	T0, T0, %lo(function_id)
+  //   LW	T9, 0(SP)
+  //   LW       RA, 4(SP)
+  //   ADDIU    SP, SP, 8
+  //
+  // We add 52 bytes to t9 because we want to adjust the function pointer to
+  // the actual start of function i.e. the address just after the noop sled.
+  // We do this because gp displacement relocation is emitted at the start of
+  // of the function i.e after the nop sled and to correctly calculate the
+  // global offset table address, t9 must hold the address of the instruction
+  // containing the gp displacement relocation.
+  // FIXME: Is this correct for the static relocation model?
+  //
+  // For mips64 we want to emit the following pattern:
+  //
+  // .Lxray_sled_N:
+  //   ALIGN
+  //   B .tmpN
+  //   15 NOP instructions (60 bytes)
+  // .tmpN
+  //
+  // We need the 60 bytes (15 instructions) because at runtime, we'd
+  // be patching over the full 64 bytes (16 instructions) with the following
+  // pattern:
+  //
+  //   DADDIU   SP, SP, -16
+  //   NOP
+  //   SD       RA, 8(SP)
+  //   SD       T9, 0(SP)
+  //   LUI      T9, %highest(__xray_FunctionEntry/Exit)
+  //   ORI      T9, T9, %higher(__xray_FunctionEntry/Exit)
+  //   DSLL     T9, T9, 16
+  //   ORI      T9, T9, %hi(__xray_FunctionEntry/Exit)
+  //   DSLL     T9, T9, 16
+  //   ORI      T9, T9, %lo(__xray_FunctionEntry/Exit)
+  //   LUI      T0, %hi(function_id)
+  //   JALR     T9
+  //   ADDIU    T0, T0, %lo(function_id)
+  //   LD       T9, 0(SP)
+  //   LD       RA, 8(SP)
+  //   DADDIU   SP, SP, 16
+  //
+  OutStreamer->EmitCodeAlignment(4);
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitLabel(CurSled);
+  auto Target = OutContext.createTempSymbol();
+
+  // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
+  // start of function
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(
+      Target, MCSymbolRefExpr::VariantKind::VK_None, OutContext);
+  EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
+                                   .addReg(Mips::ZERO)
+                                   .addReg(Mips::ZERO)
+                                   .addExpr(TargetExpr));
+
+  for (int8_t I = 0; I < NoopsInSledCount; I++)
+    EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::SLL)
+                                     .addReg(Mips::ZERO)
+                                     .addReg(Mips::ZERO)
+                                     .addImm(0));
+
+  OutStreamer->EmitLabel(Target);
+
+  if (!Subtarget->isGP64bit()) {
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(Mips::ADDiu)
+                       .addReg(Mips::T9)
+                       .addReg(Mips::T9)
+                       .addImm(0x34));
+  }
+
+  recordSled(CurSled, MI, Kind);
+}
+
+void MipsAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI) {
+  EmitSled(MI, SledKind::FUNCTION_ENTER);
+}
+
+void MipsAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI) {
+  EmitSled(MI, SledKind::FUNCTION_EXIT);
+}
+
+void MipsAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI) {
+  EmitSled(MI, SledKind::TAIL_CALL);
+}
+
 void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
                                            raw_ostream &OS) {
   // TODO: implement
@@ -1039,7 +1167,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 // Emit .dtprelword or .dtpreldword directive
 // and value for debug thread local expression.
-void MipsAsmPrinter::EmitDebugValue(const MCExpr *Value,
+void MipsAsmPrinter::EmitDebugThreadLocal(const MCExpr *Value,
                                           unsigned Size) const {
   switch (Size) {
   case 4:

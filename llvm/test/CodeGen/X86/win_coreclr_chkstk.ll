@@ -103,7 +103,7 @@ entry:
 
 ; Make sure we don't emit the probe sequence if not on windows even if the
 ; caller has the Win64 calling convention.
-define x86_64_win64cc i32 @main4k_win64() nounwind {
+define win64cc i32 @main4k_win64() nounwind {
 entry:
 ; WIN_X64:      movq    %gs:16, %rcx
 ; LINUX-NOT:    movq    %gs:16, %rcx
@@ -115,7 +115,7 @@ entry:
 declare i32 @bar(i8*) nounwind
 
 ; Within-body inline probe expansion
-define x86_64_win64cc i32 @main4k_alloca(i64 %n) nounwind {
+define win64cc i32 @main4k_alloca(i64 %n) nounwind {
 entry:
 ; WIN_X64: 	callq	bar
 ; WIN_X64:  	movq	%gs:16, [[R:%r.*]]

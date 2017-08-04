@@ -145,7 +145,7 @@
 ; OBJ32:      ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ32:        ProcStart {
+; OBJ32:        {{.*}}Proc{{.*}}Sym {
 ; OBJ32:          Kind: S_LPROC32_ID (0x1146)
 ; OBJ32:          CodeSize: 0x6
 ; OBJ32:          DisplayName: x
@@ -159,7 +159,7 @@
 ; OBJ32:      ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ32:        ProcStart {
+; OBJ32:        {{.*}}Proc{{.*}}Sym {
 ; OBJ32:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ32:          CodeSize: 0x6
 ; OBJ32:          DisplayName: y
@@ -173,7 +173,7 @@
 ; OBJ32:      ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ32:        ProcStart {
+; OBJ32:        {{.*}}Proc{{.*}}Sym {
 ; OBJ32:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ32:          CodeSize: 0x10
 ; OBJ32:          DisplayName: f
@@ -419,7 +419,7 @@
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ64:        ProcStart {
+; OBJ64:        {{.*}}Proc{{.*}}Sym {
 ; OBJ64:          Kind: S_LPROC32_ID (0x1146)
 ; OBJ64:          CodeSize: 0xE
 ; OBJ64:          DisplayName: x
@@ -433,7 +433,7 @@
 ; OBJ64:      ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ64:        ProcStart {
+; OBJ64:        {{.*}}Proc{{.*}}Sym {
 ; OBJ64:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ64:          CodeSize: 0xE
 ; OBJ64:          DisplayName: y
@@ -447,7 +447,7 @@
 ; OBJ64:      ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ64:        ProcStart {
+; OBJ64:        {{.*}}Proc{{.*}}Sym {
 ; OBJ64:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ64:          CodeSize: 0x18
 ; OBJ64:          DisplayName: f

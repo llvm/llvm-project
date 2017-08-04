@@ -16,9 +16,14 @@
 #include <system_error>
 #include <__threading_support>
 
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -34,7 +39,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mutex
 {
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 #else
     __libcpp_mutex_t __m_;
@@ -42,8 +47,8 @@ class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mut
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
-    constexpr mutex() _NOEXCEPT = default;
+#ifndef _LIBCPP_CXX03_LANG
+    constexpr mutex() = default;
 #else
     mutex() _NOEXCEPT {__m_ = (__libcpp_mutex_t)_LIBCPP_MUTEX_INITIALIZER;}
 #endif
@@ -62,11 +67,14 @@ public:
     _LIBCPP_INLINE_VISIBILITY native_handle_type native_handle() {return &__m_;}
 };
 
+static_assert(is_nothrow_default_constructible<mutex>::value,
+              "the default constructor for std::mutex must be nothrow");
+
 struct _LIBCPP_TYPE_VIS defer_lock_t {};
 struct _LIBCPP_TYPE_VIS try_to_lock_t {};
 struct _LIBCPP_TYPE_VIS adopt_lock_t {};
 
-#if defined(_LIBCPP_HAS_NO_CONSTEXPR) || defined(_LIBCPP_BUILDING_MUTEX)
+#if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_MUTEX)
 
 extern const defer_lock_t  defer_lock;
 extern const try_to_lock_t try_to_lock;
@@ -80,21 +88,9 @@ constexpr adopt_lock_t  adopt_lock  = adopt_lock_t();
 
 #endif
 
-
-// Forward declare lock_guard as a variadic template even in C++03 to keep
-// the mangling consistent between dialects.
-#if defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD)
-template <class ..._Mutexes>
-class _LIBCPP_TEMPLATE_VIS lock_guard;
-#endif
-
 template <class _Mutex>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable)
-#if !defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD)
 lock_guard
-#else
-lock_guard<_Mutex>
-#endif
 {
 public:
     typedef _Mutex mutex_type;
@@ -162,7 +158,7 @@ private:
     unique_lock& operator=(unique_lock const&); // = delete;
 
 public:
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     unique_lock(unique_lock&& __u) _NOEXCEPT
         : __m_(__u.__m_), __owns_(__u.__owns_)
@@ -179,7 +175,7 @@ public:
             return *this;
         }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     void lock();
     bool try_lock();
@@ -291,7 +287,7 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
 class _LIBCPP_TYPE_VIS condition_variable
 {
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 #else
     __libcpp_condvar_t __cv_;
@@ -299,7 +295,7 @@ class _LIBCPP_TYPE_VIS condition_variable
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#ifndef _LIBCPP_CXX03_LANG
     constexpr condition_variable() _NOEXCEPT = default;
 #else
     condition_variable() _NOEXCEPT {__cv_ = (__libcpp_condvar_t)_LIBCPP_CONDVAR_INITIALIZER;}
@@ -316,20 +312,24 @@ public:
 
     void wait(unique_lock<mutex>& __lk) _NOEXCEPT;
     template <class _Predicate>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         void wait(unique_lock<mutex>& __lk, _Predicate __pred);
 
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         cv_status
         wait_until(unique_lock<mutex>& __lk,
                    const chrono::time_point<_Clock, _Duration>& __t);
 
     template <class _Clock, class _Duration, class _Predicate>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool
         wait_until(unique_lock<mutex>& __lk,
                    const chrono::time_point<_Clock, _Duration>& __t,
                    _Predicate __pred);
 
     template <class _Rep, class _Period>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         cv_status
         wait_for(unique_lock<mutex>& __lk,
                  const chrono::duration<_Rep, _Period>& __d);
@@ -434,5 +434,7 @@ condition_variable::wait_for(unique_lock<mutex>& __lk,
 #endif // !_LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP___MUTEX_BASE

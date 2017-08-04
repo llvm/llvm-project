@@ -291,7 +291,7 @@ __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),set),BASE)(
 {
 	isl_space *multi_space = NULL;
 	isl_space *el_space = NULL;
-	int match;
+	isl_bool match;
 
 	multi = FN(MULTI(BASE),cow)(multi);
 	if (!multi || !el)
@@ -509,13 +509,16 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),align_params)(
 	__isl_take MULTI(BASE) *multi, __isl_take isl_space *model)
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 	isl_reordering *exp;
 
 	if (!multi || !model)
 		goto error;
 
-	if (isl_space_match(multi->space, isl_dim_param,
-			     model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(multi->space, model);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params) {
 		isl_space_free(model);
 		return multi;
 	}
@@ -735,11 +738,14 @@ static __isl_give MULTI(BASE) *FN(MULTI(BASE),align_params_multi_multi_and)(
 		__isl_take MULTI(BASE) *multi2))
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 
 	if (!multi1 || !multi2)
 		goto error;
-	if (isl_space_match(multi1->space, isl_dim_param,
-			    multi2->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(multi1->space, multi2->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return fn(multi1, multi2);
 	ctx = FN(MULTI(BASE),get_ctx)(multi1);
 	if (!isl_space_has_named_params(multi1->space) ||
@@ -1440,6 +1446,26 @@ isl_bool FN(MULTI(BASE),plain_is_equal)(__isl_keep MULTI(BASE) *multi1,
 	}
 
 	return isl_bool_true;
+}
+
+/* Does "multi" involve any NaNs?
+ */
+isl_bool FN(MULTI(BASE),involves_nan)(__isl_keep MULTI(BASE) *multi)
+{
+	int i;
+
+	if (!multi)
+		return isl_bool_error;
+	if (multi->n == 0)
+		return isl_bool_false;
+
+	for (i = 0; i < multi->n; ++i) {
+		isl_bool has_nan = FN(EL,involves_nan)(multi->p[i]);
+		if (has_nan < 0 || has_nan)
+			return has_nan;
+	}
+
+	return isl_bool_false;
 }
 
 #ifndef NO_DOMAIN

@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -32,14 +32,6 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
     return MF.getFrameInfo().hasCalls();
 
   return false;
-}
-
-/// LessPreciseFPMAD - This flag return true when -enable-fp-mad option
-/// is specified on the command line.  When this flag is off(default), the
-/// code generator is not allowed to generate mad (multiply add) if the
-/// result is "less precise" than doing those operations individually.
-bool TargetOptions::LessPreciseFPMAD() const {
-  return UnsafeFPMath || LessPreciseFPMADOption;
 }
 
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume

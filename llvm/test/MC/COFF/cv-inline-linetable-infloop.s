@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj < %s | llvm-readobj -codeview | FileCheck %s
 
-# CHECK:    InlineSite {
+# CHECK:    InlineSiteSym {
 # CHECK:      BinaryAnnotations [
 # CHECK:        ChangeLineOffset: 1
 # CHECK:        ChangeCodeLength: 0x2

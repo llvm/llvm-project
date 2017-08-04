@@ -115,32 +115,6 @@ define void @example3(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture 
   ret void
 }
 
-; N is unknown, we need a tail. Can't vectorize because the loop is cold.
-;CHECK-LABEL: @example4(
-;CHECK-NOT: <4 x i32>
-;CHECK: ret void
-define void @example4(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture %q) {
-  %1 = icmp eq i32 %n, 0
-  br i1 %1, label %._crit_edge, label %.lr.ph, !prof !0
-
-.lr.ph:                                           ; preds = %0, %.lr.ph
-  %.05 = phi i32 [ %2, %.lr.ph ], [ %n, %0 ]
-  %.014 = phi i32* [ %5, %.lr.ph ], [ %p, %0 ]
-  %.023 = phi i32* [ %3, %.lr.ph ], [ %q, %0 ]
-  %2 = add nsw i32 %.05, -1
-  %3 = getelementptr inbounds i32, i32* %.023, i64 1
-  %4 = load i32, i32* %.023, align 16
-  %5 = getelementptr inbounds i32, i32* %.014, i64 1
-  store i32 %4, i32* %.014, align 16
-  %6 = icmp eq i32 %2, 0
-  br i1 %6, label %._crit_edge, label %.lr.ph
-
-._crit_edge:                                      ; preds = %.lr.ph, %0
-  ret void
-}
-
-!0 = !{!"branch_weights", i32 64, i32 4}
-
 ; We can't vectorize this one because we need a runtime ptr check.
 ;CHECK-LABEL: @example23(
 ;CHECK-NOT: <4 x i32>

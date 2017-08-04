@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=verde -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-early-ifcvt=0 -machine-sink-split-probability-threshold=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}uniform_if_scc:
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0
@@ -12,7 +12,7 @@
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_scc(i32 %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_scc(i32 %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %if, label %else
@@ -40,7 +40,7 @@ done:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_vcc(float %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_vcc(float %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = fcmp oeq float %cond, 0.0
   br i1 %cmp0, label %if, label %else
@@ -68,7 +68,7 @@ done:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_swap_br_targets_scc(i32 %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_swap_br_targets_scc(i32 %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %else, label %if
@@ -96,7 +96,7 @@ done:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_swap_br_targets_vcc(float %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_swap_br_targets_vcc(float %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = fcmp oeq float %cond, 0.0
   br i1 %cmp0, label %else, label %if
@@ -123,7 +123,7 @@ done:
 ; GCN: buffer_store_dword
 ; GCN: [[ENDIF_LABEL]]:
 ; GCN: s_endpgm
-define void @uniform_if_move_valu(i32 addrspace(1)* %out, float %a) {
+define amdgpu_kernel void @uniform_if_move_valu(i32 addrspace(1)* %out, float %a) {
 entry:
   %a.0 = fadd float %a, 10.0
   %cond = bitcast float %a.0 to i32
@@ -148,7 +148,7 @@ endif:
 ; GCN: buffer_store_dword
 ; GCN: [[ENDIF_LABEL]]:
 ; GCN: s_endpgm
-define void @uniform_if_move_valu_commute(i32 addrspace(1)* %out, float %a) {
+define amdgpu_kernel void @uniform_if_move_valu_commute(i32 addrspace(1)* %out, float %a) {
 entry:
   %a.0 = fadd float %a, 10.0
   %cond = bitcast float %a.0 to i32
@@ -166,7 +166,7 @@ endif:
 
 ; GCN-LABEL: {{^}}uniform_if_else_ret:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN-NEXT: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+; GCN: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
 
 ; GCN: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN: buffer_store_dword [[TWO]]
@@ -176,7 +176,7 @@ endif:
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
 ; GCN: s_endpgm
-define void @uniform_if_else_ret(i32 addrspace(1)* nocapture %out, i32 %a) {
+define amdgpu_kernel void @uniform_if_else_ret(i32 addrspace(1)* nocapture %out, i32 %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -209,7 +209,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; GCN: v_mov_b32_e32 [[THREE:v[0-9]+]], 3
 ; GCN: buffer_store_dword [[THREE]]
 ; GCN: s_endpgm
-define void @uniform_if_else(i32 addrspace(1)* nocapture %out0, i32 addrspace(1)* nocapture %out1, i32 %a) {
+define amdgpu_kernel void @uniform_if_else(i32 addrspace(1)* nocapture %out0, i32 addrspace(1)* nocapture %out1, i32 %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -233,7 +233,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; GCN: buffer_store_dword
 ; GCN: [[LABEL]]:
 ; GCN: s_endpgm
-define void @icmp_2_users(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @icmp_2_users(i32 addrspace(1)* %out, i32 %cond) {
 main_body:
   %0 = icmp sgt i32 %cond, 0
   %1 = sext i1 %0 to i32
@@ -252,11 +252,13 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; GCN: s_cmp_lt_i32 [[COND]], 1
 ; GCN: s_cbranch_scc1 [[EXIT:[A-Za-z0-9_]+]]
 ; GCN: v_cmp_gt_i32_e64 vcc, [[COND]], 0{{$}}
-; GCN: s_cbranch_vccnz [[EXIT]]
-; GCN: buffer_store
+; GCN: s_cbranch_vccz [[BODY:[A-Za-z0-9_]+]]
 ; GCN: {{^}}[[EXIT]]:
 ; GCN: s_endpgm
-define void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, i32 addrspace(1)* %out) {
+; GCN: {{^}}[[BODY]]:
+; GCN: buffer_store
+; GCN: s_endpgm
+define amdgpu_kernel void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, i32 addrspace(1)* %out) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %cmp0 = icmp sgt i32 %cond0, 0
@@ -282,7 +284,7 @@ bb9:                                              ; preds = %bb8, %bb4
 ; SI: s_cmp_lg_u32 [[I]], 0
 ; SI: s_cbranch_scc1 [[LOOP_LABEL]]
 ; SI: s_endpgm
-define void @uniform_loop(i32 addrspace(1)* %out, i32 %a) {
+define amdgpu_kernel void @uniform_loop(i32 addrspace(1)* %out, i32 %a) {
 entry:
   br label %loop
 
@@ -302,12 +304,13 @@ done:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
-; GCN: s_cbranch_execz [[ENDIF_LABEL:[0-9_A-Za-z]+]]
 ; GCN: s_cmp_lg_u32 {{s[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[ENDIF_LABEL]]
+; GCN: s_cbranch_scc0 [[IF_UNIFORM_LABEL:[A-Z0-9_a-z]+]]
+; GCN: s_endpgm
+; GCN: {{^}}[[IF_UNIFORM_LABEL]]:
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
-define void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %d_cmp = icmp ult i32 %tid, 16
@@ -328,15 +331,14 @@ endif:
 
 ; GCN-LABEL: {{^}}divergent_inside_uniform:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[ENDIF_LABEL:[0-9_A-Za-z]+]]
+; GCN: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+; GCN: [[IF_LABEL]]:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
-; GCN: [[ENDIF_LABEL]]:
-; GCN: s_endpgm
-define void @divergent_inside_uniform(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @divergent_inside_uniform(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %u_cmp = icmp eq i32 %cond, 0
   br i1 %u_cmp, label %if, label %endif
@@ -363,12 +365,12 @@ endif:
 ; GCN: buffer_store_dword [[ONE]]
 ; GCN: s_or_b64 exec, exec, [[MASK]]
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[EXIT:[A-Z0-9_]+]]
+; GCN: s_cbranch_scc0 [[IF_UNIFORM:[A-Z0-9_]+]]
+; GCN: s_endpgm
+; GCN: [[IF_UNIFORM]]:
 ; GCN: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN: buffer_store_dword [[TWO]]
-; GCN: [[EXIT]]:
-; GCN: s_endpgm
-define void @divergent_if_uniform_if(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @divergent_if_uniform_if(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %d_cmp = icmp eq i32 %tid, 0
@@ -408,7 +410,7 @@ exit:
 
 ; GCN: BB[[FNNUM]]_3:
 ; GCN: s_endpgm
-define void @cse_uniform_condition_different_blocks(i32 %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @cse_uniform_condition_different_blocks(i32 %cond, i32 addrspace(1)* %out) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp1 = icmp sgt i32 %cond, 0
@@ -443,7 +445,7 @@ bb9:                                              ; preds = %bb8, %bb4
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_scc_i64_eq(i64 %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_scc_i64_eq(i64 %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = icmp eq i64 %cond, 0
   br i1 %cmp0, label %if, label %else
@@ -475,7 +477,7 @@ done:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_scc_i64_ne(i64 %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_scc_i64_ne(i64 %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = icmp ne i64 %cond, 0
   br i1 %cmp0, label %if, label %else
@@ -503,7 +505,7 @@ done:
 ; GCN: [[IF_LABEL]]:
 ; GCN: v_mov_b32_e32 [[V_VAL]], [[S_VAL]]
 ; GCN: buffer_store_dword [[V_VAL]]
-define void @uniform_if_scc_i64_sgt(i64 %cond, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @uniform_if_scc_i64_sgt(i64 %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = icmp sgt i64 %cond, 0
   br i1 %cmp0, label %if, label %else
@@ -522,7 +524,7 @@ done:
 
 ; GCN-LABEL: {{^}}move_to_valu_i64_eq:
 ; GCN: v_cmp_eq_u64_e32
-define void @move_to_valu_i64_eq(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @move_to_valu_i64_eq(i32 addrspace(1)* %out) {
   %cond = load volatile i64, i64 addrspace(3)* undef
   %cmp0 = icmp eq i64 %cond, 0
   br i1 %cmp0, label %if, label %else
@@ -541,7 +543,7 @@ done:
 
 ; GCN-LABEL: {{^}}move_to_valu_i64_ne:
 ; GCN: v_cmp_ne_u64_e32
-define void @move_to_valu_i64_ne(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @move_to_valu_i64_ne(i32 addrspace(1)* %out) {
   %cond = load volatile i64, i64 addrspace(3)* undef
   %cmp0 = icmp ne i64 %cond, 0
   br i1 %cmp0, label %if, label %else

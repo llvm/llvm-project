@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linuxs -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // CHECK: @_ZZ1hvE1i = internal global i32 0, align 4
 // CHECK: @base_req = global [4 x i8] c"foo\00", align 1
@@ -9,7 +10,8 @@
 // CHECK: @_ZZ2h2vE1i = linkonce_odr global i32 0, comdat, align 4
 // CHECK: @_ZGVZ2h2vE1i = linkonce_odr global i64 0, comdat, align 8{{$}}
 // CHECK: @_ZZN5test1L6getvarEiE3var = internal constant [4 x i32] [i32 1, i32 0, i32 2, i32 4], align 16
-// CHECK: @_ZZN5test414useStaticLocalEvE3obj = linkonce_odr global %"struct.test4::HasVTable" zeroinitializer, comdat, align 8
+// CHECK98: @_ZZN5test414useStaticLocalEvE3obj = linkonce_odr global %"struct.test4::HasVTable" zeroinitializer, comdat, align 8
+// CHECK11: @_ZZN5test414useStaticLocalEvE3obj = linkonce_odr global { i8** } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN5test49HasVTableE, i32 0, inrange i32 0, i32 2) }, comdat, align 8
 
 struct A {
   A();
@@ -169,5 +171,5 @@ void useit() {
   useStaticLocal();
 }
 // CHECK: define linkonce_odr dereferenceable(8) %"struct.test4::HasVTable"* @_ZN5test414useStaticLocalEv()
-// CHECK: ret %"struct.test4::HasVTable"* @_ZZN5test414useStaticLocalEvE3obj
+// CHECK: ret %"struct.test4::HasVTable"*{{.*}} @_ZZN5test414useStaticLocalEvE3obj
 }

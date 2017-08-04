@@ -1,0 +1,32 @@
+# RUN: llc -o - %s -mtriple=amdgcn--amdhsa -verify-machineinstrs -run-pass=greedy,virtregrewriter | FileCheck %s
+--- |
+
+  define amdgpu_kernel void @func0() {
+    ret void
+  }
+
+...
+
+---
+# We should not detect any interference between v0/v1 here and only allocate
+# sgpr0-sgpr3.
+#
+# CHECK-LABEL: func0
+# CHECK: S_NOP 0, implicit-def %sgpr0
+# CHECK: S_NOP 0, implicit-def %sgpr3
+# CHECK: S_NOP 0, implicit-def %sgpr1
+# CHECK: S_NOP 0, implicit-def %sgpr2
+# CHECK: S_NOP 0, implicit %sgpr0, implicit %sgpr3
+# CHECK: S_NOP 0, implicit %sgpr1, implicit %sgpr2
+name: func0
+body: |
+  bb.0:
+    S_NOP 0, implicit-def undef %0.sub0 : sreg_128
+    S_NOP 0, implicit-def %0.sub3
+    S_NOP 0, implicit-def undef %1.sub1 : sreg_128
+    S_NOP 0, implicit-def %1.sub2
+
+
+    S_NOP 0, implicit %0.sub0, implicit %0.sub3
+    S_NOP 0, implicit %1.sub1, implicit %1.sub2
+...

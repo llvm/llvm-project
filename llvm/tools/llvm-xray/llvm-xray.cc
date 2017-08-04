@@ -30,12 +30,20 @@ int main(int argc, char *argv[]) {
                               "  This program consolidates multiple XRay trace "
                               "processing tools for convenient access.\n");
   for (auto *SC : cl::getRegisteredSubcommands()) {
-    if (*SC)
+    if (*SC) {
+      // If no subcommand was provided, we need to explicitly check if this is
+      // the top-level subcommand.
+      if (SC == &*cl::TopLevelSubCommand) {
+        cl::PrintHelpMessage(false, true);
+        return 0;
+      }
       if (auto C = dispatch(SC)) {
         ExitOnError("llvm-xray: ")(C());
         return 0;
       }
+    }
   }
 
+  // If all else fails, we still print the usage message.
   cl::PrintHelpMessage(false, true);
 }

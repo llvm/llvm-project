@@ -15,6 +15,7 @@
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 using namespace llvm;
 
 bool WebAssembly::isArgument(const MachineInstr &MI) {
@@ -68,4 +69,29 @@ bool WebAssembly::isChild(const MachineInstr &MI,
   unsigned Reg = MO.getReg();
   return TargetRegisterInfo::isVirtualRegister(Reg) &&
          MFI.isVRegStackified(Reg);
+}
+
+bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case WebAssembly::CALL_INDIRECT_VOID:
+  case WebAssembly::CALL_INDIRECT_I32:
+  case WebAssembly::CALL_INDIRECT_I64:
+  case WebAssembly::CALL_INDIRECT_F32:
+  case WebAssembly::CALL_INDIRECT_F64:
+  case WebAssembly::CALL_INDIRECT_v16i8:
+  case WebAssembly::CALL_INDIRECT_v8i16:
+  case WebAssembly::CALL_INDIRECT_v4i32:
+  case WebAssembly::CALL_INDIRECT_v4f32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+MachineBasicBlock *llvm::LoopBottom(const MachineLoop *Loop) {
+  MachineBasicBlock *Bottom = Loop->getHeader();
+  for (MachineBasicBlock *MBB : Loop->blocks())
+    if (MBB->getNumber() > Bottom->getNumber())
+      Bottom = MBB;
+  return Bottom;
 }

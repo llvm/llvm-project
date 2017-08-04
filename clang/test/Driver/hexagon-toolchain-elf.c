@@ -89,6 +89,30 @@
 // CHECK023: "-cc1" {{.*}} "-target-cpu" "hexagonv60"
 // CHECK023: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0
 
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv62 \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK024 %s
+// CHECK024: "-cc1" {{.*}} "-target-cpu" "hexagonv62"
+// CHECK024: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v62/crt0
+
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -O3 \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK025 %s
+// CHECK025: "-ffp-contract=fast"
+// CHECK025: hexagon-link
+
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -O3 -ffp-contract=off \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK026 %s
+// CHECK026-NOT: "-ffp-contract=fast"
+// CHECK026: hexagon-link
+
 // -----------------------------------------------------------------------------
 // Test Linker related args
 // -----------------------------------------------------------------------------

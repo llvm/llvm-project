@@ -12,6 +12,7 @@
 ; CHECK-NEXT: C g3
 ; CHECK-NOT: g4
 ; CHECK-NEXT: T global_asm_sym
+; CHECK-NEXT: T ifunc_f1
 ; CHECK-NEXT: t local_asm_sym
 ; CHECK-NEXT: U undef_asm_sy
 
@@ -35,6 +36,8 @@ define void @f1() {
   call void @f5()
   ret void
 }
+
+@ifunc_f1 = ifunc void (), void ()* @f1
 
 define internal void @f2() {
   ret void

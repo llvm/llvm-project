@@ -199,8 +199,8 @@ namespace test5 {
 
 // rdar://problem/8518751
 namespace test6 {
-  enum __attribute__((deprecated)) A { // expected-note {{'A' has been explicitly marked deprecated here}}
-    a0 // expected-note {{'a0' has been explicitly marked deprecated here}}
+  enum __attribute__((deprecated)) A { // expected-note 2 {{'A' has been explicitly marked deprecated here}}
+    a0
   };
   void testA() {
     A x; // expected-warning {{'A' is deprecated}}
@@ -218,8 +218,8 @@ namespace test6 {
   }
 
   template <class T> struct C {
-    enum __attribute__((deprecated)) Enum { // expected-note {{'Enum' has been explicitly marked deprecated here}}
-      c0 // expected-note {{'c0' has been explicitly marked deprecated here}}
+    enum __attribute__((deprecated)) Enum { // expected-note 2 {{'Enum' has been explicitly marked deprecated here}}
+      c0
     };
   };
   void testC() {

@@ -97,3 +97,143 @@ define <2 x i32> @shrink_and_vec(<2 x i33> %a) {
   ret <2 x i32> %trunc
 }
 
+; FIXME:
+; This is based on an 'any_of' loop construct.
+; By narrowing the phi and logic op, we simplify away the zext and the final icmp.
+
+define i1 @searchArray1(i32 %needle, i32* %haystack) {
+; CHECK-LABEL: @searchArray1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOUND:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDVAR]] to i64
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, i32* [[HAYSTACK:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[IDX]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[NEEDLE:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i8
+; CHECK-NEXT:    [[OR]] = or i8 [[FOUND]], [[ZEXT]]
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVAR_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ 0, %entry ], [ %indvar.next, %loop ]
+  %found = phi i8 [ 0, %entry ], [ %or, %loop ]
+  %idx = getelementptr i32, i32* %haystack, i32 %indvar
+  %ld = load i32, i32* %idx
+  %cmp1 = icmp eq i32 %ld, %needle
+  %zext = zext i1 %cmp1 to i8
+  %or = or i8 %found, %zext
+  %indvar.next = add i32 %indvar, 1
+  %exitcond = icmp eq i32 %indvar.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %tobool = icmp ne i8 %or, 0
+  ret i1 %tobool
+}
+
+; FIXME:
+; This is based on an 'all_of' loop construct.
+; By narrowing the phi and logic op, we simplify away the zext and the final icmp.
+
+define i1 @searchArray2(i32 %hay, i32* %haystack) {
+; CHECK-LABEL: @searchArray2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOUND:%.*]] = phi i8 [ 1, [[ENTRY]] ], [ [[AND:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, i32* [[HAYSTACK:%.*]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[IDX]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[HAY:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i8
+; CHECK-NEXT:    [[AND]] = and i8 [[FOUND]], [[ZEXT]]
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i64 [ 0, %entry ], [ %indvar.next, %loop ]
+  %found = phi i8 [ 1, %entry ], [ %and, %loop ]
+  %idx = getelementptr i32, i32* %haystack, i64 %indvar
+  %ld = load i32, i32* %idx
+  %cmp1 = icmp eq i32 %ld, %hay
+  %zext = zext i1 %cmp1 to i8
+  %and = and i8 %found, %zext
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %tobool = icmp ne i8 %and, 0
+  ret i1 %tobool
+}
+
+; FIXME:
+; Narrowing should work with an 'xor' and is not limited to bool types.
+
+define i32 @shrinkLogicAndPhi1(i8 %x, i1 %cond) {
+; CHECK-LABEL: @shrinkLogicAndPhi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ENDIF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[ENDIF]]
+; CHECK:       endif:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 21, [[ENTRY:%.*]] ], [ 33, [[IF]] ]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[LOGIC:%.*]] = xor i32 [[PHI]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[LOGIC]]
+;
+entry:
+  br i1 %cond, label %if, label %endif
+if:
+  br label %endif
+endif:
+  %phi = phi i32 [ 21, %entry], [ 33, %if ]
+  %zext = zext i8 %x to i32
+  %logic = xor i32 %phi, %zext
+  ret i32 %logic
+}
+
+; FIXME:
+; Narrowing should work with an 'xor' and is not limited to bool types.
+; Test that commuting the xor operands does not inhibit optimization.
+
+define i32 @shrinkLogicAndPhi2(i8 %x, i1 %cond) {
+; CHECK-LABEL: @shrinkLogicAndPhi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ENDIF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[ENDIF]]
+; CHECK:       endif:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 21, [[ENTRY:%.*]] ], [ 33, [[IF]] ]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[LOGIC:%.*]] = xor i32 [[PHI]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[LOGIC]]
+;
+entry:
+  br i1 %cond, label %if, label %endif
+if:
+  br label %endif
+endif:
+  %phi = phi i32 [ 21, %entry], [ 33, %if ]
+  %zext = zext i8 %x to i32
+  %logic = xor i32 %zext, %phi
+  ret i32 %logic
+}
+

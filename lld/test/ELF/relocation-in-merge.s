@@ -1,7 +1,12 @@
 // REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
-// RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
-// CHECK: relocations pointing to SHF_MERGE are not supported
+// RUN: ld.lld %t.o -o %t -shared
+// RUN: llvm-objdump -section-headers %t | FileCheck %s
 
-        .section	.foo,"aM",@progbits,4
-        .long bar
+// Test that we accept this by just not merging the section.
+// CHECK:  .foo          00000008
+
+bar:
+        .section	.foo,"aM",@progbits,8
+        .long bar - .
+        .long bar - .

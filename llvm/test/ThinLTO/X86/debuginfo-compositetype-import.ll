@@ -7,7 +7,7 @@
 
 ; By default, composite types are imported as type declarations
 ; RUN: llvm-lto -thinlto-action=import %t2.bc -thinlto-index=%t.index.bc -o - | llvm-dis -o - | FileCheck %s
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.out -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.out -save-temps \
 ; RUN:   -r %t2.bc,main,plx \
 ; RUN:   -r %t2.bc,foo,l \
 ; RUN:   -r %t1.bc,foo,pl
@@ -20,7 +20,7 @@
 
 ; Ensure that full type definitions of composite types are imported if requested
 ; RUN: llvm-lto -import-full-type-definitions -thinlto-action=import %t2.bc -thinlto-index=%t.index.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=FULL
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.out -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.out -save-temps \
 ; RUN:   -import-full-type-definitions \
 ; RUN:   -r %t2.bc,main,plx \
 ; RUN:   -r %t2.bc,foo,l \

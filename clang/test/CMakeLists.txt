@@ -18,6 +18,13 @@ if(CLANG_BUILT_STANDALONE)
   endif()
 endif()
 
+llvm_canonicalize_cmake_booleans(
+  CLANG_BUILD_EXAMPLES
+  CLANG_ENABLE_ARCMT
+  CLANG_ENABLE_STATIC_ANALYZER
+  ENABLE_BACKTRACES
+  HAVE_LIBZ)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
@@ -39,9 +46,11 @@ list(APPEND CLANG_TEST_DEPS
   c-index-test diagtool
   clang-tblgen
   clang-offload-bundler
+  clang-refactor-test
   clang-import-test
+  clang-rename
   )
-  
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
@@ -55,7 +64,7 @@ if (CLANG_ENABLE_ARCMT)
   )
 endif ()
 
-if (ENABLE_CLANG_EXAMPLES)
+if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
     AnnotateFunctions
     clang-interpreter
@@ -63,7 +72,7 @@ if (ENABLE_CLANG_EXAMPLES)
     )
 endif ()
 
-if (ENABLE_CLANG_STATIC_ANALYZER AND ENABLE_CLANG_EXAMPLES)
+if (CLANG_ENABLE_STATIC_ANALYZER AND CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
     SampleAnalyzerPlugin
     )
@@ -79,6 +88,9 @@ if( NOT CLANG_BUILT_STANDALONE )
     FileCheck count not
     llc
     llvm-bcanalyzer
+    llvm-cat
+    llvm-dis
+    llvm-modextract
     llvm-nm
     llvm-objdump
     llvm-profdata

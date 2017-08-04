@@ -93,8 +93,7 @@ define <4 x i32> @test6() {
 define <2 x i64> @test7() {
 ; X32-LABEL: test7:
 ; X32:       # BB#0:
-; X32-NEXT:    movdqa {{.*#+}} xmm0 = [1,0,2,0]
-; X32-NEXT:    psllq $3, %xmm0
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [8,0,16,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test7:
@@ -108,8 +107,7 @@ define <2 x i64> @test7() {
 define <2 x i64> @test8() {
 ; X32-LABEL: test8:
 ; X32:       # BB#0:
-; X32-NEXT:    movdqa {{.*#+}} xmm0 = [8,0,16,0]
-; X32-NEXT:    psrlq $3, %xmm0
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [1,0,2,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test8:
@@ -151,8 +149,7 @@ define <4 x i32> @test10() {
 define <2 x i64> @test11() {
 ; X32-LABEL: test11:
 ; X32:       # BB#0:
-; X32-NEXT:    movdqa {{.*#+}} xmm0 = <u,u,31,0>
-; X32-NEXT:    psrlq $3, %xmm0
+; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,u,3,0>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test11:
@@ -222,8 +219,7 @@ define <4 x i32> @test15() {
 define <2 x i64> @test16() {
 ; X32-LABEL: test16:
 ; X32:       # BB#0:
-; X32-NEXT:    movdqa {{.*#+}} xmm0 = <u,u,31,0>
-; X32-NEXT:    psllq $3, %xmm0
+; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,u,248,0>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test16:

@@ -192,9 +192,19 @@ OPTIONS
  information is dumped in a more human readable form (also in text) with
  annotations.
 
+.. option:: -topn=n
+	     
+ Instruct the profile dumper to show the top ``n`` functions with the
+ hottest basic blocks in the summary section. By default, the topn functions
+ are not dumped.
+
 .. option:: -sample
 
  Specify that the input profile is a sample-based profile.
+
+.. option:: -memop-sizes
+
+ Show the profiled sizes of the memory intrinsic calls for shown functions.
 
 EXIT STATUS
 -----------

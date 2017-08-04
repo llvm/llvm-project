@@ -3,9 +3,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: Function: foo
-; CHECK:   PartialAlias: i32* %Ipointer, i32* %Jpointer
+; CHECK:   MayAlias: i32* %Ipointer, i32* %Jpointer
 ; CHECK: 9 no alias responses
-; CHECK: 6 partial alias responses
+; CHECK: 6 may alias responses
 
 define void @foo(i32* noalias %p, i32* noalias %q, i32 %i, i32 %j) {
   %Ipointer = getelementptr i32, i32* %p, i32 %i

@@ -87,8 +87,6 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
   OptimizationRemarkEmitter *ORE;
 
-  BlockFrequency ColdEntryFreq;
-
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Shim for old PM.

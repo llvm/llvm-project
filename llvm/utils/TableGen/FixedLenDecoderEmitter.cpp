@@ -1145,16 +1145,15 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
-    std::string P = Pred->getValueAsString("AssemblerCondString");
+    StringRef P = Pred->getValueAsString("AssemblerCondString");
 
-    if (!P.length())
+    if (P.empty())
       continue;
 
     if (!IsFirstEmission)
       o << " && ";
 
-    StringRef SR(P);
-    std::pair<StringRef, StringRef> pairs = SR.split(',');
+    std::pair<StringRef, StringRef> pairs = P.split(',');
     while (!pairs.second.empty()) {
       emitSinglePredicateMatch(o, pairs.first, Emitter->PredicateNamespace);
       o << " && ";
@@ -1174,9 +1173,9 @@ bool FilterChooser::doesOpcodeNeedPredicate(unsigned Opc) const {
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
-    std::string P = Pred->getValueAsString("AssemblerCondString");
+    StringRef P = Pred->getValueAsString("AssemblerCondString");
 
-    if (!P.length())
+    if (P.empty())
       continue;
 
     return true;
@@ -1692,9 +1691,7 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   dumpStack(errs(), "\t\t");
 
   for (unsigned i = 0; i < Opcodes.size(); ++i) {
-    const std::string &Name = nameWithID(Opcodes[i]);
-
-    errs() << '\t' << Name << " ";
+    errs() << '\t' << nameWithID(Opcodes[i]) << " ";
     dumpBits(errs(),
              getBitsField(*AllInstructions[Opcodes[i]]->TheDef, "Inst"));
     errs() << '\n';
@@ -1744,7 +1741,7 @@ static bool populateInstruction(CodeGenTarget &Target,
 
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
-  std::string InstDecoder = Def.getValueAsString("DecoderMethod");
+  StringRef InstDecoder = Def.getValueAsString("DecoderMethod");
   if (InstDecoder != "") {
     bool HasCompleteInstDecoder = Def.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(OperandInfo(InstDecoder, HasCompleteInstDecoder));
@@ -2261,7 +2258,7 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
         Def->getValueAsBit("isCodeGenOnly"))
       continue;
 
-    std::string DecoderNamespace = Def->getValueAsString("DecoderNamespace");
+    StringRef DecoderNamespace = Def->getValueAsString("DecoderNamespace");
 
     if (Size) {
       if (populateInstruction(Target, *Inst, i, Operands)) {

@@ -20,8 +20,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ObjCARC.h"
 #include "DependencyAnalysis.h"
+#include "ObjCARC.h"
 #include "ProvenanceAnalysis.h"
 #include "llvm/IR/CFG.h"
 

@@ -19,4 +19,4 @@
 type = Library
 name = Core
 parent = Libraries
-required_libraries = Support
+required_libraries = BinaryFormat Support

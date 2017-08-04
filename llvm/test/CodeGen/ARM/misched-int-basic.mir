@@ -1,0 +1,128 @@
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=swift -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_SWIFT
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-a9 -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_A9
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -verify-misched \
+# RUN:  -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_R52
+# REQUIRES: asserts
+--- |
+  ; ModuleID = 'foo.ll'
+  source_filename = "foo.ll"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "arm---eabi"
+
+  define i64 @foo(i16 signext %a, i16 signext %b)  {
+  entry:
+    %d = mul nsw i16 %a, %a
+    %e = mul nsw i16 %b, %b
+    %f = add nuw nsw i16 %e, %d
+    %c = zext i16 %f to i32
+    %mul8 = mul nsw i32 %c, %c
+    %mul9 = mul nsw i32 %mul8, %mul8
+    %add10 = add nuw nsw i32 %mul9, %mul8
+    %conv1130 = zext i32 %add10 to i64
+    %mul12 = mul nuw nsw i64 %conv1130, %conv1130
+    %mul13 = mul nsw i64 %mul12, %mul12
+    %add14 = add nuw nsw i64 %mul13, %mul12
+    ret i64 %add14
+  }
+
+# CHECK:       ********** MI Scheduling **********
+# CHECK:       SU(2):   %vreg2<def> = SMULBB %vreg1, %vreg1, pred:14, pred:%noreg; GPR:%vreg2,%vreg1,%vreg1
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(3):   %vreg3<def> = SMLABB %vreg0, %vreg0, %vreg2, pred:14, pred:%noreg; GPRnopc:%vreg3,%vreg0,%vreg0 GPR:%vreg2
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(4):   %vreg4<def> = UXTH %vreg3, 0, pred:14, pred:%noreg; GPRnopc:%vreg4,%vreg3
+# CHECK_A9:    Latency    : 1
+# CHECK_SWIFT: Latency    : 1
+# CHECK_R52:   Latency    : 3
+#
+# CHECK:       SU(5):   %vreg5<def> = MUL %vreg4, %vreg4, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%vreg5,%vreg4,%vreg4
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(6):   %vreg6<def> = MLA %vreg5, %vreg5, %vreg5, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%vreg6,%vreg5,%vreg5,%vreg5
+# CHECK_A9:    Latency    : 2
+# CHECK_SWIFT: Latency    : 4
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(7):   %vreg7<def>, %vreg8<def> = UMULL %vreg6, %vreg6, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%vreg7,%vreg8,%vreg6,%vreg6
+# CHECK_A9:    Latency    : 3
+# CHECK_SWIFT: Latency    : 5
+# CHECK_R52:   Latency    : 4
+#
+# CHECK:       SU(11):   %vreg13<def,tied4>, %vreg14<def,tied5> = UMLAL %vreg6, %vreg6, %vreg13<tied0>, %vreg14<tied1>, pred:14, pred:%noreg, opt:%noreg; GPR:%vreg13 GPRnopc:%vreg14,%vreg6,%vreg6
+# CHECK_SWIFT: Latency    : 7
+# CHECK_A9:    Latency    : 3
+# CHECK_R52:   Latency    : 4
+# CHECK:  ** ScheduleDAGMILive::schedule picking next node
+...
+---
+name:            foo
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprnopc }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gprnopc }
+  - { id: 4, class: gprnopc }
+  - { id: 5, class: gprnopc }
+  - { id: 6, class: gprnopc }
+  - { id: 7, class: gprnopc }
+  - { id: 8, class: gprnopc }
+  - { id: 9, class: gpr }
+  - { id: 10, class: gprnopc }
+  - { id: 11, class: gprnopc }
+  - { id: 12, class: gprnopc }
+  - { id: 13, class: gpr }
+  - { id: 14, class: gprnopc }
+liveins:
+  - { reg: '%r0', virtual-reg: '%0' }
+  - { reg: '%r1', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    liveins: %r0, %r1
+
+    %1 = COPY %r1
+    %0 = COPY %r0
+    %2 = SMULBB %1, %1, 14, _
+    %3 = SMLABB %0, %0, %2, 14, _
+    %4 = UXTH %3, 0, 14, _
+    %5 = MUL %4, %4, 14, _, _
+    %6 = MLA %5, %5, %5, 14, _, _
+    %7, %8 = UMULL %6, %6, 14, _, _
+    %13, %10 = UMULL %7, %7, 14, _, _
+    %11 = MLA %7, %8, %10, 14, _, _
+    %14 = MLA %7, %8, %11, 14, _, _
+    %13, %14 = UMLAL %6, %6, %13, %14, 14, _, _
+    %r0 = COPY %13
+    %r1 = COPY %14
+    BX_RET 14, _, implicit %r0, implicit %r1
+
+...

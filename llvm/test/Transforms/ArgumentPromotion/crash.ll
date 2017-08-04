@@ -1,61 +1,73 @@
-; RUN: opt -inline -argpromotion < %s
-; rdar://7879828
+; RUN: opt -S < %s -inline -argpromotion | FileCheck %s
+; RUN: opt -S < %s -passes=inline,argpromotion | FileCheck %s
 
-define void @foo() personality i32 (...)* @__gxx_personality_v0 {
-  invoke void @foo2()
-          to label %if.end432 unwind label %for.end520 
+%S = type { %S* }
 
-if.end432:  
+; Inlining should nuke the invoke (and any inlined calls) here even with
+; argument promotion running along with it.
+define void @zot() personality i32 (...)* @wibble {
+; CHECK-LABEL: define void @zot() personality i32 (...)* @wibble
+; CHECK-NOT: call
+; CHECK-NOT: invoke
+bb:
+  invoke void @hoge()
+          to label %bb1 unwind label %bb2
+
+bb1:
   unreachable
 
-for.end520: 
-  %exn = landingpad {i8*, i32}
-           cleanup
-  unreachable
-}
-
-define internal  void @foo2() ssp {
-  %call7 = call fastcc i8* @foo3(i1 (i8*)* @foo4)
-  %call58 = call fastcc i8* @foo3(i1 (i8*)* @foo5)
-  unreachable
-}
-
-define internal fastcc i8* @foo3(i1 (i8*)* %Pred) {
-entry:
+bb2:
+  %tmp = landingpad { i8*, i32 }
+          cleanup
   unreachable
 }
 
-define internal i1 @foo4(i8* %O) nounwind {
-entry:
-  %call = call zeroext i1 @foo5(i8* %O) ; <i1> [#uses=0]
+define internal void @hoge() {
+bb:
+  %tmp = call fastcc i8* @spam(i1 (i8*)* @eggs)
+  %tmp1 = call fastcc i8* @spam(i1 (i8*)* @barney)
   unreachable
 }
 
-define internal i1 @foo5(i8* %O) nounwind {
-entry:
+define internal fastcc i8* @spam(i1 (i8*)* %arg) {
+bb:
+  unreachable
+}
+
+define internal i1 @eggs(i8* %arg) {
+bb:
+  %tmp = call zeroext i1 @barney(i8* %arg)
+  unreachable
+}
+
+define internal i1 @barney(i8* %arg) {
+bb:
   ret i1 undef
 }
 
+define i32 @test_inf_promote_caller(i32 %arg) {
+; CHECK-LABEL: define i32 @test_inf_promote_caller(
+bb:
+  %tmp = alloca %S
+  %tmp1 = alloca %S
+  %tmp2 = call i32 @test_inf_promote_callee(%S* %tmp, %S* %tmp1)
+; CHECK: call i32 @test_inf_promote_callee(%S* %{{.*}}, %S* %{{.*}})
 
-; PR8932 - infinite promotion.
-%0 = type { %0* }
-
-define i32 @test2(i32 %a) {
-init:
-  %0 = alloca %0
-  %1 = alloca %0
-  %2 = call i32 @"clay_assign(Chain, Chain)"(%0* %0, %0* %1)
   ret i32 0
 }
 
-define internal i32 @"clay_assign(Chain, Chain)"(%0* %c, %0* %d) {
-init:
-  %0 = getelementptr %0, %0* %d, i32 0, i32 0
-  %1 = load %0*, %0** %0
-  %2 = getelementptr %0, %0* %c, i32 0, i32 0
-  %3 = load %0*, %0** %2
-  %4 = call i32 @"clay_assign(Chain, Chain)"(%0* %3, %0* %1)
+define internal i32 @test_inf_promote_callee(%S* %arg, %S* %arg1) {
+; CHECK-LABEL: define internal i32 @test_inf_promote_callee(
+; CHECK: %S* %{{.*}}, %S* %{{.*}})
+bb:
+  %tmp = getelementptr %S, %S* %arg1, i32 0, i32 0
+  %tmp2 = load %S*, %S** %tmp
+  %tmp3 = getelementptr %S, %S* %arg, i32 0, i32 0
+  %tmp4 = load %S*, %S** %tmp3
+  %tmp5 = call i32 @test_inf_promote_callee(%S* %tmp4, %S* %tmp2)
+; CHECK: call i32 @test_inf_promote_callee(%S* %{{.*}}, %S* %{{.*}})
+
   ret i32 0
 }
 
-declare i32 @__gxx_personality_v0(...)
+declare i32 @wibble(...)

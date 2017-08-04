@@ -1,0 +1,119 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2 -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=SSE2
+
+--- |
+  define void @test_add_v16i8() {
+    %ret = add <16 x i8> undef, undef
+    ret void
+  }
+
+  define void @test_add_v8i16() {
+    %ret = add <8 x i16> undef, undef
+    ret void
+  }
+
+  define void @test_add_v4i32() {
+    %ret = add <4 x i32> undef, undef
+    ret void
+  }
+
+  define void @test_add_v2i64() {
+    %ret = add <2 x i64> undef, undef
+    ret void
+  }
+...
+---
+name:            test_add_v16i8
+# ALL-LABEL: name:  test_add_v16i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<16 x s8>) = IMPLICIT_DEF
+# ALL-NEXT:     %1(<16 x s8>) = IMPLICIT_DEF
+# ALL-NEXT:     %2(<16 x s8>) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<16 x s8>) = IMPLICIT_DEF
+    %1(<16 x s8>) = IMPLICIT_DEF
+    %2(<16 x s8>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v8i16
+# ALL-LABEL: name:  test_add_v8i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<8 x s16>) = IMPLICIT_DEF
+# ALL-NEXT:     %1(<8 x s16>) = IMPLICIT_DEF
+# ALL-NEXT:     %2(<8 x s16>) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<8 x s16>) = IMPLICIT_DEF
+    %1(<8 x s16>) = IMPLICIT_DEF
+    %2(<8 x s16>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v4i32
+# ALL-LABEL: name:  test_add_v4i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<4 x s32>) = IMPLICIT_DEF
+# ALL-NEXT:     %1(<4 x s32>) = IMPLICIT_DEF
+# ALL-NEXT:     %2(<4 x s32>) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<4 x s32>) = IMPLICIT_DEF
+    %1(<4 x s32>) = IMPLICIT_DEF
+    %2(<4 x s32>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v2i64
+# ALL-LABEL: name:  test_add_v2i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<2 x s64>) = IMPLICIT_DEF
+# ALL-NEXT:     %1(<2 x s64>) = IMPLICIT_DEF
+# ALL-NEXT:     %2(<2 x s64>) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<2 x s64>) = IMPLICIT_DEF
+    %1(<2 x s64>) = IMPLICIT_DEF
+    %2(<2 x s64>) = G_ADD %0, %1
+    RET 0
+
+...

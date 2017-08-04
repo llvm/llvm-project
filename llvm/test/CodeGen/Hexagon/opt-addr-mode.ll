@@ -2,10 +2,10 @@
 ; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 -disable-hexagon-amodeopt=0 -hexagon-amode-growth-limit=4 < %s | FileCheck %s --check-prefix=CHECK-AMODE
 
 ; CHECK-NO-AMODE: [[REG0:(r[0-9]+)]] = ##global_2
-; CHECK-NO-AMODE: memw([[REG0]] + {{.*}}<<#2) =
+; CHECK-NO-AMODE: memw([[REG0]]+{{.*}}<<#2) =
 
 ; CHECK-AMODE: [[REG1:(r[0-9]+)]] = memw(##global_1)
-; CHECK-AMODE: memw([[REG1]]<<#2 + ##global_2) =
+; CHECK-AMODE: memw([[REG1]]<<#2+##global_2) =
 
 @global_1 = external global i32, align 4
 @global_2 = external global [128 x i32], align 8

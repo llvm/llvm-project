@@ -98,9 +98,6 @@ void perror(const char* s);
 
 #include <__config>
 #include <stdio.h>
-#if defined(_LIBCPP_MSVCRT)
-#include <crtversion.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -156,8 +153,7 @@ using ::tmpnam;
 
 #ifndef _LIBCPP_HAS_NO_STDIN
 using ::getchar;
-#if _LIBCPP_STD_VER <= 11 && \
-    (!defined(_VC_CRT_MAJOR_VERSION) || _VC_CRT_MAJOR_VERSION < 14)
+#if _LIBCPP_STD_VER <= 11 && !defined(_LIBCPP_MSVCRT)
 using ::gets;
 #endif
 using ::scanf;

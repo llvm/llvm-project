@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -tail-dup-placement=0| FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -tail-dup-placement=0 | FileCheck %s
 
 ; Test memcpy, memmove, and memset intrinsics.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1)
 declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1)

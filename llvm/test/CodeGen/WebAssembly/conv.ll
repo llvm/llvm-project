@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
 
 ; Test that basic conversion operations assemble as expected.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; CHECK-LABEL: i32_wrap_i64:
 ; CHECK-NEXT: .param i64{{$}}

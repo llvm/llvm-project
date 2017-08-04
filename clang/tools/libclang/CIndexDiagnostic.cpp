@@ -110,40 +110,34 @@ public:
       CurrentSet = &CD.getChildDiagnostics();
   }
 
-  void emitDiagnosticMessage(SourceLocation Loc, PresumedLoc PLoc,
-                             DiagnosticsEngine::Level Level,
-                             StringRef Message,
+  void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
+                             DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
-                             const SourceManager *SM,
                              DiagOrStoredDiag D) override {
     if (!D.isNull())
       return;
     
     CXSourceLocation L;
-    if (SM)
-      L = translateSourceLocation(*SM, LangOpts, Loc);
+    if (Loc.hasManager())
+      L = translateSourceLocation(Loc.getManager(), LangOpts, Loc);
     else
       L = clang_getNullLocation();
     CurrentSet->appendDiagnostic(
         llvm::make_unique<CXDiagnosticCustomNoteImpl>(Message, L));
   }
 
-  void emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
+  void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                          DiagnosticsEngine::Level Level,
-                         ArrayRef<CharSourceRange> Ranges,
-                         const SourceManager &SM) override {}
+                         ArrayRef<CharSourceRange> Ranges) override {}
 
-  void emitCodeContext(SourceLocation Loc,
-                       DiagnosticsEngine::Level Level,
-                       SmallVectorImpl<CharSourceRange>& Ranges,
-                       ArrayRef<FixItHint> Hints,
-                       const SourceManager &SM) override {}
+  void emitCodeContext(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
+                       SmallVectorImpl<CharSourceRange> &Ranges,
+                       ArrayRef<FixItHint> Hints) override {}
 
-  void emitNote(SourceLocation Loc, StringRef Message,
-                const SourceManager *SM) override {
+  void emitNote(FullSourceLoc Loc, StringRef Message) override {
     CXSourceLocation L;
-    if (SM)
-      L = translateSourceLocation(*SM, LangOpts, Loc);
+    if (Loc.hasManager())
+      L = translateSourceLocation(Loc.getManager(), LangOpts, Loc);
     else
       L = clang_getNullLocation();
     CurrentSet->appendDiagnostic(
@@ -152,7 +146,20 @@ public:
 
   CXDiagnosticSetImpl *CurrentSet;
   CXDiagnosticSetImpl *MainSet;
-};  
+};
+
+class CXStoredDiagnosticSet : public CXDiagnosticSetImpl {
+  llvm::SmallVector<StoredDiagnostic, 2> Diags;
+
+public:
+  CXStoredDiagnosticSet(ArrayRef<StoredDiagnostic> Diags,
+                        const LangOptions &LangOpts)
+      : CXDiagnosticSetImpl(/*isManaged=*/true),
+        Diags(Diags.begin(), Diags.end()) {
+    for (const auto &Diag : this->Diags)
+      appendDiagnostic(llvm::make_unique<CXStoredDiagnostic>(Diag, LangOpts));
+  }
+};
 }
 
 CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
@@ -200,6 +207,11 @@ CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
     }
   }
   return static_cast<CXDiagnosticSetImpl*>(TU->Diagnostics);
+}
+
+CXDiagnosticSetImpl *cxdiag::createStoredDiags(ArrayRef<StoredDiagnostic> Diags,
+                                               const LangOptions &LangOpts) {
+  return new CXStoredDiagnosticSet(Diags, LangOpts);
 }
 
 //-----------------------------------------------------------------------------

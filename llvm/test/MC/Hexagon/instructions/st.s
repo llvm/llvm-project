@@ -5,7 +5,7 @@
 # CHECK: 9e f5 d1 3b
 memd(r17 + r21<<#3) = r31:30
 # CHECK: 28 d4 c0 48
-memd(#320) = r21:20
+memd(gp+#320) = r21:20
 # CHECK: 02 40 00 00
 # CHECK-NEXT: 28 d4 c0 48
 memd(##168) = r21:20
@@ -83,7 +83,7 @@ memb(r17 + r21<<#3) = r31
 # CHECK: 9f ca 11 3c
 memb(r17+#21)=#31
 # CHECK: 15 d5 00 48
-memb(#21) = r21
+memb(gp+#21) = r21
 # CHECK: 00 40 00 00
 # CHECK-NEXT: 15 d5 00 48
 memb(##21) = r21
@@ -183,9 +183,9 @@ memh(##42) = r21
 # CHECK-NEXT: 2a d5 60 48
 memh(##42) = r21.h
 # CHECK: 2a d5 40 48
-memh(#84) = r21
+memh(gp+#84) = r21
 # CHECK: 2a d5 60 48
-memh(#84) = r21.h
+memh(gp+#84) = r21.h
 # CHECK: 15 df 51 a1
 memh(r17+#42) = r31
 # CHECK: 15 df 71 a1
@@ -341,7 +341,7 @@ memw(r17 + r21<<#3) = r31
 # CHECK: 9f ca 51 3c
 memw(r17+#84)=#31
 # CHECK: 15 df 80 48
-memw(#84) = r31
+memw(gp+#84) = r31
 # CHECK: 01 40 00 00
 # CHECK-NEXT: 14 d5 80 48
 memw(##84) = r21

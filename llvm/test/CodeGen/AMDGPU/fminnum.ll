@@ -13,7 +13,7 @@ declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>) #0
 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MIN_DX10 {{.*}}[[OUT]]
-define void @test_fmin_f32(float addrspace(1)* %out, float %a, float %b) nounwind {
+define amdgpu_kernel void @test_fmin_f32(float addrspace(1)* %out, float %a, float %b) nounwind {
   %val = call float @llvm.minnum.f32(float %a, float %b) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -26,7 +26,7 @@ define void @test_fmin_f32(float addrspace(1)* %out, float %a, float %b) nounwin
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+]]
 ; EG: MIN_DX10 {{.*}}[[OUT]]
 ; EG: MIN_DX10 {{.*}}[[OUT]]
-define void @test_fmin_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) nounwind {
+define amdgpu_kernel void @test_fmin_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) nounwind {
   %val = call <2 x float> @llvm.minnum.v2f32(<2 x float> %a, <2 x float> %b) #0
   store <2 x float> %val, <2 x float> addrspace(1)* %out, align 8
   ret void
@@ -43,7 +43,7 @@ define void @test_fmin_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 
 ; EG: MIN_DX10 {{.*}}[[OUT]]
 ; EG: MIN_DX10 {{.*}}[[OUT]]
 ; EG: MIN_DX10 {{.*}}[[OUT]]
-define void @test_fmin_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x float> %b) nounwind {
+define amdgpu_kernel void @test_fmin_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x float> %b) nounwind {
   %val = call <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b) #0
   store <4 x float> %val, <4 x float> addrspace(1)* %out, align 16
   ret void
@@ -69,7 +69,7 @@ define void @test_fmin_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 
 ; EG-DAG: MIN_DX10 {{.*}}[[OUT2]].Y
 ; EG-DAG: MIN_DX10 {{.*}}[[OUT2]].Z
 ; EG-DAG: MIN_DX10 {{.*}}[[OUT2]].W
-define void @test_fmin_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %a, <8 x float> %b) nounwind {
+define amdgpu_kernel void @test_fmin_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %a, <8 x float> %b) nounwind {
   %val = call <8 x float> @llvm.minnum.v8f32(<8 x float> %a, <8 x float> %b) #0
   store <8 x float> %val, <8 x float> addrspace(1)* %out, align 32
   ret void
@@ -113,7 +113,7 @@ define void @test_fmin_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %a, <8 
 ; EG-DAG: MIN_DX10 {{.*}}[[OUT4]].Y
 ; EG-DAG: MIN_DX10 {{.*}}[[OUT4]].Z
 ; EG-DAG: MIN_DX10 {{.*}}[[OUT4]].W
-define void @test_fmin_v16f32(<16 x float> addrspace(1)* %out, <16 x float> %a, <16 x float> %b) nounwind {
+define amdgpu_kernel void @test_fmin_v16f32(<16 x float> addrspace(1)* %out, <16 x float> %a, <16 x float> %b) nounwind {
   %val = call <16 x float> @llvm.minnum.v16f32(<16 x float> %a, <16 x float> %b) #0
   store <16 x float> %val, <16 x float> addrspace(1)* %out, align 64
   ret void
@@ -127,7 +127,7 @@ define void @test_fmin_v16f32(<16 x float> addrspace(1)* %out, <16 x float> %a, 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float 1.0, float 2.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -142,7 +142,7 @@ define void @constant_fold_fmin_f32(float addrspace(1)* %out) nounwind {
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
 ; EG: 2143289344({{nan|1\.#QNAN0e\+00}})
-define void @constant_fold_fmin_f32_nan_nan(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_nan_nan(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -156,7 +156,7 @@ define void @constant_fold_fmin_f32_nan_nan(float addrspace(1)* %out) nounwind {
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32_val_nan(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_val_nan(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float 1.0, float 0x7FF8000000000000) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -170,7 +170,7 @@ define void @constant_fold_fmin_f32_val_nan(float addrspace(1)* %out) nounwind {
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32_nan_val(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_nan_val(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 1.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -184,7 +184,7 @@ define void @constant_fold_fmin_f32_nan_val(float addrspace(1)* %out) nounwind {
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32_p0_p0(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_p0_p0(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float 0.0, float 0.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -198,7 +198,7 @@ define void @constant_fold_fmin_f32_p0_p0(float addrspace(1)* %out) nounwind {
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32_p0_n0(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_p0_n0(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float 0.0, float -0.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -212,7 +212,7 @@ define void @constant_fold_fmin_f32_p0_n0(float addrspace(1)* %out) nounwind {
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32_n0_p0(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_n0_p0(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float -0.0, float 0.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -226,7 +226,7 @@ define void @constant_fold_fmin_f32_n0_p0(float addrspace(1)* %out) nounwind {
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG-NOT: MIN_DX10
 ; EG: MOV {{.*}}[[OUT]], literal.{{[xy]}}
-define void @constant_fold_fmin_f32_n0_n0(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @constant_fold_fmin_f32_n0_n0(float addrspace(1)* %out) nounwind {
   %val = call float @llvm.minnum.f32(float -0.0, float -0.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -237,7 +237,7 @@ define void @constant_fold_fmin_f32_n0_n0(float addrspace(1)* %out) nounwind {
 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MIN_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define void @fmin_var_immediate_f32(float addrspace(1)* %out, float %a) nounwind {
+define amdgpu_kernel void @fmin_var_immediate_f32(float addrspace(1)* %out, float %a) nounwind {
   %val = call float @llvm.minnum.f32(float %a, float 2.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -248,7 +248,7 @@ define void @fmin_var_immediate_f32(float addrspace(1)* %out, float %a) nounwind
 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MIN_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define void @fmin_immediate_var_f32(float addrspace(1)* %out, float %a) nounwind {
+define amdgpu_kernel void @fmin_immediate_var_f32(float addrspace(1)* %out, float %a) nounwind {
   %val = call float @llvm.minnum.f32(float 2.0, float %a) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -260,7 +260,7 @@ define void @fmin_immediate_var_f32(float addrspace(1)* %out, float %a) nounwind
 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MIN_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define void @fmin_var_literal_f32(float addrspace(1)* %out, float %a) nounwind {
+define amdgpu_kernel void @fmin_var_literal_f32(float addrspace(1)* %out, float %a) nounwind {
   %val = call float @llvm.minnum.f32(float %a, float 99.0) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void
@@ -272,7 +272,7 @@ define void @fmin_var_literal_f32(float addrspace(1)* %out, float %a) nounwind {
 
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[OUT:T[0-9]+\.[XYZW]]]
 ; EG: MIN_DX10 {{.*}}[[OUT]], {{KC0\[[0-9]\].[XYZW]}}, literal.{{[xy]}}
-define void @fmin_literal_var_f32(float addrspace(1)* %out, float %a) nounwind {
+define amdgpu_kernel void @fmin_literal_var_f32(float addrspace(1)* %out, float %a) nounwind {
   %val = call float @llvm.minnum.f32(float 99.0, float %a) #0
   store float %val, float addrspace(1)* %out, align 4
   ret void

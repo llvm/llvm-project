@@ -58,7 +58,7 @@ main_body:
 ;
 ;CHECK-LABEL: {{^}}buffer_store_wait:
 ;CHECK: buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
-;CHECK: s_waitcnt vmcnt(0) expcnt(0)
+;CHECK: s_waitcnt expcnt(0)
 ;CHECK: buffer_load_format_xyzw v[0:3], v5, s[0:3], 0 idxen
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_store_format_xyzw v[0:3], v6, s[0:3], 0 idxen

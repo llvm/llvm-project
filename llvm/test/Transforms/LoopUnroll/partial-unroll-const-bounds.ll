@@ -1,4 +1,8 @@
-; RUN: opt < %s -S -unroll-threshold=20 -loop-unroll -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-max-percent-threshold-boost=100 | FileCheck %s
+; RUN: opt < %s -S -unroll-partial-threshold=20 -unroll-threshold=20 -loop-unroll -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-max-percent-threshold-boost=100 | FileCheck %s
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll)' -unroll-partial-threshold=20 -unroll-threshold=20 -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-max-percent-threshold-boost=100 | FileCheck %s
+;
+; Also check that the simple unroller doesn't allow the partial unrolling.
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-partial-threshold=20 -unroll-threshold=20 -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-max-percent-threshold-boost=100 | FileCheck %s --check-prefix=CHECK-NO-UNROLL
 
 ; The Loop TripCount is 9. However unroll factors 3 or 9 exceed given threshold.
 ; The test checks that we choose a smaller, power-of-two, unroll count and do not give up on unrolling.
@@ -7,6 +11,10 @@
 ; CHECK: store
 ; CHECK: for.body.1:
 ; CHECK: store
+
+; CHECK-NO-UNROLL: for.body:
+; CHECK-NO-UNROLL: store
+; CHECK-NO-UNROLL-NOT: store
 
 define void @foo(i32* nocapture %a, i32* nocapture readonly %b) nounwind uwtable {
 entry:

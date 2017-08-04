@@ -13,8 +13,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
@@ -37,8 +37,9 @@ private:
   TypeSerializer Serializer;
 
 public:
-  explicit TypeTableBuilder(BumpPtrAllocator &Allocator)
-      : Allocator(Allocator), Serializer(Allocator) {}
+  explicit TypeTableBuilder(BumpPtrAllocator &Allocator,
+                            bool WriteUnique = true)
+      : Allocator(Allocator), Serializer(Allocator, WriteUnique) {}
   TypeTableBuilder(const TypeTableBuilder &) = delete;
   TypeTableBuilder &operator=(const TypeTableBuilder &) = delete;
 
@@ -64,8 +65,12 @@ public:
     return *ExpectedIndex;
   }
 
-  TypeIndex writeSerializedRecord(MutableArrayRef<uint8_t> Record) {
+  TypeIndex writeSerializedRecord(ArrayRef<uint8_t> Record) {
     return Serializer.insertRecordBytes(Record);
+  }
+
+  TypeIndex writeSerializedRecord(const RemappedType &Record) {
+    return Serializer.insertRecord(Record);
   }
 
   template <typename TFunc> void ForEachRecord(TFunc Func) {
@@ -77,23 +82,24 @@ public:
     }
   }
 
-  ArrayRef<MutableArrayRef<uint8_t>> records() const {
-    return Serializer.records();
-  }
+  ArrayRef<ArrayRef<uint8_t>> records() const { return Serializer.records(); }
 };
 
 class FieldListRecordBuilder {
   TypeTableBuilder &TypeTable;
+  BumpPtrAllocator Allocator;
   TypeSerializer TempSerializer;
   CVType Type;
 
 public:
   explicit FieldListRecordBuilder(TypeTableBuilder &TypeTable)
-      : TypeTable(TypeTable), TempSerializer(TypeTable.getAllocator()) {
+      : TypeTable(TypeTable), TempSerializer(Allocator, false) {
     Type.Type = TypeLeafKind::LF_FIELDLIST;
   }
 
   void begin() {
+    TempSerializer.reset();
+
     if (auto EC = TempSerializer.visitTypeBegin(Type))
       consumeError(std::move(EC));
   }
@@ -109,16 +115,18 @@ public:
       consumeError(std::move(EC));
   }
 
-  TypeIndex end() {
+  TypeIndex end(bool Write) {
+    TypeIndex Index;
     if (auto EC = TempSerializer.visitTypeEnd(Type)) {
       consumeError(std::move(EC));
       return TypeIndex();
     }
 
-    TypeIndex Index;
-    for (auto Record : TempSerializer.records()) {
-      Index = TypeTable.writeSerializedRecord(Record);
+    if (Write) {
+      for (auto Record : TempSerializer.records())
+        Index = TypeTable.writeSerializedRecord(Record);
     }
+
     return Index;
   }
 };

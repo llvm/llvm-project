@@ -21,10 +21,6 @@
 
 namespace __tsan {
 
-Flags *flags() {
-  return &ctx->flags;
-}
-
 // Can be overriden in frontend.
 #ifdef TSAN_EXTERNAL_HOOKS
 extern "C" const char* __tsan_default_options();

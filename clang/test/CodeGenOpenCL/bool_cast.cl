@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -o - -O0 | FileCheck %s
 
 typedef unsigned char uchar4 __attribute((ext_vector_type(4)));
 typedef unsigned int int4 __attribute((ext_vector_type(4)));
 typedef float float4 __attribute((ext_vector_type(4)));
 
-// CHECK-LABEL: define void @ker()
+// CHECK-LABEL: define spir_kernel void @ker()
 void kernel ker() {
   bool t = true;
   int4 vec4 = (int4)t;

@@ -38,11 +38,24 @@ private:
 /// The indirect function call promotion pass.
 class PGOIndirectCallPromotion : public PassInfoMixin<PGOIndirectCallPromotion> {
 public:
-  PGOIndirectCallPromotion(bool IsInLTO = false) : InLTO(IsInLTO) {}
+  PGOIndirectCallPromotion(bool IsInLTO = false, bool SamplePGO = false)
+      : InLTO(IsInLTO), SamplePGO(SamplePGO) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
 private:
   bool InLTO;
+  bool SamplePGO;
 };
+
+/// The profile size based optimization pass for memory intrinsics.
+class PGOMemOPSizeOpt : public PassInfoMixin<PGOMemOPSizeOpt> {
+public:
+  PGOMemOPSizeOpt() {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+                     uint64_t MaxCount);
 
 } // End llvm namespace
 #endif

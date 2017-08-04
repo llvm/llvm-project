@@ -1,23 +1,23 @@
 # RUN: llc -march=amdgcn -run-pass si-insert-waits %s -o - | FileCheck %s
 
 --- |
-  define void @basic_insert_dcache_wb() {
+  define amdgpu_kernel void @basic_insert_dcache_wb() {
     ret void
   }
 
-  define void @explicit_flush_after() {
+  define amdgpu_kernel void @explicit_flush_after() {
     ret void
   }
 
-  define void @explicit_flush_before() {
+  define amdgpu_kernel void @explicit_flush_before() {
     ret void
   }
 
-  define void @no_scalar_store() {
+  define amdgpu_kernel void @no_scalar_store() {
     ret void
   }
 
-  define void @multi_block_store() {
+  define amdgpu_kernel void @multi_block_store() {
   bb0:
     br i1 undef, label %bb1, label %bb2
 
@@ -28,7 +28,7 @@
     ret void
   }
 
-  define void @one_block_store() {
+  define amdgpu_kernel void @one_block_store() {
   bb0:
     br i1 undef, label %bb1, label %bb2
 
@@ -169,5 +169,5 @@ tracksRegLiveness: false
 body: |
   bb.0:
     S_STORE_DWORD_SGPR undef %sgpr2, undef %sgpr0_sgpr1, undef %m0, 0
-    SI_RETURN undef %vgpr0
+    SI_RETURN_TO_EPILOG undef %vgpr0
 ...

@@ -87,7 +87,6 @@ void test_no_inner_alloc()
 
 void test_with_inner_alloc()
 {
-    using VoidAlloc1 = CountingAllocator<void, 1>;
     using VoidAlloc2 = CountingAllocator<void, 2>;
 
     AllocController POuter;

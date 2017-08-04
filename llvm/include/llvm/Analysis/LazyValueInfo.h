@@ -32,6 +32,7 @@ namespace llvm {
 class LazyValueInfo {
   friend class LazyValueInfoWrapperPass;
   AssumptionCache *AC = nullptr;
+  const DataLayout *DL = nullptr;
   class TargetLibraryInfo *TLI = nullptr;
   DominatorTree *DT = nullptr;
   void *PImpl = nullptr;
@@ -40,16 +41,17 @@ class LazyValueInfo {
 public:
   ~LazyValueInfo();
   LazyValueInfo() {}
-  LazyValueInfo(AssumptionCache *AC_, TargetLibraryInfo *TLI_,
+  LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_, TargetLibraryInfo *TLI_,
                 DominatorTree *DT_)
-      : AC(AC_), TLI(TLI_), DT(DT_) {}
+      : AC(AC_), DL(DL_), TLI(TLI_), DT(DT_) {}
   LazyValueInfo(LazyValueInfo &&Arg)
-      : AC(Arg.AC), TLI(Arg.TLI), DT(Arg.DT), PImpl(Arg.PImpl) {
+      : AC(Arg.AC), DL(Arg.DL), TLI(Arg.TLI), DT(Arg.DT), PImpl(Arg.PImpl) {
     Arg.PImpl = nullptr;
   }
   LazyValueInfo &operator=(LazyValueInfo &&Arg) {
     releaseMemory();
     AC = Arg.AC;
+    DL = Arg.DL;
     TLI = Arg.TLI;
     DT = Arg.DT;
     PImpl = Arg.PImpl;
@@ -91,6 +93,13 @@ public:
   Constant *getConstantOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
                               Instruction *CxtI = nullptr);
 
+  /// Return the ConstantRage constraint that is known to hold for the
+  /// specified value on the specified edge. This may be only be called
+  /// on integer-typed Values.
+  ConstantRange getConstantRangeOnEdge(Value *V, BasicBlock *FromBB,
+                                       BasicBlock *ToBB,
+                                       Instruction *CxtI = nullptr);
+
   /// Inform the analysis cache that we have threaded an edge from
   /// PredBB to OldSucc to be from PredBB to NewSucc instead.
   void threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc, BasicBlock *NewSucc);
@@ -98,8 +107,18 @@ public:
   /// Inform the analysis cache that we have erased a block.
   void eraseBlock(BasicBlock *BB);
 
+  /// Print the \LazyValueInfo Analysis.
+  /// We pass in the DTree that is required for identifying which basic blocks
+  /// we can solve/print for, in the LVIPrinter. The DT is optional
+  /// in LVI, so we need to pass it here as an argument.
+  void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS);
+
   // For old PM pass. Delete once LazyValueInfoWrapperPass is gone.
   void releaseMemory();
+
+  /// Handle invalidation events in the new pass manager.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
 };
 
 /// \brief Analysis to compute lazy value information.

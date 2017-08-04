@@ -1,7 +1,11 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-#include <libkern/OSAtomic.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
+
+typedef int32_t OSSpinLock;
+extern "C" void OSSpinLockLock(OSSpinLock *);
+extern "C" void OSSpinLockUnlock(OSSpinLock *);
 
 int Global;
 OSSpinLock lock;

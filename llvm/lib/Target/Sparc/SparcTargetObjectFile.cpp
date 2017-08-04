@@ -9,11 +9,17 @@
 
 #include "SparcTargetObjectFile.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Target/TargetLowering.h"
 
 using namespace llvm;
+
+void SparcELFTargetObjectFile::Initialize(MCContext &Ctx,
+                                          const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  InitializeELF(TM.Options.UseInitArray);
+}
 
 const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,

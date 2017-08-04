@@ -25,7 +25,7 @@
 
 #if TEST_STD_VER > 14
 constexpr bool check_idx( size_t idx, double val )
-{ 
+{
     std::array<double, 3> arr = {1, 2, 3.5};
 	return arr.at(idx) == val;
 }

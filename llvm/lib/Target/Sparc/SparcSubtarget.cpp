@@ -28,6 +28,7 @@ void SparcSubtarget::anchor() { }
 
 SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
+  UseSoftMulDiv = false;
   IsV9 = false;
   IsLeon = false;
   V8DeprecatedInsts = false;

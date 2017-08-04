@@ -558,7 +558,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
       Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);
 
   // We take the DebugLoc from MI, since OrigMI may be attributed to a
-  // different source location. 
+  // different source location.
   auto *NewMI = LIS.getInstructionFromIndex(DefIdx);
   NewMI->setDebugLoc(MI.getDebugLoc());
 
@@ -643,8 +643,11 @@ void InlineSpiller::reMaterializeAll() {
       Edit->eraseVirtReg(Reg);
       continue;
     }
-    assert((LIS.hasInterval(Reg) && !LIS.getInterval(Reg).empty()) &&
-           "Reg with empty interval has reference");
+
+    assert(LIS.hasInterval(Reg) &&
+           (!LIS.getInterval(Reg).empty() || !MRI.reg_nodbg_empty(Reg)) &&
+           "Empty and not used live-range?!");
+
     RegsToSpill[ResultPos++] = Reg;
   }
   RegsToSpill.erase(RegsToSpill.begin() + ResultPos, RegsToSpill.end());
@@ -686,7 +689,8 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, unsigned Reg) {
   return true;
 }
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 // Dump the range of instructions from B to E with their slot indexes.
 static void dumpMachineInstrRangeWithSlotIndex(MachineBasicBlock::iterator B,
                                                MachineBasicBlock::iterator E,
@@ -856,21 +860,46 @@ void InlineSpiller::insertReload(unsigned NewVReg,
   ++NumReloads;
 }
 
+/// Check if \p Def fully defines a VReg with an undefined value.
+/// If that's the case, that means the value of VReg is actually
+/// not relevant.
+static bool isFullUndefDef(const MachineInstr &Def) {
+  if (!Def.isImplicitDef())
+    return false;
+  assert(Def.getNumOperands() == 1 &&
+         "Implicit def with more than one definition");
+  // We can say that the VReg defined by Def is undef, only if it is
+  // fully defined by Def. Otherwise, some of the lanes may not be
+  // undef and the value of the VReg matters.
+  return !Def.getOperand(0).getSubReg();
+}
+
 /// insertSpill - Insert a spill of NewVReg after MI.
 void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
                                  MachineBasicBlock::iterator MI) {
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI);
-  TII.storeRegToStackSlot(MBB, std::next(MI), NewVReg, isKill, StackSlot,
-                          MRI.getRegClass(NewVReg), &TRI);
+  bool IsRealSpill = true;
+  if (isFullUndefDef(*MI)) {
+    // Don't spill undef value.
+    // Anything works for undef, in particular keeping the memory
+    // uninitialized is a viable option and it saves code size and
+    // run time.
+    BuildMI(MBB, std::next(MI), MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
+        .addReg(NewVReg, getKillRegState(isKill));
+    IsRealSpill = false;
+  } else
+    TII.storeRegToStackSlot(MBB, std::next(MI), NewVReg, isKill, StackSlot,
+                            MRI.getRegClass(NewVReg), &TRI);
 
   LIS.InsertMachineInstrRangeInMaps(std::next(MI), MIS.end());
 
   DEBUG(dumpMachineInstrRangeWithSlotIndex(std::next(MI), MIS.end(), LIS,
                                            "spill"));
   ++NumSpills;
-  HSpiller.addToMergeableSpills(*std::next(MI), StackSlot, Original);
+  if (IsRealSpill)
+    HSpiller.addToMergeableSpills(*std::next(MI), StackSlot, Original);
 }
 
 /// spillAroundUses - insert spill code around each use of Reg.

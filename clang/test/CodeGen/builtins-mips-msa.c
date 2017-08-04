@@ -526,6 +526,8 @@ void test(void) {
   v2i64_r = __msa_ld_d(&v2i64_a, 96); // CHECK: call <2  x i64> @llvm.mips.ld.d(
 
   v16i8_r = __msa_ldi_b(3); // CHECK: call <16 x i8>  @llvm.mips.ldi.b(
+  v16i8_r = __msa_ldi_b(-128); // CHECK: call <16 x i8>  @llvm.mips.ldi.b(
+  v16i8_r = __msa_ldi_b(255); // CHECK: call <16 x i8>  @llvm.mips.ldi.b(
   v8i16_r = __msa_ldi_h(3); // CHECK: call <8  x i16> @llvm.mips.ldi.h(
   v4i32_r = __msa_ldi_w(3); // CHECK: call <4  x i32> @llvm.mips.ldi.w(
   v2i64_r = __msa_ldi_d(3); // CHECK: call <2  x i64> @llvm.mips.ldi.d(
@@ -698,6 +700,11 @@ void test(void) {
   v8i16_r = __msa_sld_h(v8i16_r, v8i16_a, 5); // CHECK: call <8  x i16> @llvm.mips.sld.h(
   v4i32_r = __msa_sld_w(v4i32_r, v4i32_a, 3); // CHECK: call <4  x i32> @llvm.mips.sld.w(
   v2i64_r = __msa_sld_d(v2i64_r, v2i64_a, 1); // CHECK: call <2  x i64> @llvm.mips.sld.d(
+
+  v16i8_r = __msa_sld_b(v16i8_r, v16i8_a, 16); // CHECK: call <16 x i8>  @llvm.mips.sld.b(
+  v8i16_r = __msa_sld_h(v8i16_r, v8i16_a, 8); // CHECK: call <8  x i16> @llvm.mips.sld.h(
+  v4i32_r = __msa_sld_w(v4i32_r, v4i32_a, 4); // CHECK: call <4  x i32> @llvm.mips.sld.w(
+  v2i64_r = __msa_sld_d(v2i64_r, v2i64_a, 2); // CHECK: call <2  x i64> @llvm.mips.sld.d(
 
   v16i8_r = __msa_sldi_b(v16i8_r, v16i8_a, 7); // CHECK: call <16 x i8>  @llvm.mips.sldi.b(
   v8i16_r = __msa_sldi_h(v8i16_r, v8i16_a, 3); // CHECK: call <8  x i16> @llvm.mips.sldi.h(

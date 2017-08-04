@@ -3,8 +3,8 @@
 
 target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 define i32 @test0() {
 ; CHECK-LABEL: @test0(
@@ -16,22 +16,22 @@ entry:
   %a2 = alloca float
 
   %a1.i8 = bitcast i32* %a1 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %a1.i8)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %a1.i8)
 
   store i32 0, i32* %a1
   %v1 = load i32, i32* %a1
 
-  call void @llvm.lifetime.end(i64 4, i8* %a1.i8)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %a1.i8)
 
   %a2.i8 = bitcast float* %a2 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %a2.i8)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %a2.i8)
 
   store float 0.0, float* %a2
   %v2 = load float , float * %a2
   %v2.int = bitcast float %v2 to i32
   %sum1 = add i32 %v1, %v2.int
 
-  call void @llvm.lifetime.end(i64 4, i8* %a2.i8)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %a2.i8)
 
   ret i32 %sum1
 }
@@ -1057,7 +1057,7 @@ define void @PR14059.1(double* %d) {
 entry:
   %X.sroa.0.i = alloca double, align 8
   %0 = bitcast double* %X.sroa.0.i to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %0)
 
   ; Store to the low 32-bits...
   %X.sroa.0.0.cast2.i = bitcast double* %X.sroa.0.i to i32*
@@ -1084,7 +1084,7 @@ entry:
   %accum.real.i = load double, double* %d, align 8
   %add.r.i = fadd double %accum.real.i, %X.sroa.0.0.load1.i
   store double %add.r.i, double* %d, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
   ret void
 }
 
@@ -1652,7 +1652,7 @@ define void @PR25873(%struct.STest* %outData) {
 entry:
   %tmpData = alloca %struct.STest, align 8
   %0 = bitcast %struct.STest* %tmpData to i8*
-  call void @llvm.lifetime.start(i64 16, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0)
   %x = getelementptr inbounds %struct.STest, %struct.STest* %tmpData, i64 0, i32 0, i32 0
   store float 1.230000e+02, float* %x, align 8
   %y = getelementptr inbounds %struct.STest, %struct.STest* %tmpData, i64 0, i32 0, i32 1
@@ -1664,7 +1664,7 @@ entry:
   store i64 %3, i64* %2, align 8
   %4 = bitcast %struct.STest* %outData to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %4, i8* %0, i64 16, i32 4, i1 false)
-  call void @llvm.lifetime.end(i64 16, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* %0)
   ret void
 }
 
@@ -1677,10 +1677,10 @@ define void @PR27999() unnamed_addr {
 entry-block:
   %0 = alloca [2 x i64], align 8
   %1 = bitcast [2 x i64]* %0 to i8*
-  call void @llvm.lifetime.start(i64 16, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %1)
   %2 = getelementptr inbounds [2 x i64], [2 x i64]* %0, i32 0, i32 1
   %3 = bitcast i64* %2 to i8*
-  call void @llvm.lifetime.end(i64 8, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* %3)
   ret void
 }
 
@@ -1692,6 +1692,6 @@ bb1:
   %e.7.sroa.6.i = alloca i32, align 1
   %e.7.sroa.6.0.load81.i = load i32, i32* %e.7.sroa.6.i, align 1
   %0 = bitcast i32* %e.7.sroa.6.i to i8*
-  call void @llvm.lifetime.end(i64 2, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 2, i8* %0)
   ret void
 }

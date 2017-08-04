@@ -170,6 +170,13 @@ const u8 kPatchableCode5[] = {
     0x54,                                      // push    esp
 };
 
+#if SANITIZER_WINDOWS64
+u8 kLoadGlobalCode[] = {
+  0x8B, 0x05, 0x00, 0x00, 0x00, 0x00, // mov    eax [rip + global]
+  0xC3,                               // ret
+};
+#endif
+
 const u8 kUnpatchableCode1[] = {
     0xC3,                           // ret
 };
@@ -502,6 +509,10 @@ TEST(Interception, PatchableFunction) {
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode4, override));
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode5, override));
 
+#if SANITIZER_WINDOWS64
+  EXPECT_TRUE(TestFunctionPatching(kLoadGlobalCode, override));
+#endif
+
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode1, override));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode2, override));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode3, override));
@@ -611,6 +622,13 @@ TEST(Interception, PatchableFunctionPadding) {
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode4, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode5, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode6, override, prefix));
+}
+
+TEST(Interception, EmptyExportTable) {
+  // We try to get a pointer to a function from an executable that doesn't
+  // export any symbol (empty export table).
+  uptr FunPtr = InternalGetProcAddress((void *)GetModuleHandleA(0), "example");
+  EXPECT_EQ(0U, FunPtr);
 }
 
 }  // namespace __interception

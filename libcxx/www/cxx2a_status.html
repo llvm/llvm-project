@@ -1,0 +1,90 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>libc++ C++2a Status</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+
+<body>
+<div id="menu">
+  <div>
+    <a href="http://llvm.org/">LLVM Home</a>
+  </div>
+
+  <div class="submenu">
+    <label>libc++ Info</label>
+    <a href="/index.html">About</a>
+  </div>
+
+  <div class="submenu">
+    <label>Quick Links</label>
+    <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a>
+    <a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a>
+    <a href="https://bugs.llvm.org/">Bug Reports</a>
+    <a href="http://llvm.org/svn/llvm-project/libcxx/trunk/">Browse SVN</a>
+    <a href="http://llvm.org/viewvc/llvm-project/libcxx/trunk/">Browse ViewVC</a>
+  </div>
+</div>
+
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>libc++ C++2a Status</h1>
+  <!--*********************************************************************-->
+
+  <p>In July 2017, the C++ standard committee created a draft for the next version of the C++ standard, known here as "C++2a" (probably to be C++20).</p>
+  <p>This page shows the status of libc++; the status of clang's support of the language features is <a href="http://clang.llvm.org/cxx_status.html#cxx2a">here</a>.</p>
+
+  <p>The groups that have contributed papers:
+  <ul>
+    <li>LWG - Library working group</li>
+    <li>CWG - Core Language Working group</li>
+    <li>SG1 - Study group #1 (Concurrency working group)</li>
+  </ul>
+  </p>
+
+  <h3>Paper Status</h3>
+  <table id="papers" border="1">
+	<tr><th>Paper #</th><th>Group</th><th>Paper Name</th><th>Meeting</th><th>Status</th><th>First released version</th></tr>
+<!--
+	<tr><td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3346.pdf">3346</a></td><td>LWG</td><td>Terminology for Container Element Requirements - Rev 1</td><td>Kona</td><td>Complete</td><td>3.4</td></tr>
+-->
+	<tr><td><a href="https://wg21.link/P0463R1">P0463R1</a></td><td>LWG</td><td>Endian just Endian</td><td>Toronto</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0674R1">P0674R1</a></td><td>LWG</td><td>Extending make_shared to Support Arrays</td><td>Toronto</td><td></td><td></td></tr>
+
+<!--  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr> -->
+  </table>
+
+<p><i>[ Note: "Nothing to do" means that no library changes were needed to implement this change -- end note]</i></p>
+
+  <h3>Library Working group Issues Status</h3>
+<!--   <I>Note: "NAD" means that the issue was deemed "Not a defect"</I> -->
+  <table id="issues" border="1">
+	<tr><th>Issue #</th><th>Issue Name</th><th>Meeting</th><th>Status</th></tr>
+<!--
+	<tr><td><a href="http://wg21.link/LWG1214">1214</a></td><td>Insufficient/inconsistent key immutability requirements for associative containers</td><td>Urbana</td><td></td></tr>
+-->
+	<tr><td><a href="http://wg21.link/LWG2070">2070</a></td><td><tt>allocate_shared</tt> should use <tt>allocator_traits&lt;A&gt;::construct</tt></td><td>Toronto</td><td>Resolved by <a href="https://wg21.link/P0674R1">P0674R1</a></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2444">2444</a></td><td>Inconsistent complexity for <tt>std::sort_heap</tt></td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2593">2593</a></td><td>Moved-from state of Allocators</td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2597">2597</a></td><td><tt>std::log</tt> misspecified for complex numbers</td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2783">2783</a></td><td><tt>stack::emplace()</tt> and <tt>queue::emplace()</tt> should return <tt>decltype(auto)</tt></td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2932">2932</a></td><td>Constraints on parallel algorithm implementations are underspecified</td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2937">2937</a></td><td>Is <tt>equivalent("existing_thing", "not_existing_thing")</tt> an error</td><td>Toronto</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2940">2940</a></td><td><tt>result_of</tt> specification also needs a little cleanup</td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2942">2942</a></td><td>LWG 2873's resolution missed <tt>weak_ptr::owner_before</tt></td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2954">2954</a></td><td>Specialization of the convenience variable templates should be prohibited</td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2961">2961</a></td><td>Bad postcondition for <tt>set_default_resource</tt></td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2966">2966</a></td><td>Incomplete resolution of US 74</td><td>Toronto</td><td><i>Nothing to do</i></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2974">2974</a></td><td>Diagnose out of bounds <tt>tuple_element/variant_alternative</tt></td><td>Toronto</td><td>Complete</td></tr>
+
+<!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
+  </table>
+
+  <p>Last Updated: 16-Jul-2017</p>
+</div>
+</body>
+</html>

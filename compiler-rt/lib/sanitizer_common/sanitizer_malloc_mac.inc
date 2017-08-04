@@ -59,6 +59,9 @@ INTERCEPTOR(void, malloc_destroy_zone, malloc_zone_t *zone) {
     uptr allocated_size = RoundUpTo(sizeof(sanitizer_zone), page_size);
     mprotect(zone, allocated_size, PROT_READ | PROT_WRITE);
   }
+  if (zone->zone_name) {
+    COMMON_MALLOC_FREE((void *)zone->zone_name);
+  }
   COMMON_MALLOC_FREE(zone);
 }
 

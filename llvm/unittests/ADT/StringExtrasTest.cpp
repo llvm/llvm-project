@@ -50,3 +50,37 @@ TEST(StringExtrasTest, JoinItems) {
 
   EXPECT_EQ("foo/bar/baz/x", join_items('/', Foo, Bar, Baz, X));
 }
+
+TEST(StringExtrasTest, ToAndFromHex) {
+  std::vector<uint8_t> OddBytes = {0x5, 0xBD, 0x0D, 0x3E, 0xCD};
+  std::string OddStr = "05BD0D3ECD";
+  StringRef OddData(reinterpret_cast<const char *>(OddBytes.data()),
+                    OddBytes.size());
+  EXPECT_EQ(OddStr, toHex(OddData));
+  EXPECT_EQ(OddData, fromHex(StringRef(OddStr).drop_front()));
+
+  std::vector<uint8_t> EvenBytes = {0xA5, 0xBD, 0x0D, 0x3E, 0xCD};
+  std::string EvenStr = "A5BD0D3ECD";
+  StringRef EvenData(reinterpret_cast<const char *>(EvenBytes.data()),
+                     EvenBytes.size());
+  EXPECT_EQ(EvenStr, toHex(EvenData));
+  EXPECT_EQ(EvenData, fromHex(EvenStr));
+}
+
+TEST(StringExtrasTest, to_float) {
+  float F;
+  EXPECT_TRUE(to_float("4.7", F));
+  EXPECT_FLOAT_EQ(4.7f, F);
+
+  double D;
+  EXPECT_TRUE(to_float("4.7", D));
+  EXPECT_DOUBLE_EQ(4.7, D);
+
+  long double LD;
+  EXPECT_TRUE(to_float("4.7", LD));
+  EXPECT_DOUBLE_EQ(4.7, LD);
+
+  EXPECT_FALSE(to_float("foo", F));
+  EXPECT_FALSE(to_float("7.4 foo", F));
+  EXPECT_FLOAT_EQ(4.7f, F); // F should be unchanged
+}

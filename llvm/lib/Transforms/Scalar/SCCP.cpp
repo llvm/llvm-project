@@ -140,6 +140,14 @@ public:
     return nullptr;
   }
 
+  /// getBlockAddress - If this is a constant with a BlockAddress value, return
+  /// it, otherwise return null.
+  BlockAddress *getBlockAddress() const {
+    if (isConstant())
+      return dyn_cast<BlockAddress>(getConstant());
+    return nullptr;
+  }
+
   void markForcedConstant(Constant *V) {
     assert(isUnknown() && "Can't force a defined value!");
     Val.setInt(forcedconstant);
@@ -306,20 +314,14 @@ public:
     return MRVFunctionsTracked;
   }
 
-  void markOverdefined(Value *V) {
-    assert(!V->getType()->isStructTy() &&
-           "structs should use markAnythingOverdefined");
-    markOverdefined(ValueState[V], V);
-  }
-
-  /// markAnythingOverdefined - Mark the specified value overdefined.  This
+  /// markOverdefined - Mark the specified value overdefined.  This
   /// works with both scalars and structs.
-  void markAnythingOverdefined(Value *V) {
+  void markOverdefined(Value *V) {
     if (auto *STy = dyn_cast<StructType>(V->getType()))
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
         markOverdefined(getStructValueState(V, i), V);
     else
-      markOverdefined(V);
+      markOverdefined(ValueState[V], V);
   }
 
   // isStructLatticeConstant - Return true if all the lattice values
@@ -513,12 +515,8 @@ private:
   void visitCmpInst(CmpInst &I);
   void visitExtractValueInst(ExtractValueInst &EVI);
   void visitInsertValueInst(InsertValueInst &IVI);
-  void visitLandingPadInst(LandingPadInst &I) { markAnythingOverdefined(&I); }
-  void visitFuncletPadInst(FuncletPadInst &FPI) {
-    markAnythingOverdefined(&FPI);
-  }
   void visitCatchSwitchInst(CatchSwitchInst &CPI) {
-    markAnythingOverdefined(&CPI);
+    markOverdefined(&CPI);
     visitTerminatorInst(CPI);
   }
 
@@ -537,17 +535,11 @@ private:
   void visitResumeInst    (TerminatorInst &I) { /*returns void*/ }
   void visitUnreachableInst(TerminatorInst &I) { /*returns void*/ }
   void visitFenceInst     (FenceInst &I) { /*returns void*/ }
-  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
-    markAnythingOverdefined(&I);
-  }
-  void visitAtomicRMWInst (AtomicRMWInst &I) { markOverdefined(&I); }
-  void visitAllocaInst    (Instruction &I) { markOverdefined(&I); }
-  void visitVAArgInst     (Instruction &I) { markAnythingOverdefined(&I); }
-
   void visitInstruction(Instruction &I) {
-    // If a new instruction is added to LLVM that we don't handle.
+    // All the instructions we don't do any special handling for just
+    // go to overdefined.
     DEBUG(dbgs() << "SCCP: Don't know how to handle: " << I << '\n');
-    markAnythingOverdefined(&I);   // Just in case
+    markOverdefined(&I);
   }
 };
 
@@ -602,14 +594,36 @@ void SCCPSolver::getFeasibleSuccessors(TerminatorInst &TI,
       return;
     }
 
-    Succs[SI->findCaseValue(CI).getSuccessorIndex()] = true;
+    Succs[SI->findCaseValue(CI)->getSuccessorIndex()] = true;
     return;
   }
 
-  // TODO: This could be improved if the operand is a [cast of a] BlockAddress.
-  if (isa<IndirectBrInst>(&TI)) {
-    // Just mark all destinations executable!
-    Succs.assign(TI.getNumSuccessors(), true);
+  // In case of indirect branch and its address is a blockaddress, we mark
+  // the target as executable.
+  if (auto *IBR = dyn_cast<IndirectBrInst>(&TI)) {
+    // Casts are folded by visitCastInst.
+    LatticeVal IBRValue = getValueState(IBR->getAddress());
+    BlockAddress *Addr = IBRValue.getBlockAddress();
+    if (!Addr) {   // Overdefined or unknown condition?
+      // All destinations are executable!
+      if (!IBRValue.isUnknown())
+        Succs.assign(TI.getNumSuccessors(), true);
+      return;
+    }
+
+    BasicBlock* T = Addr->getBasicBlock();
+    assert(Addr->getFunction() == T->getParent() &&
+           "Block address of a different function ?");
+    for (unsigned i = 0; i < IBR->getNumSuccessors(); ++i) {
+      // This is the target.
+      if (IBR->getDestination(i) == T) {
+        Succs[i] = true;
+        return;
+      }
+    }
+
+    // If we didn't find our destination in the IBR successor list, then we
+    // have undefined behavior. Its ok to assume no successor is executable.
     return;
   }
 
@@ -659,13 +673,21 @@ bool SCCPSolver::isEdgeFeasible(BasicBlock *From, BasicBlock *To) {
     if (!CI)
       return !SCValue.isUnknown();
 
-    return SI->findCaseValue(CI).getCaseSuccessor() == To;
+    return SI->findCaseValue(CI)->getCaseSuccessor() == To;
   }
 
-  // Just mark all destinations executable!
-  // TODO: This could be improved if the operand is a [cast of a] BlockAddress.
-  if (isa<IndirectBrInst>(TI))
-    return true;
+  // In case of indirect branch and its address is a blockaddress, we mark
+  // the target as executable.
+  if (auto *IBR = dyn_cast<IndirectBrInst>(TI)) {
+    LatticeVal IBRValue = getValueState(IBR->getAddress());
+    BlockAddress *Addr = IBRValue.getBlockAddress();
+
+    if (!Addr)
+      return !IBRValue.isUnknown();
+
+    // At this point, the indirectbr is branching on a blockaddress.
+    return Addr->getBasicBlock() == To;
+  }
 
   DEBUG(dbgs() << "Unknown terminator instruction: " << *TI << '\n');
   llvm_unreachable("SCCP: Don't know how to handle this terminator!");
@@ -693,7 +715,7 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
   // If this PN returns a struct, just mark the result overdefined.
   // TODO: We could do a lot better than this if code actually uses this.
   if (PN.getType()->isStructTy())
-    return markAnythingOverdefined(&PN);
+    return markOverdefined(&PN);
 
   if (getValueState(&PN).isOverdefined())
     return;  // Quick exit
@@ -803,7 +825,7 @@ void SCCPSolver::visitExtractValueInst(ExtractValueInst &EVI) {
   // If this returns a struct, mark all elements over defined, we don't track
   // structs in structs.
   if (EVI.getType()->isStructTy())
-    return markAnythingOverdefined(&EVI);
+    return markOverdefined(&EVI);
 
   // If this is extracting from more than one level of struct, we don't know.
   if (EVI.getNumIndices() != 1)
@@ -828,7 +850,7 @@ void SCCPSolver::visitInsertValueInst(InsertValueInst &IVI) {
   // If this has more than one index, we can't handle it, drive all results to
   // undef.
   if (IVI.getNumIndices() != 1)
-    return markAnythingOverdefined(&IVI);
+    return markOverdefined(&IVI);
 
   Value *Aggr = IVI.getAggregateOperand();
   unsigned Idx = *IVI.idx_begin();
@@ -857,7 +879,7 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
   // If this select returns a struct, just mark the result overdefined.
   // TODO: We could do a lot better than this if code actually uses this.
   if (I.getType()->isStructTy())
-    return markAnythingOverdefined(&I);
+    return markOverdefined(&I);
 
   LatticeVal CondValue = getValueState(I.getCondition());
   if (CondValue.isUnknown())
@@ -910,9 +932,16 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
 
   // Otherwise, one of our operands is overdefined.  Try to produce something
   // better than overdefined with some tricks.
+  // If this is 0 / Y, it doesn't matter that the second operand is
+  // overdefined, and we can replace it with zero.
+  if (I.getOpcode() == Instruction::UDiv || I.getOpcode() == Instruction::SDiv)
+    if (V1State.isConstant() && V1State.getConstant()->isNullValue())
+      return markConstant(IV, &I, V1State.getConstant());
 
-  // If this is an AND or OR with 0 or -1, it doesn't matter that the other
-  // operand is overdefined.
+  // If this is:
+  // -> AND/MUL with 0
+  // -> OR with -1
+  // it doesn't matter that the other operand is overdefined.
   if (I.getOpcode() == Instruction::And || I.getOpcode() == Instruction::Mul ||
       I.getOpcode() == Instruction::Or) {
     LatticeVal *NonOverdefVal = nullptr;
@@ -934,7 +963,7 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
       } else {
         // X or -1 = -1
         if (ConstantInt *CI = NonOverdefVal->getConstantInt())
-          if (CI->isAllOnesValue())
+          if (CI->isMinusOne())
             return markConstant(IV, &I, NonOverdefVal->getConstant());
       }
     }
@@ -1021,7 +1050,7 @@ void SCCPSolver::visitStoreInst(StoreInst &SI) {
 void SCCPSolver::visitLoadInst(LoadInst &I) {
   // If this load is of a struct, just mark the result overdefined.
   if (I.getType()->isStructTy())
-    return markAnythingOverdefined(&I);
+    return markOverdefined(&I);
 
   LatticeVal PtrVal = getValueState(I.getOperand(0));
   if (PtrVal.isUnknown()) return;   // The pointer is not resolved yet!
@@ -1078,7 +1107,7 @@ CallOverdefined:
     // Otherwise, if we have a single return value case, and if the function is
     // a declaration, maybe we can constant fold it.
     if (F && F->isDeclaration() && !I->getType()->isStructTy() &&
-        canConstantFoldCallTo(F)) {
+        canConstantFoldCallTo(CS, F)) {
 
       SmallVector<Constant*, 8> Operands;
       for (CallSite::arg_iterator AI = CS.arg_begin(), E = CS.arg_end();
@@ -1098,7 +1127,7 @@ CallOverdefined:
 
       // If we can constant fold this, mark the result of the call as a
       // constant.
-      if (Constant *C = ConstantFoldCall(F, Operands, TLI)) {
+      if (Constant *C = ConstantFoldCall(CS, F, Operands, TLI)) {
         // call -> undef.
         if (isa<UndefValue>(C))
           return;
@@ -1107,7 +1136,7 @@ CallOverdefined:
     }
 
     // Otherwise, we don't know anything about this call, mark it overdefined.
-    return markAnythingOverdefined(I);
+    return markOverdefined(I);
   }
 
   // If this is a local function that doesn't have its address taken, mark its
@@ -1483,6 +1512,31 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       return true;
     }
 
+   if (auto *IBR = dyn_cast<IndirectBrInst>(TI)) {
+      // Indirect branch with no successor ?. Its ok to assume it branches
+      // to no target.
+      if (IBR->getNumSuccessors() < 1)
+        continue;
+
+      if (!getValueState(IBR->getAddress()).isUnknown())
+        continue;
+
+      // If the input to SCCP is actually branch on undef, fix the undef to
+      // the first successor of the indirect branch.
+      if (isa<UndefValue>(IBR->getAddress())) {
+        IBR->setAddress(BlockAddress::get(IBR->getSuccessor(0)));
+        markEdgeExecutable(&BB, IBR->getSuccessor(0));
+        return true;
+      }
+
+      // Otherwise, it is a branch on a symbolic value which is currently
+      // considered to be undef.  Handle this by forcing the input value to the
+      // branch to the first successor.
+      markForcedConstant(IBR->getAddress(),
+                         BlockAddress::get(IBR->getSuccessor(0)));
+      return true;
+    }
+
     if (auto *SI = dyn_cast<SwitchInst>(TI)) {
       if (!SI->getNumCases() || !getValueState(SI->getCondition()).isUnknown())
         continue;
@@ -1490,12 +1544,12 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // If the input to SCCP is actually switch on undef, fix the undef to
       // the first constant.
       if (isa<UndefValue>(SI->getCondition())) {
-        SI->setCondition(SI->case_begin().getCaseValue());
-        markEdgeExecutable(&BB, SI->case_begin().getCaseSuccessor());
+        SI->setCondition(SI->case_begin()->getCaseValue());
+        markEdgeExecutable(&BB, SI->case_begin()->getCaseSuccessor());
         return true;
       }
 
-      markForcedConstant(SI->getCondition(), SI->case_begin().getCaseValue());
+      markForcedConstant(SI->getCondition(), SI->case_begin()->getCaseValue());
       return true;
     }
   }
@@ -1545,7 +1599,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
 
   // Mark all arguments to the function as being overdefined.
   for (Argument &AI : F.args())
-    Solver.markAnythingOverdefined(&AI);
+    Solver.markOverdefined(&AI);
 
   // Solve for constants.
   bool ResolvedUndefs = true;
@@ -1715,8 +1769,9 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     // arguments and return value aggressively, and can assume it is not called
     // unless we see evidence to the contrary.
     if (F.hasLocalLinkage()) {
-      if (AddressIsTaken(&F))
+      if (F.hasAddressTaken()) {
         AddressTakenFunctions.insert(&F);
+      }
       else {
         Solver.AddArgumentTrackedFunction(&F);
         continue;
@@ -1728,14 +1783,15 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
 
     // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markAnythingOverdefined(&AI);
+      Solver.markOverdefined(&AI);
   }
 
   // Loop over global variables.  We inform the solver about any internal global
   // variables that do not have their 'addresses taken'.  If they don't have
   // their addresses taken, we can propagate constants through them.
   for (GlobalVariable &G : M.globals())
-    if (!G.isConstant() && G.hasLocalLinkage() && !AddressIsTaken(&G))
+    if (!G.isConstant() && G.hasLocalLinkage() &&
+        G.hasDefinitiveInitializer() && !AddressIsTaken(&G))
       Solver.TrackValueOfGlobalVariable(&G);
 
   // Solve for constants.
@@ -1760,15 +1816,11 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     if (F.isDeclaration())
       continue;
 
-    if (Solver.isBlockExecutable(&F.front())) {
+    if (Solver.isBlockExecutable(&F.front()))
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
-           ++AI) {
-        if (AI->use_empty())
-          continue;
-        if (tryToReplaceWithConstant(Solver, &*AI))
+           ++AI)
+        if (!AI->use_empty() && tryToReplaceWithConstant(Solver, &*AI))
           ++IPNumArgsElimed;
-      }
-    }
 
     for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
       if (!Solver.isBlockExecutable(&*BB)) {
@@ -1817,32 +1869,9 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
         if (!I) continue;
 
         bool Folded = ConstantFoldTerminator(I->getParent());
-        if (!Folded) {
-          // The constant folder may not have been able to fold the terminator
-          // if this is a branch or switch on undef.  Fold it manually as a
-          // branch to the first successor.
-#ifndef NDEBUG
-          if (auto *BI = dyn_cast<BranchInst>(I)) {
-            assert(BI->isConditional() && isa<UndefValue>(BI->getCondition()) &&
-                   "Branch should be foldable!");
-          } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
-            assert(isa<UndefValue>(SI->getCondition()) && "Switch should fold");
-          } else {
-            llvm_unreachable("Didn't fold away reference to block!");
-          }
-#endif
-
-          // Make this an uncond branch to the first successor.
-          TerminatorInst *TI = I->getParent()->getTerminator();
-          BranchInst::Create(TI->getSuccessor(0), TI);
-
-          // Remove entries in successor phi nodes to remove edges.
-          for (unsigned i = 1, e = TI->getNumSuccessors(); i != e; ++i)
-            TI->getSuccessor(i)->removePredecessor(TI->getParent());
-
-          // Remove the old terminator.
-          TI->eraseFromParent();
-        }
+        assert(Folded &&
+              "Expect TermInst on constantint or blockaddress to be folded");
+        (void) Folded;
       }
 
       // Finally, delete the basic block.

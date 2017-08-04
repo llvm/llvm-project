@@ -1,13 +1,14 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=VI-FLUSH -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=+fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=VI-DENORM -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}mac_vvv:
 ; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0{{$}}
 ; GCN: buffer_load_dword [[B:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
 ; GCN: buffer_load_dword [[C:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:8
-; GCN: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; GCN: v_mac_f32_e32 [[C]], [[A]], [[B]]
 ; GCN: buffer_store_dword [[C]]
-define void @mac_vvv(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @mac_vvv(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -25,7 +26,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_inline_sgpr_inline:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]}}, s{{[0-9]+}}, 0.5, 0.5
-define void @mad_inline_sgpr_inline(float addrspace(1)* %out, float %in) #0 {
+define amdgpu_kernel void @mad_inline_sgpr_inline(float addrspace(1)* %out, float %in) #0 {
 entry:
   %tmp0 = fmul float 0.5, %in
   %tmp1 = fadd float %tmp0, 0.5
@@ -36,7 +37,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_vvs:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
-define void @mad_vvs(float addrspace(1)* %out, float addrspace(1)* %in, float %c) #0 {
+define amdgpu_kernel void @mad_vvs(float addrspace(1)* %out, float addrspace(1)* %in, float %c) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
 
@@ -51,7 +52,7 @@ entry:
 
 ; GCN-LABEL: {{^}}mac_ssv:
 ; GCN: v_mac_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-define void @mac_ssv(float addrspace(1)* %out, float addrspace(1)* %in, float %a) #0 {
+define amdgpu_kernel void @mac_ssv(float addrspace(1)* %out, float addrspace(1)* %in, float %a) #0 {
 entry:
   %c = load float, float addrspace(1)* %in
 
@@ -64,7 +65,7 @@ entry:
 ; GCN-LABEL: {{^}}mac_mad_same_add:
 ; GCN: v_mad_f32 v{{[0-9]}}, v{{[0-9]+}}, v{{[0-9]+}}, [[ADD:v[0-9]+]]
 ; GCN: v_mac_f32_e32 [[ADD]], v{{[0-9]+}}, v{{[0-9]+}}
-define void @mac_mad_same_add(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @mac_mad_same_add(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -95,7 +96,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_neg_src0:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define void @mad_neg_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @mad_neg_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -112,10 +113,10 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}unsafe_mad_sub0_src0:
+; GCN-LABEL: {{^}}nsz_mad_sub0_src0:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define void @unsafe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
+define amdgpu_kernel void @nsz_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -134,8 +135,8 @@ entry:
 
 ; GCN-LABEL: {{^}}safe_mad_sub0_src0:
 ; GCN: v_sub_f32_e32 [[SUB0:v[0-9]+]], 0,
-; GCN: v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[SUB0]]
-define void @safe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+; GCN: v_mac_f32_e32 v{{[0-9]+}}, [[SUB0]], v{{[0-9]+}}
+define amdgpu_kernel void @safe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -155,7 +156,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_neg_src1:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define void @mad_neg_src1(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @mad_neg_src1(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -172,10 +173,10 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}unsafe_mad_sub0_src1:
+; GCN-LABEL: {{^}}nsz_mad_sub0_src1:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define void @unsafe_mad_sub0_src1(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
+define amdgpu_kernel void @nsz_mad_sub0_src1(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -195,7 +196,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_neg_src2:
 ; GCN-NOT: v_mac
 ; GCN: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
-define void @mad_neg_src2(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @mad_neg_src2(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -221,7 +222,7 @@ entry:
 
 ; GCN: v_add_f32_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
 ; GCN: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
-define void @fold_inline_imm_into_mac_src2_f32(float addrspace(1)* %out, float addrspace(1)* %a, float addrspace(1)* %b) #3 {
+define amdgpu_kernel void @fold_inline_imm_into_mac_src2_f32(float addrspace(1)* %out, float addrspace(1)* %a, float addrspace(1)* %b) #3 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -247,12 +248,16 @@ bb:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_ushort [[B:v[0-9]+]]
 
-; FIXME: How is this not folded?
-; SI: v_cvt_f32_f16_e32 v{{[0-9]+}}, 0x3c00
+; SI-DAG: v_cvt_f32_f16_e32 [[CVT_A:v[0-9]+]], [[A]]
+; SI-DAG: v_cvt_f32_f16_e32 [[CVT_B:v[0-9]+]], [[B]]
 
-; VI: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
-; VI: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
-define void @fold_inline_imm_into_mac_src2_f16(half addrspace(1)* %out, half addrspace(1)* %a, half addrspace(1)* %b) #3 {
+; SI: v_add_f32_e32 [[TMP2:v[0-9]+]], [[CVT_A]], [[CVT_A]]
+; SI: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
+; SI: v_mac_f32_e32 v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
+
+; VI-FLUSH: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
+; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
+define amdgpu_kernel void @fold_inline_imm_into_mac_src2_f16(half addrspace(1)* %out, half addrspace(1)* %a, half addrspace(1)* %b) #3 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -276,7 +281,7 @@ bb:
 
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
+attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }

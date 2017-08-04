@@ -462,6 +462,14 @@ public:
                                          const LangOptions &LangOpts,
                                          bool SkipTrailingWhitespaceAndNewLine);
 
+  /// \brief Returns the source location of the token that comes after the
+  /// token located at the given location \p Loc (excluding any comments and
+  /// whitespace). The returned source location will be invalid if the location
+  /// is inside a macro.
+  static SourceLocation
+  findNextTokenLocationAfterTokenAt(SourceLocation Loc, const SourceManager &SM,
+                                    const LangOptions &LangOpts);
+
   /// \brief Returns true if the given character could appear in an identifier.
   static bool isIdentifierBodyChar(char c, const LangOptions &LangOpts);
 

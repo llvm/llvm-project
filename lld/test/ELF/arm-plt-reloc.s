@@ -46,29 +46,37 @@ _start:
 // DSO-NEXT:    1010:        0b 00 00 eb    bl      #44
 // S(0x1054) - P(0x1014) + A(-8) = 0x38 = 56
 // DSO-NEXT:    1014:        0e 00 00 0a    beq     #56
+
 // DSO: Disassembly of section .plt:
-// DSO-NEXT:.plt:
-// DSO-NEXT:    1020:        04 e0 2d e5    str     lr, [sp, #-4]!
-// DSO-NEXT:    1024:        04 e0 9f e5    ldr     lr, [pc, #4]
-// DSO-NEXT:    1028:        0e e0 8f e0    add     lr, pc, lr
-// DSO-NEXT:    102c:        08 f0 be e5    ldr     pc, [lr, #8]!
+// DSO-NEXT: $a:
+// DSO-NEXT:     1020:       04 e0 2d e5     str     lr, [sp, #-4]!
+// DSO-NEXT:     1024:       04 e0 9f e5     ldr     lr, [pc, #4]
+// DSO-NEXT:     1028:       0e e0 8f e0     add     lr, pc, lr
+// DSO-NEXT:     102c:       08 f0 be e5     ldr     pc, [lr, #8]!
 // 0x1028 + 8 + 0fd0 = 0x2000
-// DSO-NEXT:    1030:        d0 0f 00 00
-// DSO-NEXT:    1034:        04 c0 9f e5    ldr     r12, [pc, #4]
-// DSO-NEXT:    1038:        0f c0 8c e0    add     r12, r12, pc
-// DSO-NEXT:    103c:        00 f0 9c e5    ldr     pc, [r12]
-// 0x1038 + 8 + 0fcc = 0x200c
-// DSO-NEXT:    1040:        cc 0f 00 00
-// DSO-NEXT:    1044:        04 c0 9f e5    ldr     r12, [pc, #4]
-// DSO-NEXT:    1048:        0f c0 8c e0    add     r12, r12, pc
-// DSO-NEXT:    104c:        00 f0 9c e5    ldr     pc, [r12]
+// DSO: $d:
+// DSO-NEXT:     1030:       d0 0f 00 00     .word   0x00000fd0
+// DSO: $a:
+// DSO-NEXT:     1034:       04 c0 9f e5     ldr     r12, [pc, #4]
+// DSO-NEXT:     1038:       0f c0 8c e0     add     r12, r12, pc
+// DSO-NEXT:     103c:       00 f0 9c e5     ldr     pc, [r12]
+// 0x1038 + 8 + 0fcc = 0x200c        
+// DSO: $d:
+// DSO-NEXT:     1040:       cc 0f 00 00     .word   0x00000fcc
+// DSO: $a:
+// DSO-NEXT:     1044:       04 c0 9f e5     ldr     r12, [pc, #4]
+// DSO-NEXT:     1048:       0f c0 8c e0     add     r12, r12, pc
+// DSO-NEXT:     104c:       00 f0 9c e5     ldr     pc, [r12]
 // 0x1048 + 8 + 0fc0 = 0x2010
-// DSO-NEXT:    1050:        c0 0f 00 00
-// DSO-NEXT:    1054:        04 c0 9f e5    ldr     r12, [pc, #4]
-// DSO-NEXT:    1058:        0f c0 8c e0    add     r12, r12, pc
-// DSO-NEXT:    105c:        00 f0 9c e5    ldr     pc, [r12]
+// DSO: $d:
+// DSO-NEXT:     1050:       c0 0f 00 00     .word   0x00000fc0
+// DSO: $a:
+// DSO-NEXT:     1054:       04 c0 9f e5     ldr     r12, [pc, #4]
+// DSO-NEXT:     1058:       0f c0 8c e0     add     r12, r12, pc
+// DSO-NEXT:     105c:       00 f0 9c e5     ldr     pc, [r12]
 // 0x1058 + 8 + 0fb4 = 0x2014
-// DSO-NEXT:    1060:       b4 0f 00 00
+// DSO: $d:
+// DSO-NEXT:     1060:       b4 0f 00 00     .word   0x00000fb4
 
 // DSOREL:    Name: .got.plt
 // DSOREL-NEXT:    Type: SHT_PROGBITS

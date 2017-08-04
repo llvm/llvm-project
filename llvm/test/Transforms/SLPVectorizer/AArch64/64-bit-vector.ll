@@ -1,6 +1,8 @@
+; RUN: opt -S -slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=generic < %s | FileCheck %s
 ; RUN: opt -S -slp-vectorizer -mtriple=aarch64-apple-ios -mcpu=cyclone < %s | FileCheck %s
-; RUN: opt -S -slp-vectorizer -mtriple=aarch64--linux-gnu < %s | FileCheck --check-prefix=NO_SLP %s
-; RUN: opt -S -slp-vectorizer -mtriple=aarch64-apple-ios -mcpu=cyclone -slp-min-reg-size=128 < %s | FileCheck --check-prefix=NO_SLP %s
+; Currently disabled for a few subtargets (e.g. Kryo):
+; RUN: opt -S -slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=kryo < %s | FileCheck --check-prefix=NO_SLP %s
+; RUN: opt -S -slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=generic -slp-min-reg-size=128 < %s | FileCheck --check-prefix=NO_SLP %s
 
 define void @f(float* %r, float* %w) {
   %r0 = getelementptr inbounds float, float* %r, i64 0

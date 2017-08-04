@@ -19,7 +19,7 @@
 
 ; We are expecting foo() to be inlined in main() (almost all the cycles are
 ; spent inside foo).
-; CHECK: remark: remarks.cc:13:21: inlined hot callee '_Z3foov' with 623868 samples into 'main'
+; CHECK: remark: remarks.cc:13:21: inlined hot callee '_Z3foov' into 'main'
 
 ; The back edge for the loop is the hottest edge in the loop subgraph.
 ; CHECK: remark: remarks.cc:6:9: most popular destination for conditional branches at remarks.cc:5:3
@@ -33,11 +33,11 @@ entry:
   %sum = alloca i64, align 8
   %i = alloca i32, align 4
   %0 = bitcast i64* %sum to i8*, !dbg !19
-  call void @llvm.lifetime.start(i64 8, i8* %0) #4, !dbg !19
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0) #4, !dbg !19
   call void @llvm.dbg.declare(metadata i64* %sum, metadata !9, metadata !20), !dbg !21
   store i64 0, i64* %sum, align 8, !dbg !21, !tbaa !22
   %1 = bitcast i32* %i to i8*, !dbg !26
-  call void @llvm.lifetime.start(i64 4, i8* %1) #4, !dbg !26
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #4, !dbg !26
   call void @llvm.dbg.declare(metadata i32* %i, metadata !10, metadata !20), !dbg !27
   store i32 0, i32* %i, align 4, !dbg !27, !tbaa !28
   br label %for.cond, !dbg !26
@@ -49,7 +49,7 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.cond.cleanup:                                 ; preds = %for.cond
   %3 = bitcast i32* %i to i8*, !dbg !36
-  call void @llvm.lifetime.end(i64 4, i8* %3) #4, !dbg !36
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %3) #4, !dbg !36
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -88,12 +88,12 @@ for.inc:                                          ; preds = %if.end
 for.end:                                          ; preds = %for.cond.cleanup
   %10 = load i64, i64* %sum, align 8, !dbg !53, !tbaa !22
   %11 = bitcast i64* %sum to i8*, !dbg !54
-  call void @llvm.lifetime.end(i64 8, i8* %11) #4, !dbg !54
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* %11) #4, !dbg !54
   ret i64 %10, !dbg !55
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -102,7 +102,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 declare i32 @rand() #3
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define i32 @main() #0 !dbg !13 {

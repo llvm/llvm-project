@@ -18,14 +18,14 @@
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
-; OBJ:   ProcStart {
-; OBJ:   InlineSite {
+; OBJ:   {{.*}}Proc{{.*}}Sym {
+; OBJ:   InlineSiteSym {
 ; OBJ:     Inlinee: h (0x1002)
 ; OBJ:   }
-; OBJ:   InlineSite {
+; OBJ:   InlineSiteSym {
 ; OBJ:     Inlinee: g (0x1003)
 ; OBJ:   }
-; OBJ:   InlineSite {
+; OBJ:   InlineSiteSym {
 ; OBJ:     Inlinee: f (0x1004)
 ; OBJ:   }
 ; OBJ:   InlineSiteEnd {

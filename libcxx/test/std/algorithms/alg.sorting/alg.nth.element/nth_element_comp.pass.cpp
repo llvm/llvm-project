@@ -18,10 +18,12 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <random>
 #include <cassert>
 #include <cstddef>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
+
+#include "test_macros.h"
 
 struct indirect_less
 {
@@ -30,7 +32,7 @@ struct indirect_less
         {return *x < *y;}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+std::mt19937 randomness;
 
 void
 test_one(int N, int M)
@@ -40,7 +42,7 @@ test_one(int N, int M)
     int* array = new int[N];
     for (int i = 0; i < N; ++i)
         array[i] = i;
-    std::random_shuffle(array, array+N);
+    std::shuffle(array, array+N, randomness);
     std::nth_element(array, array+M, array+N, std::greater<int>());
     assert(array[M] == N-M-1);
     std::nth_element(array, array+N, array+N, std::greater<int>()); // begin, end, end
@@ -75,7 +77,7 @@ int main()
     test(1000);
     test(1009);
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     {
     std::vector<std::unique_ptr<int> > v(1000);
     for (int i = 0; static_cast<std::size_t>(i) < v.size(); ++i)
@@ -83,5 +85,5 @@ int main()
     std::nth_element(v.begin(), v.begin() + v.size()/2, v.end(), indirect_less());
     assert(static_cast<std::size_t>(*v[v.size()/2]) == v.size()/2);
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
 }

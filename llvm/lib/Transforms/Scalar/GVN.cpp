@@ -36,7 +36,6 @@
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -51,9 +50,12 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/VNCoercion.h"
+
 #include <vector>
 using namespace llvm;
 using namespace llvm::gvn;
+using namespace llvm::VNCoercion;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "gvn"
@@ -595,11 +597,12 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<GlobalsAA>();
+  PA.preserve<TargetLibraryAnalysis>();
   return PA;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) {
+LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) const {
   errs() << "{\n";
   for (DenseMap<uint32_t, Value*>::iterator I = d.begin(),
        E = d.end(); I != E; ++I) {
@@ -691,442 +694,6 @@ SpeculationFailure:
 }
 
 
-/// Return true if CoerceAvailableValueToLoadType will succeed.
-static bool CanCoerceMustAliasedValueToLoad(Value *StoredVal,
-                                            Type *LoadTy,
-                                            const DataLayout &DL) {
-  // If the loaded or stored value is an first class array or struct, don't try
-  // to transform them.  We need to be able to bitcast to integer.
-  if (LoadTy->isStructTy() || LoadTy->isArrayTy() ||
-      StoredVal->getType()->isStructTy() ||
-      StoredVal->getType()->isArrayTy())
-    return false;
-
-  // The store has to be at least as big as the load.
-  if (DL.getTypeSizeInBits(StoredVal->getType()) <
-        DL.getTypeSizeInBits(LoadTy))
-    return false;
-
-  return true;
-}
-
-/// If we saw a store of a value to memory, and
-/// then a load from a must-aliased pointer of a different type, try to coerce
-/// the stored value.  LoadedTy is the type of the load we want to replace.
-/// IRB is IRBuilder used to insert new instructions.
-///
-/// If we can't do it, return null.
-static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                             IRBuilder<> &IRB,
-                                             const DataLayout &DL) {
-  assert(CanCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, DL) &&
-         "precondition violation - materialization can't fail");
-
-  if (auto *C = dyn_cast<Constant>(StoredVal))
-    if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
-      StoredVal = FoldedStoredVal;
-
-  // If this is already the right type, just return it.
-  Type *StoredValTy = StoredVal->getType();
-
-  uint64_t StoredValSize = DL.getTypeSizeInBits(StoredValTy);
-  uint64_t LoadedValSize = DL.getTypeSizeInBits(LoadedTy);
-
-  // If the store and reload are the same size, we can always reuse it.
-  if (StoredValSize == LoadedValSize) {
-    // Pointer to Pointer -> use bitcast.
-    if (StoredValTy->getScalarType()->isPointerTy() &&
-        LoadedTy->getScalarType()->isPointerTy()) {
-      StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy);
-    } else {
-      // Convert source pointers to integers, which can be bitcast.
-      if (StoredValTy->getScalarType()->isPointerTy()) {
-        StoredValTy = DL.getIntPtrType(StoredValTy);
-        StoredVal = IRB.CreatePtrToInt(StoredVal, StoredValTy);
-      }
-
-      Type *TypeToCastTo = LoadedTy;
-      if (TypeToCastTo->getScalarType()->isPointerTy())
-        TypeToCastTo = DL.getIntPtrType(TypeToCastTo);
-
-      if (StoredValTy != TypeToCastTo)
-        StoredVal = IRB.CreateBitCast(StoredVal, TypeToCastTo);
-
-      // Cast to pointer if the load needs a pointer type.
-      if (LoadedTy->getScalarType()->isPointerTy())
-        StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy);
-    }
-
-    if (auto *C = dyn_cast<ConstantExpr>(StoredVal))
-      if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
-        StoredVal = FoldedStoredVal;
-
-    return StoredVal;
-  }
-
-  // If the loaded value is smaller than the available value, then we can
-  // extract out a piece from it.  If the available value is too small, then we
-  // can't do anything.
-  assert(StoredValSize >= LoadedValSize &&
-         "CanCoerceMustAliasedValueToLoad fail");
-
-  // Convert source pointers to integers, which can be manipulated.
-  if (StoredValTy->getScalarType()->isPointerTy()) {
-    StoredValTy = DL.getIntPtrType(StoredValTy);
-    StoredVal = IRB.CreatePtrToInt(StoredVal, StoredValTy);
-  }
-
-  // Convert vectors and fp to integer, which can be manipulated.
-  if (!StoredValTy->isIntegerTy()) {
-    StoredValTy = IntegerType::get(StoredValTy->getContext(), StoredValSize);
-    StoredVal = IRB.CreateBitCast(StoredVal, StoredValTy);
-  }
-
-  // If this is a big-endian system, we need to shift the value down to the low
-  // bits so that a truncate will work.
-  if (DL.isBigEndian()) {
-    uint64_t ShiftAmt = DL.getTypeStoreSizeInBits(StoredValTy) -
-                        DL.getTypeStoreSizeInBits(LoadedTy);
-    StoredVal = IRB.CreateLShr(StoredVal, ShiftAmt, "tmp");
-  }
-
-  // Truncate the integer to the right size now.
-  Type *NewIntTy = IntegerType::get(StoredValTy->getContext(), LoadedValSize);
-  StoredVal  = IRB.CreateTrunc(StoredVal, NewIntTy, "trunc");
-
-  if (LoadedTy != NewIntTy) {
-    // If the result is a pointer, inttoptr.
-    if (LoadedTy->getScalarType()->isPointerTy())
-      StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy, "inttoptr");
-    else
-      // Otherwise, bitcast.
-      StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy, "bitcast");
-  }
-
-  if (auto *C = dyn_cast<Constant>(StoredVal))
-    if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
-      StoredVal = FoldedStoredVal;
-
-  return StoredVal;
-}
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering memory write (store,
-/// memset, memcpy, memmove).  This means that the write *may* provide bits used
-/// by the load but we can't be sure because the pointers don't mustalias.
-///
-/// Check this case to see if there is anything more we can do before we give
-/// up.  This returns -1 if we have to give up, or a byte number in the stored
-/// value of the piece that feeds the load.
-static int AnalyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
-                                          Value *WritePtr,
-                                          uint64_t WriteSizeInBits,
-                                          const DataLayout &DL) {
-  // If the loaded or stored value is a first class array or struct, don't try
-  // to transform them.  We need to be able to bitcast to integer.
-  if (LoadTy->isStructTy() || LoadTy->isArrayTy())
-    return -1;
-
-  int64_t StoreOffset = 0, LoadOffset = 0;
-  Value *StoreBase =
-      GetPointerBaseWithConstantOffset(WritePtr, StoreOffset, DL);
-  Value *LoadBase = GetPointerBaseWithConstantOffset(LoadPtr, LoadOffset, DL);
-  if (StoreBase != LoadBase)
-    return -1;
-
-  // If the load and store are to the exact same address, they should have been
-  // a must alias.  AA must have gotten confused.
-  // FIXME: Study to see if/when this happens.  One case is forwarding a memset
-  // to a load from the base of the memset.
-
-  // If the load and store don't overlap at all, the store doesn't provide
-  // anything to the load.  In this case, they really don't alias at all, AA
-  // must have gotten confused.
-  uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy);
-
-  if ((WriteSizeInBits & 7) | (LoadSize & 7))
-    return -1;
-  uint64_t StoreSize = WriteSizeInBits / 8;  // Convert to bytes.
-  LoadSize /= 8;
-
-
-  bool isAAFailure = false;
-  if (StoreOffset < LoadOffset)
-    isAAFailure = StoreOffset+int64_t(StoreSize) <= LoadOffset;
-  else
-    isAAFailure = LoadOffset+int64_t(LoadSize) <= StoreOffset;
-
-  if (isAAFailure)
-    return -1;
-
-  // If the Load isn't completely contained within the stored bits, we don't
-  // have all the bits to feed it.  We could do something crazy in the future
-  // (issue a smaller load then merge the bits in) but this seems unlikely to be
-  // valuable.
-  if (StoreOffset > LoadOffset ||
-      StoreOffset+StoreSize < LoadOffset+LoadSize)
-    return -1;
-
-  // Okay, we can do this transformation.  Return the number of bytes into the
-  // store that the load is.
-  return LoadOffset-StoreOffset;
-}
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering store.
-static int AnalyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
-                                          StoreInst *DepSI) {
-  // Cannot handle reading from store of first-class aggregate yet.
-  if (DepSI->getValueOperand()->getType()->isStructTy() ||
-      DepSI->getValueOperand()->getType()->isArrayTy())
-    return -1;
-
-  const DataLayout &DL = DepSI->getModule()->getDataLayout();
-  Value *StorePtr = DepSI->getPointerOperand();
-  uint64_t StoreSize =DL.getTypeSizeInBits(DepSI->getValueOperand()->getType());
-  return AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr,
-                                        StorePtr, StoreSize, DL);
-}
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being clobbered by another load.  See if
-/// the other load can feed into the second load.
-static int AnalyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
-                                         LoadInst *DepLI, const DataLayout &DL){
-  // Cannot handle reading from store of first-class aggregate yet.
-  if (DepLI->getType()->isStructTy() || DepLI->getType()->isArrayTy())
-    return -1;
-
-  Value *DepPtr = DepLI->getPointerOperand();
-  uint64_t DepSize = DL.getTypeSizeInBits(DepLI->getType());
-  int R = AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, DepSize, DL);
-  if (R != -1) return R;
-
-  // If we have a load/load clobber an DepLI can be widened to cover this load,
-  // then we should widen it!
-  int64_t LoadOffs = 0;
-  const Value *LoadBase =
-      GetPointerBaseWithConstantOffset(LoadPtr, LoadOffs, DL);
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy);
-
-  unsigned Size = MemoryDependenceResults::getLoadLoadClobberFullWidthSize(
-      LoadBase, LoadOffs, LoadSize, DepLI);
-  if (Size == 0) return -1;
-
-  // Check non-obvious conditions enforced by MDA which we rely on for being
-  // able to materialize this potentially available value
-  assert(DepLI->isSimple() && "Cannot widen volatile/atomic load!");
-  assert(DepLI->getType()->isIntegerTy() && "Can't widen non-integer load");
-
-  return AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, Size*8, DL);
-}
-
-
-
-static int AnalyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
-                                            MemIntrinsic *MI,
-                                            const DataLayout &DL) {
-  // If the mem operation is a non-constant size, we can't handle it.
-  ConstantInt *SizeCst = dyn_cast<ConstantInt>(MI->getLength());
-  if (!SizeCst) return -1;
-  uint64_t MemSizeInBits = SizeCst->getZExtValue()*8;
-
-  // If this is memset, we just need to see if the offset is valid in the size
-  // of the memset..
-  if (MI->getIntrinsicID() == Intrinsic::memset)
-    return AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr, MI->getDest(),
-                                          MemSizeInBits, DL);
-
-  // If we have a memcpy/memmove, the only case we can handle is if this is a
-  // copy from constant memory.  In that case, we can read directly from the
-  // constant memory.
-  MemTransferInst *MTI = cast<MemTransferInst>(MI);
-
-  Constant *Src = dyn_cast<Constant>(MTI->getSource());
-  if (!Src) return -1;
-
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(GetUnderlyingObject(Src, DL));
-  if (!GV || !GV->isConstant()) return -1;
-
-  // See if the access is within the bounds of the transfer.
-  int Offset = AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr,
-                                              MI->getDest(), MemSizeInBits, DL);
-  if (Offset == -1)
-    return Offset;
-
-  unsigned AS = Src->getType()->getPointerAddressSpace();
-  // Otherwise, see if we can constant fold a load from the constant with the
-  // offset applied as appropriate.
-  Src = ConstantExpr::getBitCast(Src,
-                                 Type::getInt8PtrTy(Src->getContext(), AS));
-  Constant *OffsetCst =
-    ConstantInt::get(Type::getInt64Ty(Src->getContext()), (unsigned)Offset);
-  Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()), Src,
-                                       OffsetCst);
-  Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  if (ConstantFoldLoadFromConstPtr(Src, LoadTy, DL))
-    return Offset;
-  return -1;
-}
-
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering store.  This means
-/// that the store provides bits used by the load but we the pointers don't
-/// mustalias.  Check this case to see if there is anything more we can do
-/// before we give up.
-static Value *GetStoreValueForLoad(Value *SrcVal, unsigned Offset,
-                                   Type *LoadTy,
-                                   Instruction *InsertPt, const DataLayout &DL){
-  LLVMContext &Ctx = SrcVal->getType()->getContext();
-
-  uint64_t StoreSize = (DL.getTypeSizeInBits(SrcVal->getType()) + 7) / 8;
-  uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy) + 7) / 8;
-
-  IRBuilder<> Builder(InsertPt);
-
-  // Compute which bits of the stored value are being used by the load.  Convert
-  // to an integer type to start with.
-  if (SrcVal->getType()->getScalarType()->isPointerTy())
-    SrcVal = Builder.CreatePtrToInt(SrcVal,
-        DL.getIntPtrType(SrcVal->getType()));
-  if (!SrcVal->getType()->isIntegerTy())
-    SrcVal = Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize*8));
-
-  // Shift the bits to the least significant depending on endianness.
-  unsigned ShiftAmt;
-  if (DL.isLittleEndian())
-    ShiftAmt = Offset*8;
-  else
-    ShiftAmt = (StoreSize-LoadSize-Offset)*8;
-
-  if (ShiftAmt)
-    SrcVal = Builder.CreateLShr(SrcVal, ShiftAmt);
-
-  if (LoadSize != StoreSize)
-    SrcVal = Builder.CreateTrunc(SrcVal, IntegerType::get(Ctx, LoadSize*8));
-
-  return CoerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
-}
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering load.  This means
-/// that the load *may* provide bits used by the load but we can't be sure
-/// because the pointers don't mustalias.  Check this case to see if there is
-/// anything more we can do before we give up.
-static Value *GetLoadValueForLoad(LoadInst *SrcVal, unsigned Offset,
-                                  Type *LoadTy, Instruction *InsertPt,
-                                  GVN &gvn) {
-  const DataLayout &DL = SrcVal->getModule()->getDataLayout();
-  // If Offset+LoadTy exceeds the size of SrcVal, then we must be wanting to
-  // widen SrcVal out to a larger load.
-  unsigned SrcValStoreSize = DL.getTypeStoreSize(SrcVal->getType());
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy);
-  if (Offset+LoadSize > SrcValStoreSize) {
-    assert(SrcVal->isSimple() && "Cannot widen volatile/atomic load!");
-    assert(SrcVal->getType()->isIntegerTy() && "Can't widen non-integer load");
-    // If we have a load/load clobber an DepLI can be widened to cover this
-    // load, then we should widen it to the next power of 2 size big enough!
-    unsigned NewLoadSize = Offset+LoadSize;
-    if (!isPowerOf2_32(NewLoadSize))
-      NewLoadSize = NextPowerOf2(NewLoadSize);
-
-    Value *PtrVal = SrcVal->getPointerOperand();
-
-    // Insert the new load after the old load.  This ensures that subsequent
-    // memdep queries will find the new load.  We can't easily remove the old
-    // load completely because it is already in the value numbering table.
-    IRBuilder<> Builder(SrcVal->getParent(), ++BasicBlock::iterator(SrcVal));
-    Type *DestPTy =
-      IntegerType::get(LoadTy->getContext(), NewLoadSize*8);
-    DestPTy = PointerType::get(DestPTy,
-                               PtrVal->getType()->getPointerAddressSpace());
-    Builder.SetCurrentDebugLocation(SrcVal->getDebugLoc());
-    PtrVal = Builder.CreateBitCast(PtrVal, DestPTy);
-    LoadInst *NewLoad = Builder.CreateLoad(PtrVal);
-    NewLoad->takeName(SrcVal);
-    NewLoad->setAlignment(SrcVal->getAlignment());
-
-    DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
-    DEBUG(dbgs() << "TO: " << *NewLoad << "\n");
-
-    // Replace uses of the original load with the wider load.  On a big endian
-    // system, we need to shift down to get the relevant bits.
-    Value *RV = NewLoad;
-    if (DL.isBigEndian())
-      RV = Builder.CreateLShr(RV, (NewLoadSize - SrcValStoreSize) * 8);
-    RV = Builder.CreateTrunc(RV, SrcVal->getType());
-    SrcVal->replaceAllUsesWith(RV);
-
-    // We would like to use gvn.markInstructionForDeletion here, but we can't
-    // because the load is already memoized into the leader map table that GVN
-    // tracks.  It is potentially possible to remove the load from the table,
-    // but then there all of the operations based on it would need to be
-    // rehashed.  Just leave the dead load around.
-    gvn.getMemDep().removeInstruction(SrcVal);
-    SrcVal = NewLoad;
-  }
-
-  return GetStoreValueForLoad(SrcVal, Offset, LoadTy, InsertPt, DL);
-}
-
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering mem intrinsic.
-static Value *GetMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                                     Type *LoadTy, Instruction *InsertPt,
-                                     const DataLayout &DL){
-  LLVMContext &Ctx = LoadTy->getContext();
-  uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy)/8;
-
-  IRBuilder<> Builder(InsertPt);
-
-  // We know that this method is only called when the mem transfer fully
-  // provides the bits for the load.
-  if (MemSetInst *MSI = dyn_cast<MemSetInst>(SrcInst)) {
-    // memset(P, 'x', 1234) -> splat('x'), even if x is a variable, and
-    // independently of what the offset is.
-    Value *Val = MSI->getValue();
-    if (LoadSize != 1)
-      Val = Builder.CreateZExt(Val, IntegerType::get(Ctx, LoadSize*8));
-
-    Value *OneElt = Val;
-
-    // Splat the value out to the right number of bits.
-    for (unsigned NumBytesSet = 1; NumBytesSet != LoadSize; ) {
-      // If we can double the number of bytes set, do it.
-      if (NumBytesSet*2 <= LoadSize) {
-        Value *ShVal = Builder.CreateShl(Val, NumBytesSet*8);
-        Val = Builder.CreateOr(Val, ShVal);
-        NumBytesSet <<= 1;
-        continue;
-      }
-
-      // Otherwise insert one byte at a time.
-      Value *ShVal = Builder.CreateShl(Val, 1*8);
-      Val = Builder.CreateOr(OneElt, ShVal);
-      ++NumBytesSet;
-    }
-
-    return CoerceAvailableValueToLoadType(Val, LoadTy, Builder, DL);
-  }
-
-  // Otherwise, this is a memcpy/memmove from a constant global.
-  MemTransferInst *MTI = cast<MemTransferInst>(SrcInst);
-  Constant *Src = cast<Constant>(MTI->getSource());
-  unsigned AS = Src->getType()->getPointerAddressSpace();
-
-  // Otherwise, see if we can constant fold a load from the constant with the
-  // offset applied as appropriate.
-  Src = ConstantExpr::getBitCast(Src,
-                                 Type::getInt8PtrTy(Src->getContext(), AS));
-  Constant *OffsetCst =
-    ConstantInt::get(Type::getInt64Ty(Src->getContext()), (unsigned)Offset);
-  Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()), Src,
-                                       OffsetCst);
-  Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  return ConstantFoldLoadFromConstPtr(Src, LoadTy, DL);
-}
 
 
 /// Given a set of loads specified by ValuesPerBlock,
@@ -1172,7 +739,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *LI,
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
-      Res = GetStoreValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
+      Res = getStoreValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
 
       DEBUG(dbgs() << "GVN COERCED NONLOCAL VAL:\nOffset: " << Offset << "  "
                    << *getSimpleValue() << '\n'
@@ -1183,14 +750,20 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *LI,
     if (Load->getType() == LoadTy && Offset == 0) {
       Res = Load;
     } else {
-      Res = GetLoadValueForLoad(Load, Offset, LoadTy, InsertPt, gvn);
-
+      Res = getLoadValueForLoad(Load, Offset, LoadTy, InsertPt, DL);
+      // We would like to use gvn.markInstructionForDeletion here, but we can't
+      // because the load is already memoized into the leader map table that GVN
+      // tracks.  It is potentially possible to remove the load from the table,
+      // but then there all of the operations based on it would need to be
+      // rehashed.  Just leave the dead load around.
+      gvn.getMemDep().removeInstruction(Load);
       DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset << "  "
                    << *getCoercedLoadValue() << '\n'
-                   << *Res << '\n' << "\n\n\n");
+                   << *Res << '\n'
+                   << "\n\n\n");
     }
   } else if (isMemIntrinValue()) {
-    Res = GetMemInstValueForLoad(getMemIntrinValue(), Offset, LoadTy,
+    Res = getMemInstValueForLoad(getMemIntrinValue(), Offset, LoadTy,
                                  InsertPt, DL);
     DEBUG(dbgs() << "GVN COERCED NONLOCAL MEM INTRIN:\nOffset: " << Offset
                  << "  " << *getMemIntrinValue() << '\n'
@@ -1259,7 +832,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
       // Can't forward from non-atomic to atomic without violating memory model.
       if (Address && LI->isAtomic() <= DepSI->isAtomic()) {
         int Offset =
-          AnalyzeLoadFromClobberingStore(LI->getType(), Address, DepSI);
+          analyzeLoadFromClobberingStore(LI->getType(), Address, DepSI, DL);
         if (Offset != -1) {
           Res = AvailableValue::get(DepSI->getValueOperand(), Offset);
           return true;
@@ -1277,7 +850,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
       // Can't forward from non-atomic to atomic without violating memory model.
       if (DepLI != LI && Address && LI->isAtomic() <= DepLI->isAtomic()) {
         int Offset =
-          AnalyzeLoadFromClobberingLoad(LI->getType(), Address, DepLI, DL);
+          analyzeLoadFromClobberingLoad(LI->getType(), Address, DepLI, DL);
 
         if (Offset != -1) {
           Res = AvailableValue::getLoad(DepLI, Offset);
@@ -1290,7 +863,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
     // forward a value on from it.
     if (MemIntrinsic *DepMI = dyn_cast<MemIntrinsic>(DepInfo.getInst())) {
       if (Address && !LI->isAtomic()) {
-        int Offset = AnalyzeLoadFromClobberingMemInst(LI->getType(), Address,
+        int Offset = analyzeLoadFromClobberingMemInst(LI->getType(), Address,
                                                       DepMI, DL);
         if (Offset != -1) {
           Res = AvailableValue::getMI(DepMI, Offset);
@@ -1335,7 +908,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
     // different types if we have to. If the stored value is larger or equal to
     // the loaded value, we can reuse it.
     if (S->getValueOperand()->getType() != LI->getType() &&
-        !CanCoerceMustAliasedValueToLoad(S->getValueOperand(),
+        !canCoerceMustAliasedValueToLoad(S->getValueOperand(),
                                          LI->getType(), DL))
       return false;
 
@@ -1352,7 +925,7 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
     // If the stored value is larger or equal to the loaded value, we can reuse
     // it.
     if (LD->getType() != LI->getType() &&
-        !CanCoerceMustAliasedValueToLoad(LD, LI->getType(), DL))
+        !canCoerceMustAliasedValueToLoad(LD, LI->getType(), DL))
       return false;
 
     // Can't forward from non-atomic to atomic without violating memory model.
@@ -1593,8 +1166,9 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 
     auto *NewLoad = new LoadInst(LoadPtr, LI->getName()+".pre",
                                  LI->isVolatile(), LI->getAlignment(),
-                                 LI->getOrdering(), LI->getSynchScope(),
+                                 LI->getOrdering(), LI->getSyncScopeID(),
                                  UnavailablePred->getTerminator());
+    NewLoad->setDebugLoc(LI->getDebugLoc());
 
     // Transfer the old load's AA tags to the new load.
     AAMDNodes Tags;
@@ -1629,7 +1203,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     V->takeName(LI);
   if (Instruction *I = dyn_cast<Instruction>(V))
     I->setDebugLoc(LI->getDebugLoc());
-  if (V->getType()->getScalarType()->isPointerTy())
+  if (V->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(V);
   markInstructionForDeletion(LI);
   ORE->emit(OptimizationRemark(DEBUG_TYPE, "LoadPRE", LI)
@@ -1716,7 +1290,7 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
       // to propagate LI's DebugLoc because LI may not post-dominate I.
       if (LI->getDebugLoc() && LI->getParent() == I->getParent())
         I->setDebugLoc(LI->getDebugLoc());
-    if (V->getType()->getScalarType()->isPointerTy())
+    if (V->getType()->isPtrOrPtrVectorTy())
       MD->invalidateCachedPointerInfo(V);
     markInstructionForDeletion(LI);
     ++NumGVNLoad;
@@ -1870,7 +1444,7 @@ bool GVN::processLoad(LoadInst *L) {
     reportLoadElim(L, AvailableValue, ORE);
     // Tell MDA to rexamine the reused pointer since we might have more
     // information after forwarding it.
-    if (MD && AvailableValue->getType()->getScalarType()->isPointerTy())
+    if (MD && AvailableValue->getType()->isPtrOrPtrVectorTy())
       MD->invalidateCachedPointerInfo(AvailableValue);
     return true;
   }
@@ -2025,7 +1599,7 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
       // RHS neither 'true' nor 'false' - bail out.
       continue;
     // Whether RHS equals 'true'.  Otherwise it equals 'false'.
-    bool isKnownTrue = CI->isAllOnesValue();
+    bool isKnownTrue = CI->isMinusOne();
     bool isKnownFalse = !isKnownTrue;
 
     // If "A && B" is known true then both A and B are known true.  If "A || B"
@@ -2114,7 +1688,7 @@ bool GVN::processInstruction(Instruction *I) {
   // example if it determines that %y is equal to %x then the instruction
   // "%z = and i32 %x, %y" becomes "%z = and i32 %x, %x" which we now simplify.
   const DataLayout &DL = I->getModule()->getDataLayout();
-  if (Value *V = SimplifyInstruction(I, DL, TLI, DT, AC)) {
+  if (Value *V = SimplifyInstruction(I, {DL, TLI, DT, AC})) {
     bool Changed = false;
     if (!I->use_empty()) {
       I->replaceAllUsesWith(V);
@@ -2125,7 +1699,7 @@ bool GVN::processInstruction(Instruction *I) {
       Changed = true;
     }
     if (Changed) {
-      if (MD && V->getType()->getScalarType()->isPointerTy())
+      if (MD && V->getType()->isPtrOrPtrVectorTy())
         MD->invalidateCachedPointerInfo(V);
       ++NumGVNSimpl;
       return true;
@@ -2188,11 +1762,11 @@ bool GVN::processInstruction(Instruction *I) {
 
     for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
          i != e; ++i) {
-      BasicBlock *Dst = i.getCaseSuccessor();
+      BasicBlock *Dst = i->getCaseSuccessor();
       // If there is only a single edge, propagate the case value into it.
       if (SwitchEdges.lookup(Dst) == 1) {
         BasicBlockEdge E(Parent, Dst);
-        Changed |= propagateEquality(SwitchCond, i.getCaseValue(), E, true);
+        Changed |= propagateEquality(SwitchCond, i->getCaseValue(), E, true);
       }
     }
     return Changed;
@@ -2236,7 +1810,7 @@ bool GVN::processInstruction(Instruction *I) {
 
   // Remove it!
   patchAndReplaceAllUsesWith(I, Repl);
-  if (MD && Repl->getType()->getScalarType()->isPointerTy())
+  if (MD && Repl->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(Repl);
   markInstructionForDeletion(I);
   return true;
@@ -2484,7 +2058,7 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     if (!performScalarPREInsertion(PREInstr, PREPred, ValNo)) {
       // If we failed insertion, make sure we remove the instruction.
       DEBUG(verifyRemoved(PREInstr));
-      delete PREInstr;
+      PREInstr->deleteValue();
       return false;
     }
   }
@@ -2510,7 +2084,7 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   addToLeaderTable(ValNo, Phi, CurrentBlock);
   Phi->setDebugLoc(CurInst->getDebugLoc());
   CurInst->replaceAllUsesWith(Phi);
-  if (MD && Phi->getType()->getScalarType()->isPointerTy())
+  if (MD && Phi->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(Phi);
   VN.erase(CurInst);
   removeFromLeaderTable(ValNo, CurInst, CurrentBlock);
@@ -2582,21 +2156,12 @@ bool GVN::iterateOnFunction(Function &F) {
 
   // Top-down walk of the dominator tree
   bool Changed = false;
-  // Save the blocks this function have before transformation begins. GVN may
-  // split critical edge, and hence may invalidate the RPO/DT iterator.
-  //
-  std::vector<BasicBlock *> BBVect;
-  BBVect.reserve(256);
   // Needed for value numbering with phi construction to work.
+  // RPOT walks the graph in its constructor and will not be invalidated during
+  // processBlock.
   ReversePostOrderTraversal<Function *> RPOT(&F);
-  for (ReversePostOrderTraversal<Function *>::rpo_iterator RI = RPOT.begin(),
-                                                           RE = RPOT.end();
-       RI != RE; ++RI)
-    BBVect.push_back(*RI);
-
-  for (std::vector<BasicBlock *>::iterator I = BBVect.begin(), E = BBVect.end();
-       I != E; I++)
-    Changed |= processBlock(*I);
+  for (BasicBlock *BB : RPOT)
+    Changed |= processBlock(BB);
 
   return Changed;
 }
@@ -2784,6 +2349,7 @@ public:
 
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<TargetLibraryInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 

@@ -14,6 +14,6 @@ namespace lld {
 namespace elf {
 template <class ELFT> void doIcf();
 }
-}
+} // namespace lld
 
 #endif

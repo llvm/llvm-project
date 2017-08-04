@@ -20,6 +20,5 @@ define void @_start() {
   ret void
 }
 
-; CHECK: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (void ()* @foo to i8*)], section "llvm.metadata"
-; CHECK: define internal void @foo
+; CHECK: define void @foo
 

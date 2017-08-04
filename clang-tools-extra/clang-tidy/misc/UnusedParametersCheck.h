@@ -20,12 +20,15 @@ namespace misc {
 /// turned on.
 class UnusedParametersCheck : public ClangTidyCheck {
 public:
-  UnusedParametersCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UnusedParametersCheck(StringRef Name, ClangTidyContext *Context);
+  ~UnusedParametersCheck();
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
+  class IndexerVisitor;
+  std::unique_ptr<IndexerVisitor> Indexer;
+
   void
   warnOnUnusedParameter(const ast_matchers::MatchFinder::MatchResult &Result,
                         const FunctionDecl *Function, unsigned ParamIndex);

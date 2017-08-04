@@ -75,6 +75,9 @@ public:
   static LinkageInfo none() {
     return LinkageInfo(NoLinkage, DefaultVisibility, false);
   }
+  static LinkageInfo visible_none() {
+    return LinkageInfo(VisibleNoLinkage, DefaultVisibility, false);
+  }
 
   Linkage getLinkage() const { return (Linkage)linkage_; }
   Visibility getVisibility() const { return (Visibility)visibility_; }

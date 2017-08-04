@@ -377,7 +377,7 @@ def P8Itineraries : ProcessorItineraries<
                                    InstrStage<1, [P8_FPU1, P8_FPU2]>],
                                   [7, 1, 1]>,
   InstrItinData<IIC_VecPerm     , [InstrStage<1, [P8_DU1, P8_DU2], 0>,
-                                   InstrStage<1, [P8_FPU2, P8_FPU2]>],
+                                   InstrStage<1, [P8_FPU1, P8_FPU2]>],
                                   [3, 1, 1]>
 ]>;
 

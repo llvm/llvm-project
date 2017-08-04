@@ -95,9 +95,10 @@ of the buffer."
 (defun clang-format--replace (offset length &optional text)
   "Replace the region defined by OFFSET and LENGTH with TEXT.
 OFFSET and LENGTH are measured in bytes, not characters.  OFFSET
-is a zero-based file offset."
-  (let ((start (clang-format--filepos-to-bufferpos offset 'exact))
-        (end (clang-format--filepos-to-bufferpos (+ offset length) 'exact)))
+is a zero-based file offset, assuming ‘utf-8-unix’ coding."
+  (let ((start (clang-format--filepos-to-bufferpos offset 'exact 'utf-8-unix))
+        (end (clang-format--filepos-to-bufferpos (+ offset length) 'exact
+                                                 'utf-8-unix)))
     (goto-char start)
     (delete-region start end)
     (when text
@@ -130,11 +131,18 @@ is no active region.  If no style is given uses `clang-format-style'."
   (unless style
     (setq style clang-format-style))
 
-  (let ((file-start (clang-format--bufferpos-to-filepos start 'approximate))
-        (file-end (clang-format--bufferpos-to-filepos end 'approximate))
-        (cursor (clang-format--bufferpos-to-filepos (point) 'exact))
+  (let ((file-start (clang-format--bufferpos-to-filepos start 'approximate
+                                                        'utf-8-unix))
+        (file-end (clang-format--bufferpos-to-filepos end 'approximate
+                                                      'utf-8-unix))
+        (cursor (clang-format--bufferpos-to-filepos (point) 'exact 'utf-8-unix))
         (temp-buffer (generate-new-buffer " *clang-format-temp*"))
-        (temp-file (make-temp-file "clang-format")))
+        (temp-file (make-temp-file "clang-format"))
+        ;; Output is XML, which is always UTF-8.  Input encoding should match
+        ;; the encoding used to convert between buffer and file positions,
+        ;; otherwise the offsets calculated above are off.  For simplicity, we
+        ;; always use ‘utf-8-unix’ and ignore the buffer coding system.
+        (default-process-coding-system '(utf-8-unix . utf-8-unix)))
     (unwind-protect
         (let ((status (call-process-region
                        nil nil clang-format-executable
@@ -164,7 +172,8 @@ is no active region.  If no style is given uses `clang-format-style'."
               (dolist (rpl replacements)
                 (apply #'clang-format--replace rpl)))
             (when cursor
-              (goto-char (clang-format--filepos-to-bufferpos cursor 'exact)))
+              (goto-char (clang-format--filepos-to-bufferpos cursor 'exact
+                                                             'utf-8-unix)))
             (if incomplete-format
                 (message "(clang-format: incomplete (syntax errors)%s)" stderr)
               (message "(clang-format: success%s)" stderr))))

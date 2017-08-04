@@ -15,8 +15,13 @@
 #define SINGLE_PRECISION
 #include "fp_add_impl.inc"
 
-ARM_EABI_FNALIAS(fadd, addsf3)
-
 COMPILER_RT_ABI float __addsf3(float a, float b) {
     return __addXf3__(a, b);
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI float __aeabi_fadd(float a, float b) {
+  return __addsf3(a, b);
+}
+#endif
+

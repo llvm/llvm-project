@@ -15,6 +15,7 @@
 #include "sleep.h"
 
 #include <cerrno>
+#include <cstdlib>
 #include <ctime>
 
 #include "internal_macros.h"
@@ -40,7 +41,7 @@ void SleepForMicroseconds(int microseconds) {
 }
 
 void SleepForMilliseconds(int milliseconds) {
-  SleepForMicroseconds(static_cast<int>(milliseconds) * kNumMicrosPerMilli);
+  SleepForMicroseconds(milliseconds * kNumMicrosPerMilli);
 }
 
 void SleepForSeconds(double seconds) {

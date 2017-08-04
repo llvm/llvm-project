@@ -5,9 +5,9 @@
 // The fuzzer must find a string based on dictionary words:
 //   "Elvis"
 //   "Presley"
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <cstring>
 #include <iostream>
 

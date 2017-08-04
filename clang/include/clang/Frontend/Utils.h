@@ -184,10 +184,11 @@ createChainedIncludesSource(CompilerInstance &CI,
 ///
 /// \return A CompilerInvocation, or 0 if none was built for the given
 /// argument vector.
-std::unique_ptr<CompilerInvocation>
-createInvocationFromCommandLine(ArrayRef<const char *> Args,
-                                IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-                                    IntrusiveRefCntPtr<DiagnosticsEngine>());
+std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
+    ArrayRef<const char *> Args,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        IntrusiveRefCntPtr<DiagnosticsEngine>(),
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
 
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.

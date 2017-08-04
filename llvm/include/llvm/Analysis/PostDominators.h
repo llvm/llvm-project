@@ -22,10 +22,12 @@ namespace llvm {
 /// PostDominatorTree Class - Concrete subclass of DominatorTree that is used to
 /// compute the post-dominator tree.
 ///
-struct PostDominatorTree : public DominatorTreeBase<BasicBlock> {
-  typedef DominatorTreeBase<BasicBlock> Base;
+struct PostDominatorTree : public PostDomTreeBase<BasicBlock> {
+  typedef PostDomTreeBase<BasicBlock> Base;
 
-  PostDominatorTree() : DominatorTreeBase<BasicBlock>(true) {}
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 };
 
 /// \brief Analysis pass which computes a \c PostDominatorTree.

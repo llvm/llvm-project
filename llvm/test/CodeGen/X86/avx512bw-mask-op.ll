@@ -150,3 +150,93 @@ define i64 @mand64_mem(<64 x i1>* %x, <64 x i1>* %y) {
   %ret = bitcast <64 x i1> %me to i64
   ret i64 %ret
 }
+
+define i32 @test_v32i1_add(i32 %x, i32 %y) {
+; CHECK-LABEL: test_v32i1_add:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    kxord %k1, %k0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i32 %x to <32 x i1>
+  %m1 = bitcast i32 %y to <32 x i1>
+  %m2 = add <32 x i1> %m0,  %m1
+  %ret = bitcast <32 x i1> %m2 to i32
+  ret i32 %ret
+}
+
+define i32 @test_v32i1_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: test_v32i1_sub:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    kxord %k1, %k0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i32 %x to <32 x i1>
+  %m1 = bitcast i32 %y to <32 x i1>
+  %m2 = sub <32 x i1> %m0,  %m1
+  %ret = bitcast <32 x i1> %m2 to i32
+  ret i32 %ret
+}
+
+define i32 @test_v32i1_mul(i32 %x, i32 %y) {
+; CHECK-LABEL: test_v32i1_mul:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k0
+; CHECK-NEXT:    kmovd %esi, %k1
+; CHECK-NEXT:    kandd %k1, %k0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i32 %x to <32 x i1>
+  %m1 = bitcast i32 %y to <32 x i1>
+  %m2 = mul <32 x i1> %m0,  %m1
+  %ret = bitcast <32 x i1> %m2 to i32
+  ret i32 %ret
+}
+
+define i64 @test_v64i1_add(i64 %x, i64 %y) {
+; CHECK-LABEL: test_v64i1_add:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovq %rdi, %k0
+; CHECK-NEXT:    kmovq %rsi, %k1
+; CHECK-NEXT:    kxorq %k1, %k0, %k0
+; CHECK-NEXT:    kmovq %k0, %rax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i64 %x to <64 x i1>
+  %m1 = bitcast i64 %y to <64 x i1>
+  %m2 = add <64 x i1> %m0,  %m1
+  %ret = bitcast <64 x i1> %m2 to i64
+  ret i64 %ret
+}
+
+define i64 @test_v64i1_sub(i64 %x, i64 %y) {
+; CHECK-LABEL: test_v64i1_sub:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovq %rdi, %k0
+; CHECK-NEXT:    kmovq %rsi, %k1
+; CHECK-NEXT:    kxorq %k1, %k0, %k0
+; CHECK-NEXT:    kmovq %k0, %rax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i64 %x to <64 x i1>
+  %m1 = bitcast i64 %y to <64 x i1>
+  %m2 = sub <64 x i1> %m0,  %m1
+  %ret = bitcast <64 x i1> %m2 to i64
+  ret i64 %ret
+}
+
+define i64 @test_v64i1_mul(i64 %x, i64 %y) {
+; CHECK-LABEL: test_v64i1_mul:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovq %rdi, %k0
+; CHECK-NEXT:    kmovq %rsi, %k1
+; CHECK-NEXT:    kandq %k1, %k0, %k0
+; CHECK-NEXT:    kmovq %k0, %rax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i64 %x to <64 x i1>
+  %m1 = bitcast i64 %y to <64 x i1>
+  %m2 = mul <64 x i1> %m0,  %m1
+  %ret = bitcast <64 x i1> %m2 to i64
+  ret i64 %ret
+}

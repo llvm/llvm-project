@@ -8,6 +8,16 @@
 #ifndef HEADER
 #define HEADER
 
+// Check that the execution mode of all 6 target regions is set to Generic Mode.
+// CHECK-DAG: {{@__omp_offloading_.+l100}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l177}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l287}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l324}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l342}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l307}}_exec_mode = weak constant i8 1
+
+__thread int id;
+
 template<typename tx, typename ty>
 struct TT{
   tx X;
@@ -23,7 +33,7 @@ int foo(int n) {
   double cn[5][n];
   TT<long long, char> d;
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l90}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l100}}_worker()
   // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
   // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
   // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -54,7 +64,7 @@ int foo(int n) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+foo.+l90]]()
+  // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+foo.+l100]]()
   // CHECK-DAG: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   // CHECK-DAG: [[NTH:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   // CHECK-DAG: [[WS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
@@ -96,7 +106,7 @@ int foo(int n) {
   {
   }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l167}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l177}}_worker()
   // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
   // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
   // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -127,7 +137,7 @@ int foo(int n) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T2:@__omp_offloading_.+foo.+l167]](i[[SZ:32|64]] [[ARG1:%[a-zA-Z_]+]])
+  // CHECK: define {{.*}}void [[T2:@__omp_offloading_.+foo.+l177]](i[[SZ:32|64]] [[ARG1:%[a-zA-Z_]+]], i[[SZ:32|64]] [[ID:%[a-zA-Z_]+]])
   // CHECK: [[AA_ADDR:%.+]] = alloca i[[SZ]],
   // CHECK: store i[[SZ]] [[ARG1]], i[[SZ]]* [[AA_ADDR]],
   // CHECK: [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
@@ -167,9 +177,10 @@ int foo(int n) {
   #pragma omp target if(1)
   {
     aa += 1;
+    id = aa;
   }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l276}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l287}}_worker()
   // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
   // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
   // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -200,7 +211,7 @@ int foo(int n) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T3:@__omp_offloading_.+foo.+l276]](i[[SZ]]
+  // CHECK: define {{.*}}void [[T3:@__omp_offloading_.+foo.+l287]](i[[SZ]]
   // Create local storage for each capture.
   // CHECK:    [[LOCAL_A:%.+]] = alloca i[[SZ]]
   // CHECK:    [[LOCAL_B:%.+]] = alloca [10 x float]*
@@ -353,7 +364,7 @@ int bar(int n){
   return a;
 }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+static.+313}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+static.+324}}_worker()
   // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
   // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
   // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -384,7 +395,7 @@ int bar(int n){
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T4:@__omp_offloading_.+static.+l313]](i[[SZ]]
+  // CHECK: define {{.*}}void [[T4:@__omp_offloading_.+static.+l324]](i[[SZ]]
   // Create local storage for each capture.
   // CHECK:  [[LOCAL_A:%.+]] = alloca i[[SZ]]
   // CHECK:  [[LOCAL_AA:%.+]] = alloca i[[SZ]]
@@ -439,7 +450,7 @@ int bar(int n){
 
 
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+S1.+l331}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+S1.+l342}}_worker()
   // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
   // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
   // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -470,7 +481,7 @@ int bar(int n){
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T5:@__omp_offloading_.+S1.+l331]](
+  // CHECK: define {{.*}}void [[T5:@__omp_offloading_.+S1.+l342]](
   // Create local storage for each capture.
   // CHECK:       [[LOCAL_THIS:%.+]] = alloca [[S1:%struct.*]]*
   // CHECK:       [[LOCAL_B:%.+]] = alloca i[[SZ]]
@@ -529,7 +540,7 @@ int bar(int n){
 
 
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l296}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l307}}_worker()
   // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
   // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
   // CHECK: store i8* null, i8** [[OMP_WORK_FN]],
@@ -560,7 +571,7 @@ int bar(int n){
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T6:@__omp_offloading_.+template.+l296]](i[[SZ]]
+  // CHECK: define {{.*}}void [[T6:@__omp_offloading_.+template.+l307]](i[[SZ]]
   // Create local storage for each capture.
   // CHECK:  [[LOCAL_A:%.+]] = alloca i[[SZ]]
   // CHECK:  [[LOCAL_AA:%.+]] = alloca i[[SZ]]

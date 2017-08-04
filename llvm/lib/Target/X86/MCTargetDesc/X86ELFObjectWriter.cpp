@@ -9,28 +9,32 @@
 
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 namespace {
-  class X86ELFObjectWriter : public MCELFObjectTargetWriter {
-  public:
-    X86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine);
 
-    ~X86ELFObjectWriter() override;
+class X86ELFObjectWriter : public MCELFObjectTargetWriter {
+public:
+  X86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine);
+  ~X86ELFObjectWriter() override = default;
 
-  protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
-  };
-}
+protected:
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
+};
+
+} // end anonymous namespace
 
 X86ELFObjectWriter::X86ELFObjectWriter(bool IsELF64, uint8_t OSABI,
                                        uint16_t EMachine)
@@ -39,9 +43,6 @@ X86ELFObjectWriter::X86ELFObjectWriter(bool IsELF64, uint8_t OSABI,
                               /*HasRelocationAddend*/
                               (EMachine != ELF::EM_386) &&
                                   (EMachine != ELF::EM_IAMCU)) {}
-
-X86ELFObjectWriter::~X86ELFObjectWriter()
-{}
 
 enum X86_64RelType { RT64_64, RT64_32, RT64_32S, RT64_16, RT64_8 };
 
@@ -96,6 +97,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   default:
     llvm_unreachable("Unimplemented");
   case MCSymbolRefExpr::VK_None:
+  case MCSymbolRefExpr::VK_X86_ABS8:
     switch (Type) {
     case RT64_64:
       return IsPCRel ? ELF::R_X86_64_PC64 : ELF::R_X86_64_64;
@@ -219,6 +221,7 @@ static unsigned getRelocType32(MCContext &Ctx,
   default:
     llvm_unreachable("Unimplemented");
   case MCSymbolRefExpr::VK_None:
+  case MCSymbolRefExpr::VK_X86_ABS8:
     switch (Type) {
     case RT32_32:
       return IsPCRel ? ELF::R_386_PC32 : ELF::R_386_32;

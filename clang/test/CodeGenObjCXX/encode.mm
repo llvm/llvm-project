@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 // CHECK: v17@0:8{vector<float, float, float>=}16
 // CHECK: {vector<float, float, float>=}

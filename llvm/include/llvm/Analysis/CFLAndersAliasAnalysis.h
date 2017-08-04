@@ -18,8 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CFLAliasAnalysisUtils.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <forward_list>
 
@@ -47,7 +47,7 @@ public:
     return false;
   }
   /// Evict the given function from cache
-  void evict(const Function &Fn);
+  void evict(const Function *Fn);
 
   /// \brief Get the alias summary for the given function
   /// Return nullptr if the summary is not found or not available
@@ -57,27 +57,6 @@ public:
   AliasResult alias(const MemoryLocation &, const MemoryLocation &);
 
 private:
-  struct FunctionHandle final : public CallbackVH {
-    FunctionHandle(Function *Fn, CFLAndersAAResult *Result)
-        : CallbackVH(Fn), Result(Result) {
-      assert(Fn != nullptr);
-      assert(Result != nullptr);
-    }
-
-    void deleted() override { removeSelfFromCache(); }
-    void allUsesReplacedWith(Value *) override { removeSelfFromCache(); }
-
-  private:
-    CFLAndersAAResult *Result;
-
-    void removeSelfFromCache() {
-      assert(Result != nullptr);
-      auto *Val = getValPtr();
-      Result->evict(*cast<Function>(Val));
-      setValPtr(nullptr);
-    }
-  };
-
   /// \brief Ensures that the given function is available in the cache.
   /// Returns the appropriate entry from the cache.
   const Optional<FunctionInfo> &ensureCached(const Function &);
@@ -97,7 +76,7 @@ private:
   /// that simply has empty sets.
   DenseMap<const Function *, Optional<FunctionInfo>> Cache;
 
-  std::forward_list<FunctionHandle> Handles;
+  std::forward_list<cflaa::FunctionHandle<CFLAndersAAResult>> Handles;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

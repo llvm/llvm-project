@@ -16,11 +16,18 @@
 namespace lld {
 namespace coff {
 
+extern uint64_t ErrorCount;
+extern llvm::raw_ostream *ErrorOS;
+
+void log(const Twine &Msg);
+void message(const Twine &Msg);
+void warn(const Twine &Msg);
+void error(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(std::error_code EC, const Twine &Prefix);
 LLVM_ATTRIBUTE_NORETURN void fatal(llvm::Error &Err, const Twine &Prefix);
 
-template <class T> T check(ErrorOr<T> &&V, const Twine &Prefix) {
+template <class T> T check(ErrorOr<T> V, const Twine &Prefix) {
   if (auto EC = V.getError())
     fatal(EC, Prefix);
   return std::move(*V);

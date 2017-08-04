@@ -24,8 +24,8 @@
 
 // -----------------------------------------------------------------------------
 // Overview
-//   Check that std::terminate is called if wait(...) fails to meet it's post
-//   conditions. This can happens when reacquiring the mutex throws
+//   Check that std::terminate is called if wait(...) fails to meet its post
+//   conditions. This can happen when reacquiring the mutex throws
 //   an exception.
 //
 //  The following methods are tested within this file
@@ -37,7 +37,7 @@
 //   6.  void wait_until(Lock& lock, TimePoint, Pred);
 //
 // Plan
-//   1 Create a mutex type, 'ThrowingMutex', that throws when the lock is aquired
+//   1 Create a mutex type, 'ThrowingMutex', that throws when the lock is acquired
 //     for the *second* time.
 //
 //   2 Replace the terminate handler with one that exits with a '0' exit code.

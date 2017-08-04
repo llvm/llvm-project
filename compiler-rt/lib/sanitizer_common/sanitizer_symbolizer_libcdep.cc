@@ -356,11 +356,19 @@ const char *LLVMSymbolizer::FormatAndSendCommand(bool is_data,
   CHECK(module_name);
   const char *is_data_str = is_data ? "DATA " : "";
   if (arch == kModuleArchUnknown) {
-    internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
-                      module_name, module_offset);
+    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
+                          module_name,
+                          module_offset) >= static_cast<int>(kBufferSize)) {
+      Report("WARNING: Command buffer too small");
+      return nullptr;
+    }
   } else {
-    internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n", is_data_str,
-                      module_name, ModuleArchToString(arch), module_offset);
+    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n",
+                          is_data_str, module_name, ModuleArchToString(arch),
+                          module_offset) >= static_cast<int>(kBufferSize)) {
+      Report("WARNING: Command buffer too small");
+      return nullptr;
+    }
   }
   return symbolizer_process_->SendCommand(buffer_);
 }
@@ -377,7 +385,23 @@ SymbolizerProcess::SymbolizerProcess(const char *path, bool use_forkpty)
   CHECK_NE(path_[0], '\0');
 }
 
+static bool IsSameModule(const char* path) {
+  if (const char* ProcessName = GetProcessName()) {
+    if (const char* SymbolizerName = StripModuleName(path)) {
+      return !internal_strcmp(ProcessName, SymbolizerName);
+    }
+  }
+  return false;
+}
+
 const char *SymbolizerProcess::SendCommand(const char *command) {
+  if (failed_to_start_)
+    return nullptr;
+  if (IsSameModule(path_)) {
+    Report("WARNING: Symbolizer was blocked from starting itself!\n");
+    failed_to_start_ = true;
+    return nullptr;
+  }
   for (; times_restarted_ < kMaxTimesRestarted; times_restarted_++) {
     // Start or restart symbolizer if we failed to send command to it.
     if (const char *res = SendCommandImpl(command))
@@ -426,6 +450,11 @@ bool SymbolizerProcess::ReadFromSymbolizer(char *buffer, uptr max_length) {
     read_len += just_read;
     if (ReachedEndOfOutput(buffer, read_len))
       break;
+    if (read_len + 1 == max_length) {
+      Report("WARNING: Symbolizer buffer too small");
+      read_len = 0;
+      break;
+    }
   }
   buffer[read_len] = '\0';
   return true;

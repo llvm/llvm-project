@@ -1,28 +1,32 @@
+//===------------------ directory_iterator.cpp ----------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "experimental/filesystem"
+#include "__config"
+#if defined(_LIBCPP_WIN32API)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#else
 #include <dirent.h>
+#endif
 #include <errno.h>
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
 namespace { namespace detail {
 
+#if !defined(_LIBCPP_WIN32API)
 inline error_code capture_errno() {
     _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
     return error_code{errno, std::generic_category()};
 }
-
-template <class ...Args>
-inline bool capture_error_or_throw(std::error_code* user_ec,
-                                   const char* msg, Args&&... args)
-{
-    std::error_code my_ec = capture_errno();
-    if (user_ec) {
-        *user_ec = my_ec;
-        return true;
-    }
-    __throw_filesystem_error(msg, std::forward<Args>(args)..., my_ec);
-    return false;
-}
+#endif
 
 template <class ...Args>
 inline bool set_or_throw(std::error_code& my_ec,
@@ -37,25 +41,87 @@ inline bool set_or_throw(std::error_code& my_ec,
     return false;
 }
 
-typedef path::string_type string_type;
-
-
-inline string_type posix_readdir(DIR *dir_stream, error_code& ec) {
+#if !defined(_LIBCPP_WIN32API)
+inline path::string_type posix_readdir(DIR *dir_stream, error_code& ec) {
     struct dirent* dir_entry_ptr = nullptr;
     errno = 0; // zero errno in order to detect errors
+    ec.clear();
     if ((dir_entry_ptr = ::readdir(dir_stream)) == nullptr) {
-        ec = capture_errno();
+        if (errno)
+          ec = capture_errno();
         return {};
     } else {
-        ec.clear();
         return dir_entry_ptr->d_name;
     }
 }
+#endif
 
 }}                                                       // namespace detail
 
 using detail::set_or_throw;
 
+#if defined(_LIBCPP_WIN32API)
+class __dir_stream {
+public:
+  __dir_stream() = delete;
+  __dir_stream& operator=(const __dir_stream&) = delete;
+
+  __dir_stream(__dir_stream&& __ds) noexcept
+      : __stream_(__ds.__stream_), __root_(std::move(__ds.__root_)),
+        __entry_(std::move(__ds.__entry_)) {
+    __ds.__stream_ = INVALID_HANDLE_VALUE;
+  }
+
+  __dir_stream(const path& root, directory_options opts, error_code& ec)
+      : __stream_(INVALID_HANDLE_VALUE), __root_(root) {
+    __stream_ = ::FindFirstFile(root.c_str(), &__data_);
+    if (__stream_ == INVALID_HANDLE_VALUE) {
+      ec = error_code(::GetLastError(), std::generic_category());
+      const bool ignore_permission_denied =
+          bool(opts & directory_options::skip_permission_denied);
+      if (ignore_permission_denied && ec.value() == ERROR_ACCESS_DENIED)
+        ec.clear();
+      return;
+    }
+  }
+
+  ~__dir_stream() noexcept {
+    if (__stream_ == INVALID_HANDLE_VALUE)
+      return;
+    close();
+  }
+
+  bool good() const noexcept { return __stream_ != INVALID_HANDLE_VALUE; }
+
+  bool advance(error_code& ec) {
+    while (::FindNextFile(__stream_, &__data_)) {
+      if (!strcmp(__data_.cFileName, ".") || strcmp(__data_.cFileName, ".."))
+        continue;
+      __entry_.assign(__root_ / __data_.cFileName);
+      return true;
+    }
+    ec = error_code(::GetLastError(), std::generic_category());
+    close();
+    return false;
+  }
+
+private:
+  std::error_code close() noexcept {
+    std::error_code ec;
+    if (!::FindClose(__stream_))
+      ec = error_code(::GetLastError(), std::generic_category());
+    __stream_ = INVALID_HANDLE_VALUE;
+    return ec;
+  }
+
+  HANDLE __stream_{INVALID_HANDLE_VALUE};
+  WIN32_FIND_DATA __data_;
+
+public:
+  path __root_;
+  directory_entry __entry_;
+};
+#else
 class __dir_stream {
 public:
     __dir_stream() = delete;
@@ -117,6 +183,7 @@ public:
     path __root_;
     directory_entry __entry_;
 };
+#endif
 
 // directory_iterator
 
@@ -149,7 +216,7 @@ directory_iterator& directory_iterator::__increment(error_code *ec)
 
 }
 
-directory_entry const& directory_iterator::__deref() const {
+directory_entry const& directory_iterator::__dereference() const {
     _LIBCPP_ASSERT(__imp_, "Attempting to dereference an invalid iterator");
     return __imp_->__entry_;
 }
@@ -195,7 +262,7 @@ int recursive_directory_iterator::depth() const {
     return __imp_->__stack_.size() - 1;
 }
 
-const directory_entry& recursive_directory_iterator::__deref() const {
+const directory_entry& recursive_directory_iterator::__dereference() const {
     return __imp_->__stack_.top().__entry_;
 }
 

@@ -1,4 +1,5 @@
-; RUN: llc -march=mipsel -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s | FileCheck %s
+; RUN: llc -relocation-model=pic -march=mipsel -mcpu=mips64r6 \
+; RUN:     -disable-mips-delay-filler -target-abi=n64 < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define void @l() {

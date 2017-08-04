@@ -11,8 +11,8 @@
 ; RUN:     --plugin-opt=thinlto -o %t2 %t.o
 ; RUN: llvm-dis < %t.o.5.precodegen.bc | FileCheck %s
 
-; Check that foo is properly appended to llvm.compiler.used
-; CHECK: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (void ()* @foo to i8*)], section "llvm.metadata"
+; Check that foo is not internalized
+; CHECK: define void @foo
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

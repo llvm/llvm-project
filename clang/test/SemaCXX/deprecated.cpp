@@ -75,21 +75,21 @@ namespace DeprecatedCopy {
   struct Assign {
     Assign &operator=(const Assign&); // expected-warning {{definition of implicit copy constructor for 'Assign' is deprecated because it has a user-declared copy assignment operator}}
   };
-  Assign a1, a2(a1); // expected-note {{implicit copy constructor for 'Assign' first required here}}
+  Assign a1, a2(a1); // expected-note {{implicit copy constructor for 'DeprecatedCopy::Assign' first required here}}
 
   struct Ctor {
     Ctor();
     Ctor(const Ctor&); // expected-warning {{definition of implicit copy assignment operator for 'Ctor' is deprecated because it has a user-declared copy constructor}}
   };
   Ctor b1, b2;
-  void f() { b1 = b2; } // expected-note {{implicit copy assignment operator for 'Ctor' first required here}}
+  void f() { b1 = b2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Ctor' first required here}}
 
   struct Dtor {
     ~Dtor();
     // expected-warning@-1 {{definition of implicit copy constructor for 'Dtor' is deprecated because it has a user-declared destructor}}
     // expected-warning@-2 {{definition of implicit copy assignment operator for 'Dtor' is deprecated because it has a user-declared destructor}}
   };
-  Dtor c1, c2(c1); // expected-note {{implicit copy constructor for 'Dtor' first required here}}
-  void g() { c1 = c2; } // expected-note {{implicit copy assignment operator for 'Dtor' first required here}}
+  Dtor c1, c2(c1); // expected-note {{implicit copy constructor for 'DeprecatedCopy::Dtor' first required here}}
+  void g() { c1 = c2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Dtor' first required here}}
 }
 #endif

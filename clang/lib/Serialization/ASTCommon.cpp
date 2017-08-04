@@ -147,9 +147,6 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::OCLQueue:
     ID = PREDEF_TYPE_QUEUE_ID;
     break;
-  case BuiltinType::OCLNDRange:
-    ID = PREDEF_TYPE_NDRANGE_ID;
-    break;
   case BuiltinType::OCLReserveID:
     ID = PREDEF_TYPE_RESERVE_ID_ID;
     break;
@@ -254,6 +251,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Function:
+  case Decl::CXXDeductionGuide:
   case Decl::CXXMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:

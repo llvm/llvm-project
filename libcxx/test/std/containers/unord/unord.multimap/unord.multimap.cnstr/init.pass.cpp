@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_map>
 
 // template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
@@ -29,7 +31,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         typedef std::unordered_multimap<int, std::string,
                                    test_hash<std::hash<int> >,
@@ -83,7 +84,6 @@ int main()
         assert(c.key_eq() == test_compare<std::equal_to<int> >());
         assert((c.get_allocator() == test_allocator<std::pair<const int, std::string> >()));
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<int, std::string,
                                    test_hash<std::hash<int> >,
@@ -250,7 +250,5 @@ int main()
         assert(c.get_allocator() == a);
         assert(!(c.get_allocator() == A()));
     }
-#endif
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif // TEST_STD_VER > 11
 }

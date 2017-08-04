@@ -45,9 +45,10 @@ typedef mp_int isl_int;
 #define isl_int_divexact_ui(r,i,j)	impz_divexact_ui(r,i,j)
 #define isl_int_tdiv_q(r,i,j)	impz_tdiv_q(r,i,j)
 #define isl_int_cdiv_q(r,i,j)	impz_cdiv_q(r,i,j)
+#define isl_int_cdiv_q_ui(r,i,j)	isl_imath_cdiv_q_ui(r,i,j)
 #define isl_int_fdiv_q(r,i,j)	impz_fdiv_q(r,i,j)
 #define isl_int_fdiv_r(r,i,j)	impz_fdiv_r(r,i,j)
-#define isl_int_fdiv_q_ui(r,i,j)	impz_fdiv_q_ui(r,i,j)
+#define isl_int_fdiv_q_ui(r,i,j)	isl_imath_fdiv_q_ui(r,i,j)
 
 #define isl_int_read(r,s)	impz_set_str(r,s,10)
 #define isl_int_sgn(i)		impz_sgn(i)

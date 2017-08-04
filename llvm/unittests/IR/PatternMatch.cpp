@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -21,7 +22,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "gtest/gtest.h"
 
@@ -91,15 +91,26 @@ TEST_F(PatternMatchTest, FloatingPointOrderedMin) {
   EXPECT_FALSE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
                    .match(IRB.CreateSelect(IRB.CreateFCmpOGT(L, R), L, R)));
 
-  // Test match on OGE with inverted select.
-  EXPECT_TRUE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
+  // Test inverted selects. Note, that this "inverts" the ordering, e.g.:
+  // %cmp = fcmp oge L, R
+  // %min = select %cmp R, L
+  // Given L == NaN
+  // the above is expanded to %cmp == false ==> %min = L
+  // which is true for UnordFMin, not OrdFMin, so test that:
+
+  // [OU]GE with inverted select.
+  EXPECT_FALSE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpOGE(L, R), R, L)));
+  EXPECT_TRUE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpUGE(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 
-  // Test match on OGT with inverted select.
-  EXPECT_TRUE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
+  // [OU]GT with inverted select.
+  EXPECT_FALSE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpOGT(L, R), R, L)));
+  EXPECT_TRUE(m_OrdFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpUGT(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 }
@@ -130,15 +141,27 @@ TEST_F(PatternMatchTest, FloatingPointOrderedMax) {
   EXPECT_FALSE(m_OrdFMax(m_Value(MatchL), m_Value(MatchR))
                    .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), L, R)));
 
-  // Test match on OLE with inverted select.
+
+  // Test inverted selects. Note, that this "inverts" the ordering, e.g.:
+  // %cmp = fcmp ole L, R
+  // %max = select %cmp, R, L
+  // Given L == NaN,
+  // the above is expanded to %cmp == false ==> %max == L
+  // which is true for UnordFMax, not OrdFMax, so test that:
+
+  // [OU]LE with inverted select.
+  EXPECT_FALSE(m_OrdFMax(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), R, L)));
   EXPECT_TRUE(m_OrdFMax(m_Value(MatchL), m_Value(MatchR))
-                  .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), R, L)));
+                  .match(IRB.CreateSelect(IRB.CreateFCmpULE(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 
-  // Test match on OLT with inverted select.
+  // [OUT]LT with inverted select.
+  EXPECT_FALSE(m_OrdFMax(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
   EXPECT_TRUE(m_OrdFMax(m_Value(MatchL), m_Value(MatchR))
-                  .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
+                  .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 }
@@ -169,15 +192,26 @@ TEST_F(PatternMatchTest, FloatingPointUnorderedMin) {
   EXPECT_FALSE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
                    .match(IRB.CreateSelect(IRB.CreateFCmpUGT(L, R), L, R)));
 
-  // Test match on UGE with inverted select.
-  EXPECT_TRUE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
+  // Test inverted selects. Note, that this "inverts" the ordering, e.g.:
+  // %cmp = fcmp uge L, R
+  // %min = select %cmp R, L
+  // Given L == NaN
+  // the above is expanded to %cmp == true ==> %min = R
+  // which is true for OrdFMin, not UnordFMin, so test that:
+
+  // [UO]GE with inverted select.
+  EXPECT_FALSE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpUGE(L, R), R, L)));
+  EXPECT_TRUE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOGE(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 
-  // Test match on UGT with inverted select.
-  EXPECT_TRUE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
+  // [UO]GT with inverted select.
+  EXPECT_FALSE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpUGT(L, R), R, L)));
+  EXPECT_TRUE(m_UnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOGT(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 }
@@ -208,15 +242,26 @@ TEST_F(PatternMatchTest, FloatingPointUnorderedMax) {
   EXPECT_FALSE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
                    .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), L, R)));
 
-  // Test match on ULE with inverted select.
-  EXPECT_TRUE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
+  // Test inverted selects. Note, that this "inverts" the ordering, e.g.:
+  // %cmp = fcmp ule L, R
+  // %max = select %cmp R, L
+  // Given L == NaN
+  // the above is expanded to %cmp == true ==> %max = R
+  // which is true for OrdFMax, not UnordFMax, so test that:
+
+  // [UO]LE with inverted select.
+  EXPECT_FALSE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpULE(L, R), R, L)));
+  EXPECT_TRUE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 
-  // Test match on ULT with inverted select.
-  EXPECT_TRUE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
+  // [UO]LT with inverted select.
+  EXPECT_FALSE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), R, L)));
+  EXPECT_TRUE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 }

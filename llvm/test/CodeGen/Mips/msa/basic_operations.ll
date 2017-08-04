@@ -1,9 +1,9 @@
 ; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic \
 ; RUN:   -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-BE %s
+; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-BE,O32-BE %s
 ; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic \
 ; RUN:   -verify-machineinstrs < %s | \
-; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-LE %s
+; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-LE,O32-LE %s
 ; RUN: llc -march=mips64 -target-abi n32 -mattr=+msa,+fp64 \
 ; RUN:   -relocation-model=pic -verify-machineinstrs < %s | \
 ; RUN:   FileCheck -check-prefixes=ALL,N32,MIPS64,ALL-BE %s
@@ -58,10 +58,19 @@ define void @const_v16i8() nounwind {
   ; ALL-DAG: fill.w [[R1:\$w[0-9]+]], [[R2]]
 
   store volatile <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, <16 x i8>*@v16i8
-  ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
-  ; ALL: ld.b  [[R1:\$w[0-9]+]], 0([[G_PTR]])
+  ; ALL-BE-DAG: lui [[R3:\$[0-9]+]], 1286
+  ; ALL-LE-DAG: lui [[R3:\$[0-9]+]], 2055
+  ; ALL-BE-DAG: ori [[R4:\$[0-9]+]], [[R3]], 1800
+  ; ALL-LE-DAG: ori [[R4:\$[0-9]+]], [[R3]], 1541
+  ; O32-BE: fill.w  [[R1:\$w[0-9]+]], [[R4]]
+
+  ; O32: insert.w [[R1]][1], [[R2]]
+  ; O32: splati.d $w{{.*}}, [[R1]][0]
+
+  ; MIPS64-BE: dinsu [[R4]], [[R2]], 32, 32
+  ; MIPS64-LE: dinsu [[R2]], [[R4]], 32, 32
+  ; MIPS64-BE: fill.d $w{{.*}}, [[R4]]
+  ; MIPS64-LE: fill.d $w{{.*}}, [[R2]]
 
   ret void
 }
@@ -92,10 +101,19 @@ define void @const_v8i16() nounwind {
   ; ALL-DAG: fill.w [[R1:\$w[0-9]+]], [[R2]]
 
   store volatile <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 1, i16 2, i16 3, i16 4>, <8 x i16>*@v8i16
-  ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
-  ; ALL: ld.h  [[R1:\$w[0-9]+]], 0([[G_PTR]])
+  ; ALL-BE-DAG: lui [[R3:\$[0-9]+]], 3
+  ; ALL-LE-DAG: lui [[R3:\$[0-9]+]], 4
+  ; ALL-BE-DAG: ori [[R4:\$[0-9]+]], [[R3]], 4
+  ; ALL-LE-DAG: ori [[R4:\$[0-9]+]], [[R3]], 3
+
+  ; O32-BE: fill.w [[R1:\$w[0-9]+]], [[R4]]
+  ; O32: insert.w [[R1]][1], [[R2]]
+  ; O32: splati.d $w{{.*}}, [[R1]][0]
+
+  ; MIPS64-BE: dinsu [[R4]], [[R2]], 32, 32
+  ; MIPS64-LE: dinsu [[R2]], [[R4]], 32, 32
+  ; MIPS64-BE: fill.d $w{{.*}}, [[R4]]
+  ; MIPS64-LE: fill.d $w{{.*}}, [[R2]]
 
   ret void
 }
@@ -122,10 +140,23 @@ define void @const_v4i32() nounwind {
   ; ALL: ldi.h [[R1:\$w[0-9]+]], 1
 
   store volatile <4 x i32> <i32 1, i32 2, i32 1, i32 2>, <4 x i32>*@v4i32
-  ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
-  ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
+  ; -BE-DAG: ori [[R2:\$[0-9]+]], $zero, 1
+  ; O32-BE-DAG: ori [[R3:\$[0-9]+]], $zero, 1
+  ; O32-BE-DAG: ori [[R4:\$[0-9]+]], $zero, 2
+  ; O32-LE-DAG: ori [[R3:\$[0-9]+]], $zero, 2
+  ; O32-LE-DAG: ori [[R4:\$[0-9]+]], $zero, 1
+  ; O32: fill.w [[W0:\$w[0-9]+]], [[R4]]
+  ; O32: insert.w [[W0]][1], [[R3]]
+  ; O32: splati.d [[W1:\$w[0-9]+]], [[W0]]
+
+  ; MIPS64-DAG: ori [[R5:\$[0-9]+]], $zero, 2
+  ; MIPS64-DAG: ori [[R6:\$[0-9]+]], $zero, 1
+
+  ; MIPS64-BE: dinsu [[R5]], [[R6]], 32, 32
+  ; MIPS64-LE: dinsu [[R6]], [[R5]], 32, 32
+  ; MIPS64-BE: fill.d $w{{.*}}, [[R4]]
+  ; MIPS64-LE: fill.d $w{{.*}}, [[R2]]
+
 
   store volatile <4 x i32> <i32 3, i32 4, i32 5, i32 6>, <4 x i32>*@v4i32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($

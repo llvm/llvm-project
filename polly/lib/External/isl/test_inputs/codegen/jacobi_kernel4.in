@@ -1,0 +1,4 @@
+# Check that an affine value is extracted for the final dimension
+[t0,a,b,t] -> { S_0[t, i] -> [i, t0] : exists (e0 = [(t0 - i)/512]:  512e0 = t0 - i and 64b >= 2t + i - 8a and 64b <= -2t + i + 8a and 4a <= 3 + t and 4a >= t and t >= 0 and t <= 1999 and i >= 1 and i <= 1310718 and a >= 0 and a <= 500 and 8b <= 163839 + a and b <= 20480 and 8b >= 1 - a and b >= 0 and 32b <= 655359 - t + 4a and 32b >= 1 + t - 4a and t0 >= 0 and t0 <= 511) }
+[t0,a,b,t] -> { :  t <= -1 + 4a + 32b and t >= 0 and t <= 4a and t >= -3 + 4a and t <= 1999 and t <= 655359 + 4a - 32b and t0 >= 0 and t0 <= 511 }
+[t0] -> {  }

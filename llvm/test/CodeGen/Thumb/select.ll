@@ -74,9 +74,9 @@ define double @f7(double %a, double %b) {
 }
 ; CHECK-LABEL: f7:
 ; CHECK: blt
-; CHECK: blt
+; CHECK: {{blt|bge}}
 ; CHECK: __ltdf2
 ; CHECK-EABI-LABEL: f7:
 ; CHECK-EABI: __aeabi_dcmplt
 ; CHECK-EABI: bne
-; CHECK-EABI: bne
+; CHECK-EABI: {{bne|beq}}

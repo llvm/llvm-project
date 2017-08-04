@@ -16,10 +16,10 @@
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Support/MachO.h"
 
 namespace llvm {
 class StringRef;
@@ -154,7 +154,7 @@ public:
   uint32_t getNumberOfObjects() const { return NumberOfObjects; }
 
   // Cast methods.
-  static inline bool classof(Binary const *V) {
+  static bool classof(Binary const *V) {
     return V->isMachOUniversalBinary();
   }
 

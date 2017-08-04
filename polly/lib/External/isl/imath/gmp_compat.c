@@ -202,18 +202,18 @@ void GMPZAPI(divexact)(mp_int q, mp_int n, mp_int d) {
 
 /* gmp: mpz_divisible_p */
 /* gmp: return 1 if d divides n, 0 otherwise */
-/* gmp: 0 is considered to divide 0*/
+/* gmp: 0 is considered to divide only 0 */
 int GMPZAPI(divisible_p)(mp_int n, mp_int d) {
   /* variables to hold remainder */
   mpz_t rz;
   mp_int r = &rz;
   int r_is_zero;
 
-  /* check for n = 0, d = 0 */
+  /* check for d = 0 */
   int n_is_zero = mp_int_compare_zero(n) == 0;
   int d_is_zero = mp_int_compare_zero(d) == 0;
-  if (n_is_zero && d_is_zero)
-    return 1;
+  if (d_is_zero)
+    return n_is_zero;
 
   /* return true if remainder is 0 */
   CHECK(mp_int_init(r));

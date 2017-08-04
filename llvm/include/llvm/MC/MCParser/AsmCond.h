@@ -28,13 +28,13 @@ public:
     ElseCond    // inside else conditional
   };
 
-  ConditionalAssemblyType TheCond;
-  bool CondMet;
-  bool Ignore;
+  ConditionalAssemblyType TheCond = NoCond;
+  bool CondMet = false;
+  bool Ignore = false;
 
-  AsmCond() : TheCond(NoCond), CondMet(false), Ignore(false) {}
+  AsmCond() = default;
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCPARSER_ASMCOND_H

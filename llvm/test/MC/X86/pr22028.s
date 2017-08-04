@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple i386-unknown-unknown-code16 -show-encoding %s | FileCheck --check-prefix=CHECK16 %s
-// RUN: llvm-mc -triple i386-unknown-unknown -show-encoding %s | FileCheck --check-prefix=CHECK %s
-// RUN: llvm-mc -triple i686-unknown-unknown -show-encoding %s | FileCheck --check-prefix=CHECK %s	
+// RUN: llvm-mc -triple i386-unknown-unknown -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple i686-unknown-unknown -show-encoding %s | FileCheck %s	
 	
 .intel_syntax
 	

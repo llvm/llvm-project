@@ -1,8 +1,10 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck --check-prefix=SI --check-prefix=ALL %s
+; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck --check-prefix=CI --check-prefix=ALL %s
 
-; CHECK: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
+; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
+; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
 
-define void @promote_alloca_size_63(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
+define amdgpu_kernel void @promote_alloca_size_63(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -22,9 +24,9 @@ entry:
   ret void
 }
 
-; CHECK: @promote_alloca_size_256.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] undef, align 4
+; ALL: @promote_alloca_size_256.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] undef, align 4
 
-define void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #1 {
+define amdgpu_kernel void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #1 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -44,9 +46,9 @@ entry:
   ret void
 }
 
-; CHECK: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1600 x [5 x i32]] undef, align 4
+; ALL: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1600 x [5 x i32]] undef, align 4
 
-define void @promote_alloca_size_1600(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #2 {
+define amdgpu_kernel void @promote_alloca_size_1600(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #2 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -66,9 +68,10 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_0(
-; CHECK: alloca [5 x i32]
-define void @occupancy_0(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #3 {
+; ALL-LABEL: @occupancy_0(
+; CI-NOT: alloca [5 x i32]
+; SI: alloca [5 x i32]
+define amdgpu_kernel void @occupancy_0(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #3 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -88,9 +91,10 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_max(
-; CHECK: alloca [5 x i32]
-define void @occupancy_max(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #4 {
+; ALL-LABEL: @occupancy_max(
+; CI-NOT: alloca [5 x i32]
+; SI: alloca [5 x i32]
+define amdgpu_kernel void @occupancy_max(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #4 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -110,9 +114,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_6(
-; CHECK-NOT: alloca
-define void @occupancy_6(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #5 {
+; SI-LABEL: @occupancy_6(
+; CI-LABEL: @occupancy_6(
+; SI: alloca
+; CI-NOT: alloca
+define amdgpu_kernel void @occupancy_6(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #5 {
 entry:
   %stack = alloca [42 x i8], align 4
   %tmp = load i8, i8 addrspace(1)* %in, align 1
@@ -134,9 +140,9 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_6_over(
-; CHECK: alloca [43 x i8]
-define void @occupancy_6_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #5 {
+; ALL-LABEL: @occupancy_6_over(
+; ALL: alloca [43 x i8]
+define amdgpu_kernel void @occupancy_6_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #5 {
 entry:
   %stack = alloca [43 x i8], align 4
   %tmp = load i8, i8 addrspace(1)* %in, align 1
@@ -158,9 +164,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_8(
-; CHECK-NOT: alloca
-define void @occupancy_8(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #6 {
+; SI-LABEL: @occupancy_8(
+; CI-LABEL: @occupancy_8(
+; SI: alloca
+; CI-NOT: alloca
+define amdgpu_kernel void @occupancy_8(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #6 {
 entry:
   %stack = alloca [32 x i8], align 4
   %tmp = load i8, i8 addrspace(1)* %in, align 1
@@ -182,9 +190,9 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_8_over(
-; CHECK: alloca [33 x i8]
-define void @occupancy_8_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #6 {
+; ALL-LABEL: @occupancy_8_over(
+; ALL: alloca [33 x i8]
+define amdgpu_kernel void @occupancy_8_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #6 {
 entry:
   %stack = alloca [33 x i8], align 4
   %tmp = load i8, i8 addrspace(1)* %in, align 1
@@ -206,9 +214,11 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_9(
-; CHECK-NOT: alloca
-define void @occupancy_9(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #7 {
+; SI-LABEL: @occupancy_9(
+; CI-LABEL: @occupancy_9(
+; SI: alloca
+; CI-NOT: alloca
+define amdgpu_kernel void @occupancy_9(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #7 {
 entry:
   %stack = alloca [28 x i8], align 4
   %tmp = load i8, i8 addrspace(1)* %in, align 1
@@ -230,9 +240,9 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: @occupancy_9_over(
-; CHECK: alloca [29 x i8]
-define void @occupancy_9_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #7 {
+; ALL-LABEL: @occupancy_9_over(
+; ALL: alloca [29 x i8]
+define amdgpu_kernel void @occupancy_9_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #7 {
 entry:
   %stack = alloca [29 x i8], align 4
   %tmp = load i8, i8 addrspace(1)* %in, align 1

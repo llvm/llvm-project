@@ -9,12 +9,12 @@ source_filename = "test/Transforms/StripSymbols/2010-06-30-StripDebug.ll"
 ; Function Attrs: nounwind optsize readnone ssp
 define void @foo() #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !10, metadata !12), !dbg !13
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !12), !dbg !13
   ret void, !dbg !14
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind optsize readnone ssp }
 attributes #1 = { nounwind readnone }

@@ -1,0 +1,13 @@
+---
+TypeIdMap:
+  typeid1:
+    WPDRes:
+      0:
+        Kind: SingleImpl
+        SingleImplName: singleimpl1
+  typeid2:
+    WPDRes:
+      8:
+        Kind: SingleImpl
+        SingleImplName: singleimpl2
+...

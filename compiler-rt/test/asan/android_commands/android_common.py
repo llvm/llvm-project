@@ -37,8 +37,5 @@ def pull_from_device(path):
     return text
 
 def push_to_device(path):
-    # Workaround for https://code.google.com/p/android/issues/detail?id=65857
     dst_path = os.path.join(ANDROID_TMPDIR, os.path.basename(path))
-    tmp_path = dst_path + '.push'
-    adb(['push', path, tmp_path], 5)
-    adb(['shell', 'cp "%s" "%s" 2>&1' % (tmp_path, dst_path)], 5)
+    adb(['push', path, dst_path], 5)

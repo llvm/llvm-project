@@ -2,22 +2,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "SECTIONS { \
 # RUN:  . = 0x1000; \
-# RUN:  .aaa : AT(0x2000) \
-# RUN:  { \
-# RUN:   *(.aaa) \
-# RUN:  } \
-# RUN:  .bbb : \
-# RUN:  { \
-# RUN:   *(.bbb) \
-# RUN:  } \
-# RUN:  .ccc : AT(0x3000) \
-# RUN:  { \
-# RUN:   *(.ccc) \
-# RUN:  } \
-# RUN:  .ddd : AT(0x4000) \
-# RUN:  { \
-# RUN:   *(.ddd) \
-# RUN:  } \
+# RUN:  .aaa : AT(0x2000) { *(.aaa) } \
+# RUN:  .bbb : { *(.bbb) } \
+# RUN:  .ccc : AT(0x3000) { *(.ccc) } \
+# RUN:  .ddd : AT(0x4000) { *(.ddd) } \
+# RUN:  .eee 0x5000 : AT(0x5000) { *(.eee) } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-readobj -program-headers %t2 | FileCheck %s
@@ -79,6 +68,19 @@
 # CHECK-NEXT:     Offset: 0x1018
 # CHECK-NEXT:     VirtualAddress: 0x1018
 # CHECK-NEXT:     PhysicalAddress: 0x4000
+# CHECK-NEXT:     FileSize: 8
+# CHECK-NEXT:     MemSize: 8
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:       PF_R
+# CHECK-NEXT:       PF_X
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Alignment: 4096
+# CHECK-NEXT:   }
+# CHECK-NEXT:   ProgramHeader {
+# CHECK-NEXT:     Type: PT_LOAD
+# CHECK-NEXT:     Offset: 0x2000
+# CHECK-NEXT:     VirtualAddress: 0x5000
+# CHECK-NEXT:     PhysicalAddress: 0x5000
 # CHECK-NEXT:     FileSize: 9
 # CHECK-NEXT:     MemSize: 9
 # CHECK-NEXT:     Flags [
@@ -116,4 +118,7 @@ _start:
 .quad 0
 
 .section .ddd, "a"
+.quad 0
+
+.section .eee, "a"
 .quad 0

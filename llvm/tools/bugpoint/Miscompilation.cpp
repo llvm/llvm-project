@@ -225,19 +225,22 @@ public:
 /// output is different. If the DeleteInputs argument is set to true then this
 /// function deletes both input modules before it returns.
 ///
-static Expected<std::unique_ptr<Module>>
-testMergedProgram(const BugDriver &BD, std::unique_ptr<Module> M1,
-                  std::unique_ptr<Module> M2, bool &Broken) {
-  if (Linker::linkModules(*M1, std::move(M2)))
+static Expected<std::unique_ptr<Module>> testMergedProgram(const BugDriver &BD,
+                                                           const Module &M1,
+                                                           const Module &M2,
+                                                           bool &Broken) {
+  // Resulting merge of M1 and M2.
+  auto Merged = CloneModule(&M1);
+  if (Linker::linkModules(*Merged, CloneModule(&M2)))
     // TODO: Shouldn't we thread the error up instead of exiting?
     exit(1);
 
   // Execute the program.
-  Expected<bool> Diff = BD.diffProgram(M1.get(), "", "", false);
+  Expected<bool> Diff = BD.diffProgram(Merged.get(), "", "", false);
   if (Error E = Diff.takeError())
     return std::move(E);
   Broken = *Diff;
-  return std::move(M1);
+  return std::move(Merged);
 }
 
 /// TestFuncs - split functions in a Module into two groups: those that are
@@ -335,9 +338,8 @@ ExtractLoops(BugDriver &BD,
     // extraction.
     AbstractInterpreter *AI = BD.switchToSafeInterpreter();
     bool Failure;
-    Expected<std::unique_ptr<Module>> New =
-        testMergedProgram(BD, std::move(ToOptimizeLoopExtracted),
-                          std::move(ToNotOptimize), Failure);
+    Expected<std::unique_ptr<Module>> New = testMergedProgram(
+        BD, *ToOptimizeLoopExtracted, *ToNotOptimize, Failure);
     if (Error E = New.takeError())
       return std::move(E);
     if (!*New)
@@ -726,8 +728,7 @@ static Expected<bool> TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
 
   outs() << "  Checking to see if the merged program executes correctly: ";
   bool Broken;
-  auto Result =
-      testMergedProgram(BD, std::move(Optimized), std::move(Safe), Broken);
+  auto Result = testMergedProgram(BD, *Optimized, *Safe, Broken);
   if (Error E = Result.takeError())
     return std::move(E);
   if (auto New = std::move(*Result)) {
@@ -840,7 +841,7 @@ static void CleanupAndPrepareModules(BugDriver &BD,
   // Prototype: void *getPointerToNamedFunction(const char* Name)
   Constant *resolverFunc = Safe->getOrInsertFunction(
       "getPointerToNamedFunction", Type::getInt8PtrTy(Safe->getContext()),
-      Type::getInt8PtrTy(Safe->getContext()), (Type *)nullptr);
+      Type::getInt8PtrTy(Safe->getContext()));
 
   // Use the function we just added to get addresses of functions we need.
   for (Module::iterator F = Safe->begin(), E = Safe->end(); F != E; ++F) {

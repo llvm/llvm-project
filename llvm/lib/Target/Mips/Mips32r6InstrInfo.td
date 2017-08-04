@@ -326,9 +326,9 @@ class AUIPC_DESC : ALUIPC_DESC_BASE<"auipc", GPR32Opnd, II_AUIPC>;
 class AUI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                     InstrItinClass itin = NoItinerary>
       : MipsR6Arch<instr_asm> {
-  dag OutOperandList = (outs GPROpnd:$rs);
-  dag InOperandList = (ins GPROpnd:$rt, uimm16:$imm);
-  string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $imm");
+  dag OutOperandList = (outs GPROpnd:$rt);
+  dag InOperandList = (ins GPROpnd:$rs, uimm16:$imm);
+  string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
   list<dag> Pattern = [];
   InstrItinClass Itinerary = itin;
 }
@@ -917,6 +917,12 @@ def : MipsInstAlias<"jrc $rs", (JIC GPR32Opnd:$rs, 0), 1>, ISA_MIPS32R6, GPR_32;
 let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"jalrc $rs", (JIALC GPR32Opnd:$rs, 0), 1>, ISA_MIPS32R6, GPR_32;
 }
+
+def : MipsInstAlias<"div $rs, $rt", (DIV GPR32Opnd:$rs, GPR32Opnd:$rs,
+                                         GPR32Opnd:$rt)>, ISA_MIPS32R6;
+def : MipsInstAlias<"divu $rs, $rt", (DIVU GPR32Opnd:$rs, GPR32Opnd:$rs,
+                                           GPR32Opnd:$rt)>, ISA_MIPS32R6;
+
 //===----------------------------------------------------------------------===//
 //
 // Patterns and Pseudo Instructions

@@ -15,7 +15,7 @@
 // RUN: %clangxx -o %t5 %s
 // RUN: %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// Tests that the CFI enforcement distinguishes betwen non-overriding siblings.
+// Tests that the CFI enforcement distinguishes between non-overriding siblings.
 // XFAILed as not implemented yet.
 
 #include <stdio.h>

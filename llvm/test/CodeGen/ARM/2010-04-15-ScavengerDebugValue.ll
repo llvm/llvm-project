@@ -5,12 +5,12 @@ target triple = "armv4t-apple-darwin10"
 
 define hidden i32 @__addvsi3(i32 %a, i32 %b) nounwind {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  tail call void @llvm.dbg.value(metadata i32 %b, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   %0 = add nsw i32 %b, %a, !dbg !9                ; <i32> [#uses=1]
   ret i32 %0, !dbg !11
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!15}

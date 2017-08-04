@@ -40,13 +40,15 @@ struct A {
   explicit A(void *x, void *y) {}
   explicit operator bool() const { return true; }
 
+  operator double() const = delete;
+
   explicit A(const A& a) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor should not be declared explicit [google-explicit-constructor]
   // CHECK-FIXES: {{^  }}A(const A& a) {}
 
-  A(int x1) {}
+  A(int x1);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: single-argument constructors must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
-  // CHECK-FIXES: {{^  }}explicit A(int x1) {}
+  // CHECK-FIXES: {{^  }}explicit A(int x1);
 
   A(double x2, double y = 3.14) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructors that are callable with a single argument must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
@@ -58,6 +60,8 @@ struct A {
   // CHECK-FIXES: {{^  }}explicit A(T&&... args);
 };
 
+inline A::A(int x1) {}
+
 struct B {
   B(std::initializer_list<int> list1) {}
   B(const std::initializer_list<unsigned> &list2) {}
@@ -66,6 +70,10 @@ struct B {
   operator bool() const { return true; }
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'operator bool' must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
   // CHECK-FIXES: {{^  }}explicit operator bool() const { return true; }
+
+  operator double() const;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'operator double' must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
+  // CHECK-FIXES: {{^  }}explicit operator double() const;
 
   explicit B(::std::initializer_list<double> list4) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initializer-list constructor should not be declared explicit [google-explicit-constructor]
@@ -79,6 +87,8 @@ struct B {
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initializer-list constructor
   // CHECK-FIXES: {{^  }}B(::std::initializer_list<char> &&list6) {}
 };
+
+inline B::operator double() const { return 0.0; }
 
 struct StructWithFnPointer {
   void (*f)();

@@ -10,6 +10,7 @@
 // test bool none() const;
 
 #include <bitset>
+#include <type_traits>
 #include <cassert>
 
 template <std::size_t N>
@@ -20,7 +21,8 @@ void test_none()
     assert(v.none() == true);
     v.set();
     assert(v.none() == (N == 0));
-    if (N > 1)
+    const bool greater_than_1 = std::integral_constant<bool, (N > 1)>::value; // avoid compiler warnings
+    if (greater_than_1)
     {
         v[N/2] = false;
         assert(v.none() == false);

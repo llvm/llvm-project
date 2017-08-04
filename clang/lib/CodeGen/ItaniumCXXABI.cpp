@@ -207,8 +207,9 @@ public:
 
   void EmitCXXConstructors(const CXXConstructorDecl *D) override;
 
-  void buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
-                              SmallVectorImpl<CanQualType> &ArgTys) override;
+  AddedStructorArgs
+  buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
+                         SmallVectorImpl<CanQualType> &ArgTys) override;
 
   bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
                               CXXDtorType DT) const override {
@@ -225,11 +226,10 @@ public:
 
   void EmitInstanceFunctionProlog(CodeGenFunction &CGF) override;
 
-  unsigned addImplicitConstructorArgs(CodeGenFunction &CGF,
-                                      const CXXConstructorDecl *D,
-                                      CXXCtorType Type, bool ForVirtualBase,
-                                      bool Delegating,
-                                      CallArgList &Args) override;
+  AddedStructorArgs
+  addImplicitConstructorArgs(CodeGenFunction &CGF, const CXXConstructorDecl *D,
+                             CXXCtorType Type, bool ForVirtualBase,
+                             bool Delegating, CallArgList &Args) override;
 
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
@@ -366,20 +366,30 @@ public:
   void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) override;
 
  private:
-   bool hasAnyVirtualInlineFunction(const CXXRecordDecl *RD) const {
-    const auto &VtableLayout =
-        CGM.getItaniumVTableContext().getVTableLayout(RD);
+   bool hasAnyUnusedVirtualInlineFunction(const CXXRecordDecl *RD) const {
+     const auto &VtableLayout =
+         CGM.getItaniumVTableContext().getVTableLayout(RD);
 
-    for (const auto &VtableComponent : VtableLayout.vtable_components()) {
-      // Skip empty slot.
-      if (!VtableComponent.isUsedFunctionPointerKind())
-        continue;
+     for (const auto &VtableComponent : VtableLayout.vtable_components()) {
+       // Skip empty slot.
+       if (!VtableComponent.isUsedFunctionPointerKind())
+         continue;
 
-      const CXXMethodDecl *Method = VtableComponent.getFunctionDecl();
-      if (Method->getCanonicalDecl()->isInlined())
-        return true;
-    }
-    return false;
+       const CXXMethodDecl *Method = VtableComponent.getFunctionDecl();
+       if (!Method->getCanonicalDecl()->isInlined())
+         continue;
+
+       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
+       auto *Entry = CGM.GetGlobalValue(Name);
+       // This checks if virtual inline function has already been emitted.
+       // Note that it is possible that this inline function would be emitted
+       // after trying to emit vtable speculatively. Because of this we do
+       // an extra pass after emitting all deferred vtables to find and emit
+       // these vtables opportunistically.
+       if (!Entry || Entry->isDeclaration())
+         return true;
+     }
+     return false;
   }
 
   bool isVTableHidden(const CXXRecordDecl *RD) const {
@@ -499,7 +509,7 @@ llvm::Type *
 ItaniumCXXABI::ConvertMemberPointerType(const MemberPointerType *MPT) {
   if (MPT->isMemberDataPointer())
     return CGM.PtrDiffTy;
-  return llvm::StructType::get(CGM.PtrDiffTy, CGM.PtrDiffTy, nullptr);
+  return llvm::StructType::get(CGM.PtrDiffTy, CGM.PtrDiffTy);
 }
 
 /// In the Itanium and ARM ABIs, method pointers have the form:
@@ -1134,8 +1144,8 @@ static llvm::Constant *getItaniumDynamicCastFn(CodeGenFunction &CGF) {
   // Mark the function as nounwind readonly.
   llvm::Attribute::AttrKind FuncAttrs[] = { llvm::Attribute::NoUnwind,
                                             llvm::Attribute::ReadOnly };
-  llvm::AttributeSet Attrs = llvm::AttributeSet::get(
-      CGF.getLLVMContext(), llvm::AttributeSet::FunctionIndex, FuncAttrs);
+  llvm::AttributeList Attrs = llvm::AttributeList::get(
+      CGF.getLLVMContext(), llvm::AttributeList::FunctionIndex, FuncAttrs);
 
   return CGF.CGM.CreateRuntimeFunction(FTy, "__dynamic_cast", Attrs);
 }
@@ -1353,7 +1363,7 @@ void ItaniumCXXABI::EmitCXXConstructors(const CXXConstructorDecl *D) {
   }
 }
 
-void
+CGCXXABI::AddedStructorArgs
 ItaniumCXXABI::buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
                                       SmallVectorImpl<CanQualType> &ArgTys) {
   ASTContext &Context = getContext();
@@ -1362,9 +1372,12 @@ ItaniumCXXABI::buildStructorSignature(const CXXMethodDecl *MD, StructorType T,
   // These are Clang types, so we don't need to worry about sret yet.
 
   // Check if we need to add a VTT parameter (which has type void **).
-  if (T == StructorType::Base && MD->getParent()->getNumVBases() != 0)
+  if (T == StructorType::Base && MD->getParent()->getNumVBases() != 0) {
     ArgTys.insert(ArgTys.begin() + 1,
                   Context.getPointerType(Context.VoidPtrTy));
+    return AddedStructorArgs::prefix(1);
+  }
+  return AddedStructorArgs{};
 }
 
 void ItaniumCXXABI::EmitCXXDestructors(const CXXDestructorDecl *D) {
@@ -1395,9 +1408,9 @@ void ItaniumCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
 
     // FIXME: avoid the fake decl
     QualType T = Context.getPointerType(Context.VoidPtrTy);
-    ImplicitParamDecl *VTTDecl
-      = ImplicitParamDecl::Create(Context, nullptr, MD->getLocation(),
-                                  &Context.Idents.get("vtt"), T);
+    auto *VTTDecl = ImplicitParamDecl::Create(
+        Context, /*DC=*/nullptr, MD->getLocation(), &Context.Idents.get("vtt"),
+        T, ImplicitParamDecl::CXXVTT);
     Params.insert(Params.begin() + 1, VTTDecl);
     getStructorImplicitParamDecl(CGF) = VTTDecl;
   }
@@ -1429,11 +1442,11 @@ void ItaniumCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
     CGF.Builder.CreateStore(getThisValue(CGF), CGF.ReturnValue);
 }
 
-unsigned ItaniumCXXABI::addImplicitConstructorArgs(
+CGCXXABI::AddedStructorArgs ItaniumCXXABI::addImplicitConstructorArgs(
     CodeGenFunction &CGF, const CXXConstructorDecl *D, CXXCtorType Type,
     bool ForVirtualBase, bool Delegating, CallArgList &Args) {
   if (!NeedsVTTParameter(GlobalDecl(D, Type)))
-    return 0;
+    return AddedStructorArgs{};
 
   // Insert the implicit 'vtt' argument as the second argument.
   llvm::Value *VTT =
@@ -1441,7 +1454,7 @@ unsigned ItaniumCXXABI::addImplicitConstructorArgs(
   QualType VTTTy = getContext().getPointerType(getContext().VoidPtrTy);
   Args.insert(Args.begin() + 1,
               CallArg(RValue::get(VTT), VTTTy, /*needscopy=*/false));
-  return 1;  // Added one arg.
+  return AddedStructorArgs::prefix(1);  // Added one arg.
 }
 
 void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
@@ -1684,11 +1697,11 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const {
   if (CGM.getLangOpts().AppleKext)
     return false;
 
-  // If we don't have any inline virtual functions, and if vtable is not hidden,
-  // then we are safe to emit available_externally copy of vtable.
+  // If we don't have any not emitted inline virtual function, and if vtable is
+  // not hidden, then we are safe to emit available_externally copy of vtable.
   // FIXME we can still emit a copy of the vtable if we
   // can emit definition of the inline functions.
-  return !hasAnyVirtualInlineFunction(RD) && !isVTableHidden(RD);
+  return !hasAnyUnusedVirtualInlineFunction(RD) && !isVTableHidden(RD);
 }
 static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
                                           Address InitialPtr,
@@ -1907,10 +1920,11 @@ static llvm::Constant *getGuardAcquireFn(CodeGenModule &CGM,
   llvm::FunctionType *FTy =
     llvm::FunctionType::get(CGM.getTypes().ConvertType(CGM.getContext().IntTy),
                             GuardPtrTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "__cxa_guard_acquire",
-                                   llvm::AttributeSet::get(CGM.getLLVMContext(),
-                                              llvm::AttributeSet::FunctionIndex,
-                                                 llvm::Attribute::NoUnwind));
+  return CGM.CreateRuntimeFunction(
+      FTy, "__cxa_guard_acquire",
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind));
 }
 
 static llvm::Constant *getGuardReleaseFn(CodeGenModule &CGM,
@@ -1918,10 +1932,11 @@ static llvm::Constant *getGuardReleaseFn(CodeGenModule &CGM,
   // void __cxa_guard_release(__guard *guard_object);
   llvm::FunctionType *FTy =
     llvm::FunctionType::get(CGM.VoidTy, GuardPtrTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "__cxa_guard_release",
-                                   llvm::AttributeSet::get(CGM.getLLVMContext(),
-                                              llvm::AttributeSet::FunctionIndex,
-                                                 llvm::Attribute::NoUnwind));
+  return CGM.CreateRuntimeFunction(
+      FTy, "__cxa_guard_release",
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind));
 }
 
 static llvm::Constant *getGuardAbortFn(CodeGenModule &CGM,
@@ -1929,10 +1944,11 @@ static llvm::Constant *getGuardAbortFn(CodeGenModule &CGM,
   // void __cxa_guard_abort(__guard *guard_object);
   llvm::FunctionType *FTy =
     llvm::FunctionType::get(CGM.VoidTy, GuardPtrTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "__cxa_guard_abort",
-                                   llvm::AttributeSet::get(CGM.getLLVMContext(),
-                                              llvm::AttributeSet::FunctionIndex,
-                                                 llvm::Attribute::NoUnwind));
+  return CGM.CreateRuntimeFunction(
+      FTy, "__cxa_guard_abort",
+      llvm::AttributeList::get(CGM.getLLVMContext(),
+                               llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::NoUnwind));
 }
 
 namespace {
@@ -2162,7 +2178,9 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
 
   // Create a variable that binds the atexit to this shared object.
   llvm::Constant *handle =
-    CGF.CGM.CreateRuntimeVariable(CGF.Int8Ty, "__dso_handle");
+      CGF.CGM.CreateRuntimeVariable(CGF.Int8Ty, "__dso_handle");
+  auto *GV = cast<llvm::GlobalValue>(handle->stripPointerCasts());
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
   llvm::Value *args[] = {
     llvm::ConstantExpr::getBitCast(dtor, dtorTy),
@@ -2568,6 +2586,9 @@ ItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(QualType Ty) {
 
   if (!GV) {
     // Create a new global variable.
+    // Note for the future: If we would ever like to do deferred emission of
+    // RTTI, check if emitting vtables opportunistically need any adjustment.
+
     GV = new llvm::GlobalVariable(CGM.getModule(), CGM.Int8PtrTy,
                                   /*Constant=*/true,
                                   llvm::GlobalValue::ExternalLinkage, nullptr,
@@ -2635,7 +2656,6 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
-    case BuiltinType::OCLNDRange:
     case BuiltinType::OCLReserveID:
       return false;
 
@@ -2712,7 +2732,9 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     // function.
     bool IsDLLImport = RD->hasAttr<DLLImportAttr>();
     if (CGM.getVTables().isVTableExternal(RD))
-      return IsDLLImport ? false : true;
+      return IsDLLImport && !CGM.getTriple().isWindowsItaniumEnvironment()
+                 ? false
+                 : true;
 
     if (IsDLLImport)
       return true;
@@ -2815,7 +2837,8 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     llvm_unreachable("References shouldn't get here");
 
   case Type::Auto:
-    llvm_unreachable("Undeduced auto type shouldn't get here");
+  case Type::DeducedTemplateSpecialization:
+    llvm_unreachable("Undeduced type shouldn't get here");
 
   case Type::Pipe:
     llvm_unreachable("Pipe types shouldn't get here");
@@ -2936,6 +2959,8 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
     return llvm::GlobalValue::InternalLinkage;
 
   case VisibleNoLinkage:
+  case ModuleInternalLinkage:
+  case ModuleLinkage:
   case ExternalLinkage:
     // RTTI is not enabled, which means that this type info struct is going
     // to be used for exception handling. Give it linkonce_odr linkage.
@@ -2947,7 +2972,8 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
       if (RD->hasAttr<WeakAttr>())
         return llvm::GlobalValue::WeakODRLinkage;
       if (CGM.getTriple().isWindowsItaniumEnvironment())
-        if (RD->hasAttr<DLLImportAttr>())
+        if (RD->hasAttr<DLLImportAttr>() &&
+            ShouldUseExternalRTTIDescriptor(CGM, Ty))
           return llvm::GlobalValue::ExternalLinkage;
       if (RD->isDynamicClass()) {
         llvm::GlobalValue::LinkageTypes LT = CGM.getVTableLinkage(RD);
@@ -3045,7 +3071,8 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     llvm_unreachable("References shouldn't get here");
 
   case Type::Auto:
-    llvm_unreachable("Undeduced auto type shouldn't get here");
+  case Type::DeducedTemplateSpecialization:
+    llvm_unreachable("Undeduced type shouldn't get here");
 
   case Type::Pipe:
     llvm_unreachable("Pipe type shouldn't get here");
@@ -3159,7 +3186,8 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     if (DLLExport || (RD && RD->hasAttr<DLLExportAttr>())) {
       TypeName->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
       GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-    } else if (CGM.getLangOpts().RTTI && RD && RD->hasAttr<DLLImportAttr>()) {
+    } else if (RD && RD->hasAttr<DLLImportAttr>() &&
+               ShouldUseExternalRTTIDescriptor(CGM, Ty)) {
       TypeName->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
       GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
 
@@ -3921,9 +3949,8 @@ void ItaniumCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 static llvm::Constant *getClangCallTerminateFn(CodeGenModule &CGM) {
   llvm::FunctionType *fnTy =
     llvm::FunctionType::get(CGM.VoidTy, CGM.Int8PtrTy, /*IsVarArgs=*/false);
-  llvm::Constant *fnRef =
-      CGM.CreateRuntimeFunction(fnTy, "__clang_call_terminate",
-                                llvm::AttributeSet(), /*Local=*/true);
+  llvm::Constant *fnRef = CGM.CreateRuntimeFunction(
+      fnTy, "__clang_call_terminate", llvm::AttributeList(), /*Local=*/true);
 
   llvm::Function *fn = dyn_cast<llvm::Function>(fnRef);
   if (fn && fn->empty()) {

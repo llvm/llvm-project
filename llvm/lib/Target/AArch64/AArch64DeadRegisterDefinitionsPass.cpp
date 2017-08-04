@@ -13,15 +13,17 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-dead-defs"
@@ -83,6 +85,55 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       // register) twice in a single instruction.
       DEBUG(dbgs() << "    Ignoring, XZR or WZR already used by the instruction\n");
       continue;
+    }
+    if (MF.getSubtarget<AArch64Subtarget>().hasLSE()) {
+      // XZ/WZ for LSE can only be used when acquire semantics are not used,
+      // LDOPAL WZ is an invalid opcode.
+      switch (MI.getOpcode()) {
+      case AArch64::CASALb:
+      case AArch64::CASALh:
+      case AArch64::CASALs:
+      case AArch64::CASALd:
+      case AArch64::SWPALb:
+      case AArch64::SWPALh:
+      case AArch64::SWPALs:
+      case AArch64::SWPALd:
+      case AArch64::LDADDALb:
+      case AArch64::LDADDALh:
+      case AArch64::LDADDALs:
+      case AArch64::LDADDALd:
+      case AArch64::LDCLRALb:
+      case AArch64::LDCLRALh:
+      case AArch64::LDCLRALs:
+      case AArch64::LDCLRALd:
+      case AArch64::LDEORALb:
+      case AArch64::LDEORALh:
+      case AArch64::LDEORALs:
+      case AArch64::LDEORALd:
+      case AArch64::LDSETALb:
+      case AArch64::LDSETALh:
+      case AArch64::LDSETALs:
+      case AArch64::LDSETALd:
+      case AArch64::LDSMINALb:
+      case AArch64::LDSMINALh:
+      case AArch64::LDSMINALs:
+      case AArch64::LDSMINALd:
+      case AArch64::LDSMAXALb:
+      case AArch64::LDSMAXALh:
+      case AArch64::LDSMAXALs:
+      case AArch64::LDSMAXALd:
+      case AArch64::LDUMINALb:
+      case AArch64::LDUMINALh:
+      case AArch64::LDUMINALs:
+      case AArch64::LDUMINALd:
+      case AArch64::LDUMAXALb:
+      case AArch64::LDUMAXALh:
+      case AArch64::LDUMAXALs:
+      case AArch64::LDUMAXALd:
+        continue;
+      default:
+        break;
+      }
     }
     const MCInstrDesc &Desc = MI.getDesc();
     for (int I = 0, E = Desc.getNumDefs(); I != E; ++I) {

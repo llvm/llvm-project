@@ -159,8 +159,8 @@ define void @call_lifetime(i32* %p) {
 entry:
   %q = alloca [100 x i8], align 16
   %0 = bitcast [100 x i8]* %q to i8*
-  call void @llvm.lifetime.start(i64 100, i8* %0)
-  call void @llvm.lifetime.end(i64 100, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 100, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 100, i8* %0)
   ret void
 }
 
@@ -174,5 +174,5 @@ declare void @readnone0(i8* nocapture readnone, i8* nocapture)
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind argmemonly
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind argmemonly
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind argmemonly
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind argmemonly
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind argmemonly

@@ -84,6 +84,16 @@ struct N {
   N(N &&RHS) : Mem(move(RHS.Mem)) {}
 };
 
+struct O {
+  O(O&& other) : b(other.b) {} // ok
+  const B b;
+};
+
+struct P {
+  P(O&& other) : b(other.b) {} // ok
+  B b;
+};
+
 struct Movable {
   Movable(Movable &&) = default;
   Movable(const Movable &) = default;

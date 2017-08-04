@@ -17,17 +17,19 @@
 // This class can (de)allocate only large chunks of memory using mmap/unmap.
 // The main purpose of this allocator is to cover large and rare allocation
 // sizes not covered by more efficient allocators (e.g. SizeClassAllocator64).
-template <class MapUnmapCallback = NoOpMapUnmapCallback>
+template <class MapUnmapCallback = NoOpMapUnmapCallback,
+          class FailureHandlerT = ReturnNullOrDieOnFailure>
 class LargeMmapAllocator {
  public:
-  void InitLinkerInitialized(bool may_return_null) {
+  typedef FailureHandlerT FailureHandler;
+
+  void InitLinkerInitialized() {
     page_size_ = GetPageSizeCached();
-    atomic_store(&may_return_null_, may_return_null, memory_order_relaxed);
   }
 
-  void Init(bool may_return_null) {
+  void Init() {
     internal_memset(this, 0, sizeof(*this));
-    InitLinkerInitialized(may_return_null);
+    InitLinkerInitialized();
   }
 
   void *Allocate(AllocatorStats *stat, uptr size, uptr alignment) {
@@ -36,9 +38,12 @@ class LargeMmapAllocator {
     if (alignment > page_size_)
       map_size += alignment;
     // Overflow.
-    if (map_size < size) return ReturnNullOrDieOnBadRequest();
+    if (map_size < size)
+      return FailureHandler::OnBadRequest();
     uptr map_beg = reinterpret_cast<uptr>(
-        MmapOrDie(map_size, "LargeMmapAllocator"));
+        MmapOrDieOnFatalError(map_size, "LargeMmapAllocator"));
+    if (!map_beg)
+      return FailureHandler::OnOOM();
     CHECK(IsAligned(map_beg, page_size_));
     MapUnmapCallback().OnMap(map_beg, map_size);
     uptr map_end = map_beg + map_size;
@@ -70,24 +75,6 @@ class LargeMmapAllocator {
       stat->Add(AllocatorStatMapped, map_size);
     }
     return reinterpret_cast<void*>(res);
-  }
-
-  bool MayReturnNull() const {
-    return atomic_load(&may_return_null_, memory_order_acquire);
-  }
-
-  void *ReturnNullOrDieOnBadRequest() {
-    if (MayReturnNull()) return nullptr;
-    ReportAllocatorCannotReturnNull(false);
-  }
-
-  void *ReturnNullOrDieOnOOM() {
-    if (MayReturnNull()) return nullptr;
-    ReportAllocatorCannotReturnNull(true);
-  }
-
-  void SetMayReturnNull(bool may_return_null) {
-    atomic_store(&may_return_null_, may_return_null, memory_order_release);
   }
 
   void Deallocate(AllocatorStats *stat, void *p) {
@@ -275,7 +262,6 @@ class LargeMmapAllocator {
   struct Stats {
     uptr n_allocs, n_frees, currently_allocated, max_allocated, by_size_log[64];
   } stats;
-  atomic_uint8_t may_return_null_;
   SpinMutex mutex_;
 };
 

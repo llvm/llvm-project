@@ -7,7 +7,7 @@ struct S {
   int z[2];
 };
 
-void testOffsets(struct S *s) {
+void testOffsets(struct S *s, int coin) {
   if (s != 0)
     return;
 
@@ -21,14 +21,17 @@ void testOffsets(struct S *s) {
 
   // FIXME: These should ideally be true.
   clang_analyzer_eval(&(s->y) == 4); // expected-warning{{FALSE}}
-  clang_analyzer_eval(&(s->z[0]) == 8); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(&(s->z[1]) == 12); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(&(s->z[0]) == 8); // expected-warning{{FALSE}}
+  clang_analyzer_eval(&(s->z[1]) == 12); // expected-warning{{FALSE}}
 
   // FIXME: These should ideally be false.
   clang_analyzer_eval(&(s->y) == 0); // expected-warning{{TRUE}}
-  clang_analyzer_eval(&(s->z[0]) == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(&(s->z[1]) == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(&(s->z[0]) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(&(s->z[1]) == 0); // expected-warning{{TRUE}}
 
-  // But this should still be a null dereference.
-  s->y = 5; // expected-warning{{Access to field 'y' results in a dereference of a null pointer (loaded from variable 's')}}
+  // But these should still be reported as null dereferences.
+  if (coin)
+    s->y = 5; // expected-warning{{Access to field 'y' results in a dereference of a null pointer (loaded from variable 's')}}
+  else
+    s->z[1] = 6; // expected-warning{{Array access (via field 'z') results in a null pointer dereference}}
 }

@@ -10,20 +10,14 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
 #define LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
 
-#include "OrcError.h"
-#include "RPCSerialization.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/RPCSerialization.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <string>
-#include <tuple>
 #include <type_traits>
-#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -32,7 +26,7 @@ namespace rpc {
 /// Interface for byte-streams to be used with RPC.
 class RawByteChannel {
 public:
-  virtual ~RawByteChannel() {}
+  virtual ~RawByteChannel() = default;
 
   /// Read Size bytes from the stream into *Dst.
   virtual Error readBytes(char *Dst, unsigned Size) = 0;
@@ -48,7 +42,11 @@ public:
   template <typename FunctionIdT, typename SequenceIdT>
   Error startSendMessage(const FunctionIdT &FnId, const SequenceIdT &SeqNo) {
     writeLock.lock();
-    return serializeSeq(*this, FnId, SeqNo);
+    if (auto Err = serializeSeq(*this, FnId, SeqNo)) {
+      writeLock.unlock();
+      return Err;
+    }
+    return Error::success();
   }
 
   /// Notify the channel that we're ending a message send.
@@ -63,7 +61,11 @@ public:
   template <typename FunctionIdT, typename SequenceNumberT>
   Error startReceiveMessage(FunctionIdT &FnId, SequenceNumberT &SeqNo) {
     readLock.lock();
-    return deserializeSeq(*this, FnId, SeqNo);
+    if (auto Err = deserializeSeq(*this, FnId, SeqNo)) {
+      readLock.unlock();
+      return Err;
+    }
+    return Error::success();
   }
 
   /// Notify the channel that we're ending a message receive.
@@ -113,11 +115,19 @@ class SerializationTraits<ChannelT, bool, bool,
                               RawByteChannel, ChannelT>::value>::type> {
 public:
   static Error serialize(ChannelT &C, bool V) {
-    return C.appendBytes(reinterpret_cast<const char *>(&V), 1);
+    uint8_t Tmp = V ? 1 : 0;
+    if (auto Err =
+          C.appendBytes(reinterpret_cast<const char *>(&Tmp), 1))
+      return Err;
+    return Error::success();
   }
 
   static Error deserialize(ChannelT &C, bool &V) {
-    return C.readBytes(reinterpret_cast<char *>(&V), 1);
+    uint8_t Tmp = 0;
+    if (auto Err = C.readBytes(reinterpret_cast<char *>(&Tmp), 1))
+      return Err;
+    V = Tmp != 0;
+    return Error::success();
   }
 };
 
@@ -134,10 +144,12 @@ public:
   }
 };
 
-template <typename ChannelT>
-class SerializationTraits<ChannelT, std::string, const char *,
-                          typename std::enable_if<std::is_base_of<
-                              RawByteChannel, ChannelT>::value>::type> {
+template <typename ChannelT, typename T>
+class SerializationTraits<ChannelT, std::string, T,
+                          typename std::enable_if<
+                            std::is_base_of<RawByteChannel, ChannelT>::value &&
+                            (std::is_same<T, const char*>::value ||
+                             std::is_same<T, char*>::value)>::type> {
 public:
   static Error serialize(RawByteChannel &C, const char *S) {
     return SerializationTraits<ChannelT, std::string, StringRef>::serialize(C,

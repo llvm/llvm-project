@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/Parser.h"
-#include "RAIIObjectsForParser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -224,6 +224,7 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
                                  /*EnteringContext=*/false,
                                  /*AllowDestructorName=*/false,
                                  /*AllowConstructorName=*/false,
+                                 /*AllowDeductionGuide=*/false,
                                  /*ObjectType=*/nullptr, TemplateKWLoc, Id);
     // Perform the lookup.
     Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id, Info,
@@ -451,12 +452,17 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
         // We're no longer in a comment.
         InAsmComment = false;
         if (isAsm) {
-          // If this is a new __asm {} block we want to process it seperately
+          // If this is a new __asm {} block we want to process it separately
           // from the single-line __asm statements
           if (PP.LookAhead(0).is(tok::l_brace))
             break;
           LineNo = SrcMgr.getLineNumber(ExpLoc.first, ExpLoc.second);
           SkippedStartOfLine = Tok.isAtStartOfLine();
+        } else if (Tok.is(tok::semi)) {
+          // A multi-line asm-statement, where next line is a comment
+          InAsmComment = true;
+          FID = ExpLoc.first;
+          LineNo = SrcMgr.getLineNumber(FID, ExpLoc.second);
         }
       } else if (!InAsmComment && Tok.is(tok::r_brace)) {
         // In MSVC mode, braces only participate in brace matching and
@@ -615,10 +621,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
                                MII.get(), IP.get(), Callback))
     return StmtError();
 
-  // Filter out "fpsw".  Clang doesn't accept it, and it always lists flags and
-  // fpsr as clobbers.
-  auto End = std::remove(Clobbers.begin(), Clobbers.end(), "fpsw");
-  Clobbers.erase(End, Clobbers.end());
+  // Filter out "fpsw" and "mxcsr". They aren't valid GCC asm clobber
+  // constraints. Clang always adds fpsr to the clobber list anyway.
+  llvm::erase_if(Clobbers, [](const std::string &C) {
+    return C == "fpsw" || C == "mxcsr";
+  });
 
   // Build the vector of clobber StringRefs.
   ClobberRefs.insert(ClobberRefs.end(), Clobbers.begin(), Clobbers.end());

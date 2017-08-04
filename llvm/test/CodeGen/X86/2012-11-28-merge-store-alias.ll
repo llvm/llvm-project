@@ -3,8 +3,8 @@
 ; CHECK: merge_stores_can
 ; CHECK: callq foo
 ; CHECK: xorps %xmm0, %xmm0
-; CHECK-NEXT: movl 36(%rsp), %ebp
 ; CHECK-NEXT: movups  %xmm0
+; CHECK-NEXT: movl 36(%rsp), %ebp
 ; CHECK: callq foo
 ; CHECK: ret
 declare i32 @foo([10 x i32]* )

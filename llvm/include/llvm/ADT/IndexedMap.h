@@ -20,28 +20,28 @@
 #ifndef LLVM_ADT_INDEXEDMAP_H
 #define LLVM_ADT_INDEXEDMAP_H
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include <cassert>
-#include <functional>
 
 namespace llvm {
 
-template <typename T, typename ToIndexT = llvm::identity<unsigned> >
+template <typename T, typename ToIndexT = identity<unsigned>>
   class IndexedMap {
-    typedef typename ToIndexT::argument_type IndexT;
+    using IndexT = typename ToIndexT::argument_type;
     // Prefer SmallVector with zero inline storage over std::vector. IndexedMaps
     // can grow very large and SmallVector grows more efficiently as long as T
     // is trivially copyable.
-    typedef SmallVector<T, 0> StorageT;
+    using StorageT = SmallVector<T, 0>;
+
     StorageT storage_;
     T nullVal_;
     ToIndexT toIndex_;
 
   public:
-    IndexedMap() : nullVal_(T()) { }
+    IndexedMap() : nullVal_(T()) {}
 
-    explicit IndexedMap(const T& val) : nullVal_(val) { }
+    explicit IndexedMap(const T& val) : nullVal_(val) {}
 
     typename StorageT::reference operator[](IndexT n) {
       assert(toIndex_(n) < storage_.size() && "index out of bounds!");
@@ -80,6 +80,6 @@ template <typename T, typename ToIndexT = llvm::identity<unsigned> >
     }
   };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_INDEXEDMAP_H

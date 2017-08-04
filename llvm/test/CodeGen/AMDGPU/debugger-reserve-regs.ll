@@ -1,11 +1,12 @@
 ; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-reserve-regs -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=gfx901 -mattr=+amdgpu-debugger-reserve-regs -verify-machineinstrs < %s | FileCheck %s
 ; CHECK: reserved_vgpr_first = {{[0-9]+}}
 ; CHECK-NEXT: reserved_vgpr_count = 4
 ; CHECK: ReservedVGPRFirst: {{[0-9]+}}
 ; CHECK-NEXT: ReservedVGPRCount: 4
 
 ; Function Attrs: nounwind
-define void @test(i32 addrspace(1)* %A) #0 !dbg !12 {
+define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !12 {
 entry:
   %A.addr = alloca i32 addrspace(1)*, align 4
   store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4

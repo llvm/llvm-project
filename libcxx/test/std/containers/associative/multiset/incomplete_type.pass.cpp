@@ -9,7 +9,7 @@
 
 // <set>
 
-// Check that std::multiset and it's iterators can be instantiated with an incomplete
+// Check that std::multiset and its iterators can be instantiated with an incomplete
 // type.
 
 #include <set>

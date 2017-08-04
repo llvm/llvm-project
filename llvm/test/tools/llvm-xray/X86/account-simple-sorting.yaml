@@ -1,13 +1,13 @@
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml | FileCheck --check-prefix DEFAULT %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s count | FileCheck --check-prefix COUNT-ASC %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s min | FileCheck --check-prefix MIN-ASC %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s max | FileCheck --check-prefix MAX-ASC %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s sum | FileCheck --check-prefix SUM-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml | FileCheck --check-prefix DEFAULT %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s count | FileCheck --check-prefix COUNT-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s min | FileCheck --check-prefix MIN-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s max | FileCheck --check-prefix MAX-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s sum | FileCheck --check-prefix SUM-ASC %s
 
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s count -r dsc | FileCheck --check-prefix COUNT-DSC %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s min -r dsc | FileCheck --check-prefix MIN-DSC %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s max -r dsc | FileCheck --check-prefix MAX-DSC %s
-#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -s sum -r dsc | FileCheck --check-prefix SUM-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s count -r dsc | FileCheck --check-prefix COUNT-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s min -r dsc | FileCheck --check-prefix MIN-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s max -r dsc | FileCheck --check-prefix MAX-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s sum -r dsc | FileCheck --check-prefix SUM-DSC %s
 ---
 header:
   version: 1

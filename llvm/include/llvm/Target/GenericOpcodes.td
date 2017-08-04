@@ -49,6 +49,12 @@ def G_TRUNC : Instruction {
   let hasSideEffects = 0;
 }
 
+def G_IMPLICIT_DEF : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = 0;
+}
+
 def G_FRAME_INDEX : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src2);
@@ -386,6 +392,15 @@ def G_FMUL : Instruction {
   let isCommutable = 1;
 }
 
+// Generic fused multiply-add instruction.
+// Behaves like llvm fma intrinsic ie src1 * src2 + src3
+def G_FMA : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 // Generic FP division.
 def G_FDIV : Instruction {
   let OutOperandList = (outs type0:$dst);
@@ -404,6 +419,34 @@ def G_FREM : Instruction {
 def G_FPOW : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Floating point base-e exponential of a value.
+def G_FEXP : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+// Floating point base-2 exponential of a value.
+def G_FEXP2 : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+// Floating point base-2 logarithm of a value.
+def G_FLOG : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+// Floating point base-2 logarithm of a value.
+def G_FLOG2 : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
   let hasSideEffects = 0;
 }
 
@@ -453,15 +496,6 @@ def G_UNMERGE_VALUES : Instruction {
 def G_INSERT : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$op, unknown:$offset);
-  let hasSideEffects = 0;
-}
-
-// Combine a sequence of generic vregs into a single larger value (starting at
-// bit 0). Essentially a G_INSERT where $src is an IMPLICIT_DEF, but it's so
-// important to legalization it probably deserves its own instruction.
-def G_SEQUENCE : Instruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins variable_ops);
   let hasSideEffects = 0;
 }
 
@@ -534,6 +568,13 @@ def G_INSERT_VECTOR_ELT : Instruction {
 def G_EXTRACT_VECTOR_ELT : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src, type2:$idx);
+  let hasSideEffects = 0;
+}
+
+// Generic shufflevector.
+def G_SHUFFLE_VECTOR: Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$v1, type1:$v2, type2:$mask);
   let hasSideEffects = 0;
 }
 

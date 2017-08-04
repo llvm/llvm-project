@@ -8,7 +8,7 @@
 ; RUN: llvm-lto -exported-symbol=_main -thinlto-action=run %t1.bc %t2.bc
 ; RUN: llvm-nm %t1.bc.thinlto.o | FileCheck %s --check-prefix=CHECK-NM
 
-; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.out -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.out -save-temps \
 ; RUN:   -r %t1.bc,_main,plx \
 ; RUN:   -r %t1.bc,_bar,pl \
 ; RUN:   -r %t1.bc,_dead_func,pl \
@@ -21,6 +21,20 @@
 ; RUN: llvm-dis < %t.out.0.3.import.bc | FileCheck %s
 ; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=CHECK2
 ; RUN: llvm-nm %t.out.1 | FileCheck %s --check-prefix=CHECK2-NM
+
+; RUN: llvm-bcanalyzer -dump %t.out.index.bc | FileCheck %s --check-prefix=COMBINED
+; Live, NotEligibleForImport, Internal
+; COMBINED-DAG: <COMBINED {{.*}} op2=55
+; Live, Internal
+; COMBINED-DAG: <COMBINED {{.*}} op2=39
+; Live, External
+; COMBINED-DAG: <COMBINED {{.*}} op2=32
+; COMBINED-DAG: <COMBINED {{.*}} op2=32
+; COMBINED-DAG: <COMBINED {{.*}} op2=32
+; (Dead)
+; COMBINED-DAG: <COMBINED {{.*}} op2=0
+; COMBINED-DAG: <COMBINED {{.*}} op2=0
+; COMBINED-DAG: <COMBINED {{.*}} op2=0
 
 ; Dead-stripping on the index allows to internalize these,
 ; and limit the import of @baz thanks to early pruning.
@@ -35,7 +49,7 @@
 ; Make sure we didn't internalize @boo, which is reachable via
 ; llvm.global_ctors
 ; CHECK2: define void @boo()
-; We should have eventually revoved @baz since it was internalized and unused
+; We should have eventually removed @baz since it was internalized and unused
 ; CHECK2-NM-NOT: _baz
 
 ; The final binary should not contain any of the dead functions,
@@ -51,7 +65,7 @@
 ; In that case there are uses of @dead_func in the regular LTO partition
 ; and it shouldn't be internalized.
 ; RUN: opt %p/Inputs/deadstrip.ll -o %t3.bc
-; RUN: llvm-lto2 %t1.bc %t3.bc -o %t4.out -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t3.bc -o %t4.out -save-temps \
 ; RUN:   -r %t1.bc,_main,plx \
 ; RUN:   -r %t1.bc,_bar,pl \
 ; RUN:   -r %t1.bc,_dead_func,pl \

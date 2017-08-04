@@ -15,7 +15,7 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
-#include "llvm/ADT/None.h"
+#include "llvm-c/Types.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -23,10 +23,9 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm-c/Types.h"
-#include <functional>
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <iterator>
 #include <string>
 
@@ -120,18 +119,18 @@ public:
   virtual void print(DiagnosticPrinter &DP) const = 0;
 };
 
-typedef std::function<void(const DiagnosticInfo &)> DiagnosticHandlerFunction;
+using DiagnosticHandlerFunction = std::function<void(const DiagnosticInfo &)>;
 
 /// Diagnostic information for inline asm reporting.
 /// This is basically a message and an optional location.
 class DiagnosticInfoInlineAsm : public DiagnosticInfo {
 private:
   /// Optional line information. 0 if not set.
-  unsigned LocCookie;
+  unsigned LocCookie = 0;
   /// Message to be reported.
   const Twine &MsgStr;
   /// Optional origin of the problem.
-  const Instruction *Instr;
+  const Instruction *Instr = nullptr;
 
 public:
   /// \p MsgStr is the message to be reported to the frontend.
@@ -139,8 +138,7 @@ public:
   /// for the whole life time of the Diagnostic.
   DiagnosticInfoInlineAsm(const Twine &MsgStr,
                           DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(0), MsgStr(MsgStr),
-        Instr(nullptr) {}
+      : DiagnosticInfo(DK_InlineAsm, Severity), MsgStr(MsgStr) {}
 
   /// \p LocCookie if non-zero gives the line number for this report.
   /// \p MsgStr gives the message.
@@ -149,7 +147,7 @@ public:
   DiagnosticInfoInlineAsm(unsigned LocCookie, const Twine &MsgStr,
                           DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(LocCookie),
-        MsgStr(MsgStr), Instr(nullptr) {}
+        MsgStr(MsgStr) {}
 
   /// \p Instr gives the original instruction that triggered the diagnostic.
   /// \p MsgStr gives the message.
@@ -294,10 +292,10 @@ public:
   DiagnosticInfoSampleProfile(StringRef FileName, const Twine &Msg,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), FileName(FileName),
-        LineNum(0), Msg(Msg) {}
+        Msg(Msg) {}
   DiagnosticInfoSampleProfile(const Twine &Msg,
                               DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_SampleProfile, Severity), LineNum(0), Msg(Msg) {}
+      : DiagnosticInfo(DK_SampleProfile, Severity), Msg(Msg) {}
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -316,7 +314,7 @@ private:
 
   /// Line number where the diagnostic occurred. If 0, no line number will
   /// be emitted in the message.
-  unsigned LineNum;
+  unsigned LineNum = 0;
 
   /// Message to report.
   const Twine &Msg;
@@ -351,8 +349,9 @@ class DiagnosticLocation {
   StringRef Filename;
   unsigned Line = 0;
   unsigned Column = 0;
+
 public:
-  DiagnosticLocation() {}
+  DiagnosticLocation() = default;
   DiagnosticLocation(const DebugLoc &DL);
   DiagnosticLocation(const DISubprogram *SP);
 
@@ -426,10 +425,11 @@ public:
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
-  /// RemarkName is a textual identifier for the remark.  \p Fn is the function
-  /// where the diagnostic is being emitted. \p Loc is the location information
-  /// to use in the diagnostic. If line table information is available, the
-  /// diagnostic will include the source code location.
+  /// RemarkName is a textual identifier for the remark (single-word,
+  /// camel-case). \p Fn is the function where the diagnostic is being emitted.
+  /// \p Loc is the location information to use in the diagnostic. If line table
+  /// information is available, the diagnostic will include the source code
+  /// location.
   DiagnosticInfoOptimizationBase(enum DiagnosticKind Kind,
                                  enum DiagnosticSeverity Severity,
                                  const char *PassName, StringRef RemarkName,
@@ -488,8 +488,9 @@ protected:
   /// be emitted.
   const char *PassName;
 
-  /// Textual identifier for the remark.  Can be used by external tools reading
-  /// the YAML output file for optimization remarks to identify the remark.
+  /// Textual identifier for the remark (single-word, camel-case). Can be used
+  /// by external tools reading the YAML output file for optimization remarks to
+  /// identify the remark.
   StringRef RemarkName;
 
   /// If profile information is available, this is the number of times the
@@ -515,12 +516,13 @@ protected:
 class DiagnosticInfoIROptimization : public DiagnosticInfoOptimizationBase {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
-  /// RemarkName is a textual identifier for the remark.  \p Fn is the function
-  /// where the diagnostic is being emitted. \p Loc is the location information
-  /// to use in the diagnostic. If line table information is available, the
-  /// diagnostic will include the source code location. \p CodeRegion is IR
-  /// value (currently basic block) that the optimization operates on.  This is
-  /// currently used to provide run-time hotness information with PGO.
+  /// RemarkName is a textual identifier for the remark (single-word,
+  /// camel-case). \p Fn is the function where the diagnostic is being emitted.
+  /// \p Loc is the location information to use in the diagnostic. If line table
+  /// information is available, the diagnostic will include the source code
+  /// location. \p CodeRegion is IR value (currently basic block) that the
+  /// optimization operates on. This is currently used to provide run-time
+  /// hotness information with PGO.
   DiagnosticInfoIROptimization(enum DiagnosticKind Kind,
                                enum DiagnosticSeverity Severity,
                                const char *PassName, StringRef RemarkName,
@@ -559,10 +561,8 @@ public:
   DiagnosticInfoIROptimization(enum DiagnosticKind Kind,
                                enum DiagnosticSeverity Severity,
                                const char *PassName, const Function &Fn,
-                               const DiagnosticLocation &Loc, const Twine &Msg,
-                               Optional<uint64_t> Hotness = None)
+                               const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoOptimizationBase(Kind, Severity, PassName, "", Fn, Loc) {
-    setHotness(Hotness);
     *this << Msg.str();
   }
 
@@ -581,32 +581,24 @@ private:
 /// Diagnostic information for applied optimization remarks.
 class OptimizationRemark : public DiagnosticInfoIROptimization {
 public:
-  /// \p PassName is the name of the pass emitting this diagnostic. If
-  /// this name matches the regular expression given in -Rpass=, then the
-  /// diagnostic will be emitted. \p Fn is the function where the diagnostic
-  /// is being emitted. \p Loc is the location information to use in the
-  /// diagnostic. If line table information is available, the diagnostic
-  /// will include the source code location. \p Msg is the message to show.
-  /// Note that this class does not copy this message, so this reference
-  /// must be valid for the whole life time of the diagnostic.
-  OptimizationRemark(const char *PassName, const Function &Fn,
-                     const DiagnosticLocation &Loc, const Twine &Msg,
-                     Optional<uint64_t> Hotness = None)
-      : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
-                                     Fn, Loc, Msg, Hotness) {}
-
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass=, then the diagnostic will
-  /// be emitted.  \p RemarkName is a textual identifier for the remark.  \p
-  /// Loc is the debug location and \p CodeRegion is the region that the
-  /// optimization operates on (currently on block is supported).
+  /// be emitted. \p RemarkName is a textual identifier for the remark (single-
+  /// word, camel-case). \p Loc is the debug location and \p CodeRegion is the
+  /// region that the optimization operates on (currently only block is
+  /// supported).
   OptimizationRemark(const char *PassName, StringRef RemarkName,
                      const DiagnosticLocation &Loc, const Value *CodeRegion);
 
-  /// Same as above but the debug location and code region is derived from \p
+  /// Same as above, but the debug location and code region are derived from \p
   /// Instr.
   OptimizationRemark(const char *PassName, StringRef RemarkName,
-                     Instruction *Inst);
+                     const Instruction *Inst);
+
+  /// Same as above, but the debug location and code region are derived from \p
+  /// Func.
+  OptimizationRemark(const char *PassName, StringRef RemarkName,
+                     const Function *Func);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemark;
@@ -616,30 +608,37 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override { return isEnabled(getPassName()); }
-};
 
-/// Diagnostic information for missed-optimization remarks.
-class OptimizationRemarkMissed : public DiagnosticInfoIROptimization {
-public:
+private:
+  /// This is deprecated now and only used by the function API below.
   /// \p PassName is the name of the pass emitting this diagnostic. If
-  /// this name matches the regular expression given in -Rpass-missed=, then the
+  /// this name matches the regular expression given in -Rpass=, then the
   /// diagnostic will be emitted. \p Fn is the function where the diagnostic
   /// is being emitted. \p Loc is the location information to use in the
   /// diagnostic. If line table information is available, the diagnostic
   /// will include the source code location. \p Msg is the message to show.
   /// Note that this class does not copy this message, so this reference
   /// must be valid for the whole life time of the diagnostic.
-  OptimizationRemarkMissed(const char *PassName, const Function &Fn,
-                           const DiagnosticLocation &Loc, const Twine &Msg,
-                           Optional<uint64_t> Hotness = None)
-      : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
-                                     PassName, Fn, Loc, Msg, Hotness) {}
+  OptimizationRemark(const char *PassName, const Function &Fn,
+                     const DiagnosticLocation &Loc, const Twine &Msg)
+      : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
+                                     Fn, Loc, Msg) {}
 
+  friend void emitOptimizationRemark(LLVMContext &Ctx, const char *PassName,
+                                     const Function &Fn,
+                                     const DiagnosticLocation &Loc,
+                                     const Twine &Msg);
+};
+
+/// Diagnostic information for missed-optimization remarks.
+class OptimizationRemarkMissed : public DiagnosticInfoIROptimization {
+public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-missed=, then the
-  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Loc is the debug location and \p CodeRegion is the region
-  /// that the optimization operates on (currently on block is supported).
+  /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
+  /// remark (single-word, camel-case). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on (currently only
+  /// block is supported).
   OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
                            const DiagnosticLocation &Loc,
                            const Value *CodeRegion);
@@ -657,30 +656,38 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override { return isEnabled(getPassName()); }
+
+private:
+  /// This is deprecated now and only used by the function API below.
+  /// \p PassName is the name of the pass emitting this diagnostic. If
+  /// this name matches the regular expression given in -Rpass-missed=, then the
+  /// diagnostic will be emitted. \p Fn is the function where the diagnostic
+  /// is being emitted. \p Loc is the location information to use in the
+  /// diagnostic. If line table information is available, the diagnostic
+  /// will include the source code location. \p Msg is the message to show.
+  /// Note that this class does not copy this message, so this reference
+  /// must be valid for the whole life time of the diagnostic.
+  OptimizationRemarkMissed(const char *PassName, const Function &Fn,
+                           const DiagnosticLocation &Loc, const Twine &Msg)
+      : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
+                                     PassName, Fn, Loc, Msg) {}
+
+  friend void emitOptimizationRemarkMissed(LLVMContext &Ctx,
+                                           const char *PassName,
+                                           const Function &Fn,
+                                           const DiagnosticLocation &Loc,
+                                           const Twine &Msg);
 };
 
 /// Diagnostic information for optimization analysis remarks.
 class OptimizationRemarkAnalysis : public DiagnosticInfoIROptimization {
 public:
-  /// \p PassName is the name of the pass emitting this diagnostic. If
-  /// this name matches the regular expression given in -Rpass-analysis=, then
-  /// the diagnostic will be emitted. \p Fn is the function where the diagnostic
-  /// is being emitted. \p Loc is the location information to use in the
-  /// diagnostic. If line table information is available, the diagnostic will
-  /// include the source code location. \p Msg is the message to show. Note that
-  /// this class does not copy this message, so this reference must be valid for
-  /// the whole life time of the diagnostic.
-  OptimizationRemarkAnalysis(const char *PassName, const Function &Fn,
-                             const DiagnosticLocation &Loc, const Twine &Msg,
-                             Optional<uint64_t> Hotness = None)
-      : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
-                                     PassName, Fn, Loc, Msg, Hotness) {}
-
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
-  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Loc is the debug location and \p CodeRegion is the region
-  /// that the optimization operates on (currently on block is supported).
+  /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
+  /// remark (single-word, camel-case). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on (currently only
+  /// block is supported).
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                              const DiagnosticLocation &Loc,
                              const Value *CodeRegion);
@@ -719,20 +726,60 @@ public:
 protected:
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
                              const Function &Fn, const DiagnosticLocation &Loc,
-                             const Twine &Msg, Optional<uint64_t> Hotness)
-      : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, Fn, Loc, Msg,
-                                     Hotness) {}
+                             const Twine &Msg)
+      : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, Fn, Loc, Msg) {}
 
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
                              StringRef RemarkName,
                              const DiagnosticLocation &Loc,
                              const Value *CodeRegion);
+
+private:
+  /// This is deprecated now and only used by the function API below.
+  /// \p PassName is the name of the pass emitting this diagnostic. If
+  /// this name matches the regular expression given in -Rpass-analysis=, then
+  /// the diagnostic will be emitted. \p Fn is the function where the diagnostic
+  /// is being emitted. \p Loc is the location information to use in the
+  /// diagnostic. If line table information is available, the diagnostic will
+  /// include the source code location. \p Msg is the message to show. Note that
+  /// this class does not copy this message, so this reference must be valid for
+  /// the whole life time of the diagnostic.
+  OptimizationRemarkAnalysis(const char *PassName, const Function &Fn,
+                             const DiagnosticLocation &Loc, const Twine &Msg)
+      : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
+                                     PassName, Fn, Loc, Msg) {}
+
+  friend void emitOptimizationRemarkAnalysis(LLVMContext &Ctx,
+                                             const char *PassName,
+                                             const Function &Fn,
+                                             const DiagnosticLocation &Loc,
+                                             const Twine &Msg);
 };
 
 /// Diagnostic information for optimization analysis remarks related to
 /// floating-point non-commutativity.
 class OptimizationRemarkAnalysisFPCommute : public OptimizationRemarkAnalysis {
 public:
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass-analysis=, then the
+  /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
+  /// remark (single-word, camel-case). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on (currently only
+  /// block is supported). The front-end will append its own message related to
+  /// options that address floating-point non-commutativity.
+  OptimizationRemarkAnalysisFPCommute(const char *PassName,
+                                      StringRef RemarkName,
+                                      const DiagnosticLocation &Loc,
+                                      const Value *CodeRegion)
+      : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
+                                   PassName, RemarkName, Loc, CodeRegion) {}
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_OptimizationRemarkAnalysisFPCommute;
+  }
+
+private:
+  /// This is deprecated now and only used by the function API below.
   /// \p PassName is the name of the pass emitting this diagnostic. If
   /// this name matches the regular expression given in -Rpass-analysis=, then
   /// the diagnostic will be emitted. \p Fn is the function where the diagnostic
@@ -745,34 +792,38 @@ public:
   /// diagnostic.
   OptimizationRemarkAnalysisFPCommute(const char *PassName, const Function &Fn,
                                       const DiagnosticLocation &Loc,
-                                      const Twine &Msg,
-                                      Optional<uint64_t> Hotness = None)
+                                      const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
-                                   PassName, Fn, Loc, Msg, Hotness) {}
+                                   PassName, Fn, Loc, Msg) {}
 
-  /// \p PassName is the name of the pass emitting this diagnostic. If this name
-  /// matches the regular expression given in -Rpass-analysis=, then the
-  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Loc is the debug location and \p CodeRegion is the region
-  /// that the optimization operates on (currently on block is supported). The
-  /// front-end will append its own message related to options that address
-  /// floating-point non-commutativity.
-  OptimizationRemarkAnalysisFPCommute(const char *PassName,
-                                      StringRef RemarkName,
-                                      const DiagnosticLocation &Loc,
-                                      const Value *CodeRegion)
-      : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
-                                   PassName, RemarkName, Loc, CodeRegion) {}
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_OptimizationRemarkAnalysisFPCommute;
-  }
+  friend void emitOptimizationRemarkAnalysisFPCommute(
+      LLVMContext &Ctx, const char *PassName, const Function &Fn,
+      const DiagnosticLocation &Loc, const Twine &Msg);
 };
 
 /// Diagnostic information for optimization analysis remarks related to
 /// pointer aliasing.
 class OptimizationRemarkAnalysisAliasing : public OptimizationRemarkAnalysis {
 public:
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass-analysis=, then the
+  /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
+  /// remark (single-word, camel-case). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on (currently only
+  /// block is supported). The front-end will append its own message related to
+  /// options that address pointer aliasing legality.
+  OptimizationRemarkAnalysisAliasing(const char *PassName, StringRef RemarkName,
+                                     const DiagnosticLocation &Loc,
+                                     const Value *CodeRegion)
+      : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
+                                   PassName, RemarkName, Loc, CodeRegion) {}
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_OptimizationRemarkAnalysisAliasing;
+  }
+
+private:
+  /// This is deprecated now and only used by the function API below.
   /// \p PassName is the name of the pass emitting this diagnostic. If
   /// this name matches the regular expression given in -Rpass-analysis=, then
   /// the diagnostic will be emitted. \p Fn is the function where the diagnostic
@@ -785,27 +836,13 @@ public:
   /// diagnostic.
   OptimizationRemarkAnalysisAliasing(const char *PassName, const Function &Fn,
                                      const DiagnosticLocation &Loc,
-                                     const Twine &Msg,
-                                     Optional<uint64_t> Hotness = None)
+                                     const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
-                                   PassName, Fn, Loc, Msg, Hotness) {}
+                                   PassName, Fn, Loc, Msg) {}
 
-  /// \p PassName is the name of the pass emitting this diagnostic. If this name
-  /// matches the regular expression given in -Rpass-analysis=, then the
-  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Loc is the debug location and \p CodeRegion is the region
-  /// that the optimization operates on (currently on block is supported). The
-  /// front-end will append its own message related to options that address
-  /// pointer aliasing legality.
-  OptimizationRemarkAnalysisAliasing(const char *PassName, StringRef RemarkName,
-                                     const DiagnosticLocation &Loc,
-                                     const Value *CodeRegion)
-      : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
-                                   PassName, RemarkName, Loc, CodeRegion) {}
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_OptimizationRemarkAnalysisAliasing;
-  }
+  friend void emitOptimizationRemarkAnalysisAliasing(
+      LLVMContext &Ctx, const char *PassName, const Function &Fn,
+      const DiagnosticLocation &Loc, const Twine &Msg);
 };
 
 /// Diagnostic information for machine IR parser.
@@ -848,51 +885,64 @@ public:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DiagnosticInfo, LLVMDiagnosticInfoRef)
 
-/// Emit an optimization-applied message. \p PassName is the name of the pass
-/// emitting the message. If -Rpass= is given and \p PassName matches the
-/// regular expression in -Rpass, then the remark will be emitted. \p Fn is
-/// the function triggering the remark, \p Loc is the debug location where
-/// the diagnostic is generated. \p Msg is the message string to use.
+/// \brief Legacy interface to emit an optimization-applied message.  Use
+/// (Machine)OptimizationRemarkEmitter instead.
+///
+/// \p PassName is the name of the pass emitting the message. If -Rpass= is
+/// given and \p PassName matches the regular expression in -Rpass, then the
+/// remark will be emitted. \p Fn is the function triggering the remark, \p Loc
+/// is the debug location where the diagnostic is generated. \p Msg is the
+/// message string to use.
 void emitOptimizationRemark(LLVMContext &Ctx, const char *PassName,
                             const Function &Fn, const DiagnosticLocation &Loc,
                             const Twine &Msg);
 
-/// Emit an optimization-missed message. \p PassName is the name of the
-/// pass emitting the message. If -Rpass-missed= is given and \p PassName
-/// matches the regular expression in -Rpass, then the remark will be
-/// emitted. \p Fn is the function triggering the remark, \p Loc is the
-/// debug location where the diagnostic is generated. \p Msg is the
+/// \brief Legacy interface to emit an optimization-missed message.  Use
+/// (Machine)OptimizationRemarkEmitter instead.
+///
+/// \p PassName is the name of the pass emitting the message. If -Rpass-missed=
+/// is given and \p PassName matches the regular expression in -Rpass, then the
+/// remark will be emitted. \p Fn is the function triggering the remark, \p Loc
+/// is the debug location where the diagnostic is generated. \p Msg is the
 /// message string to use.
 void emitOptimizationRemarkMissed(LLVMContext &Ctx, const char *PassName,
                                   const Function &Fn,
                                   const DiagnosticLocation &Loc,
                                   const Twine &Msg);
 
-/// Emit an optimization analysis remark message. \p PassName is the name of
-/// the pass emitting the message. If -Rpass-analysis= is given and \p
-/// PassName matches the regular expression in -Rpass, then the remark will be
-/// emitted. \p Fn is the function triggering the remark, \p Loc is the debug
-/// location where the diagnostic is generated. \p Msg is the message string
-/// to use.
+/// \brief Legacy interface to emit an optimization analysis remark message.
+/// Use (Machine)OptimizationRemarkEmitter instead.
+///
+/// \p PassName is the name of the pass emitting the message. If
+/// -Rpass-analysis= is given and \p PassName matches the regular expression in
+/// -Rpass, then the remark will be emitted. \p Fn is the function triggering
+/// the remark, \p Loc is the debug location where the diagnostic is
+/// generated. \p Msg is the message string to use.
 void emitOptimizationRemarkAnalysis(LLVMContext &Ctx, const char *PassName,
                                     const Function &Fn,
                                     const DiagnosticLocation &Loc,
                                     const Twine &Msg);
 
-/// Emit an optimization analysis remark related to messages about
-/// floating-point non-commutativity. \p PassName is the name of the pass
-/// emitting the message. If -Rpass-analysis= is given and \p PassName matches
-/// the regular expression in -Rpass, then the remark will be emitted. \p Fn is
-/// the function triggering the remark, \p Loc is the debug location where the
-/// diagnostic is generated. \p Msg is the message string to use.
+/// \brief Legacy interface to emit an optimization analysis remark related to
+/// messages about floating-point non-commutativity.  Use
+/// (Machine)OptimizationRemarkEmitter instead.
+///
+/// \p PassName is the name of the pass emitting the message. If
+/// -Rpass-analysis= is given and \p PassName matches the regular expression in
+/// -Rpass, then the remark will be emitted. \p Fn is the function triggering
+/// the remark, \p Loc is the debug location where the diagnostic is
+/// generated. \p Msg is the message string to use.
 void emitOptimizationRemarkAnalysisFPCommute(LLVMContext &Ctx,
                                              const char *PassName,
                                              const Function &Fn,
                                              const DiagnosticLocation &Loc,
                                              const Twine &Msg);
 
-/// Emit an optimization analysis remark related to messages about
-/// pointer aliasing. \p PassName is the name of the pass emitting the message.
+/// \brief Legacy interface to emit an optimization analysis remark related to
+/// messages about pointer aliasing.  Use (Machine)OptimizationRemarkEmitter
+/// instead.
+///
+/// \p PassName is the name of the pass emitting the message.
 /// If -Rpass-analysis= is given and \p PassName matches the regular expression
 /// in -Rpass, then the remark will be emitted. \p Fn is the function triggering
 /// the remark, \p Loc is the debug location where the diagnostic is generated.
@@ -962,6 +1012,7 @@ public:
 
   void print(DiagnosticPrinter &DP) const override;
 };
+
 } // end namespace llvm
 
 #endif // LLVM_IR_DIAGNOSTICINFO_H

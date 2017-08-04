@@ -153,7 +153,17 @@ INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 VALUE_PROF_FUNC_PARAM(uint64_t, TargetValue, Type::getInt64Ty(Ctx)) \
                       INSTR_PROF_COMMA
 VALUE_PROF_FUNC_PARAM(void *, Data, Type::getInt8PtrTy(Ctx)) INSTR_PROF_COMMA
+#ifndef VALUE_RANGE_PROF
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
+#else /* VALUE_RANGE_PROF */
+VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx)) \
+                      INSTR_PROF_COMMA
+VALUE_PROF_FUNC_PARAM(uint64_t, PreciseRangeStart, Type::getInt64Ty(Ctx)) \
+                      INSTR_PROF_COMMA
+VALUE_PROF_FUNC_PARAM(uint64_t, PreciseRangeLast, Type::getInt64Ty(Ctx)) \
+                      INSTR_PROF_COMMA
+VALUE_PROF_FUNC_PARAM(uint64_t, LargeValue, Type::getInt64Ty(Ctx))
+#endif /*VALUE_RANGE_PROF */
 #undef VALUE_PROF_FUNC_PARAM
 #undef INSTR_PROF_COMMA
 /* VALUE_PROF_FUNC_PARAM end */
@@ -174,13 +184,15 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
  * name hash and the function address.
  */
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0)
+/* For memory intrinsic functions size profiling. */
+VALUE_PROF_KIND(IPVK_MemOPSize, 1)
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
  * array created with the template can be
  * indexed with the kind value.
  */
 VALUE_PROF_KIND(IPVK_First, IPVK_IndirectCallTarget)
-VALUE_PROF_KIND(IPVK_Last, IPVK_IndirectCallTarget)
+VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize)
 
 #undef VALUE_PROF_KIND
 /* VALUE_PROF_KIND end */
@@ -232,6 +244,31 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
               llvm::ConstantInt::get(Int32Ty, CovMapVersion::CurrentVersion))
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
+
+
+#ifdef INSTR_PROF_SECT_ENTRY
+#define INSTR_PROF_DATA_DEFINED
+INSTR_PROF_SECT_ENTRY(IPSK_data, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_DATA_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_name, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_NAME_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vals, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VALS_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COFF), "__LLVM_COV,")
+
+#undef INSTR_PROF_SECT_ENTRY
+#endif
 
 
 #ifdef INSTR_PROF_VALUE_PROF_DATA
@@ -610,17 +647,47 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * specified via command line. */
 #define INSTR_PROF_PROFILE_NAME_VAR __llvm_profile_filename
 
+/* section name strings common to all targets other
+   than WIN32 */
+#define INSTR_PROF_DATA_COMMON __llvm_prf_data
+#define INSTR_PROF_NAME_COMMON __llvm_prf_names
+#define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_VALS_COMMON __llvm_prf_vals
+#define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
+#define INSTR_PROF_COVMAP_COMMON __llvm_covmap
+/* Win32 */
+#define INSTR_PROF_DATA_COFF .lprfd
+#define INSTR_PROF_NAME_COFF .lprfn
+#define INSTR_PROF_CNTS_COFF .lprfc
+#define INSTR_PROF_VALS_COFF .lprfv
+#define INSTR_PROF_VNODES_COFF .lprfnd
+#define INSTR_PROF_COVMAP_COFF .lcovmap
+
+#ifdef _WIN32
 /* Runtime section names and name strings.  */
-#define INSTR_PROF_DATA_SECT_NAME __llvm_prf_data
-#define INSTR_PROF_NAME_SECT_NAME __llvm_prf_names
-#define INSTR_PROF_CNTS_SECT_NAME __llvm_prf_cnts
+#define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COFF
+#define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COFF
+#define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COFF
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
-#define INSTR_PROF_VALS_SECT_NAME __llvm_prf_vals
+#define INSTR_PROF_VALS_SECT_NAME INSTR_PROF_VALS_COFF
 /* Value profile nodes section. */
-#define INSTR_PROF_VNODES_SECT_NAME __llvm_prf_vnds
-#define INSTR_PROF_COVMAP_SECT_NAME __llvm_covmap
+#define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COFF
+#define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
+#else
+/* Runtime section names and name strings.  */
+#define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COMMON
+#define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COMMON
+#define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COMMON
+/* Array of pointers. Each pointer points to a list
+ * of value nodes associated with one value site.
+ */
+#define INSTR_PROF_VALS_SECT_NAME INSTR_PROF_VALS_COMMON
+/* Value profile nodes section. */
+#define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COMMON
+#define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COMMON
+#endif
 
 #define INSTR_PROF_DATA_SECT_NAME_STR                                          \
   INSTR_PROF_QUOTE(INSTR_PROF_DATA_SECT_NAME)
@@ -649,6 +716,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALUE_PROF_FUNC __llvm_profile_instrument_target
 #define INSTR_PROF_VALUE_PROF_FUNC_STR \
         INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_FUNC)
+#define INSTR_PROF_VALUE_RANGE_PROF_FUNC __llvm_profile_instrument_range
+#define INSTR_PROF_VALUE_RANGE_PROF_FUNC_STR \
+        INSTR_PROF_QUOTE(INSTR_PROF_VALUE_RANGE_PROF_FUNC)
 
 /* InstrProfile per-function control data alignment.  */
 #define INSTR_PROF_DATA_ALIGNMENT 8

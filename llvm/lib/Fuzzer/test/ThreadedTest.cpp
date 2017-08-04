@@ -3,8 +3,8 @@
 
 // Threaded test for a fuzzer. The fuzzer should not crash.
 #include <assert.h>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <thread>
 

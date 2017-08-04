@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.7"
 define <16 x i8> @shift(<16 x i8> %a, <16 x i8> %b) nounwind {
   ; Make sure operands to pblend are in the right order.
   ; CHECK-W-SSE4: psllw $4, [[REG1:%xmm.]]
-  ; CHECK-W-SSE4: pblendvb [[REG1]],{{ %xmm.}}
+  ; CHECK-W-SSE4: pblendvb %xmm0, [[REG1]],{{ %xmm.}}
   ; CHECK-W-SSE4: psllw $2
 
   ; Make sure we're masking and pcmp'ing the VSELECT conditon vector.

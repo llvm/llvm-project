@@ -25,14 +25,11 @@ int main()
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
-        typedef C::const_iterator I;
-        typedef std::pair<int, std::string> P;
         const C c;
         LIBCPP_ASSERT(c.bucket_count() == 0);
     }
     {
         typedef std::unordered_multimap<int, std::string> C;
-        typedef C::const_iterator I;
         typedef std::pair<int, std::string> P;
         P a[] =
         {

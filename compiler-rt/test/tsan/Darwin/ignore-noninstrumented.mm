@@ -1,4 +1,4 @@
-// Check that ignore_noninstrumented_modules=1 supresses races from system libraries on OS X.
+// Check that ignore_noninstrumented_modules=1 suppresses races from system libraries on OS X.
 
 // RUN: %clang_tsan %s -o %t -framework Foundation
 

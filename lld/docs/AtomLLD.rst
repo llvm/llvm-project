@@ -1,6 +1,9 @@
 ATOM-based lld
 ==============
 
+Note: this document discuss Mach-O port of LLD. For ELF and COFF,
+see :doc:`index`.
+
 ATOM-based lld is a new set of modular code for creating linker tools.
 Currently it supports Mach-O.
 
@@ -46,9 +49,7 @@ Contents
 
    design
    getting_started
-   ReleaseNotes
    development
-   windows_support
    open_projects
    sphinx_intro
 

@@ -20,7 +20,7 @@ target triple="amdgcn--"
 ; CHECK-NEXT: s_mov_b32 s6, -1
 ; CHECK-NEXT: buffer_store_dword v1, off, s[4:7], 0
 ; CHECK-NEXT: s_endpgm
-define void @foobar(float %a0, float %a1, float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out) nounwind {
 entry:
   %v0 = insertelement <4 x float> undef, float %a0, i32 0
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0

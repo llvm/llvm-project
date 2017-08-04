@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <stack>
 
 // void push(value_type&& v);
@@ -18,7 +20,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     std::stack<MoveOnly> q;
     q.push(MoveOnly(1));
     assert(q.size() == 1);
@@ -29,5 +30,4 @@ int main()
     q.push(MoveOnly(3));
     assert(q.size() == 3);
     assert(q.top() == MoveOnly(3));
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

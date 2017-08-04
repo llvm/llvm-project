@@ -15,6 +15,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -40,27 +41,50 @@ static cl::opt<int>
               cl::init(4));
 static cl::alias MinLengthShort("n", cl::desc(""), cl::aliasopt(MinLength));
 
+enum radix { none, octal, hexadecimal, decimal };
+static cl::opt<radix>
+    Radix("radix", cl::desc("print the offset within the file"),
+          cl::values(clEnumValN(octal, "o", "octal"),
+                     clEnumValN(hexadecimal, "x", "hexadecimal"),
+                     clEnumValN(decimal, "d", "decimal")),
+          cl::init(none));
+static cl::alias RadixShort("t", cl::desc(""), cl::aliasopt(Radix));
+
 static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
-  auto print = [&OS, FileName](StringRef L) {
+  auto print = [&OS, FileName](unsigned Offset, StringRef L) {
     if (L.size() < static_cast<size_t>(MinLength))
       return;
     if (PrintFileName)
-      OS << FileName << ": ";
-    OS << L << '\n';
+      OS << FileName << ":";
+    switch (Radix) {
+    case none:
+      break;
+    case octal:
+      OS << format("%8o", Offset);
+      break;
+    case hexadecimal:
+      OS << format("%8x", Offset);
+      break;
+    case decimal:
+      OS << format("%8u", Offset);
+      break;
+    }
+    OS << " " << L << '\n';
   };
 
+  const char *B = Contents.begin();
   const char *P = nullptr, *E = nullptr, *S = nullptr;
   for (P = Contents.begin(), E = Contents.end(); P < E; ++P) {
     if (std::isgraph(*P) || std::isblank(*P)) {
       if (S == nullptr)
         S = P;
     } else if (S) {
-      print(StringRef(S, P - S));
+      print(S - B, StringRef(S, P - S));
       S = nullptr;
     }
   }
   if (S)
-    print(StringRef(S, E - S));
+    print(S - B, StringRef(S, E - S));
 }
 
 int main(int argc, char **argv) {

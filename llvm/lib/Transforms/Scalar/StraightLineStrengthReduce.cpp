@@ -693,7 +693,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
       UnlinkedInst->setOperand(I, nullptr);
       RecursivelyDeleteTriviallyDeadInstructions(Op);
     }
-    delete UnlinkedInst;
+    UnlinkedInst->deleteValue();
   }
   bool Ret = !UnlinkedInstructions.empty();
   UnlinkedInstructions.clear();

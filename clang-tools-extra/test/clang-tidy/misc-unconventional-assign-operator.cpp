@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -std=c++11 -isystem %S/Inputs/Headers
+// RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -std=c++11 -isystem %S/Inputs/Headers -fno-delayed-template-parsing
 
 namespace std {
 template <typename T>
@@ -87,3 +87,25 @@ public:
     return n;
   }
 };
+
+namespace pr31531 {
+enum E { e };
+// This declaration makes the 'return *this' below have an unresolved operator
+// in the class template, but not in an instantiation.
+E operator*(E, E);
+
+template <typename>
+struct UnresolvedOperator {
+  UnresolvedOperator &operator=(const UnresolvedOperator &) { return *this; }
+};
+
+UnresolvedOperator<int> UnresolvedOperatorInt;
+
+template <typename>
+struct Template {
+  Template &operator=(const Template &) { return this; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: operator=() should always return '*this'
+};
+
+Template<int> TemplateInt;
+}

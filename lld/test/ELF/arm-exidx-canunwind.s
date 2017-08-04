@@ -72,7 +72,7 @@ _start:
 // CHECK-EXIDX-NEXT: 100d4 380f0000 08849780 340f0000 0c000000
 // 100e4 + f30 = 11014 = terminate = func2 + sizeof(func2)
 // CHECK-EXIDX-NEXT: 100e4 300f0000 01000000
-// CHECK-EXIDX-NEXT: Contents of section .ARM.extab.text.func2:
+// CHECK-EXIDX-NEXT: Contents of section .ARM.extab:
 // 100ec + f28 = 11014 = __gxx_personality_v0
 // CHECK-EXIDX-NEXT: 100ec 280f0000 b0b0b000 00000000
 

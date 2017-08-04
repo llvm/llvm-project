@@ -102,6 +102,10 @@
 #define LAST_OTHER_INST(num)
 #endif
 
+#ifndef HANDLE_USER_INST
+#define HANDLE_USER_INST(num, opc, Class) HANDLE_OTHER_INST(num, opc, Class)
+#endif
+
 // Terminator Instructions - These instructions are used to terminate a basic
 // block of the program.   Every basic block must end with one of these
 // instructions for it to be a well formed basic block.
@@ -185,8 +189,8 @@ HANDLE_OTHER_INST(52, FCmp   , FCmpInst   )  // Floating point comparison instr.
 HANDLE_OTHER_INST(53, PHI    , PHINode    )  // PHI node instruction
 HANDLE_OTHER_INST(54, Call   , CallInst   )  // Call a function
 HANDLE_OTHER_INST(55, Select , SelectInst )  // select instruction
-HANDLE_OTHER_INST(56, UserOp1, Instruction)  // May be used internally in a pass
-HANDLE_OTHER_INST(57, UserOp2, Instruction)  // Internal to passes only
+HANDLE_USER_INST (56, UserOp1, Instruction)  // May be used internally in a pass
+HANDLE_USER_INST (57, UserOp2, Instruction)  // Internal to passes only
 HANDLE_OTHER_INST(58, VAArg  , VAArgInst  )  // vaarg instruction
 HANDLE_OTHER_INST(59, ExtractElement, ExtractElementInst)// extract from vector
 HANDLE_OTHER_INST(60, InsertElement, InsertElementInst)  // insert into vector
@@ -219,6 +223,8 @@ HANDLE_OTHER_INST(64, LandingPad, LandingPadInst)  // Landing pad instruction.
 #undef  FIRST_OTHER_INST
 #undef HANDLE_OTHER_INST
 #undef   LAST_OTHER_INST
+
+#undef HANDLE_USER_INST
 
 #ifdef HANDLE_INST
 #undef HANDLE_INST

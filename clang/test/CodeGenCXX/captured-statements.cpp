@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -emit-llvm %s -o %t
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -emit-llvm %s -o %t -debug-info-kind=limited
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-1
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-2
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-3
@@ -194,3 +194,18 @@ inline int test_captured_linkage() {
 void call_test_captured_linkage() {
   test_captured_linkage();
 }
+
+// CHECK-1-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-1-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)
+// CHECK-2-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-2-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)
+// CHECK-3-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-3-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)
+// CHECK-4-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-4-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)
+// CHECK-5-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-5-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)
+// CHECK-6-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-6-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)
+// CHECK-7-DAG: !DILocalVariable(name: "this", {{.*}}, flags: DIFlagArtificial | DIFlagObjectPointer)
+// CHECK-7-DAG: !DILocalVariable(name: "__context", {{.*}}, flags: DIFlagArtificial)

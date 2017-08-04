@@ -1,17 +1,16 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-bsb-sched=0 -enable-pipeliner < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-pipeliner < %s | FileCheck %s
 
 ; From coremark. Test that we pipeline the matrix multiplication bitextract
 ; function. The pipelined code should have two packets.
 
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: = extractu([[REG2:(r[0-9]+)]],
-; CHECK: = extractu([[REG2]],
-; CHECK: [[REG0:(r[0-9]+)]] = memh
-; CHECK: [[REG1:(r[0-9]+)]] = memh
+; CHECK: [[REG0:(r[0-9]+)]] = mpyi([[REG1:(r[0-9]+)]],[[REG2:(r[0-9]+)]])
 ; CHECK: += mpyi
-; CHECK: [[REG2]] = mpyi([[REG0]], [[REG1]])
+; CHECK: [[REG1:(r[0-9]+)]] = memh
+; CHECK: = extractu([[REG0:(r[0-9]+)]],
+; CHECK: = extractu([[REG0]],
+; CHECK: [[REG2:(r[0-9]+)]] = memh
 ; CHECK: endloop0
 
 %union_h2_sem_t = type { i32 }

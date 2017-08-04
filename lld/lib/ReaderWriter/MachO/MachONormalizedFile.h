@@ -48,10 +48,10 @@
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 
 using llvm::BumpPtrAllocator;

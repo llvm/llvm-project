@@ -188,12 +188,14 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
     }
   }
   if (!dynamic) return 0;
-  uptr strtab = 0, symtab = 0;
+  uptr strtab = 0, symtab = 0, strsz = 0;
   for (const ElfW(Dyn) *p = dynamic; p->d_tag != PT_NULL; ++p) {
     if (p->d_tag == DT_SYMTAB)
       symtab = p->d_un.d_ptr;
     else if (p->d_tag == DT_STRTAB)
       strtab = p->d_un.d_ptr;
+    else if (p->d_tag == DT_STRSZ)
+      strsz = p->d_un.d_ptr;
   }
 
   if (symtab > strtab) {
@@ -209,7 +211,8 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
     if (phdr->p_type == PT_LOAD) {
       uptr beg = info->dlpi_addr + phdr->p_vaddr;
       uptr end = beg + phdr->p_memsz;
-      if (strtab >= beg && strtab < end && symtab >= beg && symtab < end)
+      if (strtab >= beg && strtab + strsz < end && symtab >= beg &&
+          symtab < end)
         break;
     }
   }
@@ -222,9 +225,14 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
 
   for (const ElfW(Sym) *p = (const ElfW(Sym) *)symtab; (ElfW(Addr))p < strtab;
        ++p) {
+    // There is no reliable way to find the end of the symbol table. In
+    // lld-produces files, there are other sections between symtab and strtab.
+    // Stop looking when the symbol name is not inside strtab.
+    if (p->st_name >= strsz) break;
     char *name = (char*)(strtab + p->st_name);
     if (strcmp(name, "__cfi_check") == 0) {
-      assert(p->st_info == ELF32_ST_INFO(STB_GLOBAL, STT_FUNC));
+      assert(p->st_info == ELF32_ST_INFO(STB_GLOBAL, STT_FUNC) ||
+             p->st_info == ELF32_ST_INFO(STB_WEAK, STT_FUNC));
       uptr addr = info->dlpi_addr + p->st_value;
       return addr;
     }

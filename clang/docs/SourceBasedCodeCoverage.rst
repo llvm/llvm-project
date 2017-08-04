@@ -18,6 +18,7 @@ Clang ships two other code coverage implementations:
   various sanitizers. It can provide up to edge-level coverage.
 
 * gcov - A GCC-compatible coverage implementation which operates on DebugInfo.
+  This is enabled by ``-ftest-coverage`` or ``--coverage``.
 
 From this point onwards "code coverage" will refer to the source-based kind.
 
@@ -256,6 +257,8 @@ without using static initializers, do this manually:
   otherwise. Calling this function multiple times appends profile data to an
   existing on-disk raw profile.
 
+In C++ files, declare these as ``extern "C"``.
+
 Collecting coverage reports for the llvm project
 ================================================
 
@@ -270,6 +273,11 @@ To specify an alternate directory for raw profiles, use
 
 Drawbacks and limitations
 =========================
+
+* Prior to version 2.26, the GNU binutils BFD linker is not able link programs
+  compiled with ``-fcoverage-mapping`` in its ``--gc-sections`` mode.  Possible
+  workarounds include disabling ``--gc-sections``, upgrading to a newer version
+  of BFD, or using the Gold linker.
 
 * Code coverage does not handle unpredictable changes in control flow or stack
   unwinding in the presence of exceptions precisely. Consider the following

@@ -1,10 +1,11 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clang_scudo %s -lstdc++ -o %t
 // RUN: %run %t 2>&1
 
 // Tests that a regular workflow of allocation, memory fill and free works as
 // intended. Tests various sizes serviced by the primary and secondary
 // allocators.
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,8 +19,7 @@ int main(int argc, char **argv)
   std::vector<int> offsets{1, 0, -1, -7, -8, -15, -16, -31, -32};
 
   p = malloc(0);
-  if (!p)
-    return 1;
+  assert(p);
   free(p);
   for (ssize_t size : sizes) {
     for (int offset: offsets) {
@@ -27,8 +27,7 @@ int main(int argc, char **argv)
       if (actual_size <= 0)
         continue;
       p = malloc(actual_size);
-      if (!p)
-        return 1;
+      assert(p);
       memset(p, 0xff, actual_size);
       free(p);
     }

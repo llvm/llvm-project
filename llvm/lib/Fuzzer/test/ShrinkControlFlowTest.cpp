@@ -2,15 +2,16 @@
 // License. See LICENSE.TXT for details.
 
 // Test that we can find the minimal item in the corpus (3 bytes: "FUZ").
-#include <cstdint>
-#include <cstdlib>
 #include <cstddef>
-#include <cstring>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 static volatile int Sink;
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+  if (Size > 64) return 0;
   int8_t Ids[256];
   memset(Ids, -1, sizeof(Ids));
   for (size_t i = 0; i < Size; i++)

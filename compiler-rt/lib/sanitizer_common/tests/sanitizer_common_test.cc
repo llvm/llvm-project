@@ -72,12 +72,12 @@ TEST(SanitizerCommon, SortTest) {
   EXPECT_TRUE(IsSorted(array, 2));
 }
 
-TEST(SanitizerCommon, MmapAlignedOrDie) {
+TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
   uptr PageSize = GetPageSizeCached();
   for (uptr size = 1; size <= 32; size *= 2) {
     for (uptr alignment = 1; alignment <= 32; alignment *= 2) {
       for (int iter = 0; iter < 100; iter++) {
-        uptr res = (uptr)MmapAlignedOrDie(
+        uptr res = (uptr)MmapAlignedOrDieOnFatalError(
             size * PageSize, alignment * PageSize, "MmapAlignedOrDieTest");
         EXPECT_EQ(0U, res % (alignment * PageSize));
         internal_memset((void*)res, 1, size * PageSize);
@@ -299,5 +299,22 @@ TEST(SanitizerCommon, InternalScopedString) {
   EXPECT_EQ(9U, str.length());
   EXPECT_STREQ("012345678", str.data());
 }
+
+#if SANITIZER_LINUX
+TEST(SanitizerCommon, GetRandom) {
+  u8 buffer_1[32], buffer_2[32];
+  EXPECT_FALSE(GetRandom(nullptr, 32));
+  EXPECT_FALSE(GetRandom(buffer_1, 0));
+  EXPECT_FALSE(GetRandom(buffer_1, 512));
+  EXPECT_EQ(ARRAY_SIZE(buffer_1), ARRAY_SIZE(buffer_2));
+  for (uptr size = 4; size <= ARRAY_SIZE(buffer_1); size += 4) {
+    for (uptr i = 0; i < 100; i++) {
+      EXPECT_TRUE(GetRandom(buffer_1, size));
+      EXPECT_TRUE(GetRandom(buffer_2, size));
+      EXPECT_NE(internal_memcmp(buffer_1, buffer_2, size), 0);
+    }
+  }
+}
+#endif
 
 }  // namespace __sanitizer

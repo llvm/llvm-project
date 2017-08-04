@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "gtest/gtest.h"
 
 namespace {
 
 struct MockBaseLayer {
-  typedef int ModuleSetHandleT;
-  ModuleSetHandleT addModuleSet(
-                  std::list<std::unique_ptr<llvm::Module>>,
+  typedef int ModuleHandleT;
+  ModuleHandleT addModule(
+                  std::shared_ptr<llvm::Module>,
                   std::unique_ptr<llvm::RuntimeDyld::MemoryManager> MemMgr,
                   std::unique_ptr<llvm::JITSymbolResolver> Resolver) {
     EXPECT_FALSE(MemMgr);
@@ -27,7 +27,7 @@ struct MockBaseLayer {
 TEST(LazyEmittingLayerTest, Empty) {
   MockBaseLayer M;
   llvm::orc::LazyEmittingLayer<MockBaseLayer> L(M);
-  L.addModuleSet(std::list<std::unique_ptr<llvm::Module>>(), nullptr, nullptr);
+  cantFail(L.addModule(std::unique_ptr<llvm::Module>(), nullptr));
 }
 
 }

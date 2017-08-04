@@ -1,4 +1,4 @@
-//===--- OrcRemoteTargetRPCAPI.h - Orc Remote-target RPC API ----*- C++ -*-===//
+//===- OrcRemoteTargetRPCAPI.h - Orc Remote-target RPC API ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,13 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETRPCAPI_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETRPCAPI_H
 
-#include "RPCUtils.h"
-#include "RawByteChannel.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/RawByteChannel.h"
 
 namespace llvm {
 namespace orc {
+
 namespace remote {
 
 class DirectBufferWriter {
@@ -72,7 +73,7 @@ public:
       return EC;
     char *Addr = reinterpret_cast<char *>(static_cast<uintptr_t>(Dst));
 
-    DBW = remote::DirectBufferWriter(0, Dst, Size);
+    DBW = remote::DirectBufferWriter(nullptr, Dst, Size);
 
     return C.readBytes(Addr, Size);
   }
@@ -87,7 +88,7 @@ class OrcRemoteTargetRPCAPI
 protected:
   class ResourceIdMgr {
   public:
-    typedef uint64_t ResourceId;
+    using ResourceId = uint64_t;
     static const ResourceId InvalidId = ~0U;
 
     ResourceId getNext() {
@@ -98,6 +99,7 @@ protected:
       }
       return NextId++;
     }
+
     void release(ResourceId I) { FreeIds.push_back(I); }
 
   private:
@@ -261,7 +263,8 @@ public:
 };
 
 } // end namespace remote
+
 } // end namespace orc
 } // end namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETRPCAPI_H

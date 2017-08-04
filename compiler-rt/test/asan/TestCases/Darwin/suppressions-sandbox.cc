@@ -8,6 +8,9 @@
 // RUN:   sandbox-exec -p '(version 1)(allow default)(deny process-fork)' \
 // RUN:   %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
+// sandbox-exec isn't available on iOS
+// UNSUPPORTED: ios
+
 #include <CoreFoundation/CoreFoundation.h>
 
 int main() {
@@ -18,6 +21,7 @@ int main() {
                               kCFStringEncodingUTF8, FALSE);  // BOOM
   fprintf(stderr, "Ignored.\n");
   free(a);
+  CFRelease(str);
 }
 
 // CHECK-CRASH: AddressSanitizer: heap-buffer-overflow

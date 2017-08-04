@@ -22,6 +22,12 @@ Visibility Macros
   Mark a symbol as being exported by the libc++ library. This attribute must
   be applied to the declaration of all functions exported by the libc++ dylib.
 
+**_LIBCPP_EXTERN_VIS**
+  Mark a symbol as being exported by the libc++ library. This attribute may
+  only be applied to objects defined in the libc++ library. On Windows this
+  macro applies `dllimport`/`dllexport` to the symbol. On all other platforms
+  this macro has no effect.
+
 **_LIBCPP_OVERRIDABLE_FUNC_VIS**
   Mark a symbol as being exported by the libc++ library, but allow it to be
   overridden locally. On non-Windows, this is equivalent to `_LIBCPP_FUNC_VIS`.
@@ -41,17 +47,16 @@ Visibility Macros
   A synonym for `_LIBCPP_INLINE_VISIBILITY`
 
 **_LIBCPP_TYPE_VIS**
+  Mark a type's typeinfo, vtable and members as having default visibility.
+  This attribute cannot be used on class templates.
+
+**_LIBCPP_TEMPLATE_VIS**
   Mark a type's typeinfo and vtable as having default visibility.
-  `_LIBCPP_TYPE_VIS`. This macro has no effect on the visibility of the
-  type's member functions. This attribute cannot be used on class templates.
+  This macro has no effect on the visibility of the type's member functions.
 
   **GCC Behavior**: GCC does not support Clang's `type_visibility(...)`
   attribute. With GCC the `visibility(...)` attribute is used and member
   functions are affected.
-
-**_LIBCPP_TEMPLATE_VIS**
-  The same as `_LIBCPP_TYPE_VIS` except that it may be applied to class
-  templates.
 
   **Windows Behavior**: DLLs do not support dllimport/export on class templates.
   The macro has an empty definition on this platform.
@@ -85,24 +90,54 @@ Visibility Macros
   The macro has an empty definition with GCC.
 
   **Windows Behavior**: `extern template` and `dllexport` are fundamentally
-  incompatible *on a template class* on Windows; the former suppresses
+  incompatible *on a class template* on Windows; the former suppresses
   instantiation, while the latter forces it. Specifying both on the same
-  declaration makes the template class be instantiated, which is not desirable
+  declaration makes the class template be instantiated, which is not desirable
   inside headers. This macro therefore expands to `dllimport` outside of libc++
   but nothing inside of it (rather than expanding to `dllexport`); instead, the
   explicit instantiations themselves are marked as exported. Note that this
-  applies *only* to extern template *classes*. Extern template *functions* obey
+  applies *only* to extern *class* templates. Extern *function* templates obey
   regular import/export semantics, and applying `dllexport` directly to the
-  extern template declaration is the correct thing to do for them.
+  extern template declaration (i.e. using `_LIBCPP_FUNC_VIS`) is the correct
+  thing to do for them.
 
 **_LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS**
   Mark the member functions, typeinfo, and vtable of an explicit instantiation
   of a class template as being exported by the libc++ library. This attribute
-  must be specified on all template class explicit instantiations.
+  must be specified on all class template explicit instantiations.
 
   It is only necessary to mark the explicit instantiation itself (as opposed to
   the extern template declaration) as exported on Windows, as discussed above.
   On all other platforms, this macro has an empty definition.
+
+**_LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS**
+  Mark a symbol as hidden so it will not be exported from shared libraries. This
+  is intended specifically for method templates of either classes marked with
+  `_LIBCPP_TYPE_VIS` or classes with an extern template instantiation
+  declaration marked with `_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS`.
+
+  When building libc++ with hidden visibility, we want explicit template
+  instantiations to export members, which is consistent with existing Windows
+  behavior. We also want classes annotated with `_LIBCPP_TYPE_VIS` to export
+  their members, which is again consistent with existing Windows behavior.
+  Both these changes are necessary for clients to be able to link against a
+  libc++ DSO built with hidden visibility without encountering missing symbols.
+
+  An unfortunate side effect, however, is that method templates of classes
+  either marked `_LIBCPP_TYPE_VIS` or with extern template instantiation
+  declarations marked with `_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS` also get default
+  visibility when instantiated. These methods are often implicitly instantiated
+  inside other libraries which use the libc++ headers, and will therefore end up
+  being exported from those libraries, since those implicit instantiations will
+  receive default visibility. This is not acceptable for libraries that wish to
+  control their visibility, and led to PR30642.
+
+  Consequently, all such problematic method templates are explicitly marked
+  either hidden (via this macro) or inline, so that they don't leak into client
+  libraries. The problematic methods were found by running
+  `bad-visibility-finder <https://github.com/smeenai/bad-visibility-finder>`_
+  against the libc++ headers after making `_LIBCPP_TYPE_VIS` and
+  `_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS` expand to default visibility.
 
 **_LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY**
   Mark a member function of a class template as visible and always inline. This

@@ -11,7 +11,7 @@ s_mov_b32 s0, global
 
 // Use a token with the same name as a global
 ds_gws_init v2 gds
-// VI: ds_gws_init v2 gds ; encoding: [0x00,0x00,0x33,0xd8,0x02,0x00,0x00,0x00]
+// VI: ds_gws_init v2 gds ; encoding: [0x00,0x00,0x33,0xd9,0x00,0x02,0x00,0x00]
 
 // Use a global with the same name as a token
 s_mov_b32 s0, gds

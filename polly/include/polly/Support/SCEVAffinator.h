@@ -64,7 +64,7 @@ public:
   __isl_give PWACtx getPwAff(const llvm::SCEV *E,
                              llvm::BasicBlock *BB = nullptr);
 
-  /// Take the asumption that @p PWAC is non-negative.
+  /// Take the assumption that @p PWAC is non-negative.
   void takeNonNegativeAssumption(PWACtx &PWAC);
 
   /// Interpret the PWA in @p PWAC as an unsigned value.
@@ -110,7 +110,7 @@ private:
   /// @param Expr The SCEV expression that might wrap.
   /// @param PWAC The isl representation of @p Expr with the invalid domain.
   ///
-  /// @returns The isl representation @p PWAC with a posisbly adjusted domain.
+  /// @returns The isl representation @p PWAC with a possibly adjusted domain.
   __isl_give PWACtx checkForWrapping(const llvm::SCEV *Expr, PWACtx PWAC) const;
 
   /// Whether to track the value of this expression precisely, rather than

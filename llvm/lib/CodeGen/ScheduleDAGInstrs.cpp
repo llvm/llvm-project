@@ -7,41 +7,63 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This implements the ScheduleDAGInstrs class, which implements re-scheduling
-// of MachineInstrs.
+/// \file This implements the ScheduleDAGInstrs class, which implements
+/// re-scheduling of MachineInstrs.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/ADT/IntEqClasses.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseSet.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDFS.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 static cl::opt<bool> EnableAASchedMI("enable-aa-sched-mi", cl::Hidden,
     cl::ZeroOrMore, cl::init(false),
@@ -90,77 +112,17 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
                                      bool RemoveKillFlags)
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
-      RemoveKillFlags(RemoveKillFlags), CanHandleTerminators(false),
-      TrackLaneMasks(false), AAForDep(nullptr), BarrierChain(nullptr),
+      RemoveKillFlags(RemoveKillFlags),
       UnknownValue(UndefValue::get(
-                     Type::getVoidTy(mf.getFunction()->getContext()))),
-      FirstDbgValue(nullptr) {
+                             Type::getVoidTy(mf.getFunction()->getContext()))) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
   SchedModel.init(ST.getSchedModel(), &ST, TII);
 }
 
-/// getUnderlyingObjectFromInt - This is the function that does the work of
-/// looking through basic ptrtoint+arithmetic+inttoptr sequences.
-static const Value *getUnderlyingObjectFromInt(const Value *V) {
-  do {
-    if (const Operator *U = dyn_cast<Operator>(V)) {
-      // If we find a ptrtoint, we can transfer control back to the
-      // regular getUnderlyingObjectFromInt.
-      if (U->getOpcode() == Instruction::PtrToInt)
-        return U->getOperand(0);
-      // If we find an add of a constant, a multiplied value, or a phi, it's
-      // likely that the other operand will lead us to the base
-      // object. We don't have to worry about the case where the
-      // object address is somehow being computed by the multiply,
-      // because our callers only care when the result is an
-      // identifiable object.
-      if (U->getOpcode() != Instruction::Add ||
-          (!isa<ConstantInt>(U->getOperand(1)) &&
-           Operator::getOpcode(U->getOperand(1)) != Instruction::Mul &&
-           !isa<PHINode>(U->getOperand(1))))
-        return V;
-      V = U->getOperand(0);
-    } else {
-      return V;
-    }
-    assert(V->getType()->isIntegerTy() && "Unexpected operand type!");
-  } while (1);
-}
-
-/// getUnderlyingObjects - This is a wrapper around GetUnderlyingObjects
-/// and adds support for basic ptrtoint+arithmetic+inttoptr sequences.
-static void getUnderlyingObjects(const Value *V,
-                                 SmallVectorImpl<Value *> &Objects,
-                                 const DataLayout &DL) {
-  SmallPtrSet<const Value *, 16> Visited;
-  SmallVector<const Value *, 4> Working(1, V);
-  do {
-    V = Working.pop_back_val();
-
-    SmallVector<Value *, 4> Objs;
-    GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
-
-    for (Value *V : Objs) {
-      if (!Visited.insert(V).second)
-        continue;
-      if (Operator::getOpcode(V) == Instruction::IntToPtr) {
-        const Value *O =
-          getUnderlyingObjectFromInt(cast<User>(V)->getOperand(0));
-        if (O->getType()->isPointerTy()) {
-          Working.push_back(O);
-          continue;
-        }
-      }
-      Objects.push_back(const_cast<Value *>(V));
-    }
-  } while (!Working.empty());
-}
-
-/// getUnderlyingObjectsForInstr - If this machine instr has memory reference
-/// information and it can be tracked to a normal reference to a known
-/// object, return the Value for that object.
+/// If this machine instr has memory reference information and it can be tracked
+/// to a normal reference to a known object, return the Value for that object.
 static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
@@ -189,12 +151,10 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
         Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
-        getUnderlyingObjects(V, Objs, DL);
+        getUnderlyingObjectsForCodeGen(V, Objs, DL);
 
         for (Value *V : Objs) {
-          if (!isIdentifiedObject(V))
-            return false;
-
+          assert(isIdentifiedObject(V));
           Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
         }
       } else
@@ -216,10 +176,6 @@ void ScheduleDAGInstrs::finishBlock() {
   BB = nullptr;
 }
 
-/// Initialize the DAG and common scheduler state for the current scheduling
-/// region. This does not actually create the DAG, only clears it. The
-/// scheduling driver may call BuildSchedGraph multiple times per scheduling
-/// region.
 void ScheduleDAGInstrs::enterRegion(MachineBasicBlock *bb,
                                     MachineBasicBlock::iterator begin,
                                     MachineBasicBlock::iterator end,
@@ -230,20 +186,10 @@ void ScheduleDAGInstrs::enterRegion(MachineBasicBlock *bb,
   NumRegionInstrs = regioninstrs;
 }
 
-/// Close the current scheduling region. Don't clear any state in case the
-/// driver wants to refer to the previous scheduling region.
 void ScheduleDAGInstrs::exitRegion() {
   // Nothing to do.
 }
 
-/// addSchedBarrierDeps - Add dependencies from instructions in the current
-/// list of instructions being scheduled to scheduling barrier by adding
-/// the exit SU to the register defs and use list. This is because we want to
-/// make sure instructions which define registers that are either used by
-/// the terminator or are live-out are properly scheduled. This is
-/// especially important when the definition latency of the return value(s)
-/// are too high to be hidden by the branch or when the liveout registers
-/// used by instructions in the fallthrough block.
 void ScheduleDAGInstrs::addSchedBarrierDeps() {
   MachineInstr *ExitMI = RegionEnd != BB->end() ? &*RegionEnd : nullptr;
   ExitSU.setInstr(ExitMI);
@@ -271,7 +217,7 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
   }
 }
 
-/// MO is an operand of SU's instruction that defines a physical register. Add
+/// MO is an operand of SU's instruction that defines a physical register. Adds
 /// data dependencies from SU to any uses of the physical register.
 void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   const MachineOperand &MO = SU->getInstr()->getOperand(OperIdx);
@@ -313,9 +259,9 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-/// addPhysRegDeps - Add register dependencies (data, anti, and output) from
-/// this SUnit to following instructions in the same scheduling region that
-/// depend the physical register referenced at OperIdx.
+/// \brief Adds register dependencies (data, anti, and output) from this SUnit
+/// to following instructions in the same scheduling region that depend the
+/// physical register referenced at OperIdx.
 void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   MachineInstr *MI = SU->getInstr();
   MachineOperand &MO = MI->getOperand(OperIdx);
@@ -406,9 +352,9 @@ LaneBitmask ScheduleDAGInstrs::getLaneMaskForMO(const MachineOperand &MO) const
   return TRI->getSubRegIndexLaneMask(SubReg);
 }
 
-/// addVRegDefDeps - Add register output and data dependencies from this SUnit
-/// to instructions that occur later in the same scheduling region if they read
-/// from or write to the virtual register defined at OperIdx.
+/// Adds register output and data dependencies from this SUnit to instructions
+/// that occur later in the same scheduling region if they read from or write to
+/// the virtual register defined at OperIdx.
 ///
 /// TODO: Hoist loop induction variable increments. This has to be
 /// reevaluated. Generally, IV scheduling should be done before coalescing.
@@ -515,10 +461,10 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
     CurrentVRegDefs.insert(VReg2SUnit(Reg, LaneMask, SU));
 }
 
-/// addVRegUseDeps - Add a register data dependency if the instruction that
-/// defines the virtual register used at OperIdx is mapped to an SUnit. Add a
-/// register antidependency from this SUnit to instructions that occur later in
-/// the same scheduling region if they write the virtual register.
+/// \brief Adds a register data dependency if the instruction that defines the
+/// virtual register used at OperIdx is mapped to an SUnit. Add a register
+/// antidependency from this SUnit to instructions that occur later in the same
+/// scheduling region if they write the virtual register.
 ///
 /// TODO: Handle ExitSU "uses" properly.
 void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
@@ -545,87 +491,25 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-/// Return true if MI is an instruction we are unable to reason about
+/// Returns true if MI is an instruction we are unable to reason about
 /// (like a call or something with unmodeled side effects).
 static inline bool isGlobalMemoryObject(AliasAnalysis *AA, MachineInstr *MI) {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
          (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad(AA));
 }
 
-/// This returns true if the two MIs need a chain edge between them.
-/// This is called on normal stores and loads.
-static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
-                             const DataLayout &DL, MachineInstr *MIa,
-                             MachineInstr *MIb) {
-  const MachineFunction *MF = MIa->getParent()->getParent();
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-
-  assert ((MIa->mayStore() || MIb->mayStore()) &&
-          "Dependency checked between two loads");
-
-  // Let the target decide if memory accesses cannot possibly overlap.
-  if (TII->areMemAccessesTriviallyDisjoint(*MIa, *MIb, AA))
-    return false;
-
-  // To this point analysis is generic. From here on we do need AA.
-  if (!AA)
-    return true;
-
-  // FIXME: Need to handle multiple memory operands to support all targets.
-  if (!MIa->hasOneMemOperand() || !MIb->hasOneMemOperand())
-    return true;
-
-  MachineMemOperand *MMOa = *MIa->memoperands_begin();
-  MachineMemOperand *MMOb = *MIb->memoperands_begin();
-
-  if (!MMOa->getValue() || !MMOb->getValue())
-    return true;
-
-  // The following interface to AA is fashioned after DAGCombiner::isAlias
-  // and operates with MachineMemOperand offset with some important
-  // assumptions:
-  //   - LLVM fundamentally assumes flat address spaces.
-  //   - MachineOperand offset can *only* result from legalization and
-  //     cannot affect queries other than the trivial case of overlap
-  //     checking.
-  //   - These offsets never wrap and never step outside
-  //     of allocated objects.
-  //   - There should never be any negative offsets here.
-  //
-  // FIXME: Modify API to hide this math from "user"
-  // FIXME: Even before we go to AA we can reason locally about some
-  // memory objects. It can save compile time, and possibly catch some
-  // corner cases not currently covered.
-
-  assert ((MMOa->getOffset() >= 0) && "Negative MachineMemOperand offset");
-  assert ((MMOb->getOffset() >= 0) && "Negative MachineMemOperand offset");
-
-  int64_t MinOffset = std::min(MMOa->getOffset(), MMOb->getOffset());
-  int64_t Overlapa = MMOa->getSize() + MMOa->getOffset() - MinOffset;
-  int64_t Overlapb = MMOb->getSize() + MMOb->getOffset() - MinOffset;
-
-  AliasResult AAResult =
-      AA->alias(MemoryLocation(MMOa->getValue(), Overlapa,
-                               UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
-                MemoryLocation(MMOb->getValue(), Overlapb,
-                               UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
-
-  return (AAResult != NoAlias);
-}
-
-/// Check whether two objects need a chain edge and add it if needed.
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
-  if (MIsNeedChainEdge(AAForDep, &MFI, MF.getDataLayout(), SUa->getInstr(),
-                       SUb->getInstr())) {
+  if (SUa->getInstr()->mayAlias(AAForDep, *SUb->getInstr(), UseTBAA)) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);
   }
 }
 
-/// Create an SUnit for each real instruction, numbered in top-down topological
-/// order. The instruction order A < B, implies that no edge exists from B to A.
+/// \brief Creates an SUnit for each real instruction, numbered in top-down
+/// topological order. The instruction order A < B, implies that no edge exists
+/// from B to A.
 ///
 /// Map each real instruction to its SUnit.
 ///
@@ -640,7 +524,7 @@ void ScheduleDAGInstrs::initSUnits() {
   // which is contained within a basic block.
   SUnits.reserve(NumRegionInstrs);
 
-  for (MachineInstr &MI : llvm::make_range(RegionBegin, RegionEnd)) {
+  for (MachineInstr &MI : make_range(RegionBegin, RegionEnd)) {
     if (MI.isDebugValue())
       continue;
 
@@ -682,23 +566,22 @@ void ScheduleDAGInstrs::initSUnits() {
 }
 
 class ScheduleDAGInstrs::Value2SUsMap : public MapVector<ValueType, SUList> {
-
   /// Current total number of SUs in map.
-  unsigned NumNodes;
+  unsigned NumNodes = 0;
 
   /// 1 for loads, 0 for stores. (see comment in SUList)
   unsigned TrueMemOrderLatency;
-public:
 
-  Value2SUsMap(unsigned lat = 0) : NumNodes(0), TrueMemOrderLatency(lat) {}
+public:
+  Value2SUsMap(unsigned lat = 0) : TrueMemOrderLatency(lat) {}
 
   /// To keep NumNodes up to date, insert() is used instead of
   /// this operator w/ push_back().
   ValueType &operator[](const SUList &Key) {
     llvm_unreachable("Don't use. Use insert() instead."); };
 
-  /// Add SU to the SUList of V. If Map grows huge, reduce its size
-  /// by calling reduce().
+  /// Adds SU to the SUList of V. If Map grows huge, reduce its size by calling
+  /// reduce().
   void inline insert(SUnit *SU, ValueType V) {
     MapVector::operator[](V).push_back(SU);
     NumNodes++;
@@ -708,7 +591,7 @@ public:
   void inline clearList(ValueType V) {
     iterator Itr = find(V);
     if (Itr != end()) {
-      assert (NumNodes >= Itr->second.size());
+      assert(NumNodes >= Itr->second.size());
       NumNodes -= Itr->second.size();
 
       Itr->second.clear();
@@ -723,8 +606,8 @@ public:
 
   unsigned inline size() const { return NumNodes; }
 
-  /// Count the number of SUs in this map after a reduction.
-  void reComputeSize(void) {
+  /// Counts the number of SUs in this map after a reduction.
+  void reComputeSize() {
     NumNodes = 0;
     for (auto &I : *this)
       NumNodes += I.second.size();
@@ -754,7 +637,7 @@ void ScheduleDAGInstrs::addChainDependencies(SUnit *SU,
 }
 
 void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
-  assert (BarrierChain != nullptr);
+  assert(BarrierChain != nullptr);
 
   for (auto &I : map) {
     SUList &sus = I.second;
@@ -765,7 +648,7 @@ void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
 }
 
 void ScheduleDAGInstrs::insertBarrierChain(Value2SUsMap &map) {
-  assert (BarrierChain != nullptr);
+  assert(BarrierChain != nullptr);
 
   // Go through all lists of SUs.
   for (Value2SUsMap::iterator I = map.begin(), EE = map.end(); I != EE;) {
@@ -797,9 +680,6 @@ void ScheduleDAGInstrs::insertBarrierChain(Value2SUsMap &map) {
   map.reComputeSize();
 }
 
-/// If RegPressure is non-null, compute register pressure as a side effect. The
-/// DAG builder is an efficient place to do it because it already visits
-/// operands.
 void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
                                         RegPressureTracker *RPTracker,
                                         PressureDiffs *PDiffs,
@@ -1088,10 +968,6 @@ void ScheduleDAGInstrs::Value2SUsMap::dump() {
   }
 }
 
-/// Reduce maps in FIFO order, by N SUs. This is better than turning
-/// every Nth memory SU into BarrierChain in buildSchedGraph(), since
-/// it avoids unnecessary edges between seen SUs above the new
-/// BarrierChain, and those below it.
 void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
                                               Value2SUsMap &loads, unsigned N) {
   DEBUG(dbgs() << "Before reduction:\nStoring SUnits:\n";
@@ -1113,7 +989,7 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
   // The N last elements in NodeNums will be removed, and the SU with
   // the lowest NodeNum of them will become the new BarrierChain to
   // let the not yet seen SUs have a dependency to the removed SUs.
-  assert (N <= NodeNums.size());
+  assert(N <= NodeNums.size());
   SUnit *newBarrierChain = &SUnits[*(NodeNums.end() - N)];
   if (BarrierChain) {
     // The aliasing and non-aliasing maps reduce independently of each
@@ -1142,178 +1018,71 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
         loads.dump());
 }
 
-/// \brief Initialize register live-range state for updating kills.
-void ScheduleDAGInstrs::startBlockForKills(MachineBasicBlock *BB) {
-  // Start with no live registers.
-  LiveRegs.reset();
+static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
+                        MachineInstr &MI, bool addToLiveRegs) {
+  for (MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.readsReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
 
-  // Examine the live-in regs of all successors.
-  for (const MachineBasicBlock *Succ : BB->successors()) {
-    for (const auto &LI : Succ->liveins()) {
-      // Repeat, for reg and all subregs.
-      for (MCSubRegIterator SubRegs(LI.PhysReg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        LiveRegs.set(*SubRegs);
-    }
+    // Things that are available after the instruction are killed by it.
+    bool IsKill = LiveRegs.available(MRI, Reg);
+    MO.setIsKill(IsKill);
+    if (addToLiveRegs)
+      LiveRegs.addReg(Reg);
   }
 }
 
-/// \brief If we change a kill flag on the bundle instruction implicit register
-/// operands, then we also need to propagate that to any instructions inside
-/// the bundle which had the same kill state.
-static void toggleBundleKillFlag(MachineInstr *MI, unsigned Reg,
-                                 bool NewKillState,
-                                 const TargetRegisterInfo *TRI) {
-  if (MI->getOpcode() != TargetOpcode::BUNDLE)
-    return;
+void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
+  DEBUG(dbgs() << "Fixup kills for BB#" << MBB.getNumber() << '\n');
 
-  // Walk backwards from the last instruction in the bundle to the first.
-  // Once we set a kill flag on an instruction, we bail out, as otherwise we
-  // might set it on too many operands.  We will clear as many flags as we
-  // can though.
-  MachineBasicBlock::instr_iterator Begin = MI->getIterator();
-  MachineBasicBlock::instr_iterator End = getBundleEnd(Begin);
-  while (Begin != End) {
-    if (NewKillState) {
-      if ((--End)->addRegisterKilled(Reg, TRI, /* addIfNotFound= */ false))
-         return;
-    } else
-        (--End)->clearRegisterKills(Reg, TRI);
-  }
-}
-
-bool ScheduleDAGInstrs::toggleKillFlag(MachineInstr *MI, MachineOperand &MO) {
-  // Setting kill flag...
-  if (!MO.isKill()) {
-    MO.setIsKill(true);
-    toggleBundleKillFlag(MI, MO.getReg(), true, TRI);
-    return false;
-  }
-
-  // If MO itself is live, clear the kill flag...
-  if (LiveRegs.test(MO.getReg())) {
-    MO.setIsKill(false);
-    toggleBundleKillFlag(MI, MO.getReg(), false, TRI);
-    return false;
-  }
-
-  // If any subreg of MO is live, then create an imp-def for that
-  // subreg and keep MO marked as killed.
-  MO.setIsKill(false);
-  toggleBundleKillFlag(MI, MO.getReg(), false, TRI);
-  bool AllDead = true;
-  const unsigned SuperReg = MO.getReg();
-  MachineInstrBuilder MIB(MF, MI);
-  for (MCSubRegIterator SubRegs(SuperReg, TRI); SubRegs.isValid(); ++SubRegs) {
-    if (LiveRegs.test(*SubRegs)) {
-      MIB.addReg(*SubRegs, RegState::ImplicitDefine);
-      AllDead = false;
-    }
-  }
-
-  if(AllDead) {
-    MO.setIsKill(true);
-    toggleBundleKillFlag(MI, MO.getReg(), true, TRI);
-  }
-  return false;
-}
-
-// FIXME: Reuse the LivePhysRegs utility for this.
-void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
-  DEBUG(dbgs() << "Fixup kills for BB#" << MBB->getNumber() << '\n');
-
-  LiveRegs.resize(TRI->getNumRegs());
-  BitVector killedRegs(TRI->getNumRegs());
-
-  startBlockForKills(MBB);
+  LiveRegs.init(*TRI);
+  LiveRegs.addLiveOuts(MBB);
 
   // Examine block from end to start...
-  unsigned Count = MBB->size();
-  for (MachineBasicBlock::iterator I = MBB->end(), E = MBB->begin();
-       I != E; --Count) {
-    MachineInstr &MI = *--I;
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
     if (MI.isDebugValue())
       continue;
 
     // Update liveness.  Registers that are defed but not used in this
     // instruction are now dead. Mark register and all subregs as they
     // are completely defined.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
-      if (MO.isRegMask())
-        LiveRegs.clearBitsNotInMask(MO.getRegMask());
-      if (!MO.isReg()) continue;
-      unsigned Reg = MO.getReg();
-      if (Reg == 0) continue;
-      if (!MO.isDef()) continue;
-      // Ignore two-addr defs.
-      if (MI.isRegTiedToUseOperand(i)) continue;
-
-      // Repeat for reg and all subregs.
-      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        LiveRegs.reset(*SubRegs);
+    for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
+      const MachineOperand &MO = *O;
+      if (MO.isReg()) {
+        if (!MO.isDef())
+          continue;
+        unsigned Reg = MO.getReg();
+        if (!Reg)
+          continue;
+        LiveRegs.removeReg(Reg);
+      } else if (MO.isRegMask()) {
+        LiveRegs.removeRegsInMask(MO);
+      }
     }
 
-    // Examine all used registers and set/clear kill flag. When a
-    // register is used multiple times we only set the kill flag on
-    // the first use. Don't set kill flags on undef operands.
-    killedRegs.reset();
-
-    // toggleKillFlag can append new operands (implicit defs), so using
-    // a range-based loop is not safe. The new operands will be appended
-    // at the end of the operand list and they don't need to be visited,
-    // so iterating until the currently last operand is ok.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
-      if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
-      unsigned Reg = MO.getReg();
-      if ((Reg == 0) || MRI.isReserved(Reg)) continue;
-
-      bool kill = false;
-      if (!killedRegs.test(Reg)) {
-        kill = true;
-        // A register is not killed if any subregs are live...
-        for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-          if (LiveRegs.test(*SubRegs)) {
-            kill = false;
-            break;
-          }
-        }
-
-        // If subreg is not live, then register is killed if it became
-        // live in this instruction
-        if (kill)
-          kill = !LiveRegs.test(Reg);
+    // If there is a bundle header fix it up first.
+    if (!MI.isBundled()) {
+      toggleKills(MRI, LiveRegs, MI, true);
+    } else {
+      MachineBasicBlock::instr_iterator First = MI.getIterator();
+      if (MI.isBundle()) {
+        toggleKills(MRI, LiveRegs, MI, false);
+        ++First;
       }
-
-      if (MO.isKill() != kill) {
-        DEBUG(dbgs() << "Fixing " << MO << " in ");
-        toggleKillFlag(&MI, MO);
-        DEBUG(MI.dump());
-        DEBUG({
-          if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-            MachineBasicBlock::instr_iterator Begin = MI.getIterator();
-            MachineBasicBlock::instr_iterator End = getBundleEnd(Begin);
-            while (++Begin != End)
-              DEBUG(Begin->dump());
-          }
-        });
-      }
-
-      killedRegs.set(Reg);
-    }
-
-    // Mark any used register (that is not using undef) and subregs as
-    // now live...
-    for (const MachineOperand &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
-      unsigned Reg = MO.getReg();
-      if ((Reg == 0) || MRI.isReserved(Reg)) continue;
-
-      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        LiveRegs.set(*SubRegs);
+      // Some targets make the (questionable) assumtion that the instructions
+      // inside the bundle are ordered and consequently only the last use of
+      // a register inside the bundle can kill it.
+      MachineBasicBlock::instr_iterator I = std::next(First);
+      while (I->isBundledWithSucc())
+        ++I;
+      do {
+        if (!I->isDebugValue())
+          toggleKills(MRI, LiveRegs, *I, true);
+        --I;
+      } while(I != First);
     }
   }
 }
@@ -1348,23 +1117,24 @@ std::string ScheduleDAGInstrs::getDAGName() const {
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-/// \brief Internal state used to compute SchedDFSResult.
+
+/// Internal state used to compute SchedDFSResult.
 class SchedDFSImpl {
   SchedDFSResult &R;
 
   /// Join DAG nodes into equivalence classes by their subtree.
   IntEqClasses SubtreeClasses;
   /// List PredSU, SuccSU pairs that represent data edges between subtrees.
-  std::vector<std::pair<const SUnit*, const SUnit*> > ConnectionPairs;
+  std::vector<std::pair<const SUnit *, const SUnit*>> ConnectionPairs;
 
   struct RootData {
     unsigned NodeID;
-    unsigned ParentNodeID;  // Parent node (member of the parent subtree).
-    unsigned SubInstrCount; // Instr count in this tree only, not children.
+    unsigned ParentNodeID;  ///< Parent node (member of the parent subtree).
+    unsigned SubInstrCount = 0; ///< Instr count in this tree only, not
+                                /// children.
 
     RootData(unsigned id): NodeID(id),
-                           ParentNodeID(SchedDFSResult::InvalidSubtreeID),
-                           SubInstrCount(0) {}
+                           ParentNodeID(SchedDFSResult::InvalidSubtreeID) {}
 
     unsigned getSparseSetIndex() const { return NodeID; }
   };
@@ -1376,7 +1146,7 @@ public:
     RootSet.setUniverse(R.DFSNodeData.size());
   }
 
-  /// Return true if this node been visited by the DFS traversal.
+  /// Returns true if this node been visited by the DFS traversal.
   ///
   /// During visitPostorderNode the Node's SubtreeID is assigned to the Node
   /// ID. Later, SubtreeID is updated but remains valid.
@@ -1385,7 +1155,7 @@ public:
       != SchedDFSResult::InvalidSubtreeID;
   }
 
-  /// Initialize this node's instruction count. We don't need to flag the node
+  /// Initializes this node's instruction count. We don't need to flag the node
   /// visited until visitPostorder because the DAG cannot have cycles.
   void visitPreorder(const SUnit *SU) {
     R.DFSNodeData[SU->NodeNum].InstrCount =
@@ -1434,8 +1204,8 @@ public:
     RootSet[SU->NodeNum] = RData;
   }
 
-  /// Called once for each tree edge after calling visitPostOrderNode on the
-  /// predecessor. Increment the parent node's instruction count and
+  /// \brief Called once for each tree edge after calling visitPostOrderNode on
+  /// the predecessor. Increment the parent node's instruction count and
   /// preemptively join this subtree to its parent's if it is small enough.
   void visitPostorderEdge(const SDep &PredDep, const SUnit *Succ) {
     R.DFSNodeData[Succ->NodeNum].InstrCount
@@ -1443,13 +1213,13 @@ public:
     joinPredSubtree(PredDep, Succ);
   }
 
-  /// Add a connection for cross edges.
+  /// Adds a connection for cross edges.
   void visitCrossEdge(const SDep &PredDep, const SUnit *Succ) {
     ConnectionPairs.push_back(std::make_pair(PredDep.getSUnit(), Succ));
   }
 
-  /// Set each node's subtree ID to the representative ID and record connections
-  /// between trees.
+  /// Sets each node's subtree ID to the representative ID and record
+  /// connections between trees.
   void finalize() {
     SubtreeClasses.compress();
     R.DFSTreeData.resize(SubtreeClasses.getNumClasses());
@@ -1485,8 +1255,8 @@ public:
   }
 
 protected:
-  /// Join the predecessor subtree with the successor that is its DFS
-  /// parent. Apply some heuristics before joining.
+  /// Joins the predecessor subtree with the successor that is its DFS parent.
+  /// Applies some heuristics before joining.
   bool joinPredSubtree(const SDep &PredDep, const SUnit *Succ,
                        bool CheckLimit = true) {
     assert(PredDep.getKind() == SDep::Data && "Subtrees are for data edges");
@@ -1532,12 +1302,15 @@ protected:
     } while (FromTree != SchedDFSResult::InvalidSubtreeID);
   }
 };
-} // namespace llvm
+
+} // end namespace llvm
 
 namespace {
-/// \brief Manage the stack used by a reverse depth-first search over the DAG.
+
+/// Manage the stack used by a reverse depth-first search over the DAG.
 class SchedDAGReverseDFS {
-  std::vector<std::pair<const SUnit*, SUnit::const_pred_iterator> > DFSStack;
+  std::vector<std::pair<const SUnit *, SUnit::const_pred_iterator>> DFSStack;
+
 public:
   bool isComplete() const { return DFSStack.empty(); }
 
@@ -1559,7 +1332,8 @@ public:
     return getCurr()->Preds.end();
   }
 };
-} // anonymous
+
+} // end anonymous namespace
 
 static bool hasDataSucc(const SUnit *SU) {
   for (const SDep &SuccDep : SU->Succs) {
@@ -1570,7 +1344,7 @@ static bool hasDataSucc(const SUnit *SU) {
   return false;
 }
 
-/// Compute an ILP metric for all nodes in the subDAG reachable via depth-first
+/// Computes an ILP metric for all nodes in the subDAG reachable via depth-first
 /// search from this root.
 void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
   if (!IsBottomUp)
@@ -1584,7 +1358,7 @@ void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
     SchedDAGReverseDFS DFS;
     Impl.visitPreorder(&SU);
     DFS.follow(&SU);
-    for (;;) {
+    while (true) {
       // Traverse the leftmost path as far as possible.
       while (DFS.getPred() != DFS.getPredEnd()) {
         const SDep &PredDep = *DFS.getPred();
@@ -1648,5 +1422,6 @@ raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val) {
   return OS;
 }
 
-} // namespace llvm
+} // end namespace llvm
+
 #endif

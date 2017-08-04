@@ -15,6 +15,24 @@ using namespace llvm;
 
 #define DEBUG_TYPE "armtti"
 
+bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
+                                     const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // To inline a callee, all features not in the whitelist must match exactly.
+  bool MatchExact = (CallerBits & ~InlineFeatureWhitelist) ==
+                    (CalleeBits & ~InlineFeatureWhitelist);
+  // For features in the whitelist, the callee's features must be a subset of
+  // the callers'.
+  bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeatureWhitelist) ==
+                     (CalleeBits & InlineFeatureWhitelist);
+  return MatchExact && MatchSubset;
+}
+
 int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
@@ -92,7 +110,8 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
 }
 
 
-int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
+int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                 const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -310,7 +329,8 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
 }
 
-int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
+int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                   const Instruction *I) {
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // On NEON a a vector select gets lowered to vbsl.
@@ -335,7 +355,7 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
     return LT.first;
   }
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
 int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
@@ -504,7 +524,7 @@ int ARMTTIImpl::getArithmeticInstrCost(
 }
 
 int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                                unsigned AddressSpace) {
+                                unsigned AddressSpace, const Instruction *I) {
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
 
   if (Src->isVectorTy() && Alignment != 16 &&
@@ -529,13 +549,14 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
 
   if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits) {
     unsigned NumElts = VecTy->getVectorNumElements();
-    Type *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
-    unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
+    auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
-    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128) &&
-        !VecTy->getScalarType()->isHalfTy())
-      return Factor;
+    // Accesses having vector types that are a multiple of 128 bits can be
+    // matched to more than one vldN/vstN instruction.
+    if (NumElts % Factor == 0 &&
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL))
+      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL);
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,

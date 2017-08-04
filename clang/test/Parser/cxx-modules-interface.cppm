@@ -1,13 +1,12 @@
 // RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.pcm -verify
-// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.pcm -verify -Dmodule=int -DERRORS
+// RUN:     %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %s -o %t.pcm -verify -DERRORS
 
-module foo;
+export module foo;
 #ifndef ERRORS
 // expected-no-diagnostics
 #else
-// expected-error@-4 {{expected module declaration at start of module interface}}
+// FIXME: diagnose missing module-declaration when building module interface
 
-// FIXME: support 'export module X;' and 'export { int n; module X; }'
 // FIXME: proclaimed-ownership-declarations?
 
 export {

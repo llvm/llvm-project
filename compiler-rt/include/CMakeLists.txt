@@ -1,17 +1,23 @@
-set(SANITIZER_HEADERS
-  sanitizer/allocator_interface.h
-  sanitizer/asan_interface.h
-  sanitizer/common_interface_defs.h
-  sanitizer/coverage_interface.h
-  sanitizer/dfsan_interface.h
-  sanitizer/esan_interface.h
-  sanitizer/linux_syscall_hooks.h
-  sanitizer/lsan_interface.h
-  sanitizer/msan_interface.h
-  sanitizer/tsan_interface_atomic.h)
+if (COMPILER_RT_BUILD_SANITIZERS)
+  set(SANITIZER_HEADERS
+    sanitizer/allocator_interface.h
+    sanitizer/asan_interface.h
+    sanitizer/common_interface_defs.h
+    sanitizer/coverage_interface.h
+    sanitizer/dfsan_interface.h
+    sanitizer/esan_interface.h
+    sanitizer/linux_syscall_hooks.h
+    sanitizer/lsan_interface.h
+    sanitizer/msan_interface.h
+    sanitizer/tsan_interface.h
+    sanitizer/tsan_interface_atomic.h)
+endif(COMPILER_RT_BUILD_SANITIZERS)
 
-set(XRAY_HEADERS
-  xray/xray_interface.h)
+if (COMPILER_RT_BUILD_XRAY)
+  set(XRAY_HEADERS
+    xray/xray_interface.h
+    xray/xray_log_interface.h)
+endif(COMPILER_RT_BUILD_XRAY)
 
 set(COMPILER_RT_HEADERS
   ${SANITIZER_HEADERS}

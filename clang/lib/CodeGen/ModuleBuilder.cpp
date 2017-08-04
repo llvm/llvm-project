@@ -92,6 +92,10 @@ namespace {
       return M.get();
     }
 
+    CGDebugInfo *getCGDebugInfo() {
+      return Builder->getModuleDebugInfo();
+    }
+
     llvm::Module *ReleaseModule() {
       return M.release();
     }
@@ -193,7 +197,7 @@ namespace {
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
       // instantiable.
-      if (!MD->getParent()->getDescribedClassTemplate())
+      if (!MD->getParent()->isDependentContext())
         Builder->AddDeferredUnusedCoverageMapping(MD);
     }
 
@@ -297,6 +301,10 @@ llvm::Module *CodeGenerator::GetModule() {
 
 llvm::Module *CodeGenerator::ReleaseModule() {
   return static_cast<CodeGeneratorImpl*>(this)->ReleaseModule();
+}
+
+CGDebugInfo *CodeGenerator::getCGDebugInfo() {
+  return static_cast<CodeGeneratorImpl*>(this)->getCGDebugInfo();
 }
 
 const Decl *CodeGenerator::GetDeclForMangledName(llvm::StringRef name) {

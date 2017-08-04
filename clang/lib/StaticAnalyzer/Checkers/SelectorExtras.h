@@ -11,48 +11,26 @@
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_SELECTOREXTRAS_H
 
 #include "clang/AST/ASTContext.h"
-#include <cstdarg>
 
 namespace clang {
 namespace ento {
 
-static inline Selector getKeywordSelectorImpl(ASTContext &Ctx,
-                                              const char *First,
-                                              va_list argp) {
-  SmallVector<IdentifierInfo*, 10> II;
-  II.push_back(&Ctx.Idents.get(First));
-
-  while (const char *s = va_arg(argp, const char *))
-    II.push_back(&Ctx.Idents.get(s));
+template <typename... IdentifierInfos>
+static inline Selector getKeywordSelector(ASTContext &Ctx,
+                                          IdentifierInfos *... IIs) {
+  static_assert(sizeof...(IdentifierInfos),
+                "keyword selectors must have at least one argument");
+  SmallVector<IdentifierInfo *, 10> II({&Ctx.Idents.get(IIs)...});
 
   return Ctx.Selectors.getSelector(II.size(), &II[0]);
 }
 
-static inline Selector getKeywordSelector(ASTContext &Ctx, va_list argp) {
-  const char *First = va_arg(argp, const char *);
-  assert(First && "keyword selectors must have at least one argument");
-  return getKeywordSelectorImpl(Ctx, First, argp);
-}
-
-LLVM_END_WITH_NULL
-static inline Selector getKeywordSelector(ASTContext &Ctx,
-                                          const char *First, ...) {
-  va_list argp;
-  va_start(argp, First);
-  Selector result = getKeywordSelectorImpl(Ctx, First, argp);
-  va_end(argp);
-  return result;
-}
-
-LLVM_END_WITH_NULL
+template <typename... IdentifierInfos>
 static inline void lazyInitKeywordSelector(Selector &Sel, ASTContext &Ctx,
-                                           const char *First, ...) {
+                                           IdentifierInfos *... IIs) {
   if (!Sel.isNull())
     return;
-  va_list argp;
-  va_start(argp, First);
-  Sel = getKeywordSelectorImpl(Ctx, First, argp);
-  va_end(argp);
+  Sel = getKeywordSelector(Ctx, IIs...);
 }
 
 static inline void lazyInitNullarySelector(Selector &Sel, ASTContext &Ctx,

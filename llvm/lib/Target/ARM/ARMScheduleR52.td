@@ -70,14 +70,12 @@ def : WriteRes<WriteCMP, [R52UnitALU]> { let Latency = 0; }
 def : WriteRes<WriteCMPsi, [R52UnitALU]> { let Latency = 0; }
 def : WriteRes<WriteCMPsr, [R52UnitALU]> { let Latency = 0; }
 
-// Div - may stall 0-9 cycles depending on input (i.e. WRI+(0-9)/2)
-def : WriteRes<WriteDiv, [R52UnitDiv]> {
-  let Latency = 8; let ResourceCycles = [8]; // not pipelined
-}
+// Multiply - aliased to sub-target specific later
 
-// Loads
-def : WriteRes<WriteLd, [R52UnitLd]> { let Latency = 4; }
-def : WriteRes<WritePreLd, [R52UnitLd]> { let Latency = 4; }
+// Div - may stall 0-9 cycles depending on input (i.e. WRI+(0-9)/2)
+def : WriteRes<WriteDIV, [R52UnitDiv]> {
+  let Latency = 8; let ResourceCycles = [8]; // non-pipelined
+}
 
 // Branches  - LR written in Late EX2
 def : WriteRes<WriteBr, [R52UnitB]> { let Latency = 0; }
@@ -86,11 +84,50 @@ def : WriteRes<WriteBrTbl, [R52UnitALU]> { let Latency = 0; }
 
 // Misc
 def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
-def : WriteRes<WriteCvtFP, [R52UnitALU]> { let Latency = 3; }
 
+// Integer pipeline by-passes
 def : ReadAdvance<ReadALU, 1>;   // Operand needed in EX1 stage
 def : ReadAdvance<ReadALUsr, 0>; // Shift operands needed in ISS
+def : ReadAdvance<ReadMUL, 0>;
+def : ReadAdvance<ReadMAC, 0>;
 
+// Floating-point. Map target-defined SchedReadWrites to subtarget
+def : WriteRes<WriteFPMUL32, [R52UnitFPMUL]> { let Latency = 6; }
+
+def : WriteRes<WriteFPMUL64, [R52UnitFPMUL, R52UnitFPMUL]> {
+  let Latency = 6;
+}
+
+def : WriteRes<WriteFPMAC32, [R52UnitFPMUL, R52UnitFPALU]> {
+  let Latency = 11;     // as it is internally two insns (MUL then ADD)
+}
+
+def : WriteRes<WriteFPMAC64, [R52UnitFPMUL, R52UnitFPMUL,
+                              R52UnitFPALU, R52UnitFPALU]> {
+  let Latency = 11;
+}
+
+def : WriteRes<WriteFPDIV32, [R52UnitDiv]> {
+  let Latency = 7;          // FP div takes fixed #cycles
+  let ResourceCycles = [7]; // is not pipelined
+}
+
+def : WriteRes<WriteFPDIV64, [R52UnitDiv]> {
+  let Latency = 17;
+  let ResourceCycles = [17];
+}
+
+def : WriteRes<WriteFPSQRT32, [R52UnitDiv]> { let Latency = 7; }
+def : WriteRes<WriteFPSQRT64, [R52UnitDiv]> { let Latency = 17; }
+
+// Overriden via InstRW for this processor.
+def : WriteRes<WriteVST1, []>;
+def : WriteRes<WriteVST2, []>;
+def : WriteRes<WriteVST3, []>;
+def : WriteRes<WriteVST4, []>;
+
+def : ReadAdvance<ReadFPMUL, 1>; // mul operand read in F1
+def : ReadAdvance<ReadFPMAC, 1>; // fp-mac operand read in F1
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedReadWrites.
@@ -106,6 +143,9 @@ def : ReadAdvance<R52Read_F2, 2>;
 
 // Cortex-R52 specific SchedWrites for use with InstRW
 def R52WriteMAC        : SchedWriteRes<[R52UnitMAC]> { let Latency = 4; }
+def R52WriteMACHi      : SchedWriteRes<[R52UnitMAC]> {
+  let Latency = 4; let NumMicroOps = 0;
+}
 def R52WriteDIV        : SchedWriteRes<[R52UnitDiv]> {
   let Latency = 8; let ResourceCycles = [8]; // not pipelined
 }
@@ -119,6 +159,19 @@ def R52WriteALU_WRI    : SchedWriteRes<[R52UnitALU]> { let Latency = 4; }
 
 def R52WriteNoRSRC_EX2 : SchedWriteRes<[]> { let Latency = 3; }
 def R52WriteNoRSRC_WRI : SchedWriteRes<[]> { let Latency = 4; }
+
+// Alias generics to sub-target specific
+def : SchedAlias<WriteMUL16, R52WriteMAC>;
+def : SchedAlias<WriteMUL32, R52WriteMAC>;
+def : SchedAlias<WriteMUL64Lo, R52WriteMAC>;
+def : SchedAlias<WriteMUL64Hi, R52WriteMACHi>;
+def : SchedAlias<WriteMAC16, R52WriteMAC>;
+def : SchedAlias<WriteMAC32, R52WriteMAC>;
+def : SchedAlias<WriteMAC64Lo, R52WriteMAC>;
+def : SchedAlias<WriteMAC64Hi, R52WriteMACHi>;
+def : SchedAlias<WritePreLd, R52WriteLd>;
+def : SchedAlias<WriteLd, R52WriteLd>;
+def : SchedAlias<WriteST, R52WriteST>;
 
 def R52WriteFPALU_F3   : SchedWriteRes<[R52UnitFPALU]> { let Latency = 4; }
 def R52Write2FPALU_F3  : SchedWriteRes<[R52UnitFPALU, R52UnitFPALU]> {
@@ -147,19 +200,17 @@ def R52Write2FPMAC_F5  : SchedWriteRes<[R52UnitFPMUL, R52UnitFPMUL,
 def R52WriteFPLd_F4    : SchedWriteRes<[R52UnitLd]> { let Latency = 5; }
 def R52WriteFPST_F4    : SchedWriteRes<[R52UnitLd]> { let Latency = 5; }
 
-def R52WriteFPDIV_SP   : SchedWriteRes<[R52UnitFPDIV]> {
-  let Latency = 7;          // FP div takes fixed #cycles
-  let ResourceCycles = [7]; // is not pipelined
- }
-def R52WriteFPDIV_DP   : SchedWriteRes<[R52UnitFPDIV]> {
-  let Latency = 17;
-  let ResourceCycles = [17];
-}
-
+//===----------------------------------------------------------------------===//
+// Floating-point. Map target defined SchedReadWrites to processor specific ones
+//
+def : SchedAlias<WriteFPCVT,   R52WriteFPALU_F5>;
+def : SchedAlias<WriteFPMOV, R52WriteFPALU_F3>;
+def : SchedAlias<WriteFPALU32, R52WriteFPALU_F5>;
+def : SchedAlias<WriteFPALU64, R52WriteFPALU_F5>;
 
 //===----------------------------------------------------------------------===//
-// Subtarget-specific - map operands to SchedReadWrites
-
+// Subtarget-specific overrides. Map opcodes to list of SchedReadWrites types.
+//
 def : InstRW<[WriteALU], (instrs COPY)>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_ISS],
@@ -235,7 +286,7 @@ def : InstRW<[R52WriteMAC, R52Read_ISS, R52Read_ISS, R52Read_ISS],
       "t2SMLSLD", "t2SMLSLDX", "t2UMAAL")>;
 
 def : InstRW <[R52WriteDIV, R52Read_ISS, R52Read_ISS],
-      (instregex "SDIV", "UDIV", "t2SDIV", "t2UDIV")>;
+      (instregex "t2SDIV", "t2UDIV")>;
 
 // Loads (except POST) with SHL > 2, or ror, require 2 extra cycles.
 // However, that's non-trivial to specify, so we keep it uniform
@@ -293,15 +344,6 @@ def : InstRW<[R52WriteCC, R52Read_ISS], (instregex "TST")>;
 
 def : InstRW<[R52WriteLd], (instregex "MRS", "MRSbanked")>;
 def : InstRW<[R52WriteLd, R52Read_EX1], (instregex "MSR", "MSRbanked")>;
-
-//def : InstRW<[R52WriteLd, R52Read_ISS], (instregex "^LDRB?(_PRE_IMM|_POST_IMM)", "LDRrs")>;
-//def : InstRW<[R52WriteLd, R52Read_ISS, R52Read_ISS], (instregex "^LDRB?_PRE_REG", "LDRB?rr")>;
-//def : InstRW<[R52WriteLd, R52Read_ISS, R52Read_ISS], (instregex "^LDRB?_POST_REG")>;
-
-//def : InstRW<[R52WriteST, R52Read_ISS], (instregex "STRi12", "PICSTR")>;
-//def : InstRW<[R52WriteST, R52WriteAdr, R52Read_ISS, R52Read_EX2], (instregex "t2STRB?_PRE_REG", "STRB?_PRE_REG")>;
-//def : InstRW<[R52WriteST, R52WriteAdr, R52Read_ISS, R52Read_EX2], (instregex "t2STRB?_POST_REG", "STRB?_POST_REG")>;
-
 
 // Integer Load, Multiple.
 foreach Lat = 3-25 in {
@@ -492,12 +534,6 @@ def : InstRW<[R52Write2FPALU_F3, R52Read_F1, R52Read_F1], (instregex "(VACGE|VAC
 def : InstRW<[R52WriteFPALU_F5, R52Read_F1, R52Read_F1], (instregex "(VADD|VSUB)(D|S|H|fd|hd)")>;
 def : InstRW<[R52Write2FPALU_F5, R52Read_F1, R52Read_F1], (instregex "(VADD|VSUB)(fq|hq)")>;
 
-def : InstRW<[R52WriteFPDIV_SP, R52Read_F0, R52Read_F0], (instregex "VDIV(S|H)")>;
-def : InstRW<[R52WriteFPDIV_DP, R52Read_F0, R52Read_F0], (instregex "VDIVD")>;
-
-def : InstRW<[R52WriteFPMAC_F5, R52Read_F1, R52Read_F1, R52Read_F1],
-                                          (instregex "(VFMA|VFMS|VFNMA|VFNMS)(D|H|S)")>;
-
 def : InstRW<[R52WriteFPLd_F4, R52Read_ISS, R52Read_F1], (instregex "VLDR")>;
 def : InstRW<[R52WriteFPST_F4, R52Read_ISS, R52Read_F1], (instregex "VSTR")>;
 
@@ -682,21 +718,24 @@ def R52WriteSTM : SchedWriteVariant<[
 
 // Vector Load/Stores. Can issue only in slot-0. Can dual-issue with
 // another instruction in slot-1, but only in the last issue.
-def R52WriteVLD1Mem  : SchedWriteRes<[R52UnitLd]> { let Latency = 5;}
-def R52WriteVLD2Mem  : SchedWriteRes<[R52UnitLd]> {
+def : WriteRes<WriteVLD1, [R52UnitLd]> { let Latency = 5;}
+def : WriteRes<WriteVLD2, [R52UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 3;
   let ResourceCycles = [2];
+  let SingleIssue = 1;
 }
-def R52WriteVLD3Mem  : SchedWriteRes<[R52UnitLd]> {
+def : WriteRes<WriteVLD3, [R52UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 5;
   let ResourceCycles = [3];
+  let SingleIssue = 1;
 }
-def R52WriteVLD4Mem  : SchedWriteRes<[R52UnitLd]> {
+def : WriteRes<WriteVLD4, [R52UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 7;
   let ResourceCycles = [4];
+  let SingleIssue = 1;
 }
 def R52WriteVST1Mem  : SchedWriteRes<[R52UnitLd]> {
   let Latency = 5;
@@ -777,9 +816,8 @@ def : InstRW<[R52Write2FPALU_F4, R52Read_F2, R52Read_F2], (instregex "(VHADD|VHS
 
 def : InstRW<[R52WriteVLDM], (instregex "VLDM[SD](IA|DB)$")>;
 def : InstRW<[R52WriteFPALU_F4, R52Read_F1, R52Read_F1], (instregex "VMAX", "VMIN", "VPMAX", "VPMIN")>;
-def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1], (instregex "VMOV", "VORR", "VORN", "VREV")>;
+def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1], (instregex "VORR", "VORN", "VREV")>;
 def : InstRW<[R52WriteNoRSRC_WRI], (instregex "VMRS")>;
-def : InstRW<[R52WriteFPMUL_F5, R52Read_F1, R52Read_F1, R52Read_F1], (instregex "VMUL", "VNMUL", "VMLA")>;
 def : InstRW<[R52WriteFPALU_F5, R52Read_F1], (instregex "VNEG")>;
 def : InstRW<[R52WriteFPALU_F4, R52Read_F1, R52Read_F1], (instregex "VPADDi")>;
 def : InstRW<[R52Write2FPALU_F4, R52Read_F1, R52Read_F1], (instregex "VPADAL", "VPADDL")>;
@@ -795,95 +833,6 @@ def : InstRW<[R52WriteFPALU_F5, R52Read_F1, R52Read_F1],
                  (instregex "VQMOVN", "VQNEG", "VQSHL", "VQSHRN")>;
 def : InstRW<[R52WriteFPALU_F4, R52Read_F1, R52Read_F1], (instregex "VRSHL", "VRSHR", "VRSHRN", "VTB")>;
 def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1], (instregex "VSWP", "VTRN", "VUZP", "VZIP")>;
-
-//---
-// VLDx. Vector Loads
-//---
-// 1-element structure load
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1d(8|16|32|64)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD1q(8|16|32|64)$")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD1d(8|16|32|64)T$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD1d(8|16|32|64)Q$")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD1d64TPseudo$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD1d64QPseudo$")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1(LN|DUP)d(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1LNdAsm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1(LN|DUP)q(8|16|32)Pseudo$")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d(8|16|32|64)wb")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1q(8|16|32|64)wb")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d(8|16|32|64)Twb")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d(8|16|32|64)Qwb")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d64TPseudoWB")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d64QPseudoWB")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1LNd(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1LNdWB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1DUP(d|q)(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1(LN|DUP)q(8|16|32)Pseudo_UPD")>;
-
-// 2-element structure load
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD2(d|b)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD2q(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2(d|b)(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2q(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD2q(8|16|32)Pseudo$")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2q(8|16|32)PseudoWB")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNd(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNdAsm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNq(16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNqAsm_(16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)x2$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNd(8|16|32)Pseudo")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNq(16|32)Pseudo")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNd(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNdWB_(fixed|register)_Asm_(8|16|32)")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNq(16|32)_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNqWB_(fixed|register)_Asm_(16|32)")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)x2wb")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNd(8|16|32)Pseudo_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNq(16|32)Pseudo_UPD")>;
-
-// 3-element structure load
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD3(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)(oddP|P)seudo")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)(oddP|P)seudo_UPD")>;
-
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)Pseudo$")>;
-
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)Pseudo_UPD")>;
-
-// 4-element structure load
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD4(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)(oddP|P)seudo")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)(oddP|P)seudo_UPD")>;
-
-
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4LN(d|q)(8|16|32)Pseudo$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4DUPd(8|16|32)Pseudo$")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)(8|16|32)Pseudo_UPD")>;
 
 //---
 // VSTx. Vector Stores

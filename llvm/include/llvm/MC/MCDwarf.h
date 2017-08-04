@@ -16,24 +16,27 @@
 #define LLVM_MC_MCDWARF_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/Support/Dwarf.h"
+#include <cassert>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+
 template <typename T> class ArrayRef;
-class raw_ostream;
 class MCAsmBackend;
 class MCContext;
 class MCObjectStreamer;
 class MCStreamer;
 class MCSymbol;
-class SourceMgr;
+class raw_ostream;
 class SMLoc;
+class SourceMgr;
 
 /// \brief Instances of this class represent the name of the dwarf
 /// .file directive and its associated dwarf file number in the MC file,
@@ -71,6 +74,7 @@ class MCDwarfLoc {
 private: // MCContext manages these
   friend class MCContext;
   friend class MCDwarfLineEntry;
+
   MCDwarfLoc(unsigned fileNum, unsigned line, unsigned column, unsigned flags,
              unsigned isa, unsigned discriminator)
       : FileNum(fileNum), Line(line), Column(column), Flags(flags), Isa(isa),
@@ -164,10 +168,10 @@ public:
     MCLineDivisions[Sec].push_back(LineEntry);
   }
 
-  typedef std::vector<MCDwarfLineEntry> MCDwarfLineEntryCollection;
-  typedef MCDwarfLineEntryCollection::iterator iterator;
-  typedef MCDwarfLineEntryCollection::const_iterator const_iterator;
-  typedef MapVector<MCSection *, MCDwarfLineEntryCollection> MCLineDivisionMap;
+  using MCDwarfLineEntryCollection = std::vector<MCDwarfLineEntry>;
+  using iterator = MCDwarfLineEntryCollection::iterator;
+  using const_iterator = MCDwarfLineEntryCollection::const_iterator;
+  using MCLineDivisionMap = MapVector<MCSection *, MCDwarfLineEntryCollection>;
 
 private:
   // A collection of MCDwarfLineEntry for each section.
@@ -194,13 +198,14 @@ struct MCDwarfLineTableParams {
 };
 
 struct MCDwarfLineTableHeader {
-  MCSymbol *Label;
+  MCSymbol *Label = nullptr;
   SmallVector<std::string, 3> MCDwarfDirs;
   SmallVector<MCDwarfFile, 3> MCDwarfFiles;
   StringMap<unsigned> SourceIdMap;
   StringRef CompilationDir;
 
-  MCDwarfLineTableHeader() : Label(nullptr) {}
+  MCDwarfLineTableHeader() = default;
+
   unsigned getFile(StringRef &Directory, StringRef &FileName,
                    unsigned FileNumber = 0);
   std::pair<MCSymbol *, MCSymbol *> Emit(MCStreamer *MCOS,
@@ -212,13 +217,16 @@ struct MCDwarfLineTableHeader {
 
 class MCDwarfDwoLineTable {
   MCDwarfLineTableHeader Header;
+
 public:
   void setCompilationDir(StringRef CompilationDir) {
     Header.CompilationDir = CompilationDir;
   }
+
   unsigned getFile(StringRef Directory, StringRef FileName) {
     return Header.getFile(Directory, FileName);
   }
+
   void Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params) const;
 };
 
@@ -488,22 +496,19 @@ public:
 };
 
 struct MCDwarfFrameInfo {
-  MCDwarfFrameInfo()
-      : Begin(nullptr), End(nullptr), Personality(nullptr), Lsda(nullptr),
-        Instructions(), CurrentCfaRegister(0), PersonalityEncoding(),
-        LsdaEncoding(0), CompactUnwindEncoding(0), IsSignalFrame(false),
-        IsSimple(false) {}
-  MCSymbol *Begin;
-  MCSymbol *End;
-  const MCSymbol *Personality;
-  const MCSymbol *Lsda;
+  MCDwarfFrameInfo() = default;
+
+  MCSymbol *Begin = nullptr;
+  MCSymbol *End = nullptr;
+  const MCSymbol *Personality = nullptr;
+  const MCSymbol *Lsda = nullptr;
   std::vector<MCCFIInstruction> Instructions;
-  unsigned CurrentCfaRegister;
-  unsigned PersonalityEncoding;
-  unsigned LsdaEncoding;
-  uint32_t CompactUnwindEncoding;
-  bool IsSignalFrame;
-  bool IsSimple;
+  unsigned CurrentCfaRegister = 0;
+  unsigned PersonalityEncoding = 0;
+  unsigned LsdaEncoding = 0;
+  uint32_t CompactUnwindEncoding = 0;
+  bool IsSignalFrame = false;
+  bool IsSimple = false;
 };
 
 class MCDwarfFrameEmitter {
@@ -516,6 +521,7 @@ public:
   static void EncodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
                                raw_ostream &OS);
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCDWARF_H

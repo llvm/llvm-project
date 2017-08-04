@@ -61,9 +61,13 @@ public:
     return TLOF.get();
   }
 
-  void addEarlyAsPossiblePasses(PassManagerBase &PM) override;
+  void adjustPassManager(PassManagerBuilder &) override;
+
   TargetIRAnalysis getTargetIRAnalysis() override;
 
+  bool isMachineVerifierClean() const override {
+    return false;
+  }
 }; // NVPTXTargetMachine.
 
 class NVPTXTargetMachine32 : public NVPTXTargetMachine {

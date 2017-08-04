@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This header provides a public inferface to a Clang library for extracting  *|
+|* This header provides a public interface to a Clang library for extracting  *|
 |* high-level symbol information from source files without exposing the full  *|
 |* Clang C++ API.                                                             *|
 |*                                                                            *|
@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 37
+#define CINDEX_VERSION_MINOR 43
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -79,6 +79,12 @@ extern "C" {
  * typically be linked together into an executable or library.
  */
 typedef void *CXIndex;
+
+/**
+ * \brief An opaque type representing target information for a given translation
+ * unit.
+ */
+typedef struct CXTargetInfoImpl *CXTargetInfo;
 
 /**
  * \brief A single translation unit, which resides in an index.
@@ -165,7 +171,60 @@ typedef struct CXVersion {
    */
   int Subminor;
 } CXVersion;
-  
+
+/**
+ * \brief Describes the exception specification of a cursor.
+ *
+ * A negative value indicates that the cursor is not a function declaration.
+ */
+enum CXCursor_ExceptionSpecificationKind {
+
+  /**
+   * \brief The cursor has no exception specification.
+   */
+  CXCursor_ExceptionSpecificationKind_None,
+
+  /**
+   * \brief The cursor has exception specification throw()
+   */
+  CXCursor_ExceptionSpecificationKind_DynamicNone,
+
+  /**
+   * \brief The cursor has exception specification throw(T1, T2)
+   */
+  CXCursor_ExceptionSpecificationKind_Dynamic,
+
+  /**
+   * \brief The cursor has exception specification throw(...).
+   */
+  CXCursor_ExceptionSpecificationKind_MSAny,
+
+  /**
+   * \brief The cursor has exception specification basic noexcept.
+   */
+  CXCursor_ExceptionSpecificationKind_BasicNoexcept,
+
+  /**
+   * \brief The cursor has exception specification computed noexcept.
+   */
+  CXCursor_ExceptionSpecificationKind_ComputedNoexcept,
+
+  /**
+   * \brief The exception specification has not yet been evaluated.
+   */
+  CXCursor_ExceptionSpecificationKind_Unevaluated,
+
+  /**
+   * \brief The exception specification has not yet been instantiated.
+   */
+  CXCursor_ExceptionSpecificationKind_Uninstantiated,
+
+  /**
+   * \brief The exception specification has not been parsed yet.
+   */
+  CXCursor_ExceptionSpecificationKind_Unparsed
+};
+
 /**
  * \brief Provides a shared context for creating translation units.
  *
@@ -478,8 +537,8 @@ CINDEX_LINKAGE void clang_getExpansionLocation(CXSourceLocation location,
                                                unsigned *offset);
 
 /**
- * \brief Retrieve the file, line, column, and offset represented by
- * the given source location, as specified in a # line directive.
+ * \brief Retrieve the file, line and column represented by the given source
+ * location, as specified in a # line directive.
  *
  * Example: given the following source code in a file somefile.c
  *
@@ -1228,7 +1287,12 @@ enum CXTranslationUnit_Flags {
    * purposes of an IDE, this is undesirable behavior and as much information
    * as possible should be reported. Use this flag to enable this behavior.
    */
-  CXTranslationUnit_KeepGoing = 0x200
+  CXTranslationUnit_KeepGoing = 0x200,
+
+  /**
+   * \brief Sets the preprocessor in a mode for parsing a single file only.
+   */
+  CXTranslationUnit_SingleFileParse = 0x400
 };
 
 /**
@@ -1413,6 +1477,15 @@ CINDEX_LINKAGE int clang_saveTranslationUnit(CXTranslationUnit TU,
                                              unsigned options);
 
 /**
+ * \brief Suspend a translation unit in order to free memory associated with it.
+ *
+ * A suspended translation unit uses significantly less memory but on the other
+ * side does not support any other calls than \c clang_reparseTranslationUnit
+ * to resume it or \c clang_disposeTranslationUnit to dispose it completely.
+ */
+CINDEX_LINKAGE unsigned clang_suspendTranslationUnit(CXTranslationUnit);
+
+/**
  * \brief Destroy the specified CXTranslationUnit object.
  */
 CINDEX_LINKAGE void clang_disposeTranslationUnit(CXTranslationUnit);
@@ -1551,6 +1624,36 @@ typedef struct CXTUResourceUsage {
 CINDEX_LINKAGE CXTUResourceUsage clang_getCXTUResourceUsage(CXTranslationUnit TU);
 
 CINDEX_LINKAGE void clang_disposeCXTUResourceUsage(CXTUResourceUsage usage);
+
+/**
+ * \brief Get target information for this translation unit.
+ *
+ * The CXTargetInfo object cannot outlive the CXTranslationUnit object.
+ */
+CINDEX_LINKAGE CXTargetInfo
+clang_getTranslationUnitTargetInfo(CXTranslationUnit CTUnit);
+
+/**
+ * \brief Destroy the CXTargetInfo object.
+ */
+CINDEX_LINKAGE void
+clang_TargetInfo_dispose(CXTargetInfo Info);
+
+/**
+ * \brief Get the normalized target triple as a string.
+ *
+ * Returns the empty string in case of any error.
+ */
+CINDEX_LINKAGE CXString
+clang_TargetInfo_getTriple(CXTargetInfo Info);
+
+/**
+ * \brief Get the pointer width of the target in bits.
+ *
+ * Returns -1 in case of error.
+ */
+CINDEX_LINKAGE int
+clang_TargetInfo_getPointerWidth(CXTargetInfo Info);
 
 /**
  * @}
@@ -3011,8 +3114,9 @@ enum CXTypeKind {
   CXType_ObjCClass = 28,
   CXType_ObjCSel = 29,
   CXType_Float128 = 30,
+  CXType_Half = 31,
   CXType_FirstBuiltin = CXType_Void,
-  CXType_LastBuiltin  = CXType_ObjCSel,
+  CXType_LastBuiltin  = CXType_Half,
 
   CXType_Complex = 100,
   CXType_Pointer = 101,
@@ -3039,7 +3143,52 @@ enum CXTypeKind {
    *
    * E.g., struct S, or via a qualified name, e.g., N::M::type, or both.
    */
-  CXType_Elaborated = 119
+  CXType_Elaborated = 119,
+
+  /* OpenCL PipeType. */
+  CXType_Pipe = 120,
+
+  /* OpenCL builtin types. */
+  CXType_OCLImage1dRO = 121,
+  CXType_OCLImage1dArrayRO = 122,
+  CXType_OCLImage1dBufferRO = 123,
+  CXType_OCLImage2dRO = 124,
+  CXType_OCLImage2dArrayRO = 125,
+  CXType_OCLImage2dDepthRO = 126,
+  CXType_OCLImage2dArrayDepthRO = 127,
+  CXType_OCLImage2dMSAARO = 128,
+  CXType_OCLImage2dArrayMSAARO = 129,
+  CXType_OCLImage2dMSAADepthRO = 130,
+  CXType_OCLImage2dArrayMSAADepthRO = 131,
+  CXType_OCLImage3dRO = 132,
+  CXType_OCLImage1dWO = 133,
+  CXType_OCLImage1dArrayWO = 134,
+  CXType_OCLImage1dBufferWO = 135,
+  CXType_OCLImage2dWO = 136,
+  CXType_OCLImage2dArrayWO = 137,
+  CXType_OCLImage2dDepthWO = 138,
+  CXType_OCLImage2dArrayDepthWO = 139,
+  CXType_OCLImage2dMSAAWO = 140,
+  CXType_OCLImage2dArrayMSAAWO = 141,
+  CXType_OCLImage2dMSAADepthWO = 142,
+  CXType_OCLImage2dArrayMSAADepthWO = 143,
+  CXType_OCLImage3dWO = 144,
+  CXType_OCLImage1dRW = 145,
+  CXType_OCLImage1dArrayRW = 146,
+  CXType_OCLImage1dBufferRW = 147,
+  CXType_OCLImage2dRW = 148,
+  CXType_OCLImage2dArrayRW = 149,
+  CXType_OCLImage2dDepthRW = 150,
+  CXType_OCLImage2dArrayDepthRW = 151,
+  CXType_OCLImage2dMSAARW = 152,
+  CXType_OCLImage2dArrayMSAARW = 153,
+  CXType_OCLImage2dMSAADepthRW = 154,
+  CXType_OCLImage2dArrayMSAADepthRW = 155,
+  CXType_OCLImage3dRW = 156,
+  CXType_OCLSampler = 157,
+  CXType_OCLEvent = 158,
+  CXType_OCLQueue = 159,
+  CXType_OCLReserveID = 160
 };
 
 /**
@@ -3056,7 +3205,7 @@ enum CXCallingConv {
   CXCallingConv_AAPCS_VFP = 7,
   CXCallingConv_X86RegCall = 8,
   CXCallingConv_IntelOclBicc = 9,
-  CXCallingConv_X86_64Win64 = 10,
+  CXCallingConv_Win64 = 10,
   CXCallingConv_X86_64SysV = 11,
   CXCallingConv_X86VectorCall = 12,
   CXCallingConv_Swift = 13,
@@ -3326,6 +3475,16 @@ CINDEX_LINKAGE unsigned clang_isVolatileQualifiedType(CXType T);
 CINDEX_LINKAGE unsigned clang_isRestrictQualifiedType(CXType T);
 
 /**
+ * \brief Returns the address space of the given type.
+ */
+CINDEX_LINKAGE unsigned clang_getAddressSpace(CXType T);
+
+/**
+ * \brief Returns the typedef name of the given type.
+ */
+CINDEX_LINKAGE CXString clang_getTypedefName(CXType CT);
+
+/**
  * \brief For pointer types, returns the type of the pointee.
  */
 CINDEX_LINKAGE CXType clang_getPointeeType(CXType T);
@@ -3365,6 +3524,13 @@ CINDEX_LINKAGE enum CXCallingConv clang_getFunctionTypeCallingConv(CXType T);
 CINDEX_LINKAGE CXType clang_getResultType(CXType T);
 
 /**
+ * \brief Retrieve the exception specification type associated with a function type.
+ *
+ * If a non-function type is passed in, an error code of -1 is returned.
+ */
+CINDEX_LINKAGE int clang_getExceptionSpecificationType(CXType T);
+
+/**
  * \brief Retrieve the number of non-variadic parameters associated with a
  * function type.
  *
@@ -3391,6 +3557,13 @@ CINDEX_LINKAGE unsigned clang_isFunctionTypeVariadic(CXType T);
  * This only returns a valid type if the cursor refers to a function or method.
  */
 CINDEX_LINKAGE CXType clang_getCursorResultType(CXCursor C);
+
+/**
+ * \brief Retrieve the exception specification type associated with a given cursor.
+ *
+ * This only returns a valid result if the cursor refers to a function or method.
+ */
+CINDEX_LINKAGE int clang_getCursorExceptionSpecificationType(CXCursor C);
 
 /**
  * \brief Return 1 if the CXType is a POD (plain old data) type, and 0
@@ -4242,6 +4415,11 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isStatic(CXCursor C);
  * one of the base classes.
  */
 CINDEX_LINKAGE unsigned clang_CXXMethod_isVirtual(CXCursor C);
+
+/**
+ * \brief Determine if an enum declaration refers to a scoped enum.
+ */
+CINDEX_LINKAGE unsigned clang_EnumDecl_isScoped(CXCursor C);
 
 /**
  * \brief Determine if a C++ member function or member function template is

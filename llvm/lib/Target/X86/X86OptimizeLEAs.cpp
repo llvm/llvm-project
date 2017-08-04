@@ -27,8 +27,8 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -223,8 +223,6 @@ public:
 
   StringRef getPassName() const override { return "X86 LEA Optimize"; }
 
-  bool doInitialization(Module &M) override;
-
   /// \brief Loop over all of the basic blocks, replacing address
   /// calculations in load and store instructions, if it's already
   /// been calculated by LEA. Also, remove redundant LEAs.
@@ -280,7 +278,6 @@ private:
   MachineRegisterInfo *MRI;
   const X86InstrInfo *TII;
   const X86RegisterInfo *TRI;
-  Module *TheModule;
 
   static char ID;
 };
@@ -556,10 +553,11 @@ MachineInstr *OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
   MachineBasicBlock *MBB = MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   bool IsIndirect = MI.isIndirectDebugValue();
-  int64_t Offset = IsIndirect ? MI.getOperand(1).getImm() : 0;
   const MDNode *Var = MI.getDebugVariable();
+  if (IsIndirect)
+    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
   return BuildMI(*MBB, MBB->erase(&MI), DL, TII->get(TargetOpcode::DBG_VALUE),
-                 IsIndirect, VReg, Offset, Var, Expr);
+                 IsIndirect, VReg, Var, Expr);
 }
 
 // Try to find similar LEAs in the list and replace one with another.
@@ -647,11 +645,6 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
   }
 
   return Changed;
-}
-
-bool OptimizeLEAPass::doInitialization(Module &M) {
-  TheModule = &M;
-  return false;
 }
 
 bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {

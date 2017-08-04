@@ -19,9 +19,9 @@ entry:
   %vs = alloca void (%struct.big*)*, align 4
   %s = alloca void (%struct.big*)*, align 4
 
-; CHECK: i32.const       {{.+}}=, extern_fd@FUNCTION
+; CHECK-DAG: i32.const       {{.+}}=, extern_fd@FUNCTION
+; CHECK-DAG: i32.const       {{.+}}=, extern_vj@FUNCTION
   store float (double)* @extern_fd, float (double)** %fd, align 4
-; CHECK: i32.const       {{.+}}=, extern_vj@FUNCTION
   store void (i64)* @extern_vj, void (i64)** %vj, align 4
   %0 = load void (i64)*, void (i64)** %vj, align 4
   call void %0(i64 1)
@@ -36,10 +36,9 @@ entry:
   %2 = load i32 (i64, i32, double, float)*, i32 (i64, i32, double, float)** %ijidf, align 4
   %call = call i32 %2(i64 1, i32 2, double 3.000000e+00, float 4.000000e+00)
 
-; CHECK: i32.const       {{.+}}=, extern_struct@FUNCTION
+; CHECK-DAG: i32.const       {{.+}}=, extern_struct@FUNCTION
+; CHECK-DAG: i32.const       {{.+}}=, extern_sret@FUNCTION
   store void (%struct.big*)* @extern_struct, void (%struct.big*)** %vs, align 4
-
-; CHECK: i32.const       {{.+}}=, extern_sret@FUNCTION
   store void (%struct.big*)* @extern_sret, void (%struct.big*)** %s, align 4
   %3 = load float (double)*, float (double)** %fd, align 4
   %4 = ptrtoint float (double)* %3 to i32

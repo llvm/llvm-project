@@ -1,3 +1,5 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+
 //===-- nedf2vfp_test.c - Test __nedf2vfp ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -19,7 +21,7 @@
 
 extern int __nedf2vfp(double a, double b);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__nedf2vfp(double a, double b)
 {
     int actual = __nedf2vfp(a, b);
@@ -33,7 +35,7 @@ int test__nedf2vfp(double a, double b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__nedf2vfp(0.0, 0.0))
         return 1;
     if (test__nedf2vfp(1.0, 1.0))

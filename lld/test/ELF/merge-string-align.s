@@ -34,10 +34,10 @@
 // CHECK-NEXT:   0010:  62617200                             |bar.|
 // CHECK-NEXT: )
 
-        .section        .rodata.str1.1,"aMS",@progbits,1
+        .section        .rodata2,"aMS",@progbits,1
         .asciz "foo"
 
-// CHECK:      Name: .rodata
+// CHECK:      Name: .rodata2
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC

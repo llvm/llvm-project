@@ -23,5 +23,8 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp target parallel default(shared)
   ++argc;
+  #pragma omp target parallel default(none)
+  #pragma omp parallel default(shared)
+  ++argc;
   return 0;
 }

@@ -20,8 +20,8 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 // This ugly hack is brought to you courtesy of constructor/destructor ordering
@@ -72,23 +72,15 @@ std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
   return llvm::make_unique<raw_fd_ostream>(2, false); // stderr.
 }
 
-
-static TimerGroup *DefaultTimerGroup = nullptr;
-static TimerGroup *getDefaultTimerGroup() {
-  TimerGroup *tmp = DefaultTimerGroup;
-  sys::MemoryFence();
-  if (tmp) return tmp;
-
-  sys::SmartScopedLock<true> Lock(*TimerLock);
-  tmp = DefaultTimerGroup;
-  if (!tmp) {
-    tmp = new TimerGroup("misc", "Miscellaneous Ungrouped Timers");
-    sys::MemoryFence();
-    DefaultTimerGroup = tmp;
+namespace {
+struct CreateDefaultTimerGroup {
+  static void *call() {
+    return new TimerGroup("misc", "Miscellaneous Ungrouped Timers");
   }
-
-  return tmp;
-}
+};
+} // namespace
+static ManagedStatic<TimerGroup, CreateDefaultTimerGroup> DefaultTimerGroup;
+static TimerGroup *getDefaultTimerGroup() { return &*DefaultTimerGroup; }
 
 //===----------------------------------------------------------------------===//
 // Timer Implementation
@@ -309,7 +301,7 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // If this is not an collection of ungrouped times, print the total time.
   // Ungrouped timers don't really make sense to add up.  We still print the
   // TOTAL line to make the percentages make sense.
-  if (this != DefaultTimerGroup)
+  if (this != getDefaultTimerGroup())
     OS << format("  Total Execution Time: %5.4f seconds (%5.4f wall clock)\n",
                  Total.getProcessTime(), Total.getWallTime());
   OS << '\n';

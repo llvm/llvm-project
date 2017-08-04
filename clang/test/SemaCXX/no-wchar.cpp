@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple i386-pc-win32 -fsyntax-only -fno-wchar -verify %s
+// RUN: %clang_cc1 -triple i386-pc-win32 -fsyntax-only -fno-wchar -verify -std=c++98 %s
+// RUN: %clang_cc1 -triple i386-pc-win32 -fsyntax-only -fno-wchar -verify -std=c++11 %s
 wchar_t x; // expected-error {{unknown type name 'wchar_t'}}
 
 typedef unsigned short wchar_t;
@@ -9,7 +11,11 @@ void bar() {
 }
 
 void foo1(wchar_t * t = L"");
-// expected-warning@-1 {{conversion from string literal to 'wchar_t *' (aka 'unsigned short *') is deprecated}}
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{conversion from string literal to 'wchar_t *' (aka 'unsigned short *') is deprecated}}
+#else
+// expected-warning@-4 {{ISO C++11 does not allow conversion from string literal to 'wchar_t *' (aka 'unsigned short *')}}
+#endif
 
 short *a = L"";
 // expected-error@-1 {{cannot initialize a variable of type 'short *' with an lvalue of type 'const unsigned short [1]'}}

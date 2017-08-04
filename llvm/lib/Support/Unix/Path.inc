@@ -48,6 +48,8 @@
 # endif
 #endif
 
+#include <pwd.h>
+
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #include <sys/attr.h>
@@ -65,23 +67,41 @@
 #endif
 
 #include <sys/types.h>
-#if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__ANDROID__)
+#if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
+    !defined(__linux__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
+#define FSTATVFS fstatvfs
 #define STATVFS_F_FRSIZE(vfs) vfs.f_frsize
 #else
-#ifdef __OpenBSD__
-#include <sys/param.h>
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/mount.h>
-#elif defined(__ANDROID__)
+#include <sys/param.h>
+#elif defined(__linux__)
+#if defined(HAVE_LINUX_MAGIC_H)
+#include <linux/magic.h>
+#else
+#if defined(HAVE_LINUX_NFS_FS_H)
+#include <linux/nfs_fs.h>
+#endif
+#if defined(HAVE_LINUX_SMB_H)
+#include <linux/smb.h>
+#endif
+#endif
 #include <sys/vfs.h>
 #else
 #include <sys/mount.h>
 #endif
 #define STATVFS statfs
+#define FSTATVFS fstatfs
 #define STATVFS_F_FRSIZE(vfs) static_cast<uint64_t>(vfs.f_bsize)
 #endif
 
+#if defined(__NetBSD__)
+#define STATVFS_F_FLAG(vfs) (vfs).f_flag
+#else
+#define STATVFS_F_FLAG(vfs) (vfs).f_flags
+#endif
 
 using namespace llvm;
 
@@ -180,7 +200,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
       if (getprogpath(exe_path, argv0))
         return exe_path;
   }
-#elif defined(HAVE_DLFCN_H)
+#elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
   // Use dladdr to get executable path if available.
   Dl_info DLInfo;
   int err = dladdr(MainAddr, &DLInfo);
@@ -208,6 +228,10 @@ TimePoint<> file_status::getLastModificationTime() const {
 
 UniqueID file_status::getUniqueID() const {
   return UniqueID(fs_st_dev, fs_st_ino);
+}
+
+uint32_t file_status::getLinkCount() const {
+  return fs_st_nlinks;
 }
 
 ErrorOr<space_info> disk_space(const Twine &Path) {
@@ -254,6 +278,16 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
   }
 
   result.set_size(strlen(result.data()));
+  return std::error_code();
+}
+
+std::error_code set_current_path(const Twine &path) {
+  SmallString<128> path_storage;
+  StringRef p = path.toNullTerminatedStringRef(path_storage);
+
+  if (::chdir(p.begin()) == -1)
+    return std::error_code(errno, std::generic_category());
+
   return std::error_code();
 }
 
@@ -325,6 +359,56 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   return std::error_code();
 }
 
+static bool is_local_impl(struct STATVFS &Vfs) {
+#if defined(__linux__)
+#ifndef NFS_SUPER_MAGIC
+#define NFS_SUPER_MAGIC 0x6969
+#endif
+#ifndef SMB_SUPER_MAGIC
+#define SMB_SUPER_MAGIC 0x517B
+#endif
+#ifndef CIFS_MAGIC_NUMBER
+#define CIFS_MAGIC_NUMBER 0xFF534D42
+#endif
+  switch ((uint32_t)Vfs.f_type) {
+  case NFS_SUPER_MAGIC:
+  case SMB_SUPER_MAGIC:
+  case CIFS_MAGIC_NUMBER:
+    return false;
+  default:
+    return true;
+  }
+#elif defined(__CYGWIN__)
+  // Cygwin doesn't expose this information; would need to use Win32 API.
+  return false;
+#elif defined(__sun)
+  // statvfs::f_basetype contains a null-terminated FSType name of the mounted target
+  StringRef fstype(Vfs.f_basetype);
+  // NFS is the only non-local fstype??
+  return !fstype.equals("nfs");
+#else
+  return !!(STATVFS_F_FLAG(Vfs) & MNT_LOCAL);
+#endif
+}
+
+std::error_code is_local(const Twine &Path, bool &Result) {
+  struct STATVFS Vfs;
+  if (::STATVFS(Path.str().c_str(), &Vfs))
+    return std::error_code(errno, std::generic_category());
+
+  Result = is_local_impl(Vfs);
+  return std::error_code();
+}
+
+std::error_code is_local(int FD, bool &Result) {
+  struct STATVFS Vfs;
+  if (::FSTATVFS(FD, &Vfs))
+    return std::error_code(errno, std::generic_category());
+
+  Result = is_local_impl(Vfs);
+  return std::error_code();
+}
+
 std::error_code rename(const Twine &from, const Twine &to) {
   // Get arguments.
   SmallString<128> from_storage;
@@ -342,14 +426,15 @@ std::error_code resize_file(int FD, uint64_t Size) {
 #if defined(HAVE_POSIX_FALLOCATE)
   // If we have posix_fallocate use it. Unlike ftruncate it always allocates
   // space, so we get an error if the disk is full.
-  if (int Err = ::posix_fallocate(FD, 0, Size))
-    return std::error_code(Err, std::generic_category());
-#else
+  if (int Err = ::posix_fallocate(FD, 0, Size)) {
+    if (Err != EOPNOTSUPP)
+      return std::error_code(Err, std::generic_category());
+  }
+#endif
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
   if (::ftruncate(FD, Size) == -1)
     return std::error_code(errno, std::generic_category());
-#endif
 
   return std::error_code();
 }
@@ -405,6 +490,46 @@ std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
   return std::error_code();
 }
 
+static void expandTildeExpr(SmallVectorImpl<char> &Path) {
+  StringRef PathStr(Path.begin(), Path.size());
+  if (PathStr.empty() || !PathStr.startswith("~"))
+    return;
+
+  PathStr = PathStr.drop_front();
+  StringRef Expr =
+      PathStr.take_until([](char c) { return path::is_separator(c); });
+  StringRef Remainder = PathStr.substr(Expr.size() + 1);
+  SmallString<128> Storage;
+  if (Expr.empty()) {
+    // This is just ~/..., resolve it to the current user's home dir.
+    if (!path::home_directory(Storage)) {
+      // For some reason we couldn't get the home directory.  Just exit.
+      return;
+    }
+
+    // Overwrite the first character and insert the rest.
+    Path[0] = Storage[0];
+    Path.insert(Path.begin() + 1, Storage.begin() + 1, Storage.end());
+    return;
+  }
+
+  // This is a string of the form ~username/, look up this user's entry in the
+  // password database.
+  struct passwd *Entry = nullptr;
+  std::string User = Expr.str();
+  Entry = ::getpwnam(User.c_str());
+
+  if (!Entry) {
+    // Unable to look up the entry, just return back the original path.
+    return;
+  }
+
+  Storage = Remainder;
+  Path.clear();
+  Path.append(Entry->pw_dir, Entry->pw_dir + strlen(Entry->pw_dir));
+  llvm::sys::path::append(Path, Storage);
+}
+
 static std::error_code fillStatus(int StatRet, const struct stat &Status,
                              file_status &Result) {
   if (StatRet != 0) {
@@ -430,22 +555,23 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
     Type = file_type::fifo_file;
   else if (S_ISSOCK(Status.st_mode))
     Type = file_type::socket_file;
+  else if (S_ISLNK(Status.st_mode))
+    Type = file_type::symlink_file;
 
-  perms Perms = static_cast<perms>(Status.st_mode);
-  Result =
-      file_status(Type, Perms, Status.st_dev, Status.st_ino, Status.st_atime,
-                  Status.st_mtime, Status.st_uid, Status.st_gid,
-                  Status.st_size);
+  perms Perms = static_cast<perms>(Status.st_mode) & all_perms;
+  Result = file_status(Type, Perms, Status.st_dev, Status.st_nlink,
+                       Status.st_ino, Status.st_atime, Status.st_mtime,
+                       Status.st_uid, Status.st_gid, Status.st_size);
 
   return std::error_code();
 }
 
-std::error_code status(const Twine &Path, file_status &Result) {
+std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
   struct stat Status;
-  int StatRet = ::stat(P.begin(), &Status);
+  int StatRet = (Follow ? ::stat : ::lstat)(P.begin(), &Status);
   return fillStatus(StatRet, Status, Result);
 }
 
@@ -453,6 +579,15 @@ std::error_code status(int FD, file_status &Result) {
   struct stat Status;
   int StatRet = ::fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
+}
+
+std::error_code setPermissions(const Twine &Path, perms Permissions) {
+  SmallString<128> PathStorage;
+  StringRef P = Path.toNullTerminatedStringRef(PathStorage);
+
+  if (::chmod(P.begin(), Permissions))
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
 }
 
 std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
@@ -481,6 +616,26 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
   int prot = (Mode == readonly) ? PROT_READ : (PROT_READ | PROT_WRITE);
+#if defined(__APPLE__)
+  //----------------------------------------------------------------------
+  // Newer versions of MacOSX have a flag that will allow us to read from
+  // binaries whose code signature is invalid without crashing by using
+  // the MAP_RESILIENT_CODESIGN flag. Also if a file from removable media
+  // is mapped we can avoid crashing and return zeroes to any pages we try
+  // to read if the media becomes unavailable by using the
+  // MAP_RESILIENT_MEDIA flag.  These flags are only usable when mapping
+  // with PROT_READ, so take care not to specify them otherwise.
+  //----------------------------------------------------------------------
+  if (Mode == readonly) {
+#if defined(MAP_RESILIENT_CODESIGN)
+    flags |= MAP_RESILIENT_CODESIGN;
+#endif
+#if defined(MAP_RESILIENT_MEDIA)
+    flags |= MAP_RESILIENT_MEDIA;
+#endif
+  }
+#endif // #if defined (__APPLE__)
+
   Mapping = ::mmap(nullptr, Size, prot, flags, FD, Offset);
   if (Mapping == MAP_FAILED)
     return std::error_code(errno, std::generic_category());
@@ -526,7 +681,8 @@ int mapped_file_region::alignment() {
 }
 
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
-                                                StringRef path){
+                                                     StringRef path,
+                                                     bool follow_symlinks) {
   SmallString<128> path_null(path);
   DIR *directory = ::opendir(path_null.c_str());
   if (!directory)
@@ -535,7 +691,7 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
   it.IterationHandle = reinterpret_cast<intptr_t>(directory);
   // Add something for replace_filename to replace.
   path::append(path_null, ".");
-  it.CurrentEntry = directory_entry(path_null.str());
+  it.CurrentEntry = directory_entry(path_null.str(), follow_symlinks);
   return directory_iterator_increment(it);
 }
 
@@ -577,10 +733,17 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath) {
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  while ((ResultFD = open(P.begin(), O_RDONLY)) < 0) {
-    if (errno != EINTR)
-      return std::error_code(errno, std::generic_category());
-  }
+  int OpenFlags = O_RDONLY;
+#ifdef O_CLOEXEC
+  OpenFlags |= O_CLOEXEC;
+#endif
+  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags)) < 0)
+    return std::error_code(errno, std::generic_category());
+#ifndef O_CLOEXEC
+  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+  (void)r;
+  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+#endif
   // Attempt to get the real name of the file, if the user asked
   if(!RealPath)
     return std::error_code();
@@ -616,6 +779,10 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 
   int OpenFlags = O_CREAT;
 
+#ifdef O_CLOEXEC
+  OpenFlags |= O_CLOEXEC;
+#endif
+
   if (Flags & F_RW)
     OpenFlags |= O_RDWR;
   else
@@ -631,10 +798,13 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  while ((ResultFD = open(P.begin(), OpenFlags, Mode)) < 0) {
-    if (errno != EINTR)
-      return std::error_code(errno, std::generic_category());
-  }
+  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags, Mode)) < 0)
+    return std::error_code(errno, std::generic_category());
+#ifndef O_CLOEXEC
+  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+  (void)r;
+  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+#endif
   return std::error_code();
 }
 
@@ -685,18 +855,85 @@ std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
   return std::error_code();
 }
 
+template <typename T>
+static std::error_code remove_directories_impl(const T &Entry,
+                                               bool IgnoreErrors) {
+  std::error_code EC;
+  directory_iterator Begin(Entry, EC, false);
+  directory_iterator End;
+  while (Begin != End) {
+    auto &Item = *Begin;
+    file_status st;
+    EC = Item.status(st);
+    if (EC && !IgnoreErrors)
+      return EC;
+
+    if (is_directory(st)) {
+      EC = remove_directories_impl(Item, IgnoreErrors);
+      if (EC && !IgnoreErrors)
+        return EC;
+    }
+
+    EC = fs::remove(Item.path(), true);
+    if (EC && !IgnoreErrors)
+      return EC;
+
+    Begin.increment(EC);
+    if (EC && !IgnoreErrors)
+      return EC;
+  }
+  return std::error_code();
+}
+
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  auto EC = remove_directories_impl(path, IgnoreErrors);
+  if (EC && !IgnoreErrors)
+    return EC;
+  EC = fs::remove(path, true);
+  if (EC && !IgnoreErrors)
+    return EC;
+  return std::error_code();
+}
+
+std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
+                          bool expand_tilde) {
+  dest.clear();
+  if (path.isTriviallyEmpty())
+    return std::error_code();
+
+  if (expand_tilde) {
+    SmallString<128> Storage;
+    path.toVector(Storage);
+    expandTildeExpr(Storage);
+    return real_path(Storage, dest, false);
+  }
+
+  int fd;
+  std::error_code EC = openFileForRead(path, fd, &dest);
+
+  if (EC)
+    return EC;
+  ::close(fd);
+  return std::error_code();
+}
+
 } // end namespace fs
 
 namespace path {
 
 bool home_directory(SmallVectorImpl<char> &result) {
-  if (char *RequestedDir = getenv("HOME")) {
-    result.clear();
-    result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
-    return true;
+  char *RequestedDir = getenv("HOME");
+  if (!RequestedDir) {
+    struct passwd *pw = getpwuid(getuid());
+    if (pw && pw->pw_dir)
+      RequestedDir = pw->pw_dir;
   }
+  if (!RequestedDir)
+    return false;
 
-  return false;
+  result.clear();
+  result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
+  return true;
 }
 
 static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {

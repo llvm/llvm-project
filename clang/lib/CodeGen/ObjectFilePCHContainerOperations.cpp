@@ -152,6 +152,9 @@ public:
     CodeGenOpts.CodeModel = "default";
     CodeGenOpts.ThreadModel = "single";
     CodeGenOpts.DebugTypeExtRefs = true;
+    // When building a module MainFileName is the name of the modulemap file.
+    CodeGenOpts.MainFileName =
+        LangOpts.CurrentModule.empty() ? MainFileName : LangOpts.CurrentModule;
     CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
     CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
   }

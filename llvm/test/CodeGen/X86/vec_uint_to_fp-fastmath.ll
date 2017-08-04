@@ -77,6 +77,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v4i32_to_v4f32:
@@ -101,9 +102,6 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 
 ; AVX2: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
 ; AVX2-NEXT: .long 1199570944 # float 65536
-
-; AVX2: [[MASKCSTADDR_v8:.LCPI[0-9_]+]]:
-; AVX2-NEXT: .long 65535 # 0xffff
 
 define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; SSE2-LABEL: test_uitofp_v8i32_to_v8f32:
@@ -165,8 +163,8 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; AVX2-NEXT:    vcvtdq2ps %ymm1, %ymm1
 ; AVX2-NEXT:    vbroadcastss [[FPMASKCSTADDR_v8]](%rip), %ymm2
 ; AVX2-NEXT:    vmulps %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpbroadcastd [[MASKCSTADDR_v8]](%rip), %ymm2
-; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7],ymm0[8],ymm2[9],ymm0[10],ymm2[11],ymm0[12],ymm2[13],ymm0[14],ymm2[15]
 ; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX2-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq

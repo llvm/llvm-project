@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
 #include "NVPTXAllocaHoisting.h"
 #include "NVPTXLowerAggrCopies.h"
-#include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,6 +28,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -50,7 +51,6 @@ void initializeNVVMReflectPass(PassRegistry&);
 void initializeGenericToNVVMPass(PassRegistry&);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry&);
-void initializeNVPTXInferAddressSpacesPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerArgsPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
@@ -70,7 +70,6 @@ extern "C" void LLVMInitializeNVPTXTarget() {
   initializeGenericToNVVMPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
-  initializeNVPTXInferAddressSpacesPass(PR);
   initializeNVPTXLowerArgsPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
@@ -133,7 +132,7 @@ namespace {
 
 class NVPTXPassConfig : public TargetPassConfig {
 public:
-  NVPTXPassConfig(NVPTXTargetMachine *TM, PassManagerBase &PM)
+  NVPTXPassConfig(NVPTXTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
   NVPTXTargetMachine &getNVPTXTargetMachine() const {
@@ -164,12 +163,16 @@ private:
 } // end anonymous namespace
 
 TargetPassConfig *NVPTXTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new NVPTXPassConfig(this, PM);
+  return new NVPTXPassConfig(*this, PM);
 }
 
-void NVPTXTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
-  PM.add(createNVVMReflectPass());
-  PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
+void NVPTXTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
+  Builder.addExtension(
+    PassManagerBuilder::EP_EarlyAsPossible,
+    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      PM.add(createNVVMReflectPass());
+      PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
+    });
 }
 
 TargetIRAnalysis NVPTXTargetMachine::getTargetIRAnalysis() {
@@ -190,7 +193,7 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // be eliminated by SROA.
   addPass(createSROAPass());
   addPass(createNVPTXLowerAllocaPass());
-  addPass(createNVPTXInferAddressSpacesPass());
+  addPass(createInferAddressSpacesPass());
 }
 
 void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {

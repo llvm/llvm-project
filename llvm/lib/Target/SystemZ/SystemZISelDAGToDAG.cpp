@@ -15,6 +15,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -711,9 +712,9 @@ bool SystemZDAGToDAGISel::detectOrAndInsertion(SDValue &Op,
   // The inner check covers all cases but is more expensive.
   uint64_t Used = allOnes(Op.getValueSizeInBits());
   if (Used != (AndMask | InsertMask)) {
-    APInt KnownZero, KnownOne;
-    CurDAG->computeKnownBits(Op.getOperand(0), KnownZero, KnownOne);
-    if (Used != (AndMask | InsertMask | KnownZero.getZExtValue()))
+    KnownBits Known;
+    CurDAG->computeKnownBits(Op.getOperand(0), Known);
+    if (Used != (AndMask | InsertMask | Known.Zero.getZExtValue()))
       return false;
   }
 
@@ -770,9 +771,9 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       // If some bits of Input are already known zeros, those bits will have
       // been removed from the mask.  See if adding them back in makes the
       // mask suitable.
-      APInt KnownZero, KnownOne;
-      CurDAG->computeKnownBits(Input, KnownZero, KnownOne);
-      Mask |= KnownZero.getZExtValue();
+      KnownBits Known;
+      CurDAG->computeKnownBits(Input, Known);
+      Mask |= Known.Zero.getZExtValue();
       if (!refineRxSBGMask(RxSBG, Mask))
         return false;
     }
@@ -794,9 +795,9 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       // If some bits of Input are already known ones, those bits will have
       // been removed from the mask.  See if adding them back in makes the
       // mask suitable.
-      APInt KnownZero, KnownOne;
-      CurDAG->computeKnownBits(Input, KnownZero, KnownOne);
-      Mask &= ~KnownOne.getZExtValue();
+      KnownBits Known;
+      CurDAG->computeKnownBits(Input, Known);
+      Mask &= ~Known.One.getZExtValue();
       if (!refineRxSBGMask(RxSBG, Mask))
         return false;
     }

@@ -30,13 +30,16 @@
 /* ABI macro definitions */
 
 #if __ARM_EABI__
-# define ARM_EABI_FNALIAS(aeabi_name, name)         \
-  void __aeabi_##aeabi_name() __attribute__((alias("__" #name)));
-# define COMPILER_RT_ABI __attribute__((pcs("aapcs")))
+# ifdef COMPILER_RT_ARMHF_TARGET
+#   define COMPILER_RT_ABI
+# else
+#   define COMPILER_RT_ABI __attribute__((__pcs__("aapcs")))
+# endif
 #else
-# define ARM_EABI_FNALIAS(aeabi_name, name)
 # define COMPILER_RT_ABI
 #endif
+
+#define AEABI_RTABI __attribute__((__pcs__("aapcs")))
 
 #ifdef _MSC_VER
 #define ALWAYS_INLINE __forceinline

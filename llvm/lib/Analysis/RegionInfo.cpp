@@ -10,28 +10,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/RegionInfo.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/RegionInfoImpl.h"
-#include "llvm/Analysis/RegionIterator.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #ifndef NDEBUG
 #include "llvm/Analysis/RegionPrinter.h"
 #endif
+#include "llvm/Analysis/RegionInfoImpl.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "region"
 
 namespace llvm {
+
 template class RegionBase<RegionTraits<Function>>;
 template class RegionNodeBase<RegionTraits<Function>>;
 template class RegionInfoBase<RegionTraits<Function>>;
-}
+
+} // end namespace llvm
 
 STATISTIC(numRegions,       "The # of regions");
 STATISTIC(numSimpleRegions, "The # of simple regions");
@@ -44,7 +45,6 @@ VerifyRegionInfoX(
   cl::location(RegionInfoBase<RegionTraits<Function>>::VerifyRegionInfo),
   cl::desc("Verify region info (time consuming)"));
 
-
 static cl::opt<Region::PrintStyle, true> printStyleX("print-region-style",
   cl::location(RegionInfo::printStyle),
   cl::Hidden,
@@ -55,7 +55,6 @@ static cl::opt<Region::PrintStyle, true> printStyleX("print-region-style",
                "print regions in detail with block_iterator"),
     clEnumValN(Region::PrintRN, "rn",
                "print regions in detail with element_iterator")));
-
 
 //===----------------------------------------------------------------------===//
 // Region implementation
@@ -68,19 +67,23 @@ Region::Region(BasicBlock *Entry, BasicBlock *Exit,
 
 }
 
-Region::~Region() { }
+Region::~Region() = default;
 
 //===----------------------------------------------------------------------===//
 // RegionInfo implementation
 //
 
-RegionInfo::RegionInfo() :
-  RegionInfoBase<RegionTraits<Function>>() {
+RegionInfo::RegionInfo() = default;
 
-}
+RegionInfo::~RegionInfo() = default;
 
-RegionInfo::~RegionInfo() {
-
+bool RegionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                            FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<RegionInfoAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
 }
 
 void RegionInfo::updateStatistics(Region *R) {
@@ -117,9 +120,7 @@ RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {
   initializeRegionInfoPassPass(*PassRegistry::getPassRegistry());
 }
 
-RegionInfoPass::~RegionInfoPass() {
-
-}
+RegionInfoPass::~RegionInfoPass() = default;
 
 bool RegionInfoPass::runOnFunction(Function &F) {
   releaseMemory();
@@ -172,10 +173,12 @@ INITIALIZE_PASS_END(RegionInfoPass, "regions",
 // the link time optimization.
 
 namespace llvm {
+
   FunctionPass *createRegionInfoPass() {
     return new RegionInfoPass();
   }
-}
+
+} // end namespace llvm
 
 //===----------------------------------------------------------------------===//
 // RegionInfoAnalysis implementation

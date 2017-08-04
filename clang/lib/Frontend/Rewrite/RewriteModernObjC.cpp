@@ -21,6 +21,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Config/config.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/DenseSet.h"
@@ -146,7 +147,7 @@ namespace {
     
     llvm::DenseMap<BlockExpr *, std::string> RewrittenBlockExprs;
     llvm::DenseMap<ObjCInterfaceDecl *, 
-                    llvm::SmallPtrSet<ObjCIvarDecl *, 8> > ReferencedIvars;
+                    llvm::SmallSetVector<ObjCIvarDecl *, 8> > ReferencedIvars;
     
     // ivar bitfield grouping containers
     llvm::DenseSet<const ObjCInterfaceDecl *> ObjCInterefaceHasBitfieldGroups;
@@ -1013,7 +1014,7 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
     Setr = "\nextern \"C\" __declspec(dllimport) "
     "void objc_setProperty (id, SEL, long, id, bool, bool);\n";
   }
-  
+
   RewriteObjCMethodDecl(OID->getContainingInterface(), 
                         PD->getSetterMethodDecl(), Setr);
   Setr += "{ ";
@@ -3965,10 +3966,11 @@ void RewriteModernObjC::RewriteIvarOffsetSymbols(ObjCInterfaceDecl *CDecl,
                                                   std::string &Result) {
   // write out ivar offset symbols which have been referenced in an ivar
   // access expression.
-  llvm::SmallPtrSet<ObjCIvarDecl *, 8> Ivars = ReferencedIvars[CDecl];
+  llvm::SmallSetVector<ObjCIvarDecl *, 8> Ivars = ReferencedIvars[CDecl];
+
   if (Ivars.empty())
     return;
-  
+
   llvm::DenseSet<std::pair<const ObjCInterfaceDecl*, unsigned> > GroupSymbolOutput;
   for (ObjCIvarDecl *IvarDecl : Ivars) {
     const ObjCInterfaceDecl *IDecl = IvarDecl->getContainingInterface();
@@ -4454,7 +4456,7 @@ static void BuildUniqueMethodName(std::string &Name,
   Name += "__" + MD->getSelector().getAsString();
   // Convert colons to underscores.
   std::string::size_type loc = 0;
-  while ((loc = Name.find(":", loc)) != std::string::npos)
+  while ((loc = Name.find(':', loc)) != std::string::npos)
     Name.replace(loc, 1, "_");
 }
 
@@ -5141,7 +5143,7 @@ void RewriteModernObjC::RewriteByRefVar(VarDecl *ND, bool firstDecl,
   if (!hasInit) {
     ByrefType += "};\n";
     unsigned nameSize = Name.size();
-    // for block or function pointer declaration. Name is aleady
+    // for block or function pointer declaration. Name is already
     // part of the declaration.
     if (Ty->isBlockPointerType() || Ty->isFunctionPointerType())
       nameSize = 1;
@@ -6068,7 +6070,7 @@ void RewriteModernObjC::Initialize(ASTContext &context) {
   Preamble += "\n#define __OFFSETOFIVAR__(TYPE, MEMBER) ((long long) &((TYPE *)0)->MEMBER)\n";
 }
 
-/// RewriteIvarOffsetComputation - This rutine synthesizes computation of
+/// RewriteIvarOffsetComputation - This routine synthesizes computation of
 /// ivar offset.
 void RewriteModernObjC::RewriteIvarOffsetComputation(ObjCIvarDecl *ivar,
                                                          std::string &Result) {

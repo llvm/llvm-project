@@ -12,240 +12,244 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <cassert>
+#include <cstdint>
 
 namespace llvm {
 
-ELFYAML::Section::~Section() {}
+ELFYAML::Section::~Section() = default;
 
 namespace yaml {
 
-void
-ScalarEnumerationTraits<ELFYAML::ELF_ET>::enumeration(IO &IO,
-                                                      ELFYAML::ELF_ET &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(ET_NONE)
-  ECase(ET_REL)
-  ECase(ET_EXEC)
-  ECase(ET_DYN)
-  ECase(ET_CORE)
+void ScalarEnumerationTraits<ELFYAML::ELF_ET>::enumeration(
+    IO &IO, ELFYAML::ELF_ET &Value) {
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(ET_NONE);
+  ECase(ET_REL);
+  ECase(ET_EXEC);
+  ECase(ET_DYN);
+  ECase(ET_CORE);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
 
-void
-ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(IO &IO,
-                                                      ELFYAML::ELF_EM &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(EM_NONE)
-  ECase(EM_M32)
-  ECase(EM_SPARC)
-  ECase(EM_386)
-  ECase(EM_68K)
-  ECase(EM_88K)
-  ECase(EM_IAMCU)
-  ECase(EM_860)
-  ECase(EM_MIPS)
-  ECase(EM_S370)
-  ECase(EM_MIPS_RS3_LE)
-  ECase(EM_PARISC)
-  ECase(EM_VPP500)
-  ECase(EM_SPARC32PLUS)
-  ECase(EM_960)
-  ECase(EM_PPC)
-  ECase(EM_PPC64)
-  ECase(EM_S390)
-  ECase(EM_SPU)
-  ECase(EM_V800)
-  ECase(EM_FR20)
-  ECase(EM_RH32)
-  ECase(EM_RCE)
-  ECase(EM_ARM)
-  ECase(EM_ALPHA)
-  ECase(EM_SH)
-  ECase(EM_SPARCV9)
-  ECase(EM_TRICORE)
-  ECase(EM_ARC)
-  ECase(EM_H8_300)
-  ECase(EM_H8_300H)
-  ECase(EM_H8S)
-  ECase(EM_H8_500)
-  ECase(EM_IA_64)
-  ECase(EM_MIPS_X)
-  ECase(EM_COLDFIRE)
-  ECase(EM_68HC12)
-  ECase(EM_MMA)
-  ECase(EM_PCP)
-  ECase(EM_NCPU)
-  ECase(EM_NDR1)
-  ECase(EM_STARCORE)
-  ECase(EM_ME16)
-  ECase(EM_ST100)
-  ECase(EM_TINYJ)
-  ECase(EM_X86_64)
-  ECase(EM_PDSP)
-  ECase(EM_PDP10)
-  ECase(EM_PDP11)
-  ECase(EM_FX66)
-  ECase(EM_ST9PLUS)
-  ECase(EM_ST7)
-  ECase(EM_68HC16)
-  ECase(EM_68HC11)
-  ECase(EM_68HC08)
-  ECase(EM_68HC05)
-  ECase(EM_SVX)
-  ECase(EM_ST19)
-  ECase(EM_VAX)
-  ECase(EM_CRIS)
-  ECase(EM_JAVELIN)
-  ECase(EM_FIREPATH)
-  ECase(EM_ZSP)
-  ECase(EM_MMIX)
-  ECase(EM_HUANY)
-  ECase(EM_PRISM)
-  ECase(EM_AVR)
-  ECase(EM_FR30)
-  ECase(EM_D10V)
-  ECase(EM_D30V)
-  ECase(EM_V850)
-  ECase(EM_M32R)
-  ECase(EM_MN10300)
-  ECase(EM_MN10200)
-  ECase(EM_PJ)
-  ECase(EM_OPENRISC)
-  ECase(EM_ARC_COMPACT)
-  ECase(EM_XTENSA)
-  ECase(EM_VIDEOCORE)
-  ECase(EM_TMM_GPP)
-  ECase(EM_NS32K)
-  ECase(EM_TPC)
-  ECase(EM_SNP1K)
-  ECase(EM_ST200)
-  ECase(EM_IP2K)
-  ECase(EM_MAX)
-  ECase(EM_CR)
-  ECase(EM_F2MC16)
-  ECase(EM_MSP430)
-  ECase(EM_BLACKFIN)
-  ECase(EM_SE_C33)
-  ECase(EM_SEP)
-  ECase(EM_ARCA)
-  ECase(EM_UNICORE)
-  ECase(EM_EXCESS)
-  ECase(EM_DXP)
-  ECase(EM_ALTERA_NIOS2)
-  ECase(EM_CRX)
-  ECase(EM_XGATE)
-  ECase(EM_C166)
-  ECase(EM_M16C)
-  ECase(EM_DSPIC30F)
-  ECase(EM_CE)
-  ECase(EM_M32C)
-  ECase(EM_TSK3000)
-  ECase(EM_RS08)
-  ECase(EM_SHARC)
-  ECase(EM_ECOG2)
-  ECase(EM_SCORE7)
-  ECase(EM_DSP24)
-  ECase(EM_VIDEOCORE3)
-  ECase(EM_LATTICEMICO32)
-  ECase(EM_SE_C17)
-  ECase(EM_TI_C6000)
-  ECase(EM_TI_C2000)
-  ECase(EM_TI_C5500)
-  ECase(EM_MMDSP_PLUS)
-  ECase(EM_CYPRESS_M8C)
-  ECase(EM_R32C)
-  ECase(EM_TRIMEDIA)
-  ECase(EM_HEXAGON)
-  ECase(EM_8051)
-  ECase(EM_STXP7X)
-  ECase(EM_NDS32)
-  ECase(EM_ECOG1)
-  ECase(EM_ECOG1X)
-  ECase(EM_MAXQ30)
-  ECase(EM_XIMO16)
-  ECase(EM_MANIK)
-  ECase(EM_CRAYNV2)
-  ECase(EM_RX)
-  ECase(EM_METAG)
-  ECase(EM_MCST_ELBRUS)
-  ECase(EM_ECOG16)
-  ECase(EM_CR16)
-  ECase(EM_ETPU)
-  ECase(EM_SLE9X)
-  ECase(EM_L10M)
-  ECase(EM_K10M)
-  ECase(EM_AARCH64)
-  ECase(EM_AVR32)
-  ECase(EM_STM8)
-  ECase(EM_TILE64)
-  ECase(EM_TILEPRO)
-  ECase(EM_CUDA)
-  ECase(EM_TILEGX)
-  ECase(EM_CLOUDSHIELD)
-  ECase(EM_COREA_1ST)
-  ECase(EM_COREA_2ND)
-  ECase(EM_ARC_COMPACT2)
-  ECase(EM_OPEN8)
-  ECase(EM_RL78)
-  ECase(EM_VIDEOCORE5)
-  ECase(EM_78KOR)
-  ECase(EM_56800EX)
-  ECase(EM_AMDGPU)
-  ECase(EM_RISCV)
-  ECase(EM_LANAI)
-  ECase(EM_BPF)
+void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
+    IO &IO, ELFYAML::ELF_EM &Value) {
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(EM_NONE);
+  ECase(EM_M32);
+  ECase(EM_SPARC);
+  ECase(EM_386);
+  ECase(EM_68K);
+  ECase(EM_88K);
+  ECase(EM_IAMCU);
+  ECase(EM_860);
+  ECase(EM_MIPS);
+  ECase(EM_S370);
+  ECase(EM_MIPS_RS3_LE);
+  ECase(EM_PARISC);
+  ECase(EM_VPP500);
+  ECase(EM_SPARC32PLUS);
+  ECase(EM_960);
+  ECase(EM_PPC);
+  ECase(EM_PPC64);
+  ECase(EM_S390);
+  ECase(EM_SPU);
+  ECase(EM_V800);
+  ECase(EM_FR20);
+  ECase(EM_RH32);
+  ECase(EM_RCE);
+  ECase(EM_ARM);
+  ECase(EM_ALPHA);
+  ECase(EM_SH);
+  ECase(EM_SPARCV9);
+  ECase(EM_TRICORE);
+  ECase(EM_ARC);
+  ECase(EM_H8_300);
+  ECase(EM_H8_300H);
+  ECase(EM_H8S);
+  ECase(EM_H8_500);
+  ECase(EM_IA_64);
+  ECase(EM_MIPS_X);
+  ECase(EM_COLDFIRE);
+  ECase(EM_68HC12);
+  ECase(EM_MMA);
+  ECase(EM_PCP);
+  ECase(EM_NCPU);
+  ECase(EM_NDR1);
+  ECase(EM_STARCORE);
+  ECase(EM_ME16);
+  ECase(EM_ST100);
+  ECase(EM_TINYJ);
+  ECase(EM_X86_64);
+  ECase(EM_PDSP);
+  ECase(EM_PDP10);
+  ECase(EM_PDP11);
+  ECase(EM_FX66);
+  ECase(EM_ST9PLUS);
+  ECase(EM_ST7);
+  ECase(EM_68HC16);
+  ECase(EM_68HC11);
+  ECase(EM_68HC08);
+  ECase(EM_68HC05);
+  ECase(EM_SVX);
+  ECase(EM_ST19);
+  ECase(EM_VAX);
+  ECase(EM_CRIS);
+  ECase(EM_JAVELIN);
+  ECase(EM_FIREPATH);
+  ECase(EM_ZSP);
+  ECase(EM_MMIX);
+  ECase(EM_HUANY);
+  ECase(EM_PRISM);
+  ECase(EM_AVR);
+  ECase(EM_FR30);
+  ECase(EM_D10V);
+  ECase(EM_D30V);
+  ECase(EM_V850);
+  ECase(EM_M32R);
+  ECase(EM_MN10300);
+  ECase(EM_MN10200);
+  ECase(EM_PJ);
+  ECase(EM_OPENRISC);
+  ECase(EM_ARC_COMPACT);
+  ECase(EM_XTENSA);
+  ECase(EM_VIDEOCORE);
+  ECase(EM_TMM_GPP);
+  ECase(EM_NS32K);
+  ECase(EM_TPC);
+  ECase(EM_SNP1K);
+  ECase(EM_ST200);
+  ECase(EM_IP2K);
+  ECase(EM_MAX);
+  ECase(EM_CR);
+  ECase(EM_F2MC16);
+  ECase(EM_MSP430);
+  ECase(EM_BLACKFIN);
+  ECase(EM_SE_C33);
+  ECase(EM_SEP);
+  ECase(EM_ARCA);
+  ECase(EM_UNICORE);
+  ECase(EM_EXCESS);
+  ECase(EM_DXP);
+  ECase(EM_ALTERA_NIOS2);
+  ECase(EM_CRX);
+  ECase(EM_XGATE);
+  ECase(EM_C166);
+  ECase(EM_M16C);
+  ECase(EM_DSPIC30F);
+  ECase(EM_CE);
+  ECase(EM_M32C);
+  ECase(EM_TSK3000);
+  ECase(EM_RS08);
+  ECase(EM_SHARC);
+  ECase(EM_ECOG2);
+  ECase(EM_SCORE7);
+  ECase(EM_DSP24);
+  ECase(EM_VIDEOCORE3);
+  ECase(EM_LATTICEMICO32);
+  ECase(EM_SE_C17);
+  ECase(EM_TI_C6000);
+  ECase(EM_TI_C2000);
+  ECase(EM_TI_C5500);
+  ECase(EM_MMDSP_PLUS);
+  ECase(EM_CYPRESS_M8C);
+  ECase(EM_R32C);
+  ECase(EM_TRIMEDIA);
+  ECase(EM_HEXAGON);
+  ECase(EM_8051);
+  ECase(EM_STXP7X);
+  ECase(EM_NDS32);
+  ECase(EM_ECOG1);
+  ECase(EM_ECOG1X);
+  ECase(EM_MAXQ30);
+  ECase(EM_XIMO16);
+  ECase(EM_MANIK);
+  ECase(EM_CRAYNV2);
+  ECase(EM_RX);
+  ECase(EM_METAG);
+  ECase(EM_MCST_ELBRUS);
+  ECase(EM_ECOG16);
+  ECase(EM_CR16);
+  ECase(EM_ETPU);
+  ECase(EM_SLE9X);
+  ECase(EM_L10M);
+  ECase(EM_K10M);
+  ECase(EM_AARCH64);
+  ECase(EM_AVR32);
+  ECase(EM_STM8);
+  ECase(EM_TILE64);
+  ECase(EM_TILEPRO);
+  ECase(EM_CUDA);
+  ECase(EM_TILEGX);
+  ECase(EM_CLOUDSHIELD);
+  ECase(EM_COREA_1ST);
+  ECase(EM_COREA_2ND);
+  ECase(EM_ARC_COMPACT2);
+  ECase(EM_OPEN8);
+  ECase(EM_RL78);
+  ECase(EM_VIDEOCORE5);
+  ECase(EM_78KOR);
+  ECase(EM_56800EX);
+  ECase(EM_AMDGPU);
+  ECase(EM_RISCV);
+  ECase(EM_LANAI);
+  ECase(EM_BPF);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_ELFCLASS>::enumeration(
     IO &IO, ELFYAML::ELF_ELFCLASS &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
   // Since the semantics of ELFCLASSNONE is "invalid", just don't accept it
   // here.
-  ECase(ELFCLASS32)
-  ECase(ELFCLASS64)
+  ECase(ELFCLASS32);
+  ECase(ELFCLASS64);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_ELFDATA>::enumeration(
     IO &IO, ELFYAML::ELF_ELFDATA &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
   // Since the semantics of ELFDATANONE is "invalid", just don't accept it
   // here.
-  ECase(ELFDATA2LSB)
-  ECase(ELFDATA2MSB)
+  ECase(ELFDATA2LSB);
+  ECase(ELFDATA2MSB);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_ELFOSABI>::enumeration(
     IO &IO, ELFYAML::ELF_ELFOSABI &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(ELFOSABI_NONE)
-  ECase(ELFOSABI_HPUX)
-  ECase(ELFOSABI_NETBSD)
-  ECase(ELFOSABI_GNU)
-  ECase(ELFOSABI_GNU)
-  ECase(ELFOSABI_HURD)
-  ECase(ELFOSABI_SOLARIS)
-  ECase(ELFOSABI_AIX)
-  ECase(ELFOSABI_IRIX)
-  ECase(ELFOSABI_FREEBSD)
-  ECase(ELFOSABI_TRU64)
-  ECase(ELFOSABI_MODESTO)
-  ECase(ELFOSABI_OPENBSD)
-  ECase(ELFOSABI_OPENVMS)
-  ECase(ELFOSABI_NSK)
-  ECase(ELFOSABI_AROS)
-  ECase(ELFOSABI_FENIXOS)
-  ECase(ELFOSABI_CLOUDABI)
-  ECase(ELFOSABI_C6000_ELFABI)
-  ECase(ELFOSABI_AMDGPU_HSA)
-  ECase(ELFOSABI_C6000_LINUX)
-  ECase(ELFOSABI_ARM)
-  ECase(ELFOSABI_STANDALONE)
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(ELFOSABI_NONE);
+  ECase(ELFOSABI_HPUX);
+  ECase(ELFOSABI_NETBSD);
+  ECase(ELFOSABI_GNU);
+  ECase(ELFOSABI_GNU);
+  ECase(ELFOSABI_HURD);
+  ECase(ELFOSABI_SOLARIS);
+  ECase(ELFOSABI_AIX);
+  ECase(ELFOSABI_IRIX);
+  ECase(ELFOSABI_FREEBSD);
+  ECase(ELFOSABI_TRU64);
+  ECase(ELFOSABI_MODESTO);
+  ECase(ELFOSABI_OPENBSD);
+  ECase(ELFOSABI_OPENVMS);
+  ECase(ELFOSABI_NSK);
+  ECase(ELFOSABI_AROS);
+  ECase(ELFOSABI_FENIXOS);
+  ECase(ELFOSABI_CLOUDABI);
+  ECase(ELFOSABI_C6000_ELFABI);
+  ECase(ELFOSABI_AMDGPU_HSA);
+  ECase(ELFOSABI_C6000_LINUX);
+  ECase(ELFOSABI_ARM);
+  ECase(ELFOSABI_STANDALONE);
 #undef ECase
 }
 
@@ -253,92 +257,92 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
                                                  ELFYAML::ELF_EF &Value) {
   const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
   assert(Object && "The IO context is not initialized");
-#define BCase(X) IO.bitSetCase(Value, #X, ELF::X);
-#define BCaseMask(X, M) IO.maskedBitSetCase(Value, #X, ELF::X, ELF::M);
+#define BCase(X) IO.bitSetCase(Value, #X, ELF::X)
+#define BCaseMask(X, M) IO.maskedBitSetCase(Value, #X, ELF::X, ELF::M)
   switch (Object->Header.Machine) {
   case ELF::EM_ARM:
-    BCase(EF_ARM_SOFT_FLOAT)
-    BCase(EF_ARM_VFP_FLOAT)
-    BCaseMask(EF_ARM_EABI_UNKNOWN, EF_ARM_EABIMASK)
-    BCaseMask(EF_ARM_EABI_VER1, EF_ARM_EABIMASK)
-    BCaseMask(EF_ARM_EABI_VER2, EF_ARM_EABIMASK)
-    BCaseMask(EF_ARM_EABI_VER3, EF_ARM_EABIMASK)
-    BCaseMask(EF_ARM_EABI_VER4, EF_ARM_EABIMASK)
-    BCaseMask(EF_ARM_EABI_VER5, EF_ARM_EABIMASK)
+    BCase(EF_ARM_SOFT_FLOAT);
+    BCase(EF_ARM_VFP_FLOAT);
+    BCaseMask(EF_ARM_EABI_UNKNOWN, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_EABI_VER1, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_EABI_VER2, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_EABI_VER3, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_EABI_VER4, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_EABI_VER5, EF_ARM_EABIMASK);
     break;
   case ELF::EM_MIPS:
-    BCase(EF_MIPS_NOREORDER)
-    BCase(EF_MIPS_PIC)
-    BCase(EF_MIPS_CPIC)
-    BCase(EF_MIPS_ABI2)
-    BCase(EF_MIPS_32BITMODE)
-    BCase(EF_MIPS_FP64)
-    BCase(EF_MIPS_NAN2008)
-    BCase(EF_MIPS_MICROMIPS)
-    BCase(EF_MIPS_ARCH_ASE_M16)
-    BCase(EF_MIPS_ARCH_ASE_MDMX)
-    BCaseMask(EF_MIPS_ABI_O32, EF_MIPS_ABI)
-    BCaseMask(EF_MIPS_ABI_O64, EF_MIPS_ABI)
-    BCaseMask(EF_MIPS_ABI_EABI32, EF_MIPS_ABI)
-    BCaseMask(EF_MIPS_ABI_EABI64, EF_MIPS_ABI)
-    BCaseMask(EF_MIPS_MACH_3900, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_4010, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_4100, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_4650, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_4120, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_4111, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_SB1, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_OCTEON, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_XLR, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_OCTEON2, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_OCTEON3, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_5400, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_5900, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_5500, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_9000, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_LS2E, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_LS2F, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_MACH_LS3A, EF_MIPS_MACH)
-    BCaseMask(EF_MIPS_ARCH_1, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_2, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_3, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_4, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_5, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_32, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_64, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_32R2, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_64R2, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_32R6, EF_MIPS_ARCH)
-    BCaseMask(EF_MIPS_ARCH_64R6, EF_MIPS_ARCH)
+    BCase(EF_MIPS_NOREORDER);
+    BCase(EF_MIPS_PIC);
+    BCase(EF_MIPS_CPIC);
+    BCase(EF_MIPS_ABI2);
+    BCase(EF_MIPS_32BITMODE);
+    BCase(EF_MIPS_FP64);
+    BCase(EF_MIPS_NAN2008);
+    BCase(EF_MIPS_MICROMIPS);
+    BCase(EF_MIPS_ARCH_ASE_M16);
+    BCase(EF_MIPS_ARCH_ASE_MDMX);
+    BCaseMask(EF_MIPS_ABI_O32, EF_MIPS_ABI);
+    BCaseMask(EF_MIPS_ABI_O64, EF_MIPS_ABI);
+    BCaseMask(EF_MIPS_ABI_EABI32, EF_MIPS_ABI);
+    BCaseMask(EF_MIPS_ABI_EABI64, EF_MIPS_ABI);
+    BCaseMask(EF_MIPS_MACH_3900, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_4010, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_4100, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_4650, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_4120, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_4111, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_SB1, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_OCTEON, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_XLR, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_OCTEON2, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_OCTEON3, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_5400, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_5900, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_5500, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_9000, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_LS2E, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_LS2F, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_MACH_LS3A, EF_MIPS_MACH);
+    BCaseMask(EF_MIPS_ARCH_1, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_2, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_3, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_4, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_5, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_32, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_64, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_32R2, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_64R2, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_32R6, EF_MIPS_ARCH);
+    BCaseMask(EF_MIPS_ARCH_64R6, EF_MIPS_ARCH);
     break;
   case ELF::EM_HEXAGON:
-    BCase(EF_HEXAGON_MACH_V2)
-    BCase(EF_HEXAGON_MACH_V3)
-    BCase(EF_HEXAGON_MACH_V4)
-    BCase(EF_HEXAGON_MACH_V5)
-    BCase(EF_HEXAGON_ISA_V2)
-    BCase(EF_HEXAGON_ISA_V3)
-    BCase(EF_HEXAGON_ISA_V4)
-    BCase(EF_HEXAGON_ISA_V5)
+    BCase(EF_HEXAGON_MACH_V2);
+    BCase(EF_HEXAGON_MACH_V3);
+    BCase(EF_HEXAGON_MACH_V4);
+    BCase(EF_HEXAGON_MACH_V5);
+    BCase(EF_HEXAGON_ISA_V2);
+    BCase(EF_HEXAGON_ISA_V3);
+    BCase(EF_HEXAGON_ISA_V4);
+    BCase(EF_HEXAGON_ISA_V5);
     break;
   case ELF::EM_AVR:
-    BCase(EF_AVR_ARCH_AVR1)
-    BCase(EF_AVR_ARCH_AVR2)
-    BCase(EF_AVR_ARCH_AVR25)
-    BCase(EF_AVR_ARCH_AVR3)
-    BCase(EF_AVR_ARCH_AVR31)
-    BCase(EF_AVR_ARCH_AVR35)
-    BCase(EF_AVR_ARCH_AVR4)
-    BCase(EF_AVR_ARCH_AVR51)
-    BCase(EF_AVR_ARCH_AVR6)
-    BCase(EF_AVR_ARCH_AVRTINY)
-    BCase(EF_AVR_ARCH_XMEGA1)
-    BCase(EF_AVR_ARCH_XMEGA2)
-    BCase(EF_AVR_ARCH_XMEGA3)
-    BCase(EF_AVR_ARCH_XMEGA4)
-    BCase(EF_AVR_ARCH_XMEGA5)
-    BCase(EF_AVR_ARCH_XMEGA6)
-    BCase(EF_AVR_ARCH_XMEGA7)
+    BCase(EF_AVR_ARCH_AVR1);
+    BCase(EF_AVR_ARCH_AVR2);
+    BCase(EF_AVR_ARCH_AVR25);
+    BCase(EF_AVR_ARCH_AVR3);
+    BCase(EF_AVR_ARCH_AVR31);
+    BCase(EF_AVR_ARCH_AVR35);
+    BCase(EF_AVR_ARCH_AVR4);
+    BCase(EF_AVR_ARCH_AVR51);
+    BCase(EF_AVR_ARCH_AVR6);
+    BCase(EF_AVR_ARCH_AVRTINY);
+    BCase(EF_AVR_ARCH_XMEGA1);
+    BCase(EF_AVR_ARCH_XMEGA2);
+    BCase(EF_AVR_ARCH_XMEGA3);
+    BCase(EF_AVR_ARCH_XMEGA4);
+    BCase(EF_AVR_ARCH_XMEGA5);
+    BCase(EF_AVR_ARCH_XMEGA6);
+    BCase(EF_AVR_ARCH_XMEGA7);
     break;
   case ELF::EM_AMDGPU:
   case ELF::EM_X86_64:
@@ -354,51 +358,52 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     IO &IO, ELFYAML::ELF_SHT &Value) {
   const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
   assert(Object && "The IO context is not initialized");
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(SHT_NULL)
-  ECase(SHT_PROGBITS)
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(SHT_NULL);
+  ECase(SHT_PROGBITS);
   // No SHT_SYMTAB. Use the top-level `Symbols` key instead.
   // FIXME: Issue a diagnostic with this information.
-  ECase(SHT_STRTAB)
-  ECase(SHT_RELA)
-  ECase(SHT_HASH)
-  ECase(SHT_DYNAMIC)
-  ECase(SHT_NOTE)
-  ECase(SHT_NOBITS)
-  ECase(SHT_REL)
-  ECase(SHT_SHLIB)
-  ECase(SHT_DYNSYM)
-  ECase(SHT_INIT_ARRAY)
-  ECase(SHT_FINI_ARRAY)
-  ECase(SHT_PREINIT_ARRAY)
-  ECase(SHT_GROUP)
-  ECase(SHT_SYMTAB_SHNDX)
-  ECase(SHT_LOOS)
-  ECase(SHT_GNU_ATTRIBUTES)
-  ECase(SHT_GNU_HASH)
-  ECase(SHT_GNU_verdef)
-  ECase(SHT_GNU_verneed)
-  ECase(SHT_GNU_versym)
-  ECase(SHT_HIOS)
-  ECase(SHT_LOPROC)
+  ECase(SHT_STRTAB);
+  ECase(SHT_RELA);
+  ECase(SHT_HASH);
+  ECase(SHT_DYNAMIC);
+  ECase(SHT_NOTE);
+  ECase(SHT_NOBITS);
+  ECase(SHT_REL);
+  ECase(SHT_SHLIB);
+  ECase(SHT_DYNSYM);
+  ECase(SHT_INIT_ARRAY);
+  ECase(SHT_FINI_ARRAY);
+  ECase(SHT_PREINIT_ARRAY);
+  ECase(SHT_GROUP);
+  ECase(SHT_SYMTAB_SHNDX);
+  ECase(SHT_LOOS);
+  ECase(SHT_LLVM_ODRTAB);
+  ECase(SHT_GNU_ATTRIBUTES);
+  ECase(SHT_GNU_HASH);
+  ECase(SHT_GNU_verdef);
+  ECase(SHT_GNU_verneed);
+  ECase(SHT_GNU_versym);
+  ECase(SHT_HIOS);
+  ECase(SHT_LOPROC);
   switch (Object->Header.Machine) {
   case ELF::EM_ARM:
-    ECase(SHT_ARM_EXIDX)
-    ECase(SHT_ARM_PREEMPTMAP)
-    ECase(SHT_ARM_ATTRIBUTES)
-    ECase(SHT_ARM_DEBUGOVERLAY)
-    ECase(SHT_ARM_OVERLAYSECTION)
+    ECase(SHT_ARM_EXIDX);
+    ECase(SHT_ARM_PREEMPTMAP);
+    ECase(SHT_ARM_ATTRIBUTES);
+    ECase(SHT_ARM_DEBUGOVERLAY);
+    ECase(SHT_ARM_OVERLAYSECTION);
     break;
   case ELF::EM_HEXAGON:
-    ECase(SHT_HEX_ORDERED)
+    ECase(SHT_HEX_ORDERED);
     break;
   case ELF::EM_X86_64:
-    ECase(SHT_X86_64_UNWIND)
+    ECase(SHT_X86_64_UNWIND);
     break;
   case ELF::EM_MIPS:
-    ECase(SHT_MIPS_REGINFO)
-    ECase(SHT_MIPS_OPTIONS)
-    ECase(SHT_MIPS_ABIFLAGS)
+    ECase(SHT_MIPS_REGINFO);
+    ECase(SHT_MIPS_OPTIONS);
+    ECase(SHT_MIPS_ABIFLAGS);
     break;
   default:
     // Nothing to do.
@@ -410,43 +415,37 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
 void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
                                                   ELFYAML::ELF_SHF &Value) {
   const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
-#define BCase(X) IO.bitSetCase(Value, #X, ELF::X);
-  BCase(SHF_WRITE)
-  BCase(SHF_ALLOC)
-  BCase(SHF_EXCLUDE)
-  BCase(SHF_EXECINSTR)
-  BCase(SHF_MERGE)
-  BCase(SHF_STRINGS)
-  BCase(SHF_INFO_LINK)
-  BCase(SHF_LINK_ORDER)
-  BCase(SHF_OS_NONCONFORMING)
-  BCase(SHF_GROUP)
-  BCase(SHF_TLS)
-  switch(Object->Header.Machine) {
+#define BCase(X) IO.bitSetCase(Value, #X, ELF::X)
+  BCase(SHF_WRITE);
+  BCase(SHF_ALLOC);
+  BCase(SHF_EXCLUDE);
+  BCase(SHF_EXECINSTR);
+  BCase(SHF_MERGE);
+  BCase(SHF_STRINGS);
+  BCase(SHF_INFO_LINK);
+  BCase(SHF_LINK_ORDER);
+  BCase(SHF_OS_NONCONFORMING);
+  BCase(SHF_GROUP);
+  BCase(SHF_TLS);
+  switch (Object->Header.Machine) {
   case ELF::EM_ARM:
-    BCase(SHF_ARM_PURECODE)
-    break;
-  case ELF::EM_AMDGPU:
-    BCase(SHF_AMDGPU_HSA_GLOBAL)
-    BCase(SHF_AMDGPU_HSA_READONLY)
-    BCase(SHF_AMDGPU_HSA_CODE)
-    BCase(SHF_AMDGPU_HSA_AGENT)
+    BCase(SHF_ARM_PURECODE);
     break;
   case ELF::EM_HEXAGON:
-    BCase(SHF_HEX_GPREL)
+    BCase(SHF_HEX_GPREL);
     break;
   case ELF::EM_MIPS:
-    BCase(SHF_MIPS_NODUPES)
-    BCase(SHF_MIPS_NAMES)
-    BCase(SHF_MIPS_LOCAL)
-    BCase(SHF_MIPS_NOSTRIP)
-    BCase(SHF_MIPS_GPREL)
-    BCase(SHF_MIPS_MERGE)
-    BCase(SHF_MIPS_ADDR)
-    BCase(SHF_MIPS_STRING)
+    BCase(SHF_MIPS_NODUPES);
+    BCase(SHF_MIPS_NAMES);
+    BCase(SHF_MIPS_LOCAL);
+    BCase(SHF_MIPS_NOSTRIP);
+    BCase(SHF_MIPS_GPREL);
+    BCase(SHF_MIPS_MERGE);
+    BCase(SHF_MIPS_ADDR);
+    BCase(SHF_MIPS_STRING);
     break;
   case ELF::EM_X86_64:
-    BCase(SHF_X86_64_LARGE)
+    BCase(SHF_X86_64_LARGE);
     break;
   default:
     // Nothing to do.
@@ -457,25 +456,25 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
 
 void ScalarEnumerationTraits<ELFYAML::ELF_STT>::enumeration(
     IO &IO, ELFYAML::ELF_STT &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(STT_NOTYPE)
-  ECase(STT_OBJECT)
-  ECase(STT_FUNC)
-  ECase(STT_SECTION)
-  ECase(STT_FILE)
-  ECase(STT_COMMON)
-  ECase(STT_TLS)
-  ECase(STT_GNU_IFUNC)
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(STT_NOTYPE);
+  ECase(STT_OBJECT);
+  ECase(STT_FUNC);
+  ECase(STT_SECTION);
+  ECase(STT_FILE);
+  ECase(STT_COMMON);
+  ECase(STT_TLS);
+  ECase(STT_GNU_IFUNC);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_STV>::enumeration(
     IO &IO, ELFYAML::ELF_STV &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(STV_DEFAULT)
-  ECase(STV_INTERNAL)
-  ECase(STV_HIDDEN)
-  ECase(STV_PROTECTED)
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(STV_DEFAULT);
+  ECase(STV_INTERNAL);
+  ECase(STV_HIDDEN);
+  ECase(STV_PROTECTED);
 #undef ECase
 }
 
@@ -483,13 +482,13 @@ void ScalarBitSetTraits<ELFYAML::ELF_STO>::bitset(IO &IO,
                                                   ELFYAML::ELF_STO &Value) {
   const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
   assert(Object && "The IO context is not initialized");
-#define BCase(X) IO.bitSetCase(Value, #X, ELF::X);
+#define BCase(X) IO.bitSetCase(Value, #X, ELF::X)
   switch (Object->Header.Machine) {
   case ELF::EM_MIPS:
-    BCase(STO_MIPS_OPTIONAL)
-    BCase(STO_MIPS_PLT)
-    BCase(STO_MIPS_PIC)
-    BCase(STO_MIPS_MICROMIPS)
+    BCase(STO_MIPS_OPTIONAL);
+    BCase(STO_MIPS_PLT);
+    BCase(STO_MIPS_PIC);
+    BCase(STO_MIPS_MICROMIPS);
     break;
   default:
     break; // Nothing to do
@@ -500,11 +499,11 @@ void ScalarBitSetTraits<ELFYAML::ELF_STO>::bitset(IO &IO,
 
 void ScalarEnumerationTraits<ELFYAML::ELF_RSS>::enumeration(
     IO &IO, ELFYAML::ELF_RSS &Value) {
-#define ECase(X) IO.enumCase(Value, #X, ELF::X);
-  ECase(RSS_UNDEF)
-  ECase(RSS_GP)
-  ECase(RSS_GP0)
-  ECase(RSS_LOC)
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(RSS_UNDEF);
+  ECase(RSS_GP);
+  ECase(RSS_GP0);
+  ECase(RSS_LOC);
 #undef ECase
 }
 
@@ -515,89 +514,90 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
 #define ELF_RELOC(X, Y) IO.enumCase(Value, #X, ELF::X);
   switch (Object->Header.Machine) {
   case ELF::EM_X86_64:
-#include "llvm/Support/ELFRelocs/x86_64.def"
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
     break;
   case ELF::EM_MIPS:
-#include "llvm/Support/ELFRelocs/Mips.def"
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
     break;
   case ELF::EM_HEXAGON:
-#include "llvm/Support/ELFRelocs/Hexagon.def"
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
     break;
   case ELF::EM_386:
   case ELF::EM_IAMCU:
-#include "llvm/Support/ELFRelocs/i386.def"
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
     break;
   case ELF::EM_AARCH64:
-#include "llvm/Support/ELFRelocs/AArch64.def"
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
     break;
   case ELF::EM_ARM:
-#include "llvm/Support/ELFRelocs/ARM.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
     break;
   case ELF::EM_RISCV:
-#include "llvm/Support/ELFRelocs/RISCV.def"
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
     break;
   case ELF::EM_LANAI:
-#include "llvm/Support/ELFRelocs/Lanai.def"
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
     break;
   case ELF::EM_AMDGPU:
-#include "llvm/Support/ELFRelocs/AMDGPU.def"
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
     break;
   case ELF::EM_BPF:
-#include "llvm/Support/ELFRelocs/BPF.def"
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
     break;
   default:
     llvm_unreachable("Unsupported architecture");
   }
 #undef ELF_RELOC
+  IO.enumFallback<Hex32>(Value);
 }
 
 void ScalarEnumerationTraits<ELFYAML::MIPS_AFL_REG>::enumeration(
     IO &IO, ELFYAML::MIPS_AFL_REG &Value) {
-#define ECase(X) IO.enumCase(Value, #X, Mips::AFL_##X);
-  ECase(REG_NONE)
-  ECase(REG_32)
-  ECase(REG_64)
-  ECase(REG_128)
+#define ECase(X) IO.enumCase(Value, #X, Mips::AFL_##X)
+  ECase(REG_NONE);
+  ECase(REG_32);
+  ECase(REG_64);
+  ECase(REG_128);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<ELFYAML::MIPS_ABI_FP>::enumeration(
     IO &IO, ELFYAML::MIPS_ABI_FP &Value) {
-#define ECase(X) IO.enumCase(Value, #X, Mips::Val_GNU_MIPS_ABI_##X);
-  ECase(FP_ANY)
-  ECase(FP_DOUBLE)
-  ECase(FP_SINGLE)
-  ECase(FP_SOFT)
-  ECase(FP_OLD_64)
-  ECase(FP_XX)
-  ECase(FP_64)
-  ECase(FP_64A)
+#define ECase(X) IO.enumCase(Value, #X, Mips::Val_GNU_MIPS_ABI_##X)
+  ECase(FP_ANY);
+  ECase(FP_DOUBLE);
+  ECase(FP_SINGLE);
+  ECase(FP_SOFT);
+  ECase(FP_OLD_64);
+  ECase(FP_XX);
+  ECase(FP_64);
+  ECase(FP_64A);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<ELFYAML::MIPS_AFL_EXT>::enumeration(
     IO &IO, ELFYAML::MIPS_AFL_EXT &Value) {
-#define ECase(X) IO.enumCase(Value, #X, Mips::AFL_##X);
-  ECase(EXT_NONE)
-  ECase(EXT_XLR)
-  ECase(EXT_OCTEON2)
-  ECase(EXT_OCTEONP)
-  ECase(EXT_LOONGSON_3A)
-  ECase(EXT_OCTEON)
-  ECase(EXT_5900)
-  ECase(EXT_4650)
-  ECase(EXT_4010)
-  ECase(EXT_4100)
-  ECase(EXT_3900)
-  ECase(EXT_10000)
-  ECase(EXT_SB1)
-  ECase(EXT_4111)
-  ECase(EXT_4120)
-  ECase(EXT_5400)
-  ECase(EXT_5500)
-  ECase(EXT_LOONGSON_2E)
-  ECase(EXT_LOONGSON_2F)
-  ECase(EXT_OCTEON3)
+#define ECase(X) IO.enumCase(Value, #X, Mips::AFL_##X)
+  ECase(EXT_NONE);
+  ECase(EXT_XLR);
+  ECase(EXT_OCTEON2);
+  ECase(EXT_OCTEONP);
+  ECase(EXT_LOONGSON_3A);
+  ECase(EXT_OCTEON);
+  ECase(EXT_5900);
+  ECase(EXT_4650);
+  ECase(EXT_4010);
+  ECase(EXT_4100);
+  ECase(EXT_3900);
+  ECase(EXT_10000);
+  ECase(EXT_SB1);
+  ECase(EXT_4111);
+  ECase(EXT_4120);
+  ECase(EXT_5400);
+  ECase(EXT_5500);
+  ECase(EXT_LOONGSON_2E);
+  ECase(EXT_LOONGSON_2F);
+  ECase(EXT_OCTEON3);
 #undef ECase
 }
 
@@ -614,27 +614,27 @@ void ScalarEnumerationTraits<ELFYAML::MIPS_ISA>::enumeration(
 
 void ScalarBitSetTraits<ELFYAML::MIPS_AFL_ASE>::bitset(
     IO &IO, ELFYAML::MIPS_AFL_ASE &Value) {
-#define BCase(X) IO.bitSetCase(Value, #X, Mips::AFL_ASE_##X);
-  BCase(DSP)
-  BCase(DSPR2)
-  BCase(EVA)
-  BCase(MCU)
-  BCase(MDMX)
-  BCase(MIPS3D)
-  BCase(MT)
-  BCase(SMARTMIPS)
-  BCase(VIRT)
-  BCase(MSA)
-  BCase(MIPS16)
-  BCase(MICROMIPS)
-  BCase(XPA)
+#define BCase(X) IO.bitSetCase(Value, #X, Mips::AFL_ASE_##X)
+  BCase(DSP);
+  BCase(DSPR2);
+  BCase(EVA);
+  BCase(MCU);
+  BCase(MDMX);
+  BCase(MIPS3D);
+  BCase(MT);
+  BCase(SMARTMIPS);
+  BCase(VIRT);
+  BCase(MSA);
+  BCase(MIPS16);
+  BCase(MICROMIPS);
+  BCase(XPA);
 #undef BCase
 }
 
 void ScalarBitSetTraits<ELFYAML::MIPS_AFL_FLAGS1>::bitset(
     IO &IO, ELFYAML::MIPS_AFL_FLAGS1 &Value) {
-#define BCase(X) IO.bitSetCase(Value, #X, Mips::AFL_FLAGS1_##X);
-  BCase(ODDSPREG)
+#define BCase(X) IO.bitSetCase(Value, #X, Mips::AFL_FLAGS1_##X)
+  BCase(ODDSPREG);
 #undef BCase
 }
 
@@ -650,6 +650,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
 }
 
 namespace {
+
 struct NormalizedOther {
   NormalizedOther(IO &)
       : Visibility(ELFYAML::ELF_STV(0)), Other(ELFYAML::ELF_STO(0)) {}
@@ -661,7 +662,8 @@ struct NormalizedOther {
   ELFYAML::ELF_STV Visibility;
   ELFYAML::ELF_STO Other;
 };
-}
+
+} // end anonymous namespace
 
 void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Name", Symbol.Name, StringRef());
@@ -784,6 +786,7 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
 }
 
 namespace {
+
 struct NormalizedMips64RelType {
   NormalizedMips64RelType(IO &)
       : Type(ELFYAML::ELF_REL(ELF::R_MIPS_NONE)),
@@ -804,7 +807,8 @@ struct NormalizedMips64RelType {
   ELFYAML::ELF_REL Type3;
   ELFYAML::ELF_RSS SpecSym;
 };
-}
+
+} // end anonymous namespace
 
 void MappingTraits<ELFYAML::Relocation>::mapping(IO &IO,
                                                  ELFYAML::Relocation &Rel) {
@@ -845,4 +849,5 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_ASE)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
 
 } // end namespace yaml
+
 } // end namespace llvm

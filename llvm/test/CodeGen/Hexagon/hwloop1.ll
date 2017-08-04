@@ -3,7 +3,7 @@
 
 ; Case 1 : Loop with a constant number of iterations.
 ; CHECK-LABEL: @hwloop1
-; CHECK: loop0(.LBB{{.}}_{{.}}, #10)
+; CHECK: loop0(.LBB{{.}}_{{.}},#10)
 ; CHECK: endloop0
 
 @a = common global [10 x i32] zeroinitializer, align 4
@@ -23,7 +23,7 @@ for.end:
 
 ; Case 2 : Loop with a run-time number of iterations.
 ; CHECK-LABEL: @hwloop2
-; CHECK: loop0(.LBB{{.}}_{{.}}, r{{[0-9]+}})
+; CHECK: loop0(.LBB{{.}}_{{.}},r{{[0-9]+}})
 ; CHECK: endloop0
 
 define i32 @hwloop2(i32 %n, i32* nocapture %b) nounwind {
@@ -54,8 +54,8 @@ for.end:
 
 ; Case 3 : Induction variable increment more than 1.
 ; CHECK-LABEL: @hwloop3
-; CHECK: lsr(r{{[0-9]+}}, #2)
-; CHECK: loop0(.LBB{{.}}_{{.}}, r{{[0-9]+}})
+; CHECK: lsr(r{{[0-9]+}},#2)
+; CHECK: loop0(.LBB{{.}}_{{.}},r{{[0-9]+}})
 ; CHECK: endloop0
 
 define i32 @hwloop3(i32 %n, i32* nocapture %b) nounwind {
@@ -86,7 +86,7 @@ for.end:
 
 ; Case 4 : Loop exit compare uses register instead of immediate value.
 ; CHECK-LABEL: @hwloop4
-; CHECK: loop0(.LBB{{.}}_{{.}}, r{{[0-9]+}})
+; CHECK: loop0(.LBB{{.}}_{{.}},r{{[0-9]+}})
 ; CHECK: endloop0
 
 define i32 @hwloop4(i32 %n, i32* nocapture %b) nounwind {
@@ -114,7 +114,7 @@ for.end:
 
 ; Case 5: After LSR, the initial value is 100 and the iv decrements to 0.
 ; CHECK-LABEL: @hwloop5
-; CHECK: loop0(.LBB{{.}}_{{.}}, #100)
+; CHECK: loop0(.LBB{{.}}_{{.}},#100)
 ; CHECK: endloop0
 
 define void @hwloop5(i32* nocapture %a, i32* nocapture %res) nounwind {
@@ -138,8 +138,8 @@ for.end:
 
 ; Case 6: Large immediate offset
 ; CHECK-LABEL: @hwloop6
-; CHECK-NOT: loop0(.LBB{{.}}_{{.}}, #1024)
-; CHECK: loop0(.LBB{{.}}_{{.}}, r{{[0-9]+}})
+; CHECK-NOT: loop0(.LBB{{.}}_{{.}},#1024)
+; CHECK: loop0(.LBB{{.}}_{{.}},r{{[0-9]+}})
 ; CHECK: endloop0
 
 define void @hwloop6(i32* nocapture %a, i32* nocapture %res) nounwind {

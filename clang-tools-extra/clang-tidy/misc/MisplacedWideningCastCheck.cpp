@@ -21,7 +21,7 @@ namespace misc {
 MisplacedWideningCastCheck::MisplacedWideningCastCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CheckImplicitCasts(Options.get("CheckImplicitCasts", true)) {}
+      CheckImplicitCasts(Options.get("CheckImplicitCasts", false)) {}
 
 void MisplacedWideningCastCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

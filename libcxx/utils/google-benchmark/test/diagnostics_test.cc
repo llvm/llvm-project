@@ -26,7 +26,7 @@ void TestHandler() {
 }
 
 void try_invalid_pause_resume(benchmark::State& state) {
-#if !defined(NDEBUG) && !defined(TEST_HAS_NO_EXCEPTIONS)
+#if !defined(TEST_BENCHMARK_LIBRARY_HAS_NO_ASSERTIONS) && !defined(TEST_HAS_NO_EXCEPTIONS)
   try {
     state.PauseTiming();
     std::abort();

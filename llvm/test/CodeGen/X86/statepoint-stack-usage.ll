@@ -1,4 +1,4 @@
-; RUN: llc -stack-symbol-ordering=0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -stack-symbol-ordering=0 < %s | FileCheck %s
 
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
@@ -11,9 +11,9 @@ target triple = "x86_64-pc-linux-gnu"
 define i32 @back_to_back_calls(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c) #1 gc "statepoint-example" {
 ; CHECK-LABEL: back_to_back_calls
 ; The exact stores don't matter, but there need to be three stack slots created
-; CHECK: movq	%rdi, 16(%rsp)
-; CHECK: movq	%rdx, 8(%rsp)
-; CHECK: movq	%rsi, (%rsp)
+; CHECK-DAG: movq	%rdi, 16(%rsp)
+; CHECK-DAG: movq	%rdx, 8(%rsp)
+; CHECK-DAG: movq	%rsi, (%rsp)
 ; There should be no more than three moves
 ; CHECK-NOT: movq
   %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
@@ -36,9 +36,9 @@ define i32 @back_to_back_calls(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 a
 define i32 @reserve_first(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c) #1 gc "statepoint-example" {
 ; CHECK-LABEL: reserve_first
 ; The exact stores don't matter, but there need to be three stack slots created
-; CHECK: movq	%rdi, 16(%rsp)
-; CHECK: movq	%rdx, 8(%rsp)
-; CHECK: movq	%rsi, (%rsp)
+; CHECK-DAG: movq	%rdi, 16(%rsp)
+; CHECK-DAG: movq	%rdx, 8(%rsp)
+; CHECK-DAG: movq	%rsi, (%rsp)
   %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
   %a1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 12)
   %b1 = tail call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 12, i32 13)
@@ -61,21 +61,21 @@ define i32 @back_to_back_deopt(i32 %a, i32 %b, i32 %c) #1
   gc "statepoint-example" {
 ; CHECK-LABEL: back_to_back_deopt
 ; The exact stores don't matter, but there need to be three stack slots created
-; CHECK: movl	%ebx, 12(%rsp)
-; CHECK: movl	%ebp, 8(%rsp)
-; CHECK: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%r14d, 4(%rsp)
 ; CHECK: callq
-; CHECK: movl	%ebx, 12(%rsp)
-; CHECK: movl	%ebp, 8(%rsp)
-; CHECK: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%r14d, 4(%rsp)
 ; CHECK: callq
-; CHECK: movl	%ebx, 12(%rsp)
-; CHECK: movl	%ebp, 8(%rsp)
-; CHECK: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%r14d, 4(%rsp)
 ; CHECK: callq
-; CHECK: movl	%ebx, 12(%rsp)
-; CHECK: movl	%ebp, 8(%rsp)
-; CHECK: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%r14d, 4(%rsp)
 ; CHECK: callq
   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 3, i32 %a, i32 %b, i32 %c)
 call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 3, i32 %a, i32 %b, i32 %c)
@@ -89,9 +89,9 @@ define i32 @back_to_back_invokes(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32
 ; CHECK-LABEL: back_to_back_invokes
 entry:
   ; The exact stores don't matter, but there need to be three stack slots created
-  ; CHECK: movq	%rdi, 16(%rsp)
-  ; CHECK: movq	%rdx, 8(%rsp)
-  ; CHECK: movq	%rsi, (%rsp)
+  ; CHECK-DAG: movq	%rdi, 16(%rsp)
+  ; CHECK-DAG: movq	%rdx, 8(%rsp)
+  ; CHECK-DAG: movq	%rsi, (%rsp)
   ; CHECK: callq
   %safepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c)
                    to label %normal_return unwind label %exceptional_return

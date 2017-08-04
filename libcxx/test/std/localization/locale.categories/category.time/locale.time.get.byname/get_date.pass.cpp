@@ -13,7 +13,7 @@
 // REQUIRES: locale.zh_CN.UTF-8
 
 // GLIBC Expects "10/06/2009" for fr_FR as opposed to "10.06.2009"
-// GLIBC also failes on the zh_CN test.
+// GLIBC also fails on the zh_CN test.
 // XFAIL: linux
 
 // <locale>

@@ -13,7 +13,7 @@
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
-define void @store_build_vector_multiple_uses_v4i32(<4 x i32> addrspace(1)* noalias %out0,
+define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32(<4 x i32> addrspace(1)* noalias %out0,
                                                     <4 x i32> addrspace(1)* noalias %out1,
                                                     i32 addrspace(1)* noalias %out2,
                                                     i32 addrspace(1)* %in) {
@@ -55,7 +55,7 @@ define void @store_build_vector_multiple_uses_v4i32(<4 x i32> addrspace(1)* noal
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
-define void @store_build_vector_multiple_extract_uses_v4i32(<4 x i32> addrspace(1)* noalias %out0,
+define amdgpu_kernel void @store_build_vector_multiple_extract_uses_v4i32(<4 x i32> addrspace(1)* noalias %out0,
                                                             <4 x i32> addrspace(1)* noalias %out1,
                                                             i32 addrspace(1)* noalias %out2,
                                                             i32 addrspace(1)* %in) {
@@ -99,7 +99,7 @@ define void @store_build_vector_multiple_extract_uses_v4i32(<4 x i32> addrspace(
 
 ; GCN: buffer_store_dwordx2
 ; GCN: buffer_store_dwordx2
-define void @store_build_vector_multiple_uses_v4i32_bitcast_to_v2i64(<2 x i64> addrspace(1)* noalias %out0,
+define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32_bitcast_to_v2i64(<2 x i64> addrspace(1)* noalias %out0,
                                                                      <4 x i32> addrspace(1)* noalias %out1,
                                                                      i64 addrspace(1)* noalias %out2,
                                                                      i32 addrspace(1)* %in) {

@@ -12,11 +12,7 @@ declare void @llvm.amdgcn.s.barrier() #2
 
 ; SI-LABEL: {{^}}test_private_array_ptr_calc:
 
-; FIXME: We end up with zero argument for ADD, because
-; SIRegisterInfo::eliminateFrameIndex() blindly replaces the frame index
-; with the appropriate offset.  We should fold this into the store.
-
-; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 0, v{{[0-9]+}}
+; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 16, v{{[0-9]+}}
 ; SI-ALLOCA: buffer_store_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:64
 ; SI-ALLOCA: s_barrier
 ; SI-ALLOCA: buffer_load_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:64
@@ -28,7 +24,7 @@ declare void @llvm.amdgcn.s.barrier() #2
 
 ; SI-PROMOTE: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 64
 ; SI-PROMOTE: ds_write_b32 [[PTRREG]]
-define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) #0 {
+define amdgpu_kernel void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) #0 {
   %alloca = alloca [16 x i32], align 16
   %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0);
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)

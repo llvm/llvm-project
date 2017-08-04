@@ -108,11 +108,10 @@ entry:
   ret i32 %0
 }
 
-; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO_DS for
-; accessing tentatively declared variable ti.
+; Verify generation of relocations foraccessing variable ti.
 ;
 ; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM6]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM6]]
 ;
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM6]]

@@ -26,25 +26,25 @@ entry:
   %Big = alloca [20 x i8], align 16
   %Small = alloca [10 x i8], align 1
   %0 = getelementptr inbounds [20 x i8], [20 x i8]* %Big, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 20, i8* %0)
+  call void @llvm.lifetime.start.p0i8(i64 20, i8* %0)
   %1 = getelementptr inbounds [10 x i8], [10 x i8]* %Small, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 10, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 10, i8* %1)
   %tobool = icmp ne i32 %N, 0
   %add.ptr = getelementptr inbounds [20 x i8], [20 x i8]* %Big, i64 0, i64 10
   %cond = select i1 %tobool, i8* %add.ptr, i8* %1
   %2 = call i64 @llvm.objectsize.i64.p0i8(i8* %cond, i1 false)
   %conv = trunc i64 %2 to i32
-  call void @llvm.lifetime.end(i64 10, i8* %1)
-  call void @llvm.lifetime.end(i64 20, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 10, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 20, i8* %0)
   ret i32 %conv
 ; CHECK: ret i32 10 
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1)
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 define void @foo() {
 entry:

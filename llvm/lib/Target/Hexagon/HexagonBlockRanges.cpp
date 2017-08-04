@@ -219,8 +219,7 @@ HexagonBlockRanges::HexagonBlockRanges(MachineFunction &mf)
     TII(*HST.getInstrInfo()), TRI(*HST.getRegisterInfo()),
     Reserved(TRI.getReservedRegs(mf)) {
   // Consider all non-allocatable registers as reserved.
-  for (auto I = TRI.regclass_begin(), E = TRI.regclass_end(); I != E; ++I) {
-    auto *RC = *I;
+  for (const TargetRegisterClass *RC : TRI.regclasses()) {
     if (RC->isAllocatable())
       continue;
     for (unsigned R : *RC)
@@ -233,14 +232,16 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::getLiveIns(
       const TargetRegisterInfo &TRI) {
   RegisterSet LiveIns;
   RegisterSet Tmp;
+
   for (auto I : B.liveins()) {
-    if (I.LaneMask.all()) {
-      Tmp.insert({I.PhysReg,0});
+    MCSubRegIndexIterator S(I.PhysReg, &TRI);
+    if (I.LaneMask.all() || (I.LaneMask.any() && !S.isValid())) {
+      Tmp.insert({I.PhysReg, 0});
       continue;
     }
-    for (MCSubRegIndexIterator S(I.PhysReg, &TRI); S.isValid(); ++S) {
-      LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-      if ((M & I.LaneMask).any())
+    for (; S.isValid(); ++S) {
+      unsigned SI = S.getSubRegIndex();
+      if ((I.LaneMask & TRI.getSubRegIndexLaneMask(SI)).any())
         Tmp.insert({S.getSubReg(), 0});
     }
   }
@@ -307,6 +308,8 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     LastUse[R] = LastDef[R] = IndexType::None;
   };
 
+  RegisterSet Defs, Clobbers;
+
   for (auto &In : B) {
     if (In.isDebugValue())
       continue;
@@ -325,18 +328,66 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
           closeRange(S);
       }
     }
-    // Process defs.
+    // Process defs and clobbers.
+    Defs.clear();
+    Clobbers.clear();
     for (auto &Op : In.operands()) {
       if (!Op.isReg() || !Op.isDef() || Op.isUndef())
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
-      if (TargetRegisterInfo::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
-        continue;
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
-        if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
-          closeRange(S);
-        LastDef[S] = Index;
+        if (TargetRegisterInfo::isPhysicalRegister(S.Reg) && Reserved[S.Reg])
+          continue;
+        if (Op.isDead())
+          Clobbers.insert(S);
+        else
+          Defs.insert(S);
       }
+    }
+
+    for (auto &Op : In.operands()) {
+      if (!Op.isRegMask())
+        continue;
+      const uint32_t *BM = Op.getRegMask();
+      for (unsigned PR = 1, N = TRI.getNumRegs(); PR != N; ++PR) {
+        // Skip registers that have subregisters. A register is preserved
+        // iff its bit is set in the regmask, so if R1:0 was preserved, both
+        // R1 and R0 would also be present.
+        if (MCSubRegIterator(PR, &TRI, false).isValid())
+          continue;
+        if (Reserved[PR])
+          continue;
+        if (BM[PR/32] & (1u << (PR%32)))
+          continue;
+        RegisterRef R = { PR, 0 };
+        if (!Defs.count(R))
+          Clobbers.insert(R);
+      }
+    }
+    // Defs and clobbers can overlap, e.g.
+    // %D0<def,dead> = COPY %vreg5, %R0<imp-def>, %R1<imp-def>
+    for (RegisterRef R : Defs)
+      Clobbers.erase(R);
+
+    // Update maps for defs.
+    for (RegisterRef S : Defs) {
+      // Defs should already be expanded into subregs.
+      assert(!TargetRegisterInfo::isPhysicalRegister(S.Reg) ||
+             !MCSubRegIterator(S.Reg, &TRI, false).isValid());
+      if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
+        closeRange(S);
+      LastDef[S] = Index;
+    }
+    // Update maps for clobbers.
+    for (RegisterRef S : Clobbers) {
+      // Clobbers should already be expanded into subregs.
+      assert(!TargetRegisterInfo::isPhysicalRegister(S.Reg) ||
+             !MCSubRegIterator(S.Reg, &TRI, false).isValid());
+      if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
+        closeRange(S);
+      // Create a single-instruction range.
+      LastDef[S] = LastUse[S] = Index;
+      closeRange(S);
     }
   }
 

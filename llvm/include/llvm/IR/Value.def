@@ -20,8 +20,12 @@
 #if !(defined HANDLE_GLOBAL_VALUE || defined HANDLE_CONSTANT ||                \
       defined HANDLE_INSTRUCTION || defined HANDLE_INLINE_ASM_VALUE ||         \
       defined HANDLE_METADATA_VALUE || defined HANDLE_VALUE ||                 \
-      defined HANDLE_CONSTANT_MARKER)
+      defined HANDLE_CONSTANT_MARKER || defined HANDLE_MEMORY_VALUE)
 #error "Missing macro definition of HANDLE_VALUE*"
+#endif
+
+#ifndef HANDLE_MEMORY_VALUE
+#define HANDLE_MEMORY_VALUE(ValueName) HANDLE_VALUE(ValueName)
 #endif
 
 #ifndef HANDLE_GLOBAL_VALUE
@@ -54,9 +58,13 @@
 
 HANDLE_VALUE(Argument)
 HANDLE_VALUE(BasicBlock)
-HANDLE_VALUE(MemoryUse)
-HANDLE_VALUE(MemoryDef)
-HANDLE_VALUE(MemoryPhi)
+
+// FIXME: It's awkward that Value.def knows about classes in Analysis. While
+// this doesn't introduce a strict link or include dependency, we should remove
+// the circular dependency eventually.
+HANDLE_MEMORY_VALUE(MemoryUse)
+HANDLE_MEMORY_VALUE(MemoryDef)
+HANDLE_MEMORY_VALUE(MemoryPhi)
 
 HANDLE_GLOBAL_VALUE(Function)
 HANDLE_GLOBAL_VALUE(GlobalAlias)
@@ -94,6 +102,7 @@ HANDLE_CONSTANT_MARKER(ConstantDataLastVal, ConstantTokenNone)
 HANDLE_CONSTANT_MARKER(ConstantAggregateFirstVal, ConstantArray)
 HANDLE_CONSTANT_MARKER(ConstantAggregateLastVal, ConstantVector)
 
+#undef HANDLE_MEMORY_VALUE
 #undef HANDLE_GLOBAL_VALUE
 #undef HANDLE_CONSTANT
 #undef HANDLE_INSTRUCTION

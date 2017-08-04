@@ -58,6 +58,7 @@ public:
   /// comes before \p B in \p BB. This is a simplification that considers
   /// cached instruction positions and ignores other basic blocks, being
   /// only relevant to compare relative instructions positions inside \p BB.
+  /// Returns false for A == B.
   bool dominates(const Instruction *A, const Instruction *B);
 };
 

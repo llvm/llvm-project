@@ -25,6 +25,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -35,6 +36,9 @@ using namespace llvm;
 STATISTIC(NumElimIdentity, "Number of IV identities eliminated");
 STATISTIC(NumElimOperand,  "Number of IV operands folded into a use");
 STATISTIC(NumElimRem     , "Number of IV remainder operations eliminated");
+STATISTIC(
+    NumSimplifiedSDiv,
+    "Number of IV signed division operations converted to unsigned division");
 STATISTIC(NumElimCmp     , "Number of IV comparisons eliminated");
 
 namespace {
@@ -48,13 +52,13 @@ namespace {
     ScalarEvolution  *SE;
     DominatorTree    *DT;
 
-    SmallVectorImpl<WeakVH> &DeadInsts;
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
     bool Changed;
 
   public:
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
-                   LoopInfo *LI,SmallVectorImpl<WeakVH> &Dead)
+                   LoopInfo *LI, SmallVectorImpl<WeakTrackingVH> &Dead)
         : L(Loop), LI(LI), SE(SE), DT(DT), DeadInsts(Dead), Changed(false) {
       assert(LI && "IV simplification requires LoopInfo");
     }
@@ -75,7 +79,9 @@ namespace {
     void eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand);
     void eliminateIVRemainder(BinaryOperator *Rem, Value *IVOperand,
                               bool IsSigned);
+    bool eliminateSDiv(BinaryOperator *SDiv);
     bool strengthenOverflowingOperation(BinaryOperator *OBO, Value *IVOperand);
+    bool strengthenRightShift(BinaryOperator *BO, Value *IVOperand);
   };
 }
 
@@ -150,6 +156,7 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
 void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
   unsigned IVOperIdx = 0;
   ICmpInst::Predicate Pred = ICmp->getPredicate();
+  ICmpInst::Predicate OriginalPred = Pred;
   if (IVOperand != ICmp->getOperand(0)) {
     // Swapped
     assert(IVOperand == ICmp->getOperand(1) && "Can't find IVOperand");
@@ -258,11 +265,48 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
     ICmp->setPredicate(InvariantPredicate);
     ICmp->setOperand(0, NewLHS);
     ICmp->setOperand(1, NewRHS);
+  } else if (ICmpInst::isSigned(OriginalPred) &&
+             SE->isKnownNonNegative(S) && SE->isKnownNonNegative(X)) {
+    // If we were unable to make anything above, all we can is to canonicalize
+    // the comparison hoping that it will open the doors for other
+    // optimizations. If we find out that we compare two non-negative values,
+    // we turn the instruction's predicate to its unsigned version. Note that
+    // we cannot rely on Pred here unless we check if we have swapped it.
+    assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
+    DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp << '\n');
+    ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
   } else
     return;
 
   ++NumElimCmp;
   Changed = true;
+}
+
+bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
+  // Get the SCEVs for the ICmp operands.
+  auto *N = SE->getSCEV(SDiv->getOperand(0));
+  auto *D = SE->getSCEV(SDiv->getOperand(1));
+
+  // Simplify unnecessary loops away.
+  const Loop *L = LI->getLoopFor(SDiv->getParent());
+  N = SE->getSCEVAtScope(N, L);
+  D = SE->getSCEVAtScope(D, L);
+
+  // Replace sdiv by udiv if both of the operands are non-negative
+  if (SE->isKnownNonNegative(N) && SE->isKnownNonNegative(D)) {
+    auto *UDiv = BinaryOperator::Create(
+        BinaryOperator::UDiv, SDiv->getOperand(0), SDiv->getOperand(1),
+        SDiv->getName() + ".udiv", SDiv);
+    UDiv->setIsExact(SDiv->isExact());
+    SDiv->replaceAllUsesWith(UDiv);
+    DEBUG(dbgs() << "INDVARS: Simplified sdiv: " << *SDiv << '\n');
+    ++NumSimplifiedSDiv;
+    Changed = true;
+    DeadInsts.push_back(SDiv);
+    return true;
+  }
+
+  return false;
 }
 
 /// SimplifyIVUsers helper for eliminating useless
@@ -321,9 +365,9 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
     return false;
 
   typedef const SCEV *(ScalarEvolution::*OperationFunctionTy)(
-      const SCEV *, const SCEV *, SCEV::NoWrapFlags);
+      const SCEV *, const SCEV *, SCEV::NoWrapFlags, unsigned);
   typedef const SCEV *(ScalarEvolution::*ExtensionFunctionTy)(
-      const SCEV *, Type *);
+      const SCEV *, Type *, unsigned);
 
   OperationFunctionTy Operation;
   ExtensionFunctionTy Extension;
@@ -375,10 +419,11 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
     IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
 
   const SCEV *A =
-      (SE->*Extension)((SE->*Operation)(LHS, RHS, SCEV::FlagAnyWrap), WideTy);
+      (SE->*Extension)((SE->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0),
+                       WideTy, 0);
   const SCEV *B =
-      (SE->*Operation)((SE->*Extension)(LHS, WideTy),
-                       (SE->*Extension)(RHS, WideTy), SCEV::FlagAnyWrap);
+      (SE->*Operation)((SE->*Extension)(LHS, WideTy, 0),
+                       (SE->*Extension)(RHS, WideTy, 0), SCEV::FlagAnyWrap, 0);
 
   if (A != B)
     return false;
@@ -426,12 +471,15 @@ bool SimplifyIndvar::eliminateIVUser(Instruction *UseInst,
     eliminateIVComparison(ICmp, IVOperand);
     return true;
   }
-  if (BinaryOperator *Rem = dyn_cast<BinaryOperator>(UseInst)) {
-    bool IsSigned = Rem->getOpcode() == Instruction::SRem;
-    if (IsSigned || Rem->getOpcode() == Instruction::URem) {
-      eliminateIVRemainder(Rem, IVOperand, IsSigned);
+  if (BinaryOperator *Bin = dyn_cast<BinaryOperator>(UseInst)) {
+    bool IsSRem = Bin->getOpcode() == Instruction::SRem;
+    if (IsSRem || Bin->getOpcode() == Instruction::URem) {
+      eliminateIVRemainder(Bin, IVOperand, IsSRem);
       return true;
     }
+
+    if (Bin->getOpcode() == Instruction::SDiv)
+      return eliminateSDiv(Bin);
   }
 
   if (auto *CI = dyn_cast<CallInst>(UseInst))
@@ -496,8 +544,7 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
     return false;
 
   const SCEV *(ScalarEvolution::*GetExprForBO)(const SCEV *, const SCEV *,
-                                               SCEV::NoWrapFlags);
-
+                                               SCEV::NoWrapFlags, unsigned);
   switch (BO->getOpcode()) {
   default:
     return false;
@@ -526,7 +573,7 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
     const SCEV *ExtendAfterOp = SE->getZeroExtendExpr(SE->getSCEV(BO), WideTy);
     const SCEV *OpAfterExtend = (SE->*GetExprForBO)(
       SE->getZeroExtendExpr(LHS, WideTy), SE->getZeroExtendExpr(RHS, WideTy),
-      SCEV::FlagAnyWrap);
+      SCEV::FlagAnyWrap, 0u);
     if (ExtendAfterOp == OpAfterExtend) {
       BO->setHasNoUnsignedWrap();
       SE->forgetValue(BO);
@@ -538,7 +585,7 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
     const SCEV *ExtendAfterOp = SE->getSignExtendExpr(SE->getSCEV(BO), WideTy);
     const SCEV *OpAfterExtend = (SE->*GetExprForBO)(
       SE->getSignExtendExpr(LHS, WideTy), SE->getSignExtendExpr(RHS, WideTy),
-      SCEV::FlagAnyWrap);
+      SCEV::FlagAnyWrap, 0u);
     if (ExtendAfterOp == OpAfterExtend) {
       BO->setHasNoSignedWrap();
       SE->forgetValue(BO);
@@ -547,6 +594,35 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
   }
 
   return Changed;
+}
+
+/// Annotate the Shr in (X << IVOperand) >> C as exact using the
+/// information from the IV's range. Returns true if anything changed, false
+/// otherwise.
+bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
+                                          Value *IVOperand) {
+  using namespace llvm::PatternMatch;
+
+  if (BO->getOpcode() == Instruction::Shl) {
+    bool Changed = false;
+    ConstantRange IVRange = SE->getUnsignedRange(SE->getSCEV(IVOperand));
+    for (auto *U : BO->users()) {
+      const APInt *C;
+      if (match(U,
+                m_AShr(m_Shl(m_Value(), m_Specific(IVOperand)), m_APInt(C))) ||
+          match(U,
+                m_LShr(m_Shl(m_Value(), m_Specific(IVOperand)), m_APInt(C)))) {
+        BinaryOperator *Shr = cast<BinaryOperator>(U);
+        if (!Shr->isExact() && IVRange.getUnsignedMin().uge(*C)) {
+          Shr->setIsExact(true);
+          Changed = true;
+        }
+      }
+    }
+    return Changed;
+  }
+
+  return false;
 }
 
 /// Add all uses of Def to the current IV's worklist.
@@ -641,8 +717,9 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     }
 
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(UseOper.first)) {
-      if (isa<OverflowingBinaryOperator>(BO) &&
-          strengthenOverflowingOperation(BO, IVOperand)) {
+      if ((isa<OverflowingBinaryOperator>(BO) &&
+           strengthenOverflowingOperation(BO, IVOperand)) ||
+          (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand))) {
         // re-queue uses of the now modified binary operator and fall
         // through to the checks that remain.
         pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
@@ -667,7 +744,7 @@ void IVVisitor::anchor() { }
 /// Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
 bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead,
+                       LoopInfo *LI, SmallVectorImpl<WeakTrackingVH> &Dead,
                        IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, Dead);
   SIV.simplifyUsers(CurrIV, V);
@@ -677,7 +754,7 @@ bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
 /// Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
-                     LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead) {
+                     LoopInfo *LI, SmallVectorImpl<WeakTrackingVH> &Dead) {
   bool Changed = false;
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     Changed |= simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LI, Dead);

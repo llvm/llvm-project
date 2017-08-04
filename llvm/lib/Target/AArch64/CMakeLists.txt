@@ -39,14 +39,15 @@ endif()
 
 add_llvm_target(AArch64CodeGen
   AArch64A57FPLoadBalancing.cpp
-  AArch64AddressTypePromotion.cpp
   AArch64AdvSIMDScalarPass.cpp
   AArch64AsmPrinter.cpp
   AArch64CleanupLocalDynamicTLSPass.cpp
   AArch64CollectLOH.cpp
+  AArch64CondBrTuning.cpp
   AArch64ConditionalCompares.cpp
   AArch64DeadRegisterDefinitionsPass.cpp
   AArch64ExpandPseudoInsts.cpp
+  AArch64FalkorHWPFFix.cpp
   AArch64FastISel.cpp
   AArch64A53Fix835769.cpp
   AArch64FrameLowering.cpp
@@ -56,6 +57,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
   AArch64LoadStoreOptimizer.cpp
+  AArch64MacroFusion.cpp
   AArch64MCInstLower.cpp
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp

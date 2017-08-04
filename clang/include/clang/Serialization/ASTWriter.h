@@ -372,6 +372,7 @@ private:
   /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
   /// record.
   SmallVector<uint64_t, 16> EagerlyDeserializedDecls;
+  SmallVector<uint64_t, 16> ModularCodegenDecls;
 
   /// \brief DeclContexts that have received extensions since their serialized
   /// form.
@@ -625,10 +626,6 @@ public:
 
   /// \brief Add a version tuple to the given record
   void AddVersionTuple(const VersionTuple &Version, RecordDataImpl &Record);
-
-  /// \brief Infer the submodule ID that contains an entity at the given
-  /// source location.
-  serialization::SubmoduleID inferSubmoduleIDFromLocation(SourceLocation Loc);
 
   /// \brief Retrieve or create a submodule ID for this module, or return 0 if
   /// the submodule is neither local (a submodle of the currently-written module)

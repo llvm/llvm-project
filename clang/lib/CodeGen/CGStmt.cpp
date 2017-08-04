@@ -145,7 +145,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
     EmitCoroutineBody(cast<CoroutineBodyStmt>(*S));
     break;
   case Stmt::CoreturnStmtClass:
-    CGM.ErrorUnsupported(S, "coroutine");
+    EmitCoreturnStmt(cast<CoreturnStmt>(*S));
     break;
   case Stmt::CapturedStmtClass: {
     const CapturedStmt *CS = cast<CapturedStmt>(S);
@@ -1024,6 +1024,18 @@ void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
 void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
+  if (requiresReturnValueCheck()) {
+    llvm::Constant *SLoc = EmitCheckSourceLocation(S.getLocStart());
+    auto *SLocPtr =
+        new llvm::GlobalVariable(CGM.getModule(), SLoc->getType(), false,
+                                 llvm::GlobalVariable::PrivateLinkage, SLoc);
+    SLocPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(SLocPtr);
+    assert(ReturnLocation.isValid() && "No valid return location");
+    Builder.CreateStore(Builder.CreateBitCast(SLocPtr, Int8PtrTy),
+                        ReturnLocation);
+  }
+
   // Returning from an outlined SEH helper is UB, and we already warn on it.
   if (IsOutlinedSEHHelper) {
     Builder.CreateUnreachable();
@@ -1166,7 +1178,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S) {
       if (Rem)
         Rem--;
       SwitchInsn->addCase(Builder.getInt(LHS), CaseDest);
-      LHS++;
+      ++LHS;
     }
     return;
   }
@@ -2127,16 +2139,16 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     llvm::InlineAsm::get(FTy, AsmString, Constraints, HasSideEffect,
                          /* IsAlignStack */ false, AsmDialect);
   llvm::CallInst *Result = Builder.CreateCall(IA, Args);
-  Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+  Result->addAttribute(llvm::AttributeList::FunctionIndex,
                        llvm::Attribute::NoUnwind);
 
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {
     if (ReadNone)
-      Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+      Result->addAttribute(llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::ReadNone);
     else if (ReadOnly)
-      Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+      Result->addAttribute(llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::ReadOnly);
   }
 
@@ -2157,7 +2169,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     // Conservatively, mark all inline asm blocks in CUDA as convergent
     // (meaning, they may call an intrinsically convergent op, such as bar.sync,
     // and so can't have certain optimizations applied around them).
-    Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+    Result->addAttribute(llvm::AttributeList::FunctionIndex,
                          llvm::Attribute::Convergent);
   }
 

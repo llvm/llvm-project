@@ -3,6 +3,96 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
+__extension__ typedef __SIZE_TYPE__ size_t;
+
+namespace std {
+  template<typename T> struct initializer_list {
+    const T *ptr;
+    size_t n;
+    initializer_list(const T*, size_t);
+  };
+}
+
+namespace dr1310 { // dr1310: 5
+  struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
+  void f() {
+    S::S(a); // expected-error {{qualified reference to 'S' is a constructor name}}
+  }
+  struct T { int n; typedef int U; typedef T V; };
+  int k = T().T::T::n;
+  T::V v;
+
+  struct U { int U; };
+  int u = U().U::U;
+  struct U::U w;
+
+  struct V : T::T {
+    // FIXME: This is technically ill-formed, but we consider that to be a defect.
+    V() : T::T() {}
+  };
+  template<typename T> struct VT : T::T {
+    VT() : T::T() {}
+  };
+  template struct VT<T>;
+
+  template<template<typename> class> class TT {};
+  template<typename> class TTy {};
+
+  template<typename T> struct WBase {};
+  template<typename T> struct W : WBase<T> { typedef int X; int n; };
+
+  void w_test() {
+    W<int>::W w1a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W::X w1ax;
+    W<int>::W<int> w1b; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W<int>::X w1bx;
+    typename W<int>::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    typename W<int>::W::X w2ax; // expected-error 0-1{{outside of a template}}
+    typename W<int>::W<int> w2b; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    typename W<int>::W<int>::X w2bx; // expected-error 0-1{{outside of a template}}
+    W<int>::template W<int> w3; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    W<int>::template W<int>::X w3x; // expected-error 0-1{{outside of a template}}
+    typename W<int>::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-2{{outside of a template}}
+    typename W<int>::template W<int>::X w4x; // expected-error 0-2{{outside of a template}}
+
+    TT<W<int>::W> tt1; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TTy<W<int>::W> tt1a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TT<W<int>::template W> tt2; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    TT<W<int>::WBase> tt3;
+    TTy<W<int>::WBase> tt3a;
+    TT<W<int>::template WBase> tt4; // expected-error 0-1{{outside of a template}}
+
+    W<int> w;
+    (void)w.W::W::n;
+    (void)w.W<int>::W::n;
+    (void)w.W<int>::W<int>::n;
+    (void)w.W<int>::template W<int>::n; // expected-error 0-1{{outside of a template}}
+  }
+
+  template<typename W>
+  void wt_test() {
+    typename W::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    typename W::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TTy<typename W::W> tt2; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TT<W::template W> tt3; // expected-error {{qualified reference to 'W' is a constructor name}}
+  }
+  template<typename W>
+  void wt_test_good() {
+    typename W::W::X w2ax;
+    typename W::template W<int>::X w4x;
+    TTy<typename W::WBase> tt4;
+    TT<W::template WBase> tt5;
+
+    W w;
+    (void)w.W::W::n;
+    (void)w.W::template W<int>::n;
+    (void)w.template W<int>::W::n;
+    (void)w.template W<int>::template W<int>::n;
+  }
+  template void wt_test<W<int> >(); // expected-note {{instantiation of}}
+  template void wt_test_good<W<int> >();
+}
+
 namespace dr1315 { // dr1315: partial
   template <int I, int J> struct A {};
   template <int I> // expected-note {{non-deducible template parameter 'I'}}
@@ -102,7 +192,7 @@ namespace dr1330 { // dr1330: 4 c++11
   static_assert(!noexcept(B<Q>().g()), "");
 #endif
 
-  template<typename T> int f() throw(typename T::error) { return 0; } // expected-error 1-4{{prior to '::'}} expected-note 0-1{{instantiation of}}
+  template<typename T> int f() throw(typename T::error) { return 0; } // expected-error 1-4{{prior to '::'}} expected-note 0-1{{prior to '::'}} expected-note 0-1{{requested here}}
 #if __cplusplus > 201402L
     // expected-error@-2 0-1{{C++1z}} expected-note@-2 0-1{{noexcept}}
 #endif
@@ -113,7 +203,16 @@ namespace dr1330 { // dr1330: 4 c++11
   decltype(f<char>()) f2; // expected-note {{instantiation of}}
   bool f3 = noexcept(f<float>()); // expected-note {{instantiation of}}
 #endif
-  template int f<short>(); // expected-note {{instantiation of}}
+  // In C++1z onwards, substituting explicit template arguments into the
+  // function type substitutes into the exception specification (because it's
+  // part of the type). In earlier languages, we don't notice there's a problem
+  // until we've already started to instantiate.
+  template int f<short>();
+#if __cplusplus >= 201703L
+  // expected-error@-2 {{does not refer to a function template}}
+#else
+  // expected-note@-4 {{instantiation of}}
+#endif
 
   template<typename T> struct C {
     C() throw(typename T::type); // expected-error 1-2{{prior to '::'}}
@@ -156,6 +255,15 @@ namespace dr1346 { // dr1346: 3.5
     [e({1, 2})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
 #endif
   }
+#endif
+}
+
+namespace dr1347 { // dr1347: yes
+  auto x = 5, *y = &x; // expected-error 0-1{{extension}}
+  auto z = y, *q = y; // expected-error {{'auto' deduced as 'int *' in declaration of 'z' and deduced as 'int' in declaration of 'q'}} expected-error 0-1{{extension}}
+#if __cplusplus >= 201103L
+  auto a = 5, b = {1, 2}; // expected-error {{'auto' deduced as 'int' in declaration of 'a' and deduced as 'std::initializer_list<int>' in declaration of 'b'}}
+  auto (*fp)(int) -> int, i = 0; // expected-error {{declaration with trailing return type must be the only declaration in its group}}
 #endif
 }
 

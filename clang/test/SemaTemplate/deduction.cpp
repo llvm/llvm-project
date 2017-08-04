@@ -305,11 +305,11 @@ namespace nullptr_deduction {
 
   template<typename T, T v> struct X {};
   template<typename T, T v> void f(X<T, v>) {
-    static_assert(!v, "");
+    static_assert(!v, ""); // expected-warning 2{{implicit conversion of nullptr constant to 'bool'}}
   }
   void g() {
-    f(X<int*, nullptr>());
-    f(X<nullptr_t, nullptr>());
+    f(X<int*, nullptr>()); // expected-note {{instantiation of}}
+    f(X<nullptr_t, nullptr>()); // expected-note {{instantiation of}}
   }
 
   template<template<typename T, T> class X, typename T, typename U, int *P>
@@ -480,4 +480,62 @@ namespace check_extended_pack {
   template<int ...N> void g(Y<N...>); // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('int *' vs 'int')}}
   int n;
   void h() { g<0>(Y<0, &n>()); } // expected-error {{no matching function}}
+}
+
+namespace dependent_template_template_param_non_type_param_type {
+  template<int N> struct A {
+    template<typename V = int, V M = 12, V (*Y)[M], template<V (*v)[M]> class W>
+    A(W<Y>);
+  };
+
+  int n[12];
+  template<int (*)[12]> struct Q {};
+  Q<&n> qn;
+  A<0> a(qn);
+}
+
+namespace dependent_list_deduction {
+  template<typename T, T V> void a(const int (&)[V]) {
+    static_assert(is_same<T, decltype(sizeof(0))>::value, "");
+    static_assert(V == 3, "");
+  }
+  template<typename T, T V> void b(const T (&)[V]) {
+    static_assert(is_same<T, int>::value, "");
+    static_assert(V == 3, "");
+  }
+  template<typename T, T V> void c(const T (&)[V]) {
+    static_assert(is_same<T, decltype(sizeof(0))>::value, "");
+    static_assert(V == 3, "");
+  }
+  void d() {
+    a({1, 2, 3});
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{no match}} expected-note@-15 {{couldn't infer template argument 'T'}}
+#endif
+    b({1, 2, 3});
+    c({{}, {}, {}});
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{no match}} expected-note@-12 {{couldn't infer template argument 'T'}}
+#endif
+  }
+
+  template<typename ...T> struct X;
+  template<int ...T> struct Y;
+  template<typename ...T, T ...V> void f(const T (&...p)[V]) {
+    static_assert(is_same<X<T...>, X<int, char, char>>::value, "");
+    static_assert(is_same<Y<V...>, Y<3, 2, 4>>::value, "");
+  }
+  template<typename ...T, T ...V> void g(const T (&...p)[V]) {
+    static_assert(is_same<X<T...>, X<int, decltype(sizeof(0))>>::value, "");
+    static_assert(is_same<Y<V...>, Y<2, 3>>::value, "");
+  }
+  void h() {
+    f({1, 2, 3}, {'a', 'b'}, "foo");
+    g({1, 2}, {{}, {}, {}});
+#if __cplusplus <= 201402
+    // expected-error@-2 {{no match}}
+    // expected-note@-9 {{deduced incomplete pack}}
+    // We deduce V$1 = (size_t)3, which in C++1z also deduces T$1 = size_t.
+#endif
+  }
 }

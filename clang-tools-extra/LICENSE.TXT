@@ -60,3 +60,4 @@ licenses, and/or restrictions:
 Program             Directory
 -------             ---------
 clang-tidy          clang-tidy/cert
+clang-tidy          clang-tidy/hicpp

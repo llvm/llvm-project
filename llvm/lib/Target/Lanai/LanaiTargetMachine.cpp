@@ -76,7 +76,7 @@ namespace {
 // Lanai Code Generator Pass Configuration Options.
 class LanaiPassConfig : public TargetPassConfig {
 public:
-  LanaiPassConfig(LanaiTargetMachine *TM, PassManagerBase *PassManager)
+  LanaiPassConfig(LanaiTargetMachine &TM, PassManagerBase *PassManager)
       : TargetPassConfig(TM, *PassManager) {}
 
   LanaiTargetMachine &getLanaiTargetMachine() const {
@@ -91,7 +91,7 @@ public:
 
 TargetPassConfig *
 LanaiTargetMachine::createPassConfig(PassManagerBase &PassManager) {
-  return new LanaiPassConfig(this, &PassManager);
+  return new LanaiPassConfig(*this, &PassManager);
 }
 
 // Install an instruction selector pass.

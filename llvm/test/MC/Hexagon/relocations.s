@@ -12,6 +12,14 @@ r_hex_b15_pcrel:
 r_hex_b7_pcrel:
 { loop1 (#undefined, #0) }
 
+# CHECK: R_HEX_LO16
+r_hex_lo16:
+{ r0.l = #lo(undefined) }
+
+# CHECK: R_HEX_HI16
+r_hex_hi16:
+{ r0.h = #hi(undefined) }
+
 # CHECK: R_HEX_32
 r_hex_32:
 .word undefined
@@ -30,19 +38,19 @@ r_hex_8:
 
 # CHECK: R_HEX_GPREL16_0
 r_hex_gprel16_0:
-{ r0 = memb (#undefined@gotrel) }
+{ r0 = memb (gp+#undefined) }
 
 # CHECK: R_HEX_GPREL16_1
 r_hex_gprel16_1:
-{ r0 = memh (#undefined@gotrel) }
+{ r0 = memh (gp+#undefined) }
 
 # CHECK: R_HEX_GPREL16_2
 r_hex_gprel16_2:
-{ r0 = memw (#undefined@gotrel) }
+{ r0 = memw (gp+#undefined) }
 
 # CHECK: R_HEX_GPREL16_3
 r_hex_gprel16_3:
-{ r1:0 = memd (#undefined@gotrel) }
+{ r1:0 = memd (gp+#undefined) }
 
 # CHECK: R_HEX_B13_PCREL
 r_hex_b13_pcrel:
@@ -67,10 +75,6 @@ r_hex_b22_pcrel_x:
 # CHECK: R_HEX_B15_PCREL_X
 r_hex_b15_pcrel_x:
 { if (p0) jump ##undefined }
-
-# CHECK: R_HEX_B9_PCREL_X
-r_hex_b9_pcrel_x:
-{ r0 = #0 ; jump ##undefined }
 
 # CHECK: R_HEX_B7_PCREL_X
 r_hex_b7_pcrel_x:

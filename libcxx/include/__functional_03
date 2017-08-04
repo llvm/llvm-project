@@ -704,7 +704,7 @@ function<_Rp()>::target()
 {
     if (__f_ == 0)
         return (_Tp*)0;
-    return (_Tp*)__f_->target(typeid(_Tp));
+    return (_Tp*) const_cast<void *>(__f_->target(typeid(_Tp)));
 }
 
 template<class _Rp>
@@ -980,7 +980,7 @@ function<_Rp(_A0)>::target()
 {
     if (__f_ == 0)
         return (_Tp*)0;
-    return (_Tp*)__f_->target(typeid(_Tp));
+    return (_Tp*) const_cast<void *>(__f_->target(typeid(_Tp)));
 }
 
 template<class _Rp, class _A0>
@@ -1256,7 +1256,7 @@ function<_Rp(_A0, _A1)>::target()
 {
     if (__f_ == 0)
         return (_Tp*)0;
-    return (_Tp*)__f_->target(typeid(_Tp));
+    return (_Tp*) const_cast<void *>(__f_->target(typeid(_Tp)));
 }
 
 template<class _Rp, class _A0, class _A1>
@@ -1532,7 +1532,7 @@ function<_Rp(_A0, _A1, _A2)>::target()
 {
     if (__f_ == 0)
         return (_Tp*)0;
-    return (_Tp*)__f_->target(typeid(_Tp));
+    return (_Tp*) const_cast<void *>(__f_->target(typeid(_Tp)));
 }
 
 template<class _Rp, class _A0, class _A1, class _A2>

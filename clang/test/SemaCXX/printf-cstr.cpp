@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wformat -verify %s -Wno-error=non-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -Wformat -verify -std=c++98 %s -Wno-error=non-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -Wformat -verify -std=c++11 %s -Wno-error=non-pod-varargs
 
 #include <stdarg.h>
 
@@ -31,12 +33,39 @@ void pod_test() {
   int n = 10;
 
   printf("%d: %s\n", n, hcs.c_str());
-  printf("%d: %s\n", n, hcs); // expected-warning{{cannot pass non-POD object of type 'HasCStr' to variadic function; expected type from format string was 'char *'}} expected-note{{did you mean to call the c_str() method?}}
-  printf("%d: %s\n", n, hncs); // expected-warning{{cannot pass non-POD object of type 'HasNoCStr' to variadic function; expected type from format string was 'char *'}}
-  sprintf(str, "%d: %s", n, hcs); // expected-warning{{cannot pass non-POD object of type 'HasCStr' to variadic function; expected type from format string was 'char *'}} expected-note{{did you mean to call the c_str() method?}}
+  printf("%d: %s\n", n, hcs);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass non-POD object of type 'HasCStr' to variadic function; expected type from format string was 'char *'}}
+  // expected-note@-3 {{did you mean to call the c_str() method?}}
+#else
+  // expected-warning@-5 {{format specifies type 'char *' but the argument has type 'HasCStr'}}
+#endif
 
-  printf(formatString, hcs, hncs); // expected-warning{{cannot pass object of non-POD type 'HasCStr' through variadic function}} expected-warning{{cannot pass object of non-POD type 'HasNoCStr' through variadic function}}
-  printf(extstr, hcs, n); // expected-warning{{cannot pass object of non-POD type 'HasCStr' through variadic function}}
+  printf("%d: %s\n", n, hncs);
+#if __cplusplus <= 199711L
+ // expected-warning@-2 {{cannot pass non-POD object of type 'HasNoCStr' to variadic function; expected type from format string was 'char *'}}
+#else
+  // expected-warning@-4 {{format specifies type 'char *' but the argument has type 'HasNoCStr'}}
+#endif
+
+  sprintf(str, "%d: %s", n, hcs);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass non-POD object of type 'HasCStr' to variadic function; expected type from format string was 'char *'}}
+  // expected-note@-3 {{did you mean to call the c_str() method?}}
+#else
+  // expected-warning@-5 {{format specifies type 'char *' but the argument has type 'HasCStr'}}
+#endif
+
+  printf(formatString, hcs, hncs);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'HasCStr' through variadic function}}
+  // expected-warning@-3 {{cannot pass object of non-POD type 'HasNoCStr' through variadic function}}
+#endif
+
+  printf(extstr, hcs, n);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'HasCStr' through variadic function}}
+#endif
 }
 
 struct Printf {
@@ -49,5 +78,11 @@ void constructor_test() {
   const char str[] = "test";
   HasCStr hcs(str);
   Printf p("%s %d %s", str, 10, 10); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
-  Printf q("%s %d", hcs, 10); // expected-warning {{cannot pass non-POD object of type 'HasCStr' to variadic constructor; expected type from format string was 'char *'}} expected-note{{did you mean to call the c_str() method?}}
+  Printf q("%s %d", hcs, 10);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass non-POD object of type 'HasCStr' to variadic constructor; expected type from format string was 'char *'}}
+  // expected-note@-3 {{did you mean to call the c_str() method?}}
+#else
+  // expected-warning@-5 {{format specifies type 'char *' but the argument has type 'HasCStr'}}
+#endif
 }

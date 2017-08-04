@@ -11,6 +11,6 @@ define void @fence_singlethread() {
 ; CHECK: @ COMPILER BARRIER
 ; CHECK-NOT: dmb
 
-  fence singlethread seq_cst
+  fence syncscope("singlethread") seq_cst
   ret void
 }

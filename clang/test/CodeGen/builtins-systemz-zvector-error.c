@@ -446,43 +446,43 @@ void test_integer(void) {
                                     // expected-note@vecintrin.h:* 1 {{must be a constant integer}}
 
   vsc = vec_sld(vsc, vsc, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
   vsc = vec_sld(vsc, vsc, -1);  // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
   vsc = vec_sld(vsc, vsc, 16);  // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
   vuc = vec_sld(vuc, vuc, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+                                // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
   vuc = vec_sld(vuc, vuc, -1);  // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+                                // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
   vuc = vec_sld(vuc, vuc, 16);  // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+                                // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
   vss = vec_sld(vss, vss, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
   vus = vec_sld(vus, vus, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+                                // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
   vsi = vec_sld(vsi, vsi, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
   vui = vec_sld(vui, vui, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+                                // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
   vsl = vec_sld(vsl, vsl, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
   vul = vec_sld(vul, vul, idx); // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
+                                // expected-note@vecintrin.h:* 11 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 2 {{must be a constant integer from 0 to 15}}
   vd = vec_sld(vd, vd, idx);    // expected-error {{no matching function}}
-                                // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
+                                // expected-note@vecintrin.h:* 12 {{candidate function not viable}}
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
 
   vsc = vec_sldw(vsc, vsc, idx); // expected-error {{no matching function}}

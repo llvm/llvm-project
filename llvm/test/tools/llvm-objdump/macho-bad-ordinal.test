@@ -1,6 +1,4 @@
-# RUN: llvm-objdump -macho -bind -lazy-bind %p/Inputs/bad-ordinal.macho-x86_64 \
-# RUN:   | FileCheck %s 
+# RUN: not llvm-objdump -macho -lazy-bind %p/Inputs/bad-ordinal.macho-x86_64 \
+# RUN: 2>&1 | FileCheck %s 
 
-
-# CHECK: __DATA   __nl_symbol_ptr    0x100001000 pointer         0 <<bad library ordinal>> dyld_stub_binder
-# CHECK: __DATA   __la_symbol_ptr    0x100001010 <<bad library ordinal>> _printf
+# CHECK: bad-ordinal.macho-x86_64': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB bad library ordinal: 2 (max 1) for opcode at: 0x2)

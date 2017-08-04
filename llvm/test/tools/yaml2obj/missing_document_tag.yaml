@@ -4,3 +4,6 @@
 DummyData:
   foo:           0
 ...
+
+# CHECK: YAML:4:1: error: YAML Object File missing document type tag!
+# CHECK: yaml2obj: Failed to parse YAML file!

@@ -5,7 +5,7 @@
 ; CHECK-LABEL: {{^}}test_workitem_id_x_known_max_range:
 ; CHECK-NOT: v0
 ; CHECK: {{flat|buffer}}_store_dword {{.*}}v0
-define void @test_workitem_id_x_known_max_range(i32 addrspace(1)* nocapture %out) #0 {
+define amdgpu_kernel void @test_workitem_id_x_known_max_range(i32 addrspace(1)* nocapture %out) #0 {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
   %and = and i32 %id, 1023
@@ -14,9 +14,9 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}test_workitem_id_x_known_trunc_1_bit_range:
-; CHECK: v_and_b32_e32 [[MASKED:v[0-9]+]], 0x1ff, v0
-; CHECK: {{flat|buffer}}_store_dword {{.*}}[[MASKED]]
-define void @test_workitem_id_x_known_trunc_1_bit_range(i32 addrspace(1)* nocapture %out) #0 {
+; CHECK-NOT: v_and_b32
+; CHECK: {{flat|buffer}}_store_dword {{.*}}v0
+define amdgpu_kernel void @test_workitem_id_x_known_trunc_1_bit_range(i32 addrspace(1)* nocapture %out) #0 {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
   %and = and i32 %id, 511
@@ -26,9 +26,9 @@ entry:
 
 ; CHECK-LABEL: {{^}}test_workitem_id_x_known_max_range_m1:
 ; CHECK-NOT: v0
-; CHECK: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xff, v0
-; CHECK: {{flat|buffer}}_store_dword {{.*}}[[MASKED]]
-define void @test_workitem_id_x_known_max_range_m1(i32 addrspace(1)* nocapture %out) #0 {
+; CHECK-NOT: v_and_b32
+; CHECK: {{flat|buffer}}_store_dword {{.*}}v0
+define amdgpu_kernel void @test_workitem_id_x_known_max_range_m1(i32 addrspace(1)* nocapture %out) #0 {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !1
   %and = and i32 %id, 255

@@ -102,8 +102,9 @@ char* f7() {
   register struct {char* x;} t1 = {"Hello"};
   char* dummy1 = &(t1.x[0]);
 
-  struct {int a : 10;} t2;
+  struct {int a : 10; struct{int b : 10;};} t2;
   int* dummy2 = &(t2.a); // expected-error {{address of bit-field requested}}
+  int* dummy3 = &(t2.b); // expected-error {{address of bit-field requested}}
 
   void* t3 = &(*(void*)0);
 }

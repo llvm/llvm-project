@@ -28,7 +28,12 @@
 
 int main()
 {
+    {
     typedef std::map<int, double, transparent_less> M;
-
     M().equal_range(C2Int{5});
+    }
+    {
+    typedef std::map<int, double, transparent_less_not_referenceable> M;
+    M().equal_range(C2Int{5});
+    }
 }

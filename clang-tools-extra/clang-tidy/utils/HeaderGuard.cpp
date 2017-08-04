@@ -76,7 +76,7 @@ public:
 
       // We use clang's header guard detection. This has the advantage of also
       // emitting a warning for cases where a pseudo header guard is found but
-      // preceeded by something blocking the header guard optimization.
+      // preceded by something blocking the header guard optimization.
       if (!MI->isUsedForHeaderGuard())
         continue;
 
@@ -223,9 +223,10 @@ public:
 
       std::string CPPVar = Check->getHeaderGuard(FileName);
       std::string CPPVarUnder = CPPVar + '_'; // Allow a trailing underscore.
-      // If there is a header guard macro but it's not in the topmost position
-      // emit a plain warning without fix-its. This often happens when the guard
-      // macro is preceeded by includes.
+      // If there's a macro with a name that follows the header guard convention
+      // but was not recognized by the preprocessor as a header guard there must
+      // be code outside of the guarded area. Emit a plain warning without
+      // fix-its.
       // FIXME: Can we move it into the right spot?
       bool SeenMacro = false;
       for (const auto &MacroEntry : Macros) {
@@ -233,9 +234,8 @@ public:
         SourceLocation DefineLoc = MacroEntry.first.getLocation();
         if ((Name == CPPVar || Name == CPPVarUnder) &&
             SM.isWrittenInSameFile(StartLoc, DefineLoc)) {
-          Check->diag(
-              DefineLoc,
-              "Header guard after code/includes. Consider moving it up.");
+          Check->diag(DefineLoc, "code/includes outside of area guarded by "
+                                 "header guard; consider moving it");
           SeenMacro = true;
           break;
         }

@@ -1,4 +1,4 @@
-//===-- FastISel.cpp - Implementation of the FastISel class ---------------===//
+//===- FastISel.cpp - Implementation of the FastISel class ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -39,35 +39,76 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/FastISel.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "isel"
@@ -77,21 +118,6 @@ STATISTIC(NumFastIselSuccessIndependent, "Number of insts selected by "
 STATISTIC(NumFastIselSuccessTarget, "Number of insts selected by "
                                     "target-specific selector");
 STATISTIC(NumFastIselDead, "Number of dead insts removed on failure");
-
-void FastISel::ArgListEntry::setAttributes(ImmutableCallSite *CS,
-                                           unsigned AttrIdx) {
-  IsSExt = CS->paramHasAttr(AttrIdx, Attribute::SExt);
-  IsZExt = CS->paramHasAttr(AttrIdx, Attribute::ZExt);
-  IsInReg = CS->paramHasAttr(AttrIdx, Attribute::InReg);
-  IsSRet = CS->paramHasAttr(AttrIdx, Attribute::StructRet);
-  IsNest = CS->paramHasAttr(AttrIdx, Attribute::Nest);
-  IsByVal = CS->paramHasAttr(AttrIdx, Attribute::ByVal);
-  IsInAlloca = CS->paramHasAttr(AttrIdx, Attribute::InAlloca);
-  IsReturned = CS->paramHasAttr(AttrIdx, Attribute::Returned);
-  IsSwiftSelf = CS->paramHasAttr(AttrIdx, Attribute::SwiftSelf);
-  IsSwiftError = CS->paramHasAttr(AttrIdx, Attribute::SwiftError);
-  Alignment = CS->getParamAlignment(AttrIdx);
-}
 
 /// Set the current block to which generated machine instructions will be
 /// appended, and clear the local CSE map.
@@ -231,17 +257,13 @@ unsigned FastISel::materializeConstant(const Value *V, MVT VT) {
       // Try to emit the constant by using an integer constant with a cast.
       const APFloat &Flt = CF->getValueAPF();
       EVT IntVT = TLI.getPointerTy(DL);
-
-      uint64_t x[2];
       uint32_t IntBitWidth = IntVT.getSizeInBits();
+      APSInt SIntVal(IntBitWidth, /*isUnsigned=*/false);
       bool isExact;
-      (void)Flt.convertToInteger(x, IntBitWidth, /*isSigned=*/true,
-                                 APFloat::rmTowardZero, &isExact);
+      (void)Flt.convertToInteger(SIntVal, APFloat::rmTowardZero, &isExact);
       if (isExact) {
-        APInt IntVal(IntBitWidth, x);
-
         unsigned IntegerReg =
-            getRegForValue(ConstantInt::get(V->getContext(), IntVal));
+            getRegForValue(ConstantInt::get(V->getContext(), SIntVal));
         if (IntegerReg != 0)
           Reg = fastEmit_r(IntVT.getSimpleVT(), VT, ISD::SINT_TO_FP, IntegerReg,
                            /*Kill=*/false);
@@ -600,7 +622,7 @@ bool FastISel::selectStackmap(const CallInst *I) {
   // have to worry about calling conventions and target-specific lowering code.
   // Instead we perform the call lowering right here.
   //
-  // CALLSEQ_START(0...)
+  // CALLSEQ_START(0, 0...)
   // STACKMAP(id, nbytes, ...)
   // CALLSEQ_END(0, 0)
   //
@@ -646,7 +668,7 @@ bool FastISel::selectStackmap(const CallInst *I) {
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                     TII.get(TargetOpcode::STACKMAP));
   for (auto const &MO : Ops)
-    MIB.addOperand(MO);
+    MIB.add(MO);
 
   // Issue CALLSEQ_END
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
@@ -672,10 +694,8 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
   Args.reserve(NumArgs);
 
   // Populate the argument list.
-  // Attributes for args start at offset 1, after the return attribute.
   ImmutableCallSite CS(CI);
-  for (unsigned ArgI = ArgIdx, ArgE = ArgIdx + NumArgs, AttrI = ArgIdx + 1;
-       ArgI != ArgE; ++ArgI) {
+  for (unsigned ArgI = ArgIdx, ArgE = ArgIdx + NumArgs; ArgI != ArgE; ++ArgI) {
     Value *V = CI->getOperand(ArgI);
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
@@ -683,7 +703,7 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
     ArgListEntry Entry;
     Entry.Val = V;
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, AttrI);
+    Entry.setAttributes(&CS, ArgIdx);
     Args.push_back(Entry);
   }
 
@@ -826,7 +846,7 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
                                     TII.get(TargetOpcode::PATCHPOINT));
 
   for (auto &MO : Ops)
-    MIB.addOperand(MO);
+    MIB.add(MO);
 
   MIB->setPhysRegsDeadExcept(CLI.InRegs, TRI);
 
@@ -841,9 +861,28 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
   return true;
 }
 
-/// Returns an AttributeSet representing the attributes applied to the return
+bool FastISel::selectXRayCustomEvent(const CallInst *I) {
+  const auto &Triple = TM.getTargetTriple();
+  if (Triple.getArch() != Triple::x86_64 || !Triple.isOSLinux())
+    return true; // don't do anything to this instruction.
+  SmallVector<MachineOperand, 8> Ops;
+  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(0)),
+                                          /*IsDef=*/false));
+  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(1)),
+                                          /*IsDef=*/false));
+  MachineInstrBuilder MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::PATCHABLE_EVENT_CALL));
+  for (auto &MO : Ops)
+    MIB.add(MO);
+  // Insert the Patchable Event Call instruction, that gets lowered properly.
+  return true;
+}
+
+
+/// Returns an AttributeList representing the attributes applied to the return
 /// value of the given call.
-static AttributeSet getReturnAttrs(FastISel::CallLoweringInfo &CLI) {
+static AttributeList getReturnAttrs(FastISel::CallLoweringInfo &CLI) {
   SmallVector<Attribute::AttrKind, 2> Attrs;
   if (CLI.RetSExt)
     Attrs.push_back(Attribute::SExt);
@@ -852,8 +891,8 @@ static AttributeSet getReturnAttrs(FastISel::CallLoweringInfo &CLI) {
   if (CLI.IsInReg)
     Attrs.push_back(Attribute::InReg);
 
-  return AttributeSet::get(CLI.RetTy->getContext(), AttributeSet::ReturnIndex,
-                           Attrs);
+  return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
+                            Attrs);
 }
 
 bool FastISel::lowerCallTo(const CallInst *CI, const char *SymName,
@@ -885,9 +924,10 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
     ArgListEntry Entry;
     Entry.Val = V;
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, ArgI + 1);
+    Entry.setAttributes(&CS, ArgI);
     Args.push_back(Entry);
   }
+  TLI.markLibCallAttributes(MF, CS.getCallingConv(), Args);
 
   CallLoweringInfo CLI;
   CLI.setCallee(RetTy, FTy, Symbol, std::move(Args), CS, NumArgs);
@@ -1021,7 +1061,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
     Entry.Ty = V->getType();
 
     // Skip the first return-type Attribute to get to params.
-    Entry.setAttributes(&CS, i - CS.arg_begin() + 1);
+    Entry.setAttributes(&CS, i - CS.arg_begin());
     Args.push_back(Entry);
   }
 
@@ -1110,16 +1150,16 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
       return true;
     }
 
-    unsigned Offset = 0;
+    // Byval arguments with frame indices were already handled after argument
+    // lowering and before isel.
+    const auto *Arg =
+        dyn_cast<Argument>(Address->stripInBoundsConstantOffsets());
+    if (Arg && FuncInfo.getArgumentFrameIndex(Arg) != INT_MAX)
+      return true;
+
     Optional<MachineOperand> Op;
-    if (const auto *Arg = dyn_cast<Argument>(Address))
-      // Some arguments' frame index is recorded during argument lowering.
-      Offset = FuncInfo.getArgumentFrameIndex(Arg);
-    if (Offset)
-      Op = MachineOperand::CreateFI(Offset);
-    if (!Op)
-      if (unsigned Reg = lookUpRegForValue(Address))
-        Op = MachineOperand::CreateReg(Reg, false);
+    if (unsigned Reg = lookUpRegForValue(Address))
+      Op = MachineOperand::CreateReg(Reg, false);
 
     // If we have a VLA that has a "use" in a metadata node that's then used
     // here but it has no other uses, then we have a problem. E.g.,
@@ -1147,11 +1187,11 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
         // into an indirect DBG_VALUE.
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
-                Op->getReg(), 0, DI->getVariable(), DI->getExpression());
+                Op->getReg(), DI->getVariable(), DI->getExpression());
       } else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_VALUE))
-            .addOperand(*Op)
+            .add(*Op)
             .addImm(0)
             .addMetadata(DI->getVariable())
             .addMetadata(DI->getExpression());
@@ -1172,35 +1212,32 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     if (!V) {
       // Currently the optimizer can produce this; insert an undef to
       // help debugging.  Probably the optimizer should not do this.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
-          .addReg(0U)
-          .addImm(DI->getOffset())
-          .addMetadata(DI->getVariable())
-          .addMetadata(DI->getExpression());
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, false, 0U,
+              DI->getVariable(), DI->getExpression());
     } else if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getBitWidth() > 64)
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
             .addCImm(CI)
-            .addImm(DI->getOffset())
+            .addImm(0U)
             .addMetadata(DI->getVariable())
             .addMetadata(DI->getExpression());
       else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
             .addImm(CI->getZExtValue())
-            .addImm(DI->getOffset())
+            .addImm(0U)
             .addMetadata(DI->getVariable())
             .addMetadata(DI->getExpression());
     } else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
           .addFPImm(CF)
-          .addImm(DI->getOffset())
+          .addImm(0U)
           .addMetadata(DI->getVariable())
           .addMetadata(DI->getExpression());
     } else if (unsigned Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
-      bool IsIndirect = DI->getOffset() != 0;
+      bool IsIndirect = false;
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, IsIndirect, Reg,
-              DI->getOffset(), DI->getVariable(), DI->getExpression());
+              DI->getVariable(), DI->getExpression());
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
@@ -1231,6 +1268,9 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
     return selectPatchpoint(II);
+
+  case Intrinsic::xray_customevent:
+    return selectXRayCustomEvent(II);
   }
 
   return fastLowerIntrinsicCall(II);
@@ -1364,7 +1404,7 @@ bool FastISel::selectInstruction(const Instruction *I) {
 
   if (const auto *Call = dyn_cast<CallInst>(I)) {
     const Function *F = Call->getCalledFunction();
-    LibFunc::Func Func;
+    LibFunc Func;
 
     // As a special case, don't handle calls to builtin library functions that
     // may be translated directly to target instructions.
@@ -1667,7 +1707,7 @@ FastISel::FastISel(FunctionLoweringInfo &FuncInfo,
       TRI(*MF->getSubtarget().getRegisterInfo()), LibInfo(LibInfo),
       SkipTargetIndependentISel(SkipTargetIndependentISel) {}
 
-FastISel::~FastISel() {}
+FastISel::~FastISel() = default;
 
 bool FastISel::fastLowerArguments() { return false; }
 

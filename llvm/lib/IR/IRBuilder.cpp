@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Statepoint.h"
@@ -134,6 +134,37 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
   return CI;  
 }
 
+CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
+    Value *Dst, Value *Src, Value *Size, uint32_t ElementSize, MDNode *TBAATag,
+    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+  Dst = getCastedInt8PtrValue(Dst);
+  Src = getCastedInt8PtrValue(Src);
+
+  Value *Ops[] = {Dst, Src, Size, getInt32(ElementSize)};
+  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
+  Module *M = BB->getParent()->getParent();
+  Value *TheFn = Intrinsic::getDeclaration(
+      M, Intrinsic::memcpy_element_unordered_atomic, Tys);
+
+  CallInst *CI = createCallHelper(TheFn, Ops, this);
+
+  // Set the TBAA info if present.
+  if (TBAATag)
+    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+
+  // Set the TBAA Struct info if present.
+  if (TBAAStructTag)
+    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
+
+  if (ScopeTag)
+    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
+
+  if (NoAliasTag)
+    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  return CI;
+}
+
 CallInst *IRBuilderBase::
 CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
               bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
@@ -161,6 +192,94 @@ CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
   return CI;  
 }
 
+static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
+                                    Value *Src) {
+  Module *M = Builder->GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {Src};
+  Type *Tys[] = { Src->getType()->getVectorElementType(), Src->getType() };
+  auto Decl = Intrinsic::getDeclaration(M, ID, Tys);
+  return createCallHelper(Decl, Ops, Builder);
+}
+
+CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
+  Module *M = GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {Acc, Src};
+  Type *Tys[] = {Src->getType()->getVectorElementType(), Acc->getType(),
+                 Src->getType()};
+  auto Decl = Intrinsic::getDeclaration(
+      M, Intrinsic::experimental_vector_reduce_fadd, Tys);
+  return createCallHelper(Decl, Ops, this);
+}
+
+CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src) {
+  Module *M = GetInsertBlock()->getParent()->getParent();
+  Value *Ops[] = {Acc, Src};
+  Type *Tys[] = {Src->getType()->getVectorElementType(), Acc->getType(),
+                 Src->getType()};
+  auto Decl = Intrinsic::getDeclaration(
+      M, Intrinsic::experimental_vector_reduce_fmul, Tys);
+  return createCallHelper(Decl, Ops, this);
+}
+
+CallInst *IRBuilderBase::CreateAddReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_add,
+                               Src);
+}
+
+CallInst *IRBuilderBase::CreateMulReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_mul,
+                               Src);
+}
+
+CallInst *IRBuilderBase::CreateAndReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_and,
+                               Src);
+}
+
+CallInst *IRBuilderBase::CreateOrReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_or,
+                               Src);
+}
+
+CallInst *IRBuilderBase::CreateXorReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_xor,
+                               Src);
+}
+
+CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
+  auto ID = IsSigned ? Intrinsic::experimental_vector_reduce_smax
+                     : Intrinsic::experimental_vector_reduce_umax;
+  return getReductionIntrinsic(this, ID, Src);
+}
+
+CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
+  auto ID = IsSigned ? Intrinsic::experimental_vector_reduce_smin
+                     : Intrinsic::experimental_vector_reduce_umin;
+  return getReductionIntrinsic(this, ID, Src);
+}
+
+CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, bool NoNaN) {
+  auto Rdx = getReductionIntrinsic(
+      this, Intrinsic::experimental_vector_reduce_fmax, Src);
+  if (NoNaN) {
+    FastMathFlags FMF;
+    FMF.setNoNaNs();
+    Rdx->setFastMathFlags(FMF);
+  }
+  return Rdx;
+}
+
+CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src, bool NoNaN) {
+  auto Rdx = getReductionIntrinsic(
+      this, Intrinsic::experimental_vector_reduce_fmin, Src);
+  if (NoNaN) {
+    FastMathFlags FMF;
+    FMF.setNoNaNs();
+    Rdx->setFastMathFlags(FMF);
+  }
+  return Rdx;
+}
+
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
@@ -172,7 +291,8 @@ CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
            "lifetime.start requires the size to be an i64");
   Value *Ops[] = { Size, Ptr };
   Module *M = BB->getParent()->getParent();
-  Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::lifetime_start);
+  Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::lifetime_start,
+                                           { Ptr->getType() });
   return createCallHelper(TheFn, Ops, this);
 }
 
@@ -187,7 +307,8 @@ CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
            "lifetime.end requires the size to be an i64");
   Value *Ops[] = { Size, Ptr };
   Module *M = BB->getParent()->getParent();
-  Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::lifetime_end);
+  Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::lifetime_end,
+                                           { Ptr->getType() });
   return createCallHelper(TheFn, Ops, this);
 }
 
@@ -291,11 +412,16 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
     Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
                                      NumElts));
 
-  Value * Ops[] = {Ptrs, getInt32(Align), Mask, UndefValue::get(DataTy)};
+  if (!PassThru)
+    PassThru = UndefValue::get(DataTy);
+
+  Type *OverloadedTypes[] = {DataTy, PtrsTy};
+  Value * Ops[] = {Ptrs, getInt32(Align), Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, { DataTy }, Name);
+  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, OverloadedTypes,
+                               Name);
 }
 
 /// \brief Create a call to a Masked Scatter intrinsic.
@@ -321,11 +447,13 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
   if (!Mask)
     Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
                                      NumElts));
+
+  Type *OverloadedTypes[] = {DataTy, PtrsTy};
   Value * Ops[] = {Data, Ptrs, getInt32(Align), Mask};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, { DataTy });
+  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
 }
 
 template <typename T0, typename T1, typename T2, typename T3>
@@ -481,4 +609,12 @@ CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
                   getInt32(BaseOffset),
                   getInt32(DerivedOffset)};
  return createCallHelper(FnGCRelocate, Args, this, Name);
+}
+
+CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID,
+                                               Value *LHS, Value *RHS,
+                                               const Twine &Name) {
+  Module *M = BB->getParent()->getParent();
+  Function *Fn =  Intrinsic::getDeclaration(M, ID, { LHS->getType() });
+  return createCallHelper(Fn, { LHS, RHS }, this, Name);
 }

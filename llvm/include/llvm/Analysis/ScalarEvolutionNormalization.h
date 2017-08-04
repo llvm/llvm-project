@@ -36,43 +36,34 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONNORMALIZATION_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONNORMALIZATION_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 namespace llvm {
 
-class Instruction;
-class DominatorTree;
 class Loop;
 class ScalarEvolution;
 class SCEV;
-class Value;
 
-/// TransformKind - Different types of transformations that
-/// TransformForPostIncUse can do.
-enum TransformKind {
-  /// Normalize - Normalize according to the given loops.
-  Normalize,
-  /// NormalizeAutodetect - Detect post-inc opportunities on new expressions,
-  /// update the given loop set, and normalize.
-  NormalizeAutodetect,
-  /// Denormalize - Perform the inverse transform on the expression with the
-  /// given loop set.
-  Denormalize
-};
-
-/// PostIncLoopSet - A set of loops.
 typedef SmallPtrSet<const Loop *, 2> PostIncLoopSet;
 
-/// TransformForPostIncUse - Transform the given expression according to the
-/// given transformation kind.
-const SCEV *TransformForPostIncUse(TransformKind Kind,
-                                   const SCEV *S,
-                                   Instruction *User,
-                                   Value *OperandValToReplace,
-                                   PostIncLoopSet &Loops,
-                                   ScalarEvolution &SE,
-                                   DominatorTree &DT);
+typedef function_ref<bool(const SCEVAddRecExpr *)> NormalizePredTy;
 
-}
+/// Normalize \p S to be post-increment for all loops present in \p
+/// Loops.
+const SCEV *normalizeForPostIncUse(const SCEV *S, const PostIncLoopSet &Loops,
+                                   ScalarEvolution &SE);
+
+/// Normalize \p S for all add recurrence sub-expressions for which \p
+/// Pred returns true.
+const SCEV *normalizeForPostIncUseIf(const SCEV *S, NormalizePredTy Pred,
+                                     ScalarEvolution &SE);
+
+/// Denormalize \p S to be post-increment for all loops present in \p
+/// Loops.
+const SCEV *denormalizeForPostIncUse(const SCEV *S, const PostIncLoopSet &Loops,
+                                     ScalarEvolution &SE);
+} // namespace llvm
 
 #endif

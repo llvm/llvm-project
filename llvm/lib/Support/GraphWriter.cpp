@@ -1,4 +1,4 @@
-//===-- GraphWriter.cpp - Implements GraphWriter support routines ---------===//
+//===- GraphWriter.cpp - Implements GraphWriter support routines ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,10 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <system_error>
+#include <string>
+#include <vector>
+
 using namespace llvm;
 
 static cl::opt<bool> ViewBackground("view-background", cl::Hidden,
@@ -43,6 +55,7 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
             Str.erase(Str.begin()+i); continue;
           default: break;
         }
+        LLVM_FALLTHROUGH;
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
@@ -98,8 +111,10 @@ static bool ExecGraphViewer(StringRef ExecPath, std::vector<const char *> &args,
 }
 
 namespace {
+
 struct GraphSession {
   std::string LogBuffer;
+
   bool TryFindProgram(StringRef Names, std::string &ProgramPath) {
     raw_string_ostream Log(LogBuffer);
     SmallVector<StringRef, 8> parts;
@@ -114,7 +129,8 @@ struct GraphSession {
     return false;
   }
 };
-} // namespace
+
+} // end anonymous namespace
 
 static const char *getProgramName(GraphProgram::Name program) {
   switch (program) {

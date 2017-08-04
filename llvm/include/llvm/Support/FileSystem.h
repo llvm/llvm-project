@@ -33,6 +33,7 @@
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MD5.h"
 #include <cassert>
 #include <cstdint>
 #include <ctime>
@@ -93,6 +94,7 @@ enum perms {
   set_uid_on_exe = 04000,
   set_gid_on_exe = 02000,
   sticky_bit = 01000,
+  all_perms = all_all | set_uid_on_exe | set_gid_on_exe | sticky_bit,
   perms_not_known = 0xFFFF
 };
 
@@ -114,7 +116,9 @@ inline perms &operator&=(perms &l, perms r) {
   return l;
 }
 inline perms operator~(perms x) {
-  return static_cast<perms>(~static_cast<unsigned short>(x));
+  // Avoid UB by explicitly truncating the (unsigned) ~ result.
+  return static_cast<perms>(
+      static_cast<unsigned short>(~static_cast<unsigned short>(x)));
 }
 
 class UniqueID {
@@ -141,70 +145,61 @@ public:
 ///               a platform-specific member to store the result.
 class file_status
 {
-  #if defined(LLVM_ON_UNIX)
-  dev_t fs_st_dev;
-  ino_t fs_st_ino;
-  time_t fs_st_atime;
-  time_t fs_st_mtime;
-  uid_t fs_st_uid;
-  gid_t fs_st_gid;
-  off_t fs_st_size;
-  #elif defined (LLVM_ON_WIN32)
-  uint32_t LastAccessedTimeHigh;
-  uint32_t LastAccessedTimeLow;
-  uint32_t LastWriteTimeHigh;
-  uint32_t LastWriteTimeLow;
-  uint32_t VolumeSerialNumber;
-  uint32_t FileSizeHigh;
-  uint32_t FileSizeLow;
-  uint32_t FileIndexHigh;
-  uint32_t FileIndexLow;
-  #endif
   friend bool equivalent(file_status A, file_status B);
-  file_type Type;
-  perms Perms;
+
+  #if defined(LLVM_ON_UNIX)
+  dev_t fs_st_dev = 0;
+  nlink_t fs_st_nlinks = 0;
+  ino_t fs_st_ino = 0;
+  time_t fs_st_atime = 0;
+  time_t fs_st_mtime = 0;
+  uid_t fs_st_uid = 0;
+  gid_t fs_st_gid = 0;
+  off_t fs_st_size = 0;
+  #elif defined (LLVM_ON_WIN32)
+  uint32_t NumLinks = 0;
+  uint32_t LastAccessedTimeHigh = 0;
+  uint32_t LastAccessedTimeLow = 0;
+  uint32_t LastWriteTimeHigh = 0;
+  uint32_t LastWriteTimeLow = 0;
+  uint32_t VolumeSerialNumber = 0;
+  uint32_t FileSizeHigh = 0;
+  uint32_t FileSizeLow = 0;
+  uint32_t FileIndexHigh = 0;
+  uint32_t FileIndexLow = 0;
+  #endif
+  file_type Type = file_type::status_error;
+  perms Perms = perms_not_known;
 
 public:
   #if defined(LLVM_ON_UNIX)
-  file_status()
-      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
-        fs_st_uid(0), fs_st_gid(0), fs_st_size(0),
-        Type(file_type::status_error), Perms(perms_not_known) {}
+  file_status() = default;
 
-  file_status(file_type Type)
-      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
-        fs_st_uid(0), fs_st_gid(0), fs_st_size(0), Type(Type),
-        Perms(perms_not_known) {}
+  file_status(file_type Type) : Type(Type) {}
 
-  file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t ATime,
-              time_t MTime, uid_t UID, gid_t GID, off_t Size)
-      : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_atime(ATime), fs_st_mtime(MTime),
-        fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size), Type(Type),
-        Perms(Perms) {}
+  file_status(file_type Type, perms Perms, dev_t Dev, nlink_t Links, ino_t Ino,
+              time_t ATime, time_t MTime, uid_t UID, gid_t GID, off_t Size)
+      : fs_st_dev(Dev), fs_st_nlinks(Links), fs_st_ino(Ino), fs_st_atime(ATime),
+        fs_st_mtime(MTime), fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size),
+        Type(Type), Perms(Perms) {}
   #elif defined(LLVM_ON_WIN32)
-  file_status()
-      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
-        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
-        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0),
-        Type(file_type::status_error), Perms(perms_not_known) {}
+  file_status() = default;
 
-  file_status(file_type Type)
-      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
-        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
-        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0), Type(Type),
-        Perms(perms_not_known) {}
+  file_status(file_type Type) : Type(Type) {}
 
-  file_status(file_type Type, uint32_t LastAccessTimeHigh,
-              uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
-              uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
-              uint32_t FileSizeHigh, uint32_t FileSizeLow,
-              uint32_t FileIndexHigh, uint32_t FileIndexLow)
-      : LastAccessedTimeHigh(LastAccessTimeHigh), LastAccessedTimeLow(LastAccessTimeLow),
+  file_status(file_type Type, perms Perms, uint32_t LinkCount,
+              uint32_t LastAccessTimeHigh, uint32_t LastAccessTimeLow,
+              uint32_t LastWriteTimeHigh, uint32_t LastWriteTimeLow,
+              uint32_t VolumeSerialNumber, uint32_t FileSizeHigh,
+              uint32_t FileSizeLow, uint32_t FileIndexHigh,
+              uint32_t FileIndexLow)
+      : NumLinks(LinkCount), LastAccessedTimeHigh(LastAccessTimeHigh),
+        LastAccessedTimeLow(LastAccessTimeLow),
         LastWriteTimeHigh(LastWriteTimeHigh),
         LastWriteTimeLow(LastWriteTimeLow),
         VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
         FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-        FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
+        FileIndexLow(FileIndexLow), Type(Type), Perms(Perms) {}
   #endif
 
   // getters
@@ -213,6 +208,7 @@ public:
   TimePoint<> getLastAccessedTime() const;
   TimePoint<> getLastModificationTime() const;
   UniqueID getUniqueID() const;
+  uint32_t getLinkCount() const;
 
   #if defined(LLVM_ON_UNIX)
   uint32_t getUser() const { return fs_st_uid; }
@@ -222,9 +218,11 @@ public:
   uint32_t getUser() const {
     return 9999; // Not applicable to Windows, so...
   }
+
   uint32_t getGroup() const {
     return 9999; // Not applicable to Windows, so...
   }
+
   uint64_t getSize() const {
     return (uint64_t(FileSizeHigh) << 32) + FileSizeLow;
   }
@@ -233,50 +231,6 @@ public:
   // setters
   void type(file_type v) { Type = v; }
   void permissions(perms p) { Perms = p; }
-};
-
-/// file_magic - An "enum class" enumeration of file types based on magic (the first
-///         N bytes of the file).
-struct file_magic {
-  enum Impl {
-    unknown = 0,              ///< Unrecognized file
-    bitcode,                  ///< Bitcode file
-    archive,                  ///< ar style archive file
-    elf,                      ///< ELF Unknown type
-    elf_relocatable,          ///< ELF Relocatable object file
-    elf_executable,           ///< ELF Executable image
-    elf_shared_object,        ///< ELF dynamically linked shared lib
-    elf_core,                 ///< ELF core image
-    macho_object,             ///< Mach-O Object file
-    macho_executable,         ///< Mach-O Executable
-    macho_fixed_virtual_memory_shared_lib, ///< Mach-O Shared Lib, FVM
-    macho_core,               ///< Mach-O Core File
-    macho_preload_executable, ///< Mach-O Preloaded Executable
-    macho_dynamically_linked_shared_lib, ///< Mach-O dynlinked shared lib
-    macho_dynamic_linker,     ///< The Mach-O dynamic linker
-    macho_bundle,             ///< Mach-O Bundle file
-    macho_dynamically_linked_shared_lib_stub, ///< Mach-O Shared lib stub
-    macho_dsym_companion,     ///< Mach-O dSYM companion file
-    macho_kext_bundle,        ///< Mach-O kext bundle file
-    macho_universal_binary,   ///< Mach-O universal binary
-    coff_cl_gl_object,        ///< Microsoft cl.exe's intermediate code file
-    coff_object,              ///< COFF object file
-    coff_import_library,      ///< COFF import library
-    pecoff_executable,        ///< PECOFF executable file
-    windows_resource,         ///< Windows compiled resource file (.rc)
-    wasm_object               ///< WebAssembly Object file
-  };
-
-  bool is_object() const {
-    return V != unknown;
-  }
-
-  file_magic() : V(unknown) {}
-  file_magic(Impl V) : V(V) {}
-  operator Impl() const { return V; }
-
-private:
-  Impl V;
 };
 
 /// @}
@@ -350,12 +304,29 @@ std::error_code create_link(const Twine &to, const Twine &from);
 /// specific error_code.
 std::error_code create_hard_link(const Twine &to, const Twine &from);
 
+/// @brief Collapse all . and .. patterns, resolve all symlinks, and optionally
+///        expand ~ expressions to the user's home directory.
+///
+/// @param path The path to resolve.
+/// @param output The location to store the resolved path.
+/// @param expand_tilde If true, resolves ~ expressions to the user's home
+///                     directory.
+std::error_code real_path(const Twine &path, SmallVectorImpl<char> &output,
+                          bool expand_tilde = false);
+
 /// @brief Get the current path.
 ///
 /// @param result Holds the current path on return.
 /// @returns errc::success if the current path has been stored in result,
 ///          otherwise a platform-specific error_code.
 std::error_code current_path(SmallVectorImpl<char> &result);
+
+/// @brief Set the current path.
+///
+/// @param path The path to set.
+/// @returns errc::success if the current path was successfully set,
+///          otherwise a platform-specific error_code.
+std::error_code set_current_path(const Twine &path);
 
 /// @brief Remove path. Equivalent to POSIX remove().
 ///
@@ -364,6 +335,13 @@ std::error_code current_path(SmallVectorImpl<char> &result);
 ///          platform-specific error code. If IgnoreNonExisting is false, also
 ///          returns error if the file didn't exist.
 std::error_code remove(const Twine &path, bool IgnoreNonExisting = true);
+
+/// @brief Recursively delete a directory.
+///
+/// @param path Input path.
+/// @returns errc::success if path has been removed or didn't exist, otherwise a
+///          platform-specific error code.
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors = true);
 
 /// @brief Rename \a from to \a to. Files are renamed as if by POSIX rename().
 ///
@@ -384,6 +362,16 @@ std::error_code copy_file(const Twine &From, const Twine &To);
 /// @returns errc::success if \a path has been resized to \a size, otherwise a
 ///          platform-specific error_code.
 std::error_code resize_file(int FD, uint64_t Size);
+
+/// @brief Compute an MD5 hash of a file's contents.
+///
+/// @param FD Input file descriptor.
+/// @returns An MD5Result with the hash computed, if successful, otherwise a
+///          std::error_code.
+ErrorOr<MD5::MD5Result> md5_contents(int FD);
+
+/// @brief Version of compute_md5 that doesn't require an open file descriptor.
+ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path);
 
 /// @}
 /// @name Physical Observers
@@ -457,6 +445,40 @@ inline bool equivalent(const Twine &A, const Twine &B) {
   return !equivalent(A, B, result) && result;
 }
 
+/// @brief Is the file mounted on a local filesystem?
+///
+/// @param path Input path.
+/// @param result Set to true if \a path is on fixed media such as a hard disk,
+///               false if it is not.
+/// @returns errc::success if result has been successfully set, otherwise a
+///          platform specific error_code.
+std::error_code is_local(const Twine &path, bool &result);
+
+/// @brief Version of is_local accepting an open file descriptor.
+std::error_code is_local(int FD, bool &result);
+
+/// @brief Simpler version of is_local for clients that don't need to
+///        differentiate between an error and false.
+inline bool is_local(const Twine &Path) {
+  bool Result;
+  return !is_local(Path, Result) && Result;
+}
+
+/// @brief Simpler version of is_local accepting an open file descriptor for
+///        clients that don't need to differentiate between an error and false.
+inline bool is_local(int FD) {
+  bool Result;
+  return !is_local(FD, Result) && Result;
+}
+
+/// @brief Does status represent a directory?
+///
+/// @param Path The path to get the type of.
+/// @param Follow For symbolic links, indicates whether to return the file type
+///               of the link itself, or of the target.
+/// @returns A value from the file_type enumeration indicating the type of file.
+file_type get_file_type(const Twine &Path, bool Follow = true);
+
 /// @brief Does status represent a directory?
 ///
 /// @param status A file_status previously returned from status.
@@ -466,8 +488,8 @@ bool is_directory(file_status status);
 /// @brief Is path a directory?
 ///
 /// @param path Input path.
-/// @param result Set to true if \a path is a directory, false if it is not.
-///               Undefined otherwise.
+/// @param result Set to true if \a path is a directory (after following
+///               symlinks, false if it is not. Undefined otherwise.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code is_directory(const Twine &path, bool &result);
@@ -488,8 +510,8 @@ bool is_regular_file(file_status status);
 /// @brief Is path a regular file?
 ///
 /// @param path Input path.
-/// @param result Set to true if \a path is a regular file, false if it is not.
-///               Undefined otherwise.
+/// @param result Set to true if \a path is a regular file (after following
+///               symlinks), false if it is not. Undefined otherwise.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code is_regular_file(const Twine &path, bool &result);
@@ -503,8 +525,32 @@ inline bool is_regular_file(const Twine &Path) {
   return Result;
 }
 
+/// @brief Does status represent a symlink file?
+///
+/// @param status A file_status previously returned from status.
+/// @returns status_known(status) && status.type() == file_type::symlink_file.
+bool is_symlink_file(file_status status);
+
+/// @brief Is path a symlink file?
+///
+/// @param path Input path.
+/// @param result Set to true if \a path is a symlink file, false if it is not.
+///               Undefined otherwise.
+/// @returns errc::success if result has been successfully set, otherwise a
+///          platform-specific error_code.
+std::error_code is_symlink_file(const Twine &path, bool &result);
+
+/// @brief Simpler version of is_symlink_file for clients that don't need to
+///        differentiate between an error and false.
+inline bool is_symlink_file(const Twine &Path) {
+  bool Result;
+  if (is_symlink_file(Path, Result))
+    return false;
+  return Result;
+}
+
 /// @brief Does this status represent something that exists but is not a
-///        directory, regular file, or symlink?
+///        directory or regular file?
 ///
 /// @param status A file_status previously returned from status.
 /// @returns exists(s) && !is_regular_file(s) && !is_directory(s)
@@ -524,12 +570,36 @@ std::error_code is_other(const Twine &path, bool &result);
 ///
 /// @param path Input path.
 /// @param result Set to the file status.
+/// @param follow When true, follows symlinks.  Otherwise, the symlink itself is
+///               statted.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
-std::error_code status(const Twine &path, file_status &result);
+std::error_code status(const Twine &path, file_status &result,
+                       bool follow = true);
 
 /// @brief A version for when a file descriptor is already available.
 std::error_code status(int FD, file_status &Result);
+
+/// @brief Set file permissions.
+///
+/// @param Path File to set permissions on.
+/// @param Permissions New file permissions.
+/// @returns errc::success if the permissions were successfully set, otherwise
+///          a platform-specific error_code.
+/// @note On Windows, all permissions except *_write are ignored. Using any of
+///       owner_write, group_write, or all_write will make the file writable.
+///       Otherwise, the file will be marked as read-only.
+std::error_code setPermissions(const Twine &Path, perms Permissions);
+
+/// @brief Get file permissions.
+///
+/// @param Path File to get permissions from.
+/// @returns the permissions if they were successfully retrieved, otherwise a
+///          platform-specific error_code.
+/// @note On Windows, if the file does not have the FILE_ATTRIBUTE_READONLY
+///       attribute, all_all will be returned. Otherwise, all_read | all_exe
+///       will be returned.
+ErrorOr<perms> getPermissions(const Twine &Path);
 
 /// @brief Get file size.
 ///
@@ -656,17 +726,6 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath = nullptr);
 
-/// @brief Identify the type of a binary file based on how magical it is.
-file_magic identify_magic(StringRef magic);
-
-/// @brief Get and identify \a path's type based on its content.
-///
-/// @param path Input path.
-/// @param result Set to the type of file, or file_magic::unknown.
-/// @returns errc::success if result has been successfully set, otherwise a
-///          platform-specific error_code.
-std::error_code identify_magic(const Twine &path, file_magic &result);
-
 std::error_code getUniqueID(const Twine Path, UniqueID &Result);
 
 /// @brief Get disk space usage information.
@@ -735,12 +794,13 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr);
 /// called.
 class directory_entry {
   std::string Path;
+  bool FollowSymlinks;
   mutable file_status Status;
 
 public:
-  explicit directory_entry(const Twine &path, file_status st = file_status())
-    : Path(path.str())
-    , Status(st) {}
+  explicit directory_entry(const Twine &path, bool follow_symlinks = true,
+                           file_status st = file_status())
+      : Path(path.str()), FollowSymlinks(follow_symlinks), Status(st) {}
 
   directory_entry() = default;
 
@@ -763,9 +823,10 @@ public:
 };
 
 namespace detail {
+
   struct DirIterState;
 
-  std::error_code directory_iterator_construct(DirIterState &, StringRef);
+  std::error_code directory_iterator_construct(DirIterState &, StringRef, bool);
   std::error_code directory_iterator_increment(DirIterState &);
   std::error_code directory_iterator_destruct(DirIterState &);
 
@@ -778,6 +839,7 @@ namespace detail {
     intptr_t IterationHandle = 0;
     directory_entry CurrentEntry;
   };
+
 } // end namespace detail
 
 /// directory_iterator - Iterates through the entries in path. There is no
@@ -785,18 +847,24 @@ namespace detail {
 /// it call report_fatal_error on error.
 class directory_iterator {
   std::shared_ptr<detail::DirIterState> State;
+  bool FollowSymlinks = true;
 
 public:
-  explicit directory_iterator(const Twine &path, std::error_code &ec) {
+  explicit directory_iterator(const Twine &path, std::error_code &ec,
+                              bool follow_symlinks = true)
+      : FollowSymlinks(follow_symlinks) {
     State = std::make_shared<detail::DirIterState>();
     SmallString<128> path_storage;
-    ec = detail::directory_iterator_construct(*State,
-            path.toStringRef(path_storage));
+    ec = detail::directory_iterator_construct(
+        *State, path.toStringRef(path_storage), FollowSymlinks);
   }
 
-  explicit directory_iterator(const directory_entry &de, std::error_code &ec) {
+  explicit directory_iterator(const directory_entry &de, std::error_code &ec,
+                              bool follow_symlinks = true)
+      : FollowSymlinks(follow_symlinks) {
     State = std::make_shared<detail::DirIterState>();
-    ec = detail::directory_iterator_construct(*State, de.path());
+    ec =
+        detail::directory_iterator_construct(*State, de.path(), FollowSymlinks);
   }
 
   /// Construct end iterator.
@@ -829,24 +897,29 @@ public:
 };
 
 namespace detail {
+
   /// Keeps state for the recursive_directory_iterator.
   struct RecDirIterState {
     std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
     uint16_t Level = 0;
     bool HasNoPushRequest = false;
   };
+
 } // end namespace detail
 
 /// recursive_directory_iterator - Same as directory_iterator except for it
 /// recurses down into child directories.
 class recursive_directory_iterator {
   std::shared_ptr<detail::RecDirIterState> State;
+  bool Follow;
 
 public:
   recursive_directory_iterator() = default;
-  explicit recursive_directory_iterator(const Twine &path, std::error_code &ec)
-      : State(std::make_shared<detail::RecDirIterState>()) {
-    State->Stack.push(directory_iterator(path, ec));
+  explicit recursive_directory_iterator(const Twine &path, std::error_code &ec,
+                                        bool follow_symlinks = true)
+      : State(std::make_shared<detail::RecDirIterState>()),
+        Follow(follow_symlinks) {
+    State->Stack.push(directory_iterator(path, ec, Follow));
     if (State->Stack.top() == directory_iterator())
       State.reset();
   }
@@ -861,7 +934,7 @@ public:
       file_status st;
       if ((ec = State->Stack.top()->status(st))) return *this;
       if (is_directory(st)) {
-        State->Stack.push(directory_iterator(*State->Stack.top(), ec));
+        State->Stack.push(directory_iterator(*State->Stack.top(), ec, Follow));
         if (ec) return *this;
         if (State->Stack.top() != end_itr) {
           ++State->Level;

@@ -25,7 +25,7 @@
 
 // FIXME: This is a hack to allow uses_allocator_types.hpp to work with
 // erased_type. However we can't define that behavior directly in the header
-// because it con't include <experimental/memory_resource>
+// because it can't include <experimental/memory_resource>
 template <>
 struct TransformErasedTypeAlloc<std::experimental::erased_type> {
   using type = std::experimental::pmr::memory_resource*;

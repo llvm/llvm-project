@@ -48,8 +48,8 @@ while.cond:                                       ; preds = %if.end, %entry
   store i32 %inc, i32* %i, align 4, !dbg !14
   %cmp = icmp slt i32 %0, 400000000, !dbg !14
   br i1 %cmp, label %while.body, label %while.end, !dbg !14
-; CHECK: edge while.cond -> while.body probability is 0x7d9eb367 / 0x80000000 = 98.14% [HOT edge]
-; CHECK: edge while.cond -> while.end probability is 0x02614c99 / 0x80000000 = 1.86%
+; CHECK: edge while.cond -> while.body probability is 0x77f2798d / 0x80000000 = 93.71% [HOT edge]
+; CHECK: edge while.cond -> while.end probability is 0x080d8673 / 0x80000000 = 6.29%
 
 while.body:                                       ; preds = %while.cond
   %1 = load i32, i32* %i, align 4, !dbg !16
@@ -59,8 +59,8 @@ while.body:                                       ; preds = %while.cond
 ; both branches out of while.body had the same weight. In reality,
 ; the edge while.body->if.then is taken most of the time.
 ;
-; CHECK: edge while.body -> if.else probability is 0x00059704 / 0x80000000 = 0.02%
-; CHECK: edge while.body -> if.then probability is 0x7ffa68fc / 0x80000000 = 99.98% [HOT edge]
+; CHECK: edge while.body -> if.else probability is 0x0005b1e0 / 0x80000000 = 0.02%
+; CHECK: edge while.body -> if.then probability is 0x7ffa4e20 / 0x80000000 = 99.98% [HOT edge]
 
 
 if.then:                                          ; preds = %while.body
@@ -103,14 +103,14 @@ declare i32 @printf(i8*, ...) #2
 !12 = !DILocation(line: 8, scope: !7)
 !13 = !DILocation(line: 9, scope: !7)
 !14 = !DILocation(line: 9, scope: !15)
-!15 = !DILexicalBlockFile(discriminator: 1, file: !1, scope: !7)
+!15 = !DILexicalBlockFile(discriminator: 2, file: !1, scope: !7)
 !16 = !DILocation(line: 10, scope: !17)
 !17 = distinct !DILexicalBlock(line: 10, column: 0, file: !1, scope: !7)
 !18 = !DILocation(line: 10, scope: !19)
-!19 = !DILexicalBlockFile(discriminator: 1, file: !1, scope: !17)
+!19 = !DILexicalBlockFile(discriminator: 2, file: !1, scope: !17)
 !20 = !DILocation(line: 10, scope: !21)
-!21 = !DILexicalBlockFile(discriminator: 2, file: !1, scope: !17)
+!21 = !DILexicalBlockFile(discriminator: 4, file: !1, scope: !17)
 !22 = !DILocation(line: 10, scope: !23)
-!23 = !DILexicalBlockFile(discriminator: 3, file: !1, scope: !17)
+!23 = !DILexicalBlockFile(discriminator: 6, file: !1, scope: !17)
 !24 = !DILocation(line: 11, scope: !7)
 !25 = !DILocation(line: 12, scope: !7)

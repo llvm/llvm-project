@@ -16,8 +16,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachO.h"
 #include <set>
 
 using llvm::MachO::HeaderFileType;

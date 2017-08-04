@@ -89,8 +89,10 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   HANDLE FindHandle(FindFirstFileA(Path.c_str(), &FindInfo));
   if (FindHandle == INVALID_HANDLE_VALUE)
   {
-    Printf("No file found in: %s.\n", Dir.c_str());
-    return;
+    if (GetLastError() == ERROR_FILE_NOT_FOUND)
+      return;
+    Printf("No such directory: %s; exiting\n", Dir.c_str());
+    exit(1);
   }
 
   do {
@@ -139,6 +141,18 @@ void RemoveFile(const std::string &Path) {
   _unlink(Path.c_str());
 }
 
+void DiscardOutput(int Fd) {
+  FILE* Temp = fopen("nul", "w");
+  if (!Temp)
+    return;
+  _dup2(_fileno(Temp), Fd);
+  fclose(Temp);
+}
+
+intptr_t GetHandleFromFd(int fd) {
+  return _get_osfhandle(fd);
+}
+
 static bool IsSeparator(char C) {
   return C == '\\' || C == '/';
 }
@@ -168,7 +182,7 @@ static size_t ParseFileName(const std::string &FileName, const size_t Offset) {
   return Pos - Offset;
 }
 
-// Parse a directory ending in separator, like: SomeDir\
+// Parse a directory ending in separator, like: `SomeDir\`
 // Returns number of characters considered if successful.
 static size_t ParseDir(const std::string &FileName, const size_t Offset) {
   size_t Pos = Offset;
@@ -183,7 +197,7 @@ static size_t ParseDir(const std::string &FileName, const size_t Offset) {
   return Pos - Offset;
 }
 
-// Parse a servername and share, like: SomeServer\SomeShare\
+// Parse a servername and share, like: `SomeServer\SomeShare\`
 // Returns number of characters considered if successful.
 static size_t ParseServerAndShare(const std::string &FileName,
                                   const size_t Offset) {
@@ -277,7 +291,32 @@ std::string DirName(const std::string &FileName) {
   return FileName.substr(0, LocationLen + DirLen);
 }
 
-std::string TmpDir() { return "TODO: implement TmpDir"; }
+std::string TmpDir() {
+  std::string Tmp;
+  Tmp.resize(MAX_PATH + 1);
+  DWORD Size = GetTempPathA(Tmp.size(), &Tmp[0]);
+  if (Size == 0) {
+    Printf("Couldn't get Tmp path.\n");
+    exit(1);
+  }
+  Tmp.resize(Size);
+  return Tmp;
+}
+
+bool IsInterestingCoverageFile(const std::string &FileName) {
+  if (FileName.find("Program Files") != std::string::npos)
+    return false;
+  if (FileName.find("compiler-rt\\lib\\") != std::string::npos)
+    return false; // sanitizer internal.
+  if (FileName == "<null>")
+    return false;
+  return true;
+}
+
+void RawPrint(const char *Str) {
+  // Not tested, may or may not work. Fix if needed.
+  Printf("%s", Str);
+}
 
 }  // namespace fuzzer
 

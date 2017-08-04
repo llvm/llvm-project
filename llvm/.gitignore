@@ -21,6 +21,9 @@
 #OS X specific files.
 .DS_store
 
+# Nested build directory
+/build
+
 #==============================================================================#
 # Explicit files to ignore (only matches one).
 #==============================================================================#
@@ -62,8 +65,9 @@ tools/polly
 tools/avrlit
 # Sphinx build tree, if building in-source dir.
 docs/_build
-# VSCode config files.
+# VS2017 and VSCode config files.
 .vscode
+.vs
 
 #==============================================================================#
 # Files created in tree by the Go bindings.

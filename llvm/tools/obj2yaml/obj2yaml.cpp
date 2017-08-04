@@ -24,25 +24,38 @@ static std::error_code dumpObject(const ObjectFile &Obj) {
     return coff2yaml(outs(), cast<COFFObjectFile>(Obj));
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);
+  if (Obj.isWasm())
+    return wasm2yaml(outs(), cast<WasmObjectFile>(Obj));
 
   return obj2yaml_error::unsupported_obj_file_format;
 }
 
-static std::error_code dumpInput(StringRef File) {
+static Error dumpInput(StringRef File) {
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
   if (!BinaryOrErr)
-    return errorToErrorCode(BinaryOrErr.takeError());
+    return BinaryOrErr.takeError();
 
   Binary &Binary = *BinaryOrErr.get().getBinary();
   // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
   // here with the other binary types.
   if (Binary.isMachO() || Binary.isMachOUniversalBinary())
-    return macho2yaml(outs(), Binary);
+    return errorCodeToError(macho2yaml(outs(), Binary));
   // TODO: If this is an archive, then burst it and dump each entry
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
-    return dumpObject(*Obj);
+    return errorCodeToError(dumpObject(*Obj));
 
-  return obj2yaml_error::unrecognized_file_format;
+  return Error::success();
+}
+
+static void reportError(StringRef Input, Error Err) {
+  if (Input == "-")
+    Input = "<stdin>";
+  std::string ErrMsg;
+  raw_string_ostream OS(ErrMsg);
+  logAllUnhandledErrors(std::move(Err), OS, "");
+  OS.flush();
+  errs() << "Error reading file: " << Input << ": " << ErrMsg;
+  errs().flush();
 }
 
 cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
@@ -54,8 +67,8 @@ int main(int argc, char *argv[]) {
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  if (std::error_code EC = dumpInput(InputFilename)) {
-    errs() << "Error: '" << EC.message() << "'\n";
+  if (Error Err = dumpInput(InputFilename)) {
+    reportError(InputFilename, std::move(Err));
     return 1;
   }
 

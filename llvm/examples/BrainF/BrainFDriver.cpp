@@ -77,7 +77,7 @@ void addMainFunction(Module *mod) {
     getOrInsertFunction("main", IntegerType::getInt32Ty(mod->getContext()),
                         IntegerType::getInt32Ty(mod->getContext()),
                         PointerType::getUnqual(PointerType::getUnqual(
-                          IntegerType::getInt8Ty(mod->getContext()))), NULL));
+                          IntegerType::getInt8Ty(mod->getContext())))));
   {
     Function::arg_iterator args = main_func->arg_begin();
     Value *arg_0 = &*args++;
@@ -166,6 +166,10 @@ int main(int argc, char **argv) {
     std::vector<GenericValue> args;
     Function *brainf_func = M.getFunction("brainf");
     GenericValue gv = ee->runFunction(brainf_func, args);
+    // Genereated code calls putchar, and output is not guaranteed without fflush.
+    // The better place for fflush(stdout) call would be the generated code, but it
+    // is unmanageable because stdout linkage name depends on stdlib implementation.
+    fflush(stdout);
   } else {
     WriteBitcodeToFile(Mod.get(), *out);
   }

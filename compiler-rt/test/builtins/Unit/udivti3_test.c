@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- udivti3_test.c - Test __udivti3 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

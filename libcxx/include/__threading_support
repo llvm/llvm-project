@@ -12,6 +12,8 @@
 #define _LIBCPP_THREADING_SUPPORT
 
 #include <__config>
+#include <chrono>
+#include <errno.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #pragma GCC system_header
@@ -25,13 +27,14 @@
 # include <pthread.h>
 # include <sched.h>
 #elif defined(_LIBCPP_HAS_THREAD_API_WIN32)
-#include <assert.h>
-#include <Windows.h>
+#include <windows.h>
 #include <process.h>
 #include <fibersapi.h>
-
-#include <chrono>
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 #if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
     defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL)
@@ -67,6 +70,8 @@ typedef pthread_once_t __libcpp_exec_once_flag;
 typedef pthread_t __libcpp_thread_id;
 
 // Thread
+#define _LIBCPP_NULL_THREAD 0U
+
 typedef pthread_t __libcpp_thread_t;
 
 // Thrad Local Storage
@@ -92,6 +97,8 @@ typedef INIT_ONCE __libcpp_exec_once_flag;
 typedef DWORD __libcpp_thread_id;
 
 // Thread
+#define _LIBCPP_NULL_THREAD 0U
+
 typedef HANDLE __libcpp_thread_t;
 
 // Thread Local Storage
@@ -108,7 +115,7 @@ _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
-int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m);
+bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m);
@@ -120,7 +127,7 @@ _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_mutex_lock(__libcpp_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
-int __libcpp_mutex_trylock(__libcpp_mutex_t *__m);
+bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m);
@@ -151,11 +158,6 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
                           void (*init_routine)(void));
 
 // Thread id
-#if defined(__APPLE__) && !defined(__arm__)
-_LIBCPP_THREAD_ABI_VISIBILITY
-mach_port_t __libcpp_thread_get_port();
-#endif
-
 _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2);
 
@@ -163,6 +165,9 @@ _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2);
 
 // Thread
+_LIBCPP_THREAD_ABI_VISIBILITY
+bool __libcpp_thread_isnull(const __libcpp_thread_t *__t);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg);
@@ -181,6 +186,9 @@ int __libcpp_thread_detach(__libcpp_thread_t *__t);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 void __libcpp_thread_yield();
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns);
 
 // Thread local storage
 _LIBCPP_THREAD_ABI_VISIBILITY
@@ -227,9 +235,9 @@ int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m)
   return pthread_mutex_lock(__m);
 }
 
-int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
+bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
 {
-  return pthread_mutex_trylock(__m);
+  return pthread_mutex_trylock(__m) == 0;
 }
 
 int __libcpp_recursive_mutex_unlock(__libcpp_mutex_t *__m)
@@ -247,9 +255,9 @@ int __libcpp_mutex_lock(__libcpp_mutex_t *__m)
   return pthread_mutex_lock(__m);
 }
 
-int __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
+bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
 {
-  return pthread_mutex_trylock(__m);
+  return pthread_mutex_trylock(__m) == 0;
 }
 
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m)
@@ -296,12 +304,6 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
 }
 
 // Thread id
-#if defined(__APPLE__) && !defined(__arm__)
-mach_port_t __libcpp_thread_get_port() {
-    return pthread_mach_thread_np(pthread_self());
-}
-#endif
-
 // Returns non-zero if the thread ids are equal, otherwise 0
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2)
 {
@@ -315,6 +317,10 @@ bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2)
 }
 
 // Thread
+bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
+  return *__t == 0;
+}
+
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
@@ -344,6 +350,28 @@ int __libcpp_thread_detach(__libcpp_thread_t *__t)
 void __libcpp_thread_yield()
 {
   sched_yield();
+}
+
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
+{
+   using namespace chrono;
+   seconds __s = duration_cast<seconds>(__ns);
+   timespec __ts;
+   typedef decltype(__ts.tv_sec) ts_sec;
+   _LIBCPP_CONSTEXPR ts_sec __ts_sec_max = numeric_limits<ts_sec>::max();
+
+   if (__s.count() < __ts_sec_max)
+   {
+     __ts.tv_sec = static_cast<ts_sec>(__s.count());
+     __ts.tv_nsec = static_cast<decltype(__ts.tv_nsec)>((__ns - __s).count());
+   }
+   else
+   {
+     __ts.tv_sec = __ts_sec_max;
+     __ts.tv_nsec = 999999999; // (10^9 - 1)
+   }
+
+   while (nanosleep(&__ts, &__ts) == -1 && errno == EINTR);
 }
 
 // Thread local storage
@@ -377,10 +405,9 @@ int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m)
   return 0;
 }
 
-int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
+bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
 {
-  TryEnterCriticalSection(__m);
-  return 0;
+  return TryEnterCriticalSection(__m) != 0;
 }
 
 int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m)
@@ -401,10 +428,9 @@ int __libcpp_mutex_lock(__libcpp_mutex_t *__m)
   return 0;
 }
 
-int __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
+bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
 {
-  TryAcquireSRWLockExclusive(__m);
-  return 0;
+  return TryAcquireSRWLockExclusive(__m) != 0;
 }
 
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m)
@@ -452,7 +478,10 @@ int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
                                  timeout_ms.count() > 0 ? timeout_ms.count()
                                                         : 0,
                                  0))
-    return GetLastError();
+    {
+      auto __ec = GetLastError();
+      return __ec == ERROR_TIMEOUT ? ETIMEDOUT : __ec;
+    }
   return 0;
 }
 
@@ -503,25 +532,32 @@ struct __libcpp_beginthreadex_thunk_data
   void *__arg;
 };
 
-static inline _LIBCPP_ALWAYS_INLINE unsigned int WINAPI
-__libcpp_beginthreadex_thunk(void *__data)
+static inline _LIBCPP_ALWAYS_INLINE unsigned WINAPI
+__libcpp_beginthreadex_thunk(void *__raw_data)
 {
-  __libcpp_beginthreadex_thunk_data data =
-      *reinterpret_cast<__libcpp_beginthreadex_thunk_data *>(__data);
-  delete reinterpret_cast<__libcpp_beginthreadex_thunk_data *>(__data);
-  return reinterpret_cast<unsigned int>(data.__func(data.__arg));
+  auto *__data =
+      static_cast<__libcpp_beginthreadex_thunk_data *>(__raw_data);
+  auto *__func = __data->__func;
+  void *__arg = __data->__arg;
+  delete __data;
+  return static_cast<unsigned>(reinterpret_cast<uintptr_t>(__func(__arg)));
+}
+
+bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
+  return *__t == 0;
 }
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
-  auto *data = new __libcpp_beginthreadex_thunk_data;
-  data->__func = __func;
-  data->__arg = __arg;
+  auto *__data = new __libcpp_beginthreadex_thunk_data;
+  __data->__func = __func;
+  __data->__arg = __arg;
 
-  *__t = reinterpret_cast<HANDLE>(_beginthreadex(NULL, 0,
+  *__t = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0,
                                                  __libcpp_beginthreadex_thunk,
-                                                 data, 0, NULL));
+                                                 __data, 0, nullptr));
+
   if (*__t)
     return 0;
   return GetLastError();
@@ -558,6 +594,16 @@ void __libcpp_thread_yield()
   SwitchToThread();
 }
 
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
+{
+  using namespace chrono;
+  // round-up to the nearest milisecond
+  milliseconds __ms =
+      duration_cast<milliseconds>(__ns + chrono::nanoseconds(999999));
+  // FIXME(compnerd) this should be an alertable sleep (WFSO or SleepEx)
+  Sleep(__ms.count());
+}
+
 // Thread Local Storage
 int __libcpp_tls_create(__libcpp_tls_key* __key,
                         void(_LIBCPP_TLS_DESTRUCTOR_CC* __at_exit)(void*))
@@ -585,6 +631,8 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 #endif // !_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL || _LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // !_LIBCPP_HAS_NO_THREADS
 

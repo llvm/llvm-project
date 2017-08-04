@@ -1,4 +1,4 @@
-//===-- MipsMCExpr.h - Mips specific MC expression classes ------*- C++ -*-===//
+//===- MipsMCExpr.h - Mips specific MC expression classes -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -70,6 +70,7 @@ public:
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
+
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
@@ -86,6 +87,7 @@ public:
     return isGpOff(Kind);
   }
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCEXPR_H

@@ -80,7 +80,7 @@ int main()
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::basic_string<char>::reverse_iterator>      ::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::basic_string<char>::const_reverse_iterator>::value), "");
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#if TEST_STD_VER >= 11
 //  Initializer list  (which has no reverse iterators)
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::initializer_list<char>::iterator>              ::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::initializer_list<char>::const_iterator>        ::value), "");

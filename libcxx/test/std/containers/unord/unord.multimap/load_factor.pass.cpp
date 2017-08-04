@@ -44,7 +44,6 @@ int main()
     }
     {
         typedef std::unordered_multimap<int, std::string> C;
-        typedef std::pair<int, std::string> P;
         const C c;
         assert(c.load_factor() == 0);
     }
@@ -70,7 +69,6 @@ int main()
     {
         typedef std::unordered_multimap<int, std::string, std::hash<int>, std::equal_to<int>,
                             min_allocator<std::pair<const int, std::string>>> C;
-        typedef std::pair<int, std::string> P;
         const C c;
         assert(c.load_factor() == 0);
     }

@@ -27,9 +27,12 @@ using namespace llvm::object;
 namespace {
 
 class LoadedCOFFObjectInfo final
-    : public RuntimeDyld::LoadedObjectInfoHelper<LoadedCOFFObjectInfo> {
+    : public LoadedObjectInfoHelper<LoadedCOFFObjectInfo,
+                                    RuntimeDyld::LoadedObjectInfo> {
 public:
-  LoadedCOFFObjectInfo(RuntimeDyldImpl &RTDyld, ObjSectionToIDMap ObjSecToIDMap)
+  LoadedCOFFObjectInfo(
+      RuntimeDyldImpl &RTDyld,
+      RuntimeDyld::LoadedObjectInfo::ObjSectionToIDMap ObjSecToIDMap)
       : LoadedObjectInfoHelper(RTDyld, std::move(ObjSecToIDMap)) {}
 
   OwningBinary<ObjectFile>

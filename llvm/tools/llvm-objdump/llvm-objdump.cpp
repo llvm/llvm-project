@@ -41,6 +41,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -61,8 +62,8 @@
 #include <cctype>
 #include <cstring>
 #include <system_error>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 
 using namespace llvm;
 using namespace object;
@@ -158,6 +159,8 @@ cl::opt<bool>
 llvm::NoShowRawInsn("no-show-raw-insn", cl::desc("When disassembling "
                                                  "instructions, do not print "
                                                  "the instruction bytes."));
+cl::opt<bool>
+llvm::NoLeadingAddr("no-leading-addr", cl::desc("Print no leading address"));
 
 cl::opt<bool>
 llvm::UnwindInfo("unwind-info", cl::desc("Display unwind information"));
@@ -212,6 +215,8 @@ cl::opt<unsigned long long>
     StopAddress("stop-address", cl::desc("Stop disassembly at address"),
                 cl::value_desc("address"), cl::init(UINT64_MAX));
 static StringRef ToolName;
+
+typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
 
 namespace {
 typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
@@ -357,7 +362,16 @@ static const Target *getTarget(const ObjectFile *Obj = nullptr) {
   llvm::Triple TheTriple("unknown-unknown-unknown");
   if (TripleName.empty()) {
     if (Obj) {
-      TheTriple.setArch(Triple::ArchType(Obj->getArch()));
+      auto Arch = Obj->getArch();
+      TheTriple.setArch(Triple::ArchType(Arch));
+
+      // For ARM targets, try to use the build attributes to build determine
+      // the build target. Target features are also added, but later during
+      // disassembly.
+      if (Arch == Triple::arm || Arch == Triple::armeb) {
+        Obj->setARMSubArch(TheTriple);
+      }
+
       // TheTriple defaults to ELF, and COFF doesn't have an environment:
       // the best we can do here is indicate that it is mach-o.
       if (Obj->isMachO())
@@ -369,8 +383,16 @@ static const Target *getTarget(const ObjectFile *Obj = nullptr) {
           TheTriple.setTriple("thumbv7-windows");
       }
     }
-  } else
+  } else {
     TheTriple.setTriple(Triple::normalize(TripleName));
+    // Use the triple, but also try to combine with ARM build attributes.
+    if (Obj) {
+      auto Arch = Obj->getArch();
+      if (Arch == Triple::arm || Arch == Triple::armeb) {
+        Obj->setARMSubArch(TheTriple);
+      }
+    }
+  }
 
   // Get the target specific parser.
   std::string Error;
@@ -464,10 +486,13 @@ void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
     auto FileBuffer = SourceCache.find(LineInfo.FileName);
     if (FileBuffer != SourceCache.end()) {
       auto LineBuffer = LineCache.find(LineInfo.FileName);
-      if (LineBuffer != LineCache.end())
+      if (LineBuffer != LineCache.end()) {
+        if (LineInfo.Line > LineBuffer->second.size())
+          return;
         // Vector begins at 0, line numbers are non-zero
         OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
            << "\n";
+      }
     }
   }
   OldLineInfo = LineInfo;
@@ -491,7 +516,8 @@ public:
                          MCSubtargetInfo const &STI, SourcePrinter *SP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    OS << format("%8" PRIx64 ":", Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
@@ -509,7 +535,8 @@ public:
                  raw_ostream &OS) {
     uint32_t opcode =
       (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
-    OS << format("%8" PRIx64 ":", Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes.slice(0, 4), OS);
@@ -570,6 +597,9 @@ public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
                  uint64_t Address, raw_ostream &OS, StringRef Annot,
                  MCSubtargetInfo const &STI, SourcePrinter *SP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+
     if (!MI) {
       OS << " <unknown>";
       return;
@@ -601,7 +631,8 @@ public:
                  MCSubtargetInfo const &STI, SourcePrinter *SP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    OS << format("%8" PRId64 ":", Address / 8);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRId64 ":", Address / 8);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
@@ -839,7 +870,10 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   bool isExtern = O->getPlainRelocationExternal(RE);
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
-  if (isExtern) {
+  if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND) {
+    fmt << format("0x%x", Val);
+    return;
+  } else if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
     advance(SI, Val);
     Expected<StringRef> SOrErr = SI->getName();
@@ -854,6 +888,18 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   }
 
   fmt << S;
+}
+
+static std::error_code getRelocationValueString(const WasmObjectFile *Obj,
+                                                const RelocationRef &RelRef,
+                                                SmallVectorImpl<char> &Result) {
+  const wasm::WasmRelocation& Rel = Obj->getWasmRelocation(RelRef);
+  std::string fmtbuf;
+  raw_string_ostream fmt(fmtbuf);
+  fmt << Rel.Index << (Rel.Addend < 0 ? "" : "+") << Rel.Addend;
+  fmt.flush();
+  Result.append(fmtbuf.begin(), fmtbuf.end());
+  return std::error_code();
 }
 
 static std::error_code getRelocationValueString(const MachOObjectFile *Obj,
@@ -989,7 +1035,7 @@ static std::error_code getRelocationValueString(const MachOObjectFile *Obj,
       case MachO::ARM_RELOC_HALF_SECTDIFF: {
         // Half relocations steal a bit from the length field to encode
         // whether this is an upper16 or a lower16 relocation.
-        bool isUpper = Obj->getAnyRelocationLength(RE) >> 1;
+        bool isUpper = (Obj->getAnyRelocationLength(RE) & 0x1) == 1;
 
         if (isUpper)
           fmt << ":upper16:(";
@@ -1041,8 +1087,11 @@ static std::error_code getRelocationValueString(const RelocationRef &Rel,
     return getRelocationValueString(ELF, Rel, Result);
   if (auto *COFF = dyn_cast<COFFObjectFile>(Obj))
     return getRelocationValueString(COFF, Rel, Result);
-  auto *MachO = cast<MachOObjectFile>(Obj);
-  return getRelocationValueString(MachO, Rel, Result);
+  if (auto *Wasm = dyn_cast<WasmObjectFile>(Obj))
+    return getRelocationValueString(Wasm, Rel, Result);
+  if (auto *MachO = dyn_cast<MachOObjectFile>(Obj))
+    return getRelocationValueString(MachO, Rel, Result);
+  llvm_unreachable("unknown object file format");
 }
 
 /// @brief Indicates whether this relocation should hidden when listing
@@ -1089,6 +1138,52 @@ static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
   if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(Obj))
     return Elf64BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
   llvm_unreachable("Unsupported binary format");
+}
+
+template <class ELFT> static void
+addDynamicElfSymbols(const ELFObjectFile<ELFT> *Obj,
+                     std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+  for (auto Symbol : Obj->getDynamicSymbolIterators()) {
+    uint8_t SymbolType = Symbol.getELFType();
+    if (SymbolType != ELF::STT_FUNC || Symbol.getSize() == 0)
+      continue;
+
+    Expected<uint64_t> AddressOrErr = Symbol.getAddress();
+    if (!AddressOrErr)
+      report_error(Obj->getFileName(), AddressOrErr.takeError());
+    uint64_t Address = *AddressOrErr;
+
+    Expected<StringRef> Name = Symbol.getName();
+    if (!Name)
+      report_error(Obj->getFileName(), Name.takeError());
+    if (Name->empty())
+      continue;
+
+    Expected<section_iterator> SectionOrErr = Symbol.getSection();
+    if (!SectionOrErr)
+      report_error(Obj->getFileName(), SectionOrErr.takeError());
+    section_iterator SecI = *SectionOrErr;
+    if (SecI == Obj->section_end())
+      continue;
+
+    AllSymbols[*SecI].emplace_back(Address, *Name, SymbolType);
+  }
+}
+
+static void
+addDynamicElfSymbols(const ObjectFile *Obj,
+                     std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+  assert(Obj->isELF());
+  if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(Obj))
+    addDynamicElfSymbols(Elf32LEObj, AllSymbols);
+  else if (auto *Elf64LEObj = dyn_cast<ELF64LEObjectFile>(Obj))
+    addDynamicElfSymbols(Elf64LEObj, AllSymbols);
+  else if (auto *Elf32BEObj = dyn_cast<ELF32BEObjectFile>(Obj))
+    addDynamicElfSymbols(Elf32BEObj, AllSymbols);
+  else if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(Obj))
+    addDynamicElfSymbols(Elf64BEObj, AllSymbols);
+  else
+    llvm_unreachable("Unsupported binary format");
 }
 
 static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
@@ -1165,7 +1260,6 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
-  typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
   for (const SymbolRef &Symbol : Obj->symbols()) {
     Expected<uint64_t> AddressOrErr = Symbol.getAddress();
@@ -1193,6 +1287,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     AllSymbols[*SecI].emplace_back(Address, *Name, SymbolType);
 
   }
+  if (AllSymbols.empty() && Obj->isELF())
+    addDynamicElfSymbols(Obj, AllSymbols);
 
   // Create a mapping from virtual address to section.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
@@ -1811,9 +1907,9 @@ void llvm::printExportsTrie(const ObjectFile *o) {
   }
 }
 
-void llvm::printRebaseTable(const ObjectFile *o) {
+void llvm::printRebaseTable(ObjectFile *o) {
   outs() << "Rebase table:\n";
-  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachORebaseTable(MachO);
   else {
     errs() << "This operation is only currently supported "
@@ -1822,9 +1918,9 @@ void llvm::printRebaseTable(const ObjectFile *o) {
   }
 }
 
-void llvm::printBindTable(const ObjectFile *o) {
+void llvm::printBindTable(ObjectFile *o) {
   outs() << "Bind table:\n";
-  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOBindTable(MachO);
   else {
     errs() << "This operation is only currently supported "
@@ -1833,9 +1929,9 @@ void llvm::printBindTable(const ObjectFile *o) {
   }
 }
 
-void llvm::printLazyBindTable(const ObjectFile *o) {
+void llvm::printLazyBindTable(ObjectFile *o) {
   outs() << "Lazy bind table:\n";
-  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOLazyBindTable(MachO);
   else {
     errs() << "This operation is only currently supported "
@@ -1844,9 +1940,9 @@ void llvm::printLazyBindTable(const ObjectFile *o) {
   }
 }
 
-void llvm::printWeakBindTable(const ObjectFile *o) {
+void llvm::printWeakBindTable(ObjectFile *o) {
   outs() << "Weak bind table:\n";
-  if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOWeakBindTable(MachO);
   else {
     errs() << "This operation is only currently supported "
@@ -1944,7 +2040,7 @@ static void printPrivateFileHeaders(const ObjectFile *o, bool onlyFirst) {
   report_error(o->getFileName(), "Invalid/Unsupported object file format");
 }
 
-static void DumpObject(const ObjectFile *o, const Archive *a = nullptr) {
+static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   StringRef ArchiveName = a != nullptr ? a->getFileName() : "";
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
@@ -1985,9 +2081,12 @@ static void DumpObject(const ObjectFile *o, const Archive *a = nullptr) {
   if (PrintFaultMaps)
     printFaultMaps(o);
   if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*o));
+    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*o);
     // Dump the complete DWARF structure.
-    DICtx->dump(outs(), DwarfDumpType, true /* DumpEH */);
+    DIDumpOptions DumpOpts;
+    DumpOpts.DumpType = DwarfDumpType;
+    DumpOpts.DumpEH = true;
+    DICtx->dump(outs(), DumpOpts);
   }
 }
 

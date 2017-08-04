@@ -15,12 +15,18 @@
 #define LLVM_OBJECTYAML_COFFYAML_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
+#include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/COFF.h"
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 
 namespace COFF {
+
 inline Characteristics operator|(Characteristics a, Characteristics b) {
   uint32_t Ret = static_cast<uint32_t>(a) | static_cast<uint32_t>(b);
   return static_cast<Characteristics>(Ret);
@@ -37,58 +43,67 @@ inline DLLCharacteristics operator|(DLLCharacteristics a,
   uint16_t Ret = static_cast<uint16_t>(a) | static_cast<uint16_t>(b);
   return static_cast<DLLCharacteristics>(Ret);
 }
-}
+
+} // end namespace COFF
 
 // The structure of the yaml files is not an exact 1:1 match to COFF. In order
 // to use yaml::IO, we use these structures which are closer to the source.
 namespace COFFYAML {
-  LLVM_YAML_STRONG_TYPEDEF(uint8_t, COMDATType)
-  LLVM_YAML_STRONG_TYPEDEF(uint32_t, WeakExternalCharacteristics)
-  LLVM_YAML_STRONG_TYPEDEF(uint8_t, AuxSymbolType)
 
-  struct Relocation {
-    uint32_t VirtualAddress;
-    uint16_t Type;
-    StringRef SymbolName;
-  };
+LLVM_YAML_STRONG_TYPEDEF(uint8_t, COMDATType)
+LLVM_YAML_STRONG_TYPEDEF(uint32_t, WeakExternalCharacteristics)
+LLVM_YAML_STRONG_TYPEDEF(uint8_t, AuxSymbolType)
 
-  struct Section {
-    COFF::section Header;
-    unsigned Alignment = 0;
-    yaml::BinaryRef SectionData;
-    std::vector<Relocation> Relocations;
-    StringRef Name;
-    Section();
-  };
+struct Relocation {
+  uint32_t VirtualAddress;
+  uint16_t Type;
+  StringRef SymbolName;
+};
 
-  struct Symbol {
-    COFF::symbol Header;
-    COFF::SymbolBaseType SimpleType = COFF::IMAGE_SYM_TYPE_NULL;
-    COFF::SymbolComplexType ComplexType = COFF::IMAGE_SYM_DTYPE_NULL;
-    Optional<COFF::AuxiliaryFunctionDefinition> FunctionDefinition;
-    Optional<COFF::AuxiliarybfAndefSymbol> bfAndefSymbol;
-    Optional<COFF::AuxiliaryWeakExternal> WeakExternal;
-    StringRef File;
-    Optional<COFF::AuxiliarySectionDefinition> SectionDefinition;
-    Optional<COFF::AuxiliaryCLRToken> CLRToken;
-    StringRef Name;
-    Symbol();
-  };
+struct Section {
+  COFF::section Header;
+  unsigned Alignment = 0;
+  yaml::BinaryRef SectionData;
+  std::vector<CodeViewYAML::YAMLDebugSubsection> DebugS;
+  std::vector<CodeViewYAML::LeafRecord> DebugT;
+  std::vector<Relocation> Relocations;
+  StringRef Name;
 
-  struct PEHeader {
-    COFF::PE32Header Header;
-    Optional<COFF::DataDirectory> DataDirectories[COFF::NUM_DATA_DIRECTORIES];
-  };
+  Section();
+};
 
-  struct Object {
-    Optional<PEHeader> OptionalHeader;
-    COFF::header Header;
-    std::vector<Section> Sections;
-    std::vector<Symbol> Symbols;
-    Object();
-  };
-}
-}
+struct Symbol {
+  COFF::symbol Header;
+  COFF::SymbolBaseType SimpleType = COFF::IMAGE_SYM_TYPE_NULL;
+  COFF::SymbolComplexType ComplexType = COFF::IMAGE_SYM_DTYPE_NULL;
+  Optional<COFF::AuxiliaryFunctionDefinition> FunctionDefinition;
+  Optional<COFF::AuxiliarybfAndefSymbol> bfAndefSymbol;
+  Optional<COFF::AuxiliaryWeakExternal> WeakExternal;
+  StringRef File;
+  Optional<COFF::AuxiliarySectionDefinition> SectionDefinition;
+  Optional<COFF::AuxiliaryCLRToken> CLRToken;
+  StringRef Name;
+
+  Symbol();
+};
+
+struct PEHeader {
+  COFF::PE32Header Header;
+  Optional<COFF::DataDirectory> DataDirectories[COFF::NUM_DATA_DIRECTORIES];
+};
+
+struct Object {
+  Optional<PEHeader> OptionalHeader;
+  COFF::header Header;
+  std::vector<Section> Sections;
+  std::vector<Symbol> Symbols;
+
+  Object();
+};
+
+} // end namespace COFFYAML
+
+} // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Section)
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Symbol)
@@ -220,4 +235,4 @@ struct MappingTraits<COFFYAML::Object> {
 } // end namespace yaml
 } // end namespace llvm
 
-#endif
+#endif // LLVM_OBJECTYAML_COFFYAML_H

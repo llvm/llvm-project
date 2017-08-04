@@ -29,11 +29,12 @@ struct A
 
 int main()
 {
+    globalMemCounter.reset();
     std::allocator<A> a;
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A_constructed == 0);
     globalMemCounter.last_new_size = 0;
-    A* ap = a.allocate(3);
+    A* volatile ap = a.allocate(3);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkLastNewSizeEq(3 * sizeof(int)));
     assert(A_constructed == 0);
@@ -42,7 +43,7 @@ int main()
     assert(A_constructed == 0);
 
     globalMemCounter.last_new_size = 0;
-    A* ap2 = a.allocate(3, (const void*)5);
+    A* volatile ap2 = a.allocate(3, (const void*)5);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkLastNewSizeEq(3 * sizeof(int)));
     assert(A_constructed == 0);

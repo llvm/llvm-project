@@ -265,12 +265,12 @@ _ZNK4llvm9StringRef10startswithES0_.exit:         ; preds = %entry._ZNK4llvm9Str
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.start(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
 
 declare void @_ZN5clang6format17WhitespaceManager24replaceWhitespaceInTokenERKNS0_11FormatTokenEjjN4llvm9StringRefES6_bjji(%"class.clang::format::WhitespaceManager"*, %"struct.clang::format::FormatToken"* dereferenceable(272), i32 zeroext, i32 zeroext, [2 x i64], [2 x i64], i1 zeroext, i32 zeroext, i32 zeroext, i32 signext) #3
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.end(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
 
 attributes #9 = { nounwind }
 

@@ -116,7 +116,7 @@ int main()
     {
 /*
  *      Corresponds to:
-        #pragma omp target nowait depend(out: dep)
+        #pragma omp target nowait
         {
             my_sleep( 0.1 );
         }

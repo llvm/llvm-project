@@ -8,7 +8,7 @@ define void @foo(i64 %a, i64 %add, i128* %retptr) {
 ; CHECK:        add.s64
 ; CHECK:        setp.lt.u64
 ; CHECK:        setp.lt.u64
-; CHECK:        selp.b64
+; CHECK:        selp.u64
 ; CHECK:        selp.b64
 ; CHECK:        add.s64
   %t1 = sext i64 %a to i128

@@ -45,6 +45,8 @@ class Configuration(LibcxxConfiguration):
         # test_exception_storage_nodynmem.pass.cpp fails under this specific configuration
         if self.get_lit_bool('cxx_ext_threads', False) and self.get_lit_bool('libcxxabi_shared', False):
             self.config.available_features.add('libcxxabi-shared-externally-threaded')
+        if not self.get_lit_bool('llvm_unwinder', False):
+            self.config.available_features.add('libcxxabi-has-system-unwinder')
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']
@@ -78,6 +80,13 @@ class Configuration(LibcxxConfiguration):
             self.lit_config.fatal("libcxxabi_headers='%s' is not a directory."
                                   % libcxxabi_headers)
         self.cxx.compile_flags += ['-I' + libcxxabi_headers]
+
+        libunwind_headers = self.get_lit_conf('libunwind_headers', None)
+        if self.get_lit_bool('llvm_unwinder', False) and libunwind_headers:
+            if not os.path.isdir(libunwind_headers):
+                self.lit_config.fatal("libunwind_headers='%s' is not a directory."
+                                      % libunwind_headers)
+            self.cxx.compile_flags += ['-I' + libunwind_headers]
 
     def configure_compile_flags_exceptions(self):
         pass

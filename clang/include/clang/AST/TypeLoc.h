@@ -1544,7 +1544,11 @@ class DependentSizedArrayTypeLoc :
     public InheritingConcreteTypeLoc<ArrayTypeLoc,
                                      DependentSizedArrayTypeLoc,
                                      DependentSizedArrayType> {
-
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    ArrayTypeLoc::initializeLocal(Context, Loc);
+    setSizeExpr(getTypePtr()->getSizeExpr());
+  }
 };
 
 class VariableArrayTypeLoc :
@@ -1834,9 +1838,25 @@ public:
   }
 };
 
-class AutoTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
-                                                        AutoTypeLoc,
-                                                        AutoType> {
+class DeducedTypeLoc
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DeducedTypeLoc,
+                                       DeducedType> {};
+
+class AutoTypeLoc
+    : public InheritingConcreteTypeLoc<DeducedTypeLoc, AutoTypeLoc, AutoType> {
+};
+
+class DeducedTemplateSpecializationTypeLoc
+    : public InheritingConcreteTypeLoc<DeducedTypeLoc,
+                                       DeducedTemplateSpecializationTypeLoc,
+                                       DeducedTemplateSpecializationType> {
+public:
+  SourceLocation getTemplateNameLoc() const {
+    return getNameLoc();
+  }
+  void setTemplateNameLoc(SourceLocation Loc) {
+    setNameLoc(Loc);
+  }
 };
 
 struct ElaboratedLocInfo {

@@ -44,7 +44,7 @@ public:
       : TheDef(TheDef), RCs(), RCWithLargestRegsSize(nullptr) {}
 
   /// Get the human-readable name for the bank.
-  std::string getName() const { return TheDef.getValueAsString("Name"); }
+  StringRef getName() const { return TheDef.getValueAsString("Name"); }
   /// Get the name of the enumerator in the ID enumeration.
   std::string getEnumeratorName() const { return (TheDef.getName() + "ID").str(); }
 
@@ -227,7 +227,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
       OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31) << "\n";
       for (const auto &RC : RCs) {
         std::string QualifiedRegClassID =
-            (Twine(TargetName) + "::" + RC->getName() + "RegClassID").str();
+            (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
         OS << "    (1u << (" << QualifiedRegClassID << " - "
            << LowestIdxInWord << ")) |\n";
       }

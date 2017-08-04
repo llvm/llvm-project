@@ -35,6 +35,9 @@ template <class InputIterator, class Function>
     Function
     for_each(InputIterator first, InputIterator last, Function f);
 
+template<class InputIterator, class Size, class Function>
+    InputIterator for_each_n(InputIterator first, Size n, Function f); // C++17
+
 template <class InputIterator, class T>
     InputIterator
     find(InputIterator first, InputIterator last, const T& value);
@@ -281,12 +284,12 @@ template <class ForwardIterator, class OutputIterator>
 
 template <class RandomAccessIterator>
     void
-    random_shuffle(RandomAccessIterator first, RandomAccessIterator last); // deprecated in C++14
+    random_shuffle(RandomAccessIterator first, RandomAccessIterator last); // deprecated in C++14, removed in C++17
 
 template <class RandomAccessIterator, class RandomNumberGenerator>
     void
     random_shuffle(RandomAccessIterator first, RandomAccessIterator last,
-                   RandomNumberGenerator& rand);  // deprecated in C++14
+                   RandomNumberGenerator& rand);  // deprecated in C++14, removed in C++17
 
 template<class PopulationIterator, class SampleIterator,
          class Distance, class UniformRandomBitGenerator>
@@ -644,17 +647,19 @@ template <class BidirectionalIterator, class Compare>
 #if defined(__IBMCPP__)
 #include "support/ibm/support.h"
 #endif
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
-#include "support/win32/support.h"
+#if defined(_LIBCPP_COMPILER_MSVC)
+#include <intrin.h>
 #endif
-
-#include <__undef_min_max>
 
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -783,51 +788,132 @@ struct __debug_less
 
 // Precondition:  __x != 0
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned
-__ctz(unsigned __x)
-{
+unsigned __ctz(unsigned __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
     return static_cast<unsigned>(__builtin_ctz(__x));
+#else
+  static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
+  static_assert(sizeof(unsigned long) == 4, "");
+  unsigned long where;
+  // Search from LSB to MSB for first set bit.
+  // Returns zero if no set bit is found.
+  if (_BitScanForward(&where, mask))
+    return where;
+  return 32;
+#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long
-__ctz(unsigned long __x)
-{
+unsigned long __ctz(unsigned long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
     return static_cast<unsigned long>(__builtin_ctzl(__x));
+#else
+    static_assert(sizeof(unsigned long) == sizeof(unsigned), "");
+    return __ctz(static_cast<unsigned>(__x));
+#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long long
-__ctz(unsigned long long __x)
-{
+unsigned long long __ctz(unsigned long long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
     return static_cast<unsigned long long>(__builtin_ctzll(__x));
+#else
+    unsigned long where;
+// Search from LSB to MSB for first set bit.
+// Returns zero if no set bit is found.
+#if defined(_LIBCPP_HAS_BITSCAN64)
+    (defined(_M_AMD64) || defined(__x86_64__))
+  if (_BitScanForward64(&where, mask))
+    return static_cast<int>(where);
+#else
+  // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
+  // Scan the Low Word.
+  if (_BitScanForward(&where, static_cast<unsigned long>(mask)))
+    return where;
+  // Scan the High Word.
+  if (_BitScanForward(&where, static_cast<unsigned long>(mask >> 32)))
+    return where + 32; // Create a bit offset from the LSB.
+#endif
+  return 64;
+#endif // _LIBCPP_COMPILER_MSVC
 }
 
 // Precondition:  __x != 0
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned
-__clz(unsigned __x)
-{
+unsigned __clz(unsigned __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
     return static_cast<unsigned>(__builtin_clz(__x));
+#else
+  static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
+  static_assert(sizeof(unsigned long) == 4, "");
+  unsigned long where;
+  // Search from LSB to MSB for first set bit.
+  // Returns zero if no set bit is found.
+  if (_BitScanReverse(&where, mask))
+    return 31 - where;
+  return 32; // Undefined Behavior.
+#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long
-__clz(unsigned long __x)
-{
+unsigned long __clz(unsigned long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
     return static_cast<unsigned long>(__builtin_clzl (__x));
+#else
+    static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
+    return __clz(static_cast<unsigned>(__x));
+#endif
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned long long
-__clz(unsigned long long __x)
-{
+unsigned long long __clz(unsigned long long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
     return static_cast<unsigned long long>(__builtin_clzll(__x));
+#else
+  unsigned long where;
+// BitScanReverse scans from MSB to LSB for first set bit.
+// Returns 0 if no set bit is found.
+#if defined(_LIBCPP_HAS_BITSCAN64)
+  if (_BitScanReverse64(&where, mask))
+    return static_cast<int>(63 - where);
+#else
+  // Scan the high 32 bits.
+  if (_BitScanReverse(&where, static_cast<unsigned long>(mask >> 32)))
+    return 63 - (where + 32); // Create a bit offset from the MSB.
+  // Scan the low 32 bits.
+  if (_BitScanReverse(&where, static_cast<unsigned long>(mask)))
+    return 63 - where;
+#endif
+  return 64; // Undefined Behavior.
+#endif // _LIBCPP_COMPILER_MSVC
 }
 
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned           __x) {return __builtin_popcount  (__x);}
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned      long __x) {return __builtin_popcountl (__x);}
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long long __x) {return __builtin_popcountll(__x);}
+inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+  return __builtin_popcount  (__x);
+#else
+  static_assert(sizeof(unsigned) == 4, "");
+  return __popcnt(__x);
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+  return __builtin_popcountl (__x);
+#else
+  static_assert(sizeof(unsigned long) == 4, "");
+  return __popcnt(__x);
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long long __x) {
+#ifndef _LIBCPP_COMPILER_MSVC
+  return __builtin_popcountll(__x);
+#else
+  static_assert(sizeof(unsigned long long) == 8, "");
+  return __popcnt64(__x);
+#endif
+}
 
 // all_of
 
@@ -879,6 +965,26 @@ for_each(_InputIterator __first, _InputIterator __last, _Function __f)
         __f(*__first);
     return __f;
 }
+
+#if _LIBCPP_STD_VER > 14
+// for_each_n
+
+template <class _InputIterator, class _Size, class _Function>
+inline _LIBCPP_INLINE_VISIBILITY
+_InputIterator
+for_each_n(_InputIterator __first, _Size __orig_n, _Function __f)
+{
+    typedef decltype(__convert_to_integral(__orig_n)) _IntegralSize;
+    _IntegralSize __n = __orig_n;
+    while (__n > 0)
+    {
+         __f(*__first);
+         ++__first;
+         --__n;
+    }
+    return __first;
+}
+#endif
 
 // find
 
@@ -2548,7 +2654,7 @@ min(const _Tp& __a, const _Tp& __b)
     return _VSTD::min(__a, __b, __less<_Tp>());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -2566,7 +2672,7 @@ min(initializer_list<_Tp> __t)
     return *_VSTD::min_element(__t.begin(), __t.end(), __less<_Tp>());
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 // max_element
 
@@ -2613,7 +2719,7 @@ max(const _Tp& __a, const _Tp& __b)
     return _VSTD::max(__a, __b, __less<_Tp>());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -2631,7 +2737,7 @@ max(initializer_list<_Tp> __t)
     return *_VSTD::max_element(__t.begin(), __t.end(), __less<_Tp>());
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 // clamp
@@ -2732,7 +2838,7 @@ minmax(const _Tp& __a, const _Tp& __b)
     return _VSTD::minmax(__a, __b, __less<_Tp>());
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -2779,7 +2885,7 @@ minmax(initializer_list<_Tp> __t)
     return _VSTD::minmax(__t, __less<_Tp>());
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 // random_shuffle
 
@@ -2804,11 +2910,11 @@ struct __log2_imp<0, _Rp>
     static const size_t value = _Rp + 1;
 };
 
-template <class _UI, _UI _Xp>
+template <class _UIntType, _UIntType _Xp>
 struct __log2
 {
     static const size_t value = __log2_imp<_Xp,
-                                         sizeof(_UI) * __CHAR_BIT__ - 1>::value;
+                                         sizeof(_UIntType) * __CHAR_BIT__ - 1>::value;
 };
 
 template<class _Engine, class _UIntType>
@@ -2837,7 +2943,7 @@ private:
     _Engine_result_type __mask0_;
     _Engine_result_type __mask1_;
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min
                                           + _Working_result_type(1);
 #else
@@ -3026,6 +3132,8 @@ uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p
     return static_cast<result_type>(__u + __p.a());
 }
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE) \
+  || defined(_LIBCPP_BUILDING_LIBRARY)
 class _LIBCPP_TYPE_VIS __rs_default;
 
 _LIBCPP_FUNC_VIS __rs_default __rs_get();
@@ -3078,7 +3186,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
 void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
                _RandomNumberGenerator&& __rand)
 #else
                _RandomNumberGenerator& __rand)
@@ -3095,6 +3203,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
         }
     }
 }
+#endif
 
 template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
@@ -3170,7 +3279,7 @@ _SampleIterator sample(_PopulationIterator __first,
 
 template<class _RandomAccessIterator, class _UniformRandomNumberGenerator>
     void shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
                  _UniformRandomNumberGenerator&& __g)
 #else
                  _UniformRandomNumberGenerator& __g)
@@ -4125,10 +4234,6 @@ sort(__wrap_iter<_Tp*> __first, __wrap_iter<_Tp*> __last, _Compare __comp)
     _VSTD::sort<_Tp*, _Comp_ref>(__first.base(), __last.base(), __comp);
 }
 
-#ifdef _LIBCPP_MSVC
-#pragma warning( push )
-#pragma warning( disable: 4231)
-#endif // _LIBCPP_MSVC
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<char>&, char*>(char*, char*, __less<char>&))
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&))
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<signed char>&, signed char*>(signed char*, signed char*, __less<signed char>&))
@@ -4162,9 +4267,6 @@ _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long double>&, long double*>(long double*, long double*, __less<long double>&))
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS unsigned __sort5<__less<long double>&, long double*>(long double*, long double*, long double*, long double*, long double*, __less<long double>&))
-#ifdef _LIBCPP_MSVC
-#pragma warning( pop )
-#endif  // _LIBCPP_MSVC
 
 // lower_bound
 
@@ -5796,5 +5898,7 @@ prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_ALGORITHM

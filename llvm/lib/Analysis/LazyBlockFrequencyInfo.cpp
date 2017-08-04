@@ -9,7 +9,7 @@
 //
 // This is an alternative analysis pass to BlockFrequencyInfoWrapperPass.  The
 // difference is that with this pass the block frequencies are not computed when
-// the analysis pass is executed but rather when the BFI results is explicitly
+// the analysis pass is executed but rather when the BFI result is explicitly
 // requested by the analysis client.
 //
 //===----------------------------------------------------------------------===//

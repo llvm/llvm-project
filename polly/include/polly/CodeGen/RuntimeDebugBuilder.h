@@ -149,4 +149,6 @@ private:
 };
 } // namespace polly
 
+extern bool PollyDebugPrinting;
+
 #endif

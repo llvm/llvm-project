@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
+; RUN: opt %loadPolly -polly-detect -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
 ;
 ; This crashed at some point as the pointer returned by the call
 ; to @__errno_location is invariant and defined in the SCoP but not
@@ -7,7 +7,10 @@
 ; to hoist %tmp. We don't try to hoist %tmp anymore but this test still
 ; checks that this passes to code generation and produces valid code.
 ;
-; CHECK: polly.start
+; This SCoP is currently rejected because %call9 is not considered a valid
+; base pointer.
+;
+; CHECK-NOT: Valid Region for Scop
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

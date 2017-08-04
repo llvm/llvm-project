@@ -11,41 +11,19 @@
 #define LLD_ELF_SCRIPT_PARSER_H
 
 #include "lld/Core/LLVM.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <utility>
-#include <vector>
 
 namespace lld {
 namespace elf {
 
-class ScriptParserBase {
-public:
-  explicit ScriptParserBase(MemoryBufferRef MB);
+// Parses a linker script. Calling this function updates
+// Config and ScriptConfig.
+void readLinkerScript(MemoryBufferRef MB);
 
-  void setError(const Twine &Msg);
-  void tokenize(MemoryBufferRef MB);
-  static StringRef skipSpace(StringRef S);
-  bool atEOF();
-  StringRef next();
-  StringRef peek();
-  void skip();
-  bool consume(StringRef Tok);
-  void expect(StringRef Expect);
-  std::string getCurrentLocation();
+// Parses a version script.
+void readVersionScript(MemoryBufferRef MB);
 
-  std::vector<MemoryBufferRef> MBs;
-  std::vector<StringRef> Tokens;
-  size_t Pos = 0;
-  bool Error = false;
-
-private:
-  StringRef getLine();
-  size_t getLineNumber();
-  size_t getColumnNumber();
-
-  MemoryBufferRef getCurrentMB();
-};
+void readDynamicList(MemoryBufferRef MB);
 
 } // namespace elf
 } // namespace lld

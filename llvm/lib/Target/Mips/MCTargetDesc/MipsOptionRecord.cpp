@@ -1,4 +1,4 @@
-//===-- MipsOptionRecord.cpp - Abstraction for storing information --------===//
+//===- MipsOptionRecord.cpp - Abstraction for storing information ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,9 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsOptionRecord.h"
+#include "MipsABIInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsTargetStreamer.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
+#include <cassert>
 
 using namespace llvm;
 

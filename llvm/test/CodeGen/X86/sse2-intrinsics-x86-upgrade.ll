@@ -83,7 +83,8 @@ define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: test_x86_sse2_storeu_dq:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    paddb LCPI7_0, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    psubb %xmm1, %xmm0
 ; CHECK-NEXT:    movdqu %xmm0, (%eax)
 ; CHECK-NEXT:    retl
   %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -98,8 +99,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_storeu_pd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    xorpd %xmm1, %xmm1
+; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    addpd %xmm0, %xmm1
 ; CHECK-NEXT:    movupd %xmm1, (%eax)
 ; CHECK-NEXT:    retl
@@ -147,7 +148,6 @@ define <16 x i8> @max_epu8(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pmaxub %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <16 x i8> @llvm.x86.sse2.pmaxu.b(<16 x i8> %a0, <16 x i8> %a1)
   ret <16 x i8> %res
 }
@@ -158,7 +158,6 @@ define <16 x i8> @min_epu8(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pminub %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <16 x i8> @llvm.x86.sse2.pminu.b(<16 x i8> %a0, <16 x i8> %a1)
   ret <16 x i8> %res
 }
@@ -169,7 +168,6 @@ define <8 x i16> @max_epi16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pmaxsw %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <8 x i16> @llvm.x86.sse2.pmaxs.w(<8 x i16> %a0, <8 x i16> %a1)
   ret <8 x i16> %res
 }
@@ -180,7 +178,6 @@ define <8 x i16> @min_epi16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pminsw %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <8 x i16> @llvm.x86.sse2.pmins.w(<8 x i16> %a0, <8 x i16> %a1)
   ret <8 x i16> %res
 }

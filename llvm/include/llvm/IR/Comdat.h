@@ -1,4 +1,4 @@
-//===-- llvm/IR/Comdat.h - Comdat definitions -------------------*- C++ -*-===//
+//===- llvm/IR/Comdat.h - Comdat definitions --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -51,8 +51,8 @@ private:
   Comdat();
 
   // Points to the map in Module.
-  StringMapEntry<Comdat> *Name;
-  SelectionKind SK;
+  StringMapEntry<Comdat> *Name = nullptr;
+  SelectionKind SK = Any;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Comdat &C) {

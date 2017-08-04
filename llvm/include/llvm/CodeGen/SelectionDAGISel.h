@@ -20,6 +20,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <memory>
 
 namespace llvm {
   class FastISel;
@@ -29,6 +30,7 @@ namespace llvm {
   class MachineBasicBlock;
   class MachineFunction;
   class MachineInstr;
+  class OptimizationRemarkEmitter;
   class TargetLowering;
   class TargetLibraryInfo;
   class FunctionLoweringInfo;
@@ -53,6 +55,12 @@ public:
   CodeGenOpt::Level OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
+  bool FastISelFailed;
+  SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
+
+  /// Current optimization remark emitter.
+  /// Used to report things like combines and FastISel failures.
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
   static char ID;
 
@@ -280,6 +288,8 @@ private:
   void DoInstructionSelection();
   SDNode *MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTs,
                     ArrayRef<SDValue> Ops, unsigned EmitNodeInfo);
+
+  SDNode *MutateStrictFPToFP(SDNode *Node, unsigned NewOpc);
 
   /// Prepares the landing pad to take incoming values or do other EH
   /// personality specific tasks. Returns true if the block should be

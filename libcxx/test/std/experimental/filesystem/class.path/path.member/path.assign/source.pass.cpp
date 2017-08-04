@@ -15,6 +15,7 @@
 
 // template <class Source>
 //      path& operator=(Source const&);
+//  path& operator=(string_type&&);
 // template <class Source>
 //      path& assign(Source const&);
 // template <class InputIterator>
@@ -49,7 +50,7 @@ void RunTestCase(MultiStringType const& MS) {
     const std::basic_string<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
-      // string provides a contigious iterator. No allocation needed.
+      // string provides a contiguous iterator. No allocation needed.
       DisableAllocationGuard g;
       path& pref = (p = S);
       assert(&pref == &p);
@@ -75,7 +76,7 @@ void RunTestCase(MultiStringType const& MS) {
     const std::basic_string_view<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
-      // string provides a contigious iterator. No allocation needed.
+      // string provides a contiguous iterator. No allocation needed.
       DisableAllocationGuard g;
       path& pref = (p = S);
       assert(&pref == &p);
@@ -101,7 +102,7 @@ void RunTestCase(MultiStringType const& MS) {
   {
     path p; PathReserve(p, Size + 1);
     {
-      // char* pointers are contigious and can be used with code_cvt directly.
+      // char* pointers are contiguous and can be used with code_cvt directly.
       // no allocations needed.
       DisableAllocationGuard g;
       path& pref = (p = TestPath);
@@ -213,12 +214,29 @@ void test_sfinae() {
   }
 }
 
+void RunStringMoveTest(const char* Expect) {
+  using namespace fs;
+  std::string ss(Expect);
+  path p;
+  {
+    DisableAllocationGuard g; ((void)g);
+    path& pr = (p = std::move(ss));
+    assert(&pr == &p);
+  }
+  assert(p == Expect);
+  {
+    // Signature test
+    ASSERT_NOEXCEPT(p = std::move(ss));
+  }
+}
+
 int main() {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
     RunTestCase<wchar_t>(MS);
     RunTestCase<char16_t>(MS);
     RunTestCase<char32_t>(MS);
+    RunStringMoveTest(MS);
   }
   test_sfinae();
 }

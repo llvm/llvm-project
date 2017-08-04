@@ -23,13 +23,35 @@ class BackendConsumer;
 
 class CodeGenAction : public ASTFrontendAction {
 private:
+  // Let BackendConsumer access LinkModule.
+  friend class BackendConsumer;
+
+  /// Info about module to link into a module we're generating.
+  struct LinkModule {
+    /// The module to link in.
+    std::unique_ptr<llvm::Module> Module;
+
+    /// If true, we set attributes on Module's functions according to our
+    /// CodeGenOptions and LangOptions, as though we were generating the
+    /// function ourselves.
+    bool PropagateAttrs;
+
+    /// If true, we use LLVM module internalizer.
+    bool Internalize;
+
+    /// Bitwise combination of llvm::LinkerFlags used when we link the module.
+    unsigned LinkFlags;
+  };
+
   unsigned Act;
   std::unique_ptr<llvm::Module> TheModule;
-  // Vector of {Linker::Flags, Module*} pairs to specify bitcode
-  // modules to link in using corresponding linker flags.
-  SmallVector<std::pair<unsigned, llvm::Module *>, 4> LinkModules;
+
+  /// Bitcode modules to link in to our module.
+  SmallVector<LinkModule, 4> LinkModules;
   llvm::LLVMContext *VMContext;
   bool OwnsVMContext;
+
+  std::unique_ptr<llvm::Module> loadModule(llvm::MemoryBufferRef MBRef);
 
 protected:
   /// Create a new code generation action.  If the optional \p _VMContext
@@ -48,13 +70,6 @@ protected:
 
 public:
   ~CodeGenAction() override;
-
-  /// setLinkModule - Set the link module to be used by this action.  If a link
-  /// module is not provided, and CodeGenOptions::LinkBitcodeFile is non-empty,
-  /// the action will load it from the specified file.
-  void addLinkModule(llvm::Module *Mod, unsigned LinkFlags) {
-    LinkModules.push_back(std::make_pair(LinkFlags, Mod));
-  }
 
   /// Take the generated LLVM module, for use after the action has been run.
   /// The result may be null on failure.

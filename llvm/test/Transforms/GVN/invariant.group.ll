@@ -237,15 +237,16 @@ entry:
     ret i8 %a
 }
 
-; CHECK-LABEL: define i8 @unoptimizable4() {
-define i8 @unoptimizable4() {
+; CHECK-LABEL: define i8 @optimizable4() {
+define i8 @optimizable4() {
 entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
     %ptr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
+; CHECK-NOT: load
     %a = load i8, i8* %ptr2, !invariant.group !0
     
-; CHECK: ret i8 %a
+; CHECK: ret i8 42
     ret i8 %a
 }
 
@@ -314,8 +315,9 @@ entry:
     store i8 %unknownValue, i8* %ptr, !invariant.group !0 
 
     %newPtr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
-    %d = load i8, i8* %newPtr2, !invariant.group !0  ; Can't step through invariant.group.barrier to get value of %ptr
-; CHECK: ret i8 %d
+; CHECK-NOT: load
+    %d = load i8, i8* %newPtr2, !invariant.group !0
+; CHECK: ret i8 %unknownValue
     ret i8 %d
 }
 
@@ -382,12 +384,12 @@ define void @testNotGlobal() {
 
    %b0 = bitcast i8* %a to i1*
    call void @fooBit(i1* %b0, i1 1)
-; CHECK: %trunc = trunc i8 %b to i1
+; CHECK: %1 = trunc i8 %b to i1
    %2 = load i1, i1* %b0, !invariant.group !0
-; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %trunc)
+; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %1)
    call void @fooBit(i1* %b0, i1 %2)
    %3 = load i1, i1* %b0, !invariant.group !0
-; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %trunc)
+; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %1)
    call void @fooBit(i1* %b0, i1 %3)
    ret void
 }

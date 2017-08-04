@@ -61,7 +61,8 @@ public:
         [&](Function &F) -> AssumptionCache & {
       return ACT->getAssumptionCache(F);
     };
-    return llvm::getInlineCost(CS, Params, TTI, GetAssumptionCache, PSI);
+    return llvm::getInlineCost(CS, Params, TTI, GetAssumptionCache,
+                               /*GetBFI=*/None, PSI);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
@@ -92,8 +93,12 @@ Pass *llvm::createFunctionInliningPass(int Threshold) {
 }
 
 Pass *llvm::createFunctionInliningPass(unsigned OptLevel,
-                                       unsigned SizeOptLevel) {
-  return new SimpleInliner(llvm::getInlineParams(OptLevel, SizeOptLevel));
+                                       unsigned SizeOptLevel,
+                                       bool DisableInlineHotCallSite) {
+  auto Param = llvm::getInlineParams(OptLevel, SizeOptLevel);
+  if (DisableInlineHotCallSite)
+    Param.HotCallSiteThreshold = 0;
+  return new SimpleInliner(Param);
 }
 
 Pass *llvm::createFunctionInliningPass(InlineParams &Params) {

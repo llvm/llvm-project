@@ -43,6 +43,9 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   bool resolveAArch64ShortBranch(unsigned SectionID, relocation_iterator RelI,
                                  const RelocationValueRef &Value);
 
+  void resolveAArch64Branch(unsigned SectionID, const RelocationValueRef &Value,
+                            relocation_iterator RelI, StubMap &Stubs);
+
   void resolveARMRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint32_t Value, uint32_t Type, int32_t Addend);
 
@@ -54,6 +57,9 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
 
   void resolveSystemZRelocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
+
+  void resolveBPFRelocation(const SectionEntry &Section, uint64_t Offset,
+                            uint64_t Value, uint32_t Type, int64_t Addend);
 
   unsigned getMaxStubSize() override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
@@ -88,24 +94,26 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
                             ObjSectionToIDMap &LocalSections,
                             RelocationValueRef &Rel);
 protected:
-  size_t getGOTEntrySize();
+  size_t getGOTEntrySize() override;
 
 private:
   SectionEntry &getSection(unsigned SectionID) { return Sections[SectionID]; }
 
   // Allocate no GOT entries for use in the given section.
-  uint64_t allocateGOTEntries(unsigned SectionID, unsigned no);
+  uint64_t allocateGOTEntries(unsigned no);
+
+  // Find GOT entry corresponding to relocation or create new one.
+  uint64_t findOrAllocGOTEntry(const RelocationValueRef &Value,
+                               unsigned GOTRelType);
 
   // Resolve the relvative address of GOTOffset in Section ID and place
   // it at the given Offset
   void resolveGOTOffsetRelocation(unsigned SectionID, uint64_t Offset,
-                                  uint64_t GOTOffset);
+                                  uint64_t GOTOffset, uint32_t Type);
 
   // For a GOT entry referenced from SectionID, compute a relocation entry
   // that will place the final resolved value in the GOT slot
-  RelocationEntry computeGOTOffsetRE(unsigned SectionID,
-                                     uint64_t GOTOffset,
-                                     uint64_t SymbolOffset,
+  RelocationEntry computeGOTOffsetRE(uint64_t GOTOffset, uint64_t SymbolOffset,
                                      unsigned Type);
 
   // Compute the address in memory where we can find the placeholder
@@ -144,8 +152,11 @@ private:
   // in a table until we receive a request to register all unregistered
   // EH frame sections with the memory manager.
   SmallVector<SID, 2> UnregisteredEHFrameSections;
-  SmallVector<SID, 2> RegisteredEHFrameSections;
 
+  // Map between GOT relocation value and corresponding GOT offset
+  std::map<RelocationValueRef, uint64_t> GOTOffsetMap;
+
+  bool relocationNeedsGot(const RelocationRef &R) const override;
   bool relocationNeedsStub(const RelocationRef &R) const override;
 
 public:
@@ -168,7 +179,6 @@ public:
                        StubMap &Stubs) override;
   bool isCompatibleFile(const object::ObjectFile &Obj) const override;
   void registerEHFrames() override;
-  void deregisterEHFrames() override;
   Error finalizeLoad(const ObjectFile &Obj,
                      ObjSectionToIDMap &SectionMap) override;
 };

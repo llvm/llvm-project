@@ -4,7 +4,7 @@ declare void @llvm.write_register.i32(metadata, i32) #0
 declare void @llvm.write_register.i64(metadata, i64) #0
 
 ; CHECK-LABEL: {{^}}test_write_m0:
-define void @test_write_m0(i32 %val) #0 {
+define amdgpu_kernel void @test_write_m0(i32 %val) #0 {
   call void @llvm.write_register.i32(metadata !0, i32 0)
   call void @llvm.write_register.i32(metadata !0, i32 -1)
   call void @llvm.write_register.i32(metadata !0, i32 %val)
@@ -15,7 +15,7 @@ define void @test_write_m0(i32 %val) #0 {
 ; CHECK: s_mov_b64 exec, 0
 ; CHECK: s_mov_b64 exec, -1
 ; CHECK: s_mov_b64 exec, s{{\[[0-9]+:[0-9]+\]}}
-define void @test_write_exec(i64 %val) #0 {
+define amdgpu_kernel void @test_write_exec(i64 %val) #0 {
   call void @llvm.write_register.i64(metadata !1, i64 0)
   call void @llvm.write_register.i64(metadata !1, i64 -1)
   call void @llvm.write_register.i64(metadata !1, i64 %val)
@@ -26,7 +26,7 @@ define void @test_write_exec(i64 %val) #0 {
 ; CHECK: s_mov_b64 flat_scratch, 0
 ; CHECK: s_mov_b64 flat_scratch, -1
 ; CHECK: s_mov_b64 flat_scratch, s{{\[[0-9]+:[0-9]+\]}}
-define void @test_write_flat_scratch(i64 %val) #0 {
+define amdgpu_kernel void @test_write_flat_scratch(i64 %val) #0 {
   call void @llvm.write_register.i64(metadata !2, i64 0)
   call void @llvm.write_register.i64(metadata !2, i64 -1)
   call void @llvm.write_register.i64(metadata !2, i64 %val)
@@ -36,7 +36,7 @@ define void @test_write_flat_scratch(i64 %val) #0 {
 ; CHECK-LABEL: {{^}}test_write_flat_scratch_lo:
 ; CHECK: s_mov_b32 flat_scratch_lo, 0
 ; CHECK: s_mov_b32 flat_scratch_lo, s{{[0-9]+}}
-define void @test_write_flat_scratch_lo(i32 %val) #0 {
+define amdgpu_kernel void @test_write_flat_scratch_lo(i32 %val) #0 {
   call void @llvm.write_register.i32(metadata !3, i32 0)
   call void @llvm.write_register.i32(metadata !3, i32 %val)
   ret void
@@ -45,7 +45,7 @@ define void @test_write_flat_scratch_lo(i32 %val) #0 {
 ; CHECK-LABEL: {{^}}test_write_flat_scratch_hi:
 ; CHECK: s_mov_b32 flat_scratch_hi, 0
 ; CHECK: s_mov_b32 flat_scratch_hi, s{{[0-9]+}}
-define void @test_write_flat_scratch_hi(i32 %val) #0 {
+define amdgpu_kernel void @test_write_flat_scratch_hi(i32 %val) #0 {
   call void @llvm.write_register.i32(metadata !4, i32 0)
   call void @llvm.write_register.i32(metadata !4, i32 %val)
   ret void
@@ -54,7 +54,7 @@ define void @test_write_flat_scratch_hi(i32 %val) #0 {
 ; CHECK-LABEL: {{^}}test_write_exec_lo:
 ; CHECK: s_mov_b32 exec_lo, 0
 ; CHECK: s_mov_b32 exec_lo, s{{[0-9]+}}
-define void @test_write_exec_lo(i32 %val) #0 {
+define amdgpu_kernel void @test_write_exec_lo(i32 %val) #0 {
   call void @llvm.write_register.i32(metadata !5, i32 0)
   call void @llvm.write_register.i32(metadata !5, i32 %val)
   ret void
@@ -63,7 +63,7 @@ define void @test_write_exec_lo(i32 %val) #0 {
 ; CHECK-LABEL: {{^}}test_write_exec_hi:
 ; CHECK: s_mov_b32 exec_hi, 0
 ; CHECK: s_mov_b32 exec_hi, s{{[0-9]+}}
-define void @test_write_exec_hi(i32 %val) #0 {
+define amdgpu_kernel void @test_write_exec_hi(i32 %val) #0 {
   call void @llvm.write_register.i32(metadata !6, i32 0)
   call void @llvm.write_register.i32(metadata !6, i32 %val)
   ret void

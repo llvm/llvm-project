@@ -26,7 +26,7 @@
 //  * etc...
 //
 // Note that this analysis specifically identifies *Loops* not cycles or SCCs
-// in the CFG.  There can be strongly connected compontents in the CFG which
+// in the CFG.  There can be strongly connected components in the CFG which
 // this analysis will not recognize and that will not be represented by a Loop
 // instance.  In particular, a Loop might be inside such a non-loop SCC, or a
 // non-loop SCC might contain a sub-SCC which is a Loop. 
@@ -56,7 +56,8 @@ class Loop;
 class MDNode;
 class PHINode;
 class raw_ostream;
-template<class N> class DominatorTreeBase;
+template <class N, bool IsPostDom>
+class DominatorTreeBase;
 template<class N, class M> class LoopInfoBase;
 template<class N, class M> class LoopBase;
 
@@ -158,11 +159,8 @@ public:
   /// True if terminator in the block can branch to another block that is
   /// outside of the current loop.
   bool isLoopExiting(const BlockT *BB) const {
-    typedef GraphTraits<const BlockT*> BlockTraits;
-    for (typename BlockTraits::ChildIteratorType SI =
-         BlockTraits::child_begin(BB),
-         SE = BlockTraits::child_end(BB); SI != SE; ++SI) {
-      if (!contains(*SI))
+    for (const auto &Succ : children<const BlockT*>(BB)) {
+      if (!contains(Succ))
         return true;
     }
     return false;
@@ -186,11 +184,8 @@ public:
     unsigned NumBackEdges = 0;
     BlockT *H = getHeader();
 
-    typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
-    for (typename InvBlockTraits::ChildIteratorType I =
-         InvBlockTraits::child_begin(H),
-         E = InvBlockTraits::child_end(H); I != E; ++I)
-      if (contains(*I))
+    for (const auto Pred : children<Inverse<BlockT*> >(H))
+      if (contains(Pred))
         ++NumBackEdges;
 
     return NumBackEdges;
@@ -249,12 +244,9 @@ public:
   /// contains a branch back to the header.
   void getLoopLatches(SmallVectorImpl<BlockT *> &LoopLatches) const {
     BlockT *H = getHeader();
-    typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
-    for (typename InvBlockTraits::ChildIteratorType I =
-         InvBlockTraits::child_begin(H),
-         E = InvBlockTraits::child_end(H); I != E; ++I)
-      if (contains(*I))
-        LoopLatches.push_back(*I);
+    for (const auto Pred : children<Inverse<BlockT*>>(H))
+      if (contains(Pred))
+        LoopLatches.push_back(Pred);
   }
 
   //===--------------------------------------------------------------------===//
@@ -364,7 +356,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
-/// in the CFG are neccessarily loops.
+/// in the CFG are necessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// \brief A range representing the start and end location of a loop.
@@ -469,7 +461,7 @@ public:
   /// the loop that branches to the loop header.
   ///
   /// The LoopID metadata node should have one or more operands and the first
-  /// operand should should be the node itself.
+  /// operand should be the node itself.
   void setLoopID(MDNode *LoopID) const;
 
   /// Return true if no exit block for the loop has a predecessor that is
@@ -478,7 +470,8 @@ public:
 
   /// Return all unique successor blocks of this loop.
   /// These are the blocks _outside of the current loop_ which are branched to.
-  /// This assumes that loop exits are in canonical form.
+  /// This assumes that loop exits are in canonical form, i.e. all exits are
+  /// dedicated exits.
   void getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const;
 
   /// If getUniqueExitBlocks would return exactly one block, return that block.
@@ -570,6 +563,23 @@ public:
   reverse_iterator rend() const { return TopLevelLoops.rend(); }
   bool empty() const { return TopLevelLoops.empty(); }
 
+  /// Return all of the loops in the function in preorder across the loop
+  /// nests, with siblings in forward program order.
+  ///
+  /// Note that because loops form a forest of trees, preorder is equivalent to
+  /// reverse postorder.
+  SmallVector<LoopT *, 4> getLoopsInPreorder();
+
+  /// Return all of the loops in the function in preorder across the loop
+  /// nests, with siblings in *reverse* program order.
+  ///
+  /// Note that because loops form a forest of trees, preorder is equivalent to
+  /// reverse postorder.
+  ///
+  /// Also note that this is *not* a reverse preorder. Only the siblings are in
+  /// reverse program order.
+  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder();
+
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
   LoopT *getLoopFor(const BlockT *BB) const { return BBMap.lookup(BB); }
@@ -654,12 +664,12 @@ public:
   }
 
   /// Create the loop forest using a stable algorithm.
-  void analyze(const DominatorTreeBase<BlockT> &DomTree);
+  void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
 
   // Debugging
   void print(raw_ostream &OS) const;
 
-  void verify(const DominatorTreeBase<BlockT> &DomTree) const;
+  void verify(const DominatorTreeBase<BlockT, false> &DomTree) const;
 };
 
 // Implementation in LoopInfoImpl.h
@@ -674,13 +684,17 @@ class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
   LoopInfo(const LoopInfo &) = delete;
 public:
   LoopInfo() {}
-  explicit LoopInfo(const DominatorTreeBase<BasicBlock> &DomTree);
+  explicit LoopInfo(const DominatorTreeBase<BasicBlock, false> &DomTree);
 
   LoopInfo(LoopInfo &&Arg) : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
   LoopInfo &operator=(LoopInfo &&RHS) {
     BaseT::operator=(std::move(static_cast<BaseT &>(RHS)));
     return *this;
   }
+
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 
   // Most of the public interface is provided via LoopInfoBase.
 

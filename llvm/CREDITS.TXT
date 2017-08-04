@@ -220,7 +220,7 @@ W: http://randomhacks.net/
 D: llvm-config script
 
 N: Anton Korobeynikov
-E: asl@math.spbu.ru
+E: anton at korobeynikov dot info
 D: Mingw32 fixes, cross-compiling support, stdcall/fastcall calling conv.
 D: x86/linux PIC codegen, aliases, regparm/visibility attributes
 D: Switch lowering refactoring
@@ -265,7 +265,7 @@ D: Release manager (1.7+)
 N: Sylvestre Ledru
 E: sylvestre@debian.org
 W: http://sylvestre.ledru.info/
-W: http://llvm.org/apt/
+W: http://apt.llvm.org/
 D: Debian and Ubuntu packaging
 D: Continuous integration with jenkins
 
@@ -318,11 +318,12 @@ D: Support for implicit TLS model used with MS VC runtime
 D: Dumping of Win64 EH structures
 
 N: Takumi Nakamura
+I: chapuni
 E: geek4civic@gmail.com
 E: chapuni@hf.rim.or.jp
-D: Cygwin and MinGW support.
-D: Win32 tweaks.
-S: Yokohama, Japan
+D: Maintaining the Git monorepo
+W: https://github.com/llvm-project/
+S: Ebina, Japan
 
 N: Edward O'Callaghan
 E: eocallaghan@auroraux.org
@@ -456,6 +457,10 @@ D: Miscellaneous bug fixes
 N: Adam Treat
 E: manyoso@yahoo.com
 D: C++ bugs filed, and C++ front-end bug fixes.
+
+N: Andrew Trick
+E: atrick@apple.com
+D: Instruction Scheduling, ...
 
 N: Lauro Ramos Venancio
 E: lauro.venancio@indt.org.br

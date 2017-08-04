@@ -86,7 +86,7 @@ eq_1:
 ; Verify the new backedge:
 ; CHECK: check_2.thread:
 ; CHECK-NEXT: call void @bar()
-; CHECK-NEXT: br label %check_1
+; CHECK-NEXT: br label %check_3.thread
 
 check_2:
   %cond2 = icmp eq i32 %v, 2
@@ -100,7 +100,7 @@ eq_2:
 ; Verify the new backedge:
 ; CHECK: eq_2:
 ; CHECK-NEXT: call void @bar()
-; CHECK-NEXT: br label %check_1
+; CHECK-NEXT: br label %check_3.thread
 
 check_3:
   %condE = icmp eq i32 %v, 3

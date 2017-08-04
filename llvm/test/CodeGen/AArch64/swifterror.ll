@@ -309,17 +309,17 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-LABEL: foo_vararg:
 ; CHECK-APPLE: orr w0, wzr, #0x10
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
-; CHECK-APPLE: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
-; CHECK-APPLE: strb [[ID]], [x0, #8]
+; CHECK-APPLE-DAG: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-APPLE-DAG: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
+; CHECK-APPLE-DAG: strb [[ID]], [x0, #8]
 
 ; First vararg
 ; CHECK-APPLE-DAG: orr {{x[0-9]+}}, [[ARGS]], #0x8
 ; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #16]
-; CHECK-APPLE: add {{x[0-9]+}}, {{x[0-9]+}}, #8
+; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #8
 ; Second vararg
-; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}]
-; CHECK-APPLE: add {{x[0-9]+}}, {{x[0-9]+}}, #8
+; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #16
 ; Third vararg
 ; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}]
 
@@ -596,4 +596,31 @@ define swiftcc void @tailcall_from_swifterror(%swift_error** swifterror %error_p
 entry:
   tail call void @acallee(i8* null)
   ret void
+}
+
+declare swiftcc void @foo2(%swift_error** swifterror)
+
+; Make sure we properly assign registers during fast-isel.
+; CHECK-O0-LABEL: testAssign
+; CHECK-O0: mov     [[TMP:x.*]], xzr
+; CHECK-O0: mov     x21, [[TMP]]
+; CHECK-O0: bl      _foo2
+; CHECK-O0: str     x21, [s[[STK:.*]]]
+; CHECK-O0: ldr     x0, [s[[STK]]]
+
+; CHECK-APPLE-LABEL: testAssign
+; CHECK-APPLE: mov      x21, xzr
+; CHECK-APPLE: bl      _foo2
+; CHECK-APPLE: mov      x0, x21
+
+define swiftcc %swift_error* @testAssign(i8* %error_ref) {
+entry:
+  %error_ptr = alloca swifterror %swift_error*
+  store %swift_error* null, %swift_error** %error_ptr
+  call swiftcc void @foo2(%swift_error** swifterror %error_ptr)
+  br label %a
+
+a:
+  %error = load %swift_error*, %swift_error** %error_ptr
+  ret %swift_error* %error
 }

@@ -42,7 +42,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     return false;
 
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
-  MachineFunction &MF = MMI.getMachineFunction(F);
+  MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
   MachineFunctionProperties &MFProps = MF.getProperties();
 

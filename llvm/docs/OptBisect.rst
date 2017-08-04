@@ -60,11 +60,14 @@ like this:
   clang -O2 -mllvm -opt-bisect-limit=256 my_file.c
 
 The -opt-bisect-limit option may also be applied to link-time optimizations by
-using a prefix to indicate that this is a plug-in option for the linker.  The
+using a prefix to indicate that this is a plug-in option for the linker. The
 following syntax will set a bisect limit for LTO transformations:
 
 ::
 
+  # When using lld, or ld64 (macOS)
+  clang -flto -Wl,-mllvm,-opt-bisect-limit=256 my_file.o my_other_file.o
+  # When using Gold
   clang -flto -Wl,-plugin-opt,-opt-bisect-limit=256 my_file.o my_other_file.o
 
 LTO passes are run by a library instance invoked by the linker. Therefore any
@@ -186,12 +189,5 @@ Adding Finer Granularity
 
 Once the pass in which an incorrect transformation is performed has been
 determined, it may be useful to perform further analysis in order to determine
-which specific transformation is causing the problem.  Ideally all passes
-would be instrumented to allow skipping of individual transformations.  This
-functionality is available through the OptBisect object but it is impractical
-to proactively instrument every existing pass.  It is hoped that as developers
-find that they need a pass to be instrumented they will add the instrumentation
-and contribute it back to the LLVM source base.
-
-Helper functions will be added to simplify this level of instrumentation, but
-this work is not yet completed.  For more information, contact Andy Kaylor.
+which specific transformation is causing the problem.  Debug counters
+can be used for this purpose.

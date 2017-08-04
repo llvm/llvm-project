@@ -36,8 +36,13 @@ After:
 
     std::vector<std::pair<int, int>> w;
     w.emplace_back(21, 37);
-    // This will be fixed to w.push_back(21, 37); in next version
-    w.emplace_back(std::make_pair(21L, 37L);
+    w.emplace_back(21L, 37L);
+
+By default, the check is able to remove unnecessary ``std::make_pair`` and
+``std::make_tuple`` calls from ``push_back`` calls on containers of
+``std::pair`` and ``std::tuple``. Custom tuple-like types can be modified by
+the :option:`TupleTypes` option; custom make functions can be modified by the
+:option:`TupleMakeFunctions` option.
 
 The other situation is when we pass arguments that will be converted to a type
 inside a container.
@@ -69,7 +74,7 @@ exception safe. In this case the calls of ``push_back`` won't be replaced.
 
 This is because replacing it with ``emplace_back`` could cause a leak of this
 pointer if ``emplace_back`` would throw exception before emplacement (e.g. not
-enough memory to add new element).
+enough memory to add a new element).
 
 For more info read item 42 - "Consider emplacement instead of insertion." of
 Scott Meyers "Effective Modern C++".
@@ -79,14 +84,15 @@ The default smart pointers that are considered are ``std::unique_ptr``,
 other classes use the :option:`SmartPointers` option.
 
 
-Check also fires if any argument of constructor call would be:
+Check also doesn't fire if any argument of the constructor call would be:
 
-  - bitfield (bitfields can't bind to rvalue/universal reference)
+  - a bit-field (bit-fields can't bind to rvalue/universal reference)
 
-  - ``new`` expression (to avoid leak) or if the argument would be converted via
-    derived-to-base cast.
+  - a ``new`` expression (to avoid leak)
 
-This check requires C++11 of higher to run.
+  - if the argument would be converted via derived-to-base cast.
+
+This check requires C++11 or higher to run.
 
 Options
 -------
@@ -99,3 +105,31 @@ Options
 .. option:: SmartPointers
 
    Semicolon-separated list of class names of custom smart pointers.
+
+.. option:: TupleTypes
+
+    Semicolon-separated list of ``std::tuple``-like class names.
+
+.. option:: TupleMakeFunctions
+
+    Semicolon-separated list of ``std::make_tuple``-like function names. Those
+    function calls will be removed from ``push_back`` calls and turned into
+    ``emplace_back``.
+
+Example
+^^^^^^^
+
+.. code-block:: c++
+
+  std::vector<MyTuple<int, bool, char>> x;
+  x.push_back(MakeMyTuple(1, false, 'x'));
+
+transforms to:
+
+.. code-block:: c++
+
+  std::vector<MyTuple<int, bool, char>> x;
+  x.emplace_back(1, false, 'x');
+
+when :option:`TupleTypes` is set to ``MyTuple`` and :option:`TupleMakeFunctions`
+is set to ``MakeMyTuple``.

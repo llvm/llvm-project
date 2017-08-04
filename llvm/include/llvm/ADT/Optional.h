@@ -1,4 +1,4 @@
-//===-- Optional.h - Simple variant for passing optional values ---*- C++ -*-=//
+//===- Optional.h - Simple variant for passing optional values --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,6 +19,8 @@
 #include "llvm/ADT/None.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/type_traits.h"
+#include <algorithm>
 #include <cassert>
 #include <new>
 #include <utility>
@@ -28,15 +30,18 @@ namespace llvm {
 template<typename T>
 class Optional {
   AlignedCharArrayUnion<T> storage;
-  bool hasVal;
-public:
-  typedef T value_type;
+  bool hasVal = false;
 
-  Optional(NoneType) : hasVal(false) {}
-  explicit Optional() : hasVal(false) {}
+public:
+  using value_type = T;
+
+  Optional(NoneType) {}
+  explicit Optional() {}
+
   Optional(const T &y) : hasVal(true) {
     new (storage.buffer) T(y);
   }
+
   Optional(const Optional &O) : hasVal(O.hasVal) {
     if (hasVal)
       new (storage.buffer) T(*O);
@@ -45,12 +50,18 @@ public:
   Optional(T &&y) : hasVal(true) {
     new (storage.buffer) T(std::forward<T>(y));
   }
+
   Optional(Optional<T> &&O) : hasVal(O) {
     if (O) {
       new (storage.buffer) T(std::move(*O));
       O.reset();
     }
   }
+
+  ~Optional() {
+    reset();
+  }
+
   Optional &operator=(T &&y) {
     if (hasVal)
       **this = std::move(y);
@@ -60,6 +71,7 @@ public:
     }
     return *this;
   }
+
   Optional &operator=(Optional &&O) {
     if (!O)
       reset();
@@ -112,10 +124,6 @@ public:
     }
   }
 
-  ~Optional() {
-    reset();
-  }
-
   const T* getPointer() const { assert(hasVal); return reinterpret_cast<const T*>(storage.buffer); }
   T* getPointer() { assert(hasVal); return reinterpret_cast<T*>(storage.buffer); }
   const T& getValue() const LLVM_LVALUE_FUNCTION { assert(hasVal); return *getPointer(); }
@@ -144,8 +152,7 @@ public:
 #endif
 };
 
-template <typename T> struct isPodLike;
-template <typename T> struct isPodLike<Optional<T> > {
+template <typename T> struct isPodLike<Optional<T>> {
   // An Optional<T> is pod-like if T is.
   static const bool value = isPodLike<T>::value;
 };
@@ -284,6 +291,6 @@ template <typename T> bool operator>=(const T &X, const Optional<T> &Y) {
   return !(X < Y);
 }
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_OPTIONAL_H

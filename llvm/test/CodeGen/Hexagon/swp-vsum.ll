@@ -4,9 +4,9 @@
 ; Simple vector total.
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: add([[REG:r([0-9]+)]], r{{[0-9]+}})
-; CHECK-NEXT: add(r{{[0-9]+}}, #4)
-; CHECK-NEXT: [[REG]] = memw(r{{[0-9]+}} + r{{[0-9]+}}<<#0)
+; CHECK: add([[REG:r([0-9]+)]],r{{[0-9]+}})
+; CHECK-NEXT: add(r{{[0-9]+}},#4)
+; CHECK-NEXT: [[REG]] = memw(r{{[0-9]+}}+r{{[0-9]+}}<<#0)
 ; CHECK-NEXT: endloop0
 
 define i32 @foo(i32* %a, i32 %n) {

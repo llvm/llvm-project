@@ -224,12 +224,10 @@ ClangTidyOptions::OptionMap getCheckOptions(const ClangTidyOptions &Options);
 ///
 /// \param Profile if provided, it enables check profile collection in
 /// MatchFinder, and will contain the result of the profile.
-ClangTidyStats
-runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-             const tooling::CompilationDatabase &Compilations,
-             ArrayRef<std::string> InputFiles,
-             std::vector<ClangTidyError> *Errors,
-             ProfileData *Profile = nullptr);
+void runClangTidy(clang::tidy::ClangTidyContext &Context,
+                  const tooling::CompilationDatabase &Compilations,
+                  ArrayRef<std::string> InputFiles,
+                  ProfileData *Profile = nullptr);
 
 // FIXME: This interface will need to be significantly extended to be useful.
 // FIXME: Implement confidence levels for displaying/fixing errors.
@@ -237,8 +235,8 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
 /// \brief Displays the found \p Errors to the users. If \p Fix is true, \p
 /// Errors containing fixes are automatically applied and reformatted. If no
 /// clang-format configuration file is found, the given \P FormatStyle is used.
-void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix,
-                  StringRef FormatStyle, unsigned &WarningsAsErrorsCount);
+void handleErrors(ClangTidyContext &Context, bool Fix,
+                  unsigned &WarningsAsErrorsCount);
 
 /// \brief Serializes replacements into YAML and writes them to the specified
 /// output stream.

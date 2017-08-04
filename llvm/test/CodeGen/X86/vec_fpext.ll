@@ -82,6 +82,7 @@ define void @fpext_frommem4(<4 x float>* %in, <4 x double>* %out) {
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
 ; X32-AVX512VL-NEXT:    vcvtps2pd (%ecx), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x5a,0x01]
 ; X32-AVX512VL-NEXT:    vmovups %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x00]
+; X32-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: fpext_frommem4:
@@ -103,6 +104,7 @@ define void @fpext_frommem4(<4 x float>* %in, <4 x double>* %out) {
 ; X64-AVX512VL:       # BB#0: # %entry
 ; X64-AVX512VL-NEXT:    vcvtps2pd (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x5a,0x07]
 ; X64-AVX512VL-NEXT:    vmovups %ymm0, (%rsi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x06]
+; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x float>, <4 x float>* %in
@@ -143,6 +145,7 @@ define void @fpext_frommem8(<8 x float>* %in, <8 x double>* %out) {
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
 ; X32-AVX512VL-NEXT:    vcvtps2pd (%ecx), %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x5a,0x01]
 ; X32-AVX512VL-NEXT:    vmovups %zmm0, (%eax) # encoding: [0x62,0xf1,0x7c,0x48,0x11,0x00]
+; X32-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: fpext_frommem8:
@@ -170,6 +173,7 @@ define void @fpext_frommem8(<8 x float>* %in, <8 x double>* %out) {
 ; X64-AVX512VL:       # BB#0: # %entry
 ; X64-AVX512VL-NEXT:    vcvtps2pd (%rdi), %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x5a,0x07]
 ; X64-AVX512VL-NEXT:    vmovups %zmm0, (%rsi) # encoding: [0x62,0xf1,0x7c,0x48,0x11,0x06]
+; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <8 x float>, <8 x float>* %in

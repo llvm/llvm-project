@@ -22,8 +22,9 @@ class NVPTXFloatMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
     VK_NVPTX_None,
-    VK_NVPTX_SINGLE_PREC_FLOAT,   // FP constant in single-precision
-    VK_NVPTX_DOUBLE_PREC_FLOAT    // FP constant in double-precision
+    VK_NVPTX_HALF_PREC_FLOAT,   // FP constant in half-precision
+    VK_NVPTX_SINGLE_PREC_FLOAT, // FP constant in single-precision
+    VK_NVPTX_DOUBLE_PREC_FLOAT  // FP constant in double-precision
   };
 
 private:
@@ -39,6 +40,11 @@ public:
 
   static const NVPTXFloatMCExpr *create(VariantKind Kind, const APFloat &Flt,
                                         MCContext &Ctx);
+
+  static const NVPTXFloatMCExpr *createConstantFPHalf(const APFloat &Flt,
+                                                        MCContext &Ctx) {
+    return create(VK_NVPTX_HALF_PREC_FLOAT, Flt, Ctx);
+  }
 
   static const NVPTXFloatMCExpr *createConstantFPSingle(const APFloat &Flt,
                                                         MCContext &Ctx) {

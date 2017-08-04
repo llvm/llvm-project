@@ -4,9 +4,8 @@
 # RUN: lld-link /out:%t2.exe /entry:g /subsystem:console /lldmap:%t2.map %t.obj %t.lto.obj
 # RUN: FileCheck %s < %t2.map
 
-# CHECK: <lto object>:
-# CHECK-NOT: :
-# CHECK: {{ g$}}
+# CHECK: lto.tmp
+# CHECK-NEXT: 0 g
 
 --- !COFF
 header:

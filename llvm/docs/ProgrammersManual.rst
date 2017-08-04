@@ -32,7 +32,7 @@ to know when working in the LLVM infrastructure, and the second describes the
 Core LLVM classes.  In the future this manual will be extended with information
 describing how to use extension libraries, such as dominator information, CFG
 traversal routines, and useful utilities like the ``InstVisitor`` (`doxygen
-<http://llvm.org/doxygen/InstVisitor_8h-source.html>`__) template.
+<http://llvm.org/doxygen/InstVisitor_8h_source.html>`__) template.
 
 .. _general:
 
@@ -108,7 +108,7 @@ they don't have some drawbacks (primarily stemming from the fact that
 ``dynamic_cast<>`` only works on classes that have a v-table).  Because they are
 used so often, you must know what they do and how they work.  All of these
 templates are defined in the ``llvm/Support/Casting.h`` (`doxygen
-<http://llvm.org/doxygen/Casting_8h-source.html>`__) file (note that you very
+<http://llvm.org/doxygen/Casting_8h_source.html>`__) file (note that you very
 rarely have to include this file directly).
 
 ``isa<>``:
@@ -225,7 +225,7 @@ and clients can call it using any one of:
 Similarly, APIs which need to return a string may return a ``StringRef``
 instance, which can be used directly or converted to an ``std::string`` using
 the ``str`` member function.  See ``llvm/ADT/StringRef.h`` (`doxygen
-<http://llvm.org/doxygen/classllvm_1_1StringRef_8h-source.html>`__) for more
+<http://llvm.org/doxygen/StringRef_8h_source.html>`__) for more
 information.
 
 You should rarely use the ``StringRef`` class directly, because it contains
@@ -482,7 +482,7 @@ that inherits from the ErrorInfo utility, E.g.:
     }
   };
 
-  char FileExists::ID; // This should be declared in the C++ file.
+  char BadFileFormat::ID; // This should be declared in the C++ file.
 
   Error printFormattedFile(StringRef Path) {
     if (<check for valid format>)
@@ -564,18 +564,18 @@ the boolean conversion operator):
 
 .. code-block:: c++
 
-  if (auto Err = canFail(...))
+  if (auto Err = mayFail(...))
     return Err; // Failure value - move error to caller.
 
   // Safe to continue: Err was checked.
 
-In contrast, the following code will always cause an abort, even if ``canFail``
+In contrast, the following code will always cause an abort, even if ``mayFail``
 returns a success value:
 
 .. code-block:: c++
 
-    canFail();
-    // Program will always abort here, even if canFail() returns Success, since
+    mayFail();
+    // Program will always abort here, even if mayFail() returns Success, since
     // the value is not checked.
 
 Failure values are considered checked once a handler for the error type has
@@ -632,6 +632,12 @@ For tool code, where errors can be handled by printing an error message then
 exiting with an error code, the :ref:`ExitOnError <err_exitonerr>` utility
 may be a better choice than handleErrors, as it simplifies control flow when
 calling fallible functions.
+
+In situations where it is known that a particular call to a fallible function
+will always succeed (for example, a call to a function that can only fail on a
+subset of inputs with an input that is known to be safe) the
+:ref:`cantFail <err_cantfail>` functions can be used to remove the error type,
+simplifying control flow.
 
 StringError
 """""""""""
@@ -764,6 +770,42 @@ mapping can also be supplied from ``Error`` values to exit codes using the
 
 Use ``ExitOnError`` in your tool code where possible as it can greatly improve
 readability.
+
+.. _err_cantfail:
+
+Using cantFail to simplify safe callsites
+"""""""""""""""""""""""""""""""""""""""""
+
+Some functions may only fail for a subset of their inputs, so calls using known
+safe inputs can be assumed to succeed.
+
+The cantFail functions encapsulate this by wrapping an assertion that their
+argument is a success value and, in the case of Expected<T>, unwrapping the
+T value:
+
+.. code-block:: c++
+
+  Error onlyFailsForSomeXValues(int X);
+  Expected<int> onlyFailsForSomeXValues2(int X);
+
+  void foo() {
+    cantFail(onlyFailsForSomeXValues(KnownSafeValue));
+    int Y = cantFail(onlyFailsForSomeXValues2(KnownSafeValue));
+    ...
+  }
+
+Like the ExitOnError utility, cantFail simplifies control flow. Their treatment
+of error cases is very different however: Where ExitOnError is guaranteed to
+terminate the program on an error input, cantFile simply asserts that the result
+is success. In debug builds this will result in an assertion failure if an error
+is encountered. In release builds the behavior of cantFail for failure values is
+undefined. As such, care must be taken in the use of cantFail: clients must be
+certain that a cantFail wrapped call really can not fail with the given
+arguments.
+
+Use of the cantFail functions should be rare in library code, but they are
+likely to be of more use in tool and unit-test code where inputs and/or
+mocked-up classes or functions may be known to be safe.
 
 Fallible constructors
 """""""""""""""""""""
@@ -931,7 +973,7 @@ The ``function_ref`` class template
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``function_ref``
-(`doxygen <http://llvm.org/docs/doxygen/html/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html>`__) class
+(`doxygen <http://llvm.org/doxygen/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html>`__) class
 template represents a reference to a callable object, templated over the type
 of the callable. This is a good choice for passing a callback to a function,
 if you don't need to hold onto the callback after the function returns. In this
@@ -981,7 +1023,7 @@ you don't want them to always be noisy.  A standard compromise is to comment
 them out, allowing you to enable them if you need them in the future.
 
 The ``llvm/Support/Debug.h`` (`doxygen
-<http://llvm.org/doxygen/Debug_8h-source.html>`__) file provides a macro named
+<http://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
 ``DEBUG()`` that is a much nicer solution to this problem.  Basically, you can
 put arbitrary code into the argument of the ``DEBUG`` macro, and it is only
 executed if '``opt``' (or any other tool) is run with the '``-debug``' command
@@ -1078,7 +1120,7 @@ The ``Statistic`` class & ``-stats`` option
 -------------------------------------------
 
 The ``llvm/ADT/Statistic.h`` (`doxygen
-<http://llvm.org/doxygen/Statistic_8h-source.html>`__) file provides a class
+<http://llvm.org/doxygen/Statistic_8h_source.html>`__) file provides a class
 named ``Statistic`` that is used as a unified way to keep track of what the LLVM
 compiler is doing and how effective various optimizations are.  It is useful to
 see what optimizations are contributing to making a particular program run
@@ -1094,23 +1136,23 @@ uniform manner with the rest of the passes being executed.
 There are many examples of ``Statistic`` uses, but the basics of using it are as
 follows:
 
-#. Define your statistic like this:
+Define your statistic like this:
 
-  .. code-block:: c++
+.. code-block:: c++
 
-    #define DEBUG_TYPE "mypassname"   // This goes before any #includes.
-    STATISTIC(NumXForms, "The # of times I did stuff");
+  #define DEBUG_TYPE "mypassname"   // This goes before any #includes.
+  STATISTIC(NumXForms, "The # of times I did stuff");
 
-  The ``STATISTIC`` macro defines a static variable, whose name is specified by
-  the first argument.  The pass name is taken from the ``DEBUG_TYPE`` macro, and
-  the description is taken from the second argument.  The variable defined
-  ("NumXForms" in this case) acts like an unsigned integer.
+The ``STATISTIC`` macro defines a static variable, whose name is specified by
+the first argument.  The pass name is taken from the ``DEBUG_TYPE`` macro, and
+the description is taken from the second argument.  The variable defined
+("NumXForms" in this case) acts like an unsigned integer.
 
-#. Whenever you make a transformation, bump the counter:
+Whenever you make a transformation, bump the counter:
 
-  .. code-block:: c++
+.. code-block:: c++
 
-    ++NumXForms;   // I did stuff!
+  ++NumXForms;   // I did stuff!
 
 That's all you have to do.  To get '``opt``' to print out the statistics
 gathered, use the '``-stats``' option:
@@ -1157,6 +1199,71 @@ report that looks like this:
 Obviously, with so many optimizations, having a unified framework for this stuff
 is very nice.  Making your pass fit well into the framework makes it more
 maintainable and useful.
+
+.. _DebugCounters:
+
+Adding debug counters to aid in debugging your code
+---------------------------------------------------
+
+Sometimes, when writing new passes, or trying to track down bugs, it
+is useful to be able to control whether certain things in your pass
+happen or not.  For example, there are times the minimization tooling
+can only easily give you large testcases.  You would like to narrow
+your bug down to a specific transformation happening or not happening,
+automatically, using bisection.  This is where debug counters help.
+They provide a framework for making parts of your code only execute a
+certain number of times.
+
+The ``llvm/Support/DebugCounter.h`` (`doxygen
+<http://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
+provides a class named ``DebugCounter`` that can be used to create
+command line counter options that control execution of parts of your code.
+
+Define your DebugCounter like this:
+
+.. code-block:: c++
+
+  DEBUG_COUNTER(DeleteAnInstruction, "passname-delete-instruction",
+		"Controls which instructions get delete").
+
+The ``DEBUG_COUNTER`` macro defines a static variable, whose name
+is specified by the first argument.  The name of the counter
+(which is used on the command line) is specified by the second
+argument, and the description used in the help is specified by the
+third argument.
+
+Whatever code you want that control, use ``DebugCounter::shouldExecute`` to control it.
+
+.. code-block:: c++
+
+  if (DebugCounter::shouldExecute(DeleteAnInstruction))
+    I->eraseFromParent();
+
+That's all you have to do.  Now, using opt, you can control when this code triggers using
+the '``--debug-counter``' option.  There are two counters provided, ``skip`` and ``count``.
+``skip`` is the number of times to skip execution of the codepath.  ``count`` is the number
+of times, once we are done skipping, to execute the codepath.
+
+.. code-block:: none
+
+  $ opt --debug-counter=passname-delete-instruction-skip=1,passname-delete-instruction-count=2 -passname
+
+This will skip the above code the first time we hit it, then execute it twice, then skip the rest of the executions.
+
+So if executed on the following code:
+
+.. code-block:: llvm
+
+  %1 = add i32 %a, %b
+  %2 = add i32 %a, %b
+  %3 = add i32 %a, %b
+  %4 = add i32 %a, %b
+
+It would delete number ``%2`` and ``%3``.
+
+A utility is provided in `utils/bisect-skip-count` to binary search
+skip and count arguments. It can be used to automatically minimize the
+skip and count for a debug-counter variable.
 
 .. _ViewGraph:
 
@@ -2257,18 +2364,12 @@ of a ``BasicBlock`` and the number of ``Instruction``\ s it contains:
 
 .. code-block:: c++
 
-  // func is a pointer to a Function instance
-  for (Function::iterator i = func->begin(), e = func->end(); i != e; ++i)
+  Function &Func = ...
+  for (BasicBlock &BB : Func)
     // Print out the name of the basic block if it has one, and then the
     // number of instructions that it contains
-    errs() << "Basic block (name=" << i->getName() << ") has "
-               << i->size() << " instructions.\n";
-
-Note that i can be used as if it were a pointer for the purposes of invoking
-member functions of the ``Instruction`` class.  This is because the indirection
-operator is overloaded for the iterator classes.  In the above code, the
-expression ``i->size()`` is exactly equivalent to ``(*i).size()`` just like
-you'd expect.
+    errs() << "Basic block (name=" << BB.getName() << ") has "
+               << BB.size() << " instructions.\n";
 
 .. _iterate_basicblock:
 
@@ -2281,17 +2382,17 @@ a code snippet that prints out each instruction in a ``BasicBlock``:
 
 .. code-block:: c++
 
-  // blk is a pointer to a BasicBlock instance
-  for (BasicBlock::iterator i = blk->begin(), e = blk->end(); i != e; ++i)
+  BasicBlock& BB = ...
+  for (Instruction &I : BB)
      // The next statement works since operator<<(ostream&,...)
      // is overloaded for Instruction&
-     errs() << *i << "\n";
+     errs() << I << "\n";
 
 
 However, this isn't really the best way to print out the contents of a
 ``BasicBlock``!  Since the ostream operators are overloaded for virtually
 anything you'll care about, you could have just invoked the print routine on the
-basic block itself: ``errs() << *blk << "\n";``.
+basic block itself: ``errs() << BB << "\n";``.
 
 .. _iterate_insiter:
 
@@ -2425,13 +2526,13 @@ method):
       OurFunctionPass(): callCounter(0) { }
 
       virtual runOnFunction(Function& F) {
-        for (Function::iterator b = F.begin(), be = F.end(); b != be; ++b) {
-          for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-            if (CallInst* callInst = dyn_cast<CallInst>(&*i)) {
+        for (BasicBlock &B : F) {
+          for (Instruction &I: B) {
+            if (auto *CallInst = dyn_cast<CallInst>(&I)) {
               // We know we've encountered a call instruction, so we
               // need to determine if it's a call to the
               // function pointed to by m_func or not.
-              if (callInst->getCalledFunction() == targetFunc)
+              if (CallInst->getCalledFunction() == targetFunc)
                 ++callCounter;
             }
           }
@@ -2524,12 +2625,11 @@ iterate over all predecessors of BB:
   #include "llvm/IR/CFG.h"
   BasicBlock *BB = ...;
 
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    BasicBlock *Pred = *PI;
+  for (BasicBlock *Pred : predecessors(BB)) {
     // ...
   }
 
-Similarly, to iterate over successors use ``succ_iterator/succ_begin/succ_end``.
+Similarly, to iterate over successors use ``successors``.
 
 .. _simplechanges:
 
@@ -2554,7 +2654,7 @@ For example, an ``AllocaInst`` only *requires* a (const-ptr-to) ``Type``.  Thus:
 
 .. code-block:: c++
 
-  AllocaInst* ai = new AllocaInst(Type::Int32Ty);
+  auto *ai = new AllocaInst(Type::Int32Ty);
 
 will create an ``AllocaInst`` instance that represents the allocation of one
 integer in the current stack frame, at run time.  Each ``Instruction`` subclass
@@ -2579,7 +2679,7 @@ intending to use it within the same ``Function``.  I might do:
 
 .. code-block:: c++
 
-  AllocaInst* pa = new AllocaInst(Type::Int32Ty, 0, "indexLoc");
+  auto *pa = new AllocaInst(Type::Int32Ty, 0, "indexLoc");
 
 where ``indexLoc`` is now the logical name of the instruction's execution value,
 which is a pointer to an integer on the run time stack.
@@ -2599,7 +2699,7 @@ sequence of instructions that form a ``BasicBlock``:
 
       BasicBlock *pb = ...;
       Instruction *pi = ...;
-      Instruction *newInst = new Instruction(...);
+      auto *newInst = new Instruction(...);
 
       pb->getInstList().insert(pi, newInst); // Inserts newInst before pi in pb
 
@@ -2611,7 +2711,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     BasicBlock *pb = ...;
-    Instruction *newInst = new Instruction(...);
+    auto *newInst = new Instruction(...);
 
     pb->getInstList().push_back(newInst); // Appends newInst to pb
 
@@ -2620,7 +2720,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     BasicBlock *pb = ...;
-    Instruction *newInst = new Instruction(..., pb);
+    auto *newInst = new Instruction(..., pb);
 
   which is much cleaner, especially if you are creating long instruction
   streams.
@@ -2635,7 +2735,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     Instruction *pi = ...;
-    Instruction *newInst = new Instruction(...);
+    auto *newInst = new Instruction(...);
 
     pi->getParent()->getInstList().insert(pi, newInst);
 
@@ -2651,7 +2751,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     Instruction* pi = ...;
-    Instruction* newInst = new Instruction(..., pi);
+    auto *newInst = new Instruction(..., pi);
 
   which is much cleaner, especially if you're creating a lot of instructions and
   adding them to ``BasicBlock``\ s.
@@ -2718,7 +2818,7 @@ Replacing individual instructions
 """""""""""""""""""""""""""""""""
 
 Including "`llvm/Transforms/Utils/BasicBlockUtils.h
-<http://llvm.org/doxygen/BasicBlockUtils_8h-source.html>`_" permits use of two
+<http://llvm.org/doxygen/BasicBlockUtils_8h_source.html>`_" permits use of two
 very useful replace functions: ``ReplaceInstWithValue`` and
 ``ReplaceInstWithInst``.
 
@@ -2814,7 +2914,7 @@ is easier to read and write than the equivalent
   FunctionType *ft = FunctionType::get(Type::Int8Ty, params, false);
 
 See the `class comment
-<http://llvm.org/doxygen/TypeBuilder_8h-source.html#l00001>`_ for more details.
+<http://llvm.org/doxygen/TypeBuilder_8h_source.html#l00001>`_ for more details.
 
 .. _threading:
 
@@ -2903,7 +3003,7 @@ Another way is to only call ``getPointerToFunction()`` from the
 
 When the JIT is configured to compile lazily (using
 ``ExecutionEngine::DisableLazyCompilation(false)``), there is currently a `race
-condition <http://llvm.org/bugs/show_bug.cgi?id=5184>`_ in updating call sites
+condition <https://bugs.llvm.org/show_bug.cgi?id=5184>`_ in updating call sites
 after a function is lazily-jitted.  It's still possible to use the lazy JIT in a
 threaded program if you ensure that only one thread at a time can call any
 particular lazy stub and that the JIT lock guards any IR access, but we suggest
@@ -3235,7 +3335,7 @@ The Core LLVM Class Hierarchy Reference
 
 ``#include "llvm/IR/Type.h"``
 
-header source: `Type.h <http://llvm.org/doxygen/Type_8h-source.html>`_
+header source: `Type.h <http://llvm.org/doxygen/Type_8h_source.html>`_
 
 doxygen info: `Type Clases <http://llvm.org/doxygen/classllvm_1_1Type.html>`_
 
@@ -3339,7 +3439,7 @@ The ``Module`` class
 
 ``#include "llvm/IR/Module.h"``
 
-header source: `Module.h <http://llvm.org/doxygen/Module_8h-source.html>`_
+header source: `Module.h <http://llvm.org/doxygen/Module_8h_source.html>`_
 
 doxygen info: `Module Class <http://llvm.org/doxygen/classllvm_1_1Module.html>`_
 
@@ -3426,7 +3526,7 @@ The ``Value`` class
 
 ``#include "llvm/IR/Value.h"``
 
-header source: `Value.h <http://llvm.org/doxygen/Value_8h-source.html>`_
+header source: `Value.h <http://llvm.org/doxygen/Value_8h_source.html>`_
 
 doxygen info: `Value Class <http://llvm.org/doxygen/classllvm_1_1Value.html>`_
 
@@ -3517,7 +3617,7 @@ The ``User`` class
 
 ``#include "llvm/IR/User.h"``
 
-header source: `User.h <http://llvm.org/doxygen/User_8h-source.html>`_
+header source: `User.h <http://llvm.org/doxygen/User_8h_source.html>`_
 
 doxygen info: `User Class <http://llvm.org/doxygen/classllvm_1_1User.html>`_
 
@@ -3564,7 +3664,7 @@ The ``Instruction`` class
 ``#include "llvm/IR/Instruction.h"``
 
 header source: `Instruction.h
-<http://llvm.org/doxygen/Instruction_8h-source.html>`_
+<http://llvm.org/doxygen/Instruction_8h_source.html>`_
 
 doxygen info: `Instruction Class
 <http://llvm.org/doxygen/classllvm_1_1Instruction.html>`_
@@ -3712,7 +3812,7 @@ The ``GlobalValue`` class
 ``#include "llvm/IR/GlobalValue.h"``
 
 header source: `GlobalValue.h
-<http://llvm.org/doxygen/GlobalValue_8h-source.html>`_
+<http://llvm.org/doxygen/GlobalValue_8h_source.html>`_
 
 doxygen info: `GlobalValue Class
 <http://llvm.org/doxygen/classllvm_1_1GlobalValue.html>`_
@@ -3770,7 +3870,7 @@ The ``Function`` class
 
 ``#include "llvm/IR/Function.h"``
 
-header source: `Function.h <http://llvm.org/doxygen/Function_8h-source.html>`_
+header source: `Function.h <http://llvm.org/doxygen/Function_8h_source.html>`_
 
 doxygen info: `Function Class
 <http://llvm.org/doxygen/classllvm_1_1Function.html>`_
@@ -3879,7 +3979,7 @@ The ``GlobalVariable`` class
 ``#include "llvm/IR/GlobalVariable.h"``
 
 header source: `GlobalVariable.h
-<http://llvm.org/doxygen/GlobalVariable_8h-source.html>`_
+<http://llvm.org/doxygen/GlobalVariable_8h_source.html>`_
 
 doxygen info: `GlobalVariable Class
 <http://llvm.org/doxygen/classllvm_1_1GlobalVariable.html>`_
@@ -3937,7 +4037,7 @@ The ``BasicBlock`` class
 ``#include "llvm/IR/BasicBlock.h"``
 
 header source: `BasicBlock.h
-<http://llvm.org/doxygen/BasicBlock_8h-source.html>`_
+<http://llvm.org/doxygen/BasicBlock_8h_source.html>`_
 
 doxygen info: `BasicBlock Class
 <http://llvm.org/doxygen/classllvm_1_1BasicBlock.html>`_

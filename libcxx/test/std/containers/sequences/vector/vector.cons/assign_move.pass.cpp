@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <vector>
 
 // vector& operator=(vector&& c);
@@ -20,7 +22,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         std::vector<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5));
         std::vector<MoveOnly, test_allocator<MoveOnly> > lo(test_allocator<MoveOnly>(5));
@@ -76,7 +77,6 @@ int main()
         assert(l2.get_allocator() == lo.get_allocator());
         assert(is_contiguous_container_asan_correct(l2));
     }
-#if TEST_STD_VER >= 11
     {
         std::vector<MoveOnly, min_allocator<MoveOnly> > l(min_allocator<MoveOnly>{});
         std::vector<MoveOnly, min_allocator<MoveOnly> > lo(min_allocator<MoveOnly>{});
@@ -96,6 +96,4 @@ int main()
         assert(l2.get_allocator() == lo.get_allocator());
         assert(is_contiguous_container_asan_correct(l2));
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

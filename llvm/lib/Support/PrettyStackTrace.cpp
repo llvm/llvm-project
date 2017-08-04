@@ -15,13 +15,14 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Config/config.h"     // Get autoconf configuration settings
+#include "llvm/Config/config.h" // Get autoconf configuration settings
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Watchdog.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdarg>
+#include <cstdio>
 #include <tuple>
 
 #ifdef HAVE_CRASHREPORTERCLIENT_H

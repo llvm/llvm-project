@@ -50,7 +50,7 @@
 # CHECK-THUMB: [0xde,0xf3,0x00,0x8f]
 
 # SUBS PC, LR, #0 should have the same encoding as ERET.
-# The conditional forms can't be tested becuse the ARM assembler parser doesn't
+# The conditional forms can't be tested because the ARM assembler parser doesn't
 # accept SUBS<cond> PC, LR, #<imm>, only the unconditonal form is allowed. This
 # is due to the way that the custom parser handles optional operands; see the
 # FIXME in ARM/AsmParser/ARMAsmParser.cpp.

@@ -24,14 +24,12 @@ entry:
 ; CHECK-THUMB-LABEL: test_cmpxchg_res_i8
 ; CHECK-THUMB: bl __sync_val_compare_and_swap_1
 ; CHECK-THUMB-NOT: mov [[R1:r[0-7]]], r0
-; CHECK-THUMB: push  {r0}
-; CHECK-THUMB: pop {[[R1:r[0-7]]]}
+; CHECK-THUMB: movs [[R1:r[0-7]]], r0
 ; CHECK-THUMB: movs r0, #1
 ; CHECK-THUMB: movs [[R2:r[0-9]+]], #0
 ; CHECK-THUMB: cmp [[R1]], {{r[0-9]+}}
 ; CHECK-THUMB: beq
-; CHECK-THUMB: push  {[[R2]]}
-; CHECK-THUMB: pop {r0}
+; CHECK-THUMB: movs r0, [[R2]]
 
 ; CHECK-ARMV6-LABEL: test_cmpxchg_res_i8:
 ; CHECK-ARMV6-NEXT:  .fnstart
@@ -66,14 +64,14 @@ entry:
 ; CHECK-ARMV7-NEXT: [[HEAD:.LBB[0-9_]+]]:
 ; CHECK-ARMV7-NEXT: strexb [[SUCCESS:r[0-9]+]], r2, [r0]
 ; CHECK-ARMV7-NEXT: cmp [[SUCCESS]], #0
-; CHECK-ARMV7-NEXT: moveq [[RES:r[0-9]+]], #1
+; CHECK-ARMV7-NEXT: moveq r0, #1
 ; CHECK-ARMV7-NEXT: bxeq lr
 ; CHECK-ARMV7-NEXT: [[TRY]]:
-; CHECK-ARMV7-NEXT: ldrexb [[LD:r[0-9]+]], [r0]
-; CHECK-ARMV7-NEXT: cmp [[LD]], [[DESIRED]]
+; CHECK-ARMV7-NEXT: ldrexb [[SUCCESS]], [r0]
+; CHECK-ARMV7-NEXT: cmp [[SUCCESS]], r1
 ; CHECK-ARMV7-NEXT: beq [[HEAD]]
+; CHECK-ARMV7-NEXT: mov r0, #0
 ; CHECK-ARMV7-NEXT: clrex
-; CHECK-ARMV7-NEXT: mov [[RES]], #0
 ; CHECK-ARMV7-NEXT: bx lr
 
 ; CHECK-THUMBV7-LABEL: test_cmpxchg_res_i8:
@@ -90,6 +88,6 @@ entry:
 ; CHECK-THUMBV7-NEXT: ldrexb [[LD:r[0-9]+]], [r0]
 ; CHECK-THUMBV7-NEXT: cmp [[LD]], [[DESIRED]]
 ; CHECK-THUMBV7-NEXT: beq [[TRYST:.LBB[0-9_]+]]
-; CHECK-THUMBV7-NEXT: clrex
 ; CHECK-THUMBV7-NEXT: movs r0, #0
+; CHECK-THUMBV7-NEXT: clrex
 ; CHECK-THUMBV7-NEXT: bx lr

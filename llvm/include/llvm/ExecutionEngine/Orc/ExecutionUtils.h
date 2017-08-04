@@ -1,4 +1,4 @@
-//===-- ExecutionUtils.h - Utilities for executing code in Orc --*- C++ -*-===//
+//===- ExecutionUtils.h - Utilities for executing code in Orc ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,11 +14,16 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include <algorithm>
+#include <cstdint>
+#include <string>
 #include <vector>
+#include <utility>
 
 namespace llvm {
 
@@ -37,7 +42,6 @@ namespace orc {
 /// getConstructors/getDestructors functions.
 class CtorDtorIterator {
 public:
-
   /// @brief Accessor for an element of the global_ctors/global_dtors array.
   ///
   ///   This class provides a read-only view of the element with any casts on
@@ -89,33 +93,37 @@ iterator_range<CtorDtorIterator> getDestructors(const Module &M);
 template <typename JITLayerT>
 class CtorDtorRunner {
 public:
-
   /// @brief Construct a CtorDtorRunner for the given range using the given
   ///        name mangling function.
   CtorDtorRunner(std::vector<std::string> CtorDtorNames,
-                 typename JITLayerT::ModuleSetHandleT H)
+                 typename JITLayerT::ModuleHandleT H)
       : CtorDtorNames(std::move(CtorDtorNames)), H(H) {}
 
   /// @brief Run the recorded constructors/destructors through the given JIT
   ///        layer.
-  bool runViaLayer(JITLayerT &JITLayer) const {
-    typedef void (*CtorDtorTy)();
+  Error runViaLayer(JITLayerT &JITLayer) const {
+    using CtorDtorTy = void (*)();
 
-    bool Error = false;
     for (const auto &CtorDtorName : CtorDtorNames)
       if (auto CtorDtorSym = JITLayer.findSymbolIn(H, CtorDtorName, false)) {
-        CtorDtorTy CtorDtor =
-          reinterpret_cast<CtorDtorTy>(
-            static_cast<uintptr_t>(CtorDtorSym.getAddress()));
-        CtorDtor();
-      } else
-        Error = true;
-    return !Error;
+        if (auto AddrOrErr = CtorDtorSym.getAddress()) {
+          CtorDtorTy CtorDtor =
+            reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
+          CtorDtor();
+        } else
+          return AddrOrErr.takeError();
+      } else {
+        if (auto Err = CtorDtorSym.takeError())
+          return Err;
+        else
+          return make_error<JITSymbolNotFound>(CtorDtorName);
+      }
+    return Error::success();
   }
 
 private:
   std::vector<std::string> CtorDtorNames;
-  typename JITLayerT::ModuleSetHandleT H;
+  typename JITLayerT::ModuleHandleT H;
 };
 
 /// @brief Support class for static dtor execution. For hosted (in-process) JITs
@@ -135,7 +143,6 @@ private:
 /// called.
 class LocalCXXRuntimeOverrides {
 public:
-
   /// Create a runtime-overrides class.
   template <typename MangleFtorT>
   LocalCXXRuntimeOverrides(const MangleFtorT &Mangle) {
@@ -156,7 +163,6 @@ public:
   void runDestructors();
 
 private:
-
   template <typename PtrTy>
   JITTargetAddress toTargetAddress(PtrTy* P) {
     return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
@@ -168,15 +174,16 @@ private:
 
   StringMap<JITTargetAddress> CXXRuntimeOverrides;
 
-  typedef void (*DestructorPtr)(void*);
-  typedef std::pair<DestructorPtr, void*> CXXDestructorDataPair;
-  typedef std::vector<CXXDestructorDataPair> CXXDestructorDataPairList;
+  using DestructorPtr = void (*)(void *);
+  using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
+  using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
   CXXDestructorDataPairList DSOHandleOverride;
   static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
                                void *DSOHandle);
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H

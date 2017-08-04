@@ -18,6 +18,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -44,7 +46,7 @@ int main()
     std::chrono::duration<double, std::ratio<1, 15> > r = s1 + s2;
     assert(r.count() == 75);
     }
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     {
     constexpr std::chrono::seconds s1(3);
     constexpr std::chrono::seconds s2(5);

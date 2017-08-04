@@ -40,7 +40,7 @@ Z::operator int() const {
 // CHECK-MEMBER: FieldDecl:{ResultType double}{TypedText member}
 // CHECK-MEMBER: FieldDecl:{ResultType int}{Text X::}{TypedText member}
 // CHECK-MEMBER: FieldDecl:{ResultType float}{Text Y::}{TypedText member}
-// CHECK-MEMBER: CXXMethod:{ResultType void}{Informative Y::}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i}}{RightParen )}
+// CHECK-MEMBER: CXXMethod:{ResultType void}{Informative Y::}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i = 17}}{RightParen )}
 // CHECK-MEMBER: CXXConversion:{TypedText operator int}{LeftParen (}{RightParen )}{Informative  const}
 // CHECK-MEMBER: CXXMethod:{ResultType Z &}{TypedText operator=}{LeftParen (}{Placeholder const Z &}{RightParen )}
 // CHECK-MEMBER: CXXMethod:{ResultType X &}{Text X::}{TypedText operator=}{LeftParen (}{Placeholder const X &}{RightParen )}
@@ -77,7 +77,7 @@ Z::operator int() const {
 // CHECK-EXPR: FieldDecl:{ResultType double}{TypedText member} (17)
 // CHECK-EXPR: FieldDecl:{ResultType int}{Text X::}{TypedText member} (9)
 // CHECK-EXPR: FieldDecl:{ResultType float}{Text Y::}{TypedText member} (18)
-// CHECK-EXPR: CXXMethod:{ResultType void}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i}}{RightParen )} (37)
+// CHECK-EXPR: CXXMethod:{ResultType void}{TypedText memfunc}{LeftParen (}{Optional {Placeholder int i = 17}}{RightParen )} (37)
 // CHECK-EXPR: Namespace:{TypedText N}{Text ::} (75)
 // CHECK-EXPR: Completion contexts:
 // CHECK-EXPR-NEXT: Any type

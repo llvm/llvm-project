@@ -613,8 +613,8 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-LABEL: test_bitreverse_v32i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
@@ -622,7 +622,7 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm3
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -1361,8 +1361,8 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX1-LABEL: test_bitreverse_v64i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm2
@@ -1370,7 +1370,7 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm6, %xmm2
 ; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
@@ -1378,13 +1378,13 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpor %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm6, %xmm2
 ; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
@@ -2372,10 +2372,10 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    vpsrlq $24, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; AVX512F-NEXT:    vpsrlq $8, %zmm0, %zmm3
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm3, %zmm3
 ; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
-; AVX512F-NEXT:    vporq %zmm1, %zmm3, %zmm1
+; AVX512F-NEXT:    vpsrlq $8, %zmm0, %zmm2
+; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
+; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    vpsllq $8, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpsllq $24, %zmm0, %zmm3
@@ -2445,6 +2445,93 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; XOPAVX2-NEXT:    retq
   %b = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
   ret <8 x i64> %b
+}
+
+;
+; Constant Folding
+;
+
+define i32 @fold_bitreverse_i32() nounwind {
+; ALL-LABEL: fold_bitreverse_i32:
+; ALL:       # BB#0:
+; ALL-NEXT:    movl $16711935, %eax # imm = 0xFF00FF
+; ALL-NEXT:    retq
+  %b = call i32 @llvm.bitreverse.i32(i32 4278255360)
+  ret i32 %b
+}
+
+define <16 x i8> @fold_bitreverse_v16i8() nounwind {
+; SSE-LABEL: fold_bitreverse_v16i8:
+; SSE:       # BB#0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,255,64,191,32,223,96,159,16,239,80,175,48,207,112,143]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fold_bitreverse_v16i8:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0,255,64,191,32,223,96,159,16,239,80,175,48,207,112,143]
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: fold_bitreverse_v16i8:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [0,255,64,191,32,223,96,159,16,239,80,175,48,207,112,143]
+; XOP-NEXT:    retq
+  %b = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> <i8 0, i8 -1, i8 2, i8 -3, i8 4, i8 -5, i8 6, i8 -7, i8 8, i8 -9, i8 10, i8 -11, i8 12, i8 -13, i8 14, i8 -15>)
+  ret <16 x i8> %b
+}
+
+define <16 x i16> @fold_bitreverse_v16i16() nounwind {
+; SSE-LABEL: fold_bitreverse_v16i16:
+; SSE:       # BB#0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,65535,16384,49151,8192,57343,24576,40959]
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [4096,61439,20480,45055,12288,53247,28672,36863]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fold_bitreverse_v16i16:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [0,65535,16384,49151,8192,57343,24576,40959,4096,61439,20480,45055,12288,53247,28672,36863]
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: fold_bitreverse_v16i16:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovaps {{.*#+}} ymm0 = [0,65535,16384,49151,8192,57343,24576,40959,4096,61439,20480,45055,12288,53247,28672,36863]
+; XOP-NEXT:    retq
+  %b = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> <i16 0, i16 -1, i16 2, i16 -3, i16 4, i16 -5, i16 6, i16 -7, i16 8, i16 -9, i16 10, i16 -11, i16 12, i16 -13, i16 14, i16 -15>)
+  ret <16 x i16> %b
+}
+
+define <16 x i32> @fold_bitreverse_v16i32() nounwind {
+; SSE-LABEL: fold_bitreverse_v16i32:
+; SSE:       # BB#0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,4294967295,1073741824,3221225471]
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [536870912,3758096383,1610612736,2684354559]
+; SSE-NEXT:    movaps {{.*#+}} xmm2 = [268435456,4026531839,1342177280,2952790015]
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [805306368,3489660927,1879048192,2415919103]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: fold_bitreverse_v16i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [0,4294967295,1073741824,3221225471,536870912,3758096383,1610612736,2684354559]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [268435456,4026531839,1342177280,2952790015,805306368,3489660927,1879048192,2415919103]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: fold_bitreverse_v16i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [0,4294967295,1073741824,3221225471,536870912,3758096383,1610612736,2684354559]
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [268435456,4026531839,1342177280,2952790015,805306368,3489660927,1879048192,2415919103]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: fold_bitreverse_v16i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vmovaps {{.*#+}} zmm0 = [0,4294967295,1073741824,3221225471,536870912,3758096383,1610612736,2684354559,268435456,4026531839,1342177280,2952790015,805306368,3489660927,1879048192,2415919103]
+; AVX512-NEXT:    retq
+;
+; XOP-LABEL: fold_bitreverse_v16i32:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovaps {{.*#+}} ymm0 = [0,4294967295,1073741824,3221225471,536870912,3758096383,1610612736,2684354559]
+; XOP-NEXT:    vmovaps {{.*#+}} ymm1 = [268435456,4026531839,1342177280,2952790015,805306368,3489660927,1879048192,2415919103]
+; XOP-NEXT:    retq
+  %b = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> <i32 0, i32 -1, i32 2, i32 -3, i32 4, i32 -5, i32 6, i32 -7, i32 8, i32 -9, i32 10, i32 -11, i32 12, i32 -13, i32 14, i32 -15>)
+  ret <16 x i32> %b
 }
 
 declare i8 @llvm.bitreverse.i8(i8) readnone

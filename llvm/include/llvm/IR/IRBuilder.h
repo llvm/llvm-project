@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_IRBUILDER_H
 #define LLVM_IR_IRBUILDER_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
@@ -33,6 +34,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -40,11 +42,10 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
-#include "llvm-c/Types.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <algorithm>
 #include <functional>
 
 namespace llvm {
@@ -434,6 +435,26 @@ public:
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
+  /// \brief Create and insert an element unordered-atomic memcpy between the
+  /// specified pointers.
+  ///
+  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
+  CallInst *CreateElementUnorderedAtomicMemCpy(
+      Value *Dst, Value *Src, uint64_t Size, uint32_t ElementSize,
+      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
+      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr) {
+    return CreateElementUnorderedAtomicMemCpy(
+        Dst, Src, getInt64(Size), ElementSize, TBAATag, TBAAStructTag, ScopeTag,
+        NoAliasTag);
+  }
+
+  CallInst *CreateElementUnorderedAtomicMemCpy(
+      Value *Dst, Value *Src, Value *Size, uint32_t ElementSize,
+      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
+      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr);
+
   /// \brief Create and insert a memmove between the specified
   /// pointers.
   ///
@@ -452,6 +473,45 @@ public:
                           bool isVolatile = false, MDNode *TBAATag = nullptr,
                           MDNode *ScopeTag = nullptr,
                           MDNode *NoAliasTag = nullptr);
+
+  /// \brief Create a vector fadd reduction intrinsic of the source vector.
+  /// The first parameter is a scalar accumulator value for ordered reductions.
+  CallInst *CreateFAddReduce(Value *Acc, Value *Src);
+
+  /// \brief Create a vector fmul reduction intrinsic of the source vector.
+  /// The first parameter is a scalar accumulator value for ordered reductions.
+  CallInst *CreateFMulReduce(Value *Acc, Value *Src);
+
+  /// \brief Create a vector int add reduction intrinsic of the source vector.
+  CallInst *CreateAddReduce(Value *Src);
+
+  /// \brief Create a vector int mul reduction intrinsic of the source vector.
+  CallInst *CreateMulReduce(Value *Src);
+
+  /// \brief Create a vector int AND reduction intrinsic of the source vector.
+  CallInst *CreateAndReduce(Value *Src);
+
+  /// \brief Create a vector int OR reduction intrinsic of the source vector.
+  CallInst *CreateOrReduce(Value *Src);
+
+  /// \brief Create a vector int XOR reduction intrinsic of the source vector.
+  CallInst *CreateXorReduce(Value *Src);
+
+  /// \brief Create a vector integer max reduction intrinsic of the source
+  /// vector.
+  CallInst *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
+
+  /// \brief Create a vector integer min reduction intrinsic of the source
+  /// vector.
+  CallInst *CreateIntMinReduce(Value *Src, bool IsSigned = false);
+
+  /// \brief Create a vector float max reduction intrinsic of the source
+  /// vector.
+  CallInst *CreateFPMaxReduce(Value *Src, bool NoNaN = false);
+
+  /// \brief Create a vector float min reduction intrinsic of the source
+  /// vector.
+  CallInst *CreateFPMinReduce(Value *Src, bool NoNaN = false);
 
   /// \brief Create a lifetime.start intrinsic.
   ///
@@ -559,6 +619,22 @@ public:
                              int DerivedOffset,
                              Type *ResultType,
                              const Twine &Name = "");
+
+  /// Create a call to intrinsic \p ID with 2 operands which is mangled on the
+  /// first type.
+  CallInst *CreateBinaryIntrinsic(Intrinsic::ID ID,
+                                  Value *LHS, Value *RHS,
+                                  const Twine &Name = "");
+
+  /// Create call to the minnum intrinsic.
+  CallInst *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, Name);
+  }
+
+  /// Create call to the maxnum intrinsic.
+  CallInst *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, Name);
+  }
 
 private:
   /// \brief Create a call to a masked intrinsic with given Id.
@@ -986,7 +1062,7 @@ public:
 
   Value *CreateAnd(Value *LHS, Value *RHS, const Twine &Name = "") {
     if (Constant *RC = dyn_cast<Constant>(RHS)) {
-      if (isa<ConstantInt>(RC) && cast<ConstantInt>(RC)->isAllOnesValue())
+      if (isa<ConstantInt>(RC) && cast<ConstantInt>(RC)->isMinusOne())
         return LHS;  // LHS & -1 -> LHS
       if (Constant *LC = dyn_cast<Constant>(LHS))
         return Insert(Folder.CreateAnd(LC, RC), Name);
@@ -1073,9 +1149,15 @@ public:
   // Instruction creation methods: Memory Instructions
   //===--------------------------------------------------------------------===//
 
+  AllocaInst *CreateAlloca(Type *Ty, unsigned AddrSpace,
+                           Value *ArraySize = nullptr, const Twine &Name = "") {
+    return Insert(new AllocaInst(Ty, AddrSpace, ArraySize), Name);
+  }
+
   AllocaInst *CreateAlloca(Type *Ty, Value *ArraySize = nullptr,
                            const Twine &Name = "") {
-    return Insert(new AllocaInst(Ty, ArraySize), Name);
+    const DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    return Insert(new AllocaInst(Ty, DL.getAllocaAddrSpace(), ArraySize), Name);
   }
   // \brief Provided to resolve 'CreateLoad(Ptr, "...")' correctly, instead of
   // converting the string to 'bool' for the isVolatile parameter.
@@ -1121,22 +1203,22 @@ public:
     return SI;
   }
   FenceInst *CreateFence(AtomicOrdering Ordering,
-                         SynchronizationScope SynchScope = CrossThread,
+                         SyncScope::ID SSID = SyncScope::System,
                          const Twine &Name = "") {
-    return Insert(new FenceInst(Context, Ordering, SynchScope), Name);
+    return Insert(new FenceInst(Context, Ordering, SSID), Name);
   }
   AtomicCmpXchgInst *
   CreateAtomicCmpXchg(Value *Ptr, Value *Cmp, Value *New,
                       AtomicOrdering SuccessOrdering,
                       AtomicOrdering FailureOrdering,
-                      SynchronizationScope SynchScope = CrossThread) {
+                      SyncScope::ID SSID = SyncScope::System) {
     return Insert(new AtomicCmpXchgInst(Ptr, Cmp, New, SuccessOrdering,
-                                        FailureOrdering, SynchScope));
+                                        FailureOrdering, SSID));
   }
   AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr, Value *Val,
                                  AtomicOrdering Ordering,
-                               SynchronizationScope SynchScope = CrossThread) {
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, Ordering, SynchScope));
+                                 SyncScope::ID SSID = SyncScope::System) {
+    return Insert(new AtomicRMWInst(Op, Ptr, Val, Ordering, SSID));
   }
   Value *CreateGEP(Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "") {
@@ -1435,11 +1517,9 @@ public:
                                 const Twine &Name = "") {
     if (V->getType() == DestTy)
       return V;
-    if (V->getType()->getScalarType()->isPointerTy() &&
-        DestTy->getScalarType()->isIntegerTy())
+    if (V->getType()->isPtrOrPtrVectorTy() && DestTy->isIntOrIntVectorTy())
       return CreatePtrToInt(V, DestTy, Name);
-    if (V->getType()->getScalarType()->isIntegerTy() &&
-        DestTy->getScalarType()->isPointerTy())
+    if (V->getType()->isIntOrIntVectorTy() && DestTy->isPtrOrPtrVectorTy())
       return CreateIntToPtr(V, DestTy, Name);
 
     return CreateBitCast(V, DestTy, Name);
@@ -1790,24 +1870,16 @@ public:
     return V;
   }
 
-  /// \brief Create an assume intrinsic call that represents an alignment
-  /// assumption on the provided pointer.
-  ///
-  /// An optional offset can be provided, and if it is provided, the offset
-  /// must be subtracted from the provided pointer to get the pointer with the
-  /// specified alignment.
-  CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
-                                      unsigned Alignment,
-                                      Value *OffsetValue = nullptr) {
-    assert(isa<PointerType>(PtrValue->getType()) &&
-           "trying to create an alignment assumption on a non-pointer?");
-
-    PointerType *PtrTy = cast<PointerType>(PtrValue->getType());
-    Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
+private:
+  /// \brief Helper function that creates an assume intrinsic call that
+  /// represents an alignment assumption on the provided Ptr, Mask, Type
+  /// and Offset.
+  CallInst *CreateAlignmentAssumptionHelper(const DataLayout &DL,
+                                            Value *PtrValue, Value *Mask,
+                                            Type *IntPtrTy,
+                                            Value *OffsetValue) {
     Value *PtrIntValue = CreatePtrToInt(PtrValue, IntPtrTy, "ptrint");
 
-    Value *Mask = ConstantInt::get(IntPtrTy,
-      Alignment > 0 ? Alignment - 1 : 0);
     if (OffsetValue) {
       bool IsOffsetZero = false;
       if (ConstantInt *CI = dyn_cast<ConstantInt>(OffsetValue))
@@ -1824,8 +1896,59 @@ public:
     Value *Zero = ConstantInt::get(IntPtrTy, 0);
     Value *MaskedPtr = CreateAnd(PtrIntValue, Mask, "maskedptr");
     Value *InvCond = CreateICmpEQ(MaskedPtr, Zero, "maskcond");
-
     return CreateAssumption(InvCond);
+  }
+
+public:
+  /// \brief Create an assume intrinsic call that represents an alignment
+  /// assumption on the provided pointer.
+  ///
+  /// An optional offset can be provided, and if it is provided, the offset
+  /// must be subtracted from the provided pointer to get the pointer with the
+  /// specified alignment.
+  CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
+                                      unsigned Alignment,
+                                      Value *OffsetValue = nullptr) {
+    assert(isa<PointerType>(PtrValue->getType()) &&
+           "trying to create an alignment assumption on a non-pointer?");
+    PointerType *PtrTy = cast<PointerType>(PtrValue->getType());
+    Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
+
+    Value *Mask = ConstantInt::get(IntPtrTy, Alignment > 0 ? Alignment - 1 : 0);
+    return CreateAlignmentAssumptionHelper(DL, PtrValue, Mask, IntPtrTy,
+                                           OffsetValue);
+  }
+  //
+  /// \brief Create an assume intrinsic call that represents an alignment
+  /// assumption on the provided pointer.
+  ///
+  /// An optional offset can be provided, and if it is provided, the offset
+  /// must be subtracted from the provided pointer to get the pointer with the
+  /// specified alignment.
+  ///
+  /// This overload handles the condition where the Alignment is dependent
+  /// on an existing value rather than a static value.
+  CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
+                                      Value *Alignment,
+                                      Value *OffsetValue = nullptr) {
+    assert(isa<PointerType>(PtrValue->getType()) &&
+           "trying to create an alignment assumption on a non-pointer?");
+    PointerType *PtrTy = cast<PointerType>(PtrValue->getType());
+    Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
+
+    if (Alignment->getType() != IntPtrTy)
+      Alignment = CreateIntCast(Alignment, IntPtrTy, /*isSigned*/ true,
+                                "alignmentcast");
+    Value *IsPositive =
+        CreateICmp(CmpInst::ICMP_SGT, Alignment,
+                   ConstantInt::get(Alignment->getType(), 0), "ispositive");
+    Value *PositiveMask =
+        CreateSub(Alignment, ConstantInt::get(IntPtrTy, 1), "positivemask");
+    Value *Mask = CreateSelect(IsPositive, PositiveMask,
+                               ConstantInt::get(IntPtrTy, 0), "mask");
+
+    return CreateAlignmentAssumptionHelper(DL, PtrValue, Mask, IntPtrTy,
+                                           OffsetValue);
   }
 };
 

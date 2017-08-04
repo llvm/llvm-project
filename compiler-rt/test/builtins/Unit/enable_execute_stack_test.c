@@ -1,3 +1,5 @@
+// REQUIRES: native-run
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- enable_execute_stack_test.c - Test __enable_execute_stack ----------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,39 +13,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#if defined(_WIN32)
-#include <windows.h>
-void __clear_cache(void* start, void* end)
-{
-    if (!FlushInstructionCache(GetCurrentProcess(), start, end-start))
-        exit(1);
-}
-void __enable_execute_stack(void *addr)
-{
-    MEMORY_BASIC_INFORMATION b;
-
-    if (!VirtualQuery(addr, &b, sizeof(b)))
-        exit(1);
-    if (!VirtualProtect(b.BaseAddress, b.RegionSize, PAGE_EXECUTE_READWRITE, &b.Protect))
-        exit(1);
-}
-#else
-#include <sys/mman.h>
 extern void __clear_cache(void* start, void* end);
 extern void __enable_execute_stack(void* addr);
-#endif
 
 typedef int (*pfunc)(void);
 
-int func1() 
-{
-    return 1;
-}
-
-int func2() 
-{
-    return 2;
-}
+// Make these static to avoid ILT jumps for incremental linking on Windows.
+static int func1() { return 1; }
+static int func2() { return 2; }
 
 void *__attribute__((noinline))
 memcpy_f(void *dst, const void *src, size_t n) {
@@ -67,6 +44,7 @@ int main()
     // verify you can copy and execute a function
     pfunc f1 = (pfunc)memcpy_f(execution_buffer, func1, 128);
     __clear_cache(execution_buffer, &execution_buffer[128]);
+    printf("f1: %p\n", f1);
     if ((*f1)() != 1)
         return 1;
 

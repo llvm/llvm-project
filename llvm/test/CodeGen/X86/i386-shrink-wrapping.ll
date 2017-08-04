@@ -55,8 +55,7 @@ target triple = "i386-apple-macosx10.5"
 ;
 ; CHECK-NEXT: L_e$non_lazy_ptr, [[E:%[a-z]+]]
 ; CHECK-NEXT: movb [[D]], ([[E]])
-; CHECK-NEXT: L_f$non_lazy_ptr, [[F:%[a-z]+]]
-; CHECK-NEXT: movsbl ([[F]]), [[CONV:%[a-z]+]]
+; CHECK-NEXT: movsbl ([[E]]), [[CONV:%[a-z]+]]
 ; CHECK-NEXT: movl $6, [[CONV:%[a-z]+]]
 ; The eflags is used in the next instruction.
 ; If that instruction disappear, we are not exercising the bug
@@ -96,7 +95,7 @@ for.end:                                          ; preds = %for.cond.preheader
   %.b3 = load i1, i1* @d, align 1
   %tmp2 = select i1 %.b3, i8 0, i8 6
   store i8 %tmp2, i8* @e, align 1
-  %tmp3 = load i8, i8* @f, align 1
+  %tmp3 = load i8, i8* @e, align 1
   %conv = sext i8 %tmp3 to i32
   %add = add nsw i32 %conv, 1
   %rem = srem i32 %tmp1, %add

@@ -33,7 +33,7 @@ class raw_ostream;
 
 /// List of target independent CodeGen pass IDs.
 namespace llvm {
-  FunctionPass *createAtomicExpandPass(const TargetMachine *TM);
+  FunctionPass *createAtomicExpandPass();
 
   /// createUnreachableBlockEliminationPass - The LLVM code generator does not
   /// work well with unreachable basic blocks (what live ranges make sense for a
@@ -60,11 +60,17 @@ namespace llvm {
   /// as if it was just created.
   /// If EmitFallbackDiag is true, the pass will emit a
   /// DiagnosticInfoISelFallback for every MachineFunction it resets.
-  MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag);
+  /// If AbortOnFailedISel is true, abort compilation instead of resetting.
+  MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
+                                                      bool AbortOnFailedISel);
 
   /// createCodeGenPreparePass - Transform the code to expose more pattern
   /// matching during instruction selection.
-  FunctionPass *createCodeGenPreparePass(const TargetMachine *TM = nullptr);
+  FunctionPass *createCodeGenPreparePass();
+
+  /// createScalarizeMaskedMemIntrinPass - Replace masked load, store, gather
+  /// and scatter intrinsics with scalar code when target doesn't support them.
+  FunctionPass *createScalarizeMaskedMemIntrinPass();
 
   /// AtomicExpandID -- Lowers atomic operations in terms of either cmpxchg
   /// load-linked/store-conditional loops.
@@ -78,6 +84,9 @@ namespace llvm {
 
 /// MachineDominanaceFrontier - This pass is a machine dominators analysis pass.
   extern char &MachineDominanceFrontierID;
+
+  /// MachineRegionInfo - This pass computes SESE regions for machine functions.
+  extern char &MachineRegionInfoPassID;
 
   /// EdgeBundles analysis - Bundle machine CFG edges.
   extern char &EdgeBundlesID;
@@ -124,8 +133,15 @@ namespace llvm {
   // instruction and update the MachineFunctionInfo with that information.
   extern char &ShrinkWrapID;
 
+  /// LiveRangeShrink pass. Move instruction close to its definition to shrink
+  /// the definition's live range.
+  extern char &LiveRangeShrinkID;
+
   /// Greedy register allocator.
   extern char &RAGreedyID;
+
+  /// Basic register allocator.
+  extern char &RABasicID;
 
   /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
   /// assigned in VirtRegMap.
@@ -164,7 +180,7 @@ namespace llvm {
   /// PrologEpilogCodeInserter - This pass inserts prolog and epilog code,
   /// and eliminates abstract frame references.
   extern char &PrologEpilogCodeInserterID;
-  MachineFunctionPass *createPrologEpilogInserterPass(const TargetMachine *TM);
+  MachineFunctionPass *createPrologEpilogInserterPass();
 
   /// ExpandPostRAPseudos - This pass expands pseudo instructions after
   /// register allocation.
@@ -284,12 +300,15 @@ namespace llvm {
   /// the target platform.
   extern char &XRayInstrumentationID;
 
+  /// This pass inserts FEntry calls
+  extern char &FEntryInserterID;
+
   /// \brief This pass implements the "patchable-function" attribute.
   extern char &PatchableFunctionID;
 
   /// createStackProtectorPass - This pass adds stack protectors to functions.
   ///
-  FunctionPass *createStackProtectorPass(const TargetMachine *TM);
+  FunctionPass *createStackProtectorPass();
 
   /// createMachineVerifierPass - This pass verifies cenerated machine code
   /// instructions for correctness.
@@ -298,11 +317,11 @@ namespace llvm {
 
   /// createDwarfEHPass - This pass mulches exception handling code into a form
   /// adapted to code generation.  Required if using dwarf exception handling.
-  FunctionPass *createDwarfEHPass(const TargetMachine *TM);
+  FunctionPass *createDwarfEHPass();
 
   /// createWinEHPass - Prepares personality functions used by MSVC on Windows,
   /// in addition to the Itanium LSDA based personalities.
-  FunctionPass *createWinEHPass(const TargetMachine *TM);
+  FunctionPass *createWinEHPass();
 
   /// createSjLjEHPreparePass - This pass adapts exception handling code to use
   /// the GCC-style builtin setjmp/longjmp (sjlj) to handling EH control flow.
@@ -317,14 +336,6 @@ namespace llvm {
 
   /// ExpandISelPseudos - This pass expands pseudo-instructions.
   extern char &ExpandISelPseudosID;
-
-  /// createExecutionDependencyFixPass - This pass fixes execution time
-  /// problems with dependent instructions, such as switching execution
-  /// domains to match.
-  ///
-  /// The pass will examine instructions using and defining registers in RC.
-  ///
-  FunctionPass *createExecutionDependencyFixPass(const TargetRegisterClass *RC);
 
   /// UnpackMachineBundles - This pass unpack machine instruction bundles.
   extern char &UnpackMachineBundlesID;
@@ -354,12 +365,12 @@ namespace llvm {
   /// InterleavedAccess Pass - This pass identifies and matches interleaved
   /// memory accesses to target specific intrinsics.
   ///
-  FunctionPass *createInterleavedAccessPass(const TargetMachine *TM);
+  FunctionPass *createInterleavedAccessPass();
 
   /// LowerEmuTLS - This pass generates __emutls_[vt].xyz variables for all
   /// TLS variables for the emulated TLS model.
   ///
-  ModulePass *createLowerEmuTLSPass(const TargetMachine *TM);
+  ModulePass *createLowerEmuTLSPass();
 
   /// This pass lowers the @llvm.load.relative intrinsic to instructions.
   /// This is unsafe to do earlier because a pass may combine the constant
@@ -376,7 +387,7 @@ namespace llvm {
 
   /// This pass splits the stack into a safe stack and an unsafe stack to
   /// protect against stack-based overflow vulnerabilities.
-  FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
+  FunctionPass *createSafeStackPass();
 
   /// This pass detects subregister lanes in a virtual register that are used
   /// independently of other lanes and splits them into separate virtual
@@ -397,35 +408,18 @@ namespace llvm {
 
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
+
+  /// This pass combine basic blocks guarded by the same branch.
+  extern char &BranchCoalescingID;
+
+  /// This pass performs outlining on machine instructions directly before
+  /// printing assembly.
+  ModulePass *createMachineOutlinerPass();
+
+  /// This pass expands the experimental reduction intrinsics into sequences of
+  /// shuffles.
+  FunctionPass *createExpandReductionsPass();
+
 } // End llvm namespace
-
-/// Target machine pass initializer for passes with dependencies. Use with
-/// INITIALIZE_TM_PASS_END.
-#define INITIALIZE_TM_PASS_BEGIN INITIALIZE_PASS_BEGIN
-
-/// Target machine pass initializer for passes with dependencies. Use with
-/// INITIALIZE_TM_PASS_BEGIN.
-#define INITIALIZE_TM_PASS_END(passName, arg, name, cfg, analysis)             \
-  PassInfo *PI = new PassInfo(                                                 \
-      name, arg, &passName::ID,                                                \
-      PassInfo::NormalCtor_t(callDefaultCtor<passName>), cfg, analysis,        \
-      PassInfo::TargetMachineCtor_t(callTargetMachineCtor<passName>));         \
-  Registry.registerPass(*PI, true);                                            \
-  return PI;                                                                   \
-  }                                                                            \
-  LLVM_DEFINE_ONCE_FLAG(Initialize##passName##PassFlag);                       \
-  void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    llvm::call_once(Initialize##passName##PassFlag,                            \
-                    initialize##passName##PassOnce, std::ref(Registry));       \
-  }
-
-/// This initializer registers TargetMachine constructor, so the pass being
-/// initialized can use target dependent interfaces. Please do not move this
-/// macro to be together with INITIALIZE_PASS, which is a complete target
-/// independent initializer, and we don't want to make libScalarOpts depend
-/// on libCodeGen.
-#define INITIALIZE_TM_PASS(passName, arg, name, cfg, analysis)                 \
-  INITIALIZE_TM_PASS_BEGIN(passName, arg, name, cfg, analysis)                 \
-  INITIALIZE_TM_PASS_END(passName, arg, name, cfg, analysis)
 
 #endif

@@ -1,0 +1,70 @@
+//===-- BuiltinsNios2.def - Nios2 Builtin function database --------*- C++ -*-==//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the Nios2-specific builtin function database. Users of
+// this file must define the BUILTIN macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+// The format of this database matches clang/Basic/Builtins.def.
+
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+// Nios2 R1 builtins:
+
+//int __builtin_ldbio(volatile const void *);
+BUILTIN(__builtin_ldbio, "ivDC*", "")
+//int __builtin_ldbuio(volatile const void *);
+BUILTIN(__builtin_ldbuio, "ivDC*", "")
+//int __builtin_ldhio(volatile const void *);
+BUILTIN(__builtin_ldhio, "ivDC*", "")
+//int __builtin_ldhuio(volatile const void *);
+BUILTIN(__builtin_ldhuio, "ivDC*", "")
+//int __builtin_ldwio(volatile const void *);
+BUILTIN(__builtin_ldwio, "ivDC*", "")
+//int __builtin_ldwuio(int);
+BUILTIN(__builtin_ldwuio, "ii", "")
+// int __builtin_rdctl(int);
+BUILTIN(__builtin_rdctl, "iIi", "")
+// void __builtin_wrctl(int, int);
+BUILTIN(__builtin_wrctl, "vIii", "")
+// int __builtin_rdprs(int, int);
+BUILTIN(__builtin_rdprs, "iii", "")
+//void __builtin_stbio(volatile void *, int);
+BUILTIN(__builtin_stbio, "vvD*i", "")
+//void __builtin_sthio(volatile void *, int);
+BUILTIN(__builtin_sthio, "vvD*i", "")
+//void __builtin_stwio(volatile void *, int);
+BUILTIN(__builtin_stwio, "vvD*i", "")
+//void __builtin_sync(void);
+BUILTIN(__builtin_sync, "v", "")
+// void __builtin_flushd(volatile void *);
+BUILTIN(__builtin_flushd, "vvD*", "")
+// void __builtin_flushda(volatile void *);
+BUILTIN(__builtin_flushda, "vvD*", "")
+
+// Nios2 R2 builtins:
+
+// int __builtin_wrpie(int);
+TARGET_BUILTIN(__builtin_wrpie, "ii", "", "nios2r2mandatory")
+// void __builtin_eni(int);
+TARGET_BUILTIN(__builtin_eni, "vi", "", "nios2r2mandatory")
+// int __builtin_ldex(volatile const void *);
+TARGET_BUILTIN(__builtin_ldex, "ivDC*", "", "nios2r2mandatory")
+// int __builtin_stex(volatile void *, int);
+TARGET_BUILTIN(__builtin_stex, "ivD*i", "", "nios2r2mandatory")
+// int __builtin_ldsex(volatile const void *);
+TARGET_BUILTIN(__builtin_ldsex, "ivDC*", "", "nios2r2mpx")
+// int __builtin_stsex(volatile void *, int);
+TARGET_BUILTIN(__builtin_stsex, "ivDC*i", "", "nios2r2mpx")
+
+#undef BUILTIN
+#undef TARGET_BUILTIN

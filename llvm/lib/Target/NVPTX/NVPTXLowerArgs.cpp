@@ -90,8 +90,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "NVPTXUtilities.h"
 #include "NVPTXTargetMachine.h"
+#include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -159,11 +159,12 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   assert(PType && "Expecting pointer type in handleByValParam");
 
   Type *StructType = PType->getElementType();
-  AllocaInst *AllocA = new AllocaInst(StructType, Arg->getName(), FirstInst);
+  unsigned AS = Func->getParent()->getDataLayout().getAllocaAddrSpace();
+  AllocaInst *AllocA = new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
   // Set the alignment to alignment of the byval parameter. This is because,
   // later load/stores assume that alignment, and we are going to replace
   // the use of the byval parameter with this alloca instruction.
-  AllocA->setAlignment(Func->getParamAlignment(Arg->getArgNo() + 1));
+  AllocA->setAlignment(Func->getParamAlignment(Arg->getArgNo()));
   Arg->replaceAllUsesWith(AllocA);
 
   Value *ArgInParam = new AddrSpaceCastInst(

@@ -29,6 +29,8 @@ def llc(args, cmd_args, ir):
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
 SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
+SCRUB_LOOP_COMMENT_RE = re.compile(
+    r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
 
 ASM_FUNCTION_X86_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
@@ -54,7 +56,7 @@ RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
 TRIPLE_IR_RE = re.compile(r'^target\s+triple\s*=\s*"([^"]+)"$')
 IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
-CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
+CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
 ASM_FUNCTION_PPC_RE = re.compile(
@@ -65,6 +67,13 @@ ASM_FUNCTION_PPC_RE = re.compile(
     r'(?P<body>.*?)\n'
     # This list is incomplete
     r'(?:^[ \t]*(?:\.long[ \t]+[^\n]+|\.quad[ \t]+[^\n]+)\n)*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
+
+ASM_FUNCTION_SYSTEMZ_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'[ \t]+.cfi_startproc\n'
+    r'(?P<body>.*?)\n'
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))
 
@@ -107,6 +116,18 @@ def scrub_asm_powerpc64le(asm):
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
   # Expand the tabs used for indentation.
   asm = string.expandtabs(asm, 2)
+  # Stripe unimportant comments
+  asm = SCRUB_LOOP_COMMENT_RE.sub(r'', asm)
+  # Strip trailing whitespace.
+  asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
+def scrub_asm_systemz(asm):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
   # Strip trailing whitespace.
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
@@ -121,7 +142,11 @@ def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'arm-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'thumb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'thumbv8-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'armeb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'powerpc64le': (scrub_asm_powerpc64le, ASM_FUNCTION_PPC_RE),
+      's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
   }
   handlers = None
   for prefix, s in target_handlers.items():
@@ -260,8 +285,8 @@ def main():
       llc_cmd_args = llc_cmd[len('llc'):].strip()
       llc_cmd_args = llc_cmd_args.replace('< %s', '').replace('%s', '').strip()
 
-      check_prefixes = [m.group(1)
-                        for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)]
+      check_prefixes = [item for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)
+                               for item in m.group(1).split(',')]
       if not check_prefixes:
         check_prefixes = ['CHECK']
 

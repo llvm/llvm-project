@@ -1,5 +1,5 @@
 ; RUN: llc -fast-isel -O0 -mcpu=generic -mtriple=i386-apple-darwin10 -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -fast-isel -O0 -mcpu=generic -mtriple=i386-apple-darwin10 -relocation-model=pic < %s -fast-isel-verbose 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
+; RUN: llc -fast-isel -O0 -mcpu=generic -mtriple=i386-apple-darwin10 -relocation-model=pic < %s -pass-remarks-missed=isel 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
 
 ; This should use flds to set the return value.
 ; CHECK-LABEL: test0:

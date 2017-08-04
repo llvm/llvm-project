@@ -17,8 +17,8 @@
 
 #define DEBUG_TYPE "aarch64-pbqp"
 
-#include "AArch64.h"
 #include "AArch64PBQPRegAlloc.h"
+#include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

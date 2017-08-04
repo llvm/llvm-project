@@ -1,5 +1,6 @@
 ; Check that we don't crash on corner cases.
 ; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=1 -unroll-max-percent-threshold-boost=200 -o /dev/null
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=1 -unroll-max-percent-threshold-boost=200 -o /dev/null
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @known_constant = internal unnamed_addr constant [10 x i32] [i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1], align 16

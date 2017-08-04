@@ -55,6 +55,25 @@ auto b(bool k) {
   return "goodbye";
 }
 
+// Allow 'operator auto' to call only the explicit operator auto.
+struct BothOps {
+  template <typename T> operator T();
+  template <typename T> operator T *();
+  operator auto() { return 0; }
+  operator auto *() { return this; }
+};
+struct JustTemplateOp {
+  template <typename T> operator T();
+  template <typename T> operator T *();
+};
+
+auto c() {
+  BothOps().operator auto(); // ok
+  BothOps().operator auto *(); // ok
+  JustTemplateOp().operator auto(); // expected-error {{no member named 'operator auto' in 'JustTemplateOp'}}
+  JustTemplateOp().operator auto *(); // expected-error {{no member named 'operator auto *' in 'JustTemplateOp'}}
+}
+
 auto *ptr_1() {
   return 100; // expected-error {{cannot deduce return type 'auto *' from returned value of type 'int'}}
 }
@@ -314,7 +333,7 @@ namespace NoReturn {
 }
 
 namespace UseBeforeComplete {
-  auto n = n; // expected-error {{variable 'n' declared with 'auto' type cannot appear in its own initializer}}
+  auto n = n; // expected-error {{variable 'n' declared with deduced type 'auto' cannot appear in its own initializer}}
   auto f(); // expected-note {{declared here}}
   void g() { &f; } // expected-error {{function 'f' with deduced return type cannot be used before it is defined}}
   auto sum(int i) {
@@ -383,6 +402,33 @@ namespace MemberTemplatesWithDeduction {
   int Ninst = test<N>();
   
 }
+}
+
+// We resolve a wording bug here: 'decltype(auto)' should not be modeled as a
+// decltype-specifier, just as a simple-type-specifier. All the extra places
+// where a decltype-specifier can appear make no sense for 'decltype(auto)'.
+namespace DecltypeAutoShouldNotBeADecltypeSpecifier {
+  namespace NNS {
+    int n;
+    decltype(auto) i();
+    decltype(n) j();
+    struct X {
+      friend decltype(auto) ::DecltypeAutoShouldNotBeADecltypeSpecifier::NNS::i();
+      friend decltype(n) ::DecltypeAutoShouldNotBeADecltypeSpecifier::NNS::j(); // expected-error {{not a class}}
+    };
+  }
+
+  namespace Dtor {
+    struct A {};
+    void f(A a) { a.~decltype(auto)(); } // expected-error {{'decltype(auto)' not allowed here}}
+  }
+
+  namespace BaseClass {
+    struct A : decltype(auto) {}; // expected-error {{'decltype(auto)' not allowed here}}
+    struct B {
+      B() : decltype(auto)() {} // expected-error {{'decltype(auto)' not allowed here}}
+    };
+  }
 }
 
 namespace CurrentInstantiation {

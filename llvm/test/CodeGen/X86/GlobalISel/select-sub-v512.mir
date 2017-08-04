@@ -1,0 +1,130 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+  define <64 x i8> @test_sub_v64i8(<64 x i8> %arg1, <64 x i8> %arg2) #0 {
+    %ret = sub <64 x i8> %arg1, %arg2
+    ret <64 x i8> %ret
+  }
+
+  define <32 x i16> @test_sub_v32i16(<32 x i16> %arg1, <32 x i16> %arg2) #0 {
+    %ret = sub <32 x i16> %arg1, %arg2
+    ret <32 x i16> %ret
+  }
+
+  define <16 x i32> @test_sub_v16i32(<16 x i32> %arg1, <16 x i32> %arg2) #1 {
+    %ret = sub <16 x i32> %arg1, %arg2
+    ret <16 x i32> %ret
+  }
+
+  define <8 x i64> @test_sub_v8i64(<8 x i64> %arg1, <8 x i64> %arg2) #1 {
+    %ret = sub <8 x i64> %arg1, %arg2
+    ret <8 x i64> %ret
+  }
+
+  attributes #0 = { "target-features"="+avx512f,+avx512bw" }
+  attributes #1 = { "target-features"="+avx512f" }
+...
+---
+name:            test_sub_v64i8
+# ALL-LABEL: name:  test_sub_v64i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %2 = VPSUBBZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<64 x s8>) = COPY %zmm0
+    %1(<64 x s8>) = COPY %zmm1
+    %2(<64 x s8>) = G_SUB %0, %1
+    %zmm0 = COPY %2(<64 x s8>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_sub_v32i16
+# ALL-LABEL: name:  test_sub_v32i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %2 = VPSUBWZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<32 x s16>) = COPY %zmm0
+    %1(<32 x s16>) = COPY %zmm1
+    %2(<32 x s16>) = G_SUB %0, %1
+    %zmm0 = COPY %2(<32 x s16>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_sub_v16i32
+# ALL-LABEL: name:  test_sub_v16i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %2 = VPSUBDZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<16 x s32>) = COPY %zmm1
+    %2(<16 x s32>) = G_SUB %0, %1
+    %zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_sub_v8i64
+# ALL-LABEL: name:  test_sub_v8i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %2 = VPSUBQZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<8 x s64>) = COPY %zmm0
+    %1(<8 x s64>) = COPY %zmm1
+    %2(<8 x s64>) = G_SUB %0, %1
+    %zmm0 = COPY %2(<8 x s64>)
+    RET 0, implicit %zmm0
+
+...

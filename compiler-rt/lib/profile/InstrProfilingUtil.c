@@ -226,27 +226,6 @@ COMPILER_RT_VISIBILITY const char *lprofFindLastDirSeparator(const char *Path) {
   return Sep;
 }
 
-COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
-#if defined(__linux__)
-  int PDeachSig = 0;
-  /* Temporarily suspend getting SIGKILL upon exit of the parent process. */
-  if (prctl(PR_GET_PDEATHSIG, &PDeachSig) == 0 && PDeachSig == SIGKILL) {
-    fprintf(stderr, "set\n");
-    prctl(PR_SET_PDEATHSIG, 0);
-  }
-  return (PDeachSig == SIGKILL);
-#else
-  return 0;
-#endif
-}
-
-COMPILER_RT_VISIBILITY void lprofRestoreSigKill() {
-#if defined(__linux__)
-  fprintf(stderr, "restore \n");
-  prctl(PR_SET_PDEATHSIG, SIGKILL);
-#endif
-}
-
 COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
                                                       void (*handler)(int)) {
 #ifdef _WIN32
@@ -262,5 +241,23 @@ COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
   if (err)
     PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
               sig, err);
+#endif
+}
+
+COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
+#if defined(__linux__)
+  int PDeachSig = 0;
+  /* Temporarily suspend getting SIGKILL upon exit of the parent process. */
+  if (prctl(PR_GET_PDEATHSIG, &PDeachSig) == 0 && PDeachSig == SIGKILL)
+    prctl(PR_SET_PDEATHSIG, 0);
+  return (PDeachSig == SIGKILL);
+#else
+  return 0;
+#endif
+}
+
+COMPILER_RT_VISIBILITY void lprofRestoreSigKill() {
+#if defined(__linux__)
+  prctl(PR_SET_PDEATHSIG, SIGKILL);
 #endif
 }

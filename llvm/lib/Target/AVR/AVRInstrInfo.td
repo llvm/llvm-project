@@ -17,7 +17,7 @@ include "AVRInstrFormats.td"
 // AVR Type Profiles
 //===----------------------------------------------------------------------===//
 
-def SDT_AVRCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>]>;
+def SDT_AVRCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def SDT_AVRCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def SDT_AVRCall : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def SDT_AVRWrapper : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
@@ -64,6 +64,8 @@ def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
 def AVRlsrLoop : SDNode<"AVRISD::LSRLOOP", SDTIntShiftOp>;
+def AVRrolLoop : SDNode<"AVRISD::ROLLOOP", SDTIntShiftOp>;
+def AVRrorLoop : SDNode<"AVRISD::RORLOOP", SDTIntShiftOp>;
 def AVRasrLoop : SDNode<"AVRISD::ASRLOOP", SDTIntShiftOp>;
 
 //===----------------------------------------------------------------------===//
@@ -183,33 +185,33 @@ def call_target : Operand<iPTR>
 // A 16-bit address (which can lead to an R_AVR_16 relocation).
 def imm16 : Operand<i16>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_16>";
+    let EncoderMethod = "encodeImm<AVR::fixup_16, 2>";
 }
 
 /// A 6-bit immediate used in the ADIW/SBIW instructions.
 def imm_arith6 : Operand<i16>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_6_adiw>";
+    let EncoderMethod = "encodeImm<AVR::fixup_6_adiw, 0>";
 }
 
 /// An 8-bit immediate inside an instruction with the same format
 /// as the `LDI` instruction (the `FRdK` format).
 def imm_ldi8 : Operand<i8>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_ldi>";
+    let EncoderMethod = "encodeImm<AVR::fixup_ldi, 0>";
 }
 
 /// A 5-bit port number used in SBIC and friends (the `FIOBIT` format).
 def imm_port5 : Operand<i8>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_port5>";
+    let EncoderMethod = "encodeImm<AVR::fixup_port5, 0>";
 }
 
 /// A 6-bit port number used in the `IN` instruction and friends (the
 /// `FIORdA` format.
 def imm_port6 : Operand<i8>
 {
-    let EncoderMethod = "encodeImm<AVR::fixup_port6>";
+    let EncoderMethod = "encodeImm<AVR::fixup_port6, 0>";
 }
 
 // Addressing mode pattern reg+imm6
@@ -331,9 +333,9 @@ let Defs = [SP, SREG],
 Uses = [SP] in
 {
   def ADJCALLSTACKDOWN : Pseudo<(outs),
-                                (ins i16imm:$amt),
+                                (ins i16imm:$amt, i16imm:$amt2),
                                 "#ADJCALLSTACKDOWN",
-                                [(AVRcallseq_start timm:$amt)]>;
+                                [(AVRcallseq_start timm:$amt, timm:$amt2)]>;
 
   // R31R30 is used to update SP, since it is a scratch reg and this instruction
   // is placed after the function call then R31R30 should be always free.
@@ -694,7 +696,7 @@ Defs = [SREG] in
 }
 
 //===----------------------------------------------------------------------===//
-// One's/Two's Compliment
+// One's/Two's Complement
 //===----------------------------------------------------------------------===//
 let Constraints = "$src = $rd",
 Defs = [SREG] in
@@ -900,10 +902,9 @@ let Defs = [SREG] in
 
   // CPI Rd, K
   // Compares a register with an 8 bit immediate.
-  let Uses = [SREG] in
   def CPIRdK : FRdK<0b0011,
                     (outs),
-                    (ins GPR8:$rd, imm_ldi8:$k),
+                    (ins LD8:$rd, imm_ldi8:$k),
                     "cpi\t$rd, $k",
                     [(AVRcmp i8:$rd, imm:$k), (implicit SREG)]>;
 }
@@ -1410,16 +1411,10 @@ hasSideEffects = 0 in
   def LPMRdZ : FLPMX<0,
                      0,
                      (outs GPR8:$dst),
-                     (ins ZREGS:$z),
+                     (ins ZREG:$z),
                      "lpm\t$dst, $z",
                      []>,
                Requires<[HasLPMX]>;
-
-  def LPMWRdZ : Pseudo<(outs DREGS:$dst),
-                       (ins ZREGS:$z),
-                       "lpmw\t$dst, $z",
-                       []>,
-                Requires<[HasLPMX]>;
 
   // Load program memory, while postincrementing the Z register.
   let mayLoad = 1,
@@ -1428,13 +1423,19 @@ hasSideEffects = 0 in
     def LPMRdZPi : FLPMX<0,
                          1,
                          (outs GPR8:$dst),
-                         (ins ZREGS:$z),
+                         (ins ZREG:$z),
                          "lpm\t$dst, $z+",
                          []>,
                    Requires<[HasLPMX]>;
 
+    def LPMWRdZ : Pseudo<(outs DREGS:$dst),
+                         (ins ZREG:$z),
+                         "lpmw\t$dst, $z",
+                         []>,
+                  Requires<[HasLPMX]>;
+
     def LPMWRdZPi : Pseudo<(outs DREGS:$dst),
-                           (ins ZREGS:$z),
+                           (ins ZREG:$z),
                            "lpmw\t$dst, $z+",
                            []>,
                     Requires<[HasLPMX]>;
@@ -1457,7 +1458,7 @@ hasSideEffects = 0 in
   def ELPMRdZ : FLPMX<1,
                       0,
                       (outs GPR8:$dst),
-                      (ins ZREGS:$z),
+                      (ins ZREG:$z),
                       "elpm\t$dst, $z",
                       []>,
                 Requires<[HasELPMX]>;
@@ -1466,7 +1467,7 @@ hasSideEffects = 0 in
   def ELPMRdZPi : FLPMX<1,
                         1,
                         (outs GPR8:$dst),
-                        (ins ZREGS: $z),
+                        (ins ZREG: $z),
                         "elpm\t$dst, $z+",
                         []>,
                   Requires<[HasELPMX]>;
@@ -1486,7 +1487,7 @@ let Uses = [R1, R0] in
   let Defs = [R31R30] in
   def SPMZPi : F16<0b1001010111111000,
                    (outs),
-                   (ins ZREGS:$z),
+                   (ins ZREG:$z),
                    "spm $z+",
                    []>,
                Requires<[HasSPMX]>;
@@ -1563,28 +1564,28 @@ hasSideEffects = 0 in
 // Read-Write-Modify (RMW) instructions.
 def XCHZRd : FZRd<0b100,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "xch\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
 
 def LASZRd : FZRd<0b101,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "las\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
 
 def LACZRd : FZRd<0b110,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "lac\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
 
 def LATZRd : FZRd<0b111,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "lat\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
@@ -1718,7 +1719,7 @@ Defs = [SREG] in
                      (implicit SREG)]>;
 
   // CBR Rd, K
-  // Alias for `ANDI Rd, COM(K)` where COM(K) is the compliment of K.
+  // Alias for `ANDI Rd, COM(K)` where COM(K) is the complement of K.
   // FIXME: This uses the 'complement' encoder. We need it to also use the
   // imm_ldi8 encoder. This will cause no fixups to be created on this instruction.
   def CBRRdK : FRdK<0b0111,
@@ -1932,12 +1933,39 @@ def Lsr8 : ShiftPseudo<
   [(set i8:$dst, (AVRlsrLoop i8:$src, i8:$cnt))]
 >;
 
-
 def Lsr16 : ShiftPseudo<
   (outs DREGS:$dst),
    (ins DREGS:$src, GPR8:$cnt),
    "# Lsr16 PSEUDO",
    [(set i16:$dst, (AVRlsrLoop i16:$src, i8:$cnt))]
+>;
+
+def Rol8 : ShiftPseudo<
+  (outs GPR8:$dst),
+  (ins GPR8:$src, GPR8:$cnt),
+  "# Rol8 PSEUDO",
+  [(set i8:$dst, (AVRrolLoop i8:$src, i8:$cnt))]
+>;
+
+def Rol16 : ShiftPseudo<
+  (outs DREGS:$dst),
+  (ins DREGS:$src, GPR8:$cnt),
+  "# Rol16 PSEUDO",
+  [(set i16:$dst, (AVRrolLoop i16:$src, i8:$cnt))]
+>;
+
+def Ror8 : ShiftPseudo<
+  (outs GPR8:$dst),
+  (ins GPR8:$src, GPR8:$cnt),
+  "# Ror8 PSEUDO",
+  [(set i8:$dst, (AVRrorLoop i8:$src, i8:$cnt))]
+>;
+
+def Ror16 : ShiftPseudo<
+  (outs DREGS:$dst),
+  (ins DREGS:$src, GPR8:$cnt),
+  "# Ror16 PSEUDO",
+  [(set i16:$dst, (AVRrorLoop i16:$src, i8:$cnt))]
 >;
 
 def Asr8 : ShiftPseudo<

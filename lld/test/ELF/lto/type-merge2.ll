@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/type-merge2.ll -o %t2.o
 ; RUN: ld.lld -m elf_x86_64 %t.o %t2.o -o %t.so -shared -save-temps

@@ -98,6 +98,7 @@ namespace clang {
     ICR_Exact_Match = 0,         ///< Exact Match
     ICR_Promotion,               ///< Promotion
     ICR_Conversion,              ///< Conversion
+    ICR_OCL_Scalar_Widening,     ///< OpenCL Scalar Widening
     ICR_Complex_Real_Conversion, ///< Complex <-> Real conversion
     ICR_Writeback_Conversion,    ///< ObjC ARC writeback conversion
     ICR_C_Conversion,            ///< Conversion only allowed in the C standard.
@@ -632,12 +633,9 @@ namespace clang {
     /// Might be a UsingShadowDecl or a FunctionTemplateDecl.
     DeclAccessPair FoundDecl;
 
-    // BuiltinTypes - Provides the return and parameter types of a
-    // built-in overload candidate. Only valid when Function is NULL.
-    struct {
-      QualType ResultTy;
-      QualType ParamTypes[3];
-    } BuiltinTypes;
+    /// BuiltinParamTypes - Provides the parameter types of a built-in overload
+    /// candidate. Only valid when Function is NULL.
+    QualType BuiltinParamTypes[3];
 
     /// Surrogate - The conversion function for which this candidate
     /// is a surrogate, but only if IsSurrogate is true.

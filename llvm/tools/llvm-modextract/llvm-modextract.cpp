@@ -59,9 +59,12 @@ int main(int argc, char **argv) {
   ExitOnErr(errorCodeToError(EC));
 
   if (BinaryExtract) {
-    SmallVector<char, 0> Header;
-    BitcodeWriter Writer(Header);
-    Out->os() << Header << Ms[ModuleIndex].getBuffer();
+    SmallVector<char, 0> Result;
+    BitcodeWriter Writer(Result);
+    Result.append(Ms[ModuleIndex].getBuffer().begin(),
+                  Ms[ModuleIndex].getBuffer().end());
+    Writer.copyStrtab(Ms[ModuleIndex].getStrtab());
+    Out->os() << Result;
     Out->keep();
     return 0;
   }

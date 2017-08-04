@@ -32,7 +32,8 @@
  * term.  This ensures that if x satisfies the resulting constraints,
  * then x plus any sum of unit vectors satisfies the original constraints.
  */
-static struct isl_basic_set *unit_box_base_points(struct isl_basic_set *bset)
+static __isl_give isl_basic_set *unit_box_base_points(
+	__isl_take isl_basic_set *bset)
 {
 	int i, j, k;
 	struct isl_basic_set *unit_box = NULL;
@@ -80,7 +81,8 @@ error:
  * and round it up to the nearest integer.
  * If not, we simply pick any integer point in "bset".
  */
-static struct isl_vec *initial_solution(struct isl_basic_set *bset, isl_int *f)
+static __isl_give isl_vec *initial_solution(__isl_keep isl_basic_set *bset,
+	isl_int *f)
 {
 	enum isl_lp_result res;
 	struct isl_basic_set *unit_box;
@@ -102,7 +104,7 @@ static struct isl_vec *initial_solution(struct isl_basic_set *bset, isl_int *f)
 
 /* Restrict "bset" to those points with values for f in the interval [l, u].
  */
-static struct isl_basic_set *add_bounds(struct isl_basic_set *bset,
+static __isl_give isl_basic_set *add_bounds(__isl_take isl_basic_set *bset,
 	isl_int *f, isl_int l, isl_int u)
 {
 	int k;
@@ -145,8 +147,8 @@ error:
  * If no point can be found, we update l to the upper bound of the interval
  * we checked (u or l+floor(u-l-1/2)) plus 1.
  */
-static struct isl_vec *solve_ilp_search(struct isl_basic_set *bset,
-	isl_int *f, isl_int *opt, struct isl_vec *sol, isl_int l, isl_int u)
+static __isl_give isl_vec *solve_ilp_search(__isl_keep isl_basic_set *bset,
+	isl_int *f, isl_int *opt, __isl_take isl_vec *sol, isl_int l, isl_int u)
 {
 	isl_int tmp;
 	int divide = 1;
@@ -204,9 +206,8 @@ static struct isl_vec *solve_ilp_search(struct isl_basic_set *bset,
  *
  * We then call solve_ilp_search to perform a binary search on the interval.
  */
-static enum isl_lp_result solve_ilp(struct isl_basic_set *bset,
-				      isl_int *f, isl_int *opt,
-				      struct isl_vec **sol_p)
+static enum isl_lp_result solve_ilp(__isl_keep isl_basic_set *bset,
+	isl_int *f, isl_int *opt, __isl_give isl_vec **sol_p)
 {
 	enum isl_lp_result res;
 	isl_int l, u;
@@ -260,9 +261,8 @@ static enum isl_lp_result solve_ilp(struct isl_basic_set *bset,
 	return res;
 }
 
-static enum isl_lp_result solve_ilp_with_eq(struct isl_basic_set *bset, int max,
-				      isl_int *f, isl_int *opt,
-				      struct isl_vec **sol_p)
+static enum isl_lp_result solve_ilp_with_eq(__isl_keep isl_basic_set *bset,
+	int max, isl_int *f, isl_int *opt, __isl_give isl_vec **sol_p)
 {
 	unsigned dim;
 	enum isl_lp_result res;
@@ -303,9 +303,8 @@ error:
  * If there is any equality among the points in "bset", then we first
  * project it out.  Otherwise, we continue with solve_ilp above.
  */
-enum isl_lp_result isl_basic_set_solve_ilp(struct isl_basic_set *bset, int max,
-				      isl_int *f, isl_int *opt,
-				      struct isl_vec **sol_p)
+enum isl_lp_result isl_basic_set_solve_ilp(__isl_keep isl_basic_set *bset,
+	int max, isl_int *f, isl_int *opt, __isl_give isl_vec **sol_p)
 {
 	unsigned dim;
 	enum isl_lp_result res;
@@ -315,7 +314,8 @@ enum isl_lp_result isl_basic_set_solve_ilp(struct isl_basic_set *bset, int max,
 	if (sol_p)
 		*sol_p = NULL;
 
-	isl_assert(bset->ctx, isl_basic_set_n_param(bset) == 0, goto error);
+	isl_assert(bset->ctx, isl_basic_set_n_param(bset) == 0,
+		return isl_lp_error);
 
 	if (isl_basic_set_plain_is_empty(bset))
 		return isl_lp_empty;
@@ -336,9 +336,6 @@ enum isl_lp_result isl_basic_set_solve_ilp(struct isl_basic_set *bset, int max,
 	}
 
 	return res;
-error:
-	isl_basic_set_free(bset);
-	return isl_lp_error;
 }
 
 static enum isl_lp_result basic_set_opt(__isl_keep isl_basic_set *bset, int max,
@@ -485,12 +482,15 @@ enum isl_lp_result isl_set_opt(__isl_keep isl_set *set, int max,
 	__isl_keep isl_aff *obj, isl_int *opt)
 {
 	enum isl_lp_result res;
+	isl_bool aligned;
 
 	if (!set || !obj)
 		return isl_lp_error;
 
-	if (isl_space_match(set->dim, isl_dim_param,
-			    obj->ls->dim, isl_dim_param))
+	aligned = isl_set_space_has_equal_params(set, obj->ls->dim);
+	if (aligned < 0)
+		return isl_lp_error;
+	if (aligned)
 		return isl_set_opt_aligned(set, max, obj, opt);
 
 	set = isl_set_copy(set);

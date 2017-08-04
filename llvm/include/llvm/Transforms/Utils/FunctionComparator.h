@@ -19,8 +19,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include <cstdint>
@@ -314,7 +314,7 @@ protected:
 private:
   int cmpOrderings(AtomicOrdering L, AtomicOrdering R) const;
   int cmpInlineAsm(const InlineAsm *L, const InlineAsm *R) const;
-  int cmpAttrs(const AttributeSet L, const AttributeSet R) const;
+  int cmpAttrs(const AttributeList L, const AttributeList R) const;
   int cmpRangeMetadata(const MDNode *L, const MDNode *R) const;
   int cmpOperandBundlesSchema(const Instruction *L, const Instruction *R) const;
 

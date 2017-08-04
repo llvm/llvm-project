@@ -64,23 +64,9 @@ BUILTIN(__nvvm_read_ptx_sreg_pm3, "i", "n")
 
 // MISC
 
-BUILTIN(__nvvm_clz_i, "ii", "")
-BUILTIN(__nvvm_clz_ll, "iLLi", "")
-BUILTIN(__nvvm_popc_i, "ii", "")
-BUILTIN(__nvvm_popc_ll, "iLLi", "")
 BUILTIN(__nvvm_prmt, "UiUiUiUi", "")
 
 // Min Max
-
-BUILTIN(__nvvm_min_i, "iii", "")
-BUILTIN(__nvvm_min_ui, "UiUiUi", "")
-BUILTIN(__nvvm_min_ll, "LLiLLiLLi", "")
-BUILTIN(__nvvm_min_ull, "ULLiULLiULLi", "")
-
-BUILTIN(__nvvm_max_i, "iii", "")
-BUILTIN(__nvvm_max_ui, "UiUiUi", "")
-BUILTIN(__nvvm_max_ll, "LLiLLiLLi", "")
-BUILTIN(__nvvm_max_ull, "ULLiULLiULLi", "")
 
 BUILTIN(__nvvm_fmax_ftz_f, "fff",  "")
 BUILTIN(__nvvm_fmax_f, "fff",  "")
@@ -133,11 +119,6 @@ BUILTIN(__nvvm_div_rz_d,  "ddd", "")
 BUILTIN(__nvvm_div_rm_d,  "ddd", "")
 BUILTIN(__nvvm_div_rp_d,  "ddd", "")
 
-// Brev
-
-BUILTIN(__nvvm_brev32, "UiUi", "")
-BUILTIN(__nvvm_brev64, "ULLiULLi", "")
-
 // Sad
 
 BUILTIN(__nvvm_sad_i, "iiii", "")
@@ -154,9 +135,6 @@ BUILTIN(__nvvm_ceil_f, "ff", "")
 BUILTIN(__nvvm_ceil_d, "dd", "")
 
 // Abs
-
-BUILTIN(__nvvm_abs_i, "ii", "")
-BUILTIN(__nvvm_abs_ll, "LLiLLi", "")
 
 BUILTIN(__nvvm_fabs_ftz_f, "ff", "")
 BUILTIN(__nvvm_fabs_f, "ff", "")
@@ -384,8 +362,6 @@ BUILTIN(__nvvm_ull2d_rp, "dULLi", "")
 
 BUILTIN(__nvvm_f2h_rn_ftz, "Usf", "")
 BUILTIN(__nvvm_f2h_rn, "Usf", "")
-
-BUILTIN(__nvvm_h2f, "fUs", "")
 
 // Bitcast
 

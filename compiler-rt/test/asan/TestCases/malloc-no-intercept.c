@@ -7,6 +7,9 @@
 // RUN: not %clang_asan -Dtestfunc=pvalloc  %s -o %t
 // RUN: not %clang_asan -Dtestfunc=cfree    %s -o %t
 
+// Conflicts with BIONIC declarations.
+// UNSUPPORTED: android
+
 #include <stdlib.h>
 
 // For glibc, cause link failures by referencing a nonexistent function.

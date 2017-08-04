@@ -136,11 +136,19 @@ void DTLS_on_libc_memalign(void *ptr, uptr size) {
 
 DTLS *DTLS_Get() { return &dtls; }
 
+bool DTLSInDestruction(DTLS *dtls) {
+  return dtls->dtv_size == kDestroyedThread;
+}
+
 #else
 void DTLS_on_libc_memalign(void *ptr, uptr size) {}
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg, void *res) { return 0; }
 DTLS *DTLS_Get() { return 0; }
 void DTLS_Destroy() {}
+bool DTLSInDestruction(DTLS *dtls) {
+  UNREACHABLE("dtls is unsupported on this platform!");
+}
+
 #endif  // SANITIZER_INTERCEPT_TLS_GET_ADDR
 
 }  // namespace __sanitizer

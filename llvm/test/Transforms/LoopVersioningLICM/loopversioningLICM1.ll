@@ -16,7 +16,7 @@
 ; CHECK-NEXT: %add8 = add nsw i32 %[[induction]], %add
 ; CHECK-NEXT: %inc = add nuw i32 %j.113, 1
 ; CHECK-NEXT: %cmp2 = icmp ult i32 %inc, %itr
-; CHECK-NEXT: br i1 %cmp2, label %for.body3, label %for.inc11.loopexit.loopexit6, !llvm.loop !5
+; CHECK-NEXT: br i1 %cmp2, label %for.body3, label %for.inc11.loopexit.loopexit7, !llvm.loop !5
 define i32 @foo(i32* nocapture %var1, i32* nocapture readnone %var2, i32* nocapture %var3, i32 %itr) #0 {
 entry:
   %cmp14 = icmp eq i32 %itr, 0

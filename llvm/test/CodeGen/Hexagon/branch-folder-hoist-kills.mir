@@ -1,0 +1,59 @@
+# RUN: llc -march=hexagon -run-pass branch-folder -run-pass if-converter -verify-machineinstrs %s -o - | FileCheck %s
+
+# The hoisting of common instructions from successors could cause registers
+# to no longer be live-in in the successor blocks. The liveness was updated
+# to include potential new live-in registres, but not to remove registers
+# that were no longer live-in.
+# This could cause if-converter to generate incorrect code.
+#
+# In this testcase, the "r1 = A2_sxth r0<kill>" was hoisted, and since r0
+# was killed, it was no longer live-in in either successor. The if-converter
+# then created code, where the first predicated instruction has incorrect
+# implicit use of r0:
+#
+# BB#0:
+#     Live Ins: %R0
+#         %R1<def> = A2_sxth %R0<kill>               ; hoisted, kills r0
+#         A2_nop %P0<imp-def>
+#         %R0<def> = C2_cmoveit %P0, 2, %R0<imp-use> ; predicated A2_tfrsi
+#         %R0<def> = C2_cmoveif %P0, 1, %R0<imp-use> ; predicated A2_tfrsi
+#         %R0<def> = A2_add %R0<kill>, %R1<kill>
+#         J2_jumpr %R31, %PC<imp-def,dead>
+#
+
+# CHECK: %r1 = A2_sxth killed %r0
+# CHECK: %r0 = C2_cmoveit %p0, 2
+# CHECK-NOT: implicit-def %r0
+# CHECK: %r0 = C2_cmoveif %p0, 1, implicit %r0
+
+---
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: %r0
+    successors: %bb.1, %bb.2
+
+    A2_nop implicit-def %p0
+    J2_jumpt killed %p0, %bb.2, implicit-def dead %pc
+
+  bb.1:
+    successors: %bb.3
+    liveins: %r0
+    %r1 = A2_sxth killed %r0
+    %r0 = A2_tfrsi 1
+    J2_jump %bb.3, implicit-def %pc
+
+  bb.2:
+    successors: %bb.3
+    liveins: %r0
+    %r1 = A2_sxth killed %r0
+    %r0 = A2_tfrsi 2
+
+  bb.3:
+    liveins: %r0, %r1
+    %r0 = A2_add killed %r0, killed %r1
+    J2_jumpr %r31, implicit-def dead %pc
+...
+

@@ -81,7 +81,7 @@ void test_counted()
     It e = std::uninitialized_value_construct_n(It(p), 1);
     assert(e == It(p+1));
     assert(Counted::count == 1);
-    assert(Counted::constructed = 1);
+    assert(Counted::constructed == 1);
     e = std::uninitialized_value_construct_n(It(p+1), 4);
     assert(e == It(p+N));
     assert(Counted::count == 5);

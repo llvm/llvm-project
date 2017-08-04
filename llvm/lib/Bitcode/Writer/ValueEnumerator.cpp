@@ -314,10 +314,13 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   // Remember what is the cutoff between globalvalue's and other constants.
   unsigned FirstConstant = Values.size();
 
-  // Enumerate the global variable initializers.
-  for (const GlobalVariable &GV : M.globals())
+  // Enumerate the global variable initializers and attributes.
+  for (const GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer())
       EnumerateValue(GV.getInitializer());
+    if (GV.hasAttributes())
+      EnumerateAttributes(GV.getAttributesAsList(AttributeList::FunctionIndex));
+  }
 
   // Enumerate the aliasees.
   for (const GlobalAlias &GA : M.aliases())
@@ -552,7 +555,7 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
 void ValueEnumerator::dropFunctionFromMetadata(
     MetadataMapType::value_type &FirstMD) {
   SmallVector<const MDNode *, 64> Worklist;
-  auto push = [this, &Worklist](MetadataMapType::value_type &MD) {
+  auto push = [&Worklist](MetadataMapType::value_type &MD) {
     auto &Entry = MD.second;
 
     // Nothing to do if this metadata isn't tagged.
@@ -887,23 +890,26 @@ void ValueEnumerator::EnumerateOperandType(const Value *V) {
   }
 }
 
-void ValueEnumerator::EnumerateAttributes(AttributeSet PAL) {
+void ValueEnumerator::EnumerateAttributes(AttributeList PAL) {
   if (PAL.isEmpty()) return;  // null is always 0.
 
   // Do a lookup.
-  unsigned &Entry = AttributeMap[PAL];
+  unsigned &Entry = AttributeListMap[PAL];
   if (Entry == 0) {
     // Never saw this before, add it.
-    Attribute.push_back(PAL);
-    Entry = Attribute.size();
+    AttributeLists.push_back(PAL);
+    Entry = AttributeLists.size();
   }
 
   // Do lookups for all attribute groups.
-  for (unsigned i = 0, e = PAL.getNumSlots(); i != e; ++i) {
-    AttributeSet AS = PAL.getSlotAttributes(i);
-    unsigned &Entry = AttributeGroupMap[AS];
+  for (unsigned i = PAL.index_begin(), e = PAL.index_end(); i != e; ++i) {
+    AttributeSet AS = PAL.getAttributes(i);
+    if (!AS.hasAttributes())
+      continue;
+    IndexAndAttrSet Pair = {i, AS};
+    unsigned &Entry = AttributeGroupMap[Pair];
     if (Entry == 0) {
-      AttributeGroups.push_back(AS);
+      AttributeGroups.push_back(Pair);
       Entry = AttributeGroups.size();
     }
   }

@@ -254,7 +254,7 @@ define <32 x i8> @combine_16_byte_loads_i8(<16 x i8>* %ptr, <32 x i8> %x) {
 define <4 x double> @combine_16_byte_loads_double(<2 x double>* %ptr, <4 x double> %x) {
 ; AVXSLOW-LABEL: combine_16_byte_loads_double:
 ; AVXSLOW:       # BB#0:
-; AVXSLOW-NEXT:    vmovupd 144(%rdi), %xmm1
+; AVXSLOW-NEXT:    vmovups 144(%rdi), %xmm1
 ; AVXSLOW-NEXT:    vinsertf128 $1, 160(%rdi), %ymm1, %ymm1
 ; AVXSLOW-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; AVXSLOW-NEXT:    retq

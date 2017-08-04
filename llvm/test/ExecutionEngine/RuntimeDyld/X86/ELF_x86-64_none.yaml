@@ -1,0 +1,30 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-rtdyld -triple=x86_64-pc-linux %t.o -printline
+
+# Verify rtdyld doesn't abort in presence of R_X86_64_NONE
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Link:            .symtab
+    Info:            .text
+    Relocations:
+      - Offset:          0x0000000000000000
+        Symbol:          ''
+        Type:            R_X86_64_NONE
+Symbols:
+  Global:
+    - Name: _main
+      Section: .text
+      Value: 0
+      Size: 4

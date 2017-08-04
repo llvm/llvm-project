@@ -45,6 +45,10 @@ public:
 
   bool isSourceOfDivergence(const Value *V);
 
+  unsigned getFlatAddressSpace() const {
+    return AddressSpace::ADDRESS_SPACE_GENERIC;
+  }
+
   // Increase the inlining cost threshold by a factor of 5, reflecting that
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() { return 5; }
@@ -57,7 +61,8 @@ public:
       TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
       ArrayRef<const Value *> Args = ArrayRef<const Value *>());
 
-  void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP);
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
 };
 
 } // end namespace llvm

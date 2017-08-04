@@ -156,20 +156,12 @@ PreservedAnalyses NaryReassociatePass::run(Function &F,
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  bool Changed = runImpl(F, AC, DT, SE, TLI, TTI);
-
-  // FIXME: We need to invalidate this to avoid PR28400. Is there a better
-  // solution?
-  AM.invalidate<ScalarEvolutionAnalysis>(F);
-
-  if (!Changed)
+  if (!runImpl(F, AC, DT, SE, TLI, TTI))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
   PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  PA.preserve<TargetLibraryAnalysis>();
   return PA;
 }
 
@@ -219,7 +211,8 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
           Changed = true;
           SE->forgetValue(&*I);
           I->replaceAllUsesWith(NewI);
-          // If SeenExprs constains I's WeakVH, that entry will be replaced with
+          // If SeenExprs constains I's WeakTrackingVH, that entry will be
+          // replaced with
           // nullptr.
           RecursivelyDeleteTriviallyDeadInstructions(&*I, TLI);
           I = NewI->getIterator();
@@ -227,7 +220,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         // Add the rewritten instruction to SeenExprs; the original instruction
         // is deleted.
         const SCEV *NewSCEV = SE->getSCEV(&*I);
-        SeenExprs[NewSCEV].push_back(WeakVH(&*I));
+        SeenExprs[NewSCEV].push_back(WeakTrackingVH(&*I));
         // Ideally, NewSCEV should equal OldSCEV because tryReassociate(I)
         // is equivalent to I. However, ScalarEvolution::getSCEV may
         // weaken nsw causing NewSCEV not to equal OldSCEV. For example, suppose
@@ -247,7 +240,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         //
         // This improvement is exercised in @reassociate_gep_nsw in nary-gep.ll.
         if (NewSCEV != OldSCEV)
-          SeenExprs[OldSCEV].push_back(WeakVH(&*I));
+          SeenExprs[OldSCEV].push_back(WeakTrackingVH(&*I));
       }
     }
   }
@@ -502,7 +495,8 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // future instruction either. Therefore, we pop it out of the stack. This
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
-    // Candidates stores WeakVHs, so a candidate can be nullptr if it's removed
+    // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
+    // removed
     // during rewriting.
     if (Value *Candidate = Candidates.back()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);

@@ -18,30 +18,30 @@
 #include "lld/Core/File.h"
 #include "lld/Core/Instrumentation.h"
 #include "lld/Core/LLVM.h"
+#include "lld/Core/LinkingContext.h"
 #include "lld/Core/Node.h"
 #include "lld/Core/PassManager.h"
 #include "lld/Core/Resolver.h"
 #include "lld/Core/SharedLibraryFile.h"
 #include "lld/Core/Simple.h"
-#include "lld/Core/LinkingContext.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Option/Option.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -61,9 +61,9 @@ namespace {
 // Create enum with OPT_xxx values for each option in DarwinLdOptions.td
 enum {
   OPT_INVALID = 0,
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM, \
-               HELP, META) \
-          OPT_##ID,
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELP, META, VALUES)                                             \
+  OPT_##ID,
 #include "DarwinLdOptions.inc"
 #undef OPTION
 };
@@ -75,10 +75,12 @@ enum {
 
 // Create table mapping all options defined in DarwinLdOptions.td
 static const llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM, \
-               HELPTEXT, METAVAR)   \
-  { PREFIX, NAME, HELPTEXT, METAVAR, OPT_##ID, llvm::opt::Option::KIND##Class, \
-    PARAM, FLAGS, OPT_##GROUP, OPT_##ALIAS, ALIASARGS },
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {PREFIX,      NAME,      HELPTEXT,                                           \
+   METAVAR,     OPT_##ID,  llvm::opt::Option::KIND##Class,                     \
+   PARAM,       FLAGS,     OPT_##GROUP,                                        \
+   OPT_##ALIAS, ALIASARGS, VALUES},
 #include "DarwinLdOptions.inc"
 #undef OPTION
 };

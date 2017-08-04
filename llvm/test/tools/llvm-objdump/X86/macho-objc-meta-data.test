@@ -1042,7 +1042,7 @@ PROTOCOL:     class_methods 0x00000000 (not in an __OBJC section)
 OBJC2_64BIT_DYLIB: Contents of (__DATA_CONST,__objc_classlist) section
 OBJC2_64BIT_DYLIB: 000000000000c038 0x8030 _OBJC_CLASS_$_Test
 OBJC2_64BIT_DYLIB:            isa 0x8008 _OBJC_METACLASS_$_Test
-OBJC2_64BIT_DYLIB:     superclass 0x0
+OBJC2_64BIT_DYLIB:     superclass 0x0 _OBJC_CLASS_$_NSObject
 OBJC2_64BIT_DYLIB:          cache 0x0
 OBJC2_64BIT_DYLIB:         vtable 0x0
 OBJC2_64BIT_DYLIB:           data 0xc120 (struct class_ro_t *)
@@ -1081,7 +1081,7 @@ OBJC2_64BIT_DYLIB: 			     name 0x4f42 testProp
 OBJC2_64BIT_DYLIB: 			attributes 0x4f4b TQ,V_testProp
 OBJC2_64BIT_DYLIB: Meta Class
 OBJC2_64BIT_DYLIB:            isa 0x0
-OBJC2_64BIT_DYLIB:     superclass 0x0
+OBJC2_64BIT_DYLIB:     superclass 0x0 _OBJC_METACLASS_$_NSObject
 OBJC2_64BIT_DYLIB:          cache 0x0
 OBJC2_64BIT_DYLIB:         vtable 0x0
 OBJC2_64BIT_DYLIB:           data 0xc048 (struct class_ro_t *)

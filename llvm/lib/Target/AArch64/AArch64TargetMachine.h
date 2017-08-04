@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class AArch64RegisterBankInfo;
+
 class AArch64TargetMachine : public LLVMTargetMachine {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -34,6 +36,9 @@ public:
 
   ~AArch64TargetMachine() override;
   const AArch64Subtarget *getSubtargetImpl(const Function &F) const override;
+  // The no argument getSubtargetImpl, while it exists on some, targets is
+  // deprecated and should not be used.
+  const AArch64Subtarget *getSubtargetImpl() const = delete;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

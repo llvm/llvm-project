@@ -16,7 +16,7 @@ for.cond.463.preheader:                           ; preds = %entry
   br label %for.cond.499.preheader
 
 for.cond.533.preheader:                           ; preds = %for.inc.530
-  unreachable
+  ret void
 
 for.cond.499.preheader:                           ; preds = %for.inc.530, %for.cond.463.preheader
   %indvars.iv140 = phi i64 [ 0, %for.cond.463.preheader ], [ %indvars.iv.next141, %for.inc.530 ]

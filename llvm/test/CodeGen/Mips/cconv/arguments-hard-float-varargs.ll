@@ -42,7 +42,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:         addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
-; SYM64-DAG:         ld [[R2:\$[0-9]]], %got_disp(doubles)(
+; SYM64-DAG:         daddiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
 
 ; O32 forbids using floating point registers for the non-variable portion.
 ; N32/N64 allow it.
@@ -107,7 +107,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:         addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
-; SYM64-DAG:         ld [[R2:\$[0-9]]], %got_disp(floats)(
+; SYM64-DAG:         daddiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The non-variable portion should be unaffected.

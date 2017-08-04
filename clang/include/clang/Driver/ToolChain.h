@@ -44,6 +44,7 @@ namespace driver {
   class RegisterEffectiveTriple;
   class SanitizerArgs;
   class Tool;
+  class XRayArgs;
 
 /// ToolChain - Access to tools for a single platform.
 class ToolChain {
@@ -94,12 +95,15 @@ private:
   Tool *getOffloadBundler() const;
 
   mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
+  mutable std::unique_ptr<XRayArgs> XRayArguments;
 
   /// The effective clang triple for the current Job.
   mutable llvm::Triple EffectiveTriple;
 
   /// Set the toolchain's effective clang triple.
-  void setEffectiveTriple(llvm::Triple ET) const { EffectiveTriple = ET; }
+  void setEffectiveTriple(llvm::Triple ET) const {
+    EffectiveTriple = std::move(ET);
+  }
 
   friend class RegisterEffectiveTriple;
 
@@ -174,6 +178,8 @@ public:
   const MultilibSet &getMultilibs() const { return Multilibs; }
 
   const SanitizerArgs& getSanitizerArgs() const;
+
+  const XRayArgs& getXRayArgs() const;
 
   // Returns the Arg * that explicitly turned on/off rtti, or nullptr.
   const llvm::opt::Arg *getRTTIArg() const { return CachedRTTIArg; }
@@ -299,6 +305,11 @@ public:
   const char *getCompilerRTArgString(const llvm::opt::ArgList &Args,
                                      StringRef Component,
                                      bool Shared = false) const;
+
+  // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
+  // as OpenMP) to find arch-specific libraries.
+  std::string getArchSpecificLibPath() const;
+
   /// needsProfileRT - returns true if instrumentation profile is on.
   static bool needsProfileRT(const llvm::opt::ArgList &Args);
 
@@ -400,7 +411,8 @@ public:
 
   /// \brief Add options that need to be passed to cc1 for this target.
   virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args) const;
+                                     llvm::opt::ArgStringList &CC1Args,
+                                     Action::OffloadKind DeviceOffloadKind) const;
 
   /// \brief Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
@@ -471,7 +483,7 @@ class RegisterEffectiveTriple {
 
 public:
   RegisterEffectiveTriple(const ToolChain &TC, llvm::Triple T) : TC(TC) {
-    TC.setEffectiveTriple(T);
+    TC.setEffectiveTriple(std::move(T));
   }
 
   ~RegisterEffectiveTriple() { TC.setEffectiveTriple(llvm::Triple()); }

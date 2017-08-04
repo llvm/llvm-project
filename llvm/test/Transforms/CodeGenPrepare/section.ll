@@ -5,17 +5,37 @@ target triple = "x86_64-pc-linux-gnu"
 ; This tests that hot/cold functions get correct section prefix assigned
 
 ; CHECK: hot_func{{.*}}!section_prefix ![[HOT_ID:[0-9]+]]
+; The entry is hot
 define void @hot_func() !prof !15 {
   ret void
 }
 
-; CHECK: cold_func{{.*}}!section_prefix ![[COLD_ID:[0-9]+]]
-define void @cold_func() !prof !16 {
+; For instrumentation based PGO, we should only look at entry counts,
+; not call site VP metadata (which can exist on value profiled memcpy,
+; or possibly left behind after static analysis based devirtualization).
+; CHECK: cold_func1{{.*}}!section_prefix ![[COLD_ID:[0-9]+]]
+define void @cold_func1() !prof !16 {
+  call void @hot_func(), !prof !17
+  call void @hot_func(), !prof !17
+  ret void
+}
+
+; CHECK: cold_func2{{.*}}!section_prefix
+define void @cold_func2() !prof !16 {
+  call void @hot_func(), !prof !17
+  call void @hot_func(), !prof !18
+  call void @hot_func(), !prof !18
+  ret void
+}
+
+; CHECK: cold_func3{{.*}}!section_prefix ![[COLD_ID]]
+define void @cold_func3() !prof !16 {
+  call void @hot_func(), !prof !18
   ret void
 }
 
 ; CHECK: ![[HOT_ID]] = !{!"function_section_prefix", !".hot"}
-; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".cold"}
+; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".unlikely"}
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}
@@ -33,3 +53,5 @@ define void @cold_func() !prof !16 {
 !14 = !{i32 999999, i64 1, i32 2}
 !15 = !{!"function_entry_count", i64 1000}
 !16 = !{!"function_entry_count", i64 1}
+!17 = !{!"branch_weights", i32 80}
+!18 = !{!"branch_weights", i32 1}

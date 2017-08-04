@@ -111,12 +111,6 @@
 #define LLVM_PREFETCH(addr, rw, locality)
 #endif
 
-#if __has_attribute(sentinel) || LLVM_GNUC_PREREQ(3, 0, 0)
-#define LLVM_END_WITH_NULL __attribute__((sentinel))
-#else
-#define LLVM_END_WITH_NULL
-#endif
-
 #if __has_attribute(used) || LLVM_GNUC_PREREQ(3, 1, 0)
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
@@ -233,6 +227,8 @@
 /// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
 #if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
 #define LLVM_FALLTHROUGH [[fallthrough]]
+#elif __has_cpp_attribute(gnu::fallthrough)
+#define LLVM_FALLTHROUGH [[gnu::fallthrough]]
 #elif !__cplusplus
 // Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
 // error when __has_cpp_attribute is given a scoped attribute in C mode.
@@ -343,7 +339,7 @@
 ///   int k;
 ///   long long l;
 /// };
-/// LLVM_PACKED_END 
+/// LLVM_PACKED_END
 #ifdef _MSC_VER
 # define LLVM_PACKED(d) __pragma(pack(push, 1)) d __pragma(pack(pop))
 # define LLVM_PACKED_START __pragma(pack(push, 1))
@@ -464,7 +460,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_PRETTY_FUNCTION __FUNCSIG__
 #elif defined(__GNUC__) || defined(__clang__)
 #define LLVM_PRETTY_FUNCTION __PRETTY_FUNCTION__
-#else 
+#else
 #define LLVM_PRETTY_FUNCTION __func__
 #endif
 
@@ -495,6 +491,16 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 // If threading is disabled entirely, this compiles to nothing and you get
 // a normal global variable.
 #define LLVM_THREAD_LOCAL
+#endif
+
+/// \macro LLVM_ENABLE_EXCEPTIONS
+/// \brief Whether LLVM is built with exception support.
+#if __has_feature(cxx_exceptions)
+#define LLVM_ENABLE_EXCEPTIONS 1
+#elif defined(__GNUC__) && defined(__EXCEPTIONS)
+#define LLVM_ENABLE_EXCEPTIONS 1
+#elif defined(_MSC_VER) && defined(_CPPUNWIND)
+#define LLVM_ENABLE_EXCEPTIONS 1
 #endif
 
 #endif

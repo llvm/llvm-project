@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/RegionIterator.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -206,6 +207,8 @@ public:
 
     return false;
   }
+
+  StringRef getPassName() const override { return "Print Region IR"; }
 };
 
 char PrintRegionPass::ID = 0;
@@ -277,4 +280,19 @@ void RegionPass::assignPassManager(PMStack &PMS,
 Pass *RegionPass::createPrinterPass(raw_ostream &O,
                                   const std::string &Banner) const {
   return new PrintRegionPass(Banner, O);
+}
+
+bool RegionPass::skipRegion(Region &R) const {
+  Function &F = *R.getEntry()->getParent();
+  if (!F.getContext().getOptBisect().shouldRunPass(this, R))
+    return true;
+
+  if (F.hasFnAttribute(Attribute::OptimizeNone)) {
+    // Report this only once per function.
+    if (R.getEntry() == &F.getEntryBlock())
+      DEBUG(dbgs() << "Skipping pass '" << getPassName()
+            << "' on function " << F.getName() << "\n");
+    return true;
+  }
+  return false;
 }

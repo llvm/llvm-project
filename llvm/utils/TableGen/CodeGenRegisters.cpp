@@ -679,11 +679,6 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     Name(R->getName()),
     TopoSigs(RegBank.getNumTopoSigs()),
     EnumValue(-1) {
-  // Rename anonymous register classes.
-  if (R->getName().size() > 9 && R->getName()[9] == '.') {
-    static unsigned AnonCounter = 0;
-    R->setName("AnonRegClass_" + utostr(AnonCounter++));
-  }
 
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
@@ -867,7 +862,7 @@ std::string CodeGenRegisterClass::getQualifiedName() const {
   if (Namespace.empty())
     return getName();
   else
-    return Namespace + "::" + getName();
+    return (Namespace + "::" + getName()).str();
 }
 
 // Compute sub-classes of all register classes.
@@ -918,6 +913,84 @@ void CodeGenRegisterClass::computeSubClasses(CodeGenRegBank &RegBank) {
   for (auto &RC : RegClasses)
     if (!RC.getDef())
       RC.inheritProperties(RegBank);
+}
+
+Optional<std::pair<CodeGenRegisterClass *, CodeGenRegisterClass *>>
+CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
+    CodeGenRegBank &RegBank, const CodeGenSubRegIndex *SubIdx) const {
+  auto SizeOrder = [](const CodeGenRegisterClass *A,
+                      const CodeGenRegisterClass *B) {
+    return A->getMembers().size() > B->getMembers().size();
+  };
+
+  auto &RegClasses = RegBank.getRegClasses();
+
+  // Find all the subclasses of this one that fully support the sub-register
+  // index and order them by size. BiggestSuperRC should always be first.
+  CodeGenRegisterClass *BiggestSuperRegRC = getSubClassWithSubReg(SubIdx);
+  if (!BiggestSuperRegRC)
+    return None;
+  BitVector SuperRegRCsBV = BiggestSuperRegRC->getSubClasses();
+  std::vector<CodeGenRegisterClass *> SuperRegRCs;
+  for (auto &RC : RegClasses)
+    if (SuperRegRCsBV[RC.EnumValue])
+      SuperRegRCs.emplace_back(&RC);
+  std::sort(SuperRegRCs.begin(), SuperRegRCs.end(), SizeOrder);
+  assert(SuperRegRCs.front() == BiggestSuperRegRC && "Biggest class wasn't first");
+
+  // Find all the subreg classes and order them by size too.
+  std::vector<std::pair<CodeGenRegisterClass *, BitVector>> SuperRegClasses;
+  for (auto &RC: RegClasses) {
+    BitVector SuperRegClassesBV(RegClasses.size());
+    RC.getSuperRegClasses(SubIdx, SuperRegClassesBV);
+    if (SuperRegClassesBV.any())
+      SuperRegClasses.push_back(std::make_pair(&RC, SuperRegClassesBV));
+  }
+  std::sort(SuperRegClasses.begin(), SuperRegClasses.end(),
+            [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
+                const std::pair<CodeGenRegisterClass *, BitVector> &B) {
+              return SizeOrder(A.first, B.first);
+            });
+
+  // Find the biggest subclass and subreg class such that R:subidx is in the
+  // subreg class for all R in subclass.
+  //
+  // For example:
+  // All registers in X86's GR64 have a sub_32bit subregister but no class
+  // exists that contains all the 32-bit subregisters because GR64 contains RIP
+  // but GR32 does not contain EIP. Instead, we constrain SuperRegRC to
+  // GR32_with_sub_8bit (which is identical to GR32_with_sub_32bit) and then,
+  // having excluded RIP, we are able to find a SubRegRC (GR32).
+  CodeGenRegisterClass *ChosenSuperRegClass = nullptr;
+  CodeGenRegisterClass *SubRegRC = nullptr;
+  for (auto *SuperRegRC : SuperRegRCs) {
+    for (const auto &SuperRegClassPair : SuperRegClasses) {
+      const BitVector &SuperRegClassBV = SuperRegClassPair.second;
+      if (SuperRegClassBV[SuperRegRC->EnumValue]) {
+        SubRegRC = SuperRegClassPair.first;
+        ChosenSuperRegClass = SuperRegRC;
+
+        // If SubRegRC is bigger than SuperRegRC then there are members of
+        // SubRegRC that don't have super registers via SubIdx. Keep looking to
+        // find a better fit and fall back on this one if there isn't one.
+        //
+        // This is intended to prevent X86 from making odd choices such as
+        // picking LOW32_ADDR_ACCESS_RBP instead of GR32 in the example above.
+        // LOW32_ADDR_ACCESS_RBP is a valid choice but contains registers that
+        // aren't subregisters of SuperRegRC whereas GR32 has a direct 1:1
+        // mapping.
+        if (SuperRegRC->getMembers().size() >= SubRegRC->getMembers().size())
+          return std::make_pair(ChosenSuperRegClass, SubRegRC);
+      }
+    }
+
+    // If we found a fit but it wasn't quite ideal because SubRegRC had excess
+    // registers, then we're done.
+    if (ChosenSuperRegClass)
+      return std::make_pair(ChosenSuperRegClass, SubRegRC);
+  }
+
+  return None;
 }
 
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
@@ -1195,12 +1268,12 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = LaneBitmask::getAll();
   for (auto &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
-      if (Bit > 32) {
+      if (Bit > LaneBitmask::BitWidth) {
         PrintFatalError(
           Twine("Ran out of lanemask bits to represent subregister ")
           + Idx.getName());
       }
-      Idx.LaneMask = LaneBitmask(1 << Bit);
+      Idx.LaneMask = LaneBitmask::getLane(Bit);
       ++Bit;
     } else {
       Idx.LaneMask = LaneBitmask::getNone();
@@ -1225,9 +1298,9 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
       static_assert(sizeof(Idx.LaneMask.getAsInteger()) == 4,
                     "Change Log2_32 to a proper one");
       unsigned DstBit = Log2_32(Idx.LaneMask.getAsInteger());
-      assert(Idx.LaneMask == LaneBitmask(1 << DstBit) &&
+      assert(Idx.LaneMask == LaneBitmask::getLane(DstBit) &&
              "Must be a leaf subregister");
-      MaskRolPair MaskRol = { LaneBitmask(1), (uint8_t)DstBit };
+      MaskRolPair MaskRol = { LaneBitmask::getLane(0), (uint8_t)DstBit };
       LaneTransforms.push_back(MaskRol);
     } else {
       // Go through all leaf subregisters and find the ones that compose with
@@ -1241,7 +1314,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
           continue;
         // Replicate the behaviour from the lane mask generation loop above.
         unsigned SrcBit = NextBit;
-        LaneBitmask SrcMask = LaneBitmask(1 << SrcBit);
+        LaneBitmask SrcMask = LaneBitmask::getLane(SrcBit);
         if (NextBit < LaneBitmask::BitWidth-1)
           ++NextBit;
         assert(Idx2.LaneMask == SrcMask);
@@ -1313,7 +1386,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
     // For classes without any subregisters set LaneMask to 1 instead of 0.
     // This makes it easier for client code to handle classes uniformly.
     if (LaneMask.none())
-      LaneMask = LaneBitmask(1);
+      LaneMask = LaneBitmask::getLane(0);
 
     RegClass.LaneMask = LaneMask;
   }
@@ -1668,7 +1741,7 @@ void CodeGenRegBank::computeRegUnitSets() {
           dbgs() << "UnitSet " << USIdx << " " << RegUnitSets[USIdx].Name
                  << ":";
           for (auto &U : RegUnitSets[USIdx].Units)
-            dbgs() << " " << RegUnits[U].Roots[0]->getName();
+            printRegUnitName(U);
           dbgs() << "\n";
         });
 
@@ -1681,7 +1754,7 @@ void CodeGenRegBank::computeRegUnitSets() {
           dbgs() << "UnitSet " << USIdx << " " << RegUnitSets[USIdx].Name
                  << ":";
           for (auto &U : RegUnitSets[USIdx].Units)
-            dbgs() << " " << RegUnits[U].Roots[0]->getName();
+            printRegUnitName(U);
           dbgs() << "\n";
         }
         dbgs() << "\nUnion sets:\n");
@@ -1727,7 +1800,7 @@ void CodeGenRegBank::computeRegUnitSets() {
         DEBUG(dbgs() << "UnitSet " << RegUnitSets.size()-1
               << " " << RegUnitSets.back().Name << ":";
               for (auto &U : RegUnitSets.back().Units)
-                dbgs() << " " << RegUnits[U].Roots[0]->getName();
+                printRegUnitName(U);
               dbgs() << "\n";);
       }
     }
@@ -1742,7 +1815,7 @@ void CodeGenRegBank::computeRegUnitSets() {
           dbgs() << "UnitSet " << USIdx << " " << RegUnitSets[USIdx].Name
                  << ":";
           for (auto &U : RegUnitSets[USIdx].Units)
-            dbgs() << " " << RegUnits[U].Roots[0]->getName();
+            printRegUnitName(U);
           dbgs() << "\n";
         });
 
@@ -1763,8 +1836,8 @@ void CodeGenRegBank::computeRegUnitSets() {
       continue;
 
     DEBUG(dbgs() << "RC " << RC.getName() << " Units: \n";
-          for (auto &U : RCRegUnits)
-            dbgs() << RegUnits[U].getRoots()[0]->getName() << " ";
+          for (auto U : RCRegUnits)
+            printRegUnitName(U);
           dbgs() << "\n  UnitSetIDs:");
 
     // Find all supersets.
@@ -2169,4 +2242,11 @@ BitVector CodeGenRegBank::computeCoveredRegisters(ArrayRef<Record*> Regs) {
   for (unsigned i = 0, e = Set.size(); i != e; ++i)
     BV.set(Set[i]->EnumValue);
   return BV;
+}
+
+void CodeGenRegBank::printRegUnitName(unsigned Unit) const {
+  if (Unit < NumNativeRegUnits)
+    dbgs() << ' ' << RegUnits[Unit].Roots[0]->getName();
+  else
+    dbgs() << " #" << Unit;
 }

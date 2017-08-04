@@ -3,7 +3,7 @@
 // RUN:   -target-cpu cortex-a7 \
 // RUN:   -mfloat-abi hard \
 // RUN:   -ffreestanding \
-// RUN:   -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:   -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 

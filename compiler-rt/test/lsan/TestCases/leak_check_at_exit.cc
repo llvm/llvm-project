@@ -1,10 +1,10 @@
 // Test for the leak_check_at_exit flag.
 // RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s --check-prefix=CHECK-do
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-do
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"leak_check_at_exit=0" not %run %t foo 2>&1 | FileCheck %s --check-prefix=CHECK-do
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"leak_check_at_exit=0" %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-dont
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s --check-prefix=CHECK-do
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-do
+// RUN: %env_lsan_opts=$LSAN_BASE:"leak_check_at_exit=0" not %run %t foo 2>&1 | FileCheck %s --check-prefix=CHECK-do
+// RUN: %env_lsan_opts=$LSAN_BASE:"leak_check_at_exit=0" %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-dont
 
 #include <stdio.h>
 #include <stdlib.h>

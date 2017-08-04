@@ -176,6 +176,9 @@ def warn_gcc_attribute_location : Warning<
 def warn_attribute_no_decl : Warning<
   "attribute %0 ignored, because it is not attached to a declaration">, 
   InGroup<IgnoredAttributes>;
+def err_ms_attributes_not_enabled : Error<
+  "'__declspec' attributes are not enabled; use '-fdeclspec' or "
+  "'-fms-extensions' to enable support for __declspec attributes">;
 def err_expected_method_body : Error<"expected method body">;
 def err_declspec_after_virtspec : Error<
   "'%0' qualifier may not appear after the virtual specifier '%1'">;
@@ -674,9 +677,6 @@ def warn_static_inline_explicit_inst_ignored : Warning<
 // Constructor template diagnostics.
 def err_out_of_line_constructor_template_id : Error<
   "out-of-line constructor for %0 cannot have template arguments">;
-def err_out_of_line_template_id_type_names_constructor : Error<
-  "qualified reference to %0 is a constructor name rather than a "
-  "%select{template name|type}1 wherever a constructor can be declared">;
 
 def err_expected_qualified_after_typename : Error<
   "expected a qualified name after 'typename'">;
@@ -887,9 +887,18 @@ def warn_pragma_expected_rparen : Warning<
   "missing ')' after '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_identifier : Warning<
   "expected identifier in '#pragma %0' - ignored">, InGroup<IgnoredPragmas>;
+
+// '#pragma clang section' related errors
+def err_pragma_expected_clang_section_name : Error<
+  "expected one of [bss|data|rodata|text] section kind in '#pragma %0'">;
+def err_pragma_clang_section_expected_equal : Error<
+  "expected '=' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
+def err_pragma_clang_section_expected_name_or_clear : Error<
+  "expected section name or '\"\"' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
 def warn_pragma_expected_section_name : Warning<
   "expected a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
+
 def warn_pragma_expected_section_push_pop_or_name : Warning<
   "expected push, pop or a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
@@ -1117,14 +1126,12 @@ def err_pragma_cannot_end_force_cuda_host_device : Error<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_expected_module_interface_decl : Error<
-  "expected module declaration at start of module interface">;
 def err_unexpected_module_decl : Error<
-  "module declaration must be the first declaration in the translation unit">;
+  "module declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
-  "expected a module name after module%select{| import}0">;
-def err_unexpected_module_kind : Error<
-  "unexpected module kind %0; expected 'implementation' or 'partition'">;
+  "expected a module name after '%select{module|import}0'">;
+def err_module_implementation_partition : Error<
+  "module partition must be declared 'export'">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_attribute_not_import_attr : Error<

@@ -22,10 +22,12 @@ namespace llvm {
 /// An optimization pass inserting data prefetches in loops.
 class LoopDataPrefetchPass : public PassInfoMixin<LoopDataPrefetchPass> {
 public:
-  LoopDataPrefetchPass() {}
+  LoopDataPrefetchPass() = default;
+
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_SCALAR_LOOPDATAPREFETCH_H

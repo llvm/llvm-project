@@ -80,46 +80,45 @@ def : Proc<"cayman",     R600_VLIW4_Itin,
 // Southern Islands
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"SI", SIFullSpeedModel,
-  [FeatureSouthernIslands, FeatureFastFMAF32, HalfRate64Ops]
+def : ProcessorModel<"gfx600",     SIFullSpeedModel,
+  [FeatureISAVersion6_0_0]>;
+
+def : ProcessorModel<"SI",         SIFullSpeedModel,
+  [FeatureISAVersion6_0_0]
 >;
 
-def : ProcessorModel<"tahiti", SIFullSpeedModel,
-  [FeatureSouthernIslands, FeatureFastFMAF32, HalfRate64Ops]
+def : ProcessorModel<"tahiti",     SIFullSpeedModel,
+  [FeatureISAVersion6_0_0]
 >;
 
-def : ProcessorModel<"pitcairn", SIQuarterSpeedModel, [FeatureSouthernIslands]>;
+def : ProcessorModel<"gfx601",     SIQuarterSpeedModel,
+  [FeatureISAVersion6_0_1]
+>;
 
-def : ProcessorModel<"verde",    SIQuarterSpeedModel, [FeatureSouthernIslands]>;
+def : ProcessorModel<"pitcairn",   SIQuarterSpeedModel,
+  [FeatureISAVersion6_0_1]>;
 
-def : ProcessorModel<"oland",    SIQuarterSpeedModel, [FeatureSouthernIslands]>;
+def : ProcessorModel<"verde",      SIQuarterSpeedModel,
+  [FeatureISAVersion6_0_1]>;
 
-def : ProcessorModel<"hainan",   SIQuarterSpeedModel, [FeatureSouthernIslands]>;
+def : ProcessorModel<"oland",      SIQuarterSpeedModel,
+  [FeatureISAVersion6_0_1]>;
+
+def : ProcessorModel<"hainan",     SIQuarterSpeedModel, [FeatureISAVersion6_0_1]>;
 
 //===----------------------------------------------------------------------===//
 // Sea Islands
 //===----------------------------------------------------------------------===//
 
+def : ProcessorModel<"gfx700",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_0]
+>;
+
 def : ProcessorModel<"bonaire",    SIQuarterSpeedModel,
   [FeatureISAVersion7_0_0]
 >;
 
-def : ProcessorModel<"kabini",     SIQuarterSpeedModel,
-  [FeatureISAVersion7_0_2]
->;
-
 def : ProcessorModel<"kaveri",     SIQuarterSpeedModel,
-  [FeatureISAVersion7_0_0]
->;
-
-def : ProcessorModel<"hawaii",     SIFullSpeedModel,
-  [FeatureISAVersion7_0_1]
->;
-
-def : ProcessorModel<"mullins",    SIQuarterSpeedModel,
-  [FeatureISAVersion7_0_2]>;
-
-def : ProcessorModel<"gfx700",     SIQuarterSpeedModel,
   [FeatureISAVersion7_0_0]
 >;
 
@@ -127,9 +126,24 @@ def : ProcessorModel<"gfx701",     SIFullSpeedModel,
   [FeatureISAVersion7_0_1]
 >;
 
+def : ProcessorModel<"hawaii",     SIFullSpeedModel,
+  [FeatureISAVersion7_0_1]
+>;
+
 def : ProcessorModel<"gfx702",     SIQuarterSpeedModel,
   [FeatureISAVersion7_0_2]
 >;
+
+def : ProcessorModel<"gfx703",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_3]
+>;
+
+def : ProcessorModel<"kabini",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_3]
+>;
+
+def : ProcessorModel<"mullins",    SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_3]>;
 
 //===----------------------------------------------------------------------===//
 // Volcanic Islands
@@ -185,5 +199,25 @@ def : ProcessorModel<"gfx804", SIQuarterSpeedModel,
 
 def : ProcessorModel<"gfx810", SIQuarterSpeedModel,
   [FeatureISAVersion8_1_0]
+>;
+
+//===----------------------------------------------------------------------===//
+// GFX9
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx900", SIQuarterSpeedModel,
+  [FeatureISAVersion9_0_0]
+>;
+
+def : ProcessorModel<"gfx901", SIQuarterSpeedModel,
+  [FeatureISAVersion9_0_1]
+>;
+
+def : ProcessorModel<"gfx902", SIQuarterSpeedModel,
+  [FeatureISAVersion9_0_2]
+>;
+
+def : ProcessorModel<"gfx903", SIQuarterSpeedModel,
+  [FeatureISAVersion9_0_3]
 >;
 

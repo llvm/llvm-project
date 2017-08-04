@@ -53,6 +53,7 @@ class DwarfFile {
 
   // Collection of abstract subprogram DIEs.
   DenseMap<const MDNode *, DIE *> AbstractSPDies;
+  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
 
   /// Maps MDNodes for type system with the corresponding DIEs. These DIEs can
   /// be shared across CUs, that is why we keep the map here instead
@@ -104,6 +105,9 @@ public:
 
   DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
     return AbstractSPDies;
+  }
+  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> &getAbstractVariables() {
+    return AbstractVariables;
   }
 
   void insertDIE(const MDNode *TypeMD, DIE *Die) {

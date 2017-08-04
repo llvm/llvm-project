@@ -3,11 +3,11 @@
 
 // Test for signed-integer-overflow.
 #include <assert.h>
+#include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <iostream>
-#include <climits>
 
 static volatile int Sink;
 static int Large = INT_MAX;

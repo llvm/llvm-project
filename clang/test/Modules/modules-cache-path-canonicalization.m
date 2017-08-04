@@ -26,5 +26,5 @@
 // RUN:   -fmodules -fimplicit-module-maps -I %S/Inputs/outofdate-rebuild \
 // RUN:   -fdisable-module-hash %t.m -fsyntax-only -Rmodule-build 2>&1 \
 // RUN:   | FileCheck %s
-// CHECK: {{/|\\\\}}rel{{/|\\\\}}cache{{/|\\\\}}CoreText.pcm
+// CHECK: {{/|\\}}rel{{/|\\}}cache{{/|\\}}CoreText.pcm
 @import Cocoa;

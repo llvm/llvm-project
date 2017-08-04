@@ -16,6 +16,8 @@ RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
+RUN: llvm-readobj -r --expand-relocs %p/Inputs/trivial.obj.wasm \
+RUN:   | FileCheck %s -check-prefix WASM
 
 COFF:      Relocations [
 COFF-NEXT:   Section (1) .text {
@@ -283,3 +285,24 @@ MACHO-ARM-NEXT:        Value: 0x4
 MACHO-ARM-NEXT:      }
 MACHO-ARM-NEXT:    }
 MACHO-ARM-NEXT:  ]
+
+WASM:      Relocations [
+WASM-NEXT:   Section (8) CODE {
+WASM-NEXT:     Relocation {
+WASM-NEXT:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_SLEB (4)
+WASM-NEXT:       Offset: 0x4
+WASM-NEXT:       Index: 0x0
+WASM-NEXT:       Addend: 0
+WASM-NEXT:     }
+WASM-NEXT:     Relocation {
+WASM-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+WASM-NEXT:       Offset: 0xA
+WASM-NEXT:       Index: 0x0
+WASM-NEXT:     }
+WASM-NEXT:     Relocation {
+WASM-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+WASM-NEXT:       Offset: 0x11
+WASM-NEXT:       Index: 0x1
+WASM-NEXT:     }
+WASM-NEXT:   }
+WASM-NEXT: ]

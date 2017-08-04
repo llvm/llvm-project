@@ -36,7 +36,7 @@ typedef enum {
   _URC_HANDLER_FOUND = 6,
   _URC_INSTALL_CONTEXT = 7,
   _URC_CONTINUE_UNWIND = 8,
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
   _URC_FAILURE = 9
 #endif
 } _Unwind_Reason_Code;
@@ -51,7 +51,7 @@ typedef enum {
 
 typedef struct _Unwind_Context _Unwind_Context;   // opaque
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
 typedef uint32_t _Unwind_State;
 
 static const _Unwind_State _US_VIRTUAL_UNWIND_FRAME   = 0;
@@ -168,7 +168,7 @@ extern void _Unwind_Resume(_Unwind_Exception *exception_object);
 #endif
 extern void _Unwind_DeleteException(_Unwind_Exception *exception_object);
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
 typedef enum {
   _UVRSC_CORE = 0, /* integer register */
   _UVRSC_VFP = 1, /* vfp */
@@ -208,7 +208,7 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                 _Unwind_VRS_DataRepresentation representation);
 #endif
 
-#if !_LIBUNWIND_ARM_EHABI
+#if !defined(_LIBUNWIND_ARM_EHABI)
 
 extern uintptr_t _Unwind_GetGR(struct _Unwind_Context *context, int index);
 extern void _Unwind_SetGR(struct _Unwind_Context *context, int index,
@@ -216,7 +216,7 @@ extern void _Unwind_SetGR(struct _Unwind_Context *context, int index,
 extern uintptr_t _Unwind_GetIP(struct _Unwind_Context *context);
 extern void _Unwind_SetIP(struct _Unwind_Context *, uintptr_t new_value);
 
-#else  // _LIBUNWIND_ARM_EHABI
+#else  // defined(_LIBUNWIND_ARM_EHABI)
 
 #if defined(_LIBUNWIND_UNWIND_LEVEL1_EXTERNAL_LINKAGE)
 #define _LIBUNWIND_EXPORT_UNWIND_LEVEL1 extern
@@ -255,7 +255,7 @@ void _Unwind_SetIP(struct _Unwind_Context *context, uintptr_t value) {
   uintptr_t thumb_bit = _Unwind_GetGR(context, 15) & ((uintptr_t)0x1);
   _Unwind_SetGR(context, 15, value | thumb_bit);
 }
-#endif  // _LIBUNWIND_ARM_EHABI
+#endif  // defined(_LIBUNWIND_ARM_EHABI)
 
 extern uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *context);
 extern uintptr_t

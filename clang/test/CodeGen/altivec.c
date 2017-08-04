@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -faltivec -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // Check initialization
 

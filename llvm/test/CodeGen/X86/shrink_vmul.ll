@@ -449,7 +449,7 @@ define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readon
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; CHECK-NEXT:    psrad $16, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -801,7 +801,7 @@ define void @mul_2xi16_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    movl $65536, %ecx # imm = 0x10000
-; CHECK-NEXT:    movd %rcx, %xmm1
+; CHECK-NEXT:    movq %rcx, %xmm1
 ; CHECK-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pmuludq %xmm1, %xmm2
@@ -835,11 +835,11 @@ define void @mul_2xi16_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; CHECK-NEXT:    psrad $16, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    movd %rcx, %xmm1
+; CHECK-NEXT:    movq %rcx, %xmm1
 ; CHECK-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pmuludq %xmm1, %xmm2

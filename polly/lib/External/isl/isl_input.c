@@ -412,7 +412,7 @@ static __isl_give isl_pw_aff *accept_div(__isl_keep isl_stream *s,
 			isl_stream_push_token(s, tok);
 			goto error;
 		}
-		isl_pw_aff_scale_down(pwaff,  tok->u.v);
+		pwaff = isl_pw_aff_scale_down(pwaff,  tok->u.v);
 		isl_token_free(tok);
 	}
 
@@ -1202,7 +1202,7 @@ static __isl_give isl_space *read_tuple_space(__isl_keep isl_stream *s,
 			goto error;
 		out = read_tuple_space(s, v, isl_space_copy(space),
 					rational, comma, read_el, user);
-		res = isl_space_range_product(res, out);
+		res = isl_space_product(res, out);
 	} else
 		res = read_tuple_list(s, v, isl_space_copy(space),
 					rational, comma, read_el, user);
@@ -3272,29 +3272,154 @@ __isl_give isl_pw_aff *isl_pw_aff_read_from_str(isl_ctx *ctx, const char *str)
 	return pa;
 }
 
+/* Extract an isl_multi_pw_aff with domain space "dom_space"
+ * from a tuple "tuple" read by read_tuple.
+ *
+ * Note that the function read_tuple accepts tuples where some output or
+ * set dimensions are defined in terms of other output or set dimensions
+ * since this function is also used to read maps.  As a special case,
+ * read_tuple also accept dimensions that are defined in terms of themselves
+ * (i.e., that are not defined).
+ * These cases are not allowed when extracting an isl_multi_pw_aff so check
+ * that the definitions of the output/set dimensions do not involve any
+ * output/set dimensions.
+ * Finally, drop the output dimensions from the domain of the result
+ * of read_tuple (which is of the form [input, output] -> [output],
+ * with anonymous domain) and reset the space.
+ */
+static __isl_give isl_multi_pw_aff *extract_mpa_from_tuple(
+	__isl_take isl_space *dom_space, __isl_keep isl_multi_pw_aff *tuple)
+{
+	int dim, i, n;
+	isl_space *space;
+	isl_multi_pw_aff *mpa;
+
+	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
+	dim = isl_space_dim(dom_space, isl_dim_all);
+	space = isl_space_range(isl_multi_pw_aff_get_space(tuple));
+	space = isl_space_align_params(space, isl_space_copy(dom_space));
+	if (!isl_space_is_params(dom_space))
+		space = isl_space_map_from_domain_and_range(
+				isl_space_copy(dom_space), space);
+	isl_space_free(dom_space);
+	mpa = isl_multi_pw_aff_alloc(space);
+
+	for (i = 0; i < n; ++i) {
+		isl_pw_aff *pa;
+		pa = isl_multi_pw_aff_get_pw_aff(tuple, i);
+		if (!pa)
+			return isl_multi_pw_aff_free(mpa);
+		if (isl_pw_aff_involves_dims(pa, isl_dim_in, dim, i + 1)) {
+			isl_ctx *ctx = isl_pw_aff_get_ctx(pa);
+			isl_pw_aff_free(pa);
+			isl_die(ctx, isl_error_invalid,
+				"not an affine expression",
+				return isl_multi_pw_aff_free(mpa));
+		}
+		pa = isl_pw_aff_drop_dims(pa, isl_dim_in, dim, n);
+		space = isl_multi_pw_aff_get_domain_space(mpa);
+		pa = isl_pw_aff_reset_domain_space(pa, space);
+		mpa = isl_multi_pw_aff_set_pw_aff(mpa, i, pa);
+	}
+
+	return mpa;
+}
+
+/* Read a tuple of affine expressions, together with optional constraints
+ * on the domain from "s".  "dom" represents the initial constraints
+ * on the domain.
+ *
+ * The isl_multi_aff may live in either a set or a map space.
+ * First read the first tuple and check if it is followed by a "->".
+ * If so, convert the tuple into the domain of the isl_multi_pw_aff and
+ * read in the next tuple.  This tuple (or the first tuple if it was
+ * not followed by a "->") is then converted into an isl_multi_pw_aff
+ * through a call to extract_mpa_from_tuple.
+ * The result is converted to an isl_pw_multi_aff and
+ * its domain is intersected with the domain.
+ */
+static __isl_give isl_pw_multi_aff *read_conditional_multi_aff(
+	__isl_keep isl_stream *s, __isl_take isl_set *dom, struct vars *v)
+{
+	isl_multi_pw_aff *tuple;
+	isl_multi_pw_aff *mpa;
+	isl_pw_multi_aff *pma;
+	int n = v->n;
+
+	tuple = read_tuple(s, v, 0, 0);
+	if (!tuple)
+		goto error;
+	if (isl_stream_eat_if_available(s, ISL_TOKEN_TO)) {
+		isl_map *map = map_from_tuple(tuple, dom, isl_dim_in, v, 0);
+		dom = isl_map_domain(map);
+		tuple = read_tuple(s, v, 0, 0);
+		if (!tuple)
+			goto error;
+	}
+
+	dom = read_optional_formula(s, dom, v, 0);
+
+	vars_drop(v, v->n - n);
+
+	mpa = extract_mpa_from_tuple(isl_set_get_space(dom), tuple);
+	isl_multi_pw_aff_free(tuple);
+	pma = isl_pw_multi_aff_from_multi_pw_aff(mpa);
+	pma = isl_pw_multi_aff_intersect_domain(pma, dom);
+
+	return pma;
+error:
+	isl_set_free(dom);
+	return NULL;
+}
+
 /* Read an isl_pw_multi_aff from "s".
- * We currently read a generic object and if it turns out to be a set or
- * a map, we convert that to an isl_pw_multi_aff.
- * It would be more efficient if we were to construct the isl_pw_multi_aff
- * directly.
+ *
+ * In particular, first read the parameters and then read a sequence
+ * of one or more tuples of affine expressions with optional conditions and
+ * add them up.
  */
 __isl_give isl_pw_multi_aff *isl_stream_read_pw_multi_aff(
 	__isl_keep isl_stream *s)
 {
-	struct isl_obj obj;
+	struct vars *v;
+	isl_set *dom;
+	isl_pw_multi_aff *pma = NULL;
 
-	obj = obj_read(s);
-	if (!obj.v)
+	v = vars_new(s->ctx);
+	if (!v)
 		return NULL;
 
-	if (obj.type == isl_obj_map)
-		return isl_pw_multi_aff_from_map(obj.v);
-	if (obj.type == isl_obj_set)
-		return isl_pw_multi_aff_from_set(obj.v);
+	dom = isl_set_universe(isl_space_params_alloc(s->ctx, 0));
+	if (next_is_tuple(s)) {
+		dom = read_map_tuple(s, dom, isl_dim_param, v, 1, 0);
+		if (isl_stream_eat(s, ISL_TOKEN_TO))
+			goto error;
+	}
+	if (isl_stream_eat(s, '{'))
+		goto error;
 
-	obj.type->free(obj.v);
-	isl_die(s->ctx, isl_error_invalid, "unexpected object type",
-		return NULL);
+	pma = read_conditional_multi_aff(s, isl_set_copy(dom), v);
+
+	while (isl_stream_eat_if_available(s, ';')) {
+		isl_pw_multi_aff *pma2;
+
+		pma2 = read_conditional_multi_aff(s, isl_set_copy(dom), v);
+		pma = isl_pw_multi_aff_union_add(pma, pma2);
+		if (!pma)
+			goto error;
+	}
+
+	if (isl_stream_eat(s, '}'))
+		goto error;
+
+	isl_set_free(dom);
+	vars_free(v);
+	return pma;
+error:
+	isl_pw_multi_aff_free(pma);
+	isl_set_free(dom);
+	vars_free(v);
+	return NULL;
 }
 
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_read_from_str(isl_ctx *ctx,
@@ -3579,19 +3704,9 @@ __isl_give isl_multi_aff *isl_multi_aff_read_from_str(isl_ctx *ctx,
  * if it is followed by a "->".  If so, we convert the tuple into
  * the domain of the isl_multi_pw_aff and read in the next tuple.
  * This tuple (or the first tuple if it was not followed by a "->")
- * is then converted into the isl_multi_pw_aff.
- *
- * Note that the function read_tuple accepts tuples where some output or
- * set dimensions are defined in terms of other output or set dimensions
- * since this function is also used to read maps.  As a special case,
- * read_tuple also accept dimensions that are defined in terms of themselves
- * (i.e., that are not defined).
- * These cases are not allowed when reading am isl_multi_pw_aff so we check
- * that the definition of the output/set dimensions does not involve any
- * output/set dimensions.
- * We then drop the output dimensions from the domain of the result
- * of read_tuple (which is of the form [input, output] -> [output],
- * with anonymous domain) and reset the space.
+ * is then converted into the isl_multi_pw_aff through a call
+ * to extract_mpa_from_tuple and the domain of the result
+ * is intersected with the domain.
  */
 __isl_give isl_multi_pw_aff *isl_stream_read_multi_pw_aff(
 	__isl_keep isl_stream *s)
@@ -3599,8 +3714,6 @@ __isl_give isl_multi_pw_aff *isl_stream_read_multi_pw_aff(
 	struct vars *v;
 	isl_set *dom = NULL;
 	isl_multi_pw_aff *tuple = NULL;
-	int dim, i, n;
-	isl_space *space, *dom_space;
 	isl_multi_pw_aff *mpa = NULL;
 
 	v = vars_new(s->ctx);
@@ -3630,32 +3743,7 @@ __isl_give isl_multi_pw_aff *isl_stream_read_multi_pw_aff(
 	if (isl_stream_eat(s, '}'))
 		goto error;
 
-	n = isl_multi_pw_aff_dim(tuple, isl_dim_out);
-	dim = isl_set_dim(dom, isl_dim_all);
-	dom_space = isl_set_get_space(dom);
-	space = isl_space_range(isl_multi_pw_aff_get_space(tuple));
-	space = isl_space_align_params(space, isl_space_copy(dom_space));
-	if (!isl_space_is_params(dom_space))
-		space = isl_space_map_from_domain_and_range(
-				isl_space_copy(dom_space), space);
-	isl_space_free(dom_space);
-	mpa = isl_multi_pw_aff_alloc(space);
-
-	for (i = 0; i < n; ++i) {
-		isl_pw_aff *pa;
-		pa = isl_multi_pw_aff_get_pw_aff(tuple, i);
-		if (!pa)
-			goto error;
-		if (isl_pw_aff_involves_dims(pa, isl_dim_in, dim, i + 1)) {
-			isl_pw_aff_free(pa);
-			isl_die(s->ctx, isl_error_invalid,
-				"not an affine expression", goto error);
-		}
-		pa = isl_pw_aff_drop_dims(pa, isl_dim_in, dim, n);
-		space = isl_multi_pw_aff_get_domain_space(mpa);
-		pa = isl_pw_aff_reset_domain_space(pa, space);
-		mpa = isl_multi_pw_aff_set_pw_aff(mpa, i, pa);
-	}
+	mpa = extract_mpa_from_tuple(isl_set_get_space(dom), tuple);
 
 	isl_multi_pw_aff_free(tuple);
 	vars_free(v);

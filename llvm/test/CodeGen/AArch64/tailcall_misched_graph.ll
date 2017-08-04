@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=cyclone -debug-only=misched < %s 2>&1 | FileCheck %s
+; RUN: llc -mcpu=cyclone -debug-only=machine-scheduler < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
@@ -37,8 +37,8 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; CHECK: SU({{.*}}):   [[VRB]]<def> = LDRXui <fi#-2>
 ; CHECK-NOT: SU
 ; CHECK:  Successors:
-; CHECK:   ord  SU([[DEPSTOREB:.*]]): Latency=0
-; CHECK:   ord  SU([[DEPSTOREA:.*]]): Latency=0
+; CHECK:   SU([[DEPSTOREB:.*]]): Ord  Latency=0
+; CHECK:   SU([[DEPSTOREA:.*]]): Ord  Latency=0
 
 ; CHECK: SU([[DEPSTOREA]]):   STRXui %vreg{{.*}}, <fi#-4>
 ; CHECK: SU([[DEPSTOREB]]):   STRXui %vreg{{.*}}, <fi#-3>

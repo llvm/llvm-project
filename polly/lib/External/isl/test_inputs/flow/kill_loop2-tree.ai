@@ -1,0 +1,11 @@
+sink: "{ S[] -> a[] }"
+must_source: "{ T[i] -> a[] : 0 <= i <= 9 }"
+kill: "{ K[] -> a[] }"
+schedule:
+  domain: "{ T[i]; S[]; K[] }"
+  child:
+    sequence:
+    - filter: "{ T[i]; K[] }"
+      child:
+        schedule: "[{ T[i] -> [(i)]; K[] -> [(10)] }]"
+    - filter: "{ S[] }"

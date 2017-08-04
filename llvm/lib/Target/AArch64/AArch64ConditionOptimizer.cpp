@@ -265,10 +265,10 @@ void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
 
   // Change immediate in comparison instruction (ADDS or SUBS).
   BuildMI(*MBB, CmpMI, CmpMI->getDebugLoc(), TII->get(Opc))
-      .addOperand(CmpMI->getOperand(0))
-      .addOperand(CmpMI->getOperand(1))
+      .add(CmpMI->getOperand(0))
+      .add(CmpMI->getOperand(1))
       .addImm(Imm)
-      .addOperand(CmpMI->getOperand(3));
+      .add(CmpMI->getOperand(3));
   CmpMI->eraseFromParent();
 
   // The fact that this comparison was picked ensures that it's related to the
@@ -278,7 +278,7 @@ void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
   // Change condition in branch instruction.
   BuildMI(*MBB, BrMI, BrMI.getDebugLoc(), TII->get(AArch64::Bcc))
       .addImm(Cmp)
-      .addOperand(BrMI.getOperand(1));
+      .add(BrMI.getOperand(1));
   BrMI.eraseFromParent();
 
   MBB->updateTerminator();

@@ -1,4 +1,4 @@
-//===--- Arg.h - Parsed Argument Classes ------------------------*- C++ -*-===//
+//===- Arg.h - Parsed Argument Classes --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,7 +21,11 @@
 #include <string>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace opt {
+
 class ArgList;
 
 /// \brief A concrete instance of a particular driver option.
@@ -29,9 +33,6 @@ class ArgList;
 /// The Arg class encodes just enough information to be able to
 /// derive the argument values efficiently.
 class Arg {
-  Arg(const Arg &) = delete;
-  void operator=(const Arg &) = delete;
-
 private:
   /// \brief The option this argument is an instance of.
   const Option Opt;
@@ -65,6 +66,8 @@ public:
       const char *Value0, const Arg *BaseArg = nullptr);
   Arg(const Option Opt, StringRef Spelling, unsigned Index,
       const char *Value0, const char *Value1, const Arg *BaseArg = nullptr);
+  Arg(const Arg &) = delete;
+  Arg &operator=(const Arg &) = delete;
   ~Arg();
 
   const Option &getOption() const { return Opt; }
@@ -89,6 +92,7 @@ public:
   void claim() const { getBaseArg().Claimed = true; }
 
   unsigned getNumValues() const { return Values.size(); }
+
   const char *getValue(unsigned N = 0) const {
     return Values[N];
   }
@@ -122,6 +126,7 @@ public:
 };
 
 } // end namespace opt
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_OPTION_ARG_H

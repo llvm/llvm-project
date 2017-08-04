@@ -1,0 +1,54 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 246
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
+
+Content-Length: 148
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":5}}}
+# The order of results returned by ASTUnit CodeComplete seems to be
+# nondeterministic, so we check regardless of order.
+#
+# CHECK: {"jsonrpc":"2.0","id":1,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"99964a","filterText":"a","insertText":"a"}
+# CHECK-DAG: {"label":"bb","kind":5,"detail":"int","sortText":"99964bb","filterText":"bb","insertText":"bb"}
+# CHECK-DAG: {"label":"ccc","kind":5,"detail":"int","sortText":"99964ccc","filterText":"ccc","insertText":"ccc"}
+# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"99965operator=","filterText":"operator=","insertText":"operator="}
+# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"99965~fake","filterText":"~fake","insertText":"~fake"}
+# CHECK-DAG: {"label":"f(int i, const float f) const","kind":2,"detail":"int","sortText":"99964f","filterText":"f","insertText":"f"}
+# CHECK: ]}
+Content-Length: 148
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":5}}}
+# Repeat the completion request, expect the same results.
+#
+# CHECK: {"jsonrpc":"2.0","id":2,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"99964a","filterText":"a","insertText":"a"}
+# CHECK-DAG: {"label":"bb","kind":5,"detail":"int","sortText":"99964bb","filterText":"bb","insertText":"bb"}
+# CHECK-DAG: {"label":"ccc","kind":5,"detail":"int","sortText":"99964ccc","filterText":"ccc","insertText":"ccc"}
+# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"99965operator=","filterText":"operator=","insertText":"operator="}
+# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"99965~fake","filterText":"~fake","insertText":"~fake"}
+# CHECK-DAG: {"label":"f(int i, const float f) const","kind":2,"detail":"int","sortText":"99964f","filterText":"f","insertText":"f"}
+# CHECK: ]}
+# Update the source file and check for completions again.
+Content-Length: 226
+
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":2},"contentChanges":[{"text":"struct fancy { int (*func())(int, int); };\nint main() {\n  fancy f;\n  f.\n}\n"}]}}
+
+Content-Length: 148
+
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":5}}}
+# Repeat the completion request, expect the same results.
+#
+# CHECK: {"jsonrpc":"2.0","id":3,"result":[
+# CHECK-DAG: {"label":"func()","kind":2,"detail":"int (*)(int, int)","sortText":"99965func","filterText":"func","insertText":"func"}
+# CHECK: ]}
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}

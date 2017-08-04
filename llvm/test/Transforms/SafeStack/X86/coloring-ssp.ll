@@ -16,19 +16,19 @@ entry:
   %x0 = bitcast i64* %x to i8*
   %y0 = bitcast i64* %y to i8*
 
-  call void @llvm.lifetime.start(i64 -1, i8* %x0)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %x0)
 ; CHECK:  getelementptr i8, i8* %[[USP]], i32 -16
   call void @capture64(i64* %x)
-  call void @llvm.lifetime.end(i64 -1, i8* %x0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %x0)
 
-  call void @llvm.lifetime.start(i64 -1, i8* %y0)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %y0)
 ; CHECK:  getelementptr i8, i8* %[[USP]], i32 -16
   call void @capture64(i64* %y)
-  call void @llvm.lifetime.end(i64 -1, i8* %y0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %y0)
 
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @capture64(i64*)

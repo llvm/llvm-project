@@ -11,21 +11,35 @@ set(variables_to_filter
   LIBFUZZER_FLAGS_BASE
   )
 foreach (VARNAME ${variables_to_filter})
-  string(REPLACE " " ";" BUILD_FLAGS_AS_LIST "${${VARNAME}}")
-  set(new_flags "")
-  foreach (flag ${BUILD_FLAGS_AS_LIST})
-    # NOTE: Use of XX here is to avoid a CMake warning due to CMP0054
-    if (NOT ("XX${flag}" MATCHES "XX-O[0123s]"))
-      set(new_flags "${new_flags} ${flag}")
-    else()
-      set(new_flags "${new_flags} -O0")
-    endif()
-  endforeach()
-  set(${VARNAME} "${new_flags}")
+  string(REGEX REPLACE "([-/]O)[123s]" "\\10" ${VARNAME} "${${VARNAME}}")
 endforeach()
 
 # Enable the coverage instrumentation (it is disabled for the Fuzzer lib).
-set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp,trace-div,trace-gep -g")
+set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp,trace-div,trace-gep -gline-tables-only")
+
+if(MSVC)
+  # For tests use the CRT specified for release build
+  # (asan doesn't support MDd and MTd)
+  if ("${LLVM_USE_CRT_RELEASE}" STREQUAL "")
+    set(CRT_FLAG " /MD ")
+  else()
+    set(CRT_FLAG " /${LLVM_USE_CRT_RELEASE} ")
+  endif()
+  # In order to use the sanitizers in Windows, we need to link against many
+  # runtime libraries which will depend on the target being created
+  # (executable or dll) and the c runtime library used (MT/MD).
+  # By default, cmake uses link.exe for linking, which fails because we don't
+  # specify the appropiate dependencies.
+  # As we don't want to consider all of that possible situations which depends
+  # on the implementation of the compiler-rt, the simplest option is to change
+  # the rules for linking executables and shared libraries, using the compiler
+  # instead of link.exe. Clang will consider the sanitizer flags, and
+  # automatically provide the required libraries to the linker.
+  set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> ${CMAKE_CXX_FLAGS} ${CRT_FLAG} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> /link <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS>")
+  set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> ${CMAKE_CXX_FLAGS} ${CRT_FLAG} /LD <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG> <TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES> /link <LINK_FLAGS>")
+endif()
+
+add_custom_target(TestBinaries)
 
 # add_libfuzzer_test(<name>
 #   SOURCES source0.cpp [source1.cpp ...]
@@ -51,11 +65,8 @@ function(add_libfuzzer_test name)
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
     )
-  set(TestBinaries ${TestBinaries} LLVMFuzzer-${name} PARENT_SCOPE)
+  add_dependencies(TestBinaries LLVMFuzzer-${name})
 endfunction()
-
-# Variable to keep track of all test targets
-set(TestBinaries)
 
 ###############################################################################
 # Basic tests
@@ -65,16 +76,25 @@ set(Tests
   AbsNegAndConstantTest
   AbsNegAndConstant64Test
   AccumulateAllocationsTest
+  BadStrcmpTest
+  BogusInitializeTest
   BufferOverflowOnInput
   CallerCalleeTest
+  CleanseTest
   CounterTest
+  CustomCrossOverAndMutateTest
   CustomCrossOverTest
   CustomMutatorTest
+  CxxStringEqTest
   DivTest
   EmptyTest
+  EquivalenceATest
+  EquivalenceBTest
+  FlagsTest
   FourIndependentBranchesTest
   FullCoverageSetTest
   InitializeTest
+  Memcmp64BytesTest
   MemcmpTest
   LeakTest
   LeakTimeoutTest
@@ -85,6 +105,7 @@ set(Tests
   OneHugeAllocTest
   OutOfMemoryTest
   OutOfMemorySingleLargeMallocTest
+  OverwriteInputTest
   RepeatedMemcmp
   RepeatedBytesTest
   SimpleCmpTest
@@ -92,11 +113,13 @@ set(Tests
   SimpleHashTest
   SimpleTest
   SimpleThreadedTest
+  SingleByteInputTest
   SingleMemcmpTest
   SingleStrcmpTest
   SingleStrncmpTest
   SpamyTest
   ShrinkControlFlowTest
+  ShrinkControlFlowSimpleTest
   ShrinkValueProfileTest
   StrcmpTest
   StrncmpOOBTest
@@ -105,17 +128,19 @@ set(Tests
   SwapCmpTest
   SwitchTest
   Switch2Test
+  TableLookupTest
   ThreadedLeakTest
   ThreadedTest
   TimeoutTest
   TimeoutEmptyTest
   TraceMallocTest
+  TwoDifferentBugsTest
   )
 
-if(APPLE)
-  # LeakSanitizer is not supported on OSX right now
+if(APPLE OR MSVC)
+  # LeakSanitizer is not supported on OSX and Windows right now
   set(HAS_LSAN 0)
-  message(WARNING "LeakSanitizer is not supported on Apple platforms."
+  message(WARNING "LeakSanitizer is not supported."
     " Building and running LibFuzzer LeakSanitizer tests is disabled."
     )
 else()
@@ -126,6 +151,17 @@ foreach(Test ${Tests})
   add_libfuzzer_test(${Test} SOURCES ${Test}.cpp)
 endforeach()
 
+function(test_export_symbol target symbol)
+  if(MSVC)
+    set_target_properties(LLVMFuzzer-${target} PROPERTIES LINK_FLAGS
+        "-export:${symbol}")
+  endif()
+endfunction()
+
+test_export_symbol(InitializeTest "LLVMFuzzerInitialize")
+test_export_symbol(BogusInitializeTest "LLVMFuzzerInitialize")
+test_export_symbol(CustomCrossOverTest "LLVMFuzzerCustomCrossOver")
+test_export_symbol(CustomMutatorTest "LLVMFuzzerCustomMutator")
 
 ###############################################################################
 # Unit tests
@@ -150,13 +186,13 @@ target_include_directories(LLVMFuzzer-Unittest PRIVATE
   "${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include"
   )
 
-set(TestBinaries ${TestBinaries} LLVMFuzzer-Unittest)
+add_dependencies(TestBinaries LLVMFuzzer-Unittest)
 set_target_properties(LLVMFuzzer-Unittest
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY
   "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
-set(TestBinaries ${TestBinaries} LLVMFuzzer-StandaloneInitializeTest)
+add_dependencies(TestBinaries LLVMFuzzer-StandaloneInitializeTest)
 set_target_properties(LLVMFuzzer-StandaloneInitializeTest
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY
   "${CMAKE_CURRENT_BINARY_DIR}"
@@ -170,7 +206,11 @@ include_directories(..)
 
 # add_subdirectory(uninstrumented)
 add_subdirectory(no-coverage)
+add_subdirectory(trace-pc)
 add_subdirectory(ubsan)
+if (NOT MSVC)
+  add_subdirectory(inline-8bit-counters)
+endif()
 
 add_library(LLVMFuzzer-DSO1 SHARED DSO1.cpp)
 add_library(LLVMFuzzer-DSO2 SHARED DSO2.cpp)
@@ -187,12 +227,22 @@ target_link_libraries(LLVMFuzzer-DSOTest
 
 set_target_properties(LLVMFuzzer-DSOTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY
   "${CMAKE_BINARY_DIR}/lib/Fuzzer/test")
-set_target_properties(LLVMFuzzer-DSO1 PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-  "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
-set_target_properties(LLVMFuzzer-DSO2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-  "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
 
-set(TestBinaries ${TestBinaries} LLVMFuzzer-DSOTest)
+if(MSVC)
+  set_output_directory(LLVMFuzzer-DSO1
+    BINARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
+    LIBRARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/test")
+  set_output_directory(LLVMFuzzer-DSO2
+    BINARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
+    LIBRARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/test")
+else(MSVC)
+  set_output_directory(LLVMFuzzer-DSO1
+    LIBRARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
+  set_output_directory(LLVMFuzzer-DSO2
+    LIBRARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
+endif()
+
+add_dependencies(TestBinaries LLVMFuzzer-DSOTest)
 
 ###############################################################################
 # Configure lit to run the tests
@@ -200,6 +250,10 @@ set(TestBinaries ${TestBinaries} LLVMFuzzer-DSOTest)
 # Note this is done after declaring all tests so we can inform lit if any tests
 # need to be disabled.
 ###############################################################################
+set(LIBFUZZER_POSIX 1)
+if (MSVC)
+  set(LIBFUZZER_POSIX 0)
+endif()
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
@@ -213,5 +267,11 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-fuzzer "Running Fuzzer tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${TestBinaries} FileCheck not
+    DEPENDS TestBinaries
     )
+
+# Don't add dependencies on Windows. The linker step would fail on Windows,
+# since cmake will use link.exe for linking and won't include compiler-rt libs.
+if(NOT MSVC)
+  add_dependencies(check-fuzzer FileCheck sancov not)
+endif()

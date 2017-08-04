@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -mcpu=haswell < %s -stats -O2 2>&1 | grep "4 machine-licm.*hoisted"
+; RUN: llc -mcpu=haswell < %s -stats -O2 2>&1 | grep "4 machinelicm.*hoisted"
 ; For test:
 ; 2 invariant loads, 1 for OBJC_SELECTOR_REFERENCES_
 ; and 1 for objc_msgSend from the GOT

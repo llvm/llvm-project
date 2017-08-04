@@ -82,6 +82,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
     set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
   endif()
 
+  option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
   option(LLVM_INSTALL_TOOLCHAIN_ONLY
     "Only include toolchain files in the 'install' target." OFF)
 
@@ -358,6 +359,10 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.inc"
     PATTERN "*.h"
     )
+
+  install(PROGRAMS utils/bash-autocomplete.sh
+    DESTINATION share/clang
+    )
 endif()
 
 add_definitions( -D_GNU_SOURCE )
@@ -366,18 +371,7 @@ option(CLANG_BUILD_TOOLS
   "Build the Clang tools. If OFF, just generate build targets." ON)
 
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
-if (CLANG_ENABLE_ARCMT)
-  set(ENABLE_CLANG_ARCMT "1")
-else()
-  set(ENABLE_CLANG_ARCMT "0")
-endif()
-
 option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
-if (CLANG_ENABLE_STATIC_ANALYZER)
-  set(ENABLE_CLANG_STATIC_ANALYZER "1")
-else()
-  set(ENABLE_CLANG_STATIC_ANALYZER "0")
-endif()
 
 option(CLANG_ANALYZER_BUILD_Z3
   "Build the static analyzer with the Z3 constraint manager." OFF)
@@ -395,11 +389,7 @@ if(CLANG_ANALYZER_BUILD_Z3)
 endif()
 
 if(CLANG_ENABLE_ARCMT)
-  add_definitions(-DCLANG_ENABLE_ARCMT)
-  add_definitions(-DCLANG_ENABLE_OBJC_REWRITER)
-endif()
-if(CLANG_ENABLE_STATIC_ANALYZER)
-  add_definitions(-DCLANG_ENABLE_STATIC_ANALYZER)
+  set(CLANG_ENABLE_OBJC_REWRITER ON)
 endif()
 
 # Clang version information
@@ -428,11 +418,6 @@ add_subdirectory(tools)
 add_subdirectory(runtime)
 
 option(CLANG_BUILD_EXAMPLES "Build CLANG example programs by default." OFF)
-if (CLANG_BUILD_EXAMPLES)
-  set(ENABLE_CLANG_EXAMPLES "1")
-else()
-  set(ENABLE_CLANG_EXAMPLES "0")
-endif()
 add_subdirectory(examples)
 
 if(APPLE)
@@ -528,6 +513,10 @@ if (CLANG_ENABLE_BOOTSTRAP)
   set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-stamps/)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
+  if(BOOTSTRAP_LLVM_ENABLE_LLD)
+    add_dependencies(clang-bootstrap-deps lld)
+  endif()
+
   # If the next stage is LTO we need to depend on LTO and possibly lld or LLVMgold
   if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO AND NOT LLVM_BUILD_INSTRUMENTED)
     if(APPLE)
@@ -544,9 +533,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
     elseif(NOT WIN32)
       add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
-      if(BOOTSTRAP_LLVM_ENABLE_LLD)
-        add_dependencies(clang-bootstrap-deps lld)
-      elseif(LLVM_BINUTILS_INCDIR)
+      if(NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
         add_dependencies(clang-bootstrap-deps LLVMgold)
       endif()
       set(LTO_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
@@ -592,10 +579,17 @@ if (CLANG_ENABLE_BOOTSTRAP)
     add_dependencies(clang-bootstrap-deps compiler-rt)
   endif()
 
+  set(C_COMPILER "clang")
+  set(CXX_COMPILER "clang++")
+  if(WIN32)
+    set(C_COMPILER "clang-cl.exe")
+    set(CXX_COMPILER "clang-cl.exe")
+  endif()
+
   set(COMPILER_OPTIONS
-    -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++
-    -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang
-    -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
+    -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${CXX_COMPILER}
+    -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
+    -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER})
 
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps llvm-profdata)

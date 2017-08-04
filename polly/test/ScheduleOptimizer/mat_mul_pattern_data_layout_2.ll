@@ -1,4 +1,12 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-1st-cache-level-associativity=8 -polly-target-2nd-cache-level-associativity=8 -polly-target-1st-cache-level-size=32768 -polly-target-2nd-cache-level-size=262144 -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: -polly-target-throughput-vector-fma=1 \
+; RUN: -polly-target-latency-vector-fma=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-2nd-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-size=32768 \
+; RUN: -polly-target-2nd-cache-level-size=262144 -polly-ast \
+; RUN: -polly-target-vector-register-bitwidth=256 \
+; RUN:  -analyze < %s | FileCheck %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    /* _PB_NK % Kc != 0 */
@@ -19,6 +27,7 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= 31; c3 += 1)
 ; CHECK-NEXT:              Stmt_bb9(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
+; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // 1st level tiling - Tiles
 ; CHECK-NEXT:      for (int c1 = 0; c1 <= 3; c1 += 1) {
 ; CHECK-NEXT:        for (int c3 = 0; c3 <= 1055; c3 += 1)
@@ -34,8 +43,6 @@
 ; CHECK-NEXT:            for (int c4 = 0; c4 <= 23; c4 += 1)
 ; CHECK-NEXT:              for (int c5 = 0; c5 <= min(255, -256 * c1 + 1022); c5 += 1) {
 ; CHECK-NEXT:                // Register tiling - Points
-; CHECK-NEXT:                // 1st level tiling - Tiles
-; CHECK-NEXT:                // 1st level tiling - Points
 ; CHECK-NEXT:                {
 ; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3, 256 * c1 + c5);
 ; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 1, 256 * c1 + c5);

@@ -45,14 +45,14 @@ entry:
 define i16 @alloca_write(i16 %x) {
 entry:
 ; CHECK-LABEL: alloca_write:
+; Small offset here
+; CHECK: std Y+23, {{.*}}
+; CHECK: std Y+24, {{.*}}
 ; Big offset here
 ; CHECK: adiw r28, 57
 ; CHECK: std Y+62, {{.*}}
 ; CHECK: std Y+63, {{.*}}
 ; CHECK: sbiw r28, 57
-; Small offset here
-; CHECK: std Y+23, {{.*}}
-; CHECK: std Y+24, {{.*}}
   %p = alloca [15 x i16]
   %k = alloca [14 x i16]
   %arrayidx = getelementptr inbounds [15 x i16], [15 x i16]* %p, i16 0, i16 45

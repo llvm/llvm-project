@@ -16,9 +16,9 @@
 #define LLVM_IR_INSTRUCTION_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/User.h"
@@ -36,6 +36,10 @@ class FastMathFlags;
 class MDNode;
 struct AAMDNodes;
 
+template <> struct ilist_alloc_traits<Instruction> {
+  static inline void deleteNode(Instruction *V);
+};
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock> {
   BasicBlock *Parent;
@@ -47,12 +51,12 @@ class Instruction : public User,
     HasMetadataBit = 1 << 15
   };
 
+protected:
+  ~Instruction(); // Use deleteValue() to delete a generic Instruction.
+
 public:
   Instruction(const Instruction &) = delete;
   Instruction &operator=(const Instruction &) = delete;
-
-  // Out of line virtual method, so the vtable, etc has a home.
-  ~Instruction() override;
 
   /// Specialize the methods defined in Value, as we know that an instruction
   /// can only be used by other instructions.
@@ -68,14 +72,20 @@ public:
   /// Note: this is undefined behavior if the instruction does not have a
   /// parent, or the parent basic block does not have a parent function.
   const Module *getModule() const;
-  Module *getModule();
+  Module *getModule() {
+    return const_cast<Module *>(
+                           static_cast<const Instruction *>(this)->getModule());
+  }
 
   /// Return the function this instruction belongs to.
   ///
   /// Note: it is undefined behavior to call this on an instruction not
   /// currently inserted into a function.
   const Function *getFunction() const;
-  Function *getFunction();
+  Function *getFunction() {
+    return const_cast<Function *>(
+                         static_cast<const Instruction *>(this)->getFunction());
+  }
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -142,9 +152,14 @@ public:
     return getOpcode() == AShr;
   }
 
+  /// Determine if the Opcode is and/or/xor.
+  static inline bool isBitwiseLogicOp(unsigned Opcode) {
+    return Opcode == And || Opcode == Or || Opcode == Xor;
+  }
+
   /// Return true if this is and/or/xor.
   inline bool isBitwiseLogicOp() const {
-    return getOpcode() == And || getOpcode() == Or || getOpcode() == Xor;
+    return isBitwiseLogicOp(getOpcode());
   }
 
   /// Determine if the OpCode is one of the CastInst instructions.
@@ -252,6 +267,12 @@ public:
   /// Returns false if no metadata was found.
   bool extractProfTotalWeight(uint64_t &TotalVal) const;
 
+  /// Updates branch_weights metadata by scaling it by \p S / \p T.
+  void updateProfWeight(uint64_t S, uint64_t T);
+
+  /// Sets the branch_weights metadata to \p W for CallInst.
+  void setProfWeight(uint64_t W);
+
   /// Set the debug location information for this instruction.
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
 
@@ -275,6 +296,10 @@ public:
 
   /// Determine whether the no signed wrap flag is set.
   bool hasNoSignedWrap() const;
+
+  /// Drops flags that may cause this instruction to evaluate to poison despite
+  /// having non-poison inputs.
+  void dropPoisonGeneratingFlags();
 
   /// Determine whether the exact flag is set.
   bool isExact() const;
@@ -340,9 +365,9 @@ public:
   /// Copy I's fast-math flags
   void copyFastMathFlags(const Instruction *I);
 
-  /// Convenience method to copy supported wrapping, exact, and fast-math flags
-  /// from V to this instruction.
-  void copyIRFlags(const Value *V);
+  /// Convenience method to copy supported exact, fast-math, and (optionally)
+  /// wrapping flags from V to this instruction.
+  void copyIRFlags(const Value *V, bool IncludeWrapFlags = true);
 
   /// Logical 'and' of any supported wrapping, exact, and fast-math flags of
   /// V and this instruction.
@@ -375,18 +400,30 @@ public:
   ///
   /// In LLVM, the Add, Mul, And, Or, and Xor operators are associative.
   ///
-  bool isAssociative() const;
-  static bool isAssociative(unsigned op);
+  bool isAssociative() const LLVM_READONLY;
+  static bool isAssociative(unsigned Opcode) {
+    return Opcode == And || Opcode == Or || Opcode == Xor ||
+           Opcode == Add || Opcode == Mul;
+  }
 
   /// Return true if the instruction is commutative:
   ///
   ///   Commutative operators satisfy: (x op y) === (y op x)
   ///
-  /// In LLVM, these are the associative operators, plus SetEQ and SetNE, when
+  /// In LLVM, these are the commutative operators, plus SetEQ and SetNE, when
   /// applied to any type.
   ///
   bool isCommutative() const { return isCommutative(getOpcode()); }
-  static bool isCommutative(unsigned op);
+  static bool isCommutative(unsigned Opcode) {
+    switch (Opcode) {
+    case Add: case FAdd:
+    case Mul: case FMul:
+    case And: case Or: case Xor:
+      return true;
+    default:
+      return false;
+  }
+  }
 
   /// Return true if the instruction is idempotent:
   ///
@@ -395,7 +432,9 @@ public:
   /// In LLVM, the And and Or operators are idempotent.
   ///
   bool isIdempotent() const { return isIdempotent(getOpcode()); }
-  static bool isIdempotent(unsigned op);
+  static bool isIdempotent(unsigned Opcode) {
+    return Opcode == And || Opcode == Or;
+  }
 
   /// Return true if the instruction is nilpotent:
   ///
@@ -407,7 +446,9 @@ public:
   /// In LLVM, the Xor operator is nilpotent.
   ///
   bool isNilpotent() const { return isNilpotent(getOpcode()); }
-  static bool isNilpotent(unsigned op);
+  static bool isNilpotent(unsigned Opcode) {
+    return Opcode == Xor;
+  }
 
   /// Return true if this instruction may modify memory.
   bool mayWriteToMemory() const;
@@ -423,6 +464,12 @@ public:
   /// Return true if this instruction has an AtomicOrdering of unordered or
   /// higher.
   bool isAtomic() const;
+
+  /// Return true if this atomic instruction loads from memory.
+  bool hasAtomicLoad() const;
+
+  /// Return true if this atomic instruction stores to memory.
+  bool hasAtomicStore() const;
 
   /// Return true if this instruction may throw an exception.
   bool mayThrow() const;
@@ -509,7 +556,7 @@ public:
 
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return V->getValueID() >= Value::InstructionVal;
   }
 
@@ -601,6 +648,10 @@ private:
   /// Create a copy of this instruction.
   Instruction *cloneImpl() const;
 };
+
+inline void ilist_alloc_traits<Instruction>::deleteNode(Instruction *V) {
+  V->deleteValue();
+}
 
 } // end namespace llvm
 

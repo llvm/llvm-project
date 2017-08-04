@@ -1646,11 +1646,13 @@ class piecewise_linear_distribution
 #include <istream>
 #include <ostream>
 
-#include <__undef_min_max>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -2013,41 +2015,41 @@ template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
           _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
 class _LIBCPP_TEMPLATE_VIS mersenne_twister_engine;
 
-template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 bool
-operator==(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+operator==(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
-           const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __y);
 
-template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-operator!=(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+operator!=(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
-           const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __y);
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+          class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x);
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+          class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
-           mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                    _Bp, _Tp, _Cp, _Lp, _Fp>& __x);
 
 template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
@@ -2129,44 +2131,44 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
-    template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-              _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-              _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+    template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+              _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+              _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
     friend
     bool
-    operator==(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+    operator==(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                              _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
-               const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+               const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                              _Bp, _Tp, _Cp, _Lp, _Fp>& __y);
 
-    template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-              _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-              _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+    template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+              _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+              _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
     friend
     bool
-    operator!=(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+    operator!=(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                              _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
-               const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+               const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                              _Bp, _Tp, _Cp, _Lp, _Fp>& __y);
 
     template <class _CharT, class _Traits,
-              class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-              _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-              _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+              class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+              _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+              _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
     friend
     basic_ostream<_CharT, _Traits>&
     operator<<(basic_ostream<_CharT, _Traits>& __os,
-               const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+               const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                              _Bp, _Tp, _Cp, _Lp, _Fp>& __x);
 
     template <class _CharT, class _Traits,
-              class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-              _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-              _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+              class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+              _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+              _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
     friend
     basic_istream<_CharT, _Traits>&
     operator>>(basic_istream<_CharT, _Traits>& __is,
-               mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+               mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                        _Bp, _Tp, _Cp, _Lp, _Fp>& __x);
 private:
 
@@ -2384,13 +2386,13 @@ mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b,
     return __z ^ __rshift<__l>(__z);
 }
 
-template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 bool
-operator==(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+operator==(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
-           const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __y)
 {
     if (__x.__i_ == __y.__i_)
@@ -2428,26 +2430,26 @@ operator==(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp,
                        __x.__x_ + (_Np - (__y.__i_ + __j)));
 }
 
-template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+template <class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
-operator!=(const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+operator!=(const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x,
-           const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __y)
 {
     return !(__x == __y);
 }
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+          class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           const mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                          _Bp, _Tp, _Cp, _Lp, _Fp>& __x)
 {
     __save_flags<_CharT, _Traits> __lx(__os);
@@ -2463,17 +2465,17 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 }
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
-          _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
-          _UI _Bp, size_t _Tp, _UI _Cp, size_t _Lp, _UI _Fp>
+          class _UInt, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
+          _UInt _Ap, size_t _Up, _UInt _Dp, size_t _Sp,
+          _UInt _Bp, size_t _Tp, _UInt _Cp, size_t _Lp, _UInt _Fp>
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
-           mersenne_twister_engine<_UI, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
+           mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp,
                                    _Bp, _Tp, _Cp, _Lp, _Fp>& __x)
 {
     __save_flags<_CharT, _Traits> __lx(__is);
     __is.flags(ios_base::dec | ios_base::skipws);
-    _UI __t[_Np];
+    _UInt __t[_Np];
     for (size_t __i = 0; __i < _Np; ++__i)
         __is >> __t[__i];
     if (!__is.fail())
@@ -2501,30 +2503,30 @@ typedef mersenne_twister_engine<uint_fast64_t, 64, 312, 156, 31,
 template<class _UIntType, size_t __w, size_t __s, size_t __r>
 class _LIBCPP_TEMPLATE_VIS subtract_with_carry_engine;
 
-template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 bool
 operator==(
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x,
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __y);
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
-template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 _LIBCPP_INLINE_VISIBILITY
 bool
 operator!=(
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x,
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __y);
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+          class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x);
+           const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+          class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
-           subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x);
+           subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
 
 template<class _UIntType, size_t __w, size_t __s, size_t __r>
 class _LIBCPP_TEMPLATE_VIS subtract_with_carry_engine
@@ -2586,33 +2588,33 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
-    template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+    template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
     friend
     bool
     operator==(
-        const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x,
-        const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __y);
+        const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+        const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
-    template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+    template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
     friend
     bool
     operator!=(
-        const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x,
-        const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __y);
+        const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+        const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
     template <class _CharT, class _Traits,
-              class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+              class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
     friend
     basic_ostream<_CharT, _Traits>&
     operator<<(basic_ostream<_CharT, _Traits>& __os,
-               const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x);
+               const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
 
     template <class _CharT, class _Traits,
-              class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+              class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
     friend
     basic_istream<_CharT, _Traits>&
     operator>>(basic_istream<_CharT, _Traits>& __is,
-               subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x);
+               subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
 
 private:
 
@@ -2711,11 +2713,11 @@ subtract_with_carry_engine<_UIntType, __w, __s, __r>::operator()()
     return __xr;
 }
 
-template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 bool
 operator==(
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x,
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __y)
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y)
 {
     if (__x.__c_ != __y.__c_)
         return false;
@@ -2754,21 +2756,21 @@ operator==(
                        __x.__x_ + (_Rp - (__y.__i_ + __j)));
 }
 
-template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+template<class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator!=(
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x,
-    const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __y)
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+    const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y)
 {
     return !(__x == __y);
 }
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+          class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x)
+           const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x)
 {
     __save_flags<_CharT, _Traits> __lx(__os);
     __os.flags(ios_base::dec | ios_base::left);
@@ -2784,14 +2786,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 }
 
 template <class _CharT, class _Traits,
-          class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
+          class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
-           subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x)
+           subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x)
 {
     __save_flags<_CharT, _Traits> __lx(__is);
     __is.flags(ios_base::dec | ios_base::skipws);
-    _UI __t[_Rp+1];
+    _UInt __t[_Rp+1];
     for (size_t __i = 0; __i < _Rp+1; ++__i)
         __is >> __t[__i];
     if (!__is.fail())
@@ -2826,7 +2828,7 @@ public:
     static _LIBCPP_CONSTEXPR const size_t block_size = __p;
     static _LIBCPP_CONSTEXPR const size_t used_block = __r;
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const result_type _Min = _Engine::_Min;
     static const result_type _Max = _Engine::_Max;
 #else
@@ -2845,11 +2847,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit discard_block_engine(const _Engine& __e)
         : __e_(__e), __n_(0) {}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit discard_block_engine(_Engine&& __e)
         : __e_(_VSTD::move(__e)), __n_(0) {}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
     template<class _Sseq>
@@ -2986,13 +2988,13 @@ typedef discard_block_engine<ranlux48_base, 389, 11> ranlux48;
 template<class _Engine, size_t __w, class _UIntType>
 class _LIBCPP_TEMPLATE_VIS independent_bits_engine
 {
-    template <class _UI, _UI _R0, size_t _Wp, size_t _Mp>
+    template <class _UInt, _UInt _R0, size_t _Wp, size_t _Mp>
     class __get_n
     {
-        static _LIBCPP_CONSTEXPR const size_t _Dt = numeric_limits<_UI>::digits;
+        static _LIBCPP_CONSTEXPR const size_t _Dt = numeric_limits<_UInt>::digits;
         static _LIBCPP_CONSTEXPR const size_t _Np = _Wp / _Mp + (_Wp % _Mp != 0);
         static _LIBCPP_CONSTEXPR const size_t _W0 = _Wp / _Np;
-        static _LIBCPP_CONSTEXPR const _UI _Y0 = _W0 >= _Dt ? 0 : (_R0 >> _W0) << _W0;
+        static _LIBCPP_CONSTEXPR const _UInt _Y0 = _W0 >= _Dt ? 0 : (_R0 >> _W0) << _W0;
     public:
         static _LIBCPP_CONSTEXPR const size_t value = _R0 - _Y0 > _Y0 / _Np ? _Np + 1 : _Np;
     };
@@ -3014,7 +3016,7 @@ private:
                 result_type,
                 _Engine_result_type
         >::type _Working_result_type;
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min
                                           + _Working_result_type(1);
 #else
@@ -3055,11 +3057,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(const _Engine& __e)
         : __e_(__e) {}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(_Engine&& __e)
         : __e_(_VSTD::move(__e)) {}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
     template<class _Sseq>
@@ -3091,33 +3093,33 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const _Engine& base() const _NOEXCEPT {return __e_;}
 
-    template<class _Eng, size_t _Wp, class _UI>
+    template<class _Eng, size_t _Wp, class _UInt>
     friend
     bool
     operator==(
-        const independent_bits_engine<_Eng, _Wp, _UI>& __x,
-        const independent_bits_engine<_Eng, _Wp, _UI>& __y);
+        const independent_bits_engine<_Eng, _Wp, _UInt>& __x,
+        const independent_bits_engine<_Eng, _Wp, _UInt>& __y);
 
-    template<class _Eng, size_t _Wp, class _UI>
+    template<class _Eng, size_t _Wp, class _UInt>
     friend
     bool
     operator!=(
-        const independent_bits_engine<_Eng, _Wp, _UI>& __x,
-        const independent_bits_engine<_Eng, _Wp, _UI>& __y);
+        const independent_bits_engine<_Eng, _Wp, _UInt>& __x,
+        const independent_bits_engine<_Eng, _Wp, _UInt>& __y);
 
     template <class _CharT, class _Traits,
-              class _Eng, size_t _Wp, class _UI>
+              class _Eng, size_t _Wp, class _UInt>
     friend
     basic_ostream<_CharT, _Traits>&
     operator<<(basic_ostream<_CharT, _Traits>& __os,
-               const independent_bits_engine<_Eng, _Wp, _UI>& __x);
+               const independent_bits_engine<_Eng, _Wp, _UInt>& __x);
 
     template <class _CharT, class _Traits,
-              class _Eng, size_t _Wp, class _UI>
+              class _Eng, size_t _Wp, class _UInt>
     friend
     basic_istream<_CharT, _Traits>&
     operator>>(basic_istream<_CharT, _Traits>& __is,
-               independent_bits_engine<_Eng, _Wp, _UI>& __x);
+               independent_bits_engine<_Eng, _Wp, _UInt>& __x);
 
 private:
     _LIBCPP_INLINE_VISIBILITY
@@ -3179,40 +3181,40 @@ independent_bits_engine<_Engine, __w, _UIntType>::__eval(true_type)
     return _Sp;
 }
 
-template<class _Eng, size_t _Wp, class _UI>
+template<class _Eng, size_t _Wp, class _UInt>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator==(
-    const independent_bits_engine<_Eng, _Wp, _UI>& __x,
-    const independent_bits_engine<_Eng, _Wp, _UI>& __y)
+    const independent_bits_engine<_Eng, _Wp, _UInt>& __x,
+    const independent_bits_engine<_Eng, _Wp, _UInt>& __y)
 {
     return __x.base() == __y.base();
 }
 
-template<class _Eng, size_t _Wp, class _UI>
+template<class _Eng, size_t _Wp, class _UInt>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator!=(
-    const independent_bits_engine<_Eng, _Wp, _UI>& __x,
-    const independent_bits_engine<_Eng, _Wp, _UI>& __y)
+    const independent_bits_engine<_Eng, _Wp, _UInt>& __x,
+    const independent_bits_engine<_Eng, _Wp, _UInt>& __y)
 {
     return !(__x == __y);
 }
 
 template <class _CharT, class _Traits,
-          class _Eng, size_t _Wp, class _UI>
+          class _Eng, size_t _Wp, class _UInt>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const independent_bits_engine<_Eng, _Wp, _UI>& __x)
+           const independent_bits_engine<_Eng, _Wp, _UInt>& __x)
 {
     return __os << __x.base();
 }
 
 template <class _CharT, class _Traits,
-          class _Eng, size_t _Wp, class _UI>
+          class _Eng, size_t _Wp, class _UInt>
 basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
-           independent_bits_engine<_Eng, _Wp, _UI>& __x)
+           independent_bits_engine<_Eng, _Wp, _UInt>& __x)
 {
     _Eng __e;
     __is >> __e;
@@ -3264,7 +3266,7 @@ public:
     // engine characteristics
     static _LIBCPP_CONSTEXPR const size_t table_size = __k;
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     static const result_type _Min = _Engine::_Min;
     static const result_type _Max = _Engine::_Max;
 #else
@@ -3285,11 +3287,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(const _Engine& __e)
         : __e_(__e) {__init();}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(_Engine&& __e)
         : __e_(_VSTD::move(__e)) {__init();}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit shuffle_order_engine(result_type __sd) : __e_(__sd) {__init();}
     template<class _Sseq>
@@ -3526,11 +3528,11 @@ public:
     // constructors
     _LIBCPP_INLINE_VISIBILITY
     seed_seq() _NOEXCEPT {}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _Tp>
         _LIBCPP_INLINE_VISIBILITY
         seed_seq(initializer_list<_Tp> __il) {init(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     template<class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
@@ -3637,7 +3639,7 @@ generate_canonical(_URNG& __g)
 {
     const size_t _Dt = numeric_limits<_RealType>::digits;
     const size_t __b = _Dt < __bits ? _Dt : __bits;
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
     const size_t __logR = __log2<uint64_t, _URNG::_Max - _URNG::_Min + uint64_t(1)>::value;
 #else
     const size_t __logR = __log2<uint64_t, _URNG::max() - _URNG::min() + uint64_t(1)>::value;
@@ -3997,16 +3999,30 @@ public:
         {return !(__x == __y);}
 };
 
+#ifndef _LIBCPP_MSVCRT
+extern "C" double lgamma_r(double, int *);
+#endif
+
+inline _LIBCPP_INLINE_VISIBILITY double __libcpp_lgamma(double __d) {
+#if defined(_LIBCPP_MSVCRT)
+  return lgamma(__d);
+#else
+  int __sign;
+  return lgamma_r(__d, &__sign);
+#endif
+}
+
 template<class _IntType>
-binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p)
+binomial_distribution<_IntType>::param_type::param_type(const result_type __t, const double __p)
     : __t_(__t), __p_(__p)
 {
     if (0 < __p_ && __p_ < 1)
     {
         __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-        __pr_ = _VSTD::exp(_VSTD::lgamma(__t_ + 1.) - _VSTD::lgamma(__r0_ + 1.) -
-                          _VSTD::lgamma(__t_ - __r0_ + 1.) + __r0_ * _VSTD::log(__p_) +
-                          (__t_ - __r0_) * _VSTD::log(1 - __p_));
+        __pr_ = _VSTD::exp(__libcpp_lgamma(__t_ + 1.) -
+                           __libcpp_lgamma(__r0_ + 1.) -
+                           __libcpp_lgamma(__t_ - __r0_ + 1.) + __r0_ * _VSTD::log(__p_) +
+                           (__t_ - __r0_) * _VSTD::log(1 - __p_));
         __odds_ratio_ = __p_ / (1 - __p_);
     }
 }
@@ -5851,11 +5867,11 @@ public:
             _LIBCPP_INLINE_VISIBILITY
             param_type(_InputIterator __f, _InputIterator __l)
             : __p_(__f, __l) {__init();}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
         _LIBCPP_INLINE_VISIBILITY
         param_type(initializer_list<double> __wl)
             : __p_(__wl.begin(), __wl.end()) {__init();}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(size_t __nw, double __xmin, double __xmax,
                        _UnaryOperation __fw);
@@ -5898,11 +5914,11 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         discrete_distribution(_InputIterator __f, _InputIterator __l)
             : __p_(__f, __l) {}
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     discrete_distribution(initializer_list<double> __wl)
         : __p_(__wl) {}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
         discrete_distribution(size_t __nw, double __xmin, double __xmax,
@@ -6079,10 +6095,10 @@ public:
         template<class _InputIteratorB, class _InputIteratorW>
             param_type(_InputIteratorB __fB, _InputIteratorB __lB,
                        _InputIteratorW __fW);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(size_t __nw, result_type __xmin, result_type __xmax,
                        _UnaryOperation __fw);
@@ -6132,13 +6148,13 @@ public:
                                         _InputIteratorW __fW)
         : __p_(__fB, __lB, __fW) {}
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
         piecewise_constant_distribution(initializer_list<result_type> __bl,
                                         _UnaryOperation __fw)
         : __p_(__bl, __fw) {}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
@@ -6268,7 +6284,7 @@ piecewise_constant_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6293,7 +6309,7 @@ piecewise_constant_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6402,10 +6418,10 @@ public:
         template<class _InputIteratorB, class _InputIteratorW>
             param_type(_InputIteratorB __fB, _InputIteratorB __lB,
                        _InputIteratorW __fW);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
         template<class _UnaryOperation>
             param_type(size_t __nw, result_type __xmin, result_type __xmax,
                        _UnaryOperation __fw);
@@ -6455,13 +6471,13 @@ public:
                                       _InputIteratorW __fW)
         : __p_(__fB, __lB, __fW) {}
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
         piecewise_linear_distribution(initializer_list<result_type> __bl,
                                       _UnaryOperation __fw)
         : __p_(__bl, __fw) {}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
     template<class _UnaryOperation>
         _LIBCPP_INLINE_VISIBILITY
@@ -6595,7 +6611,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6620,7 +6636,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template<class _RealType>
 template<class _UnaryOperation>
@@ -6721,5 +6737,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_RANDOM

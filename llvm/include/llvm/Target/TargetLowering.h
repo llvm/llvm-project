@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetLowering.h - Target Lowering Info -----*- C++ -*-===//
+//===- llvm/Target/TargetLowering.h - Target Lowering Info ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,15 +23,17 @@
 #ifndef LLVM_TARGET_TARGETLOWERING_H
 #define LLVM_TARGET_TARGETLOWERING_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Attributes.h"
@@ -39,6 +41,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
@@ -65,9 +68,13 @@ namespace llvm {
 class BranchProbability;
 class CCState;
 class CCValAssign;
+class Constant;
 class FastISel;
 class FunctionLoweringInfo;
+class GlobalValue;
 class IntrinsicInst;
+struct KnownBits;
+class LLVMContext;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
@@ -76,6 +83,7 @@ class MachineLoop;
 class MachineRegisterInfo;
 class MCContext;
 class MCExpr;
+class Module;
 class TargetRegisterClass;
 class TargetLibraryInfo;
 class TargetRegisterInfo;
@@ -125,7 +133,7 @@ public:
 
   /// LegalizeKind holds the legalization kind that needs to happen to EVT
   /// in order to type-legalize it.
-  typedef std::pair<LegalizeTypeAction, EVT> LegalizeKind;
+  using LegalizeKind = std::pair<LegalizeTypeAction, EVT>;
 
   /// Enum that describes how the target represents true/false values.
   enum BooleanContent {
@@ -163,6 +171,35 @@ public:
                        // or custom.
   };
 
+  class ArgListEntry {
+  public:
+    Value *Val = nullptr;
+    SDValue Node = SDValue();
+    Type *Ty = nullptr;
+    bool IsSExt : 1;
+    bool IsZExt : 1;
+    bool IsInReg : 1;
+    bool IsSRet : 1;
+    bool IsNest : 1;
+    bool IsByVal : 1;
+    bool IsInAlloca : 1;
+    bool IsReturned : 1;
+    bool IsSwiftSelf : 1;
+    bool IsSwiftError : 1;
+    uint16_t Alignment = 0;
+
+    ArgListEntry()
+        : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
+          IsNest(false), IsByVal(false), IsInAlloca(false), IsReturned(false),
+          IsSwiftSelf(false), IsSwiftError(false) {}
+
+    void setAttributes(ImmutableCallSite *CS, unsigned ArgIdx);
+  };
+  using ArgListTy = std::vector<ArgListEntry>;
+
+  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
+                                     ArgListTy &Args) const {};
+
   static ISD::NodeType getExtendForContent(BooleanContent Content) {
     switch (Content) {
     case UndefinedBooleanContent:
@@ -180,8 +217,8 @@ public:
 
   /// NOTE: The TargetMachine owns TLOF.
   explicit TargetLoweringBase(const TargetMachine &TM);
-  TargetLoweringBase(const TargetLoweringBase&) = delete;
-  void operator=(const TargetLoweringBase&) = delete;
+  TargetLoweringBase(const TargetLoweringBase &) = delete;
+  TargetLoweringBase &operator=(const TargetLoweringBase &) = delete;
   virtual ~TargetLoweringBase() = default;
 
 protected:
@@ -198,6 +235,18 @@ public:
   /// FIXME: The default needs to be removed once all the code is updated.
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const {
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
+  }
+
+  /// Return the type for frame index, which is determined by
+  /// the alloca address space specified through the data layout.
+  MVT getFrameIndexTy(const DataLayout &DL) const {
+    return getPointerTy(DL, DL.getAllocaAddrSpace());
+  }
+
+  /// Return the type for operands of fence.
+  /// TODO: Let fence operands be of i32 type and remove this.
+  virtual MVT getFenceOperandTy(const DataLayout &DL) const {
+    return getPointerTy(DL);
   }
 
   /// EVT is not used in-tree, but is used by out-of-tree target.
@@ -254,9 +303,7 @@ public:
   /// several shifts, adds, and multiplies for this target.
   /// The definition of "cheaper" may depend on whether we're optimizing
   /// for speed or for size.
-  virtual bool isIntDivCheap(EVT VT, AttributeSet Attr) const {
-    return false;
-  }
+  virtual bool isIntDivCheap(EVT VT, AttributeList Attr) const { return false; }
 
   /// Return true if the target can handle a standalone remainder operation.
   virtual bool hasStandaloneRem(EVT VT) const {
@@ -363,6 +410,16 @@ public:
     return false;
   }
 
+  /// Should we merge stores after Legalization (generally
+  /// better quality) or before (simpler)
+  virtual bool mergeStoresAfterLegalization() const { return false; }
+
+  /// Returns if it's reasonable to merge stores to MemVT size.
+  virtual bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                                const SelectionDAG &DAG) const {
+    return true;
+  }
+
   /// \brief Return true if it is cheap to speculate a call to intrinsic cttz.
   virtual bool isCheapToSpeculateCttz() const {
     return false;
@@ -404,6 +461,24 @@ public:
   /// \endcode
   virtual bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const {
     return false;
+  }
+
+  /// Use bitwise logic to make pairs of compares more efficient. For example:
+  /// and (seteq A, B), (seteq C, D) --> seteq (or (xor A, B), (xor C, D)), 0
+  /// This should be true when it takes more than one instruction to lower
+  /// setcc (cmp+set on x86 scalar), when bitwise ops are faster than logic on
+  /// condition bits (crand on PowerPC), and/or when reducing cmp+br is a win.
+  virtual bool convertSetCCLogicToBitwiseLogic(EVT VT) const {
+    return false;
+  }
+
+  /// Return the preferred operand type if the target has a quick way to compare
+  /// integer values of the given size. Assume that any legal integer type can
+  /// be compared efficiently. Targets may override this to allow illegal wide
+  /// types to return a vector type if there is support to compare that type.
+  virtual MVT hasFastEqualityCompare(unsigned NumBits) const {
+    MVT VT = MVT::getIntegerVT(NumBits);
+    return isTypeLegal(VT) ? VT : MVT::INVALID_SIMPLE_VALUE_TYPE;
   }
 
   /// Return true if the target should transform:
@@ -613,6 +688,16 @@ public:
                                   unsigned &NumIntermediates,
                                   MVT &RegisterVT) const;
 
+  /// Certain targets such as MIPS require that some types such as vectors are
+  /// always broken down into scalars in some contexts. This occurs even if the
+  /// vector type is legal.
+  virtual unsigned getVectorTypeBreakdownForCallingConv(
+      LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+      unsigned &NumIntermediates, MVT &RegisterVT) const {
+    return getVectorTypeBreakdown(Context, VT, IntermediateVT, NumIntermediates,
+                                  RegisterVT);
+  }
+
   struct IntrinsicInfo {
     unsigned     opc = 0;          // target opcode
     EVT          memVT;            // memory VT
@@ -674,7 +759,7 @@ public:
     if (VT.isExtended()) return Expand;
     // If a target-specific SDNode requires legalization, require the target
     // to provide custom legalization for it.
-    if (Op > array_lengthof(OpActions[0])) return Custom;
+    if (Op >= array_lengthof(OpActions[0])) return Custom;
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 
@@ -711,6 +796,74 @@ public:
   /// decisions.
   bool isOperationCustom(unsigned Op, EVT VT) const {
     return (!isTypeLegal(VT) && getOperationAction(Op, VT) == Custom);
+  }
+
+  /// Return true if lowering to a jump table is allowed.
+  bool areJTsAllowed(const Function *Fn) const {
+    if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
+      return false;
+
+    return isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
+           isOperationLegalOrCustom(ISD::BRIND, MVT::Other);
+  }
+
+  /// Check whether the range [Low,High] fits in a machine word.
+  bool rangeFitsInWord(const APInt &Low, const APInt &High,
+                       const DataLayout &DL) const {
+    // FIXME: Using the pointer type doesn't seem ideal.
+    uint64_t BW = DL.getPointerSizeInBits();
+    uint64_t Range = (High - Low).getLimitedValue(UINT64_MAX - 1) + 1;
+    return Range <= BW;
+  }
+
+  /// Return true if lowering to a jump table is suitable for a set of case
+  /// clusters which may contain \p NumCases cases, \p Range range of values.
+  /// FIXME: This function check the maximum table size and density, but the
+  /// minimum size is not checked. It would be nice if the the minimum size is
+  /// also combined within this function. Currently, the minimum size check is
+  /// performed in findJumpTable() in SelectionDAGBuiler and
+  /// getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
+  bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
+                              uint64_t Range) const {
+    const bool OptForSize = SI->getParent()->getParent()->optForSize();
+    const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
+    const unsigned MaxJumpTableSize =
+        OptForSize || getMaximumJumpTableSize() == 0
+            ? UINT_MAX
+            : getMaximumJumpTableSize();
+    // Check whether a range of clusters is dense enough for a jump table.
+    if (Range <= MaxJumpTableSize &&
+        (NumCases * 100 >= Range * MinDensity)) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Return true if lowering to a bit test is suitable for a set of case
+  /// clusters which contains \p NumDests unique destinations, \p Low and
+  /// \p High as its lowest and highest case values, and expects \p NumCmps
+  /// case value comparisons. Check if the number of destinations, comparison
+  /// metric, and range are all suitable.
+  bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
+                             const APInt &Low, const APInt &High,
+                             const DataLayout &DL) const {
+    // FIXME: I don't think NumCmps is the correct metric: a single case and a
+    // range of cases both require only one branch to lower. Just looking at the
+    // number of clusters and destinations should be enough to decide whether to
+    // build bit tests.
+
+    // To lower a range with bit tests, the range must fit the bitwidth of a
+    // machine word.
+    if (!rangeFitsInWord(Low, High, DL))
+      return false;
+
+    // Decide whether it's profitable to lower this range with bit tests. Each
+    // destination requires a bit test and branch, and there is an overall range
+    // check branch. For a small number of clusters, separate comparisons might
+    // be cheaper, and for many destinations, splitting the range might be
+    // better.
+    return (NumDests == 1 && NumCmps >= 3) || (NumDests == 2 && NumCmps >= 5) ||
+           (NumDests == 3 && NumCmps >= 6);
   }
 
   /// Return true if the specified operation is illegal on this target or
@@ -953,6 +1106,33 @@ public:
     llvm_unreachable("Unsupported extended type!");
   }
 
+  /// Certain combinations of ABIs, Targets and features require that types
+  /// are legal for some operations and not for other operations.
+  /// For MIPS all vector types must be passed through the integer register set.
+  virtual MVT getRegisterTypeForCallingConv(MVT VT) const {
+    return getRegisterType(VT);
+  }
+
+  virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+                                            EVT VT) const {
+    return getRegisterType(Context, VT);
+  }
+
+  /// Certain targets require unusual breakdowns of certain types. For MIPS,
+  /// this occurs when a vector type is used, as vector are passed through the
+  /// integer register set.
+  virtual unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                                 EVT VT) const {
+    return getNumRegisters(Context, VT);
+  }
+
+  /// Certain targets have context senstive alignment requirements, where one
+  /// type has the alignment requirement of another type.
+  virtual unsigned getABIAlignmentForCallingConv(Type *ArgTy,
+                                                 DataLayout DL) const {
+    return DL.getABITypeAlignment(ArgTy);
+  }
+
   /// If true, then instruction selection should seek to shrink the FP constant
   /// of the specified type to a smaller type in order to save space and / or
   /// reduce runtime.
@@ -1009,6 +1189,16 @@ public:
   /// return the limit for functions that have OptSize attribute.
   unsigned getMaxStoresPerMemcpy(bool OptSize) const {
     return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
+  }
+
+  /// Get maximum # of load operations permitted for memcmp
+  ///
+  /// This function returns the maximum number of load operations permitted
+  /// to replace a call to memcmp. The value is set by the target at the
+  /// performance threshold for such a replacement. If OptSize is true,
+  /// return the limit for functions that have OptSize attribute.
+  unsigned getMaxExpandSizeMemcmp(bool OptSize) const {
+    return OptSize ? MaxLoadsPerMemcmpOptSize : MaxLoadsPerMemcmp;
   }
 
   /// \brief Get maximum # of store operations permitted for llvm.memmove
@@ -1086,6 +1276,9 @@ public:
 
   /// Return lower limit for number of blocks in a jump table.
   unsigned getMinimumJumpTableEntries() const;
+
+  /// Return lower limit of the density in a jump table.
+  unsigned getMinimumJumpTableDensity(bool OptForSize) const;
 
   /// Return upper limit for number of entries in a jump table.
   /// Zero if no limit.
@@ -1182,6 +1375,12 @@ public:
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const;
 
+  /// Returns the name of the symbol used to emit stack probes or the empty
+  /// string if not applicable.
+  virtual StringRef getStackProbeSymbolName(MachineFunction &MF) const {
+    return "";
+  }
+
   /// Returns true if a cast between SrcAS and DestAS is a noop.
   virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
     return false;
@@ -1263,7 +1462,10 @@ public:
   /// It is called by AtomicExpandPass before expanding an
   ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
   ///   if shouldInsertFencesForAtomic returns true.
-  /// RMW and CmpXchg set both IsStore and IsLoad to true.
+  ///
+  /// Inst is the original atomic instruction, prior to other expansions that
+  /// may be performed.
+  ///
   /// This function should either return a nullptr, or a pointer to an IR-level
   ///   Instruction*. Even complex fence sequences can be represented by a
   ///   single Instruction* through an intrinsic to be lowered later.
@@ -1289,18 +1491,17 @@ public:
   ///  seq_cst. But if they are lowered to monotonic accesses, no amount of
   ///  IR-level fences can prevent it.
   /// @{
-  virtual Instruction *emitLeadingFence(IRBuilder<> &Builder,
-                                        AtomicOrdering Ord, bool IsStore,
-                                        bool IsLoad) const {
-    if (isReleaseOrStronger(Ord) && IsStore)
+  virtual Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+                                        AtomicOrdering Ord) const {
+    if (isReleaseOrStronger(Ord) && Inst->hasAtomicStore())
       return Builder.CreateFence(Ord);
     else
       return nullptr;
   }
 
   virtual Instruction *emitTrailingFence(IRBuilder<> &Builder,
-                                         AtomicOrdering Ord, bool IsStore,
-                                         bool IsLoad) const {
+                                         Instruction *Inst,
+                                         AtomicOrdering Ord) const {
     if (isAcquireOrStronger(Ord))
       return Builder.CreateFence(Ord);
     else
@@ -1386,6 +1587,13 @@ public:
     LegalizeTypeAction Action = getTypeAction(Context, VT);
     return Action != TypeExpandInteger && Action != TypeExpandFloat &&
       Action != TypeSplitVector;
+  }
+
+  /// Return true if a select of constants (select Cond, C1, C2) should be
+  /// transformed into simple math ops with the condition value. For example:
+  /// select Cond, C1, C1-1 --> add (zext Cond), C1-1
+  virtual bool convertSelectOfConstantsToMath() const {
+    return false;
   }
 
   //===--------------------------------------------------------------------===//
@@ -1647,10 +1855,9 @@ public:
   /// possible to be done in the address mode for that operand. This hook lets
   /// targets also pass back when this should be done on intrinsics which
   /// load/store.
-  virtual bool GetAddrModeArguments(IntrinsicInst * /*I*/,
+  virtual bool getAddrModeArguments(IntrinsicInst * /*I*/,
                                     SmallVectorImpl<Value*> &/*Ops*/,
-                                    Type *&/*AccessTy*/,
-                                    unsigned AddrSpace = 0) const {
+                                    Type *&/*AccessTy*/) const {
     return false;
   }
 
@@ -1723,6 +1930,38 @@ public:
     return false;
   }
 
+  /// Returns true if the opcode is a commutative binary operation.
+  virtual bool isCommutativeBinOp(unsigned Opcode) const {
+    // FIXME: This should get its info from the td file.
+    switch (Opcode) {
+    case ISD::ADD:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::UMIN:
+    case ISD::UMAX:
+    case ISD::MUL:
+    case ISD::MULHU:
+    case ISD::MULHS:
+    case ISD::SMUL_LOHI:
+    case ISD::UMUL_LOHI:
+    case ISD::FADD:
+    case ISD::FMUL:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::SADDO:
+    case ISD::UADDO:
+    case ISD::ADDC:
+    case ISD::ADDE:
+    case ISD::FMINNUM:
+    case ISD::FMAXNUM:
+    case ISD::FMINNAN:
+    case ISD::FMAXNAN:
+      return true;
+    default: return false;
+    }
+  }
+
   /// Return true if it's free to truncate a value of type FromTy to type
   /// ToTy. e.g. On x86 it's free to truncate a i32 value in register EAX to i16
   /// by referencing its sub-register AX.
@@ -1773,6 +2012,35 @@ public:
     return isExtFreeImpl(I);
   }
 
+  /// Return true if \p Load and \p Ext can form an ExtLoad.
+  /// For example, in AArch64
+  ///   %L = load i8, i8* %ptr
+  ///   %E = zext i8 %L to i32
+  /// can be lowered into one load instruction
+  ///   ldrb w0, [x0]
+  bool isExtLoad(const LoadInst *Load, const Instruction *Ext,
+                 const DataLayout &DL) const {
+    EVT VT = getValueType(DL, Ext->getType());
+    EVT LoadVT = getValueType(DL, Load->getType());
+
+    // If the load has other users and the truncate is not free, the ext
+    // probably isn't free.
+    if (!Load->hasOneUse() && (isTypeLegal(LoadVT) || !isTypeLegal(VT)) &&
+        !isTruncateFree(Ext->getType(), Load->getType()))
+      return false;
+
+    // Check whether the target supports casts folded into loads.
+    unsigned LType;
+    if (isa<ZExtInst>(Ext))
+      LType = ISD::ZEXTLOAD;
+    else {
+      assert(isa<SExtInst>(Ext) && "Unexpected ext type!");
+      LType = ISD::SEXTLOAD;
+    }
+
+    return isLoadExtLegal(LType, VT, LoadVT);
+  }
+
   /// Return true if any actual instruction that defines a value of type FromTy
   /// implicitly zero-extends the value to ToTy in the result register.
   ///
@@ -1813,7 +2081,7 @@ public:
   /// this information should not be provided because it will generate more
   /// loads.
   virtual bool hasPairedLoad(EVT /*LoadedType*/,
-                             unsigned & /*RequiredAligment*/) const {
+                             unsigned & /*RequiredAlignment*/) const {
     return false;
   }
 
@@ -2187,6 +2455,8 @@ protected:
   /// Maximum number of store operations that may be substituted for a call to
   /// memcpy, used for functions with OptSize attribute.
   unsigned MaxStoresPerMemcpyOptSize;
+  unsigned MaxLoadsPerMemcmp;
+  unsigned MaxLoadsPerMemcmpOptSize;
 
   /// \brief Specify maximum bytes of store instructions per memmove call.
   ///
@@ -2213,7 +2483,8 @@ protected:
 
   /// Return true if the value types that can be represented by the specified
   /// register class are all legal.
-  bool isLegalRC(const TargetRegisterClass *RC) const;
+  bool isLegalRC(const TargetRegisterInfo &TRI,
+                 const TargetRegisterClass &RC) const;
 
   /// Replace/modify any TargetFrameIndex operands with a targte-dependent
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
@@ -2230,8 +2501,8 @@ class TargetLowering : public TargetLoweringBase {
 public:
   struct DAGCombinerInfo;
 
-  TargetLowering(const TargetLowering&) = delete;
-  void operator=(const TargetLowering&) = delete;
+  TargetLowering(const TargetLowering &) = delete;
+  TargetLowering &operator=(const TargetLowering &) = delete;
 
   /// NOTE: The TargetMachine owns TLOF.
   explicit TargetLowering(const TargetMachine &TM);
@@ -2373,29 +2644,38 @@ public:
   /// expression and return a mask of KnownOne and KnownZero bits for the
   /// expression (used to simplify the caller).  The KnownZero/One bits may only
   /// be accurate for those bits in the DemandedMask.
-  /// \p AssumeSingleUse When this paramater is true, this function will
+  /// \p AssumeSingleUse When this parameter is true, this function will
   ///    attempt to simplify \p Op even if there are multiple uses.
   ///    Callers are responsible for correctly updating the DAG based on the
   ///    results of this function, because simply replacing replacing TLO.Old
-  ///    with TLO.New will be incorrect when this paramater is true and TLO.Old
+  ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
   ///    has multiple uses.
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
-                            APInt &KnownZero, APInt &KnownOne,
+                            KnownBits &Known,
                             TargetLoweringOpt &TLO,
                             unsigned Depth = 0,
                             bool AssumeSingleUse = false) const;
 
+  /// Helper wrapper around SimplifyDemandedBits
+  bool SimplifyDemandedBits(SDValue Op, APInt &DemandedMask,
+                            DAGCombinerInfo &DCI) const;
+
   /// Determine which of the bits specified in Mask are known to be either zero
-  /// or one and return them in the KnownZero/KnownOne bitsets.
+  /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
+  /// argument allows us to only collect the known bits that are shared by the
+  /// requested vector elements.
   virtual void computeKnownBitsForTargetNode(const SDValue Op,
-                                             APInt &KnownZero,
-                                             APInt &KnownOne,
+                                             KnownBits &Known,
+                                             const APInt &DemandedElts,
                                              const SelectionDAG &DAG,
                                              unsigned Depth = 0) const;
 
   /// This method can be implemented by targets that want to expose additional
-  /// information about sign bits to the DAG Combiner.
+  /// information about sign bits to the DAG Combiner. The DemandedElts
+  /// argument allows us to only collect the minimum sign bits that are shared
+  /// by the requested vector elements.
   virtual unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                                   const APInt &DemandedElts,
                                                    const SelectionDAG &DAG,
                                                    unsigned Depth = 0) const;
 
@@ -2472,8 +2752,20 @@ public:
   //  This transformation may not be desirable if it disrupts a particularly
   //  auspicious target-specific tree (e.g. bitfield extraction in AArch64).
   //  By default, it returns true.
-  virtual bool isDesirableToCommuteWithShift(const SDNode *N /*Op*/) const {
+  virtual bool isDesirableToCommuteWithShift(const SDNode *N) const {
     return true;
+  }
+
+  // Return true if it is profitable to combine a BUILD_VECTOR to a TRUNCATE.
+  // Example of such a combine:
+  // v4i32 build_vector((extract_elt V, 0),
+  //                    (extract_elt V, 2),
+  //                    (extract_elt V, 4),
+  //                    (extract_elt V, 6))
+  //  -->
+  // v4i32 truncate (bitcast V to v4i64)
+  virtual bool isDesirableToCombineBuildVectorToTruncate() const {
+    return false;
   }
 
   /// Return true if the target has native support for the specified value type
@@ -2538,7 +2830,6 @@ public:
   /// described by the Ins array, into the specified DAG. The implementation
   /// should fill in the InVals array with legal-type argument values, and
   /// return the resulting token chain value.
-  ///
   virtual SDValue LowerFormalArguments(
       SDValue /*Chain*/, CallingConv::ID /*CallConv*/, bool /*isVarArg*/,
       const SmallVectorImpl<ISD::InputArg> & /*Ins*/, const SDLoc & /*dl*/,
@@ -2546,37 +2837,13 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
-  struct ArgListEntry {
-    SDValue Node;
-    Type* Ty;
-    bool isSExt     : 1;
-    bool isZExt     : 1;
-    bool isInReg    : 1;
-    bool isSRet     : 1;
-    bool isNest     : 1;
-    bool isByVal    : 1;
-    bool isInAlloca : 1;
-    bool isReturned : 1;
-    bool isSwiftSelf : 1;
-    bool isSwiftError : 1;
-    uint16_t Alignment;
-
-    ArgListEntry() : isSExt(false), isZExt(false), isInReg(false),
-      isSRet(false), isNest(false), isByVal(false), isInAlloca(false),
-      isReturned(false), isSwiftSelf(false), isSwiftError(false),
-      Alignment(0) {}
-
-    void setAttributes(ImmutableCallSite *CS, unsigned AttrIdx);
-  };
-  typedef std::vector<ArgListEntry> ArgListTy;
-
   /// This structure contains all information that is necessary for lowering
   /// calls. It is passed to TLI::LowerCallTo when the SelectionDAG builder
   /// needs to lower a call, and targets will see this struct in their LowerCall
   /// implementation.
   struct CallLoweringInfo {
     SDValue Chain;
-    Type *RetTy;
+    Type *RetTy = nullptr;
     bool RetSExt           : 1;
     bool RetZExt           : 1;
     bool IsVarArg          : 1;
@@ -2584,30 +2851,31 @@ public:
     bool DoesNotReturn     : 1;
     bool IsReturnValueUsed : 1;
     bool IsConvergent      : 1;
+    bool IsPatchPoint      : 1;
 
     // IsTailCall should be modified by implementations of
     // TargetLowering::LowerCall that perform tail call conversions.
-    bool IsTailCall;
+    bool IsTailCall = false;
 
-    unsigned NumFixedArgs;
-    CallingConv::ID CallConv;
+    // Is Call lowering done post SelectionDAG type legalization.
+    bool IsPostTypeLegalization = false;
+
+    unsigned NumFixedArgs = -1;
+    CallingConv::ID CallConv = CallingConv::C;
     SDValue Callee;
     ArgListTy Args;
     SelectionDAG &DAG;
     SDLoc DL;
-    ImmutableCallSite *CS;
-    bool IsPatchPoint;
+    ImmutableCallSite *CS = nullptr;
     SmallVector<ISD::OutputArg, 32> Outs;
     SmallVector<SDValue, 32> OutVals;
     SmallVector<ISD::InputArg, 32> Ins;
     SmallVector<SDValue, 4> InVals;
 
     CallLoweringInfo(SelectionDAG &DAG)
-        : RetTy(nullptr), RetSExt(false), RetZExt(false), IsVarArg(false),
-          IsInReg(false), DoesNotReturn(false), IsReturnValueUsed(true),
-          IsConvergent(false), IsTailCall(false), NumFixedArgs(-1),
-          CallConv(CallingConv::C), DAG(DAG), CS(nullptr), IsPatchPoint(false) {
-    }
+        : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
+          DoesNotReturn(false), IsReturnValueUsed(true), IsConvergent(false),
+          IsPatchPoint(false), DAG(DAG) {}
 
     CallLoweringInfo &setDebugLoc(const SDLoc &dl) {
       DL = dl;
@@ -2616,6 +2884,20 @@ public:
 
     CallLoweringInfo &setChain(SDValue InChain) {
       Chain = InChain;
+      return *this;
+    }
+
+    // setCallee with target/module-specific attributes
+    CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
+                                   SDValue Target, ArgListTy &&ArgsList) {
+      RetTy = ResultType;
+      Callee = Target;
+      CallConv = CC;
+      NumFixedArgs = Args.size();
+      Args = std::move(ArgsList);
+
+      DAG.getTargetLoweringInfo().markLibCallAttributes(
+          &(DAG.getMachineFunction()), CC, Args);
       return *this;
     }
 
@@ -2634,15 +2916,15 @@ public:
                                 ImmutableCallSite &Call) {
       RetTy = ResultType;
 
-      IsInReg = Call.paramHasAttr(0, Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
           Call.doesNotReturn() ||
           (!Call.isInvoke() &&
            isa<UnreachableInst>(Call.getInstruction()->getNextNode()));
       IsVarArg = FTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
-      RetSExt = Call.paramHasAttr(0, Attribute::SExt);
-      RetZExt = Call.paramHasAttr(0, Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
       Callee = Target;
 
@@ -2697,6 +2979,11 @@ public:
 
     CallLoweringInfo &setIsPatchPoint(bool Value = true) {
       IsPatchPoint = Value;
+      return *this;
+    }
+
+    CallLoweringInfo &setIsPostTypeLegalization(bool Value=true) {
+      IsPostTypeLegalization = Value;
       return *this;
     }
 
@@ -2761,7 +3048,7 @@ public:
   /// Return true if the target may be able emit the call instruction as a tail
   /// call. This is used by optimization passes to determine if it's profitable
   /// to duplicate return instructions to enable tailcall optimization.
-  virtual bool mayBeEmittedAsTailCall(CallInst *) const {
+  virtual bool mayBeEmittedAsTailCall(const CallInst *) const {
     return false;
   }
 
@@ -2818,6 +3105,13 @@ public:
     return Chain;
   }
 
+  /// This callback is used to inspect load/store instructions and add
+  /// target-specific MachineMemOperand flags to them.  The default
+  /// implementation does nothing.
+  virtual MachineMemOperand::Flags getMMOFlags(const Instruction &I) const {
+    return MachineMemOperand::MONone;
+  }
+
   /// This callback is invoked by the type legalizer to legalize nodes with an
   /// illegal operand type but legal result types.  It replaces the
   /// LowerOperation callback in the type Legalizer.  The reason we can not do
@@ -2867,7 +3161,6 @@ public:
     return nullptr;
   }
 
-
   bool verifyReturnAddressArgumentIsConstant(SDValue Op,
                                              SelectionDAG &DAG) const;
 
@@ -2916,15 +3209,19 @@ public:
 
     /// Information about the constraint code, e.g. Register, RegisterClass,
     /// Memory, Other, Unknown.
-    TargetLowering::ConstraintType ConstraintType;
+    TargetLowering::ConstraintType ConstraintType = TargetLowering::C_Unknown;
 
     /// If this is the result output operand or a clobber, this is null,
     /// otherwise it is the incoming operand to the CallInst.  This gets
     /// modified as the asm is processed.
-    Value *CallOperandVal;
+    Value *CallOperandVal = nullptr;
 
     /// The ValueType for the operand value.
-    MVT ConstraintVT;
+    MVT ConstraintVT = MVT::Other;
+
+    /// Copy constructor for copying from a ConstraintInfo.
+    AsmOperandInfo(InlineAsm::ConstraintInfo Info)
+        : InlineAsm::ConstraintInfo(std::move(Info)) {}
 
     /// Return true of this is an input operand that is a matching constraint
     /// like "4".
@@ -2933,15 +3230,9 @@ public:
     /// If this is an input matching constraint, this method returns the output
     /// operand it matches.
     unsigned getMatchedOperand() const;
-
-    /// Copy constructor for copying from a ConstraintInfo.
-    AsmOperandInfo(InlineAsm::ConstraintInfo Info)
-        : InlineAsm::ConstraintInfo(std::move(Info)),
-          ConstraintType(TargetLowering::C_Unknown), CallOperandVal(nullptr),
-          ConstraintVT(MVT::Other) {}
   };
 
-  typedef std::vector<AsmOperandInfo> AsmOperandInfoVector;
+  using AsmOperandInfoVector = std::vector<AsmOperandInfo>;
 
   /// Split up the constraint string from the inline assembly value into the
   /// specific constraints and their prefixes, and also tie in the associated
@@ -3193,7 +3484,7 @@ private:
 /// Given an LLVM IR type and return type attributes, compute the return value
 /// EVTs and flags, and optionally also the offsets, if the return value is
 /// being lowered to memory.
-void GetReturnInfo(Type *ReturnType, AttributeSet attr,
+void GetReturnInfo(Type *ReturnType, AttributeList attr,
                    SmallVectorImpl<ISD::OutputArg> &Outs,
                    const TargetLowering &TLI, const DataLayout &DL);
 

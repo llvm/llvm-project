@@ -639,7 +639,7 @@ static std::unique_ptr<PrototypeAST> ParsePrototype() {
     // Read the precedence if present.
     if (CurTok == tok_number) {
       if (NumVal < 1 || NumVal > 100)
-        return LogErrorP("Invalid precedecnce: must be 1..100");
+        return LogErrorP("Invalid precedence: must be 1..100");
       BinaryPrecedence = (unsigned)NumVal;
       getNextToken();
     }
@@ -840,7 +840,7 @@ Value *IfExprAST::codegen() {
   if (!CondV)
     return nullptr;
 
-  // Convert condition to a bool by comparing equal to 0.0.
+  // Convert condition to a bool by comparing non-equal to 0.0.
   CondV = Builder.CreateFCmpONE(
       CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
 
@@ -963,7 +963,7 @@ Value *ForExprAST::codegen() {
   Value *NextVar = Builder.CreateFAdd(CurVar, StepVal, "nextvar");
   Builder.CreateStore(NextVar, Alloca);
 
-  // Convert condition to a bool by comparing equal to 0.0.
+  // Convert condition to a bool by comparing non-equal to 0.0.
   EndCond = Builder.CreateFCmpONE(
       EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
 
@@ -1099,7 +1099,7 @@ Function *FunctionAST::codegen() {
   TheFunction->eraseFromParent();
 
   if (P.isBinaryOp())
-    BinopPrecedence.erase(Proto->getOperatorName());
+    BinopPrecedence.erase(P.getOperatorName());
   return nullptr;
 }
 
@@ -1115,6 +1115,8 @@ static void InitializeModuleAndPassManager() {
   // Create a new pass manager attached to it.
   TheFPM = llvm::make_unique<legacy::FunctionPassManager>(TheModule.get());
 
+  // Promote allocas to registers.
+  TheFPM->add(createPromoteMemoryToRegisterPass());
   // Do simple "peephole" optimizations and bit-twiddling optzns.
   TheFPM->add(createInstructionCombiningPass());
   // Reassociate expressions.
@@ -1131,7 +1133,8 @@ static void HandleDefinition() {
   if (auto FnAST = ParseDefinition()) {
     if (auto *FnIR = FnAST->codegen()) {
       fprintf(stderr, "Read function definition:");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
       TheJIT->addModule(std::move(TheModule));
       InitializeModuleAndPassManager();
     }
@@ -1145,7 +1148,8 @@ static void HandleExtern() {
   if (auto ProtoAST = ParseExtern()) {
     if (auto *FnIR = ProtoAST->codegen()) {
       fprintf(stderr, "Read extern: ");
-      FnIR->dump();
+      FnIR->print(errs());
+      fprintf(stderr, "\n");
       FunctionProtos[ProtoAST->getName()] = std::move(ProtoAST);
     }
   } else {
@@ -1169,7 +1173,7 @@ static void HandleTopLevelExpression() {
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      double (*FP)() = (double (*)())(intptr_t)ExprSymbol.getAddress();
+      double (*FP)() = (double (*)())(intptr_t)cantFail(ExprSymbol.getAddress());
       fprintf(stderr, "Evaluated to %f\n", FP());
 
       // Delete the anonymous expression module from the JIT.
@@ -1208,14 +1212,20 @@ static void MainLoop() {
 // "Library" functions that can be "extern'd" from user code.
 //===----------------------------------------------------------------------===//
 
+#ifdef LLVM_ON_WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
 /// putchard - putchar that takes a double and returns 0.
-extern "C" double putchard(double X) {
+extern "C" DLLEXPORT double putchard(double X) {
   fputc((char)X, stderr);
   return 0;
 }
 
 /// printd - printf that takes a double prints it as "%f\n", returning 0.
-extern "C" double printd(double X) {
+extern "C" DLLEXPORT double printd(double X) {
   fprintf(stderr, "%f\n", X);
   return 0;
 }

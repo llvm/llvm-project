@@ -509,6 +509,28 @@ def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_missing_argument : Warning<
   "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+// #pragma module
+def err_pp_expected_module_name : Error<
+  "expected %select{identifier after '.' in |}0module name">;
+def err_pp_module_begin_wrong_module : Error<
+  "must specify '-fmodule-name=%0' to enter %select{|submodule of }1"
+  "this module%select{ (current module is %3)|}2">;
+def err_pp_module_begin_no_module_map : Error<
+  "no module map available for module %0">;
+def err_pp_module_begin_no_submodule : Error<
+  "submodule %0.%1 not declared in module map">;
+def err_pp_module_begin_without_module_end : Error<
+  "no matching '#pragma clang module end' for this "
+  "'#pragma clang module begin'">;
+def err_pp_module_end_without_module_begin : Error<
+  "no matching '#pragma clang module begin' for this "
+  "'#pragma clang module end'">;
+def note_pp_module_begin_here : Note<
+  "entering module '%0' due to this pragma">;
+def err_pp_module_build_pth : Error<
+  "'#pragma clang module build' not supported in pretokenized header">;
+def err_pp_module_build_missing_end : Error<
+  "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<
@@ -595,8 +617,6 @@ def err_mmap_expected_mmap_file : Error<"expected a module map file name">;
 def err_mmap_module_redefinition : Error<
   "redefinition of module '%0'">;
 def note_mmap_prev_definition : Note<"previously defined here">;
-def err_mmap_umbrella_dir_not_found : Error<
-  "umbrella directory '%0' not found">;
 def err_mmap_umbrella_clash : Error<
   "umbrella for module '%0' already covers this directory">;
 def err_mmap_module_id : Error<
@@ -648,6 +668,12 @@ def warn_mmap_mismatched_top_level_private : Warning<
   InGroup<PrivateModule>;
 def note_mmap_rename_top_level_private_as_submodule : Note<
   "make '%0' a submodule of '%1' to ensure it can be found by name">;
+def err_mmap_duplicate_header_attribute : Error<
+  "header attribute '%0' specified multiple times">;
+def err_mmap_invalid_header_attribute_value : Error<
+  "expected integer literal as value for header attribute '%0'">;
+def err_mmap_expected_header_attribute : Error<
+  "expected a header attribute name ('size' or 'mtime')">;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
@@ -656,6 +682,9 @@ def note_implicit_top_level_module_import_here : Note<
   "submodule of top-level module '%0' implicitly imported here">;
 def warn_uncovered_module_header : Warning<
   "umbrella header for module '%0' does not include header '%1'">, 
+  InGroup<IncompleteUmbrella>;
+def warn_mmap_umbrella_dir_not_found : Warning<
+  "umbrella directory '%0' not found">,
   InGroup<IncompleteUmbrella>;
 def err_expected_id_building_module : Error<
   "expected a module name in '__building_module' expression">;
@@ -679,6 +708,13 @@ def warn_header_guard : Warning<
   InGroup<DiagGroup<"header-guard">>;
 def note_header_guard : Note<
   "%0 is defined here; did you mean %1?">;
+
+def warn_defined_in_object_type_macro : Warning<
+  "macro expansion producing 'defined' has undefined behavior">,
+  InGroup<ExpansionToDefined>;
+def warn_defined_in_function_type_macro : Extension<
+  "macro expansion producing 'defined' has undefined behavior">,
+  InGroup<ExpansionToDefined>;
 
 let CategoryName = "Nullability Issue" in {
 

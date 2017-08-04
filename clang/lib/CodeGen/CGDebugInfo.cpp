@@ -528,12 +528,15 @@ void CGDebugInfo::CreateCompileUnit() {
   // Create new compile unit.
   // FIXME - Eliminate TheCU.
   TheCU = DBuilder.createCompileUnit(
-      LangTag, DBuilder.createFile(remapDIPath(MainFileName),
-                                   remapDIPath(getCurrentDirname()), CSKind,
-                                   Checksum),
+      LangTag,
+      DBuilder.createFile(remapDIPath(MainFileName),
+                          remapDIPath(getCurrentDirname()), CSKind, Checksum),
       Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
-      CGM.getCodeGenOpts().SplitDwarfFile, EmissionKind, 0 /* DWOid */,
-      CGM.getCodeGenOpts().SplitDwarfInlining);
+      CGM.getCodeGenOpts().EnableSplitDwarf
+          ? ""
+          : CGM.getCodeGenOpts().SplitDwarfFile,
+      EmissionKind, 0 /* DWOid */, CGM.getCodeGenOpts().SplitDwarfInlining,
+      CGM.getCodeGenOpts().DebugInfoForProfiling);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
@@ -605,8 +608,6 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return getOrCreateStructPtrType("opencl_clk_event_t", OCLClkEventDITy);
   case BuiltinType::OCLQueue:
     return getOrCreateStructPtrType("opencl_queue_t", OCLQueueDITy);
-  case BuiltinType::OCLNDRange:
-    return getOrCreateStructPtrType("opencl_ndrange_t", OCLNDRangeDITy);
   case BuiltinType::OCLReserveID:
     return getOrCreateStructPtrType("opencl_reserve_id_t", OCLReserveIDDITy);
 
@@ -955,7 +956,7 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_BORLAND_pascal;
 
   // FIXME: Create new DW_CC_ codes for these calling conventions.
-  case CC_X86_64Win64:
+  case CC_Win64:
   case CC_X86_64SysV:
   case CC_AAPCS:
   case CC_AAPCS_VFP:
@@ -1040,7 +1041,13 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
   assert(SizeInBits > 0 && "found named 0-width bitfield");
   uint64_t StorageOffsetInBits =
       CGM.getContext().toBits(BitFieldInfo.StorageOffset);
-  uint64_t OffsetInBits = StorageOffsetInBits + BitFieldInfo.Offset;
+  uint64_t Offset = BitFieldInfo.Offset;
+  // The bit offsets for big endian machines are reversed for big
+  // endian target, compensate for that as the DIDerivedType requires
+  // un-reversed offsets.
+  if (CGM.getDataLayout().isBigEndian())
+    Offset = BitFieldInfo.StorageSize - BitFieldInfo.Size - Offset;
+  uint64_t OffsetInBits = StorageOffsetInBits + Offset;
   llvm::DINode::DIFlags Flags = getAccessFlag(BitFieldDecl->getAccess(), RD);
   return DBuilder.createBitFieldMemberType(
       RecordTy, Name, File, Line, SizeInBits, OffsetInBits, StorageOffsetInBits,
@@ -1749,26 +1756,13 @@ void CGDebugInfo::completeType(const RecordDecl *RD) {
     completeRequiredType(RD);
 }
 
-void CGDebugInfo::completeClassData(const RecordDecl *RD) {
-  if (DebugKind <= codegenoptions::DebugLineTablesOnly)
-    return;
-  QualType Ty = CGM.getContext().getRecordType(RD);
-  void *TyPtr = Ty.getAsOpaquePtr();
-  auto I = TypeCache.find(TyPtr);
-  if (I != TypeCache.end() && !cast<llvm::DIType>(I->second)->isForwardDecl())
-    return;
-  llvm::DIType *Res = CreateTypeDefinition(Ty->castAs<RecordType>());
-  assert(!Res->isForwardDecl());
-  TypeCache[TyPtr].reset(Res);
-}
-
-static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
-                                        CXXRecordDecl::method_iterator End) {
-  for (CXXMethodDecl *MD : llvm::make_range(I, End))
-    if (FunctionDecl *Tmpl = MD->getInstantiatedFromMemberFunction())
-      if (!Tmpl->isImplicit() && Tmpl->isThisDeclarationADefinition() &&
-          !MD->getMemberSpecializationInfo()->isExplicitSpecialization())
-        return true;
+/// Return true if the class or any of its methods are marked dllimport.
+static bool isClassOrMethodDLLImport(const CXXRecordDecl *RD) {
+  if (RD->hasAttr<DLLImportAttr>())
+    return true;
+  for (const CXXMethodDecl *MD : RD->methods())
+    if (MD->hasAttr<DLLImportAttr>())
+      return true;
   return false;
 }
 
@@ -1795,13 +1789,40 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
   return true;
 }
 
-/// Return true if the class or any of its methods are marked dllimport.
-static bool isClassOrMethodDLLImport(const CXXRecordDecl *RD) {
-  if (RD->hasAttr<DLLImportAttr>())
-    return true;
-  for (const CXXMethodDecl *MD : RD->methods())
-    if (MD->hasAttr<DLLImportAttr>())
-      return true;
+void CGDebugInfo::completeClassData(const RecordDecl *RD) {
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->isDynamicClass() &&
+        CGM.getVTableLinkage(CXXRD) ==
+            llvm::GlobalValue::AvailableExternallyLinkage &&
+        !isClassOrMethodDLLImport(CXXRD))
+      return;
+
+  if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
+    return;
+
+  completeClass(RD);
+}
+
+void CGDebugInfo::completeClass(const RecordDecl *RD) {
+  if (DebugKind <= codegenoptions::DebugLineTablesOnly)
+    return;
+  QualType Ty = CGM.getContext().getRecordType(RD);
+  void *TyPtr = Ty.getAsOpaquePtr();
+  auto I = TypeCache.find(TyPtr);
+  if (I != TypeCache.end() && !cast<llvm::DIType>(I->second)->isForwardDecl())
+    return;
+  llvm::DIType *Res = CreateTypeDefinition(Ty->castAs<RecordType>());
+  assert(!Res->isForwardDecl());
+  TypeCache[TyPtr].reset(Res);
+}
+
+static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
+                                        CXXRecordDecl::method_iterator End) {
+  for (CXXMethodDecl *MD : llvm::make_range(I, End))
+    if (FunctionDecl *Tmpl = MD->getInstantiatedFromMemberFunction())
+      if (!Tmpl->isImplicit() && Tmpl->isThisDeclarationADefinition() &&
+          !MD->getMemberSpecializationInfo()->isExplicitSpecialization())
+        return true;
   return false;
 }
 
@@ -1810,6 +1831,10 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  const LangOptions &LangOpts) {
   if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
     return true;
+
+  if (auto *ES = RD->getASTContext().getExternalSource())
+    if (ES->hasExternalDefinitions(RD) == ExternalASTSource::EK_Always)
+      return true;
 
   if (DebugKind > codegenoptions::LimitedDebugInfo)
     return false;
@@ -2447,6 +2472,21 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
                                         FullName);
 }
 
+llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
+                                        unsigned MType, SourceLocation LineLoc,
+                                        StringRef Name, StringRef Value) {
+  unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
+  return DBuilder.createMacro(Parent, Line, MType, Name, Value);
+}
+
+llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
+                                                    SourceLocation LineLoc,
+                                                    SourceLocation FileLoc) {
+  llvm::DIFile *FName = getOrCreateFile(FileLoc);
+  unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
+  return DBuilder.createTempMacroFile(Parent, Line, FName);
+}
+
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
   Qualifiers Quals;
   do {
@@ -2490,8 +2530,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::SubstTemplateTypeParm:
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
-    case Type::Auto: {
-      QualType DT = cast<AutoType>(T)->getDeducedType();
+    case Type::Auto:
+    case Type::DeducedTemplateSpecialization: {
+      QualType DT = cast<DeducedType>(T)->getDeducedType();
       assert(!DT.isNull() && "Undeduced types shouldn't reach here.");
       T = DT;
       break;
@@ -2527,11 +2568,17 @@ void CGDebugInfo::completeTemplateDefinition(
     const ClassTemplateSpecializationDecl &SD) {
   if (DebugKind <= codegenoptions::DebugLineTablesOnly)
     return;
+  completeUnusedClass(SD);
+}
 
-  completeClassData(&SD);
+void CGDebugInfo::completeUnusedClass(const CXXRecordDecl &D) {
+  if (DebugKind <= codegenoptions::DebugLineTablesOnly)
+    return;
+
+  completeClassData(&D);
   // In case this type has no member function definitions being emitted, ensure
   // it is retained
-  RetainedTypes.push_back(CGM.getContext().getRecordType(&SD).getAsOpaquePtr());
+  RetainedTypes.push_back(CGM.getContext().getRecordType(&D).getAsOpaquePtr());
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {
@@ -2576,7 +2623,7 @@ llvm::DIModule *CGDebugInfo::getParentModuleOrNull(const Decl *D) {
     // best to make this behavior a command line or debugger tuning
     // option.
     FullSourceLoc Loc(D->getLocation(), CGM.getContext().getSourceManager());
-    if (Module *M = ClangModuleMap->inferModuleFromLocation(Loc)) {
+    if (Module *M = D->getOwningModule()) {
       // This is a (sub-)module.
       auto Info = ExternalASTSource::ASTSourceDescriptor(*M);
       return getOrCreateModuleRef(Info, /*SkeletonCU=*/false);
@@ -2657,6 +2704,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Attributed:
   case Type::Adjusted:
   case Type::Decayed:
+  case Type::DeducedTemplateSpecialization:
   case Type::Elaborated:
   case Type::Paren:
   case Type::SubstTemplateTypeParm:
@@ -2743,6 +2791,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     // them distinct if they are ODR-uniqued.
     if (FullName.empty())
       break;
+    LLVM_FALLTHROUGH;
 
   case llvm::dwarf::DW_TAG_structure_type:
   case llvm::dwarf::DW_TAG_union_type:
@@ -2813,9 +2862,10 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
   }
   // No need to replicate the linkage name if it isn't different from the
   // subprogram name, no need to have it at all unless coverage is enabled or
-  // debug is set to more than just line tables.
+  // debug is set to more than just line tables or extra debug info is needed.
   if (LinkageName == Name || (!CGM.getCodeGenOpts().EmitGcovArcs &&
                               !CGM.getCodeGenOpts().EmitGcovNotes &&
+                              !CGM.getCodeGenOpts().DebugInfoForProfiling &&
                               DebugKind <= codegenoptions::DebugLineTablesOnly))
     LinkageName = StringRef();
 
@@ -3224,7 +3274,7 @@ void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
 
 void CGDebugInfo::EmitInlineFunctionEnd(CGBuilderTy &Builder) {
   assert(CurInlinedAt && "unbalanced inline scope stack");
-  EmitFunctionEnd(Builder);
+  EmitFunctionEnd(Builder, nullptr);
   setInlinedAt(llvm::DebugLoc(CurInlinedAt).getInlinedAt());
 }
 
@@ -3293,7 +3343,7 @@ void CGDebugInfo::EmitLexicalBlockEnd(CGBuilderTy &Builder,
   LexicalBlockStack.pop_back();
 }
 
-void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder) {
+void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
   unsigned RCount = FnBeginRegionCount.back();
   assert(RCount <= LexicalBlockStack.size() && "Region stack mismatch");
@@ -3305,6 +3355,9 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder) {
     LexicalBlockStack.pop_back();
   }
   FnBeginRegionCount.pop_back();
+
+  if (Fn && Fn->getSubprogram())
+    DBuilder.finalizeSubprogram(Fn->getSubprogram());
 }
 
 llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
@@ -3423,13 +3476,13 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
   unsigned AddressSpace = CGM.getContext().getTargetAddressSpace(VD->getType());
   AppendAddressSpaceXDeref(AddressSpace, Expr);
 
-  // If this is the first argument and it is implicit then
-  // give it an object pointer flag.
-  // FIXME: There has to be a better way to do this, but for static
-  // functions there won't be an implicit param at arg1 and
-  // otherwise it is 'self' or 'this'.
-  if (isa<ImplicitParamDecl>(VD) && ArgNo && *ArgNo == 1)
-  Flags |= llvm::DINode::FlagObjectPointer;
+  // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
+  // object pointer flag.
+  if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
+    if (IPD->getParameterKind() == ImplicitParamDecl::CXXThis ||
+        IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+      Flags |= llvm::DINode::FlagObjectPointer;
+  }
 
   // Note: Older versions of clang used to emit byval references with an extra
   // DW_OP_deref, because they referenced the IR arg directly instead of
@@ -3441,13 +3494,13 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
     if (VD->hasAttr<BlocksAttr>()) {
       // Here, we need an offset *into* the alloca.
       CharUnits offset = CharUnits::fromQuantity(32);
-      Expr.push_back(llvm::dwarf::DW_OP_plus);
+      Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
       // offset of __forwarding field
       offset = CGM.getContext().toCharUnitsFromBits(
           CGM.getTarget().getPointerWidth(0));
       Expr.push_back(offset.getQuantity());
       Expr.push_back(llvm::dwarf::DW_OP_deref);
-      Expr.push_back(llvm::dwarf::DW_OP_plus);
+      Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
       // offset of x field
       offset = CGM.getContext().toCharUnitsFromBits(XOffset);
       Expr.push_back(offset.getQuantity());
@@ -3540,8 +3593,9 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
 
   // Self is passed along as an implicit non-arg variable in a
   // block. Mark it as the object pointer.
-  if (isa<ImplicitParamDecl>(VD) && VD->getName() == "self")
-    Ty = CreateSelfType(VD->getType(), Ty);
+  if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD))
+    if (IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+      Ty = CreateSelfType(VD->getType(), Ty);
 
   // Get location information.
   unsigned Line = getLineNumber(VD->getLocation());
@@ -3555,17 +3609,17 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
 
   SmallVector<int64_t, 9> addr;
   addr.push_back(llvm::dwarf::DW_OP_deref);
-  addr.push_back(llvm::dwarf::DW_OP_plus);
+  addr.push_back(llvm::dwarf::DW_OP_plus_uconst);
   addr.push_back(offset.getQuantity());
   if (isByRef) {
     addr.push_back(llvm::dwarf::DW_OP_deref);
-    addr.push_back(llvm::dwarf::DW_OP_plus);
+    addr.push_back(llvm::dwarf::DW_OP_plus_uconst);
     // offset of __forwarding field
     offset =
         CGM.getContext().toCharUnitsFromBits(target.getPointerSizeInBits(0));
     addr.push_back(offset.getQuantity());
     addr.push_back(llvm::dwarf::DW_OP_deref);
-    addr.push_back(llvm::dwarf::DW_OP_plus);
+    addr.push_back(llvm::dwarf::DW_OP_plus_uconst);
     // offset of x field
     offset = CGM.getContext().toCharUnitsFromBits(XOffset);
     addr.push_back(offset.getQuantity());
@@ -3745,7 +3799,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
   if (LocalAddr) {
     // Insert an llvm.dbg.value into the current block.
     DBuilder.insertDbgValueIntrinsic(
-        LocalAddr, 0, debugVar, DBuilder.createExpression(),
+        LocalAddr, debugVar, DBuilder.createExpression(),
         llvm::DebugLoc::get(line, column, scope, CurInlinedAt),
         Builder.GetInsertBlock());
   }
@@ -3920,10 +3974,10 @@ void CGDebugInfo::EmitUsingDirective(const UsingDirectiveDecl &UD) {
   const NamespaceDecl *NSDecl = UD.getNominatedNamespace();
   if (!NSDecl->isAnonymousNamespace() ||
       CGM.getCodeGenOpts().DebugExplicitImport) {
+    auto Loc = UD.getLocation();
     DBuilder.createImportedModule(
         getCurrentContextDescriptor(cast<Decl>(UD.getDeclContext())),
-        getOrCreateNamespace(NSDecl),
-        getLineNumber(UD.getLocation()));
+        getOrCreateNamespace(NSDecl), getOrCreateFile(Loc), getLineNumber(Loc));
   }
 }
 
@@ -3946,10 +4000,12 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
       if (AT->getDeducedType().isNull())
         return;
   if (llvm::DINode *Target =
-          getDeclarationOrDefinition(USD.getUnderlyingDecl()))
+          getDeclarationOrDefinition(USD.getUnderlyingDecl())) {
+    auto Loc = USD.getLocation();
     DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(USD.getDeclContext())), Target,
-        getLineNumber(USD.getLocation()));
+        getOrCreateFile(Loc), getLineNumber(Loc));
+  }
 }
 
 void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
@@ -3957,10 +4013,11 @@ void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
     return;
   if (Module *M = ID.getImportedModule()) {
     auto Info = ExternalASTSource::ASTSourceDescriptor(*M);
+    auto Loc = ID.getLocation();
     DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(ID.getDeclContext())),
-        getOrCreateModuleRef(Info, DebugTypeExtRefs),
-        getLineNumber(ID.getLocation()));
+        getOrCreateModuleRef(Info, DebugTypeExtRefs), getOrCreateFile(Loc),
+        getLineNumber(Loc));
   }
 }
 
@@ -3972,18 +4029,19 @@ CGDebugInfo::EmitNamespaceAlias(const NamespaceAliasDecl &NA) {
   if (VH)
     return cast<llvm::DIImportedEntity>(VH);
   llvm::DIImportedEntity *R;
+  auto Loc = NA.getLocation();
   if (const auto *Underlying =
           dyn_cast<NamespaceAliasDecl>(NA.getAliasedNamespace()))
     // This could cache & dedup here rather than relying on metadata deduping.
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
-        EmitNamespaceAlias(*Underlying), getLineNumber(NA.getLocation()),
-        NA.getName());
+        EmitNamespaceAlias(*Underlying), getOrCreateFile(Loc),
+        getLineNumber(Loc), NA.getName());
   else
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
         getOrCreateNamespace(cast<NamespaceDecl>(NA.getAliasedNamespace())),
-        getLineNumber(NA.getLocation()), NA.getName());
+        getOrCreateFile(Loc), getLineNumber(Loc), NA.getName());
   VH.reset(R);
   return R;
 }

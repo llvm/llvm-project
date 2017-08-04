@@ -12,9 +12,7 @@
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) &&                 \
     !defined(__ARM_DWARF_EH__)
-#define LIBCXXABI_ARM_EHABI 1
-#else
-#define LIBCXXABI_ARM_EHABI 0
+#define _LIBCXXABI_ARM_EHABI
 #endif
 
 #if !defined(__has_attribute)
@@ -54,6 +52,12 @@
   #define _LIBCXXABI_FUNC_VIS
   #define _LIBCXXABI_TYPE_VIS
  #endif
+#endif
+
+#if defined(_WIN32)
+#define _LIBCXXABI_WEAK
+#else
+#define _LIBCXXABI_WEAK __attribute__((__weak__))
 #endif
 
 #endif // ____CXXABI_CONFIG_H

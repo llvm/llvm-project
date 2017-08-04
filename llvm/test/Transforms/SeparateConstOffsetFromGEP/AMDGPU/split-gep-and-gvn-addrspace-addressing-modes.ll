@@ -9,7 +9,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 1
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 32
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 33
-define void @sum_of_array(i32 %x, i32 %y, float addrspace(1)* nocapture %output) {
+define amdgpu_kernel void @sum_of_array(i32 %x, i32 %y, float addrspace(1)* nocapture %output) {
   %tmp = sext i32 %y to i64
   %tmp1 = sext i32 %x to i64
   %tmp2 = getelementptr inbounds [4096 x [32 x float]], [4096 x [32 x float]] addrspace(2)* @array, i64 0, i64 %tmp1, i64 %tmp
@@ -42,7 +42,7 @@ define void @sum_of_array(i32 %x, i32 %y, float addrspace(1)* nocapture %output)
 ; IR: add i32 %x, 256
 ; IR: getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(2)* @array2, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(2)* @array2, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
-define void @sum_of_array_over_max_mubuf_offset(i32 %x, i32 %y, float addrspace(1)* nocapture %output) {
+define amdgpu_kernel void @sum_of_array_over_max_mubuf_offset(i32 %x, i32 %y, float addrspace(1)* nocapture %output) {
   %tmp = sext i32 %y to i64
   %tmp1 = sext i32 %x to i64
   %tmp2 = getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(2)* @array2, i64 0, i64 %tmp1, i64 %tmp
@@ -74,7 +74,7 @@ define void @sum_of_array_over_max_mubuf_offset(i32 %x, i32 %y, float addrspace(
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i32 255
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i32 16128
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i32 16383
-define void @sum_of_lds_array_over_max_mubuf_offset(i32 %x, i32 %y, float addrspace(1)* nocapture %output) {
+define amdgpu_kernel void @sum_of_lds_array_over_max_mubuf_offset(i32 %x, i32 %y, float addrspace(1)* nocapture %output) {
   %tmp2 = getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(3)* @lds_array, i32 0, i32 %x, i32 %y
   %tmp4 = load float, float addrspace(3)* %tmp2, align 4
   %tmp5 = fadd float %tmp4, 0.000000e+00

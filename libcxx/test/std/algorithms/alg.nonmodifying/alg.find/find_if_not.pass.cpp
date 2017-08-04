@@ -20,16 +20,23 @@
 
 #include "test_iterators.h"
 
+struct ne {
+	ne (int val) : v(val) {}
+	bool operator () (int v2) const { return v != v2; }
+	int v;
+	};
+
+
 int main()
 {
     int ia[] = {0, 1, 2, 3, 4, 5};
     const unsigned s = sizeof(ia)/sizeof(ia[0]);
     input_iterator<const int*> r = std::find_if_not(input_iterator<const int*>(ia),
                                                     input_iterator<const int*>(ia+s),
-                                                    std::bind2nd(std::not_equal_to<int>(), 3));
+                                                    ne(3));
     assert(*r == 3);
     r = std::find_if_not(input_iterator<const int*>(ia),
                          input_iterator<const int*>(ia+s),
-                         std::bind2nd(std::not_equal_to<int>(), 10));
+                         ne(10));
     assert(r == input_iterator<const int*>(ia+s));
 }

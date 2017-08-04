@@ -6,6 +6,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin8"
 
+; Test that consecutive, identical DBG_VALUEs are merged.
 ;CHECK: DW_AT_location{{.*}}(<0x1> 55 )
 
 %0 = type { i64, i1 }
@@ -14,11 +15,12 @@ target triple = "x86_64-apple-darwin8"
 
 define hidden i128 @__divti3(i128 %u, i128 %v) nounwind readnone !dbg !9 {
 entry:
-  tail call void @llvm.dbg.value(metadata i128 %u, i64 0, metadata !14, metadata !DIExpression()), !dbg !15
-  tail call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata i128 %u, metadata !14, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata i64 0, metadata !17, metadata !DIExpression()), !dbg !21
   br i1 undef, label %bb2, label %bb4, !dbg !22
 
 bb2:                                              ; preds = %entry
+  tail call void @llvm.dbg.value(metadata i128 %u, metadata !14, metadata !DIExpression()), !dbg !15
   br label %bb4, !dbg !23
 
 bb4:                                              ; preds = %bb2, %entry
@@ -33,7 +35,7 @@ __udivmodti4.exit:                                ; preds = %bb4
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 declare %0 @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
 

@@ -103,3 +103,173 @@ CF246:                                            ; preds = %CF237
   %E156 = extractelement <4 x i1> %Cmp117, i32 2
   br label %CF
 }
+
+define i32 @knownbits_mask_add_lshr(i32 %a0, i32 %a1) nounwind {
+; X32-LABEL: knownbits_mask_add_lshr:
+; X32:       # BB#0:
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_add_lshr:
+; X64:       # BB#0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %1 = and i32 %a0, 32767
+  %2 = and i32 %a1, 32766
+  %3 = add i32 %1, %2
+  %4 = lshr i32 %3, 17
+  ret i32 %4
+}
+
+define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
+; X32-LABEL: knownbits_mask_addc_shl:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl $-1024, %esi # imm = 0xFC00
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    andl %esi, %edi
+; X32-NEXT:    andl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    addl %edi, %esi
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    shldl $22, %edx, %ecx
+; X32-NEXT:    shldl $22, %esi, %edx
+; X32-NEXT:    movl %edx, 8(%eax)
+; X32-NEXT:    movl %ecx, 12(%eax)
+; X32-NEXT:    movl $0, 4(%eax)
+; X32-NEXT:    movl $0, (%eax)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    retl $4
+;
+; X64-LABEL: knownbits_mask_addc_shl:
+; X64:       # BB#0:
+; X64-NEXT:    andq $-1024, %rdi # imm = 0xFC00
+; X64-NEXT:    andq $-1024, %rsi # imm = 0xFC00
+; X64-NEXT:    addq %rdi, %rsi
+; X64-NEXT:    adcl $0, %edx
+; X64-NEXT:    shldq $54, %rsi, %rdx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %1 = and i64 %a0, -1024
+  %2 = zext i64 %1 to i128
+  %3 = and i64 %a1, -1024
+  %4 = zext i64 %3 to i128
+  %5 = add i128 %2, %4
+  %6 = zext i64 %a2 to i128
+  %7 = shl i128 %6, 64
+  %8 = add i128 %5, %7
+  %9 = shl i128 %8, 54
+  ret i128 %9
+}
+
+define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
+; X32-LABEL: knownbits_uaddo_saddo:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    addl %eax, %edx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    setns %al
+; X32-NEXT:    testl %ecx, %ecx
+; X32-NEXT:    setns %cl
+; X32-NEXT:    cmpb %al, %cl
+; X32-NEXT:    sete %al
+; X32-NEXT:    testl %edx, %edx
+; X32-NEXT:    setns %dl
+; X32-NEXT:    cmpb %dl, %cl
+; X32-NEXT:    setne %dl
+; X32-NEXT:    andb %al, %dl
+; X32-NEXT:    orb %bl, %dl
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_uaddo_saddo:
+; X64:       # BB#0:
+; X64-NEXT:    shlq $32, %rdi
+; X64-NEXT:    shlq $32, %rsi
+; X64-NEXT:    addq %rdi, %rsi
+; X64-NEXT:    setb %al
+; X64-NEXT:    seto %dl
+; X64-NEXT:    orb %al, %dl
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %1 = shl i64 %a0, 32
+  %2 = shl i64 %a1, 32
+  %u = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %1, i64 %2)
+  %uval = extractvalue {i64, i1} %u, 0
+  %uovf = extractvalue {i64, i1} %u, 1
+  %s = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %1, i64 %2)
+  %sval = extractvalue {i64, i1} %s, 0
+  %sovf = extractvalue {i64, i1} %s, 1
+  %sum = add i64 %uval, %sval
+  %3 = trunc i64 %sum to i32
+  %4 = or i1 %uovf, %sovf
+  %ret0 = insertvalue {i32, i1} undef, i32 %3, 0
+  %ret1 = insertvalue {i32, i1} %ret0, i1 %4, 1
+  ret {i32, i1} %ret1
+}
+
+define {i32, i1} @knownbits_usubo_ssubo(i64 %a0, i64 %a1) nounwind {
+; X32-LABEL: knownbits_usubo_ssubo:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    subl %eax, %edx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    setns %al
+; X32-NEXT:    testl %ecx, %ecx
+; X32-NEXT:    setns %cl
+; X32-NEXT:    cmpb %al, %cl
+; X32-NEXT:    setne %al
+; X32-NEXT:    testl %edx, %edx
+; X32-NEXT:    setns %dl
+; X32-NEXT:    cmpb %dl, %cl
+; X32-NEXT:    setne %dl
+; X32-NEXT:    andb %al, %dl
+; X32-NEXT:    orb %bl, %dl
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_usubo_ssubo:
+; X64:       # BB#0:
+; X64-NEXT:    shlq $32, %rdi
+; X64-NEXT:    shlq $32, %rsi
+; X64-NEXT:    cmpq %rsi, %rdi
+; X64-NEXT:    setb %al
+; X64-NEXT:    seto %dl
+; X64-NEXT:    orb %al, %dl
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %1 = shl i64 %a0, 32
+  %2 = shl i64 %a1, 32
+  %u = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %1, i64 %2)
+  %uval = extractvalue {i64, i1} %u, 0
+  %uovf = extractvalue {i64, i1} %u, 1
+  %s = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %1, i64 %2)
+  %sval = extractvalue {i64, i1} %s, 0
+  %sovf = extractvalue {i64, i1} %s, 1
+  %sum = add i64 %uval, %sval
+  %3 = trunc i64 %sum to i32
+  %4 = or i1 %uovf, %sovf
+  %ret0 = insertvalue {i32, i1} undef, i32 %3, 0
+  %ret1 = insertvalue {i32, i1} %ret0, i1 %4, 1
+  ret {i32, i1} %ret1
+}
+
+declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
+declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone

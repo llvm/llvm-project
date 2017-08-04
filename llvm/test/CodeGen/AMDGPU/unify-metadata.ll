@@ -14,10 +14,6 @@
 ; ALL-DAG: ![[USED_EXT_1]] = !{!"cl_khr_fp16"}
 ; ALL-DAG: ![[USED_EXT_2]] = !{!"cl_doubles"}
 
-define void @test() {
-   ret void
-}
-
 !opencl.ocl.version = !{!1, !0, !0, !0}
 !llvm.ident = !{!2, !2, !2, !2, !6}
 !opencl.used.extensions = !{!3, !3, !4, !5}

@@ -18,8 +18,6 @@
 
 #include "int_lib.h"
 
-ARM_EABI_FNALIAS(ui2d, floatunsidf)
-
 COMPILER_RT_ABI fp_t
 __floatunsidf(unsigned int a) {
     
@@ -40,3 +38,10 @@ __floatunsidf(unsigned int a) {
     result += (rep_t)(exponent + exponentBias) << significandBits;
     return fromRep(result);
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI fp_t __aeabi_ui2d(unsigned int a) {
+  return __floatunsidf(a);
+}
+#endif
+

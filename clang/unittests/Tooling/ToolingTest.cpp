@@ -203,7 +203,7 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
 
 struct VerifyEndCallback : public SourceFileCallbacks {
   VerifyEndCallback() : BeginCalled(0), EndCalled(0), Matched(false) {}
-  bool handleBeginSource(CompilerInstance &CI, StringRef Filename) override {
+  bool handleBeginSource(CompilerInstance &CI) override {
     ++BeginCalled;
     return true;
   }

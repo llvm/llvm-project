@@ -9,7 +9,7 @@
 
 ; CHECK: buffer_store_dword
 ; CHECK: s_endpgm
-define void @test_debug_value(i32 addrspace(1)* nocapture %globalptr_arg) #0 !dbg !4 {
+define amdgpu_kernel void @test_debug_value(i32 addrspace(1)* nocapture %globalptr_arg) #0 !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 addrspace(1)* %globalptr_arg, i64 0, metadata !10, metadata !13), !dbg !14
   store i32 123, i32 addrspace(1)* %globalptr_arg, align 4

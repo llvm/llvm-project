@@ -11,10 +11,10 @@
 #include "Config.h"
 #include "Driver.h"
 #include "Error.h"
+#include "LTO.h"
 #include "Memory.h"
 #include "Symbols.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -24,11 +24,40 @@ using namespace llvm;
 namespace lld {
 namespace coff {
 
+enum SymbolPreference {
+  SP_EXISTING = -1,
+  SP_CONFLICT = 0,
+  SP_NEW = 1,
+};
+
+/// Checks if an existing symbol S should be kept or replaced by a new symbol.
+/// Returns SP_EXISTING when S should be kept, SP_NEW when the new symbol
+/// should be kept, and SP_CONFLICT if no valid resolution exists.
+static SymbolPreference compareDefined(Symbol *S, bool WasInserted,
+                                       bool NewIsCOMDAT) {
+  // If the symbol wasn't previously known, the new symbol wins by default.
+  if (WasInserted || !isa<Defined>(S->body()))
+    return SP_NEW;
+
+  // If the existing symbol is a DefinedRegular, both it and the new symbol
+  // must be comdats. In that case, we have no reason to prefer one symbol
+  // over the other, and we keep the existing one. If one of the symbols
+  // is not a comdat, we report a conflict.
+  if (auto *R = dyn_cast<DefinedRegular>(S->body())) {
+    if (NewIsCOMDAT && R->isCOMDAT())
+      return SP_EXISTING;
+    else
+      return SP_CONFLICT;
+  }
+
+  // Existing symbol is not a DefinedRegular; new symbol wins.
+  return SP_NEW;
+}
+
 SymbolTable *Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
-  if (Config->Verbose)
-    outs() << "Reading " << toString(File) << "\n";
+  log("Reading " + toString(File));
   File->parse();
 
   MachineTypes MT = File->getMachineType();
@@ -51,8 +80,7 @@ void SymbolTable::addFile(InputFile *File) {
   if (S.empty())
     return;
 
-  if (Config->Verbose)
-    outs() << "Directives: " << toString(File) << ": " << S << "\n";
+  log("Directives: " + toString(File) + ": " + S);
   Driver->parseDirectives(S);
 }
 
@@ -106,12 +134,11 @@ void SymbolTable::reportRemainingUndefines() {
     return;
   for (SymbolBody *B : Config->GCRoot)
     if (Undefs.count(B))
-      errs() << "<root>: undefined symbol: " << B->getName() << "\n";
+      warn("<root>: undefined symbol: " + B->getName());
   for (ObjectFile *File : ObjectFiles)
     for (SymbolBody *Sym : File->getSymbols())
       if (Undefs.count(Sym))
-        errs() << toString(File) << ": undefined symbol: " << Sym->getName()
-               << "\n";
+        warn(toString(File) + ": undefined symbol: " + Sym->getName());
   if (!Config->Force)
     fatal("link failed");
 }
@@ -163,7 +190,7 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
 }
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
-  fatal("duplicate symbol: " + toString(*Existing->body()) + " in " +
+  error("duplicate symbol: " + toString(*Existing->body()) + " in " +
         toString(Existing->body()->getFile()) + " and in " +
         (NewFile ? toString(NewFile) : "(internal)"));
 }
@@ -192,71 +219,53 @@ Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
   return S;
 }
 
-Symbol *SymbolTable::addRelative(StringRef N, uint64_t VA) {
+Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
-    replaceBody<DefinedRelative>(S, N, VA);
+    replaceBody<DefinedSynthetic>(S, N, C);
   else if (!isa<DefinedCOFF>(S->body()))
     reportDuplicate(S, nullptr);
   return S;
 }
 
-Symbol *SymbolTable::addRegular(ObjectFile *F, COFFSymbolRef Sym,
+Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
+                                const coff_symbol_generic *Sym,
                                 SectionChunk *C) {
-  StringRef Name;
-  F->getCOFFObj()->getSymbolName(Sym, Name);
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-  S->IsUsedInRegularObj = true;
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
-    replaceBody<DefinedRegular>(S, F, Sym, C);
-  else if (auto *R = dyn_cast<DefinedRegular>(S->body())) {
-    if (!C->isCOMDAT() || !R->isCOMDAT())
-      reportDuplicate(S, F);
-  } else if (auto *B = dyn_cast<DefinedBitcode>(S->body())) {
-    if (B->IsReplaceable)
-      replaceBody<DefinedRegular>(S, F, Sym, C);
-    else if (!C->isCOMDAT())
-      reportDuplicate(S, F);
-  } else
-    replaceBody<DefinedRegular>(S, F, Sym, C);
-  return S;
-}
-
-Symbol *SymbolTable::addBitcode(BitcodeFile *F, StringRef N, bool IsReplaceable) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body())) {
-    replaceBody<DefinedBitcode>(S, F, N, IsReplaceable);
-    return S;
+  if (!isa<BitcodeFile>(F))
+    S->IsUsedInRegularObj = true;
+  SymbolPreference SP = compareDefined(S, WasInserted, IsCOMDAT);
+  if (SP == SP_CONFLICT) {
+    reportDuplicate(S, F);
+  } else if (SP == SP_NEW) {
+    replaceBody<DefinedRegular>(S, F, N, IsCOMDAT, /*IsExternal*/ true, Sym, C);
+  } else if (SP == SP_EXISTING && IsCOMDAT && C) {
+    C->markDiscarded();
+    // Discard associative chunks that we've parsed so far. No need to recurse
+    // because an associative section cannot have children.
+    for (SectionChunk *Child : C->children())
+      Child->markDiscarded();
   }
-  if (isa<DefinedCommon>(S->body()))
-    return S;
-  if (IsReplaceable)
-    if (isa<DefinedRegular>(S->body()) || isa<DefinedBitcode>(S->body()))
-      return S;
-  reportDuplicate(S, F);
   return S;
 }
 
-Symbol *SymbolTable::addCommon(ObjectFile *F, COFFSymbolRef Sym,
-                               CommonChunk *C) {
-  StringRef Name;
-  F->getCOFFObj()->getSymbolName(Sym, Name);
+Symbol *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
+                               const coff_symbol_generic *Sym, CommonChunk *C) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-  S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(N);
+  if (!isa<BitcodeFile>(F))
+    S->IsUsedInRegularObj = true;
   if (WasInserted || !isa<DefinedCOFF>(S->body()))
-    replaceBody<DefinedCommon>(S, F, Sym, C);
+    replaceBody<DefinedCommon>(S, F, N, Size, Sym, C);
   else if (auto *DC = dyn_cast<DefinedCommon>(S->body()))
-    if (Sym.getValue() > DC->getSize())
-      replaceBody<DefinedCommon>(S, F, Sym, C);
+    if (Size > DC->getSize())
+      replaceBody<DefinedCommon>(S, F, N, Size, Sym, C);
   return S;
 }
 
@@ -345,75 +354,21 @@ SymbolBody *SymbolTable::addUndefined(StringRef Name) {
   return addUndefined(Name, nullptr, false)->body();
 }
 
-void SymbolTable::printMap(llvm::raw_ostream &OS) {
-  for (ObjectFile *File : ObjectFiles) {
-    OS << toString(File) << ":\n";
-    for (SymbolBody *Body : File->getSymbols())
-      if (auto *R = dyn_cast<DefinedRegular>(Body))
-        if (R->getChunk()->isLive())
-          OS << Twine::utohexstr(Config->ImageBase + R->getRVA())
-             << " " << R->getName() << "\n";
-  }
+std::vector<StringRef> SymbolTable::compileBitcodeFiles() {
+  LTO.reset(new BitcodeCompiler);
+  for (BitcodeFile *F : BitcodeFiles)
+    LTO->add(*F);
+  return LTO->compile();
 }
 
 void SymbolTable::addCombinedLTOObjects() {
   if (BitcodeFiles.empty())
     return;
-
-  // Create an object file and add it to the symbol table by replacing any
-  // DefinedBitcode symbols with the definitions in the object file.
-  LTOCodeGenerator CG(BitcodeFile::Context);
-  CG.setOptLevel(Config->LTOOptLevel);
-  for (ObjectFile *Obj : createLTOObjects(&CG))
+  for (StringRef Object : compileBitcodeFiles()) {
+    auto *Obj = make<ObjectFile>(MemoryBufferRef(Object, "lto.tmp"));
     Obj->parse();
-}
-
-// Combine and compile bitcode files and then return the result
-// as a vector of regular COFF object files.
-std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
-  // All symbols referenced by non-bitcode objects, including GC roots, must be
-  // preserved. We must also replace bitcode symbols with undefined symbols so
-  // that they may be replaced with real definitions without conflicting.
-  for (BitcodeFile *File : BitcodeFiles)
-    for (SymbolBody *Body : File->getSymbols()) {
-      if (!isa<DefinedBitcode>(Body))
-        continue;
-      if (Body->symbol()->IsUsedInRegularObj)
-        CG->addMustPreserveSymbol(Body->getName());
-      replaceBody<Undefined>(Body->symbol(), Body->getName());
-    }
-
-  CG->setModule(BitcodeFiles[0]->takeModule());
-  for (unsigned I = 1, E = BitcodeFiles.size(); I != E; ++I)
-    CG->addModule(BitcodeFiles[I]->takeModule().get());
-
-  bool DisableVerify = true;
-#ifdef NDEBUG
-  DisableVerify = false;
-#endif
-  if (!CG->optimize(DisableVerify, false, false, false))
-    fatal(""); // optimize() should have emitted any error message.
-
-  Objs.resize(Config->LTOJobs);
-  // Use std::list to avoid invalidation of pointers in OSPtrs.
-  std::list<raw_svector_ostream> OSs;
-  std::vector<raw_pwrite_stream *> OSPtrs;
-  for (SmallString<0> &Obj : Objs) {
-    OSs.emplace_back(Obj);
-    OSPtrs.push_back(&OSs.back());
+    ObjectFiles.push_back(Obj);
   }
-
-  if (!CG->compileOptimized(OSPtrs))
-    fatal(""); // compileOptimized() should have emitted any error message.
-
-  std::vector<ObjectFile *> ObjFiles;
-  for (SmallString<0> &Obj : Objs) {
-    auto *ObjFile = make<ObjectFile>(MemoryBufferRef(Obj, "<LTO object>"));
-    ObjectFiles.push_back(ObjFile);
-    ObjFiles.push_back(ObjFile);
-  }
-
-  return ObjFiles;
 }
 
 } // namespace coff

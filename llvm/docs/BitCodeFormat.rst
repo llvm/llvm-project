@@ -550,6 +550,8 @@ LLVM IR is defined with the following blocks:
 
 * 17 --- `TYPE_BLOCK`_ --- This describes all of the types in the module.
 
+* 23 --- `STRTAB_BLOCK`_ --- The bitcode file's string table.
+
 .. _MODULE_BLOCK:
 
 MODULE_BLOCK Contents
@@ -577,7 +579,7 @@ MODULE_CODE_VERSION Record
 ``[VERSION, version#]``
 
 The ``VERSION`` record (code 1) contains a single value indicating the format
-version. Versions 0 and 1 are supported at this time. The difference between
+version. Versions 0, 1 and 2 are supported at this time. The difference between
 version 0 and 1 is in the encoding of instruction operands in
 each `FUNCTION_BLOCK`_.
 
@@ -620,6 +622,12 @@ as unsigned VBRs. However, forward references are rare, except in the
 case of phi instructions. For phi instructions, operands are encoded as
 `Signed VBRs`_ to deal with forward references.
 
+In version 2, the meaning of module records ``FUNCTION``, ``GLOBALVAR``,
+``ALIAS``, ``IFUNC`` and ``COMDAT`` change such that the first two operands
+specify an offset and size of a string in a string table (see `STRTAB_BLOCK
+Contents`_), the function name is removed from the ``FNENTRY`` record in the
+value symbol table, and the top-level ``VALUE_SYMTAB_BLOCK`` may only contain
+``FNENTRY`` records.
 
 MODULE_CODE_TRIPLE Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -673,10 +681,13 @@ for each library name referenced.
 MODULE_CODE_GLOBALVAR Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[GLOBALVAR, pointer type, isconst, initid, linkage, alignment, section, visibility, threadlocal, unnamed_addr, externally_initialized, dllstorageclass, comdat]``
+``[GLOBALVAR, strtab offset, strtab size, pointer type, isconst, initid, linkage, alignment, section, visibility, threadlocal, unnamed_addr, externally_initialized, dllstorageclass, comdat]``
 
 The ``GLOBALVAR`` record (code 7) marks the declaration or definition of a
 global variable. The operand fields are:
+
+* *strtab offset*, *strtab size*: Specifies the name of the global variable.
+  See `STRTAB_BLOCK Contents`_.
 
 * *pointer type*: The type index of the pointer type used to point to this
   global variable
@@ -755,10 +766,13 @@ global variable. The operand fields are:
 MODULE_CODE_FUNCTION Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[FUNCTION, type, callingconv, isproto, linkage, paramattr, alignment, section, visibility, gc, prologuedata, dllstorageclass, comdat, prefixdata, personalityfn]``
+``[FUNCTION, strtab offset, strtab size, type, callingconv, isproto, linkage, paramattr, alignment, section, visibility, gc, prologuedata, dllstorageclass, comdat, prefixdata, personalityfn]``
 
 The ``FUNCTION`` record (code 8) marks the declaration or definition of a
 function. The operand fields are:
+
+* *strtab offset*, *strtab size*: Specifies the name of the function.
+  See `STRTAB_BLOCK Contents`_.
 
 * *type*: The type index of the function type describing this function
 
@@ -817,10 +831,13 @@ function. The operand fields are:
 MODULE_CODE_ALIAS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[ALIAS, alias type, aliasee val#, linkage, visibility, dllstorageclass, threadlocal, unnamed_addr]``
+``[ALIAS, strtab offset, strtab size, alias type, aliasee val#, linkage, visibility, dllstorageclass, threadlocal, unnamed_addr]``
 
 The ``ALIAS`` record (code 9) marks the definition of an alias. The operand
 fields are
+
+* *strtab offset*, *strtab size*: Specifies the name of the alias.
+  See `STRTAB_BLOCK Contents`_.
 
 * *alias type*: The type index of the alias
 
@@ -838,16 +855,6 @@ fields are
 
 * *unnamed_addr*: If present, an encoding of the
   :ref:`unnamed_addr<bcunnamedaddr>` attribute of this alias
-
-MODULE_CODE_PURGEVALS Record
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``[PURGEVALS, numvals]``
-
-The ``PURGEVALS`` record (code 10) resets the module-level value list to the
-size given by the single operand value. Module-level value list items are added
-by ``GLOBALVAR``, ``FUNCTION``, and ``ALIAS`` records.  After a ``PURGEVALS``
-record is seen, new value indices will start from the given *numvals* value.
 
 .. _MODULE_CODE_GCNAME:
 
@@ -1310,3 +1317,20 @@ METADATA_ATTACHMENT Contents
 ----------------------------
 
 The ``METADATA_ATTACHMENT`` block (id 16) ...
+
+.. _STRTAB_BLOCK:
+
+STRTAB_BLOCK Contents
+---------------------
+
+The ``STRTAB`` block (id 23) contains a single record (``STRTAB_BLOB``, id 1)
+with a single blob operand containing the bitcode file's string table.
+
+Strings in the string table are not null terminated. A record's *strtab
+offset* and *strtab size* operands specify the byte offset and size of a
+string within the string table.
+
+The string table is used by all preceding blocks in the bitcode file that are
+not succeeded by another intervening ``STRTAB`` block. Normally a bitcode
+file will have a single string table, but it may have more than one if it
+was created by binary concatenation of multiple bitcode files.

@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mtriple=armv7-eabi -mcpu=cortex-a8 | FileCheck %s
-; RUN: llc < %s -march=thumb -mtriple=thumbv7-eabi -mcpu=cortex-a8 | FileCheck %s
 
 define void @coproc(i8* %i) nounwind {
 entry:

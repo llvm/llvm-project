@@ -42,10 +42,12 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     Entry.Node = Size;
     Args.push_back(Entry);
     TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(dl).setChain(Chain)
-      .setCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-                 DAG.getExternalSymbol(bzeroEntry, IntPtr), std::move(Args))
-      .setDiscardResult();
+    CLI.setDebugLoc(dl)
+        .setChain(Chain)
+        .setLibCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
+                      DAG.getExternalSymbol(bzeroEntry, IntPtr),
+                      std::move(Args))
+        .setDiscardResult();
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
     return CallResult.second;
   }
@@ -53,7 +55,5 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 }
 bool AArch64SelectionDAGInfo::generateFMAsInMachineCombiner(
     CodeGenOpt::Level OptLevel) const {
-  if (OptLevel >= CodeGenOpt::Aggressive)
-    return true;
-  return false;
+  return OptLevel >= CodeGenOpt::Aggressive;
 }

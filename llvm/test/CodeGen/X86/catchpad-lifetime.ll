@@ -26,9 +26,9 @@ catch.pad:                                        ; preds = %catch.dispatch
   %cp = catchpad within %cs [i8* null, i32 0, i8** %alloca1]
   store volatile i8* null, i8** %alloca1
   %bc1 = bitcast i8** %alloca1 to i8*
-  call void @llvm.lifetime.end(i64 4, i8* nonnull %bc1)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %bc1)
   %bc2 = bitcast i8** %alloca2 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %bc2)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bc2)
   store volatile i8* null, i8** %alloca1
   unreachable
 
@@ -63,9 +63,9 @@ catch.pad:                                        ; preds = %catch.dispatch
   %cp = catchpad within %cs [i8* null, i32 0, i8** null]
   store volatile i8* null, i8** %alloca1
   %bc1 = bitcast i8** %alloca1 to i8*
-  call void @llvm.lifetime.end(i64 4, i8* nonnull %bc1)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %bc1)
   %bc2 = bitcast i8** %alloca2 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %bc2)
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %bc2)
   store volatile i8* null, i8** %alloca1
   unreachable
 
@@ -83,9 +83,9 @@ unreachable:                                      ; preds = %entry
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
 
 attributes #0 = { argmemonly nounwind }

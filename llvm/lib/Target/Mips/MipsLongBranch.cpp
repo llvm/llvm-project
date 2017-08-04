@@ -13,20 +13,31 @@
 // FIXME: Fix pc-region jump instructions which cross 256MB segment boundaries.
 //===----------------------------------------------------------------------===//
 
-#include "Mips.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
+#include "Mips.h"
+#include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
+#include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Function.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -47,24 +58,25 @@ static cl::opt<bool> ForceLongBranch(
   cl::Hidden);
 
 namespace {
+
   typedef MachineBasicBlock::iterator Iter;
   typedef MachineBasicBlock::reverse_iterator ReverseIter;
 
   struct MBBInfo {
-    uint64_t Size, Address;
-    bool HasLongBranch;
-    MachineInstr *Br;
+    uint64_t Size = 0;
+    uint64_t Address;
+    bool HasLongBranch = false;
+    MachineInstr *Br = nullptr;
 
-    MBBInfo() : Size(0), HasLongBranch(false), Br(nullptr) {}
+    MBBInfo() = default;
   };
 
   class MipsLongBranch : public MachineFunctionPass {
-
   public:
     static char ID;
-    MipsLongBranch(TargetMachine &tm)
-        : MachineFunctionPass(ID), TM(tm), IsPIC(TM.isPositionIndependent()),
-          ABI(static_cast<const MipsTargetMachine &>(TM).getABI()) {}
+
+    MipsLongBranch()
+        : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
 
     StringRef getPassName() const override { return "Mips Long Branch"; }
 
@@ -83,7 +95,6 @@ namespace {
                        MachineBasicBlock *MBBOpnd);
     void expandToLongBranch(MBBInfo &Info);
 
-    const TargetMachine &TM;
     MachineFunction *MF;
     SmallVector<MBBInfo, 16> MBBInfos;
     bool IsPIC;
@@ -92,13 +103,8 @@ namespace {
   };
 
   char MipsLongBranch::ID = 0;
-} // end of anonymous namespace
 
-/// createMipsLongBranchPass - Returns a pass that converts branches to long
-/// branches.
-FunctionPass *llvm::createMipsLongBranchPass(MipsTargetMachine &tm) {
-  return new MipsLongBranch(tm);
-}
+} // end anonymous namespace
 
 /// Iterate over list of Br's operands and search for a MachineBasicBlock
 /// operand.
@@ -461,6 +467,12 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
       static_cast<const MipsSubtarget &>(F.getSubtarget());
   const MipsInstrInfo *TII =
       static_cast<const MipsInstrInfo *>(STI.getInstrInfo());
+
+
+  const TargetMachine& TM = F.getTarget();
+  IsPIC = TM.isPositionIndependent();
+  ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
+
   LongBranchSeqSize =
       !IsPIC ? 2 : (ABI.IsN64() ? 10 : (!STI.isTargetNaCl() ? 9 : 10));
 
@@ -530,3 +542,7 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
 
   return true;
 }
+
+/// createMipsLongBranchPass - Returns a pass that converts branches to long
+/// branches.
+FunctionPass *llvm::createMipsLongBranchPass() { return new MipsLongBranch(); }

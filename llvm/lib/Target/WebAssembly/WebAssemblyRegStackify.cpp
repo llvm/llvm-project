@@ -20,8 +20,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
@@ -152,7 +153,7 @@ static void QueryCallee(const MachineInstr &MI, unsigned CalleeOpNo, bool &Read,
 }
 
 // Determine whether MI reads memory, writes memory, has side effects,
-// and/or uses the __stack_pointer value.
+// and/or uses the stack pointer value.
 static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
                   bool &Write, bool &Effects, bool &StackPointer) {
   assert(!MI.isPosition());
@@ -176,8 +177,9 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
         auto PSV = MPI.V.get<const PseudoSourceValue *>();
         if (const ExternalSymbolPseudoSourceValue *EPSV =
                 dyn_cast<ExternalSymbolPseudoSourceValue>(PSV))
-          if (StringRef(EPSV->getSymbol()) == "__stack_pointer")
+          if (StringRef(EPSV->getSymbol()) == "__stack_pointer") {
             StackPointer = true;
+          }
       }
     }
   } else if (MI.hasOrderedMemoryRef()) {

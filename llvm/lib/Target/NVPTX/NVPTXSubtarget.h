@@ -101,6 +101,8 @@ public:
   inline bool hasROT32() const { return hasHWROT32() || hasSWROT32(); }
   inline bool hasROT64() const { return SmVersion >= 20; }
   bool hasImageHandles() const;
+  bool hasFP16Math() const { return SmVersion >= 53; }
+  bool allowFP16Math() const;
 
   unsigned int getSmVersion() const { return SmVersion; }
   std::string getTargetName() const { return TargetName; }

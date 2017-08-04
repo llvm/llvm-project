@@ -9,6 +9,9 @@ add_clang_subdirectory(clang-import-test)
 add_clang_subdirectory(clang-offload-bundler)
 
 add_clang_subdirectory(c-index-test)
+add_clang_subdirectory(IndexStore)
+
+add_clang_subdirectory(clang-rename)
 
 if(CLANG_ENABLE_ARCMT)
   add_clang_subdirectory(arcmt-test)
@@ -30,3 +33,6 @@ add_llvm_external_project(clang-tools-extra extra)
 
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
+
+add_clang_subdirectory(clang-refactor-test)
+

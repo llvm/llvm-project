@@ -28,10 +28,8 @@
   IfUnequal:
     ret i32 0
   }
-  
+
 ...
 ---
 name: foo
-body: |
-  bb.0:
 ...

@@ -26,6 +26,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_posix_test.cc
   sanitizer_printf_test.cc
   sanitizer_procmaps_test.cc
+  sanitizer_quarantine_test.cc
   sanitizer_stackdepot_test.cc
   sanitizer_stacktrace_printer_test.cc
   sanitizer_stacktrace_test.cc
@@ -145,6 +146,15 @@ set_target_properties(SanitizerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 # Adds sanitizer tests for architecture.
 macro(add_sanitizer_tests_for_arch arch)
   get_target_flags_for_arch(${arch} TARGET_FLAGS)
+
+  # If the sanitizer library was built with _FILE_OFFSET_BITS=64 we need
+  # to ensure that the library and tests agree on the layout of certain
+  # structures such as 'struct stat'.
+  if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
+    list(APPEND TARGET_FLAGS "-D_LARGEFILE_SOURCE")
+    list(APPEND TARGET_FLAGS "-D_FILE_OFFSET_BITS=64")
+  endif()
+
   set(SANITIZER_TEST_SOURCES ${SANITIZER_UNITTESTS}
                              ${COMPILER_RT_GTEST_SOURCE})
   set(SANITIZER_TEST_COMPILE_DEPS ${SANITIZER_TEST_HEADERS})

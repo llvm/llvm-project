@@ -104,6 +104,7 @@ define float @PR22688(float %x) {
 }
 
 declare float @llvm.fabs.f32(float)
+declare float @llvm.sqrt.f32(float)
 
 ; CHECK-LABEL: @fabs_select_positive_constants(
 ; CHECK: %select = select i1 %cmp, float 1.000000e+00, float 2.000000e+00
@@ -193,5 +194,58 @@ define float @fabs_select_negnan_zero(float addrspace(1)* %out, i32 %c) {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, float 0xFFF8000000000000, float 0.0
   %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_sqrt
+; CHECK: call float @llvm.sqrt.f32
+; CHECK: call float @llvm.fabs.f32
+define float @fabs_sqrt(float %a) {
+; The fabs can't be eliminated because llvm.sqrt.f32 may return -0 or NaN with
+; an arbitrary sign bit.
+  %sqrt = call float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_sqrt_nnan
+; CHECK: call nnan float @llvm.sqrt.f32
+; CHECK: call float @llvm.fabs.f32
+define float @fabs_sqrt_nnan(float %a) {
+; The fabs can't be eliminated because the nnan sqrt may still return -0.
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_sqrt_nsz
+; CHECK: call nsz float @llvm.sqrt.f32
+; CHECK: call float @llvm.fabs.f32
+define float @fabs_sqrt_nsz(float %a) {
+; The fabs can't be eliminated because the nsz sqrt may still return NaN.
+  %sqrt = call nsz float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_sqrt_nnan_nsz
+; CHECK: call nnan nsz float @llvm.sqrt.f32
+; CHECK-NOT: call float @llvm.fabs.f32
+define float @fabs_sqrt_nnan_nsz(float %a) {
+; The fabs can be eliminated because we're nsz and nnan.
+  %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_sqrt_nnan_fabs
+; CHECK: call float @llvm.fabs.f32
+; CHECK: call nnan float @llvm.sqrt.f32
+; CHECK-NOT: call float @llvm.fabs.f32
+define float @fabs_sqrt_nnan_fabs(float %a) {
+; The second fabs can be eliminated because the operand to sqrt cannot be -0.
+  %b = call float @llvm.fabs.f32(float %a)
+  %sqrt = call nnan float @llvm.sqrt.f32(float %b)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }

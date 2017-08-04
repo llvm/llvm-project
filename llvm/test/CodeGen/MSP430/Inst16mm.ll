@@ -1,4 +1,4 @@
-; RUN: llc -march=msp430 -combiner-alias-analysis < %s | FileCheck %s
+; RUN: llc -march=msp430 < %s | FileCheck %s
 target datalayout = "e-p:16:8:8-i8:8:8-i16:8:8-i32:8:8"
 target triple = "msp430-generic-generic"
 @foo = common global i16 0, align 2
@@ -64,6 +64,6 @@ entry:
  %0 = load i16, i16* %retval                          ; <i16> [#uses=1]
  ret i16 %0
 ; CHECK-LABEL: mov2:
-; CHECK:	mov.w	2(r1), 6(r1)
-; CHECK:	mov.w	0(r1), 4(r1)
+; CHECK-DAG:	mov.w	2(r1), 6(r1)
+; CHECK-DAG:	mov.w	0(r1), 4(r1)
 }

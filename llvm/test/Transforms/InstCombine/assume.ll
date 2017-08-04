@@ -176,13 +176,13 @@ define i32 @icmp2(i32 %a) #0 {
   ret i32 %lnot.ext
 }
 
-; FIXME: If the 'not' of a condition is known true, then the condition must be false. 
+; If the 'not' of a condition is known true, then the condition must be false.
 
 define i1 @assume_not(i1 %cond) {
 ; CHECK-LABEL: @assume_not(
 ; CHECK-NEXT:    [[NOTCOND:%.*]] = xor i1 [[COND:%.*]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %notcond = xor i1 %cond, true
   call void @llvm.assume(i1 %notcond)

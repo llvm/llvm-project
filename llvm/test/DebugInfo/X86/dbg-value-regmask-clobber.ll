@@ -40,8 +40,8 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; Function Attrs: nounwind uwtable
 define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 !dbg !12 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !19, metadata !21), !dbg !22
-  tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !20, metadata !21), !dbg !23
+  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !19, metadata !21), !dbg !22
+  tail call void @llvm.dbg.value(metadata i32 %argc, metadata !20, metadata !21), !dbg !23
   store volatile i32 1, i32* @x, align 4, !dbg !24, !tbaa !25
   tail call void @clobber() #2, !dbg !29
   store volatile i32 2, i32* @x, align 4, !dbg !30, !tbaa !25
@@ -65,7 +65,7 @@ if.end:                                           ; preds = %if.else, %if.then
 declare void @clobber()
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind readnone }

@@ -10,7 +10,10 @@
 #include "HelperDeclRefGraph.h"
 #include "ClangMove.h"
 #include "clang/AST/Decl.h"
+#include "llvm/Support/Debug.h"
 #include <vector>
+
+#define DEBUG_TYPE "clang-move"
 
 namespace clang {
 namespace move {
@@ -113,13 +116,19 @@ void HelperDeclRGBuilder::run(
   if (const auto *FuncRef = Result.Nodes.getNodeAs<DeclRefExpr>("func_ref")) {
     const auto *DC = Result.Nodes.getNodeAs<Decl>("dc");
     assert(DC);
-
-    RG->addEdge(getOutmostClassOrFunDecl(DC->getCanonicalDecl()),
-                getOutmostClassOrFunDecl(FuncRef->getDecl()));
+    DEBUG(llvm::dbgs() << "Find helper function usage: "
+                       << FuncRef->getDecl()->getNameAsString() << " ("
+                       << FuncRef->getDecl() << ")\n");
+    RG->addEdge(
+        getOutmostClassOrFunDecl(DC->getCanonicalDecl()),
+        getOutmostClassOrFunDecl(FuncRef->getDecl()->getCanonicalDecl()));
   } else if (const auto *UsedClass =
                  Result.Nodes.getNodeAs<CXXRecordDecl>("used_class")) {
     const auto *DC = Result.Nodes.getNodeAs<Decl>("dc");
     assert(DC);
+    DEBUG(llvm::dbgs() << "Find helper class usage: "
+                       << UsedClass->getNameAsString() << " (" << UsedClass
+                       << ")\n");
     RG->addEdge(getOutmostClassOrFunDecl(DC->getCanonicalDecl()), UsedClass);
   }
 }

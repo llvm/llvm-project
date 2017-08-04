@@ -1,4 +1,4 @@
-//===-- TailDuplication.cpp - Duplicate blocks into predecessors' tails ---===//
+//===- TailDuplication.cpp - Duplicate blocks into predecessors' tails ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TailDuplicator.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Pass.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "tailduplication"
 
 namespace {
+
 /// Perform tail duplication. Delegates to TailDuplicator
 class TailDuplicatePass : public MachineFunctionPass {
   TailDuplicator Duplicator;
 
 public:
   static char ID;
+
   explicit TailDuplicatePass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -35,13 +38,13 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
+} // end anonymous namespace
+
 char TailDuplicatePass::ID = 0;
-}
 
 char &llvm::TailDuplicateID = TailDuplicatePass::ID;
 
-INITIALIZE_PASS(TailDuplicatePass, "tailduplication", "Tail Duplication", false,
-                false)
+INITIALIZE_PASS(TailDuplicatePass, DEBUG_TYPE, "Tail Duplication", false, false)
 
 bool TailDuplicatePass::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))

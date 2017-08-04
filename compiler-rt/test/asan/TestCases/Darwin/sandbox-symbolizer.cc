@@ -12,6 +12,9 @@
 // RUN: not %run sandbox-exec -p '(version 1)(allow default)(deny mach-priv-task-port)' %t 2>&1 | FileCheck %s
 // RUN: env ASAN_SYMBOLIZER_PATH="" not %run sandbox-exec -p '(version 1)(allow default)(deny mach-priv-task-port)' %t 2>&1 | FileCheck %s
 
+// sandbox-exec isn't available on iOS
+// UNSUPPORTED: ios
+
 #include <stdlib.h>
 int main() {
   char *x = (char*)malloc(10 * sizeof(char));

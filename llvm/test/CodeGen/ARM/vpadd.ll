@@ -285,17 +285,17 @@ define void @addCombineToVPADDLq_s8(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ss
 define void @addCombineToVPADDL_s8(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDL_s8:
 ; CHECK:       @ BB#0:
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vmov.i16 d18, #0x8
-; CHECK-NEXT:    vneg.s16 d18, d18
-; CHECK-NEXT:    vext.8 d19, d16, d16, #1
-; CHECK-NEXT:    vshl.i16 d16, d16, #8
-; CHECK-NEXT:    vshl.i16 d17, d19, #8
-; CHECK-NEXT:    vshl.s16 d16, d16, d18
-; CHECK-NEXT:    vshl.s16 d17, d17, d18
-; CHECK-NEXT:    vadd.i16 d16, d17, d16
-; CHECK-NEXT:    vstr d16, [r1]
-; CHECK-NEXT:    mov pc, lr
+; CHECK-NEXT:    vmov.i16	d16, #0x8
+; CHECK-NEXT:    vld1.64	{d18, d19}, [r0]
+; CHECK-NEXT:    vext.8	d17, d18, d16, #1
+; CHECK-NEXT:    vneg.s16	d16, d16
+; CHECK-NEXT:    vshl.i16	d18, d18, #8
+; CHECK-NEXT:    vshl.i16	d17, d17, #8
+; CHECK-NEXT:    vshl.s16	d18, d18, d16
+; CHECK-NEXT:    vshl.s16	d16, d17, d16
+; CHECK-NEXT:    vadd.i16	d16, d16, d18
+; CHECK-NEXT:    vstr	d16, [r1]
+; CHECK-NEXT:    mov	pc, lr
   %tmp = load <16 x i8>, <16 x i8>* %cbcr
   %tmp1 = shufflevector <16 x i8> %tmp, <16 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %tmp3 = shufflevector <16 x i8> %tmp, <16 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

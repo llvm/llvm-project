@@ -37,8 +37,16 @@ namespace std
       typedef S<T> type;
     };
 
+//  P0548
+    template <class T>
+    struct common_type< ::S<T>, ::S<T> > {
+      typedef S<T> type;
+    };
+
     template <> struct common_type< ::S<long>, long> {};
     template <> struct common_type<long, ::S<long> > {};
+    template <> struct common_type< ::X<float> > {};
+    template <> struct common_type< ::X<double>, ::X<double> > {};
 }
 
 #if TEST_STD_VER >= 11
@@ -88,6 +96,9 @@ void test_bullet_two() {
   static_assert(std::is_same<CommonType<int const>, int>::value, "");
   static_assert(std::is_same<CommonType<int volatile[]>, int volatile*>::value, "");
   static_assert(std::is_same<CommonType<void(&)()>, void(*)()>::value, "");
+
+  static_assert(no_common_type<X<float> >::value, "");
+  static_assert(no_common_type<X<double> >::value, "");
 }
 
 template <class T, class U, class Expect>
@@ -284,4 +295,18 @@ int main()
   test_bullet_three_two();
   test_bullet_four();
 #endif
+
+//  P0548
+    static_assert((std::is_same<std::common_type<S<int> >::type,         S<int> >::value), "");
+    static_assert((std::is_same<std::common_type<S<int>, S<int> >::type, S<int> >::value), "");
+
+    static_assert((std::is_same<std::common_type<int>::type,                int>::value), "");
+    static_assert((std::is_same<std::common_type<const int>::type,          int>::value), "");
+    static_assert((std::is_same<std::common_type<volatile int>::type,       int>::value), "");
+    static_assert((std::is_same<std::common_type<const volatile int>::type, int>::value), "");
+
+    static_assert((std::is_same<std::common_type<int, int>::type,             int>::value), "");
+    static_assert((std::is_same<std::common_type<const int, int>::type,       int>::value), "");
+    static_assert((std::is_same<std::common_type<int, const int>::type,       int>::value), "");
+    static_assert((std::is_same<std::common_type<const int, const int>::type, int>::value), "");
 }

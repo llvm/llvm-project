@@ -27,10 +27,11 @@ public:
 
   void dump(PDBSymDumper &Dumper) const override;
 
-  FORWARD_SYMBOL_METHOD(getClassParentId)
+  FORWARD_SYMBOL_ID_METHOD(getClassParent)
+  FORWARD_SYMBOL_METHOD(getOffset)
   FORWARD_SYMBOL_METHOD(isConstType)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
-  FORWARD_SYMBOL_METHOD(getTypeId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
+  FORWARD_SYMBOL_ID_METHOD(getType)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };

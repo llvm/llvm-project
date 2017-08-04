@@ -318,8 +318,9 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
-define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
-; X32-LABEL: buildvector_v4f23_0404:
+; FIXME: Duplicated load in i686
+define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
+; X32-LABEL: buildvector_v4f32_0404:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -328,7 +329,7 @@ define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X32-NEXT:    vmovaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: buildvector_v4f23_0404:
+; X64-LABEL: buildvector_v4f32_0404:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[0],xmm1[0]
 ; X64-NEXT:    vmovaps %xmm0, (%rdi)
@@ -337,6 +338,30 @@ define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
   %v1 = insertelement <4 x float> %v0,   float %b, i32 1
   %v2 = insertelement <4 x float> %v1,   float %a, i32 2
   %v3 = insertelement <4 x float> %v2,   float %b, i32 3
+  store <4 x float> %v3, <4 x float>* %ptr
+  ret void
+}
+
+define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr) {
+; X32-LABEL: buildvector_v4f32_07z6:
+; X32:       # BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm1[0],xmm0[3],zero,xmm0[2]
+; X32-NEXT:    vmovaps %xmm0, (%eax)
+; X32-NEXT:    retl
+;
+; X64-LABEL: buildvector_v4f32_07z6:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[3],zero,xmm1[2]
+; X64-NEXT:    vmovaps %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %b2 = extractelement <4 x float> %b, i32 2
+  %b3 = extractelement <4 x float> %b, i32 3
+  %v0 = insertelement <4 x float> undef, float  %a, i32 0
+  %v1 = insertelement <4 x float> %v0,   float %b3, i32 1
+  %v2 = insertelement <4 x float> %v1,   float 0.0, i32 2
+  %v3 = insertelement <4 x float> %v2,   float %b2, i32 3
   store <4 x float> %v3, <4 x float>* %ptr
   ret void
 }
@@ -416,16 +441,14 @@ define <4 x float> @PR31296(i8* %in) {
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    vmovaps {{.*#+}} xmm1 = <0,1,u,u>
-; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0,0,1]
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR31296:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    vmovq %rax, %xmm0
-; X64-NEXT:    vmovaps {{.*#+}} xmm1 = <0,1,u,u>
-; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0,0,1]
+; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X64-NEXT:    retq
 entry:
   %0 = getelementptr i8, i8* %in, i32 0

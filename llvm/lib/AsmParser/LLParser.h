@@ -241,11 +241,14 @@ namespace llvm {
     bool ParseOptionalCallingConv(unsigned &CC);
     bool ParseOptionalAlignment(unsigned &Alignment);
     bool ParseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
-    bool ParseScopeAndOrdering(bool isAtomic, SynchronizationScope &Scope,
+    bool ParseScopeAndOrdering(bool isAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
+    bool ParseScope(SyncScope::ID &SSID);
     bool ParseOrdering(AtomicOrdering &Ordering);
     bool ParseOptionalStackAlignment(unsigned &Alignment);
     bool ParseOptionalCommaAlign(unsigned &Alignment, bool &AteExtraComma);
+    bool ParseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
+                                     bool &AteExtraComma);
     bool ParseOptionalCommaInAlloca(bool &IsInAlloca);
     bool parseAllocSizeArguments(unsigned &ElemSizeArg,
                                  Optional<unsigned> &HowManyArg);
@@ -397,7 +400,7 @@ namespace llvm {
       Value *V;
       AttributeSet Attrs;
       ParamInfo(LocTy loc, Value *v, AttributeSet attrs)
-        : Loc(loc), V(v), Attrs(attrs) {}
+          : Loc(loc), V(v), Attrs(attrs) {}
     };
     bool ParseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
                             PerFunctionState &PFS,
@@ -451,7 +454,7 @@ namespace llvm {
       AttributeSet Attrs;
       std::string Name;
       ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
-        : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
+          : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
     };
     bool ParseArgumentList(SmallVectorImpl<ArgInfo> &ArgList, bool &isVarArg);
     bool ParseFunctionHeader(Function *&Fn, bool isDefine);

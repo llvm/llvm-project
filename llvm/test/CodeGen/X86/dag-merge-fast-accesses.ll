@@ -51,19 +51,11 @@ define void @merge_vec_element_store(<4 x double> %v, double* %ptr) {
 }
 
 
-;; TODO: FAST *should* be:
-;;    movups (%rdi), %xmm0
-;;    movups %xmm0, 40(%rdi)
-;; ..but is not currently. See the UseAA FIXME in DAGCombiner.cpp
-;; visitSTORE.
-
 define void @merge_vec_load_and_stores(i64 *%ptr) {
 ; FAST-LABEL: merge_vec_load_and_stores:
 ; FAST:       # BB#0:
-; FAST-NEXT:    movq (%rdi), %rax
-; FAST-NEXT:    movq 8(%rdi), %rcx
-; FAST-NEXT:    movq %rax, 40(%rdi)
-; FAST-NEXT:    movq %rcx, 48(%rdi)
+; FAST-NEXT:    movups (%rdi), %xmm0
+; FAST-NEXT:    movups %xmm0, 40(%rdi)
 ; FAST-NEXT:    retq
 ;
 ; SLOW-LABEL: merge_vec_load_and_stores:

@@ -265,7 +265,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       "__cudaRegisterFatBinary");
   // struct { int magic, int version, void * gpu_binary, void * dont_care };
   llvm::StructType *FatbinWrapperTy =
-      llvm::StructType::get(IntTy, IntTy, VoidPtrTy, VoidPtrTy, nullptr);
+      llvm::StructType::get(IntTy, IntTy, VoidPtrTy, VoidPtrTy);
 
   llvm::Function *ModuleCtorFunc = llvm::Function::Create(
       llvm::FunctionType::get(VoidTy, VoidPtrTy, false),

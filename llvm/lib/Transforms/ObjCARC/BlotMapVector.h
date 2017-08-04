@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 namespace llvm {
 /// \brief An associative container with fast insertion-order (deterministic)

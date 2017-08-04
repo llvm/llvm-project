@@ -50,7 +50,7 @@ for.body74:                                       ; preds = %for.body74, %for.en
   br i1 %exitcond57, label %for.body74, label %for.inc104
 
 for.inc104:                                       ; preds = %for.body74
-  unreachable
+  ret void
 }
 
 attributes #0 = { argmemonly nounwind }

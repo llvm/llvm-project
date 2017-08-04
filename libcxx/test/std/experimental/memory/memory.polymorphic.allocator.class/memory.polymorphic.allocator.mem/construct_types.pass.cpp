@@ -120,7 +120,7 @@ void test_pmr_uses_alloc(Args&&... args)
     }
     {
         // Test that T(std::allocator_arg_t, Alloc const&, Args...) construction
-        // is prefered when T(Args..., Alloc const&) is also available.
+        // is preferred when T(Args..., Alloc const&) is also available.
         using T = UsesAllocatorV3<Alloc, sizeof...(Args)>;
         assert((doTest<T>(UA_AllocArg, std::forward<Args>(args)...)));
     }

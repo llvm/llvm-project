@@ -1,4 +1,4 @@
-//===- FastISelEmitter.cpp - Generate an instruction selector -------------===//
+///===- FastISelEmitter.cpp - Generate an instruction selector -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -390,10 +390,10 @@ class FastISelMap {
   std::map<OperandsSignature, std::vector<OperandsSignature> >
     SignaturesWithConstantForms;
 
-  std::string InstNS;
+  StringRef InstNS;
   ImmPredicateSet ImmediatePredicates;
 public:
-  explicit FastISelMap(std::string InstNS);
+  explicit FastISelMap(StringRef InstNS);
 
   void collectPatterns(CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
@@ -417,7 +417,7 @@ static std::string getLegalCName(std::string OpName) {
   return OpName;
 }
 
-FastISelMap::FastISelMap(std::string instns) : InstNS(std::move(instns)) {}
+FastISelMap::FastISelMap(StringRef instns) : InstNS(instns) {}
 
 static std::string PhyRegForNode(TreePatternNode *Op,
                                  const CodeGenTarget &Target) {
@@ -439,10 +439,6 @@ static std::string PhyRegForNode(TreePatternNode *Op,
 
 void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
   const CodeGenTarget &Target = CGP.getTargetInfo();
-
-  // Determine the target's namespace name.
-  InstNS = Target.getInstNamespace() + "::";
-  assert(InstNS.size() > 2 && "Can't determine target-specific namespace!");
 
   // Scan through all the patterns and record the simple ones.
   for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(),
@@ -640,12 +636,9 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       OneHadNoPredicate = true;
     } else {
       if (OneHadNoPredicate) {
-        // FIXME: This should be a PrintError once the x86 target
-        // fixes PR21575.
-        PrintWarning("Multiple instructions match and one with no "
-                     "predicate came before one with a predicate!  "
-                     "name:" + Memo.Name + "  predicate: " + 
-                     PredicateCheck);
+        PrintFatalError("Multiple instructions match and one with no "
+                        "predicate came before one with a predicate!  "
+                        "name:" + Memo.Name + "  predicate: " + PredicateCheck);
       }
       OS << "  if (" + PredicateCheck + ") {\n";
       OS << "  ";
@@ -662,8 +655,8 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
     if (Memo.SubRegNo.empty()) {
       Operands.PrintManglingSuffix(OS, *Memo.PhysRegs,
      ImmediatePredicates, true);
-      OS << "(" << InstNS << Memo.Name << ", ";
-      OS << "&" << InstNS << Memo.RC->getName() << "RegClass";
+      OS << "(" << InstNS << "::" << Memo.Name << ", ";
+      OS << "&" << InstNS << "::" << Memo.RC->getName() << "RegClass";
       if (!Operands.empty())
         OS << ", ";
       Operands.PrintArguments(OS, *Memo.PhysRegs);
@@ -876,8 +869,8 @@ void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
                        Target.getName().str() + " target", OS);
 
   // Determine the target's namespace name.
-  std::string InstNS = Target.getInstNamespace() + "::";
-  assert(InstNS.size() > 2 && "Can't determine target-specific namespace!");
+  StringRef InstNS = Target.getInstNamespace();
+  assert(!InstNS.empty() && "Can't determine target-specific namespace!");
 
   FastISelMap F(InstNS);
   F.collectPatterns(CGP);

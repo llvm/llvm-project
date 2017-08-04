@@ -1,4 +1,4 @@
-//===-- DWARFUnitIndex.cpp ------------------------------------------------===//
+//===- DWARFUnitIndex.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,11 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
-
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cinttypes>
+#include <cstdint>
 
-namespace llvm {
+using namespace llvm;
 
 bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
                                    uint32_t *OffsetPtr) {
@@ -119,7 +123,7 @@ StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
 }
 
 void DWARFUnitIndex::dump(raw_ostream &OS) const {
-  if (!Header.NumBuckets)
+  if (!*this)
     return;
 
   Header.dump(OS);
@@ -152,6 +156,7 @@ DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
       return &Contributions[i];
   return nullptr;
 }
+
 const DWARFUnitIndex::Entry::SectionContribution *
 DWARFUnitIndex::Entry::getOffset() const {
   return &Contributions[Index->InfoColumn];
@@ -165,4 +170,17 @@ DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
         return &Rows[i];
   return nullptr;
 }
+
+const DWARFUnitIndex::Entry *DWARFUnitIndex::getFromHash(uint64_t S) const {
+  uint64_t Mask = Header.NumBuckets - 1;
+
+  auto H = S & Mask;
+  auto HP = ((S >> 32) & Mask) | 1;
+  while (Rows[H].getSignature() != S && Rows[H].getSignature() != 0)
+    H = (H + HP) & Mask;
+
+  if (Rows[H].getSignature() != S)
+    return nullptr;
+
+  return &Rows[H];
 }

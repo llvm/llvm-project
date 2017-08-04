@@ -43,3 +43,21 @@ define i8 @stack_fold_addcarryx_u64(i8 %a0, i64 %a1, i64 %a2, i8* %a3) {
   ret i8 %2;
 }
 declare i8 @llvm.x86.addcarryx.u64(i8, i64, i64, i8*)
+
+define i8 @stack_fold_subborrow_u32(i8 %a0, i32 %a1, i32 %a2, i8* %a3) {
+  ;CHECK-LABEL: stack_fold_subborrow_u32
+  ;CHECK:       sbbl {{-?[0-9]*}}(%rsp), %ecx {{.*#+}} 4-byte Folded Reload
+  %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = tail call i8 @llvm.x86.subborrow.u32(i8 %a0, i32 %a1, i32 %a2, i8* %a3)
+  ret i8 %2;
+}
+declare i8 @llvm.x86.subborrow.u32(i8, i32, i32, i8*)
+
+define i8 @stack_fold_subborrow_u64(i8 %a0, i64 %a1, i64 %a2, i8* %a3) {
+  ;CHECK-LABEL: stack_fold_subborrow_u64
+  ;CHECK:       sbbq {{-?[0-9]*}}(%rsp), %rcx {{.*#+}} 8-byte Folded Reload
+  %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = tail call i8 @llvm.x86.subborrow.u64(i8 %a0, i64 %a1, i64 %a2, i8* %a3)
+  ret i8 %2;
+}
+declare i8 @llvm.x86.subborrow.u64(i8, i64, i64, i8*)

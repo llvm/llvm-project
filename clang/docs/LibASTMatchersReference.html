@@ -337,11 +337,64 @@ nonTypeTemplateParmDecl()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcCategoryDecl0')"><a name="objcCategoryDecl0Anchor">objcCategoryDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCCategoryDecl.html">ObjCCategoryDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcCategoryDecl0"><pre>Matches Objective-C category declarations.
+
+Example matches Foo (Additions)
+  @interface Foo (Additions)
+  @end
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcInterfaceDecl0')"><a name="objcInterfaceDecl0Anchor">objcInterfaceDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="objcInterfaceDecl0"><pre>Matches Objective-C interface declarations.
 
 Example matches Foo
   @interface Foo
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcIvarDecl0')"><a name="objcIvarDecl0Anchor">objcIvarDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCIvarDecl.html">ObjCIvarDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcIvarDecl0"><pre>Matches Objective-C instance variable declarations.
+
+Example matches _enabled
+  @implementation Foo {
+    BOOL _enabled;
+  }
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcMethodDecl0')"><a name="objcMethodDecl0Anchor">objcMethodDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcMethodDecl0"><pre>Matches Objective-C method declarations.
+
+Example matches both declaration and definition of -[Foo method]
+  @interface Foo
+  - (void)method;
+  @end
+
+  @implementation Foo
+  - (void)method {}
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcPropertyDecl0')"><a name="objcPropertyDecl0Anchor">objcPropertyDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcPropertyDecl0"><pre>Matches Objective-C property declarations.
+
+Example matches enabled
+  @interface Foo
+  @property BOOL enabled;
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcProtocolDecl0')"><a name="objcProtocolDecl0Anchor">objcProtocolDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCProtocolDecl.html">ObjCProtocolDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcProtocolDecl0"><pre>Matches Objective-C protocol declarations.
+
+Example matches FooDelegate
+  @protocol FooDelegate
   @end
 </pre></td></tr>
 
@@ -413,6 +466,15 @@ Given
   using Y = int;
 typeAliasDecl()
   matches "using Y = int", but not "typedef int X"
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('typeAliasTemplateDecl0')"><a name="typeAliasTemplateDecl0Anchor">typeAliasTemplateDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeAliasTemplateDecl.html">TypeAliasTemplateDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="typeAliasTemplateDecl0"><pre>Matches type alias template declarations.
+
+typeAliasTemplateDecl() matches
+  template &lt;typename T&gt;
+  using Y = X&lt;T&gt;;
 </pre></td></tr>
 
 
@@ -862,6 +924,19 @@ in
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxStdInitializerListExpr0')"><a name="cxxStdInitializerListExpr0Anchor">cxxStdInitializerListExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXStdInitializerListExpr.html">CXXStdInitializerListExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="cxxStdInitializerListExpr0"><pre>Matches C++ initializer list expressions.
+
+Given
+  std::vector&lt;int&gt; a({ 1, 2, 3 });
+  std::vector&lt;int&gt; b = { 4, 5 };
+  int c[] = { 6, 7 };
+  std::pair&lt;int, int&gt; d = { 8, 9 };
+cxxStdInitializerListExpr()
+  matches "{ 1, 2, 3 }" and "{ 4, 5 }"
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxTemporaryObjectExpr0')"><a name="cxxTemporaryObjectExpr0Anchor">cxxTemporaryObjectExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxTemporaryObjectExpr0"><pre>Matches functional cast expressions having N != 1 arguments
 
@@ -1098,7 +1173,7 @@ Example matches [&amp;](){return 5;}
 <tr><td colspan="4" class="doc" id="materializeTemporaryExpr0"><pre>Matches nodes where temporaries are materialized.
 
 Example: Given
-  struct T {void func()};
+  struct T {void func();};
   T f();
   void g(T);
 materializeTemporaryExpr() matches 'f()' in these statements
@@ -1784,15 +1859,42 @@ Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;CXXBoolLiteral&gt;</td><td class="name" onclick="toggle('equals2')"><a name="equals2Anchor">equals</a></td><td>ValueT  Value</td></tr>
-<tr><td colspan="4" class="doc" id="equals2"><pre>Matches literals that are equal to the given value.
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;</td><td class="name" onclick="toggle('equals2')"><a name="equals2Anchor">equals</a></td><td>ValueT  Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals2"><pre>Matches literals that are equal to the given value of type ValueT.
 
-Example matches true (matcher = cxxBoolLiteral(equals(true)))
-  true
+Given
+  f('false, 3.14, 42);
+characterLiteral(equals(0))
+  matches 'cxxBoolLiteral(equals(false)) and cxxBoolLiteral(equals(0))
+  match false
+floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
+  match 3.14
+integerLiteral(equals(42))
+  matches 42
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;CXXBoolLiteral&gt;,
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
 </pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;</td><td class="name" onclick="toggle('equals5')"><a name="equals5Anchor">equals</a></td><td>bool Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals5"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;</td><td class="name" onclick="toggle('equals11')"><a name="equals11Anchor">equals</a></td><td>double Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals11"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;</td><td class="name" onclick="toggle('equals8')"><a name="equals8Anchor">equals</a></td><td>unsigned Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals8"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXCatchStmt.html">CXXCatchStmt</a>&gt;</td><td class="name" onclick="toggle('isCatchAll0')"><a name="isCatchAll0Anchor">isCatchAll</a></td><td></td></tr>
@@ -2221,14 +2323,41 @@ Example: matches the implicit cast around 0
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;</td><td class="name" onclick="toggle('equals3')"><a name="equals3Anchor">equals</a></td><td>ValueT  Value</td></tr>
-<tr><td colspan="4" class="doc" id="equals3"><pre>Matches literals that are equal to the given value.
+<tr><td colspan="4" class="doc" id="equals3"><pre>Matches literals that are equal to the given value of type ValueT.
 
-Example matches true (matcher = cxxBoolLiteral(equals(true)))
-  true
+Given
+  f('false, 3.14, 42);
+characterLiteral(equals(0))
+  matches 'cxxBoolLiteral(equals(false)) and cxxBoolLiteral(equals(0))
+  match false
+floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
+  match 3.14
+integerLiteral(equals(42))
+  matches 42
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;CXXBoolLiteral&gt;,
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
 </pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;</td><td class="name" onclick="toggle('equals4')"><a name="equals4Anchor">equals</a></td><td>bool Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals4"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;</td><td class="name" onclick="toggle('equals10')"><a name="equals10Anchor">equals</a></td><td>double Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals10"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;</td><td class="name" onclick="toggle('equals7')"><a name="equals7Anchor">equals</a></td><td>unsigned Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals7"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('templateArgumentCountIs0')"><a name="templateArgumentCountIs0Anchor">templateArgumentCountIs</a></td><td>unsigned N</td></tr>
@@ -2458,14 +2587,33 @@ fieldDecl(isBitField())
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;</td><td class="name" onclick="toggle('equals1')"><a name="equals1Anchor">equals</a></td><td>ValueT  Value</td></tr>
-<tr><td colspan="4" class="doc" id="equals1"><pre>Matches literals that are equal to the given value.
+<tr><td colspan="4" class="doc" id="equals1"><pre>Matches literals that are equal to the given value of type ValueT.
 
-Example matches true (matcher = cxxBoolLiteral(equals(true)))
-  true
+Given
+  f('false, 3.14, 42);
+characterLiteral(equals(0))
+  matches 'cxxBoolLiteral(equals(false)) and cxxBoolLiteral(equals(0))
+  match false
+floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
+  match 3.14
+integerLiteral(equals(42))
+  matches 42
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;CXXBoolLiteral&gt;,
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
 </pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;</td><td class="name" onclick="toggle('equals12')"><a name="equals12Anchor">equals</a></td><td>double Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals12"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasDynamicExceptionSpec0')"><a name="hasDynamicExceptionSpec0Anchor">hasDynamicExceptionSpec</a></td><td></td></tr>
@@ -2730,14 +2878,41 @@ functionProtoType(parameterCountIs(3))
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;</td><td class="name" onclick="toggle('equals0')"><a name="equals0Anchor">equals</a></td><td>ValueT  Value</td></tr>
-<tr><td colspan="4" class="doc" id="equals0"><pre>Matches literals that are equal to the given value.
+<tr><td colspan="4" class="doc" id="equals0"><pre>Matches literals that are equal to the given value of type ValueT.
 
-Example matches true (matcher = cxxBoolLiteral(equals(true)))
-  true
+Given
+  f('false, 3.14, 42);
+characterLiteral(equals(0))
+  matches 'cxxBoolLiteral(equals(false)) and cxxBoolLiteral(equals(0))
+  match false
+floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
+  match 3.14
+integerLiteral(equals(42))
+  matches 42
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;CXXBoolLiteral&gt;,
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
 </pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;</td><td class="name" onclick="toggle('equals6')"><a name="equals6Anchor">equals</a></td><td>bool Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals6"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;</td><td class="name" onclick="toggle('equals13')"><a name="equals13Anchor">equals</a></td><td>double Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals13"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;</td><td class="name" onclick="toggle('equals9')"><a name="equals9Anchor">equals</a></td><td>unsigned Value</td></tr>
+<tr><td colspan="4" class="doc" id="equals9"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;</td><td class="name" onclick="toggle('isArrow0')"><a name="isArrow0Anchor">isArrow</a></td><td></td></tr>
@@ -5171,7 +5346,7 @@ Example matches y in x(y)
 <tr><td colspan="4" class="doc" id="hasReceiverType0"><pre>Matches on the receiver of an ObjectiveC Message expression.
 
 Example
-matcher = objCMessageExpr(hasRecieverType(asString("UIWebView *")));
+matcher = objCMessageExpr(hasReceiverType(asString("UIWebView *")));
 matches the [webView ...] message invocation.
   NSString *webViewJavaScript = ...
   UIWebView *webView = ...
@@ -5419,7 +5594,7 @@ alignof.
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('forFunction0')"><a name="forFunction0Anchor">forFunction</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forFunction0"><pre>Matches declaration of the function the statemenet belongs to
+<tr><td colspan="4" class="doc" id="forFunction0"><pre>Matches declaration of the function the statement belongs to
 
 Given:
 F&amp; operator=(const F&amp; o) {

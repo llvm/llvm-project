@@ -32,9 +32,6 @@ typedef clk_event_t clkevt_t;
 // queue_t
 typedef queue_t q_t;
 
-// ndrange_t
-typedef ndrange_t range_t;
-
 // reserve_id_t
 typedef reserve_id_t reserveid_t;
 

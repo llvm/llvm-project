@@ -20,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: test3:
-; CHECK: r1:0 = combine(#0, #1)
+; CHECK: r1:0 = combine(#0,#1)
 define i64 @test3() #0 {
 entry:
   %0 = tail call i64 @llvm.hexagon.S4.extractp(i64 -1, i32 63, i32 63)

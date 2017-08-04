@@ -7,13 +7,14 @@
 int printf(const char * restrict, ...);
 
 #if __LP64__
+typedef long CFIndex;
 typedef long NSInteger;
 typedef unsigned long NSUInteger;
 typedef int SInt32;
 typedef unsigned int UInt32;
 
 #else
-
+typedef int CFIndex;
 typedef int NSInteger;
 typedef unsigned int NSUInteger;
 typedef long SInt32;
@@ -27,6 +28,7 @@ typedef enum NSIntegerEnum : NSInteger {
   EnumValueB
 } NSIntegerEnum;
 
+CFIndex getCFIndex();
 NSInteger getNSInteger();
 NSUInteger getNSUInteger();
 SInt32 getSInt32();
@@ -52,6 +54,11 @@ void testCorrectionInAllCases() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-12]]:16-[[@LINE-12]]:16}:"(unsigned int)"
 
   printf("%s", getNSIntegerEnum()); // expected-warning{{enum values with underlying type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
+
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:13}:"%ld"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"(long)"
+
+  printf("%s", getCFIndex()); // expected-warning{{values of type 'CFIndex' should not be used as format arguments; add an explicit cast to 'long' instead}}
 
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:13}:"%ld"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"(long)"
@@ -120,6 +127,11 @@ void testWarn() {
 
   // CHECK-64: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:13}:"%ld"
   // CHECK-64: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"(long)"
+
+  printf("%d", getCFIndex()); // expected-warning{{values of type 'CFIndex' should not be used as format arguments; add an explicit cast to 'long' instead}}
+
+  // CHECK-64: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:13}:"%ld"
+  // CHECK-64: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"(long)"
 }
 
 void testPreserveHex() {
@@ -165,6 +177,10 @@ void testWarn() {
   // CHECK-32: fix-it:"{{.*}}":{[[@LINE-5]]:16-[[@LINE-5]]:16}:"(unsigned int)"
 
   printf("%ld", getNSIntegerEnum()); // expected-warning{{enum values with underlying type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
+
+  // CHECK-32: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"(long)"
+
+  printf("%ld", getCFIndex()); // expected-warning{{values of type 'CFIndex' should not be used as format arguments; add an explicit cast to 'long' instead}}
 
   // CHECK-32: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"(long)"
 }
@@ -218,6 +234,11 @@ void testCasts() {
 
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:13}:"%ld"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:31}:"(long)"
+
+  printf("%s", (CFIndex)0); // expected-warning{{values of type 'CFIndex' should not be used as format arguments; add an explicit cast to 'long' instead}}
+  
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:13}:"%ld"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:25}:"(long)"
 }
 
 void testCapitals() {

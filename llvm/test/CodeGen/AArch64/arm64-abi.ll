@@ -43,9 +43,7 @@ entry:
 ; CHECK-LABEL: i8i16caller
 ; The 8th, 9th, 10th and 11th arguments are passed at sp, sp+2, sp+4, sp+5.
 ; They are i8, i16, i8 and i8.
-; CHECK-DAG: strb {{w[0-9]+}}, [sp, #5]
-; CHECK-DAG: strb {{w[0-9]+}}, [sp, #4]
-; CHECK-DAG: strh {{w[0-9]+}}, [sp, #2]
+; CHECK-DAG: stur {{w[0-9]+}}, [sp, #2]
 ; CHECK-DAG: strb {{w[0-9]+}}, [sp]
 ; CHECK: bl
 ; FAST-LABEL: i8i16caller
@@ -205,10 +203,7 @@ declare i32 @args_i32(i32, i32, i32, i32, i32, i32, i32, i32, i16 signext, i32,
 define i32 @test8(i32 %argc, i8** nocapture %argv) nounwind {
 entry:
 ; CHECK-LABEL: test8
-; CHECK: strb {{w[0-9]+}}, [sp, #3]
-; CHECK: strb wzr, [sp, #2]
-; CHECK: strb {{w[0-9]+}}, [sp, #1]
-; CHECK: strb wzr, [sp]
+; CHECK: str w8, [sp]
 ; CHECK: bl
 ; FAST-LABEL: test8
 ; FAST: strb {{w[0-9]+}}, [sp]

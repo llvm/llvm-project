@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AVRMCTargetDesc.h"
 #include "AVRELFStreamer.h"
 #include "AVRMCAsmInfo.h"
-#include "AVRMCTargetDesc.h"
 #include "AVRTargetStreamer.h"
 #include "InstPrinter/AVRInstPrinter.h"
 

@@ -55,12 +55,7 @@
 #include <string.h>
 #endif
 
-namespace __cxxabiv1
-{
-
-#pragma GCC visibility push(hidden)
-
-inline
+static inline
 bool
 is_equal(const std::type_info* x, const std::type_info* y, bool use_strcmp)
 {
@@ -73,6 +68,8 @@ is_equal(const std::type_info* x, const std::type_info* y, bool use_strcmp)
 #endif
 }
 
+namespace __cxxabiv1
+{
 
 // __shim_type_info
 
@@ -232,7 +229,7 @@ __class_type_info::can_catch(const __shim_type_info* thrown_type,
     if (thrown_class_type == 0)
         return false;
     // bullet 2
-    __dynamic_cast_info info = {thrown_class_type, 0, this, -1, 0};
+    __dynamic_cast_info info = {thrown_class_type, 0, this, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
     if (info.path_dst_ptr_to_static_ptr == public_path)
@@ -430,7 +427,7 @@ __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
         dynamic_cast<const __class_type_info*>(thrown_pointer_type->__pointee);
     if (thrown_class_type == 0)
         return false;
-    __dynamic_cast_info info = {thrown_class_type, 0, catch_class_type, -1, 0};
+    __dynamic_cast_info info = {thrown_class_type, 0, catch_class_type, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
     if (info.path_dst_ptr_to_static_ptr == public_path)
@@ -538,9 +535,6 @@ bool __pointer_to_member_type_info::can_catch_nested(
 #pragma clang diagnostic pop
 #endif
 
-#pragma GCC visibility pop
-#pragma GCC visibility push(default)
-
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
@@ -639,7 +633,7 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
     //    be returned.
     const void* dst_ptr = 0;
     // Initialize info struct for this search.
-    __dynamic_cast_info info = {dst_type, static_ptr, static_type, src2dst_offset, 0};
+    __dynamic_cast_info info = {dst_type, static_ptr, static_type, src2dst_offset, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,};
 
     // Find out if we can use a giant short cut in the search
     if (is_equal(dynamic_type, dst_type, false))
@@ -714,9 +708,6 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
-
-#pragma GCC visibility pop
-#pragma GCC visibility push(hidden)
 
 // Call this function when you hit a static_type which is a base (above) a dst_type.
 // Let caller know you hit a static_type.  But only start recording details if
@@ -1299,7 +1290,5 @@ __base_class_type_info::search_below_dst(__dynamic_cast_info* info,
                                       not_public_path,
                                   use_strcmp);
 }
-
-#pragma GCC visibility pop
 
 }  // __cxxabiv1

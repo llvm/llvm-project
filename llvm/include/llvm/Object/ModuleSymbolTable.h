@@ -1,4 +1,4 @@
-//===- ModuleSymbolTable.h - symbol table for in-memory IR ----------------===//
+//===- ModuleSymbolTable.h - symbol table for in-memory IR ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,15 @@
 #ifndef LLVM_OBJECT_MODULESYMBOLTABLE_H
 #define LLVM_OBJECT_MODULESYMBOLTABLE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/Allocator.h"
+#include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -29,8 +32,8 @@ class GlobalValue;
 
 class ModuleSymbolTable {
 public:
-  typedef std::pair<std::string, uint32_t> AsmSymbol;
-  typedef PointerUnion<GlobalValue *, AsmSymbol *> Symbol;
+  using AsmSymbol = std::pair<std::string, uint32_t>;
+  using Symbol = PointerUnion<GlobalValue *, AsmSymbol *>;
 
 private:
   Module *FirstMod = nullptr;
@@ -52,10 +55,10 @@ public:
   /// For each found symbol, call \p AsmSymbol with the name of the symbol found
   /// and the associated flags.
   static void CollectAsmSymbols(
-      const Triple &TheTriple, StringRef InlineAsm,
+      const Module &M,
       function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol);
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_OBJECT_MODULESYMBOLTABLE_H

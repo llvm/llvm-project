@@ -106,6 +106,8 @@ public:
   /// \brief Initializes \c ClangTidyContext instance.
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider);
 
+  ~ClangTidyContext();
+
   /// \brief Report any errors detected using this method.
   ///
   /// This is still under heavy development and will likely change towards using
@@ -136,14 +138,14 @@ public:
   /// diagnostic ID.
   StringRef getCheckName(unsigned DiagnosticID) const;
 
-  /// \brief Returns check filter for the \c CurrentFile.
+  /// \brief Returns \c true if the check is enabled for the \c CurrentFile.
   ///
   /// The \c CurrentFile can be changed using \c setCurrentFile.
-  GlobList &getChecksFilter();
+  bool isCheckEnabled(StringRef CheckName) const;
 
-  /// \brief Returns check filter for the \c CurrentFile which
-  /// selects checks for upgrade to error.
-  GlobList &getWarningAsErrorFilter();
+  /// \brief Returns \c true if the check should be upgraded to error for the
+  /// \c CurrentFile.
+  bool treatAsError(StringRef CheckName) const;
 
   /// \brief Returns global options.
   const ClangTidyGlobalOptions &getGlobalOptions() const;
@@ -162,7 +164,7 @@ public:
   const ClangTidyStats &getStats() const { return Stats; }
 
   /// \brief Returns all collected errors.
-  const std::vector<ClangTidyError> &getErrors() const { return Errors; }
+  ArrayRef<ClangTidyError> getErrors() const { return Errors; }
 
   /// \brief Clears collected errors.
   void clearErrors() { Errors.clear(); }
@@ -202,8 +204,9 @@ private:
 
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
-  std::unique_ptr<GlobList> CheckFilter;
-  std::unique_ptr<GlobList> WarningAsErrorFilter;
+  class CachedGlobList;
+  std::unique_ptr<CachedGlobList> CheckFilter;
+  std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
 
   LangOptions LangOpts;
 
@@ -223,7 +226,8 @@ private:
 // implementation file.
 class ClangTidyDiagnosticConsumer : public DiagnosticConsumer {
 public:
-  ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx);
+  ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx,
+                              bool RemoveIncompatibleErrors = true);
 
   // FIXME: The concept of converting between FixItHints and Replacements is
   // more generic and should be pulled out into a more useful Diagnostics
@@ -249,6 +253,7 @@ private:
   bool passesLineFilter(StringRef FileName, unsigned LineNumber) const;
 
   ClangTidyContext &Context;
+  bool RemoveIncompatibleErrors;
   std::unique_ptr<DiagnosticsEngine> Diags;
   SmallVector<ClangTidyError, 8> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;

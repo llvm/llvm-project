@@ -10,8 +10,8 @@ target triple = "x86_64-pc-linux"
 define void @fn1() {
   %a = alloca [1073741825 x i32], align 16
   %t0 = bitcast [1073741825 x i32]* %a to i8*
-  call void @llvm.lifetime.end(i64 4294967300, i8* %t0)
+  call void @llvm.lifetime.end.p0i8(i64 4294967300, i8* %t0)
   ret void
 }
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

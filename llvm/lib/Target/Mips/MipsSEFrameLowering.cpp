@@ -12,25 +12,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsSEFrameLowering.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsMachineFunction.h"
+#include "MipsRegisterInfo.h"
 #include "MipsSEInstrInfo.h"
 #include "MipsSubtarget.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
-
-namespace {
-typedef MachineBasicBlock::iterator Iter;
 
 static std::pair<unsigned, unsigned> getMFHiLoOpc(unsigned Src) {
   if (Mips::ACC64RegClass.contains(Src))
@@ -47,6 +62,8 @@ static std::pair<unsigned, unsigned> getMFHiLoOpc(unsigned Src) {
   return std::make_pair(0, 0);
 }
 
+namespace {
+
 /// Helper class to expand pseudos.
 class ExpandPseudo {
 public:
@@ -54,6 +71,8 @@ public:
   bool expand();
 
 private:
+  typedef MachineBasicBlock::iterator Iter;
+
   bool expandInstr(MachineBasicBlock &MBB, Iter I);
   void expandLoadCCond(MachineBasicBlock &MBB, Iter I);
   void expandStoreCCond(MachineBasicBlock &MBB, Iter I);
@@ -74,7 +93,8 @@ private:
   const MipsSEInstrInfo &TII;
   const MipsRegisterInfo &RegInfo;
 };
-}
+
+} // end anonymous namespace
 
 ExpandPseudo::ExpandPseudo(MachineFunction &MF_)
     : MF(MF_), MRI(MF.getRegInfo()),
@@ -240,7 +260,8 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
   //  copy dst_hi, $vr1
 
   unsigned Dst = I->getOperand(0).getReg(), Src = I->getOperand(1).getReg();
-  unsigned VRegSize = RegInfo.getMinimalPhysRegClass(Dst)->getSize() / 2;
+  const TargetRegisterClass *DstRC = RegInfo.getMinimalPhysRegClass(Dst);
+  unsigned VRegSize = RegInfo.getRegSizeInBits(*DstRC) / 16;
   const TargetRegisterClass *RC = RegInfo.intRegClass(VRegSize);
   unsigned VR0 = MRI.createVirtualRegister(RC);
   unsigned VR1 = MRI.createVirtualRegister(RC);
@@ -419,7 +440,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  if (CSI.size()) {
+  if (!CSI.empty()) {
     // Find the instruction past the last instruction that saves a callee-saved
     // register to the stack.
     for (unsigned i = 0; i < CSI.size(); ++i)
@@ -471,7 +492,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       } else {
         // Reg is either in GPR32 or FGR32.
         unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-            nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
+            nullptr, MRI->getDwarfRegNum(Reg, true), Offset));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
       }
@@ -534,7 +555,6 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
 void MipsSEFrameLowering::emitInterruptPrologueStub(
     MachineFunction &MF, MachineBasicBlock &MBB) const {
-
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
@@ -722,7 +742,6 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
 void MipsSEFrameLowering::emitInterruptEpilogueStub(
     MachineFunction &MF, MachineBasicBlock &MBB) const {
-
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
@@ -820,7 +839,6 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 bool
 MipsSEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-
   // Reserve call frame if the size of the maximum call frame fits into 16-bit
   // immediate field and there are no variable sized objects on the stack.
   // Make sure the second register scavenger spill slot can be accessed with one
@@ -841,6 +859,7 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
   unsigned FP = ABI.GetFramePtr();
@@ -866,10 +885,11 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (ExpandPseudo(MF).expand()) {
     // The spill slot should be half the size of the accumulator. If target is
     // mips64, it should be 64-bit, otherwise it should be 32-bt.
-    const TargetRegisterClass *RC = STI.hasMips64() ?
-      &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-    int FI = MF.getFrameInfo().CreateStackObject(RC->getSize(),
-                                                  RC->getAlignment(), false);
+    const TargetRegisterClass &RC = STI.hasMips64() ?
+      Mips::GPR64RegClass : Mips::GPR32RegClass;
+    int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
+                                                 TRI->getSpillAlignment(RC),
+                                                 false);
     RS->addScavengingFrameIndex(FI);
   }
 
@@ -880,10 +900,11 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (isInt<16>(MaxSPOffset))
     return;
 
-  const TargetRegisterClass *RC =
-      ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-  int FI = MF.getFrameInfo().CreateStackObject(RC->getSize(),
-                                                RC->getAlignment(), false);
+  const TargetRegisterClass &RC =
+      ABI.ArePtrs64bit() ? Mips::GPR64RegClass : Mips::GPR32RegClass;
+  int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
+                                               TRI->getSpillAlignment(RC),
+                                               false);
   RS->addScavengingFrameIndex(FI);
 }
 

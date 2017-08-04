@@ -69,7 +69,7 @@ class MCFixup {
   /// an instruction or an assembler directive.
   const MCExpr *Value;
 
-  /// The byte index of start of the relocation inside the encoded instruction.
+  /// The byte index of start of the relocation inside the MCFragment.
   uint32_t Offset;
 
   /// The target dependent kind of fixup item this is. The kind is used to

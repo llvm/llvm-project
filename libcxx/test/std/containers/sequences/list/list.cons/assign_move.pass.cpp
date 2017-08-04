@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <list>
 
 // list& operator=(list&& c);
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         std::list<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5));
         std::list<MoveOnly, test_allocator<MoveOnly> > lo(test_allocator<MoveOnly>(5));
@@ -62,7 +63,6 @@ int main()
         assert(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
     }
-#if TEST_STD_VER >= 11
     {
         std::list<MoveOnly, min_allocator<MoveOnly> > l(min_allocator<MoveOnly>{});
         std::list<MoveOnly, min_allocator<MoveOnly> > lo(min_allocator<MoveOnly>{});
@@ -77,6 +77,4 @@ int main()
         assert(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

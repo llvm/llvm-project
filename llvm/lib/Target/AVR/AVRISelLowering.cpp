@@ -48,6 +48,8 @@ AVRTargetLowering::AVRTargetLowering(AVRTargetMachine &tm)
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
 
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i8, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
 
@@ -76,6 +78,11 @@ AVRTargetLowering::AVRTargetLowering(AVRTargetMachine &tm)
   setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
+
+  setOperationAction(ISD::ROTL, MVT::i8, Custom);
+  setOperationAction(ISD::ROTL, MVT::i16, Custom);
+  setOperationAction(ISD::ROTR, MVT::i8, Custom);
+  setOperationAction(ISD::ROTR, MVT::i16, Custom);
 
   setOperationAction(ISD::BR_CC, MVT::i8, Custom);
   setOperationAction(ISD::BR_CC, MVT::i16, Custom);
@@ -271,6 +278,12 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SRL:
       return DAG.getNode(AVRISD::LSRLOOP, dl, VT, N->getOperand(0),
                          N->getOperand(1));
+    case ISD::ROTL:
+      return DAG.getNode(AVRISD::ROLLOOP, dl, VT, N->getOperand(0),
+                         N->getOperand(1));
+    case ISD::ROTR:
+      return DAG.getNode(AVRISD::RORLOOP, dl, VT, N->getOperand(0),
+                         N->getOperand(1));
     case ISD::SRA:
       return DAG.getNode(AVRISD::ASRLOOP, dl, VT, N->getOperand(0),
                          N->getOperand(1));
@@ -311,7 +324,7 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
          "Invalid opcode for Div/Rem lowering");
-  bool isSigned = (Opcode == ISD::SDIVREM);
+  bool IsSigned = (Opcode == ISD::SDIVREM);
   EVT VT = Op->getValueType(0);
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
 
@@ -320,16 +333,16 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   default:
     llvm_unreachable("Unexpected request for libcall!");
   case MVT::i8:
-    LC = isSigned ? RTLIB::SDIVREM_I8 : RTLIB::UDIVREM_I8;
+    LC = IsSigned ? RTLIB::SDIVREM_I8 : RTLIB::UDIVREM_I8;
     break;
   case MVT::i16:
-    LC = isSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16;
+    LC = IsSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16;
     break;
   case MVT::i32:
-    LC = isSigned ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
+    LC = IsSigned ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
     break;
   case MVT::i64:
-    LC = isSigned ? RTLIB::SDIVREM_I64 : RTLIB::UDIVREM_I64;
+    LC = IsSigned ? RTLIB::SDIVREM_I64 : RTLIB::UDIVREM_I64;
     break;
   }
 
@@ -340,24 +353,24 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   for (SDValue const &Value : Op->op_values()) {
     Entry.Node = Value;
     Entry.Ty = Value.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.isSExt = isSigned;
-    Entry.isZExt = !isSigned;
+    Entry.IsSExt = IsSigned;
+    Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);
   }
 
   SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
                                          getPointerTy(DAG.getDataLayout()));
 
-  Type *RetTy = (Type *)StructType::get(Ty, Ty, nullptr);
+  Type *RetTy = (Type *)StructType::get(Ty, Ty);
 
   SDLoc dl(Op);
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
+      .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
       .setInRegister()
-      .setSExtResult(isSigned)
-      .setZExtResult(!isSigned);
+      .setSExtResult(IsSigned)
+      .setZExtResult(!IsSigned);
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
   return CallInfo.first;
@@ -932,6 +945,12 @@ static void analyzeStandardArguments(TargetLowering::CallLoweringInfo *CLI,
   bool UsesStack = false;
   for (unsigned i = 0, pos = 0, e = Args.size(); i != e; ++i) {
     unsigned Size = Args[i];
+
+    // If we have a zero-sized argument, don't attempt to lower it.
+    // AVR-GCC does not support zero-sized arguments and so we need not
+    // worry about ABI compatibility.
+    if (Size == 0) continue;
+
     MVT LocVT = (IsCall) ? (*Outs)[pos].VT : (*Ins)[pos].VT;
 
     // If we have plenty of regs to pass the whole argument do it.
@@ -1147,8 +1166,7 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getNextStackOffset();
 
-  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, DL, true),
-                               DL);
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
@@ -1373,7 +1391,7 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Don't emit the ret/reti instruction when the naked attribute is present in
   // the function being compiled.
   if (MF.getFunction()->getAttributes().hasAttribute(
-          AttributeSet::FunctionIndex, Attribute::Naked)) {
+          AttributeList::FunctionIndex, Attribute::Naked)) {
     return Chain;
   }
 
@@ -1432,6 +1450,22 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
     Opc = AVR::LSRWRd;
     RC = &AVR::DREGSRegClass;
     break;
+  case AVR::Rol8:
+    Opc = AVR::ROLRd;
+    RC = &AVR::GPR8RegClass;
+    break;
+  case AVR::Rol16:
+    Opc = AVR::ROLWRd;
+    RC = &AVR::DREGSRegClass;
+    break;
+  case AVR::Ror8:
+    Opc = AVR::RORRd;
+    RC = &AVR::GPR8RegClass;
+    break;
+  case AVR::Ror16:
+    Opc = AVR::RORWRd;
+    RC = &AVR::DREGSRegClass;
+    break;
   }
 
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
@@ -1466,9 +1500,9 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   unsigned DstReg = MI.getOperand(0).getReg();
 
   // BB:
-  // cp 0, N
+  // cpi N, 0
   // breq RemBB
-  BuildMI(BB, dl, TII.get(AVR::CPRdRr)).addReg(ShiftAmtSrcReg).addReg(AVR::R0);
+  BuildMI(BB, dl, TII.get(AVR::CPIRdK)).addReg(ShiftAmtSrcReg).addImm(0);
   BuildMI(BB, dl, TII.get(AVR::BREQk)).addMBB(RemBB);
 
   // LoopBB:
@@ -1544,6 +1578,10 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::Lsl16:
   case AVR::Lsr8:
   case AVR::Lsr16:
+  case AVR::Rol8:
+  case AVR::Rol16:
+  case AVR::Ror8:
+  case AVR::Ror16:
   case AVR::Asr8:
   case AVR::Asr16:
     return insertShift(MI, MBB);
@@ -1572,8 +1610,9 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineBasicBlock *trueMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *falseMBB = MF->CreateMachineBasicBlock(LLVM_BB);
 
-  MachineFunction::iterator I = MBB->getParent()->begin();
-  ++I;
+  MachineFunction::iterator I;
+  for (I = MF->begin(); I != MF->end() && &(*I) != MBB; ++I);
+  if (I != MF->end()) ++I;
   MF->insert(I, trueMBB);
   MF->insert(I, falseMBB);
 
@@ -1975,4 +2014,3 @@ unsigned AVRTargetLowering::getRegisterByName(const char *RegName,
 }
 
 } // end of namespace llvm
-

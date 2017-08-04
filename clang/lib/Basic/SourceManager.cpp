@@ -73,11 +73,11 @@ void ContentCache::replaceBuffer(llvm::MemoryBuffer *B, bool DoNotFree) {
     Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
     return;
   }
-  
+
   if (shouldFreeBuffer())
     delete Buffer.getPointer();
   Buffer.setPointer(B);
-  Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
+  Buffer.setInt((B && DoNotFree) ? DoNotFreeFlag : 0);
 }
 
 llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
@@ -183,47 +183,21 @@ unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
   return IterBool.first->second;
 }
 
-/// AddLineNote - Add a line note to the line table that indicates that there
-/// is a \#line at the specified FID/Offset location which changes the presumed
-/// location to LineNo/FilenameID.
-void LineTableInfo::AddLineNote(FileID FID, unsigned Offset,
-                                unsigned LineNo, int FilenameID) {
-  std::vector<LineEntry> &Entries = LineEntries[FID];
-
-  assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
-         "Adding line entries out of order!");
-
-  SrcMgr::CharacteristicKind Kind = SrcMgr::C_User;
-  unsigned IncludeOffset = 0;
-
-  if (!Entries.empty()) {
-    // If this is a '#line 4' after '#line 42 "foo.h"', make sure to remember
-    // that we are still in "foo.h".
-    if (FilenameID == -1)
-      FilenameID = Entries.back().FilenameID;
-
-    // If we are after a line marker that switched us to system header mode, or
-    // that set #include information, preserve it.
-    Kind = Entries.back().FileKind;
-    IncludeOffset = Entries.back().IncludeOffset;
-  }
-
-  Entries.push_back(LineEntry::get(Offset, LineNo, FilenameID, Kind,
-                                   IncludeOffset));
-}
-
-/// AddLineNote This is the same as the previous version of AddLineNote, but is
-/// used for GNU line markers.  If EntryExit is 0, then this doesn't change the
-/// presumed \#include stack.  If it is 1, this is a file entry, if it is 2 then
-/// this is a file exit.  FileKind specifies whether this is a system header or
-/// extern C system header.
-void LineTableInfo::AddLineNote(FileID FID, unsigned Offset,
-                                unsigned LineNo, int FilenameID,
-                                unsigned EntryExit,
+/// Add a line note to the line table that indicates that there is a \#line or
+/// GNU line marker at the specified FID/Offset location which changes the
+/// presumed location to LineNo/FilenameID. If EntryExit is 0, then this doesn't
+/// change the presumed \#include stack.  If it is 1, this is a file entry, if
+/// it is 2 then this is a file exit. FileKind specifies whether this is a
+/// system header or extern C system header.
+void LineTableInfo::AddLineNote(FileID FID, unsigned Offset, unsigned LineNo,
+                                int FilenameID, unsigned EntryExit,
                                 SrcMgr::CharacteristicKind FileKind) {
-  assert(FilenameID != -1 && "Unspecified filename should use other accessor");
-
   std::vector<LineEntry> &Entries = LineEntries[FID];
+
+  // An unspecified FilenameID means use the last filename if available, or the
+  // main source file otherwise.
+  if (FilenameID == -1 && !Entries.empty())
+    FilenameID = Entries.back().FilenameID;
 
   assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
          "Adding line entries out of order!");
@@ -281,61 +255,26 @@ unsigned SourceManager::getLineTableFilenameID(StringRef Name) {
   return getLineTable().getLineTableFilenameID(Name);
 }
 
-
 /// AddLineNote - Add a line note to the line table for the FileID and offset
 /// specified by Loc.  If FilenameID is -1, it is considered to be
 /// unspecified.
 void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
-                                int FilenameID) {
-  std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
-
-  bool Invalid = false;
-  const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
-  if (!Entry.isFile() || Invalid)
-    return;
-  
-  const SrcMgr::FileInfo &FileInfo = Entry.getFile();
-
-  // Remember that this file has #line directives now if it doesn't already.
-  const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
-
-  getLineTable().AddLineNote(LocInfo.first, LocInfo.second, LineNo, FilenameID);
-}
-
-/// AddLineNote - Add a GNU line marker to the line table.
-void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
                                 int FilenameID, bool IsFileEntry,
-                                bool IsFileExit, bool IsSystemHeader,
-                                bool IsExternCHeader) {
-  // If there is no filename and no flags, this is treated just like a #line,
-  // which does not change the flags of the previous line marker.
-  if (FilenameID == -1) {
-    assert(!IsFileEntry && !IsFileExit && !IsSystemHeader && !IsExternCHeader &&
-           "Can't set flags without setting the filename!");
-    return AddLineNote(Loc, LineNo, FilenameID);
-  }
-
+                                bool IsFileExit,
+                                SrcMgr::CharacteristicKind FileKind) {
   std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
 
   bool Invalid = false;
   const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
   if (!Entry.isFile() || Invalid)
     return;
-  
+
   const SrcMgr::FileInfo &FileInfo = Entry.getFile();
 
   // Remember that this file has #line directives now if it doesn't already.
   const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
 
   (void) getLineTable();
-
-  SrcMgr::CharacteristicKind FileKind;
-  if (IsExternCHeader)
-    FileKind = SrcMgr::C_ExternCSystem;
-  else if (IsSystemHeader)
-    FileKind = SrcMgr::C_System;
-  else
-    FileKind = SrcMgr::C_User;
 
   unsigned EntryExit = 0;
   if (IsFileEntry)
@@ -404,6 +343,34 @@ void SourceManager::clearIDTables() {
   NextLocalOffset = 0;
   CurrentLoadedOffset = MaxLoadedOffset;
   createExpansionLoc(SourceLocation(),SourceLocation(),SourceLocation(), 1);
+}
+
+void SourceManager::initializeForReplay(const SourceManager &Old) {
+  assert(MainFileID.isInvalid() && "expected uninitialized SourceManager");
+
+  auto CloneContentCache = [&](const ContentCache *Cache) -> ContentCache * {
+    auto *Clone = new (ContentCacheAlloc.Allocate<ContentCache>()) ContentCache;
+    Clone->OrigEntry = Cache->OrigEntry;
+    Clone->ContentsEntry = Cache->ContentsEntry;
+    Clone->BufferOverridden = Cache->BufferOverridden;
+    Clone->IsSystemFile = Cache->IsSystemFile;
+    Clone->IsTransient = Cache->IsTransient;
+    Clone->replaceBuffer(Cache->getRawBuffer(), /*DoNotFree*/true);
+    return Clone;
+  };
+
+  // Ensure all SLocEntries are loaded from the external source.
+  for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)
+    if (!Old.SLocEntryLoaded[I])
+      Old.loadSLocEntry(I, nullptr);
+
+  // Inherit any content cache data from the old source manager.
+  for (auto &FileInfo : Old.FileInfos) {
+    SrcMgr::ContentCache *&Slot = FileInfos[FileInfo.first];
+    if (Slot)
+      continue;
+    Slot = CloneContentCache(FileInfo.second);
+  }
 }
 
 /// getOrCreateContentCache - Create or return a cached ContentCache for the
@@ -1136,6 +1103,7 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
     return 1;
   }
 
+  const char *Buf = MemBuf->getBufferStart();
   // See if we just calculated the line number for this FilePos and can use
   // that to lookup the start of the line instead of searching for it.
   if (LastLineNoFileIDQuery == FID &&
@@ -1144,11 +1112,19 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
     unsigned *SourceLineCache = LastLineNoContentCache->SourceLineCache;
     unsigned LineStart = SourceLineCache[LastLineNoResult - 1];
     unsigned LineEnd = SourceLineCache[LastLineNoResult];
-    if (FilePos >= LineStart && FilePos < LineEnd)
+    if (FilePos >= LineStart && FilePos < LineEnd) {
+      // LineEnd is the LineStart of the next line.
+      // A line ends with separator LF or CR+LF on Windows.
+      // FilePos might point to the last separator,
+      // but we need a column number at most 1 + the last column.
+      if (FilePos + 1 == LineEnd && FilePos > LineStart) {
+        if (Buf[FilePos - 1] == '\r' || Buf[FilePos - 1] == '\n')
+          --FilePos;
+      }
       return FilePos - LineStart + 1;
+    }
   }
 
-  const char *Buf = MemBuf->getBufferStart();
   unsigned LineStart = FilePos;
   while (LineStart && Buf[LineStart-1] != '\n' && Buf[LineStart-1] != '\r')
     --LineStart;
@@ -2042,56 +2018,13 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   if (LOffs.first.isInvalid() || ROffs.first.isInvalid())
     return LOffs.first.isInvalid() && !ROffs.first.isInvalid();
 
-  // If the source locations are in the same file, just compare offsets.
-  if (LOffs.first == ROffs.first)
-    return LOffs.second < ROffs.second;
-
-  // If we are comparing a source location with multiple locations in the same
-  // file, we get a big win by caching the result.
-  InBeforeInTUCacheEntry &IsBeforeInTUCache =
-    getInBeforeInTUCache(LOffs.first, ROffs.first);
-
-  // If we are comparing a source location with multiple locations in the same
-  // file, we get a big win by caching the result.
-  if (IsBeforeInTUCache.isCacheValid(LOffs.first, ROffs.first))
-    return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
-
-  // Okay, we missed in the cache, start updating the cache for this query.
-  IsBeforeInTUCache.setQueryFIDs(LOffs.first, ROffs.first,
-                          /*isLFIDBeforeRFID=*/LOffs.first.ID < ROffs.first.ID);
-
-  // We need to find the common ancestor. The only way of doing this is to
-  // build the complete include chain for one and then walking up the chain
-  // of the other looking for a match.
-  // We use a map from FileID to Offset to store the chain. Easier than writing
-  // a custom set hash info that only depends on the first part of a pair.
-  typedef llvm::SmallDenseMap<FileID, unsigned, 16> LocSet;
-  LocSet LChain;
-  do {
-    LChain.insert(LOffs);
-    // We catch the case where LOffs is in a file included by ROffs and
-    // quit early. The other way round unfortunately remains suboptimal.
-  } while (LOffs.first != ROffs.first && !MoveUpIncludeHierarchy(LOffs, *this));
-  LocSet::iterator I;
-  while((I = LChain.find(ROffs.first)) == LChain.end()) {
-    if (MoveUpIncludeHierarchy(ROffs, *this))
-      break; // Met at topmost file.
-  }
-  if (I != LChain.end())
-    LOffs = *I;
-
-  // If we exited because we found a nearest common ancestor, compare the
-  // locations within the common file and cache them.
-  if (LOffs.first == ROffs.first) {
-    IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second);
-    return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
-  }
+  std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
+  if (InSameTU.first)
+    return InSameTU.second;
 
   // If we arrived here, the location is either in a built-ins buffer or
   // associated with global inline asm. PR5662 and PR22576 are examples.
 
-  // Clear the lookup cache, it depends on a common location.
-  IsBeforeInTUCache.clear();
   StringRef LB = getBuffer(LOffs.first)->getBufferIdentifier();
   StringRef RB = getBuffer(ROffs.first)->getBufferIdentifier();
   bool LIsBuiltins = LB == "<built-in>";
@@ -2122,6 +2055,60 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
     return LOffs.second < ROffs.second;
   }
   llvm_unreachable("Unsortable locations found");
+}
+
+std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
+    std::pair<FileID, unsigned> &LOffs,
+    std::pair<FileID, unsigned> &ROffs) const {
+  // If the source locations are in the same file, just compare offsets.
+  if (LOffs.first == ROffs.first)
+    return std::make_pair(true, LOffs.second < ROffs.second);
+
+  // If we are comparing a source location with multiple locations in the same
+  // file, we get a big win by caching the result.
+  InBeforeInTUCacheEntry &IsBeforeInTUCache =
+    getInBeforeInTUCache(LOffs.first, ROffs.first);
+
+  // If we are comparing a source location with multiple locations in the same
+  // file, we get a big win by caching the result.
+  if (IsBeforeInTUCache.isCacheValid(LOffs.first, ROffs.first))
+    return std::make_pair(
+        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
+
+  // Okay, we missed in the cache, start updating the cache for this query.
+  IsBeforeInTUCache.setQueryFIDs(LOffs.first, ROffs.first,
+                          /*isLFIDBeforeRFID=*/LOffs.first.ID < ROffs.first.ID);
+
+  // We need to find the common ancestor. The only way of doing this is to
+  // build the complete include chain for one and then walking up the chain
+  // of the other looking for a match.
+  // We use a map from FileID to Offset to store the chain. Easier than writing
+  // a custom set hash info that only depends on the first part of a pair.
+  typedef llvm::SmallDenseMap<FileID, unsigned, 16> LocSet;
+  LocSet LChain;
+  do {
+    LChain.insert(LOffs);
+    // We catch the case where LOffs is in a file included by ROffs and
+    // quit early. The other way round unfortunately remains suboptimal.
+  } while (LOffs.first != ROffs.first && !MoveUpIncludeHierarchy(LOffs, *this));
+  LocSet::iterator I;
+  while((I = LChain.find(ROffs.first)) == LChain.end()) {
+    if (MoveUpIncludeHierarchy(ROffs, *this))
+      break; // Met at topmost file.
+  }
+  if (I != LChain.end())
+    LOffs = *I;
+
+  // If we exited because we found a nearest common ancestor, compare the
+  // locations within the common file and cache them.
+  if (LOffs.first == ROffs.first) {
+    IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second);
+    return std::make_pair(
+        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
+  }
+  // Clear the lookup cache, it depends on a common location.
+  IsBeforeInTUCache.clear();
+  return std::make_pair(false, false);
 }
 
 void SourceManager::PrintStats() const {

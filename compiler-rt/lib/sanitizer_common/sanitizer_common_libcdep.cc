@@ -124,7 +124,7 @@ void BackgroundThread(void *arg) {
     if (heap_profile &&
         current_rss_mb > rss_during_last_reported_profile * 1.1) {
       Printf("\n\nHEAP PROFILE at RSS %zdMb\n", current_rss_mb);
-      __sanitizer_print_memory_profile(90);
+      __sanitizer_print_memory_profile(90, 20);
       rss_during_last_reported_profile = current_rss_mb;
     }
   }
@@ -163,8 +163,8 @@ void MaybeStartBackgroudThread() {
 
 }  // namespace __sanitizer
 
-void NOINLINE
-__sanitizer_sandbox_on_notify(__sanitizer_sandbox_arguments *args) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
+                             __sanitizer_sandbox_arguments *args) {
   __sanitizer::PrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();

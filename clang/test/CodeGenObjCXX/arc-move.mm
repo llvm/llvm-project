@@ -49,7 +49,7 @@ void library_move(__strong id &y) {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
   // CHECK: [[I:%.*]] = alloca i32, align 4
   // CHECK:      [[XPTR1:%.*]] = bitcast i8** [[X]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[XPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
   // CHECK: [[Y:%[a-zA-Z0-9]+]] = call dereferenceable({{[0-9]+}}) i8** @_Z4moveIRU8__strongP11objc_objectEON16remove_referenceIT_E4typeEOS5_
   // Load the object
   // CHECK-NEXT: [[OBJ:%[a-zA-Z0-9]+]] = load i8*, i8** [[Y]]
@@ -60,15 +60,15 @@ void library_move(__strong id &y) {
   id x = move(y);
 
   // CHECK-NEXT: [[IPTR1:%.*]] = bitcast i32* [[I]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 4, i8* [[IPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 4, i8* [[IPTR1]])
   // CHECK-NEXT: store i32 17
   int i = 17;
   // CHECK-NEXT: [[IPTR2:%.*]] = bitcast i32* [[I]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 4, i8* [[IPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* [[IPTR2]])
   // CHECK-NEXT: [[OBJ:%[a-zA-Z0-9]+]] = load i8*, i8** [[X]]
   // CHECK-NEXT: call void @objc_release(i8* [[OBJ]])
   // CHECK-NEXT: [[XPTR2:%.*]] = bitcast i8** [[X]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[XPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[XPTR2]])
   // CHECK-NEXT: ret void
 }
 

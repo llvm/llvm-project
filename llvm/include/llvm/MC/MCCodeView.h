@@ -14,10 +14,10 @@
 #ifndef LLVM_MC_MCCODEVIEW_H
 #define LLVM_MC_MCCODEVIEW_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include <map>
 #include <vector>
 

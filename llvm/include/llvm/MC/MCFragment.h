@@ -10,24 +10,25 @@
 #ifndef LLVM_MC_MCFRAGMENT_H
 #define LLVM_MC_MCFRAGMENT_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_node.h"
-#include "llvm/ADT/iterator.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/SMLoc.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
+
 class MCSection;
-class MCSymbol;
 class MCSubtargetInfo;
+class MCSymbol;
 
 class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
   friend class MCAsmLayout;
-
-  MCFragment() = delete;
-  MCFragment(const MCFragment &) = delete;
-  void operator=(const MCFragment &) = delete;
 
 public:
   enum FragmentType : uint8_t {
@@ -86,6 +87,10 @@ protected:
   ~MCFragment();
 
 public:
+  MCFragment() = delete;
+  MCFragment(const MCFragment &) = delete;
+  MCFragment &operator=(const MCFragment &) = delete;
+
   /// Destroys the current fragment.
   ///
   /// This must be used instead of delete as MCFragment is non-virtual.
@@ -125,13 +130,14 @@ public:
   /// \brief Return true if given frgment has FT_Dummy type.
   bool isDummy() const { return Kind == FT_Dummy; }
 
-  void dump();
+  void dump() const;
 };
 
 class MCDummyFragment : public MCFragment {
 public:
   explicit MCDummyFragment(MCSection *Sec)
-      : MCFragment(FT_Dummy, false, 0, Sec){};
+      : MCFragment(FT_Dummy, false, 0, Sec) {}
+
   static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
 };
 
@@ -194,8 +200,8 @@ protected:
                                                     Sec) {}
 
 public:
-  typedef SmallVectorImpl<MCFixup>::const_iterator const_fixup_iterator;
-  typedef SmallVectorImpl<MCFixup>::iterator fixup_iterator;
+  using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
+  using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
 
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
@@ -271,7 +277,6 @@ public:
 };
 
 class MCAlignFragment : public MCFragment {
-
   /// Alignment - The alignment to ensure, in bytes.
   unsigned Alignment;
 
@@ -319,7 +324,6 @@ public:
 };
 
 class MCFillFragment : public MCFragment {
-
   /// Value to use for filling bytes.
   uint8_t Value;
 
@@ -339,7 +343,6 @@ public:
 };
 
 class MCOrgFragment : public MCFragment {
-
   /// Offset - The offset this fragment should start at.
   const MCExpr *Offset;
 
@@ -371,7 +374,6 @@ public:
 };
 
 class MCLEBFragment : public MCFragment {
-
   /// Value - The value this fragment should contain.
   const MCExpr *Value;
 
@@ -404,7 +406,6 @@ public:
 };
 
 class MCDwarfLineAddrFragment : public MCFragment {
-
   /// LineDelta - the value of the difference between the two line numbers
   /// between two .loc dwarf directives.
   int64_t LineDelta;
@@ -441,7 +442,6 @@ public:
 };
 
 class MCDwarfCallFrameFragment : public MCFragment {
-
   /// AddrDelta - The expression for the difference of the two symbols that
   /// make up the address delta between two .cfi_* dwarf directives.
   const MCExpr *AddrDelta;
@@ -561,4 +561,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCFRAGMENT_H

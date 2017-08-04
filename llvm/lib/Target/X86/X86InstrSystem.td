@@ -173,27 +173,28 @@ def MOV32rs : I<0x8C, MRMDestReg, (outs GR32:$dst), (ins SEGMENT_REG:$src),
                 "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV_REG_SR>, OpSize32;
 def MOV64rs : RI<0x8C, MRMDestReg, (outs GR64:$dst), (ins SEGMENT_REG:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", [], IIC_MOV_REG_SR>;
-
+let mayStore = 1 in {
 def MOV16ms : I<0x8C, MRMDestMem, (outs), (ins i16mem:$dst, SEGMENT_REG:$src),
                 "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV_MEM_SR>, OpSize16;
 def MOV32ms : I<0x8C, MRMDestMem, (outs), (ins i32mem:$dst, SEGMENT_REG:$src),
                 "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV_MEM_SR>, OpSize32;
 def MOV64ms : RI<0x8C, MRMDestMem, (outs), (ins i64mem:$dst, SEGMENT_REG:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", [], IIC_MOV_MEM_SR>;
-
+}
 def MOV16sr : I<0x8E, MRMSrcReg, (outs SEGMENT_REG:$dst), (ins GR16:$src),
                 "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV_SR_REG>, OpSize16;
 def MOV32sr : I<0x8E, MRMSrcReg, (outs SEGMENT_REG:$dst), (ins GR32:$src),
                 "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV_SR_REG>, OpSize32;
 def MOV64sr : RI<0x8E, MRMSrcReg, (outs SEGMENT_REG:$dst), (ins GR64:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", [], IIC_MOV_SR_REG>;
-
+let mayLoad = 1 in {
 def MOV16sm : I<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i16mem:$src),
                 "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV_SR_MEM>, OpSize16;
 def MOV32sm : I<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i32mem:$src),
                 "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV_SR_MEM>, OpSize32;
 def MOV64sm : RI<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i64mem:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", [], IIC_MOV_SR_MEM>;
+}
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -202,6 +203,7 @@ def MOV64sm : RI<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i64mem:$src),
 let SchedRW = [WriteSystem] in {
 def SWAPGS : I<0x01, MRM_F8, (outs), (ins), "swapgs", [], IIC_SWAPGS>, TB;
 
+let mayLoad = 1 in
 def LAR16rm : I<0x02, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                 "lar{w}\t{$src, $dst|$dst, $src}", [], IIC_LAR_RM>, TB,
                 OpSize16;
@@ -210,6 +212,7 @@ def LAR16rr : I<0x02, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                 OpSize16;
 
 // i16mem operand in LAR32rm and GR32 operand in LAR32rr is not a typo.
+let mayLoad = 1 in
 def LAR32rm : I<0x02, MRMSrcMem, (outs GR32:$dst), (ins i16mem:$src),
                 "lar{l}\t{$src, $dst|$dst, $src}", [], IIC_LAR_RM>, TB,
                 OpSize32;
@@ -217,23 +220,27 @@ def LAR32rr : I<0x02, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                 "lar{l}\t{$src, $dst|$dst, $src}", [], IIC_LAR_RR>, TB,
                 OpSize32;
 // i16mem operand in LAR64rm and GR32 operand in LAR32rr is not a typo.
+let mayLoad = 1 in
 def LAR64rm : RI<0x02, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
                  "lar{q}\t{$src, $dst|$dst, $src}", [], IIC_LAR_RM>, TB;
 def LAR64rr : RI<0x02, MRMSrcReg, (outs GR64:$dst), (ins GR32:$src),
                  "lar{q}\t{$src, $dst|$dst, $src}", [], IIC_LAR_RR>, TB;
 
+let mayLoad = 1 in
 def LSL16rm : I<0x03, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                 "lsl{w}\t{$src, $dst|$dst, $src}", [], IIC_LSL_RM>, TB,
                 OpSize16;
 def LSL16rr : I<0x03, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                 "lsl{w}\t{$src, $dst|$dst, $src}", [], IIC_LSL_RR>, TB,
                 OpSize16;
+let mayLoad = 1 in
 def LSL32rm : I<0x03, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
                 "lsl{l}\t{$src, $dst|$dst, $src}", [], IIC_LSL_RM>, TB,
                 OpSize32;
 def LSL32rr : I<0x03, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                 "lsl{l}\t{$src, $dst|$dst, $src}", [], IIC_LSL_RR>, TB,
                 OpSize32;
+let mayLoad = 1 in
 def LSL64rm : RI<0x03, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                  "lsl{q}\t{$src, $dst|$dst, $src}", [], IIC_LSL_RM>, TB;
 def LSL64rr : RI<0x03, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
@@ -248,11 +255,13 @@ def STR32r : I<0x00, MRM1r, (outs GR32:$dst), (ins),
                "str{l}\t$dst", [], IIC_STR>, TB, OpSize32;
 def STR64r : RI<0x00, MRM1r, (outs GR64:$dst), (ins),
                 "str{q}\t$dst", [], IIC_STR>, TB;
+let mayStore = 1 in
 def STRm   : I<0x00, MRM1m, (outs), (ins i16mem:$dst),
                "str{w}\t$dst", [], IIC_STR>, TB;
 
 def LTRr : I<0x00, MRM3r, (outs), (ins GR16:$src),
              "ltr{w}\t$src", [], IIC_LTR>, TB;
+let mayLoad = 1 in
 def LTRm : I<0x00, MRM3m, (outs), (ins i16mem:$src),
              "ltr{w}\t$src", [], IIC_LTR>, TB;
 
@@ -377,12 +386,14 @@ def LGS64rm : RI<0xb5, MRMSrcMem, (outs GR64:$dst), (ins opaque80mem:$src),
 
 def VERRr : I<0x00, MRM4r, (outs), (ins GR16:$seg),
               "verr\t$seg", [], IIC_VERR>, TB;
-def VERRm : I<0x00, MRM4m, (outs), (ins i16mem:$seg),
-              "verr\t$seg", [], IIC_VERR>, TB;
 def VERWr : I<0x00, MRM5r, (outs), (ins GR16:$seg),
               "verw\t$seg", [], IIC_VERW_MEM>, TB;
+let mayLoad = 1 in {
+def VERRm : I<0x00, MRM4m, (outs), (ins i16mem:$seg),
+              "verr\t$seg", [], IIC_VERR>, TB;
 def VERWm : I<0x00, MRM5m, (outs), (ins i16mem:$seg),
               "verw\t$seg", [], IIC_VERW_REG>, TB;
+}
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -403,6 +414,7 @@ def SIDT64m : I<0x01, MRM1m, (outs), (ins opaque80mem:$dst),
               "sidt{q}\t$dst", []>, TB, Requires <[In64BitMode]>;
 def SLDT16r : I<0x00, MRM0r, (outs GR16:$dst), (ins),
                 "sldt{w}\t$dst", [], IIC_SLDT>, TB, OpSize16;
+let mayStore = 1 in
 def SLDT16m : I<0x00, MRM0m, (outs), (ins i16mem:$dst),
                 "sldt{w}\t$dst", [], IIC_SLDT>, TB;
 def SLDT32r : I<0x00, MRM0r, (outs GR32:$dst), (ins),
@@ -412,6 +424,7 @@ def SLDT32r : I<0x00, MRM0r, (outs GR32:$dst), (ins),
 //   extension.
 def SLDT64r : RI<0x00, MRM0r, (outs GR64:$dst), (ins),
                  "sldt{q}\t$dst", [], IIC_SLDT>, TB;
+let mayStore = 1 in
 def SLDT64m : RI<0x00, MRM0m, (outs), (ins i16mem:$dst),
                  "sldt{q}\t$dst", [], IIC_SLDT>, TB;
 
@@ -429,6 +442,7 @@ def LIDT64m : I<0x01, MRM3m, (outs), (ins opaque80mem:$src),
               "lidt{q}\t$src", [], IIC_LIDT>, TB, Requires<[In64BitMode]>;
 def LLDT16r : I<0x00, MRM2r, (outs), (ins GR16:$src),
                 "lldt{w}\t$src", [], IIC_LLDT_REG>, TB;
+let mayLoad = 1 in
 def LLDT16m : I<0x00, MRM2m, (outs), (ins i16mem:$src),
                 "lldt{w}\t$src", [], IIC_LLDT_MEM>, TB;
 } // SchedRW
@@ -459,6 +473,7 @@ def SMSW16m : I<0x01, MRM4m, (outs), (ins i16mem:$dst),
 
 def LMSW16r : I<0x01, MRM6r, (outs), (ins GR16:$src),
                 "lmsw{w}\t$src", [], IIC_LMSW_MEM>, TB;
+let mayLoad = 1 in
 def LMSW16m : I<0x01, MRM6m, (outs), (ins i16mem:$src),
                 "lmsw{w}\t$src", [], IIC_LMSW_REG>, TB;
 

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <forward_list>
 
 // void push_front(value_type&& v);
@@ -19,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef MoveOnly T;
         typedef std::forward_list<T> C;
@@ -32,7 +33,6 @@ int main()
         assert(*next(c.begin()) == 1);
         assert(distance(c.begin(), c.end()) == 2);
     }
-#if TEST_STD_VER >= 11
     {
         typedef MoveOnly T;
         typedef std::forward_list<T, min_allocator<T>> C;
@@ -45,6 +45,4 @@ int main()
         assert(*next(c.begin()) == 1);
         assert(distance(c.begin(), c.end()) == 2);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

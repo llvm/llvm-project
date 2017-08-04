@@ -19,8 +19,8 @@
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -37,6 +37,7 @@ class AMDGPUAnnotateUniformValues : public FunctionPass,
   LoopInfo *LI;
   DenseMap<Value*, GetElementPtrInst*> noClobberClones;
   bool isKernelFunc;
+  AMDGPUAS AMDGPUASI;
 
 public:
   static char ID;
@@ -106,11 +107,12 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
 
   DFS(Start, Checklist);
   for (auto &BB : Checklist) {
-    BasicBlock::iterator StartIt = (BB == Load->getParent()) ?
-     BasicBlock::iterator(Load) : BB->end();
-     if (MDR->getPointerDependencyFrom(MemoryLocation(Ptr),
-       true, StartIt, BB, Load).isClobber())
-       return true;
+    BasicBlock::iterator StartIt = (!L && (BB == Load->getParent())) ?
+      BasicBlock::iterator(Load) : BB->end();
+    auto Q = MDR->getPointerDependencyFrom(MemoryLocation(Ptr), true,
+                                           StartIt, BB, Load);
+    if (Q.isClobber() || Q.isUnknown())
+      return true;
   }
   return false;
 }
@@ -130,8 +132,8 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
   if (!DA->isUniform(Ptr))
     return;
-  auto isGlobalLoad = [](LoadInst &Load)->bool {
-    return Load.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+  auto isGlobalLoad = [&](LoadInst &Load)->bool {
+    return Load.getPointerAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;
   };
   // We're tracking up to the Function boundaries
   // We cannot go beyond because of FunctionPass restrictions
@@ -166,6 +168,7 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
 }
 
 bool AMDGPUAnnotateUniformValues::doInitialization(Module &M) {
+  AMDGPUASI = AMDGPU::getAMDGPUAS(M);
   return false;
 }
 

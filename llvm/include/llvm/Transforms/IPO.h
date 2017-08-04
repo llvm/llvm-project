@@ -50,12 +50,12 @@ ModulePass *createStripNonLineTableDebugInfoPass();
 
 //===----------------------------------------------------------------------===//
 //
-// These pass removes llvm.dbg.declare intrinsics.
+// This pass removes llvm.dbg.declare intrinsics.
 ModulePass *createStripDebugDeclarePass();
 
 //===----------------------------------------------------------------------===//
 //
-// These pass removes unused symbols' debug info.
+// This pass removes unused symbols' debug info.
 ModulePass *createStripDeadDebugInfoPass();
 
 //===----------------------------------------------------------------------===//
@@ -108,7 +108,8 @@ Pass *createFunctionImportPass();
 /// threshold given here.
 Pass *createFunctionInliningPass();
 Pass *createFunctionInliningPass(int Threshold);
-Pass *createFunctionInliningPass(unsigned OptLevel, unsigned SizeOptLevel);
+Pass *createFunctionInliningPass(unsigned OptLevel, unsigned SizeOptLevel,
+                                 bool DisableInlineHotCallSite);
 Pass *createFunctionInliningPass(InlineParams &Params);
 
 //===----------------------------------------------------------------------===//
@@ -215,27 +216,42 @@ ModulePass *createMetaRenamerPass();
 /// manager.
 ModulePass *createBarrierNoopPass();
 
-/// What to do with the summary when running the LowerTypeTests pass.
-enum class LowerTypeTestsSummaryAction {
+/// What to do with the summary when running passes that operate on it.
+enum class PassSummaryAction {
   None,   ///< Do nothing.
-  Import, ///< Import typeid resolutions from summary and globals.
-  Export, ///< Export typeid resolutions to summary and globals.
+  Import, ///< Import information from summary.
+  Export, ///< Export information to summary.
 };
 
 /// \brief This pass lowers type metadata and the llvm.type.test intrinsic to
 /// bitsets.
-/// \param Action What to do with the summary passed as Index.
-/// \param Index The summary to use for importing or exporting, this can be null
-///              when Action is None.
-ModulePass *createLowerTypeTestsPass(LowerTypeTestsSummaryAction Action,
-                                     ModuleSummaryIndex *Index);
+///
+/// The behavior depends on the summary arguments:
+/// - If ExportSummary is non-null, this pass will export type identifiers to
+///   the given summary.
+/// - Otherwise, if ImportSummary is non-null, this pass will import type
+///   identifiers from the given summary.
+/// - Otherwise it does neither.
+/// It is invalid for both ExportSummary and ImportSummary to be non-null.
+ModulePass *createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
+                                     const ModuleSummaryIndex *ImportSummary);
 
 /// \brief This pass export CFI checks for use by external modules.
 ModulePass *createCrossDSOCFIPass();
 
 /// \brief This pass implements whole-program devirtualization using type
 /// metadata.
-ModulePass *createWholeProgramDevirtPass();
+///
+/// The behavior depends on the summary arguments:
+/// - If ExportSummary is non-null, this pass will export type identifiers to
+///   the given summary.
+/// - Otherwise, if ImportSummary is non-null, this pass will import type
+///   identifiers from the given summary.
+/// - Otherwise it does neither.
+/// It is invalid for both ExportSummary and ImportSummary to be non-null.
+ModulePass *
+createWholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
+                             const ModuleSummaryIndex *ImportSummary);
 
 /// This pass splits globals into pieces for the benefit of whole-program
 /// devirtualization and control-flow integrity.
@@ -248,7 +264,8 @@ ModulePass *createSampleProfileLoaderPass();
 ModulePass *createSampleProfileLoaderPass(StringRef Name);
 
 /// Write ThinLTO-ready bitcode to Str.
-ModulePass *createWriteThinLTOBitcodePass(raw_ostream &Str);
+ModulePass *createWriteThinLTOBitcodePass(raw_ostream &Str,
+                                          raw_ostream *ThinLinkOS = nullptr);
 
 } // End llvm namespace
 

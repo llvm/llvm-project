@@ -1,4 +1,4 @@
-//===-- DWARFGdbIndex.cpp -------------------------------------------------===//
+//===- DWARFGdbIndex.cpp --------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,9 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
+#include <utility>
 
 using namespace llvm;
 
@@ -33,8 +39,9 @@ void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
      << '\n';
   for (const AddressEntry &Addr : AddressArea)
     OS << format(
-        "    Low address = 0x%llx, High address = 0x%llx, CU index = %d\n",
-        Addr.LowAddress, Addr.HighAddress, Addr.CuIndex);
+        "    Low/High address = [0x%llx, 0x%llx) (Size: 0x%llx), CU id = %d\n",
+        Addr.LowAddress, Addr.HighAddress, Addr.HighAddress - Addr.LowAddress,
+        Addr.CuIndex);
 }
 
 void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {

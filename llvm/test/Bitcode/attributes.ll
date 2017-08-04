@@ -204,7 +204,7 @@ define void @f34()
 ; CHECK: define void @f34()
 {
         call void @nobuiltin() nobuiltin
-; CHECK: call void @nobuiltin() #33
+; CHECK: call void @nobuiltin() #34
         ret void;
 }
 
@@ -334,6 +334,11 @@ define void @f56() writeonly
   ret void
 }
 
+; CHECK: define void @f57() #33
+define void @f57() speculatable {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -367,4 +372,5 @@ define void @f56() writeonly
 ; CHECK: attributes #30 = { allocsize(0) }
 ; CHECK: attributes #31 = { allocsize(0,1) }
 ; CHECK: attributes #32 = { writeonly }
-; CHECK: attributes #33 = { nobuiltin }
+; CHECK: attributes #33 = { speculatable }
+; CHECK: attributes #34 = { nobuiltin }

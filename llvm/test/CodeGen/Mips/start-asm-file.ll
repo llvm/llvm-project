@@ -75,7 +75,7 @@
 ; CHECK-PIC-N32-NLEGACY: .nan legacy
 ; CHECK-PIC-N32-N2008: .nan 2008
 
-; CHECK-STATIC-N64: .abicalls
+; CHECK-STATIC-N64-NOT: .abicalls
 ; CHECK-STATIC-N64-NOT: .option pic0
 ; CHECK-STATIC-N64: .section .mdebug.abi64
 ; CHECK-STATIC-N64-NLEGACY: .nan legacy

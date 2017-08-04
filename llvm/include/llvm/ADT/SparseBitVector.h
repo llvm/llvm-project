@@ -1,4 +1,4 @@
-//===- llvm/ADT/SparseBitVector.h - Efficient Sparse BitVector -*- C++ -*- ===//
+//===- llvm/ADT/SparseBitVector.h - Efficient Sparse BitVector --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -41,8 +41,8 @@ namespace llvm {
 
 template <unsigned ElementSize = 128> struct SparseBitVectorElement {
 public:
-  typedef unsigned long BitWord;
-  typedef unsigned size_type;
+  using BitWord = unsigned long;
+  using size_type = unsigned;
   enum {
     BITWORD_SIZE = sizeof(BitWord) * CHAR_BIT,
     BITWORDS_PER_ELEMENT = (ElementSize + BITWORD_SIZE - 1) / BITWORD_SIZE,
@@ -100,7 +100,7 @@ public:
     Bits[Idx / BITWORD_SIZE] |= 1L << (Idx % BITWORD_SIZE);
   }
 
-  bool test_and_set (unsigned Idx) {
+  bool test_and_set(unsigned Idx) {
     bool old = test(Idx);
     if (!old) {
       set(Idx);
@@ -129,6 +129,17 @@ public:
     for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i] != 0)
         return i * BITWORD_SIZE + countTrailingZeros(Bits[i]);
+    llvm_unreachable("Illegal empty element");
+  }
+
+  /// find_last - Returns the index of the last set bit.
+  int find_last() const {
+    for (unsigned I = 0; I < BITWORDS_PER_ELEMENT; ++I) {
+      unsigned Idx = BITWORDS_PER_ELEMENT - I - 1;
+      if (Bits[Idx] != 0)
+        return Idx * BITWORD_SIZE + BITWORD_SIZE -
+               countLeadingZeros(Bits[Idx]) - 1;
+    }
     llvm_unreachable("Illegal empty element");
   }
 
@@ -243,9 +254,9 @@ public:
 
 template <unsigned ElementSize = 128>
 class SparseBitVector {
-  typedef std::list<SparseBitVectorElement<ElementSize>> ElementList;
-  typedef typename ElementList::iterator ElementListIter;
-  typedef typename ElementList::const_iterator ElementListConstIter;
+  using ElementList = std::list<SparseBitVectorElement<ElementSize>>;
+  using ElementListIter = typename ElementList::iterator;
+  using ElementListConstIter = typename ElementList::const_iterator;
   enum {
     BITWORD_SIZE = SparseBitVectorElement<ElementSize>::BITWORD_SIZE
   };
@@ -410,13 +421,11 @@ class SparseBitVector {
   };
 
 public:
-  typedef SparseBitVectorIterator iterator;
+  using iterator = SparseBitVectorIterator;
 
   SparseBitVector() {
     CurrElementIter = Elements.begin();
   }
-
-  ~SparseBitVector() = default;
 
   // SparseBitVector copy ctor.
   SparseBitVector(const SparseBitVector &RHS) {
@@ -428,6 +437,8 @@ public:
 
     CurrElementIter = Elements.begin ();
   }
+
+  ~SparseBitVector() = default;
 
   // Clear.
   void clear() {
@@ -766,6 +777,14 @@ public:
       return -1;
     const SparseBitVectorElement<ElementSize> &First = *(Elements.begin());
     return (First.index() * ElementSize) + First.find_first();
+  }
+
+  // Return the last set bit in the bitmap.  Return -1 if no bits are set.
+  int find_last() const {
+    if (Elements.empty())
+      return -1;
+    const SparseBitVectorElement<ElementSize> &Last = *(Elements.rbegin());
+    return (Last.index() * ElementSize) + Last.find_last();
   }
 
   // Return true if the SparseBitVector is empty

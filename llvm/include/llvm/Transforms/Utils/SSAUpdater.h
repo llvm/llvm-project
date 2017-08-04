@@ -15,19 +15,20 @@
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
+#include <string>
 
 namespace llvm {
-  class BasicBlock;
-  class Instruction;
-  class LoadInst;
-  template <typename T> class ArrayRef;
-  template <typename T> class SmallVectorImpl;
-  template <typename T> class SSAUpdaterTraits;
-  class PHINode;
-  class Type;
-  class Use;
-  class Value;
+
+class BasicBlock;
+class Instruction;
+class LoadInst;
+template <typename T> class ArrayRef;
+template <typename T> class SmallVectorImpl;
+template <typename T> class SSAUpdaterTraits;
+class PHINode;
+class Type;
+class Use;
+class Value;
 
 /// \brief Helper class for SSA formation on a set of values defined in
 /// multiple blocks.
@@ -42,10 +43,10 @@ private:
   /// This keeps track of which value to use on a per-block basis. When we
   /// insert PHI nodes, we keep track of them here.
   //typedef DenseMap<BasicBlock*, Value*> AvailableValsTy;
-  void *AV;
+  void *AV = nullptr;
 
   /// ProtoType holds the type of the values being rewritten.
-  Type *ProtoType;
+  Type *ProtoType = nullptr;
 
   /// PHI nodes are given a name based on ProtoName.
   std::string ProtoName;
@@ -58,6 +59,8 @@ public:
   /// If InsertedPHIs is specified, it will be filled
   /// in with all PHI Nodes created by rewriting.
   explicit SSAUpdater(SmallVectorImpl<PHINode*> *InsertedPHIs = nullptr);
+  SSAUpdater(const SSAUpdater &) = delete;
+  SSAUpdater &operator=(const SSAUpdater &) = delete;
   ~SSAUpdater();
 
   /// \brief Reset this object to get ready for a new set of SSA updates with
@@ -118,9 +121,6 @@ public:
 
 private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
-
-  void operator=(const SSAUpdater&) = delete;
-  SSAUpdater(const SSAUpdater&) = delete;
 };
 
 /// \brief Helper class for promoting a collection of loads and stores into SSA
@@ -138,7 +138,7 @@ protected:
 public:
   LoadAndStorePromoter(ArrayRef<const Instruction*> Insts,
                        SSAUpdater &S, StringRef Name = StringRef());
-  virtual ~LoadAndStorePromoter() {}
+  virtual ~LoadAndStorePromoter() = default;
 
   /// \brief This does the promotion.
   ///
@@ -173,6 +173,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_SSAUPDATER_H

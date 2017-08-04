@@ -32,7 +32,7 @@
 // function also sets the personality and lsda fields of the block.
 //
 
-#if _LIBUNWIND_BUILD_SJLJ_APIS
+#if defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 
 struct _Unwind_FunctionContext {
   // next function in stack of handlers
@@ -465,4 +465,4 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetCFA(struct _Unwind_Context *context) {
   return 0;
 }
 
-#endif // _LIBUNWIND_BUILD_SJLJ_APIS
+#endif // defined(_LIBUNWIND_BUILD_SJLJ_APIS)

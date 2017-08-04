@@ -16,61 +16,13 @@
 #include "llvm/ADT/StringMap.h"
 using namespace llvm;
 
-// Create the combined module index/summary from multiple
-// per-module instances.
-void ModuleSummaryIndex::mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
-                                   uint64_t NextModuleId) {
-  if (Other->modulePaths().empty())
-    return;
-
-  assert(Other->modulePaths().size() == 1 &&
-         "Can only merge from an single-module index at that time");
-
-  StringRef OtherModPath = Other->modulePaths().begin()->first();
-  StringRef ModPath = addModulePath(OtherModPath, NextModuleId,
-                                    Other->getModuleHash(OtherModPath))
-                          ->first();
-
-  for (auto &OtherGlobalValSummaryLists : *Other) {
-    GlobalValue::GUID ValueGUID = OtherGlobalValSummaryLists.first;
-    GlobalValueSummaryList &List = OtherGlobalValSummaryLists.second;
-
-    // Assert that the value summary list only has one entry, since we shouldn't
-    // have duplicate names within a single per-module index.
-    assert(List.size() == 1);
-    std::unique_ptr<GlobalValueSummary> Summary = std::move(List.front());
-
-    // Note the module path string ref was copied above and is still owned by
-    // the original per-module index. Reset it to the new module path
-    // string reference owned by the combined index.
-    Summary->setModulePath(ModPath);
-
-    // Add new value summary to existing list. There may be duplicates when
-    // combining GlobalValueMap entries, due to COMDAT values. Any local
-    // values were given unique global IDs.
-    addGlobalValueSummary(ValueGUID, std::move(Summary));
-  }
-}
-
-void ModuleSummaryIndex::removeEmptySummaryEntries() {
-  for (auto MI = begin(), MIE = end(); MI != MIE;) {
-    // Only expect this to be called on a per-module index, which has a single
-    // entry per value entry list.
-    assert(MI->second.size() == 1);
-    if (!MI->second[0])
-      MI = GlobalValueMap.erase(MI);
-    else
-      ++MI;
-  }
-}
-
 // Collect for the given module the list of function it defines
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(
     StringRef ModulePath, GVSummaryMapTy &GVSummaryMap) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &GlobSummary : GlobalList.second) {
+    for (auto &GlobSummary : GlobalList.second.SummaryList) {
       auto *Summary = dyn_cast_or_null<FunctionSummary>(GlobSummary.get());
       if (!Summary)
         // Ignore global variable, focus on functions
@@ -88,7 +40,7 @@ void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
     StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second) {
+    for (auto &Summary : GlobalList.second.SummaryList) {
       ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
     }
   }
@@ -97,10 +49,23 @@ void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
 GlobalValueSummary *
 ModuleSummaryIndex::getGlobalValueSummary(uint64_t ValueGUID,
                                           bool PerModuleIndex) const {
-  auto SummaryList = findGlobalValueSummaryList(ValueGUID);
-  assert(SummaryList != end() && "GlobalValue not found in index");
-  assert((!PerModuleIndex || SummaryList->second.size() == 1) &&
+  auto VI = getValueInfo(ValueGUID);
+  assert(VI && "GlobalValue not found in index");
+  assert((!PerModuleIndex || VI.getSummaryList().size() == 1) &&
          "Expected a single entry per global value in per-module index");
-  auto &Summary = SummaryList->second[0];
+  auto &Summary = VI.getSummaryList()[0];
   return Summary.get();
+}
+
+bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
+  auto VI = getValueInfo(GUID);
+  if (!VI)
+    return true;
+  const auto &SummaryList = VI.getSummaryList();
+  if (SummaryList.empty())
+    return true;
+  for (auto &I : SummaryList)
+    if (isGlobalValueLive(I.get()))
+      return true;
+  return false;
 }

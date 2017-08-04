@@ -16,7 +16,7 @@
 ; CHECK:         %loop_carried.phiops.reload = load float, float* %loop_carried.phiops
 ;
 ; CHECK-LABEL: polly.stmt.subregion_entry:
-; CHECK:         %polly.loop_carried = phi float [ %loop_carried.phiops.reload2, %polly.stmt.subregion_entry.entry ]
+; CHECK:         %polly.loop_carried = phi float [ %loop_carried.phiops.reload, %polly.stmt.subregion_entry.entry ]
 ; CHECK:         %p_newval = fadd float %polly.loop_carried, 1.000000e+00
 ;
 ; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:

@@ -20,6 +20,13 @@
 
 namespace llvm {
 
+/// The type of CFI jumptable needed for a function.
+enum CfiFunctionLinkage {
+  CFL_Definition = 0,
+  CFL_Declaration = 1,
+  CFL_WeakDeclaration = 2
+};
+
 /// A call site that could be devirtualized.
 struct DevirtCallSite {
   /// The offset from the address point to the virtual function.
@@ -32,14 +39,15 @@ struct DevirtCallSite {
 /// call sites based on the call and return them in DevirtCalls.
 void findDevirtualizableCallsForTypeTest(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
-    SmallVectorImpl<CallInst *> &Assumes, CallInst *CI);
+    SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI);
 
 /// Given a call to the intrinsic @llvm.type.checked.load, find all
 /// devirtualizable call sites based on the call and return them in DevirtCalls.
 void findDevirtualizableCallsForTypeCheckedLoad(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     SmallVectorImpl<Instruction *> &LoadedPtrs,
-    SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses, CallInst *CI);
+    SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses,
+    const CallInst *CI);
 }
 
 #endif

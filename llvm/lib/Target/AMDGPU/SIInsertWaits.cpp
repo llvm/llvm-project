@@ -21,16 +21,32 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <new>
+#include <utility>
 
 #define DEBUG_TYPE "si-insert-waits"
 
 using namespace llvm;
-using namespace llvm::AMDGPU;
 
 namespace {
 
@@ -42,7 +58,6 @@ typedef union {
     unsigned LGKM;
   } Named;
   unsigned Array[3];
-
 } Counters;
 
 typedef enum {
@@ -55,13 +70,12 @@ typedef Counters RegCounters[512];
 typedef std::pair<unsigned, unsigned> RegInterval;
 
 class SIInsertWaits : public MachineFunctionPass {
-
 private:
-  const SISubtarget *ST;
-  const SIInstrInfo *TII;
-  const SIRegisterInfo *TRI;
+  const SISubtarget *ST = nullptr;
+  const SIInstrInfo *TII = nullptr;
+  const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI;
-  IsaVersion IV;
+  AMDGPU::IsaInfo::IsaVersion ISA;
 
   /// \brief Constant zero value
   static const Counters ZeroCounts;
@@ -86,7 +100,7 @@ private:
   RegCounters DefinedRegs;
 
   /// \brief Different export instruction types seen since last wait.
-  unsigned ExpInstrTypesSeen;
+  unsigned ExpInstrTypesSeen = 0;
 
   /// \brief Type of the last opcode.
   InstType LastOpcodeType;
@@ -100,7 +114,7 @@ private:
   bool ReturnsVoid;
 
   /// Whether the VCCZ bit is possibly corrupt
-  bool VCCZCorrupt;
+  bool VCCZCorrupt = false;
 
   /// \brief Get increment/decrement amount for this instruction.
   Counters getHwCounts(MachineInstr &MI);
@@ -141,13 +155,7 @@ private:
 public:
   static char ID;
 
-  SIInsertWaits() :
-    MachineFunctionPass(ID),
-    ST(nullptr),
-    TII(nullptr),
-    TRI(nullptr),
-    ExpInstrTypesSeen(0),
-    VCCZCorrupt(false) { }
+  SIInsertWaits() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -161,7 +169,7 @@ public:
   }
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(SIInsertWaits, DEBUG_TYPE,
                       "SI Insert Waits", false, false)
@@ -208,8 +216,8 @@ Counters SIInsertWaits::getHwCounts(MachineInstr &MI) {
 
         // XXX - What if this is a write into a super register?
         const TargetRegisterClass *RC = TII->getOpRegClass(MI, 0);
-        unsigned Size = RC->getSize();
-        Result.Named.LGKM = Size > 4 ? 2 : 1;
+        unsigned Size = TRI->getRegSizeInBits(*RC);
+        Result.Named.LGKM = Size > 32 ? 2 : 1;
       } else {
         // s_dcache_inv etc. do not have a a destination register. Assume we
         // want a wait on these.
@@ -281,12 +289,12 @@ bool SIInsertWaits::isOpRelevant(MachineOperand &Op) {
 
 RegInterval SIInsertWaits::getRegInterval(const TargetRegisterClass *RC,
                                           const MachineOperand &Reg) const {
-  unsigned Size = RC->getSize();
-  assert(Size >= 4);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+  assert(Size >= 32);
 
   RegInterval Result;
   Result.first = TRI->getEncodingValue(Reg.getReg());
-  Result.second = Result.first + Size / 4;
+  Result.second = Result.first + Size / 32;
 
   return Result;
 }
@@ -294,7 +302,6 @@ RegInterval SIInsertWaits::getRegInterval(const TargetRegisterClass *RC,
 void SIInsertWaits::pushInstruction(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     const Counters &Increment) {
-
   // Get the hardware counter increments and sum them up
   Counters Limit = ZeroCounts;
   unsigned Sum = 0;
@@ -366,7 +373,6 @@ void SIInsertWaits::pushInstruction(MachineBasicBlock &MBB,
 bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
                                const Counters &Required) {
-
   // End of program? No need to wait on anything
   // A function not returning void needs to wait, because other bytecode will
   // be appended after it and we don't know what it will be.
@@ -393,7 +399,6 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
   bool NeedWait = false;
 
   for (unsigned i = 0; i < 3; ++i) {
-
     if (Required.Array[i] <= WaitedOn.Array[i])
       continue;
 
@@ -421,10 +426,10 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
 
   // Build the wait instruction
   BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
-    .addImm(encodeWaitcnt(IV,
-                          Counts.Named.VM,
-                          Counts.Named.EXP,
-                          Counts.Named.LGKM));
+    .addImm(AMDGPU::encodeWaitcnt(ISA,
+                                  Counts.Named.VM,
+                                  Counts.Named.EXP,
+                                  Counts.Named.LGKM));
 
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;
@@ -434,7 +439,6 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
 
 /// \brief helper function for handleOperands
 static void increaseCounters(Counters &Dst, const Counters &Src) {
-
   for (unsigned i = 0; i < 3; ++i)
     Dst.Array[i] = std::max(Dst.Array[i], Src.Array[i]);
 }
@@ -453,9 +457,9 @@ void SIInsertWaits::handleExistingWait(MachineBasicBlock::iterator I) {
   unsigned Imm = I->getOperand(0).getImm();
   Counters Counts, WaitOn;
 
-  Counts.Named.VM = decodeVmcnt(IV, Imm);
-  Counts.Named.EXP = decodeExpcnt(IV, Imm);
-  Counts.Named.LGKM = decodeLgkmcnt(IV, Imm);
+  Counts.Named.VM = AMDGPU::decodeVmcnt(ISA, Imm);
+  Counts.Named.EXP = AMDGPU::decodeExpcnt(ISA, Imm);
+  Counts.Named.LGKM = AMDGPU::decodeLgkmcnt(ISA, Imm);
 
   for (unsigned i = 0; i < 3; ++i) {
     if (Counts.Array[i] <= LastIssued.Array[i])
@@ -468,7 +472,6 @@ void SIInsertWaits::handleExistingWait(MachineBasicBlock::iterator I) {
 }
 
 Counters SIInsertWaits::handleOperands(MachineInstr &MI) {
-
   Counters Result = ZeroCounts;
 
   // For each register affected by this instruction increase the result
@@ -484,7 +487,6 @@ Counters SIInsertWaits::handleOperands(MachineInstr &MI) {
     const TargetRegisterClass *RC = TII->getOpRegClass(MI, i);
     RegInterval Interval = getRegInterval(RC, Op);
     for (unsigned j = Interval.first; j < Interval.second; ++j) {
-
       if (Op.isDef()) {
         increaseCounters(Result, UsedRegs[j]);
         increaseCounters(Result, DefinedRegs[j]);
@@ -522,6 +524,16 @@ void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
   }
 }
 
+/// Return true if \p MBB has one successor immediately following, and is its
+/// only predecessor
+static bool hasTrivialSuccessor(const MachineBasicBlock &MBB) {
+  if (MBB.succ_size() != 1)
+    return false;
+
+  const MachineBasicBlock *Succ = *MBB.succ_begin();
+  return (Succ->pred_size() == 1) && MBB.isLayoutSuccessor(Succ);
+}
+
 // FIXME: Insert waits listed in Table 4.2 "Required User-Inserted Wait States"
 // around other non-memory instructions.
 bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
@@ -531,12 +543,12 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
-  IV = getIsaVersion(ST->getFeatureBits());
+  ISA = AMDGPU::IsaInfo::getIsaVersion(ST->getFeatureBits());
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  HardwareLimits.Named.VM = getVmcntBitMask(IV);
-  HardwareLimits.Named.EXP = getExpcntBitMask(IV);
-  HardwareLimits.Named.LGKM = getLgkmcntBitMask(IV);
+  HardwareLimits.Named.VM = AMDGPU::getVmcntBitMask(ISA);
+  HardwareLimits.Named.EXP = AMDGPU::getExpcntBitMask(ISA);
+  HardwareLimits.Named.LGKM = AMDGPU::getLgkmcntBitMask(ISA);
 
   WaitedOn = ZeroCounts;
   DelayedWaitOn = ZeroCounts;
@@ -618,7 +630,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
       // but we also want to wait for any other outstanding transfers before
       // signalling other hardware blocks
       if ((I->getOpcode() == AMDGPU::S_BARRIER &&
-               ST->needWaitcntBeforeBarrier()) ||
+               !ST->hasAutoWaitcntBeforeBarrier()) ||
            I->getOpcode() == AMDGPU::S_SENDMSG ||
            I->getOpcode() == AMDGPU::S_SENDMSGHALT)
         Required = LastIssued;
@@ -636,12 +648,14 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
       handleSendMsg(MBB, I);
 
       if (I->getOpcode() == AMDGPU::S_ENDPGM ||
-          I->getOpcode() == AMDGPU::SI_RETURN)
+          I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG)
         EndPgmBlocks.push_back(&MBB);
     }
 
-    // Wait for everything at the end of the MBB
-    Changes |= insertWait(MBB, MBB.getFirstTerminator(), LastIssued);
+    // Wait for everything at the end of the MBB. If there is only one
+    // successor, we can defer this until the uses there.
+    if (!hasTrivialSuccessor(MBB))
+      Changes |= insertWait(MBB, MBB.getFirstTerminator(), LastIssued);
   }
 
   if (HaveScalarStores) {
@@ -665,7 +679,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
 
         // FIXME: It would be better to insert this before a waitcnt if any.
         if ((I->getOpcode() == AMDGPU::S_ENDPGM ||
-             I->getOpcode() == AMDGPU::SI_RETURN) && !SeenDCacheWB) {
+             I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) && !SeenDCacheWB) {
           Changes = true;
           BuildMI(*MBB, I, I->getDebugLoc(), TII->get(AMDGPU::S_DCACHE_WB));
         }
@@ -675,6 +689,20 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineInstr *I : RemoveMI)
     I->eraseFromParent();
+
+  if (!MFI->isEntryFunction()) {
+    // Wait for any outstanding memory operations that the input registers may
+    // depend on. We can't track them and it's better to to the wait after the
+    // costly call sequence.
+
+    // TODO: Could insert earlier and schedule more liberally with operations
+    // that only use caller preserved registers.
+    MachineBasicBlock &EntryBB = MF.front();
+    BuildMI(EntryBB, EntryBB.getFirstNonPHI(), DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
+      .addImm(0);
+
+    Changes = true;
+  }
 
   return Changes;
 }

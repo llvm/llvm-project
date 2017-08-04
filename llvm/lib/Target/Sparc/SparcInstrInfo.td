@@ -27,6 +27,9 @@ def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
 // True when generating 64-bit code. This also implies HasV9.
 def Is64Bit : Predicate<"Subtarget->is64Bit()">;
 
+def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
+              AssemblerPredicate<"FeatureSoftMulDiv">;
+
 // HasV9 - This predicate is true when the target processor supports V9
 // instructions.  Note that the machine may be running in 32-bit mode.
 def HasV9   : Predicate<"Subtarget->isV9()">,
@@ -195,7 +198,8 @@ def SPsjlj_longjmp: SDNode<"SPISD::EH_SJLJ_LONGJMP",
                            [SDNPHasChain, SDNPSideEffect]>;
 
 //  These are target-independent nodes, but have target-specific formats.
-def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
+def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
+                                          SDTCisVT<1, i32> ]>;
 def SDT_SPCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
                                         SDTCisVT<1, i32> ]>;
 
@@ -404,9 +408,9 @@ let Defs = [O7] in {
 }
 
 let Defs = [O6], Uses = [O6] in {
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
-                               "!ADJCALLSTACKDOWN $amt",
-                               [(callseq_start timm:$amt)]>;
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                               "!ADJCALLSTACKDOWN $amt1, $amt2",
+                               [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             "!ADJCALLSTACKUP $amt1",
                             [(callseq_end timm:$amt1, timm:$amt2)]>;

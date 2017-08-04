@@ -24,8 +24,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -154,7 +154,7 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
   if (!callReturnsInput)
     return false;
 
-  LibFunc::Func Func;
+  LibFunc Func;
   if (!LibInfo.getLibFunc(Name, Func))
     return false;
 

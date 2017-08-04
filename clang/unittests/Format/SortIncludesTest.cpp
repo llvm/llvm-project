@@ -266,6 +266,29 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
                  "a.cc"));
 }
 
+TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
+  // Setup an regex for main includes so we can cover those as well.
+  Style.IncludeIsMainRegex = "([-_](test|unittest))?$";
+
+  // Ensure both main header detection and grouping work in a case insensitive
+  // manner.
+  EXPECT_EQ("#include \"llvm/A.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"LLVM/z.h\"\n"
+            "#include \"llvm/X.h\"\n"
+            "#include \"GTest/GTest.h\"\n"
+            "#include \"gmock/gmock.h\"\n",
+            sort("#include \"c.h\"\n"
+                 "#include \"b.h\"\n"
+                 "#include \"GTest/GTest.h\"\n"
+                 "#include \"llvm/A.h\"\n"
+                 "#include \"gmock/gmock.h\"\n"
+                 "#include \"llvm/X.h\"\n"
+                 "#include \"LLVM/z.h\"\n",
+                 "a_TEST.cc"));
+}
+
 TEST_F(SortIncludesTest, NegativePriorities) {
   Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
   EXPECT_EQ("#include \"important_os_header.h\"\n"

@@ -175,7 +175,8 @@ namespace {
       None      = 0,
       Root      = 0x01,
       Internal  = 0x02,
-      Used      = 0x04
+      Used      = 0x04,
+      InBounds  = 0x08
     };
 
     uint32_t Flags;
@@ -230,6 +231,11 @@ namespace {
       if (Comma)
         OS << ',';
       OS << "used";
+    }
+    if (GN.Flags & GepNode::InBounds) {
+      if (Comma)
+        OS << ',';
+      OS << "inbounds";
     }
     OS << "} ";
     if (GN.Flags & GepNode::Root)
@@ -315,11 +321,8 @@ void HexagonCommonGEP::getBlockTraversalOrder(BasicBlock *Root,
   // visited".
 
   Order.push_back(Root);
-  DomTreeNode *DTN = DT->getNode(Root);
-  typedef GraphTraits<DomTreeNode*> GTN;
-  typedef GTN::ChildIteratorType Iter;
-  for (Iter I = GTN::child_begin(DTN), E = GTN::child_end(DTN); I != E; ++I)
-    getBlockTraversalOrder((*I)->getBlock(), Order);
+  for (auto *DTN : children<DomTreeNode*>(DT->getNode(Root)))
+    getBlockTraversalOrder(DTN->getBlock(), Order);
 }
 
 bool HexagonCommonGEP::isHandledGepForm(GetElementPtrInst *GepI) {
@@ -337,10 +340,11 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   DEBUG(dbgs() << "Visiting GEP: " << *GepI << '\n');
   GepNode *N = new (*Mem) GepNode;
   Value *PtrOp = GepI->getPointerOperand();
+  uint32_t InBounds = GepI->isInBounds() ? GepNode::InBounds : 0;
   ValueToNodeMap::iterator F = NM.find(PtrOp);
   if (F == NM.end()) {
     N->BaseVal = PtrOp;
-    N->Flags |= GepNode::Root;
+    N->Flags |= GepNode::Root | InBounds;
   } else {
     // If PtrOp was a GEP instruction, it must have already been processed.
     // The ValueToNodeMap entry for it is the last gep node in the generated
@@ -376,7 +380,7 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
     Value *Op = *OI;
     GepNode *Nx = new (*Mem) GepNode;
     Nx->Parent = PN;  // Link Nx to the previous node.
-    Nx->Flags |= GepNode::Internal;
+    Nx->Flags |= GepNode::Internal | InBounds;
     Nx->PTy = PtrTy;
     Nx->Idx = Op;
     Nodes.push_back(Nx);
@@ -1084,7 +1088,7 @@ Value *HexagonCommonGEP::fabricateGEP(NodeVect &NA, BasicBlock::iterator At,
   GepNode *RN = NA[0];
   assert((RN->Flags & GepNode::Root) && "Creating GEP for non-root");
 
-  Value *NewInst = nullptr;
+  GetElementPtrInst *NewInst = nullptr;
   Value *Input = RN->BaseVal;
   Value **IdxList = new Value*[Num+1];
   unsigned nax = 0;
@@ -1115,6 +1119,7 @@ Value *HexagonCommonGEP::fabricateGEP(NodeVect &NA, BasicBlock::iterator At,
     Type *InpTy = Input->getType();
     Type *ElTy = cast<PointerType>(InpTy->getScalarType())->getElementType();
     NewInst = GetElementPtrInst::Create(ElTy, Input, A, "cgep", &*At);
+    NewInst->setIsInBounds(RN->Flags & GepNode::InBounds);
     DEBUG(dbgs() << "new GEP: " << *NewInst << '\n');
     Input = NewInst;
   } while (nax <= Num);
@@ -1235,11 +1240,8 @@ void HexagonCommonGEP::removeDeadCode() {
 
   for (unsigned i = 0; i < BO.size(); ++i) {
     BasicBlock *B = cast<BasicBlock>(BO[i]);
-    DomTreeNode *N = DT->getNode(B);
-    typedef GraphTraits<DomTreeNode*> GTN;
-    typedef GTN::ChildIteratorType Iter;
-    for (Iter I = GTN::child_begin(N), E = GTN::child_end(N); I != E; ++I)
-      BO.push_back((*I)->getBlock());
+    for (auto DTN : children<DomTreeNode*>(DT->getNode(B)))
+      BO.push_back(DTN->getBlock());
   }
 
   for (unsigned i = BO.size(); i > 0; --i) {

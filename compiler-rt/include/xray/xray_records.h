@@ -21,7 +21,16 @@ namespace __xray {
 
 enum FileTypes {
   NAIVE_LOG = 0,
+  FDR_LOG = 1,
 };
+
+// FDR mode use of the union field in the XRayFileHeader.
+struct alignas(16) FdrAdditionalHeaderData {
+  uint64_t ThreadBufferSize;
+};
+
+static_assert(sizeof(FdrAdditionalHeaderData) == 16,
+              "FdrAdditionalHeaderData != 16 bytes");
 
 // This data structure is used to describe the contents of the file. We use this
 // for versioning the supported XRay file formats.
@@ -40,6 +49,16 @@ struct alignas(32) XRayFileHeader {
 
   // The frequency by which TSC increases per-second.
   alignas(8) uint64_t CycleFrequency = 0;
+
+  union {
+    char FreeForm[16];
+    // The current civiltime timestamp, as retrived from 'clock_gettime'. This
+    // allows readers of the file to determine when the file was created or
+    // written down.
+    struct timespec TS;
+
+    struct FdrAdditionalHeaderData FdrData;
+  };
 } __attribute__((packed));
 
 static_assert(sizeof(XRayFileHeader) == 32, "XRayFileHeader != 32 bytes");

@@ -284,15 +284,15 @@ error:
 /* Check whether the parametric constant term of constraint c is never
  * positive in "bset".
  */
-static int parametric_constant_never_positive(__isl_keep isl_basic_set *bset,
-	isl_int *c, int *div_purity)
+static isl_bool parametric_constant_never_positive(
+	__isl_keep isl_basic_set *bset, isl_int *c, int *div_purity)
 {
 	unsigned d;
 	unsigned n_div;
 	unsigned nparam;
 	int i;
 	int k;
-	int empty;
+	isl_bool empty;
 
 	n_div = isl_basic_set_dim(bset, isl_dim_div);
 	d = isl_basic_set_dim(bset, isl_dim_set);
@@ -319,7 +319,7 @@ static int parametric_constant_never_positive(__isl_keep isl_basic_set *bset,
 	return empty;
 error:
 	isl_basic_set_free(bset);
-	return -1;
+	return isl_bool_error;
 }
 
 /* Return PURE_PARAM if only the coefficients of the parameters are non-zero.
@@ -335,7 +335,7 @@ static int purity(__isl_keep isl_basic_set *bset, isl_int *c, int *div_purity,
 	unsigned d;
 	unsigned n_div;
 	unsigned nparam;
-	int empty;
+	isl_bool empty;
 	int i;
 	int p = 0, v = 0;
 
@@ -777,7 +777,7 @@ static __isl_give isl_map *construct_extended_path(__isl_take isl_space *dim,
 		delta = isl_basic_map_deltas(isl_basic_map_copy(map->p[i]));
 
 		for (j = 0; j < d; ++j) {
-			int fixed;
+			isl_bool fixed;
 
 			fixed = isl_basic_set_plain_dim_is_fixed(delta, j,
 							    &steps->row[n][j]);
@@ -822,23 +822,24 @@ error:
 	return NULL;
 }
 
-static int isl_set_overlaps(__isl_keep isl_set *set1, __isl_keep isl_set *set2)
+static isl_bool isl_set_overlaps(__isl_keep isl_set *set1,
+	__isl_keep isl_set *set2)
 {
 	isl_set *i;
-	int no_overlap;
+	isl_bool no_overlap;
 
 	if (!set1 || !set2)
-		return -1;
+		return isl_bool_error;
 
 	if (!isl_space_tuple_is_equal(set1->dim, isl_dim_set,
 					set2->dim, isl_dim_set))
-		return 0;
+		return isl_bool_false;
 
 	i = isl_set_intersect(isl_set_copy(set1), isl_set_copy(set2));
 	no_overlap = isl_set_is_empty(i);
 	isl_set_free(i);
 
-	return no_overlap < 0 ? -1 : !no_overlap;
+	return isl_bool_not(no_overlap);
 }
 
 /* Given a union of basic maps R = \cup_i R_i \subseteq D \times D
@@ -867,7 +868,7 @@ static __isl_give isl_map *construct_component(__isl_take isl_space *dim,
 	struct isl_set *range = NULL;
 	struct isl_map *app = NULL;
 	struct isl_map *path = NULL;
-	int overlaps;
+	isl_bool overlaps;
 
 	domain = isl_map_domain(isl_map_copy(map));
 	domain = isl_set_coalesce(domain);
@@ -1040,7 +1041,7 @@ static int composability(__isl_keep isl_set *C, int i,
 
 	ok = LEFT | RIGHT;
 	for (j = 0; j < map->n && ok; ++j) {
-		int overlaps, subset;
+		isl_bool overlaps, subset;
 		if (j == i)
 			continue;
 
@@ -1440,7 +1441,7 @@ static int merge(isl_set **set, int *group, __isl_take isl_set *dom, int pos)
 	set[pos] = isl_set_copy(dom);
 
 	for (i = pos - 1; i >= 0; --i) {
-		int o;
+		isl_bool o;
 
 		if (group[i] != i)
 			continue;
@@ -2115,53 +2116,6 @@ __isl_give isl_map *isl_map_reaching_path_lengths(__isl_take isl_map *map,
 	return map;
 }
 
-/* Check whether equality i of bset is a pure stride constraint
- * on a single dimension, i.e., of the form
- *
- *	v = k e
- *
- * with k a constant and e an existentially quantified variable.
- */
-static int is_eq_stride(__isl_keep isl_basic_set *bset, int i)
-{
-	unsigned nparam;
-	unsigned d;
-	unsigned n_div;
-	int pos1;
-	int pos2;
-
-	if (!bset)
-		return -1;
-
-	if (!isl_int_is_zero(bset->eq[i][0]))
-		return 0;
-
-	nparam = isl_basic_set_dim(bset, isl_dim_param);
-	d = isl_basic_set_dim(bset, isl_dim_set);
-	n_div = isl_basic_set_dim(bset, isl_dim_div);
-
-	if (isl_seq_first_non_zero(bset->eq[i] + 1, nparam) != -1)
-		return 0;
-	pos1 = isl_seq_first_non_zero(bset->eq[i] + 1 + nparam, d);
-	if (pos1 == -1)
-		return 0;
-	if (isl_seq_first_non_zero(bset->eq[i] + 1 + nparam + pos1 + 1, 
-					d - pos1 - 1) != -1)
-		return 0;
-
-	pos2 = isl_seq_first_non_zero(bset->eq[i] + 1 + nparam + d, n_div);
-	if (pos2 == -1)
-		return 0;
-	if (isl_seq_first_non_zero(bset->eq[i] + 1 + nparam + d  + pos2 + 1,
-				   n_div - pos2 - 1) != -1)
-		return 0;
-	if (!isl_int_is_one(bset->eq[i][1 + nparam + pos1]) &&
-	    !isl_int_is_negone(bset->eq[i][1 + nparam + pos1]))
-		return 0;
-
-	return 1;
-}
-
 /* Given a map, compute the smallest superset of this map that is of the form
  *
  *	{ i -> j : L <= j - i <= U and exists a_p: j_p - i_p = M_p a_p }
@@ -2227,7 +2181,7 @@ static __isl_give isl_map *box_closure_on_domain(__isl_take isl_map *map,
 		isl_int_set_si(bmap->div[k][0], 0);
 	}
 	for (i = 0; i < aff->n_eq; ++i) {
-		if (!is_eq_stride(aff, i))
+		if (!isl_basic_set_eq_is_stride(aff, i))
 			continue;
 		k = isl_basic_map_alloc_equality(bmap);
 		if (k < 0)

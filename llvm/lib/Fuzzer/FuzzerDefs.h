@@ -36,19 +36,53 @@
 #error "Support for your platform has not been implemented"
 #endif
 
+#ifndef __has_attribute
+#  define __has_attribute(x) 0
+#endif
+
 #define LIBFUZZER_POSIX LIBFUZZER_APPLE || LIBFUZZER_LINUX
 
 #ifdef __x86_64
-#define ATTRIBUTE_TARGET_POPCNT __attribute__((target("popcnt")))
+#  if __has_attribute(target)
+#    define ATTRIBUTE_TARGET_POPCNT __attribute__((target("popcnt")))
+#  else
+#    define ATTRIBUTE_TARGET_POPCNT
+#  endif
 #else
-#define ATTRIBUTE_TARGET_POPCNT
+#  define ATTRIBUTE_TARGET_POPCNT
 #endif
 
 
 #ifdef __clang__  // avoid gcc warning.
-#  define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize("memory")))
+#  if __has_attribute(no_sanitize)
+#    define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize("memory")))
+#  else
+#    define ATTRIBUTE_NO_SANITIZE_MEMORY
+#  endif
+#  define ALWAYS_INLINE __attribute__((always_inline))
 #else
 #  define ATTRIBUTE_NO_SANITIZE_MEMORY
+#  define ALWAYS_INLINE
+#endif // __clang__
+
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+
+#if defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+#    define ATTRIBUTE_NO_SANITIZE_ALL ATTRIBUTE_NO_SANITIZE_ADDRESS
+#  elif __has_feature(memory_sanitizer)
+#    define ATTRIBUTE_NO_SANITIZE_ALL ATTRIBUTE_NO_SANITIZE_MEMORY
+#  else
+#    define ATTRIBUTE_NO_SANITIZE_ALL
+#  endif
+#else
+#  define ATTRIBUTE_NO_SANITIZE_ALL
+#endif
+
+#if LIBFUZZER_WINDOWS
+#define ATTRIBUTE_INTERFACE __declspec(dllexport)
+#else
+#define ATTRIBUTE_INTERFACE __attribute__((visibility("default")))
 #endif
 
 namespace fuzzer {
@@ -74,15 +108,20 @@ typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
 
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);
 
-struct ScopedDoingMyOwnMemmem {
-  ScopedDoingMyOwnMemmem();
-  ~ScopedDoingMyOwnMemmem();
+struct ScopedDoingMyOwnMemOrStr {
+  ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr++; }
+  ~ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr--; }
+  static int DoingMyOwnMemOrStr;
 };
 
 inline uint8_t  Bswap(uint8_t x)  { return x; }
 inline uint16_t Bswap(uint16_t x) { return __builtin_bswap16(x); }
 inline uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
 inline uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
+
+uint8_t *ExtraCountersBegin();
+uint8_t *ExtraCountersEnd();
+void ClearExtraCounters();
 
 }  // namespace fuzzer
 

@@ -1,5 +1,5 @@
-; RUN: opt -safe-stack -S -mtriple=aarch64-linux-android < %s -o - | FileCheck --check-prefix=TLS %s
-
+; RUN: opt -safe-stack -S -mtriple=aarch64-linux-android < %s -o - | FileCheck --check-prefixes=TLS,ANDROID %s
+; RUN: opt -safe-stack -S -mtriple=aarch64-unknown-fuchsia < %s -o - | FileCheck --check-prefixes=TLS,FUCHSIA %s
 
 define void @foo() nounwind uwtable safestack sspreq {
 entry:
@@ -7,7 +7,8 @@ entry:
 ; TLS: call i8* @llvm.thread.pointer()
 
 ; TLS: %[[TP2:.*]] = call i8* @llvm.thread.pointer()
-; TLS: %[[B:.*]] = getelementptr i8, i8* %[[TP2]], i32 40
+; ANDROID: %[[B:.*]] = getelementptr i8, i8* %[[TP2]], i32 40
+; FUCHSIA: %[[B:.*]] = getelementptr i8, i8* %[[TP2]], i32 -16
 ; TLS: %[[C:.*]] = bitcast i8* %[[B]] to i8**
 ; TLS: %[[StackGuard:.*]] = load i8*, i8** %[[C]]
 ; TLS: store i8* %[[StackGuard]], i8** %[[StackGuardSlot:.*]]

@@ -36,6 +36,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
+#define GET_REGINFO_TARGET_DESC
+#include "HexagonGenRegisterInfo.inc"
+
 using namespace llvm;
 
 HexagonRegisterInfo::HexagonRegisterInfo()
@@ -46,11 +49,6 @@ bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(unsigned R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
          R == Hexagon::R3 || R == Hexagon::D0 || R == Hexagon::D1;
 }
-
-bool HexagonRegisterInfo::isCalleeSaveReg(unsigned Reg) const {
-  return Hexagon::R16 <= Reg && Reg <= Hexagon::R27;
-}
-
 
 const MCPhysReg *
 HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
@@ -125,11 +123,18 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case HexagonSubtarget::V5:
   case HexagonSubtarget::V55:
   case HexagonSubtarget::V60:
+  case HexagonSubtarget::V62:
     return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
   }
 
   llvm_unreachable("Callee saved registers requested for unknown architecture "
                    "version");
+}
+
+
+const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
+      const MachineFunction &MF, CallingConv::ID) const {
+  return HexagonCSR_RegMask;
 }
 
 
@@ -139,19 +144,35 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
-  Reserved.set(Hexagon::PC);
-  Reserved.set(Hexagon::D14);
-  Reserved.set(Hexagon::D15);
-  Reserved.set(Hexagon::LC0);
-  Reserved.set(Hexagon::LC1);
-  Reserved.set(Hexagon::SA0);
-  Reserved.set(Hexagon::SA1);
-  Reserved.set(Hexagon::UGP);
-  Reserved.set(Hexagon::GP);
-  Reserved.set(Hexagon::CS0);
-  Reserved.set(Hexagon::CS1);
-  Reserved.set(Hexagon::CS);
-  Reserved.set(Hexagon::USR);
+  // Control registers.
+  Reserved.set(Hexagon::SA0);         // C0
+  Reserved.set(Hexagon::LC0);         // C1
+  Reserved.set(Hexagon::SA1);         // C2
+  Reserved.set(Hexagon::LC1);         // C3
+  Reserved.set(Hexagon::P3_0);        // C4
+  Reserved.set(Hexagon::USR);         // C8
+  Reserved.set(Hexagon::PC);          // C9
+  Reserved.set(Hexagon::UGP);         // C10
+  Reserved.set(Hexagon::GP);          // C11
+  Reserved.set(Hexagon::CS0);         // C12
+  Reserved.set(Hexagon::CS1);         // C13
+  Reserved.set(Hexagon::UPCYCLELO);   // C14
+  Reserved.set(Hexagon::UPCYCLEHI);   // C15
+  Reserved.set(Hexagon::FRAMELIMIT);  // C16
+  Reserved.set(Hexagon::FRAMEKEY);    // C17
+  Reserved.set(Hexagon::PKTCOUNTLO);  // C18
+  Reserved.set(Hexagon::PKTCOUNTHI);  // C19
+  Reserved.set(Hexagon::UTIMERLO);    // C30
+  Reserved.set(Hexagon::UTIMERHI);    // C31
+  // Out of the control registers, only C8 is explicitly defined in
+  // HexagonRegisterInfo.td. If others are defined, make sure to add
+  // them here as well.
+  Reserved.set(Hexagon::C8);
+  Reserved.set(Hexagon::USR_OVF);
+
+  for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
+    markSuperRegs(Reserved, x);
+
   return Reserved;
 }
 
@@ -267,6 +288,3 @@ unsigned HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
   return Hexagon::R6;
 }
 
-
-#define GET_REGINFO_TARGET_DESC
-#include "HexagonGenRegisterInfo.inc"

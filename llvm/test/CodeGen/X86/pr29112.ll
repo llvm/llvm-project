@@ -24,11 +24,11 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm4
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm4 = xmm0[0,1,2],xmm4[3]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm5 = xmm2[3,1,2,3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[2,3]
+; CHECK-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm2[1],xmm5[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm8[1,1,3,3]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm7 = xmm7[0],xmm1[0],xmm7[2,3]
+; CHECK-NEXT:    vunpcklps {{.*#+}} xmm7 = xmm7[0],xmm1[0],xmm7[1],xmm1[1]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm10 = xmm7[0,1],xmm2[1],xmm7[3]
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm7 = xmm10[0,1,2],xmm3[3]
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm11 = xmm0[0,1,2],xmm3[3]
@@ -60,6 +60,7 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vmovaps %xmm8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps %xmm9, (%rsp)
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vaddps {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload

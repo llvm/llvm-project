@@ -89,7 +89,7 @@ float2 ntest04(int2 C, int2 X, float2 Y)
 
 float2 ntest05(int2 C, int2 X, float Y)
 {
-  return C ? X : Y; // expected-error {{cannot convert between vector values of different size ('int2' (vector of 2 'int' values) and 'float')}}
+  return C ? X : Y; // expected-error {{scalar operand type has greater rank than the type of the vector element. ('int2' (vector of 2 'int' values) and 'float'}}
 }
 
 char2 ntest06(int2 C, char2 X, char2 Y)

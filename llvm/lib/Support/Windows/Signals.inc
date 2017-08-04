@@ -776,7 +776,7 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
   // the nasty sorts of crashes that aren't 100% reproducible from a set of
   // inputs (or in the event that the user is unable or unwilling to provide a
   // reproducible case).
-  if (!llvm::Process::AreCoreFilesPrevented()) {
+  if (!llvm::sys::Process::AreCoreFilesPrevented()) {
     MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo;
     ExceptionInfo.ThreadId = ::GetCurrentThreadId();
     ExceptionInfo.ExceptionPointers = ep;

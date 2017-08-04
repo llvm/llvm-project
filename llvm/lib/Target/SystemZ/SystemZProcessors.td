@@ -33,3 +33,6 @@ def : ProcessorModel<"zEC12", ZEC12Model, Arch10SupportedFeatures.List>;
 def : ProcessorModel<"arch11", Z13Model, Arch11SupportedFeatures.List>;
 def : ProcessorModel<"z13", Z13Model, Arch11SupportedFeatures.List>;
 
+def : ProcessorModel<"arch12", Z14Model, Arch12SupportedFeatures.List>;
+def : ProcessorModel<"z14", Z14Model, Arch12SupportedFeatures.List>;
+

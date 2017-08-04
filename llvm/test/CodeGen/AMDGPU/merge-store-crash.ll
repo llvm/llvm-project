@@ -26,11 +26,11 @@ main_body:
   %tmp9 = insertelement <4 x i32> %tmp8, i32 %tmp7, i32 1
   %tmp10 = insertelement <4 x i32> %tmp9, i32 undef, i32 2
   %tmp11 = insertelement <4 x i32> %tmp10, i32 undef, i32 3
-  call void @llvm.SI.tbuffer.store.v4i32(<16 x i8> undef, <4 x i32> %tmp11, i32 4, i32 undef, i32 %arg, i32 0, i32 14, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
+  call void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32> %tmp11, <4 x i32> undef, i32 undef, i32 0, i32 %arg, i32 0, i32 14, i32 4, i1 1, i1 1)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.SI.tbuffer.store.v4i32(<16 x i8>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0
+declare void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1) #0
 
 attributes #0 = { nounwind }

@@ -86,6 +86,7 @@ namespace clang {
     void VisitUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D);
     void VisitDeclaratorDecl(DeclaratorDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
+    void VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D);
     void VisitCXXMethodDecl(CXXMethodDecl *D);
     void VisitCXXConstructorDecl(CXXConstructorDecl *D);
     void VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -298,7 +299,7 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   Record.push_back(D->isTopLevelDeclInObjCContainer());
   Record.push_back(D->getAccess());
   Record.push_back(D->isModulePrivate());
-  Record.push_back(Writer.inferSubmoduleIDFromLocation(D->getLocation()));
+  Record.push_back(Writer.getSubmoduleID(D->getOwningModule()));
 
   // If this declaration injected a name into a context different from its
   // lexical context, and that context is an imported namespace, we need to
@@ -368,6 +369,7 @@ void ASTDeclWriter::VisitTypedefNameDecl(TypedefNameDecl *D) {
   Record.push_back(D->isModed());
   if (D->isModed())
     Record.AddTypeRef(D->getUnderlyingType());
+  Record.AddDeclRef(D->getAnonDeclWithTypedefName(false));
 }
 
 void ASTDeclWriter::VisitTypedefDecl(TypedefDecl *D) {
@@ -519,6 +521,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back((int)D->SClass); // FIXME: stable encoding
   Record.push_back(D->IsInline);
   Record.push_back(D->IsInlineSpecified);
+  Record.push_back(D->IsExplicitSpecified);
   Record.push_back(D->IsVirtualAsWritten);
   Record.push_back(D->IsPure);
   Record.push_back(D->HasInheritedPrototype);
@@ -605,6 +608,11 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   for (auto P : D->parameters())
     Record.AddDeclRef(P);
   Code = serialization::DECL_FUNCTION;
+}
+
+void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
+  VisitFunctionDecl(D);
+  Code = serialization::DECL_CXX_DEDUCTION_GUIDE;
 }
 
 void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
@@ -776,6 +784,8 @@ void ASTDeclWriter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
 void ASTDeclWriter::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getClassInterface());
+  Record.AddSourceLocation(D->getClassInterfaceLoc());
+  Record.AddSourceLocation(D->getAtLoc());
   Code = serialization::DECL_OBJC_COMPATIBLE_ALIAS;
 }
 
@@ -907,6 +917,10 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     Record.push_back(D->isConstexpr());
     Record.push_back(D->isInitCapture());
     Record.push_back(D->isPreviousDeclInSameBlockScope());
+    if (const auto *IPD = dyn_cast<ImplicitParamDecl>(D))
+      Record.push_back(static_cast<unsigned>(IPD->getParameterKind()));
+    else
+      Record.push_back(0);
   }
   Record.push_back(D->getLinkageInternal());
 
@@ -1269,8 +1283,6 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
 
   VisitCXXMethodDecl(D);
 
-  Record.push_back(D->IsExplicitSpecified);
-
   Code = D->isInheritingConstructor()
              ? serialization::DECL_CXX_INHERITED_CONSTRUCTOR
              : serialization::DECL_CXX_CONSTRUCTOR;
@@ -1286,7 +1298,6 @@ void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
 
 void ASTDeclWriter::VisitCXXConversionDecl(CXXConversionDecl *D) {
   VisitCXXMethodDecl(D);
-  Record.push_back(D->IsExplicitSpecified);
   Code = serialization::DECL_CXX_CONVERSION;
 }
 
@@ -1984,6 +1995,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // isConstexpr
   Abv->Add(BitCodeAbbrevOp(0));                         // isInitCapture
   Abv->Add(BitCodeAbbrevOp(0));                         // isPrevDeclInSameScope
+  Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // IsInitICE (local)
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
@@ -2024,6 +2036,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // StorageClass
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Inline
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InlineSpecified
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ExplicitSpecified
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // VirtualAsWritten
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Pure
   Abv->Add(BitCodeAbbrevOp(0));                         // HasInheritedProto
@@ -2222,6 +2235,21 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   Writer->ClearSwitchCaseIDs();
 
   assert(FD->doesThisDeclarationHaveABody());
+  bool ModulesCodegen = false;
+  if (Writer->WritingModule && !FD->isDependentContext()) {
+    // Under -fmodules-codegen, codegen is performed for all defined functions.
+    // When building a C++ Modules TS module interface unit, a strong definition
+    // in the module interface is provided by the compilation of that module
+    // interface unit, not by its users. (Inline functions are still emitted
+    // in module users.)
+    ModulesCodegen =
+        Writer->Context->getLangOpts().ModulesCodegen ||
+        (Writer->WritingModule->Kind == Module::ModuleInterfaceUnit &&
+         Writer->Context->GetGVALinkageForFunction(FD) == GVA_StrongExternal);
+  }
+  Record->push_back(ModulesCodegen);
+  if (ModulesCodegen)
+    Writer->ModularCodegenDecls.push_back(Writer->GetDeclRef(FD));
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     Record->push_back(CD->getNumCtorInitializers());
     if (CD->getNumCtorInitializers())

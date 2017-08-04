@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- cmpti2_test.c - Test __cmpti2 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

@@ -39,10 +39,10 @@
         mrc2  p14, #0, r1, c1, c2, #9
         mrrc  p7, #16, r5, r4, c1
         mrrc2  p7, #17, r5, r4, c1
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: error: immediate operand must be in the range [0,7]
 @ CHECK-ERRORS: error: immediate operand must be in the range [0,15]
 @ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
 @ CHECK-ERRORS-V8: error: invalid operand for instruction
@@ -76,11 +76,8 @@
 @ CHECK-ERRORS: error: branch target out of range
 
 foo2:
-        mov r0, foo2
         movw r0, foo2
         movt r0, foo2
-@ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
-@ CHECK-ERRORS:                 ^
 @ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
 @ CHECK-ERRORS:                  ^
 @ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
@@ -117,4 +114,10 @@ foo2:
 @ CHECK-ERRORS: error: invalid operand for instruction
 @ CHECK-ERRORS: error: instruction requires: arm-mode
 @ CHECK-ERRORS: error: immediate value expected for vector index
+@ CHECK-ERRORS: error: instruction requires: arm-mode
+
+        @ SWP(B) is an ARM-only instruction
+        swp  r0, r1, [r2]
+        swpb r3, r4, [r5]
+@ CHECK-ERRORS: error: instruction requires: arm-mode
 @ CHECK-ERRORS: error: instruction requires: arm-mode

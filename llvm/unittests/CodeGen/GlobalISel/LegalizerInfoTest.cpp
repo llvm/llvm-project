@@ -117,4 +117,23 @@ TEST(LegalizerInfoTest, MultipleTypes) {
   ASSERT_EQ(L.getAction({G_PTRTOINT, 1, p0}),
             std::make_pair(LegalizerInfo::Legal, p0));
 }
+
+TEST(LegalizerInfoTest, MultipleSteps) {
+  using namespace TargetOpcode;
+  LegalizerInfo L;
+  LLT s16 = LLT::scalar(16);
+  LLT s32 = LLT::scalar(32);
+  LLT s64 = LLT::scalar(64);
+
+  L.setAction({G_UREM, 0, s16}, LegalizerInfo::WidenScalar);
+  L.setAction({G_UREM, 0, s32}, LegalizerInfo::Lower);
+  L.setAction({G_UREM, 0, s64}, LegalizerInfo::Lower);
+
+  L.computeTables();
+
+  ASSERT_EQ(L.getAction({G_UREM, LLT::scalar(16)}),
+            std::make_pair(LegalizerInfo::WidenScalar, LLT::scalar(32)));
+  ASSERT_EQ(L.getAction({G_UREM, LLT::scalar(32)}),
+            std::make_pair(LegalizerInfo::Lower, LLT::scalar(32)));
+}
 }

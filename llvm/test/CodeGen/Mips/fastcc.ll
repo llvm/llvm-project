@@ -132,20 +132,19 @@ entry:
 define internal fastcc void @callee0(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16) nounwind noinline {
 entry:
 ; CHECK: callee0
-; CHECK: sw  $4
-; CHECK: sw  $5
-; CHECK: sw  $6
-; CHECK: sw  $7
-; CHECK: sw  $8
-; CHECK: sw  $9
-; CHECK: sw  $10
-; CHECK: sw  $11
-; CHECK: sw  $12
-; CHECK: sw  $13
-; CHECK: sw  $14
-; CHECK: sw  $15
-; CHECK: sw  $24
-; CHECK: sw  $3
+; CHECK-DAG: sw  $4
+; CHECK-DAG: sw  $5
+; CHECK-DAG: sw  $7
+; CHECK-DAG: sw  $8
+; CHECK-DAG: sw  $9
+; CHECK-DAG: sw  $10
+; CHECK-DAG: sw  $11
+; CHECK-DAG: sw  $12
+; CHECK-DAG: sw  $13
+; CHECK-DAG: sw  $14
+; CHECK-DAG: sw  $15
+; CHECK-DAG: sw  $24
+; CHECK-DAG: sw  $3
 
 ; t6, t7 and t8 are reserved in NaCl and cannot be used for fastcc.
 ; CHECK-NACL-NOT: sw  $14
@@ -223,27 +222,27 @@ entry:
 
 define internal fastcc void @callee1(float %a0, float %a1, float %a2, float %a3, float %a4, float %a5, float %a6, float %a7, float %a8, float %a9, float %a10, float %a11, float %a12, float %a13, float %a14, float %a15, float %a16, float %a17, float %a18, float %a19, float %a20) nounwind noinline {
 entry:
-; CHECK: callee1
-; CHECK: swc1  $f0
-; CHECK: swc1  $f1
-; CHECK: swc1  $f2
-; CHECK: swc1  $f3
-; CHECK: swc1  $f4
-; CHECK: swc1  $f5
-; CHECK: swc1  $f6
-; CHECK: swc1  $f7
-; CHECK: swc1  $f8
-; CHECK: swc1  $f9
-; CHECK: swc1  $f10
-; CHECK: swc1  $f11
-; CHECK: swc1  $f12
-; CHECK: swc1  $f13
-; CHECK: swc1  $f14
-; CHECK: swc1  $f15
-; CHECK: swc1  $f16
-; CHECK: swc1  $f17
-; CHECK: swc1  $f18
-; CHECK: swc1  $f19
+; CHECK-LABEL: callee1:
+; CHECK-DAG: swc1  $f0
+; CHECK-DAG: swc1  $f1
+; CHECK-DAG: swc1  $f2
+; CHECK-DAG: swc1  $f3
+; CHECK-DAG: swc1  $f4
+; CHECK-DAG: swc1  $f5
+; CHECK-DAG: swc1  $f6
+; CHECK-DAG: swc1  $f7
+; CHECK-DAG: swc1  $f8
+; CHECK-DAG: swc1  $f9
+; CHECK-DAG: swc1  $f10
+; CHECK-DAG: swc1  $f11
+; CHECK-DAG: swc1  $f12
+; CHECK-DAG: swc1  $f13
+; CHECK-DAG: swc1  $f14
+; CHECK-DAG: swc1  $f15
+; CHECK-DAG: swc1  $f16
+; CHECK-DAG: swc1  $f17
+; CHECK-DAG: swc1  $f18
+; CHECK-DAG: swc1  $f19
 
   store float %a0, float* @gf0, align 4
   store float %a1, float* @gf1, align 4
@@ -316,8 +315,6 @@ entry:
 
 ; NOODDSPREG-LABEL:  callee2:
 
-; NOODDSPREG:        addiu   $sp, $sp, -[[OFFSET:[0-9]+]]
-
 ; Check that first 10 arguments are received in even float registers
 ; f0, f2, ... , f18. Check that 11th argument is received on stack.
 
@@ -333,7 +330,7 @@ entry:
 ; NOODDSPREG-DAG:    swc1    $f16, 32($[[R0]])
 ; NOODDSPREG-DAG:    swc1    $f18, 36($[[R0]])
 
-; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], [[OFFSET]]($sp)
+; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], 0($sp)
 ; NOODDSPREG-DAG:    swc1    $[[F0]], 40($[[R0]])
 
   store float %a0, float* getelementptr ([11 x float], [11 x float]* @fa, i32 0, i32 0), align 4
@@ -397,7 +394,6 @@ entry:
 
 ; FP64-NOODDSPREG-LABEL:  callee3:
 
-; FP64-NOODDSPREG:        addiu   $sp, $sp, -[[OFFSET:[0-9]+]]
 
 ; Check that first 10 arguments are received in even float registers
 ; f0, f2, ... , f18. Check that 11th argument is received on stack.
@@ -414,7 +410,7 @@ entry:
 ; FP64-NOODDSPREG-DAG:    sdc1    $f16, 64($[[R0]])
 ; FP64-NOODDSPREG-DAG:    sdc1    $f18, 72($[[R0]])
 
-; FP64-NOODDSPREG-DAG:    ldc1    $[[F0:f[0-9]*[02468]]], [[OFFSET]]($sp)
+; FP64-NOODDSPREG-DAG:    ldc1    $[[F0:f[0-9]*[02468]]], 0($sp)
 ; FP64-NOODDSPREG-DAG:    sdc1    $[[F0]], 80($[[R0]])
 
   store double %a0, double* getelementptr ([11 x double], [11 x double]* @da, i32 0, i32 0), align 8

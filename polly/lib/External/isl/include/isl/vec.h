@@ -44,7 +44,7 @@ void isl_vec_dump(__isl_keep isl_vec *vec);
 __isl_give isl_printer *isl_printer_print_vec(__isl_take isl_printer *printer,
 	__isl_keep isl_vec *vec);
 
-struct isl_vec *isl_vec_ceil(struct isl_vec *vec);
+__isl_give isl_vec *isl_vec_ceil(__isl_take isl_vec *vec);
 struct isl_vec *isl_vec_normalize(struct isl_vec *vec);
 __isl_give isl_vec *isl_vec_set_si(__isl_take isl_vec *vec, int v);
 __isl_give isl_vec *isl_vec_set_val(__isl_take isl_vec *vec,

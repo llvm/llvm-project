@@ -1,0 +1,80 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
+
+--- |
+  define void @test_extract_128_idx0() {
+    ret void
+  }
+
+  define void @test_extract_128_idx1() {
+    ret void
+  }
+
+...
+---
+name:            test_extract_128_idx0
+# ALL-LABEL: name:  test_extract_128_idx0
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX:           registers:
+# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
+# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
+#
+# AVX512VL:      registers:
+# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:               %0 = COPY %ymm1
+# ALL-NEXT:          %1 = COPY %0.sub_xmm
+# ALL-NEXT:          %xmm0 = COPY %1
+# ALL-NEXT:          RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm1
+
+    %0(<8 x s32>) = COPY %ymm1
+    %1(<4 x s32>) = G_EXTRACT %0(<8 x s32>), 0
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_extract_128_idx1
+# ALL-LABEL: name:  test_extract_128_idx1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX:           registers:
+# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
+# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
+#
+# AVX512VL:      registers:
+# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# AVX:               %0 = COPY %ymm1
+# AVX-NEXT:          %1 = VEXTRACTF128rr %0, 1
+# AVX-NEXT:          %xmm0 = COPY %1
+# AVX-NEXT:          RET 0, implicit %xmm0
+#
+# AVX512VL:          %0 = COPY %ymm1
+# AVX512VL-NEXT:     %1 = VEXTRACTF32x4Z256rr %0, 1
+# AVX512VL-NEXT:     %xmm0 = COPY %1
+# AVX512VL-NEXT:     RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm1
+
+    %0(<8 x s32>) = COPY %ymm1
+    %1(<4 x s32>) = G_EXTRACT %0(<8 x s32>), 128
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+
+

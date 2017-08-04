@@ -1,0 +1,1114 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
+
+--- |
+  define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
+    %ret = add i8 %arg1, %arg2
+    ret i8 %ret
+  }
+
+  define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
+    %ret = add i16 %arg1, %arg2
+    ret i16 %ret
+  }
+
+  define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
+    %ret = add i32 %arg1, %arg2
+    ret i32 %ret
+  }
+
+  define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
+    %ret = add i64 %arg1, %arg2
+    ret i64 %ret
+  }
+
+  define void @test_mul_gpr() {
+    ret void
+  }
+
+  define float @test_add_float(float %arg1, float %arg2) {
+    %ret = fadd float %arg1, %arg2
+    ret float %ret
+  }
+
+  define double @test_add_double(double %arg1, double %arg2) {
+    %ret = fadd double %arg1, %arg2
+    ret double %ret
+  }
+  
+  define void @test_fsub_float() {
+    %ret1 = fsub float undef, undef
+    %ret2 = fsub double undef, undef
+    ret void
+  }
+
+  define void @test_fmul_float() {
+    %ret1 = fmul float undef, undef
+    %ret2 = fmul double undef, undef
+    ret void
+  }
+
+  define void @test_fdiv_float() {
+    %ret1 = fdiv float undef, undef
+    %ret2 = fdiv double undef, undef
+    ret void
+  }
+  
+
+  define <4 x i32> @test_add_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
+    %ret = add <4 x i32> %arg1, %arg2
+    ret <4 x i32> %ret
+  }
+
+  define <4 x float> @test_add_v4f32(<4 x float> %arg1, <4 x float> %arg2) {
+    %ret = fadd <4 x float> %arg1, %arg2
+    ret <4 x float> %ret
+  }
+
+  define i8 @test_load_i8(i8* %p1) {
+    %r = load i8, i8* %p1
+    ret i8 %r
+  }
+
+  define i16 @test_load_i16(i16* %p1) {
+    %r = load i16, i16* %p1
+    ret i16 %r
+  }
+
+  define i32 @test_load_i32(i32* %p1) {
+    %r = load i32, i32* %p1
+    ret i32 %r
+  }
+
+  define i64 @test_load_i64(i64* %p1) {
+    %r = load i64, i64* %p1
+    ret i64 %r
+  }
+
+  define float @test_load_float(float* %p1) {
+    %r = load float, float* %p1
+    ret float %r
+  }
+
+  define double @test_load_double(double* %p1) {
+    %r = load double, double* %p1
+    ret double %r
+  }
+
+  define <4 x i32> @test_load_v4i32(<4 x i32>* %p1) {
+    %r = load <4 x i32>, <4 x i32>* %p1, align 16
+    ret <4 x i32> %r
+  }
+
+  define i32* @test_store_i32(i32 %val, i32* %p1) {
+    store i32 %val, i32* %p1
+    ret i32* %p1
+  }
+
+  define i64* @test_store_i64(i64 %val, i64* %p1) {
+    store i64 %val, i64* %p1
+    ret i64* %p1
+  }
+
+  define float* @test_store_float(float %val, float* %p1) {
+    store float %val, float* %p1
+    ret float* %p1
+  }
+
+  define double* @test_store_double(double %val, double* %p1) {
+    store double %val, double* %p1
+    ret double* %p1
+  }
+
+  define void @constInt_check() {
+    ret void
+  }
+
+  define void @trunc_check() {
+    ret void
+  }
+
+  define void @test_gep() {
+    %p1 = getelementptr i32, i32* undef, i32 5
+    %p2 = getelementptr i32, i32* undef, i64 5
+    ret void
+  }
+
+  define i1 @test_icmp_eq_i8(i8 %a, i8 %b) {
+    %r = icmp eq i8 %a, %b
+    ret i1 %r
+  }
+
+  define i1 @test_icmp_eq_i16(i16 %a, i16 %b) {
+    %r = icmp eq i16 %a, %b
+    ret i1 %r
+  }
+
+  define i1 @test_icmp_eq_i32(i32 %a, i32 %b) {
+    %r = icmp eq i32 %a, %b
+    ret i1 %r
+  }
+
+  define i1 @test_icmp_eq_i64(i64 %a, i64 %b) {
+    %r = icmp eq i64 %a, %b
+    ret i1 %r
+  }
+
+  define i8 @test_xor_i8() {
+    %ret = xor i8 undef, undef
+    ret i8 %ret
+  }
+
+  define i16 @test_or_i16() {
+    %ret = or i16 undef, undef
+    ret i16 %ret
+  }
+
+  define i32 @test_and_i32() {
+    %ret = and i32 undef, undef
+    ret i32 %ret
+  }
+
+  define i64 @test_and_i64() {
+    %ret = and i64 undef, undef
+    ret i64 %ret
+  }
+
+  @g_int = global i32 0, align 4
+
+  define i32* @test_global_ptrv() {
+  entry:
+    ret i32* @g_int
+  }
+  
+...
+---
+name:            test_add_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i8
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s8) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s8) = G_ADD %0, %1
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_add_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i16
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s16) = G_ADD %0, %1
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_add_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i32
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s32) = G_ADD %0, %1
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_add_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i64
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(s64) = COPY %rsi
+    %2(s64) = G_ADD %0, %1
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_mul_gpr
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_mul_gpr
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 3, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 4, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 5, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 6, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 7, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }  
+body:             |
+  bb.1 (%ir-block.0):
+    
+    %0(s64) = IMPLICIT_DEF
+    %1(s32) = IMPLICIT_DEF
+    %2(s16) = IMPLICIT_DEF
+    %3(s8)  = IMPLICIT_DEF
+    %4(s64) = G_MUL %0, %0
+    %5(s32) = G_MUL %1, %1
+    %6(s16) = G_MUL %2, %2
+    %7(s8)  = G_MUL %3, %3
+    RET 0
+...
+---
+name:            test_add_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_float
+# CHECK: registers:
+# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 2, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(s32) = COPY %xmm0
+    %1(s32) = COPY %xmm1
+    %2(s32) = G_FADD %0, %1
+    %xmm0 = COPY %2(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_add_double
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_double
+# CHECK: registers:
+# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 2, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(s64) = COPY %xmm0
+    %1(s64) = COPY %xmm1
+    %2(s64) = G_FADD %0, %1
+    %xmm0 = COPY %2(s64)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_fsub_float
+# CHECK-LABEL: name:  test_fsub_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 3, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 4, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 5, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 6, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 7, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %2(s64) = IMPLICIT_DEF
+    %1(s32) = G_FSUB %0, %0
+    %3(s64) = G_FSUB %2, %2
+    RET 0
+
+...
+---
+name:            test_fmul_float
+# CHECK-LABEL: name:  test_fmul_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 3, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 4, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 5, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 6, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 7, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %2(s64) = IMPLICIT_DEF
+    %1(s32) = G_FMUL %0, %0
+    %3(s64) = G_FMUL %2, %2
+    RET 0
+
+...
+---
+name:            test_fdiv_float
+# CHECK-LABEL: name:  test_fdiv_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 3, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 4, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 5, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 6, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 7, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %2(s64) = IMPLICIT_DEF
+    %1(s32) = G_FDIV %0, %0
+    %3(s64) = G_FDIV %2, %2
+    RET 0
+
+...
+---
+name:            test_add_v4i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_v4i32
+# CHECK: registers:
+# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 2, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<4 x s32>) = COPY %xmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<4 x s32>) = G_ADD %0, %1
+    %xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_add_v4f32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_v4f32
+# CHECK: registers:
+# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 2, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<4 x s32>) = COPY %xmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<4 x s32>) = G_FADD %0, %1
+    %xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_load_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i8
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s8) = G_LOAD %0(p0) :: (load 1 from %ir.p1)
+    %al = COPY %1(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_load_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i16
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s16) = G_LOAD %0(p0) :: (load 2 from %ir.p1)
+    %ax = COPY %1(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_load_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i32
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_load_i64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_i64
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_load_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_float
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %xmm0 = COPY %1(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_load_double
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_double
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %xmm0 = COPY %1(s64)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_load_v4i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_load_v4i32
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(<4 x s32>) = G_LOAD %0(p0) :: (load 16 from %ir.p1, align 1)
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_store_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_i32
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %rsi
+
+    %0(s32) = COPY %edi
+    %1(p0) = COPY %rsi
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_store_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_i64
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(p0) = COPY %rsi
+    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_store_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_float
+# CHECK: registers:
+
+# FAST-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# FAST-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+# FAST-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+
+# GREEDY-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# GREEDY-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s32) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    ; CHECK:      %1(p0) = COPY %rdi
+
+    ; FAST-NEXT:  %2(s32) = COPY %0(s32)
+    ; FAST-NEXT:  G_STORE %2(s32), %1(p0) :: (store 4 into %ir.p1)
+
+    ; GREEDY-NEXT:  G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_store_double
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK-LABEL: name:            test_store_double
+# CHECK: registers:
+
+# FAST-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# FAST-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+# FAST-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+
+# GREEDY-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# GREEDY-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s64) = COPY %xmm0
+    %1(p0) = COPY %rdi
+
+    ; CHECK:       %1(p0) = COPY %rdi
+
+    ; FAST-NEXT:   %2(s64) = COPY %0(s64)
+    ; FAST-NEXT:   G_STORE %2(s64), %1(p0) :: (store 8 into %ir.p1)
+
+    ; GREEDY-NEXT: G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+
+    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            constInt_check
+alignment:       4
+legalized:       true
+# CHECK-LABEL: name:            constInt_check
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(s8) = G_CONSTANT i8 8
+    %1(s16) = G_CONSTANT i16 16
+    %2(s32) = G_CONSTANT i32 32
+    %3(s64) = G_CONSTANT i64 64
+    RET 0
+
+...
+---
+name:            trunc_check
+alignment:       4
+legalized:       true
+# CHECK-LABEL: name:            trunc_check
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s8) = G_TRUNC %0(s32)
+    %3(s16) = G_TRUNC %0(s32)
+    RET 0
+
+...
+---
+name:            test_gep
+legalized:       true
+# CHECK-LABEL: name:            test_gep
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(p0) = IMPLICIT_DEF
+    %1(s32) = G_CONSTANT i32 20
+    %2(p0) = G_GEP %0, %1(s32)
+    %3(s64) = G_CONSTANT i64 20
+    %4(p0) = G_GEP %0, %3(s64)
+    RET 0
+
+...
+---
+name:            test_icmp_eq_i8
+# CHECK-LABEL: name:  test_icmp_eq_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s8) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s8), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_icmp_eq_i16
+# CHECK-LABEL: name:  test_icmp_eq_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s16), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_icmp_eq_i32
+# CHECK-LABEL: name:  test_icmp_eq_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_icmp_eq_i64
+# CHECK-LABEL: name:  test_icmp_eq_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(s64) = COPY %rsi
+    %2(s1) = G_ICMP intpred(eq), %0(s64), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_xor_i8
+# CHECK-LABEL: name:  test_xor_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s8) = IMPLICIT_DEF
+    %1(s8) = G_XOR %0, %0
+    %al = COPY %1(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_or_i16
+# CHECK-LABEL: name:  test_or_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s16) = IMPLICIT_DEF
+    %1(s16) = G_OR %0, %0
+    %ax = COPY %1(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_and_i32
+# CHECK-LABEL: name:  test_and_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %1(s32) = G_AND %0, %0
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_and_i64
+# CHECK-LABEL: name:  test_and_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = IMPLICIT_DEF
+    %1(s64) = G_AND %0, %0
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_global_ptrv
+# CHECK-LABEL: name:  test_global_ptrv
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+# CHECK:           %0(p0) = G_GLOBAL_VALUE @g_int
+# CHECK-NEXT:      %rax = COPY %0(p0)
+# CHECK-NEXT:      RET 0, implicit %rax
+body:             |
+  bb.1.entry:
+    %0(p0) = G_GLOBAL_VALUE @g_int
+    %rax = COPY %0(p0)
+    RET 0, implicit %rax
+
+...
+

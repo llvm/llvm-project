@@ -62,7 +62,7 @@ COMMON_FLAG(
 COMMON_FLAG(
     int, verbosity, 0,
     "Verbosity level (0 - silent, 1 - a bit of output, 2+ - more output).")
-COMMON_FLAG(bool, detect_leaks, true, "Enable memory leak detection.")
+COMMON_FLAG(bool, detect_leaks, !SANITIZER_MAC, "Enable memory leak detection.")
 COMMON_FLAG(
     bool, leak_check_at_exit, true,
     "Invoke leak checking in an atexit handler. Has no effect if "
@@ -75,20 +75,27 @@ COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
 COMMON_FLAG(int, print_module_map, 0,
-            "OS X only. 0 = don't print, 1 = print only once before process "
-            "exits, 2 = print after each report.")
+            "OS X only (0 - don't print, 1 - print only once before process "
+            "exits, 2 - print after each report).")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
-COMMON_FLAG(bool, handle_segv, true,
-            "If set, registers the tool's custom SIGSEGV/SIGBUS handler.")
-COMMON_FLAG(bool, handle_abort, false,
-            "If set, registers the tool's custom SIGABRT handler.")
-COMMON_FLAG(bool, handle_sigill, false,
-            "If set, registers the tool's custom SIGILL handler.")
-COMMON_FLAG(bool, handle_sigfpe, true,
-            "If set, registers the tool's custom SIGFPE handler.")
-COMMON_FLAG(bool, allow_user_segv_handler, false,
-            "If set, allows user to register a SEGV handler even if the tool "
-            "registers one.")
+#define COMMON_FLAG_HANDLE_SIGNAL_HELP(signal) \
+    "Controls custom tool's " #signal " handler (0 - do not registers the " \
+    "handler, 1 - register the handler and allow user to set own, " \
+    "2 - registers the handler and block user from changing it). "
+COMMON_FLAG(HandleSignalMode, handle_segv, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGSEGV))
+COMMON_FLAG(HandleSignalMode, handle_sigbus, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGBUS))
+COMMON_FLAG(HandleSignalMode, handle_abort, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGABRT))
+COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGILL))
+COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
+#undef COMMON_FLAG_HANDLE_SIGNAL_HELP
+COMMON_FLAG(bool, allow_user_segv_handler, true,
+            "Deprecated. True has no effect, use handle_sigbus=1. If false, "
+            "handle_*=1 will be upgraded to handle_*=2.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
 COMMON_FLAG(bool, detect_deadlocks, false,
@@ -134,22 +141,6 @@ COMMON_FLAG(
     bool, coverage, false,
     "If set, coverage information will be dumped at program shutdown (if the "
     "coverage instrumentation was enabled at compile time).")
-COMMON_FLAG(bool, coverage_pcs, true,
-            "If set (and if 'coverage' is set too), the coverage information "
-            "will be dumped as a set of PC offsets for every module.")
-COMMON_FLAG(bool, coverage_order_pcs, false,
-             "If true, the PCs will be dumped in the order they've"
-             " appeared during the execution.")
-COMMON_FLAG(bool, coverage_bitset, false,
-            "If set (and if 'coverage' is set too), the coverage information "
-            "will also be dumped as a bitset to a separate file.")
-COMMON_FLAG(bool, coverage_counters, false,
-            "If set (and if 'coverage' is set too), the bitmap that corresponds"
-            " to coverage counters will be dumped.")
-COMMON_FLAG(bool, coverage_direct, SANITIZER_ANDROID,
-            "If set, coverage information will be dumped directly to a memory "
-            "mapped file. This way data is not lost even if the process is "
-            "suddenly killed.")
 COMMON_FLAG(const char *, coverage_dir, ".",
             "Target directory for coverage dumps. Defaults to the current "
             "directory.")
@@ -190,11 +181,17 @@ COMMON_FLAG(bool, intercept_strstr, true,
 COMMON_FLAG(bool, intercept_strspn, true,
             "If set, uses custom wrappers for strspn and strcspn function "
             "to find more errors.")
+COMMON_FLAG(bool, intercept_strtok, true,
+            "If set, uses a custom wrapper for the strtok function "
+            "to find more errors.")
 COMMON_FLAG(bool, intercept_strpbrk, true,
             "If set, uses custom wrappers for strpbrk function "
             "to find more errors.")
 COMMON_FLAG(bool, intercept_strlen, true,
             "If set, uses custom wrappers for strlen and strnlen functions "
+            "to find more errors.")
+COMMON_FLAG(bool, intercept_strndup, true,
+            "If set, uses custom wrappers for strndup functions "
             "to find more errors.")
 COMMON_FLAG(bool, intercept_strchr, true,
             "If set, uses custom wrappers for strchr, strchrnul, and strrchr "

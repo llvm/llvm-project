@@ -17,7 +17,7 @@ class Context:
         isl.isl_ctx_free(self)
 
     def from_param(self):
-        return self.ptr
+        return c_void_p(self.ptr)
 
     @staticmethod
     def getDefaultInstance():

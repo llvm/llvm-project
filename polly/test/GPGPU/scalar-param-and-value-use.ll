@@ -2,7 +2,7 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=IR %s
 
-; REQUIRES: pollyacc
+; REQUIRES: pollyacc,nvptx
 
 ;    void foo(long n, float A[][n]) {
 ;      for (long i = 0; i < 32; i++)

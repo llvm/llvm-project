@@ -66,6 +66,16 @@ let suite name f =
 let filename = Sys.argv.(1)
 let m = create_module context filename
 
+(*===-- Contained types  --------------------------------------------------===*)
+
+let test_contained_types () =
+  let pointer_i32 = pointer_type i32_type in
+  insist (i32_type = (Array.get (subtypes pointer_i32) 0));
+
+  let ar = struct_type context [| i32_type; i8_type |] in
+  insist (i32_type = (Array.get (subtypes ar)) 0);
+  insist (i8_type = (Array.get (subtypes ar)) 1)
+
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -1533,6 +1543,7 @@ let test_writer () =
 (*===-- Driver ------------------------------------------------------------===*)
 
 let _ =
+  suite "contained types"  test_contained_types;
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;

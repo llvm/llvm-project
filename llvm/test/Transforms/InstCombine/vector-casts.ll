@@ -15,9 +15,9 @@ define <2 x i1> @test1(<2 x i64> %a) {
 ; The ashr turns into an lshr.
 define <2 x i64> @test2(<2 x i64> %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> %a, <i64 65535, i64 65535>
-; CHECK-NEXT:    [[T:%.*]] = lshr <2 x i64> [[B]], <i64 1, i64 1>
-; CHECK-NEXT:    ret <2 x i64> [[T]]
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> %a, <i64 65534, i64 65534>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact <2 x i64> [[B]], <i64 1, i64 1>
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %b = and <2 x i64> %a, <i64 65535, i64 65535>
   %t = ashr <2 x i64> %b, <i64 1, i64 1>
@@ -110,23 +110,11 @@ define <2 x i64> @bar(<2 x i65> %t) {
   ret <2 x i64> %b
 }
 
-define <2 x i65> @foos(<2 x i64> %t) {
-; CHECK-LABEL: @foos(
-; CHECK-NEXT:    [[A:%.*]] = zext <2 x i64> %t to <2 x i65>
-; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i65> [[A]], <i65 33, i65 33>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i65> [[SEXT]], <i65 33, i65 33>
-; CHECK-NEXT:    ret <2 x i65> [[B]]
-;
-  %a = trunc <2 x i64> %t to <2 x i32>
-  %b = sext <2 x i32> %a to <2 x i65>
-  ret <2 x i65> %b
-}
-
 define <2 x i64> @bars(<2 x i65> %t) {
 ; CHECK-LABEL: @bars(
 ; CHECK-NEXT:    [[A:%.*]] = trunc <2 x i65> %t to <2 x i64>
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> [[A]], <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i65> %t to <2 x i32>
@@ -137,7 +125,7 @@ define <2 x i64> @bars(<2 x i65> %t) {
 define <2 x i64> @quxs(<2 x i64> %t) {
 ; CHECK-LABEL: @quxs(
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> %t, <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
@@ -148,7 +136,7 @@ define <2 x i64> @quxs(<2 x i64> %t) {
 define <2 x i64> @quxt(<2 x i64> %t) {
 ; CHECK-LABEL: @quxt(
 ; CHECK-NEXT:    [[A:%.*]] = shl <2 x i64> %t, <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[A]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[A]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = shl <2 x i64> %t, <i64 32, i64 32>
@@ -226,5 +214,93 @@ define <8 x i32> @pr24458(<8 x float> %n) {
   %equal_a_load72__to_boolvec.i = sext <8 x i1> %equal_a_load72_.i to <8 x i32>
   %wrong = or <8 x i32> %notequal_b_load__to_boolvec.i, %equal_a_load72__to_boolvec.i
   ret <8 x i32> %wrong
+}
+
+; Hoist a trunc to a scalar if we're inserting into an undef vector.
+; trunc (inselt undef, X, Index) --> inselt undef, (trunc X), Index
+
+define <3 x i16> @trunc_inselt_undef(i32 %x) {
+; CHECK-LABEL: @trunc_inselt_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %x to i16
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> undef, i16 [[TMP1]], i32 1
+; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
+;
+  %vec = insertelement <3 x i32> undef, i32 %x, i32 1
+  %trunc = trunc <3 x i32> %vec to <3 x i16>
+  ret <3 x i16> %trunc
+}
+
+; Hoist a trunc to a scalar if we're inserting into an undef vector.
+; trunc (inselt undef, X, Index) --> inselt undef, (trunc X), Index
+
+define <2 x float> @fptrunc_inselt_undef(double %x, i32 %index) {
+; CHECK-LABEL: @fptrunc_inselt_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double %x to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 %index
+; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
+;
+  %vec = insertelement <2 x double> <double undef, double undef>, double %x, i32 %index
+  %trunc = fptrunc <2 x double> %vec to <2 x float>
+  ret <2 x float> %trunc
+}
+
+; TODO: Strengthen the backend, so we can have this canonicalization.
+; Insert a scalar int into a constant vector and truncate:
+; trunc (inselt C, X, Index) --> inselt C, (trunc X), Index
+
+define <3 x i16> @trunc_inselt1(i32 %x) {
+; CHECK-LABEL: @trunc_inselt1(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> <i32 3, i32 undef, i32 65536>, i32 %x, i32 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i32> [[VEC]] to <3 x i16>
+; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
+;
+  %vec = insertelement <3 x i32> <i32 3, i32 -2, i32 65536>, i32 %x, i32 1
+  %trunc = trunc <3 x i32> %vec to <3 x i16>
+  ret <3 x i16> %trunc
+}
+
+; TODO: Strengthen the backend, so we can have this canonicalization.
+; Insert a scalar FP into a constant vector and FP truncate:
+; fptrunc (inselt C, X, Index) --> inselt C, (fptrunc X), Index
+
+define <2 x float> @fptrunc_inselt1(double %x, i32 %index) {
+; CHECK-LABEL: @fptrunc_inselt1(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x double> <double undef, double 3.000000e+00>, double %x, i32 %index
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <2 x double> [[VEC]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
+;
+  %vec = insertelement <2 x double> <double undef, double 3.0>, double %x, i32 %index
+  %trunc = fptrunc <2 x double> %vec to <2 x float>
+  ret <2 x float> %trunc
+}
+
+; TODO: Strengthen the backend, so we can have this canonicalization.
+; Insert a scalar int constant into a vector and truncate:
+; trunc (inselt X, C, Index) --> inselt (trunc X), C', Index
+
+define <8 x i16> @trunc_inselt2(<8 x i32> %x, i32 %index) {
+; CHECK-LABEL: @trunc_inselt2(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <8 x i32> %x, i32 1048576, i32 %index
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <8 x i32> [[VEC]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[TRUNC]]
+;
+  %vec = insertelement <8 x i32> %x, i32 1048576, i32 %index
+  %trunc = trunc <8 x i32> %vec to <8 x i16>
+  ret <8 x i16> %trunc
+}
+
+; TODO: Strengthen the backend, so we can have this canonicalization.
+; Insert a scalar FP constant into a vector and FP truncate:
+; fptrunc (inselt X, C, Index) --> inselt (fptrunc X), C', Index
+
+define <3 x float> @fptrunc_inselt2(<3 x double> %x) {
+; CHECK-LABEL: @fptrunc_inselt2(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x double> %x, double 4.000000e+00, i32 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <3 x double> [[VEC]] to <3 x float>
+; CHECK-NEXT:    ret <3 x float> [[TRUNC]]
+;
+  %vec = insertelement <3 x double> %x, double 4.0, i32 2
+  %trunc = fptrunc <3 x double> %vec to <3 x float>
+  ret <3 x float> %trunc
 }
 

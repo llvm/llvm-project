@@ -20,6 +20,11 @@
   "Clang-based include fixer."
   :group 'tools)
 
+(defvar clang-include-fixer-add-include-hook nil
+  "A hook that will be called for every added include.
+The first argument is the filename of the include, the second argument is
+non-nil if the include is a system-header.")
+
 (defcustom clang-include-fixer-executable
   "clang-include-fixer"
   "Location of the clang-include-fixer executable.
@@ -53,6 +58,7 @@ This string is passed as -input argument to
 (defface clang-include-fixer-highlight '((t :background "green"))
   "Used for highlighting the symbol for which a header file is being added.")
 
+;;;###autoload
 (defun clang-include-fixer ()
   "Invoke the Include Fixer to insert missing C++ headers."
   (interactive)
@@ -61,14 +67,23 @@ This string is passed as -input argument to
   (clang-include-fixer--start #'clang-include-fixer--add-header
                               "-output-headers"))
 
+;;;###autoload
 (defun clang-include-fixer-at-point ()
   "Invoke the Clang include fixer for the symbol at point."
   (interactive)
   (let ((symbol (clang-include-fixer--symbol-at-point)))
     (unless symbol
       (user-error "No symbol at current location"))
-    (clang-include-fixer--start #'clang-include-fixer--add-header
-                                (format "-query-symbol=%s" symbol))))
+    (clang-include-fixer-from-symbol symbol)))
+
+;;;###autoload
+(defun clang-include-fixer-from-symbol (symbol)
+  "Invoke the Clang include fixer for the SYMBOL.
+When called interactively, prompts the user for a symbol."
+  (interactive
+   (list (read-string "Symbol: " (clang-include-fixer--symbol-at-point))))
+  (clang-include-fixer--start #'clang-include-fixer--add-header
+                              (format "-query-symbol=%s" symbol)))
 
 (defun clang-include-fixer--start (callback &rest args)
   "Asynchronously start clang-include-fixer with parameters ARGS.
@@ -76,6 +91,8 @@ The current file name is passed after ARGS as last argument.  If
 the call was successful the returned result is stored in a
 temporary buffer, and CALLBACK is called with the temporary
 buffer as only argument."
+  (unless buffer-file-name
+    (user-error "clang-include-fixer works only in buffers that visit a file"))
   (let ((process (if (fboundp 'make-process)
                      ;; Prefer using ‘make-process’ if available, because
                      ;; ‘start-process’ doesn’t allow us to separate the
@@ -173,9 +190,9 @@ failure, a buffer containing the error output is displayed."
   "Replace current buffer by content of STDOUT."
   (cl-check-type stdout buffer-live)
   (barf-if-buffer-read-only)
-  (unless (clang-include-fixer--insert-line stdout (current-buffer))
-    (erase-buffer)
-    (insert-buffer-substring stdout))
+  (cond ((fboundp 'replace-buffer-contents) (replace-buffer-contents stdout))
+        ((clang-include-fixer--insert-line stdout (current-buffer)))
+        (t (erase-buffer) (insert-buffer-substring stdout)))
   (message "Fix applied")
   nil)
 
@@ -201,16 +218,14 @@ return nil.  Buffer restrictions are ignored."
                 (if (zerop chars)
                     ;; Buffer contents are equal, nothing to do.
                     t
-                  (goto-char (point-min))
-                  (forward-char chars)
+                  (goto-char chars)
                   ;; We might have ended up in the middle of a line if the
                   ;; current line partially matches.  In this case we would
                   ;; have to insert more than a line.  Move to the beginning of
                   ;; the line to avoid this situation.
                   (beginning-of-line)
                   (with-current-buffer from
-                    (goto-char (point-min))
-                    (forward-char chars)
+                    (goto-char chars)
                     (beginning-of-line)
                     (let ((from-begin (point))
                           (from-end (progn (forward-line) (point)))
@@ -239,20 +254,29 @@ clang-include-fixer to insert the selected header."
         (message "Couldn't find header for '%s'"
                  (let-alist (car .QuerySymbolInfos) .RawIdentifier)))
        (t
-        ;; Replace the HeaderInfos list by a single header selected by
-        ;; the user.
-        (clang-include-fixer--select-header context)
-        ;; Call clang-include-fixer again to insert the selected header.
-        (clang-include-fixer--start
-         (let ((old-tick (buffer-chars-modified-tick)))
-           (lambda (stdout)
-             (when (/= old-tick (buffer-chars-modified-tick))
-               ;; Replacing the buffer now would undo the user’s changes.
-               (user-error (concat "The buffer has been changed "
-                                   "before the header could be inserted")))
-             (clang-include-fixer--replace-buffer stdout)))
-         (format "-insert-header=%s"
-                 (clang-include-fixer--encode-json context)))))))
+        ;; Users may C-g in prompts, make sure the process sentinel
+        ;; behaves correctly.
+        (with-local-quit
+          ;; Replace the HeaderInfos list by a single header selected by
+          ;; the user.
+          (clang-include-fixer--select-header context)
+          ;; Call clang-include-fixer again to insert the selected header.
+          (clang-include-fixer--start
+           (let ((old-tick (buffer-chars-modified-tick)))
+             (lambda (stdout)
+               (when (/= old-tick (buffer-chars-modified-tick))
+                 ;; Replacing the buffer now would undo the user’s changes.
+                 (user-error (concat "The buffer has been changed "
+                                     "before the header could be inserted")))
+               (clang-include-fixer--replace-buffer stdout)
+               (let-alist context
+                 (let-alist (car .HeaderInfos)
+                   (with-local-quit
+                     (run-hook-with-args 'clang-include-fixer-add-include-hook
+                                         (substring .Header 1 -1)
+                                         (string= (substring .Header 0 1) "<")))))))
+           (format "-insert-header=%s"
+                   (clang-include-fixer--encode-json context))))))))
   nil)
 
 (defun clang-include-fixer--select-header (context)
@@ -280,21 +304,23 @@ They are replaced by the single element selected by the user."
     (let ((symbol (clang-include-fixer--symbol-name .QuerySymbolInfos))
           ;; Add temporary highlighting so that the user knows which
           ;; symbols the current session is about.
-          (overlays (mapcar #'clang-include-fixer--highlight .QuerySymbolInfos)))
+          (overlays (remove nil
+                            (mapcar #'clang-include-fixer--highlight .QuerySymbolInfos))))
       (unwind-protect
           (save-excursion
             ;; While prompting, go to the closest overlay so that the user sees
             ;; some context.
-            (goto-char (clang-include-fixer--closest-overlay overlays))
+            (when overlays
+              (goto-char (clang-include-fixer--closest-overlay overlays)))
             (cl-flet ((header (info) (let-alist info .Header)))
               ;; The header-infos is already sorted by include-fixer.
-              (let* ((header (ido-completing-read
+              (let* ((header (completing-read
                               (clang-include-fixer--format-message
                                "Select include for '%s': " symbol)
                               (mapcar #'header .HeaderInfos)
                               nil :require-match nil
                               'clang-include-fixer--history))
-                     (info (cl-find header .HeaderInfos :key #'header)))
+                     (info (cl-find header .HeaderInfos :key #'header :test #'string=)))
                 (cl-assert info)
                 (setcar .HeaderInfos info)
                 (setcdr .HeaderInfos nil))))
@@ -311,16 +337,17 @@ Raise a signal if the symbol name is not unique."
     (car symbols)))
 
 (defun clang-include-fixer--highlight (symbol-info)
-  "Add an overlay to highlight SYMBOL-INFO.
-Return the overlay object."
-  (let ((overlay (let-alist symbol-info
-                   (make-overlay
-                    (clang-include-fixer--filepos-to-bufferpos
-                     .Range.Offset 'approximate)
-                    (clang-include-fixer--filepos-to-bufferpos
-                     (+ .Range.Offset .Range.Length) 'approximate)))))
-    (overlay-put overlay 'face 'clang-include-fixer-highlight)
-    overlay))
+  "Add an overlay to highlight SYMBOL-INFO, if it points to a non-empty range.
+Return the overlay object, or nil."
+  (let-alist symbol-info
+    (unless (zerop .Range.Length)
+      (let ((overlay (make-overlay
+                      (clang-include-fixer--filepos-to-bufferpos
+                       .Range.Offset 'approximate)
+                      (clang-include-fixer--filepos-to-bufferpos
+                       (+ .Range.Offset .Range.Length) 'approximate))))
+        (overlay-put overlay 'face 'clang-include-fixer-highlight)
+        overlay))))
 
 (defun clang-include-fixer--closest-overlay (overlays)
   "Return the start of the overlay in OVERLAYS that is closest to point."

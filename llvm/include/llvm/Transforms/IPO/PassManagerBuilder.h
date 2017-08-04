@@ -21,6 +21,7 @@
 #include <vector>
 
 namespace llvm {
+class ModuleSummaryIndex;
 class Pass;
 class TargetLibraryInfoImpl;
 class TargetMachine;
@@ -100,6 +101,14 @@ public:
     /// will be inserted after each instance of the instruction combiner pass.
     EP_Peephole,
 
+    /// EP_LateLoopOptimizations - This extension point allows adding late loop
+    /// canonicalization and simplification passes. This is the last point in
+    /// the loop optimization pipeline before loop deletion. Each pass added
+    /// here must be an instance of LoopPass.
+    /// This is the place to add passes that can remove loops, such as target-
+    /// specific loop idiom recognition.
+    EP_LateLoopOptimizations,
+
     /// EP_CGSCCOptimizerLate - This extension point allows adding CallGraphSCC
     /// passes at the end of the main CallGraphSCC passes and before any
     /// function simplification passes run by CGPassManager.
@@ -123,14 +132,22 @@ public:
   /// added to the per-module passes.
   Pass *Inliner;
 
+  /// The module summary index to use for exporting information from the
+  /// regular LTO phase, for example for the CFI and devirtualization type
+  /// tests.
+  ModuleSummaryIndex *ExportSummary = nullptr;
+
+  /// The module summary index to use for importing information to the
+  /// thin LTO backends, for example for the CFI and devirtualization type
+  /// tests.
+  const ModuleSummaryIndex *ImportSummary = nullptr;
+
   bool DisableTailCalls;
   bool DisableUnitAtATime;
   bool DisableUnrollLoops;
-  bool BBVectorize;
   bool SLPVectorize;
   bool LoopVectorize;
   bool RerollLoops;
-  bool LoadCombine;
   bool NewGVN;
   bool DisableGVNLoadPRE;
   bool VerifyInput;
@@ -139,6 +156,7 @@ public:
   bool PrepareForLTO;
   bool PrepareForThinLTO;
   bool PerformThinLTO;
+  bool DivergentTarget;
 
   /// Enable profile instrumentation pass.
   bool EnablePGOInstrGen;

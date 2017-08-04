@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+# RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+--- |
+  define void @test_add_i32() {
+    ret void
+  }
+
+  define void @test_add_i64() {
+    ret void
+  }
+
+...
+---
+name:            test_add_i32
+# ALL-LABEL: name:  test_add_i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(s32) = IMPLICIT_DEF
+# ALL-NEXT:     %1(s32) = IMPLICIT_DEF
+# ALL-NEXT:     %2(s32) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %1(s32) = IMPLICIT_DEF
+    %2(s32) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_i64
+# ALL-LABEL: name:  test_add_i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# X64:          %0(s64) = IMPLICIT_DEF
+# X64-NEXT:     %1(s64) = IMPLICIT_DEF
+# X64-NEXT:     %2(s64) = G_ADD %0, %1
+# X64-NEXT:     RET 0
+#
+# X32:          %0(s64) = IMPLICIT_DEF
+# X32-NEXT:     %1(s64) = IMPLICIT_DEF
+# X32-NEXT:     %3(s32), %4(s32) = G_UNMERGE_VALUES %0(s64)
+# X32-NEXT:     %5(s32), %6(s32) = G_UNMERGE_VALUES %1(s64)
+# X32-NEXT:     %12(s8) = G_CONSTANT i8 0
+# X32-NEXT:     %7(s1) = G_TRUNC %12(s8)
+# X32-NEXT:     %8(s32), %9(s1) = G_UADDE %3, %5, %7
+# X32-NEXT:     %10(s32), %11(s1) = G_UADDE %4, %6, %9
+# X32-NEXT:     %2(s64) = G_MERGE_VALUES %8(s32), %10(s32)
+# X32-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = IMPLICIT_DEF
+    %1(s64) = IMPLICIT_DEF
+    %2(s64) = G_ADD %0, %1
+    RET 0
+
+...

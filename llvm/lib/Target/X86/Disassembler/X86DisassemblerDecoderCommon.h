@@ -339,6 +339,15 @@ enum ModRMDecisionType {
     case ENCODING_RM_CD32:   \
     case ENCODING_RM_CD64
 
+#define CASE_ENCODING_VSIB   \
+    case ENCODING_VSIB:      \
+    case ENCODING_VSIB_CD2:  \
+    case ENCODING_VSIB_CD4:  \
+    case ENCODING_VSIB_CD8:  \
+    case ENCODING_VSIB_CD16: \
+    case ENCODING_VSIB_CD32: \
+    case ENCODING_VSIB_CD64
+
 // Physical encodings of instruction operands.
 #define ENCODINGS                                                              \
   ENUM_ENTRY(ENCODING_NONE,   "")                                              \
@@ -350,6 +359,13 @@ enum ModRMDecisionType {
   ENUM_ENTRY(ENCODING_RM_CD16,"R/M operand with CDisp scaling of 16")          \
   ENUM_ENTRY(ENCODING_RM_CD32,"R/M operand with CDisp scaling of 32")          \
   ENUM_ENTRY(ENCODING_RM_CD64,"R/M operand with CDisp scaling of 64")          \
+  ENUM_ENTRY(ENCODING_VSIB,     "VSIB operand in ModR/M byte.")                \
+  ENUM_ENTRY(ENCODING_VSIB_CD2, "VSIB operand with CDisp scaling of 2")        \
+  ENUM_ENTRY(ENCODING_VSIB_CD4, "VSIB operand with CDisp scaling of 4")        \
+  ENUM_ENTRY(ENCODING_VSIB_CD8, "VSIB operand with CDisp scaling of 8")        \
+  ENUM_ENTRY(ENCODING_VSIB_CD16,"VSIB operand with CDisp scaling of 16")       \
+  ENUM_ENTRY(ENCODING_VSIB_CD32,"VSIB operand with CDisp scaling of 32")       \
+  ENUM_ENTRY(ENCODING_VSIB_CD64,"VSIB operand with CDisp scaling of 64")       \
   ENUM_ENTRY(ENCODING_VVVV,   "Register operand in VEX.vvvv byte.")            \
   ENUM_ENTRY(ENCODING_WRITEMASK, "Register operand in EVEX.aaa byte.")         \
   ENUM_ENTRY(ENCODING_IB,     "1-byte immediate")                              \
@@ -383,85 +399,38 @@ enum OperandEncoding {
 // Semantic interpretations of instruction operands.
 #define TYPES                                                                  \
   ENUM_ENTRY(TYPE_NONE,       "")                                              \
-  ENUM_ENTRY(TYPE_REL8,       "1-byte immediate address")                      \
-  ENUM_ENTRY(TYPE_REL16,      "2-byte")                                        \
-  ENUM_ENTRY(TYPE_REL32,      "4-byte")                                        \
-  ENUM_ENTRY(TYPE_REL64,      "8-byte")                                        \
-  ENUM_ENTRY(TYPE_PTR1616,    "2+2-byte segment+offset address")               \
-  ENUM_ENTRY(TYPE_PTR1632,    "2+4-byte")                                      \
-  ENUM_ENTRY(TYPE_PTR1664,    "2+8-byte")                                      \
+  ENUM_ENTRY(TYPE_REL,        "immediate address")                             \
   ENUM_ENTRY(TYPE_R8,         "1-byte register operand")                       \
   ENUM_ENTRY(TYPE_R16,        "2-byte")                                        \
   ENUM_ENTRY(TYPE_R32,        "4-byte")                                        \
   ENUM_ENTRY(TYPE_R64,        "8-byte")                                        \
-  ENUM_ENTRY(TYPE_IMM8,       "1-byte immediate operand")                      \
-  ENUM_ENTRY(TYPE_IMM16,      "2-byte")                                        \
-  ENUM_ENTRY(TYPE_IMM32,      "4-byte")                                        \
-  ENUM_ENTRY(TYPE_IMM64,      "8-byte")                                        \
+  ENUM_ENTRY(TYPE_IMM,        "immediate operand")                      \
   ENUM_ENTRY(TYPE_IMM3,       "1-byte immediate operand between 0 and 7")      \
   ENUM_ENTRY(TYPE_IMM5,       "1-byte immediate operand between 0 and 31")     \
   ENUM_ENTRY(TYPE_AVX512ICC,  "1-byte immediate operand for AVX512 icmp")      \
   ENUM_ENTRY(TYPE_UIMM8,      "1-byte unsigned immediate operand")             \
-  ENUM_ENTRY(TYPE_RM8,        "1-byte register or memory operand")             \
-  ENUM_ENTRY(TYPE_RM16,       "2-byte")                                        \
-  ENUM_ENTRY(TYPE_RM32,       "4-byte")                                        \
-  ENUM_ENTRY(TYPE_RM64,       "8-byte")                                        \
   ENUM_ENTRY(TYPE_M,          "Memory operand")                                \
-  ENUM_ENTRY(TYPE_M8,         "1-byte")                                        \
-  ENUM_ENTRY(TYPE_M16,        "2-byte")                                        \
-  ENUM_ENTRY(TYPE_M32,        "4-byte")                                        \
-  ENUM_ENTRY(TYPE_M64,        "8-byte")                                        \
-  ENUM_ENTRY(TYPE_LEA,        "Effective address")                             \
-  ENUM_ENTRY(TYPE_M128,       "16-byte (SSE/SSE2)")                            \
-  ENUM_ENTRY(TYPE_M256,       "256-byte (AVX)")                                \
-  ENUM_ENTRY(TYPE_M1616,      "2+2-byte segment+offset address")               \
-  ENUM_ENTRY(TYPE_M1632,      "2+4-byte")                                      \
-  ENUM_ENTRY(TYPE_M1664,      "2+8-byte")                                      \
-  ENUM_ENTRY(TYPE_SRCIDX8,    "1-byte memory at source index")                 \
-  ENUM_ENTRY(TYPE_SRCIDX16,   "2-byte memory at source index")                 \
-  ENUM_ENTRY(TYPE_SRCIDX32,   "4-byte memory at source index")                 \
-  ENUM_ENTRY(TYPE_SRCIDX64,   "8-byte memory at source index")                 \
-  ENUM_ENTRY(TYPE_DSTIDX8,    "1-byte memory at destination index")            \
-  ENUM_ENTRY(TYPE_DSTIDX16,   "2-byte memory at destination index")            \
-  ENUM_ENTRY(TYPE_DSTIDX32,   "4-byte memory at destination index")            \
-  ENUM_ENTRY(TYPE_DSTIDX64,   "8-byte memory at destination index")            \
-  ENUM_ENTRY(TYPE_MOFFS8,     "1-byte memory offset (relative to segment "     \
-                              "base)")                                         \
-  ENUM_ENTRY(TYPE_MOFFS16,    "2-byte")                                        \
-  ENUM_ENTRY(TYPE_MOFFS32,    "4-byte")                                        \
-  ENUM_ENTRY(TYPE_MOFFS64,    "8-byte")                                        \
-  ENUM_ENTRY(TYPE_M32FP,      "32-bit IEE754 memory floating-point operand")   \
-  ENUM_ENTRY(TYPE_M64FP,      "64-bit")                                        \
-  ENUM_ENTRY(TYPE_M80FP,      "80-bit extended")                               \
+  ENUM_ENTRY(TYPE_SRCIDX,     "memory at source index")                        \
+  ENUM_ENTRY(TYPE_DSTIDX,     "memory at destination index")                   \
+  ENUM_ENTRY(TYPE_MOFFS,      "memory offset (relative to segment base)")      \
   ENUM_ENTRY(TYPE_ST,         "Position on the floating-point stack")          \
   ENUM_ENTRY(TYPE_MM64,       "8-byte MMX register")                           \
-  ENUM_ENTRY(TYPE_XMM32,      "4-byte XMM register or memory operand")         \
-  ENUM_ENTRY(TYPE_XMM64,      "8-byte")                                        \
-  ENUM_ENTRY(TYPE_XMM128,     "16-byte")                                       \
-  ENUM_ENTRY(TYPE_XMM256,     "32-byte")                                       \
-  ENUM_ENTRY(TYPE_XMM512,     "64-byte")                                       \
-  ENUM_ENTRY(TYPE_VK1,        "1-bit")                                         \
-  ENUM_ENTRY(TYPE_VK2,        "2-bit")                                         \
-  ENUM_ENTRY(TYPE_VK4,        "4-bit")                                         \
-  ENUM_ENTRY(TYPE_VK8,        "8-bit")                                         \
-  ENUM_ENTRY(TYPE_VK16,       "16-bit")                                        \
-  ENUM_ENTRY(TYPE_VK32,       "32-bit")                                        \
-  ENUM_ENTRY(TYPE_VK64,       "64-bit")                                        \
+  ENUM_ENTRY(TYPE_XMM,        "16-byte")                                       \
+  ENUM_ENTRY(TYPE_YMM,        "32-byte")                                       \
+  ENUM_ENTRY(TYPE_ZMM,        "64-byte")                                       \
+  ENUM_ENTRY(TYPE_VK,         "mask register")                                 \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG,   "Debug register operand")                        \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \
   ENUM_ENTRY(TYPE_BNDR,       "MPX bounds register")                           \
                                                                                \
-  ENUM_ENTRY(TYPE_Mv,         "Memory operand of operand size")                \
   ENUM_ENTRY(TYPE_Rv,         "Register operand of operand size")              \
-  ENUM_ENTRY(TYPE_IMMv,       "Immediate operand of operand size")             \
   ENUM_ENTRY(TYPE_RELv,       "Immediate address of operand size")             \
   ENUM_ENTRY(TYPE_DUP0,       "Duplicate of operand 0")                        \
   ENUM_ENTRY(TYPE_DUP1,       "operand 1")                                     \
   ENUM_ENTRY(TYPE_DUP2,       "operand 2")                                     \
   ENUM_ENTRY(TYPE_DUP3,       "operand 3")                                     \
   ENUM_ENTRY(TYPE_DUP4,       "operand 4")                                     \
-  ENUM_ENTRY(TYPE_M512,       "512-bit FPU/MMX/XMM/MXCSR state")
 
 #define ENUM_ENTRY(n, d) n,
 enum OperandType {

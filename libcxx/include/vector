@@ -275,13 +275,15 @@ void swap(vector<T,Allocator>& x, vector<T,Allocator>& y)
 #include <__split_buffer>
 #include <__functional_base>
 
-#include <__undef_min_max>
-
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -308,14 +310,7 @@ __vector_base_common<__b>::__throw_out_of_range() const
     _VSTD::__throw_out_of_range("vector");
 }
 
-#ifdef _LIBCPP_MSVC
-#pragma warning( push )
-#pragma warning( disable: 4231 )
-#endif // _LIBCPP_MSVC
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __vector_base_common<true>)
-#ifdef _LIBCPP_MSVC
-#pragma warning( pop )
-#endif // _LIBCPP_MSVC
 
 template <class _Tp, class _Allocator>
 class __vector_base
@@ -413,8 +408,10 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 __vector_base<_Tp, _Allocator>::__destruct_at_end(pointer __new_last) _NOEXCEPT
 {
-    while (__new_last != __end_)
-        __alloc_traits::destroy(__alloc(), _VSTD::__to_raw_pointer(--__end_));
+    pointer __soon_to_be_end = __end_;
+    while (__new_last != __soon_to_be_end)
+        __alloc_traits::destroy(__alloc(), _VSTD::__to_raw_pointer(--__soon_to_be_end));
+    __end_ = __new_last;
 }
 
 template <class _Tp, class _Allocator>
@@ -525,12 +522,7 @@ public:
                                  is_constructible<
                                     value_type,
                                     typename iterator_traits<_ForwardIterator>::reference>::value>::type* = 0);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-    _LIBCPP_INLINE_VISIBILITY
-    vector(initializer_list<value_type> __il);
-    _LIBCPP_INLINE_VISIBILITY
-    vector(initializer_list<value_type> __il, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
     ~vector()
@@ -543,7 +535,14 @@ public:
     vector(const vector& __x, const allocator_type& __a);
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(const vector& __x);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY
+    vector(initializer_list<value_type> __il);
+
+    _LIBCPP_INLINE_VISIBILITY
+    vector(initializer_list<value_type> __il, const allocator_type& __a);
+
     _LIBCPP_INLINE_VISIBILITY
     vector(vector&& __x)
 #if _LIBCPP_STD_VER > 14
@@ -551,17 +550,18 @@ public:
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #endif
+
     _LIBCPP_INLINE_VISIBILITY
     vector(vector&& __x, const allocator_type& __a);
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(vector&& __x)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(initializer_list<value_type> __il)
         {assign(__il.begin(), __il.end()); return *this;}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#endif  // !_LIBCPP_CXX03_LANG
 
     template <class _InputIterator>
         typename enable_if
@@ -586,11 +586,12 @@ public:
         assign(_ForwardIterator __first, _ForwardIterator __last);
 
     void assign(size_type __n, const_reference __u);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void assign(initializer_list<value_type> __il)
         {assign(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT
@@ -674,9 +675,10 @@ public:
         {return _VSTD::__to_raw_pointer(this->__begin_);}
 
     _LIBCPP_INLINE_VISIBILITY void push_back(const_reference __x);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY void push_back(value_type&& __x);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
 #if _LIBCPP_STD_VER > 14
@@ -684,19 +686,19 @@ public:
 #else
         void      emplace_back(_Args&&... __args);
 #endif
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif // !_LIBCPP_CXX03_LANG
+
     _LIBCPP_INLINE_VISIBILITY
     void pop_back();
 
     iterator insert(const_iterator __position, const_reference __x);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#ifndef _LIBCPP_CXX03_LANG
     iterator insert(const_iterator __position, value_type&& __x);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class... _Args>
         iterator emplace(const_iterator __position, _Args&&... __args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
+
     iterator insert(const_iterator __position, size_type __n, const_reference __x);
     template <class _InputIterator>
         typename enable_if
@@ -719,11 +721,12 @@ public:
             iterator
         >::type
         insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __position, initializer_list<value_type> __il)
         {return insert(__position, __il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif
 
     _LIBCPP_INLINE_VISIBILITY iterator erase(const_iterator __position);
     iterator erase(const_iterator __first, const_iterator __last);
@@ -796,18 +799,16 @@ private:
         __base::__destruct_at_end(__new_last);
         __annotate_shrink(__old_size);
     }
-    template <class _Up>
-        void
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-        __push_back_slow_path(_Up&& __x);
-#else
-        __push_back_slow_path(_Up& __x);
-#endif
-#if !defined(_LIBCPP_HAS_NO_VARIADICS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+
+#ifndef _LIBCPP_CXX03_LANG
+    template <class _Up> void __push_back_slow_path(_Up&& __x);
+
     template <class... _Args>
-        void
-        __emplace_back_slow_path(_Args&&... __args);
+    void __emplace_back_slow_path(_Args&&... __args);
+#else
+    template <class _Up> void __push_back_slow_path(_Up& __x);
 #endif
+
     // The following functions are no-ops outside of AddressSanitizer mode.
     // We call annotatations only for the default Allocator because other allocators
     // may not meet the AddressSanitizer alignment constraints.
@@ -1217,7 +1218,7 @@ vector<_Tp, _Allocator>::vector(const vector& __x, const allocator_type& __a)
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1264,8 +1265,6 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const allocator_type& __a)
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il)
@@ -1294,8 +1293,6 @@ vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocat
         __construct_at_end(__il.begin(), __il.end(), __il.size());
     }
 }
-
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1338,7 +1335,7 @@ vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1560,7 +1557,7 @@ vector<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
 template <class _Tp, class _Allocator>
 template <class _Up>
 void
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 vector<_Tp, _Allocator>::__push_back_slow_path(_Up&& __x)
 #else
 vector<_Tp, _Allocator>::__push_back_slow_path(_Up& __x)
@@ -1591,7 +1588,7 @@ vector<_Tp, _Allocator>::push_back(const_reference __x)
         __push_back_slow_path(__x);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1610,8 +1607,6 @@ vector<_Tp, _Allocator>::push_back(value_type&& __x)
     else
         __push_back_slow_path(_VSTD::move(__x));
 }
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
@@ -1652,8 +1647,7 @@ vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
 #endif
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline
@@ -1758,7 +1752,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
     return __make_iter(__p);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
@@ -1796,8 +1790,6 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
     }
     return __make_iter(__p);
 }
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
@@ -1838,8 +1830,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
     return __make_iter(__p);
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
@@ -2036,7 +2027,7 @@ vector<_Tp, _Allocator>::swap(vector& __x)
     _VSTD::swap(this->__begin_, __x.__begin_);
     _VSTD::swap(this->__end_, __x.__end_);
     _VSTD::swap(this->__end_cap(), __x.__end_cap());
-    __swap_allocator(this->__alloc(), __x.__alloc(), 
+    __swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool,__alloc_traits::propagate_on_container_swap::value>());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->swap(this, &__x);
@@ -2231,12 +2222,11 @@ public:
     vector(const vector& __v);
     vector(const vector& __v, const allocator_type& __a);
     vector& operator=(const vector& __v);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#ifndef _LIBCPP_CXX03_LANG
     vector(initializer_list<value_type> __il);
     vector(initializer_list<value_type> __il, const allocator_type& __a);
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     vector(vector&& __v)
 #if _LIBCPP_STD_VER > 14
@@ -2248,12 +2238,12 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(vector&& __v)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(initializer_list<value_type> __il)
         {assign(__il.begin(), __il.end()); return *this;}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#endif  // !_LIBCPP_CXX03_LANG
 
     template <class _InputIterator>
         typename enable_if
@@ -2272,11 +2262,12 @@ public:
         assign(_ForwardIterator __first, _ForwardIterator __last);
 
     void assign(size_type __n, const value_type& __x);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void assign(initializer_list<value_type> __il)
         {assign(__il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif
 
     _LIBCPP_INLINE_VISIBILITY allocator_type get_allocator() const _NOEXCEPT
         {return allocator_type(this->__alloc());}
@@ -2385,11 +2376,12 @@ public:
             iterator
         >::type
         insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last);
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __position, initializer_list<value_type> __il)
         {return insert(__position, __il.begin(), __il.end());}
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif
 
     _LIBCPP_INLINE_VISIBILITY iterator erase(const_iterator __position);
     iterator erase(const_iterator __first, const_iterator __last);
@@ -2749,7 +2741,7 @@ vector<bool, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __la
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Allocator>
 vector<bool, _Allocator>::vector(initializer_list<value_type> __il)
@@ -2779,7 +2771,7 @@ vector<bool, _Allocator>::vector(initializer_list<value_type> __il, const alloca
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Allocator>
 vector<bool, _Allocator>::~vector()
@@ -2836,7 +2828,7 @@ vector<bool, _Allocator>::operator=(const vector& __v)
     return *this;
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2911,7 +2903,7 @@ vector<bool, _Allocator>::__move_assign(vector& __c, true_type)
     __c.__cap() = __c.__size_ = 0;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 template <class _Allocator>
 void
@@ -3201,7 +3193,7 @@ vector<bool, _Allocator>::swap(vector& __x)
     _VSTD::swap(this->__begin_, __x.__begin_);
     _VSTD::swap(this->__size_, __x.__size_);
     _VSTD::swap(this->__cap(), __x.__cap());
-    __swap_allocator(this->__alloc(), __x.__alloc(), 
+    __swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool, __alloc_traits::propagate_on_container_swap::value>());
 }
 
@@ -3359,5 +3351,7 @@ swap(vector<_Tp, _Allocator>& __x, vector<_Tp, _Allocator>& __y)
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_VECTOR

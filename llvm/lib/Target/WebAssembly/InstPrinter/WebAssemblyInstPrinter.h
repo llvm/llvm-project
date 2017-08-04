@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_INSTPRINTER_WEBASSEMBLYINSTPRINTER_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/MC/MCInstPrinter.h"
 
@@ -50,6 +51,7 @@ public:
 namespace WebAssembly {
 
 const char *TypeToString(MVT Ty);
+const char *TypeToString(wasm::ValType Type);
 
 } // end namespace WebAssembly
 

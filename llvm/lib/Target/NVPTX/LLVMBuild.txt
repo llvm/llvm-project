@@ -28,5 +28,5 @@ has_asmprinter = 1
 type = Library
 name = NVPTXCodeGen
 parent = NVPTX
-required_libraries = Analysis AsmPrinter CodeGen Core MC NVPTXAsmPrinter NVPTXDesc NVPTXInfo Scalar SelectionDAG Support Target TransformUtils Vectorize
+required_libraries = Analysis AsmPrinter CodeGen Core IPO MC NVPTXAsmPrinter NVPTXDesc NVPTXInfo Scalar SelectionDAG Support Target TransformUtils Vectorize
 add_to_library_groups = NVPTX

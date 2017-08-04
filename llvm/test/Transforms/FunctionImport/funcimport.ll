@@ -40,10 +40,12 @@ declare void @weakalias(...) #1
 ; CHECK-DAG: declare void @analias
 declare void @analias(...) #1
 
-; FIXME: Add this checking back when follow on fix to add alias summary
-; records is committed.
 ; Aliases import the aliasee function
 declare void @linkoncealias(...) #1
+; INSTLIMDEF-DAG: Import linkoncealias
+; INSTLIMDEF-DAG: Import linkoncefunc
+; CHECK-DAG: define linkonce_odr void @linkoncefunc()
+; CHECK-DAG: @linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*
 
 ; INSTLIMDEF-DAG: Import referencestatics
 ; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i) !thinlto_src_module !0 {

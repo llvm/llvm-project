@@ -29,8 +29,8 @@
 #include <set_to_map.c>
 #include <set_from_map.c>
 
-struct isl_basic_map *isl_basic_map_implicit_equalities(
-						struct isl_basic_map *bmap)
+__isl_give isl_basic_map *isl_basic_map_implicit_equalities(
+	__isl_take isl_basic_map *bmap)
 {
 	struct isl_tab *tab;
 
@@ -64,25 +64,6 @@ struct isl_basic_set *isl_basic_set_implicit_equalities(
 {
 	return bset_from_bmap(
 		isl_basic_map_implicit_equalities(bset_to_bmap(bset)));
-}
-
-struct isl_map *isl_map_implicit_equalities(struct isl_map *map)
-{
-	int i;
-
-	if (!map)
-		return map;
-
-	for (i = 0; i < map->n; ++i) {
-		map->p[i] = isl_basic_map_implicit_equalities(map->p[i]);
-		if (!map->p[i])
-			goto error;
-	}
-
-	return map;
-error:
-	isl_map_free(map);
-	return NULL;
 }
 
 /* Make eq[row][col] of both bmaps equal so we can add the row
@@ -316,7 +297,8 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_recession_cone(struct isl_basic_set *bset)
+__isl_give isl_basic_set *isl_basic_set_recession_cone(
+	__isl_take isl_basic_set *bset)
 {
 	int i;
 
@@ -335,32 +317,6 @@ struct isl_basic_set *isl_basic_set_recession_cone(struct isl_basic_set *bset)
 	return isl_basic_set_implicit_equalities(bset);
 error:
 	isl_basic_set_free(bset);
-	return NULL;
-}
-
-__isl_give isl_set *isl_set_recession_cone(__isl_take isl_set *set)
-{
-	int i;
-
-	if (!set)
-		return NULL;
-	if (set->n == 0)
-		return set;
-
-	set = isl_set_remove_divs(set);
-	set = isl_set_cow(set);
-	if (!set)
-		return NULL;
-
-	for (i = 0; i < set->n; ++i) {
-		set->p[i] = isl_basic_set_recession_cone(set->p[i]);
-		if (!set->p[i])
-			goto error;
-	}
-
-	return set;
-error:
-	isl_set_free(set);
 	return NULL;
 }
 
@@ -916,8 +872,8 @@ error:
 /* Detect and make explicit all equalities satisfied by the (integer)
  * points in bmap.
  */
-struct isl_basic_map *isl_basic_map_detect_equalities(
-						struct isl_basic_map *bmap)
+__isl_give isl_basic_map *isl_basic_map_detect_equalities(
+	__isl_take isl_basic_map *bmap)
 {
 	int i, j;
 	struct isl_basic_set *hull = NULL;
@@ -1005,7 +961,8 @@ __isl_give isl_basic_set *isl_basic_set_plain_affine_hull(
  * equalities), we compute the additional equalities satisfied by
  * the integer points (if any) and add the original equalities back in.
  */
-struct isl_basic_map *isl_basic_map_affine_hull(struct isl_basic_map *bmap)
+__isl_give isl_basic_map *isl_basic_map_affine_hull(
+	__isl_take isl_basic_map *bmap)
 {
 	bmap = isl_basic_map_detect_equalities(bmap);
 	bmap = isl_basic_map_plain_affine_hull(bmap);
@@ -1228,7 +1185,7 @@ __isl_give isl_basic_map *isl_map_affine_hull(__isl_take isl_map *map)
 	map = isl_map_local_affine_hull(map);
 	map = isl_map_remove_empty_parts(map);
 	map = isl_map_remove_unknown_divs(map);
-	map = isl_map_align_divs(map);
+	map = isl_map_align_divs_internal(map);
 
 	if (!map)
 		return NULL;

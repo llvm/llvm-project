@@ -9,33 +9,41 @@
 
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWin64EH.h"
-#include "llvm/Support/COFF.h"
+#include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 #include <cstdlib>
-using namespace llvm;
+#include <utility>
 
-// Pin the vtables to this file.
-MCTargetStreamer::~MCTargetStreamer() {}
+using namespace llvm;
 
 MCTargetStreamer::MCTargetStreamer(MCStreamer &S) : Streamer(S) {
   S.setTargetStreamer(this);
 }
+
+// Pin the vtables to this file.
+MCTargetStreamer::~MCTargetStreamer() = default;
 
 void MCTargetStreamer::emitLabel(MCSymbol *Symbol) {}
 
@@ -673,7 +681,7 @@ void MCStreamer::EmitWinCFISaveXMM(unsigned Register, unsigned Offset) {
 
 void MCStreamer::EmitWinCFIPushFrame(bool Code) {
   EnsureValidWinFrameInfo();
-  if (CurrentWinFrameInfo->Instructions.size() > 0)
+  if (!CurrentWinFrameInfo->Instructions.empty())
     report_fatal_error("If present, PushMachFrame must be the first UOP");
 
   MCSymbol *Label = EmitCFILabel();
@@ -769,8 +777,8 @@ void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   }
 }
 
-void MCStreamer::EmitInstruction(const MCInst &Inst,
-                                 const MCSubtargetInfo &STI) {
+void MCStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                                 bool) {
   // Scan for values.
   for (unsigned i = Inst.getNumOperands(); i--;)
     if (Inst.getOperand(i).isExpr())
@@ -799,12 +807,22 @@ void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
 void MCStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {}
 void MCStreamer::EmitThumbFunc(MCSymbol *Func) {}
 void MCStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
-void MCStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {}
-void MCStreamer::EndCOFFSymbolDef() {}
+void MCStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {
+  llvm_unreachable("this directive only supported on COFF targets");
+}
+void MCStreamer::EndCOFFSymbolDef() {
+  llvm_unreachable("this directive only supported on COFF targets");
+}
 void MCStreamer::EmitFileDirective(StringRef Filename) {}
-void MCStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {}
-void MCStreamer::EmitCOFFSymbolType(int Type) {}
+void MCStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {
+  llvm_unreachable("this directive only supported on COFF targets");
+}
+void MCStreamer::EmitCOFFSymbolType(int Type) {
+  llvm_unreachable("this directive only supported on COFF targets");
+}
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
+void MCStreamer::emitELFSymverDirective(MCSymbol *Alias,
+                                        const MCSymbol *Aliasee) {}
 void MCStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        unsigned ByteAlignment) {}
 void MCStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,

@@ -1,4 +1,4 @@
-//===-- llvm/Attributes.h - Container for Attributes ------------*- C++ -*-===//
+//===- llvm/Attributes.h - Container for Attributes -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,24 +16,27 @@
 #ifndef LLVM_IR_ATTRIBUTES_H
 #define LLVM_IR_ATTRIBUTES_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
-#include "llvm-c/Types.h"
 #include <bitset>
 #include <cassert>
+#include <cstdint>
 #include <map>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
 class AttrBuilder;
 class AttributeImpl;
-class AttributeSetImpl;
+class AttributeListImpl;
+class AttributeList;
 class AttributeSetNode;
-class Constant;
 template<typename T> struct DenseMapInfo;
 class Function;
 class LLVMContext;
@@ -73,11 +76,12 @@ public:
   };
 
 private:
-  AttributeImpl *pImpl;
+  AttributeImpl *pImpl = nullptr;
+
   Attribute(AttributeImpl *A) : pImpl(A) {}
 
 public:
-  Attribute() : pImpl(nullptr) {}
+  Attribute() = default;
 
   //===--------------------------------------------------------------------===//
   // Attribute Construction
@@ -194,130 +198,327 @@ inline Attribute unwrap(LLVMAttributeRef Attr) {
 
 //===----------------------------------------------------------------------===//
 /// \class
+/// This class holds the attributes for a particular argument, parameter,
+/// function, or return value. It is an immutable value type that is cheap to
+/// copy. Adding and removing enum attributes is intended to be fast, but adding
+/// and removing string or integer attributes involves a FoldingSet lookup.
+class AttributeSet {
+  // TODO: Extract AvailableAttrs from AttributeSetNode and store them here.
+  // This will allow an efficient implementation of addAttribute and
+  // removeAttribute for enum attrs.
+
+  /// Private implementation pointer.
+  AttributeSetNode *SetNode = nullptr;
+
+  friend AttributeListImpl;
+  template <typename Ty> friend struct DenseMapInfo;
+
+private:
+  explicit AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
+
+public:
+  /// AttributeSet is a trivially copyable value type.
+  AttributeSet() = default;
+  AttributeSet(const AttributeSet &) = default;
+  ~AttributeSet() = default;
+
+  static AttributeSet get(LLVMContext &C, const AttrBuilder &B);
+  static AttributeSet get(LLVMContext &C, ArrayRef<Attribute> Attrs);
+
+  bool operator==(const AttributeSet &O) { return SetNode == O.SetNode; }
+  bool operator!=(const AttributeSet &O) { return !(*this == O); }
+
+  /// Add an argument attribute. Returns a new set because attribute sets are
+  /// immutable.
+  AttributeSet addAttribute(LLVMContext &C, Attribute::AttrKind Kind) const;
+
+  /// Add a target-dependent attribute. Returns a new set because attribute sets
+  /// are immutable.
+  AttributeSet addAttribute(LLVMContext &C, StringRef Kind,
+                            StringRef Value = StringRef()) const;
+
+  /// Add attributes to the attribute set. Returns a new set because attribute
+  /// sets are immutable.
+  AttributeSet addAttributes(LLVMContext &C, AttributeSet AS) const;
+
+  /// Remove the specified attribute from this set. Returns a new set because
+  /// attribute sets are immutable.
+  AttributeSet removeAttribute(LLVMContext &C, Attribute::AttrKind Kind) const;
+
+  /// Remove the specified attribute from this set. Returns a new set because
+  /// attribute sets are immutable.
+  AttributeSet removeAttribute(LLVMContext &C, StringRef Kind) const;
+
+  /// Remove the specified attributes from this set. Returns a new set because
+  /// attribute sets are immutable.
+  AttributeSet removeAttributes(LLVMContext &C,
+                                const AttrBuilder &AttrsToRemove) const;
+
+  /// Return the number of attributes in this set.
+  unsigned getNumAttributes() const;
+
+  /// Return true if attributes exists in this set.
+  bool hasAttributes() const { return SetNode != nullptr; }
+
+  /// Return true if the attribute exists in this set.
+  bool hasAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return true if the attribute exists in this set.
+  bool hasAttribute(StringRef Kind) const;
+
+  /// Return the attribute object.
+  Attribute getAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return the target-dependent attribute object.
+  Attribute getAttribute(StringRef Kind) const;
+
+  unsigned getAlignment() const;
+  unsigned getStackAlignment() const;
+  uint64_t getDereferenceableBytes() const;
+  uint64_t getDereferenceableOrNullBytes() const;
+  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  std::string getAsString(bool InAttrGrp = false) const;
+
+  using iterator = const Attribute *;
+
+  iterator begin() const;
+  iterator end() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() const;
+#endif
+};
+
+//===----------------------------------------------------------------------===//
+/// \class
+/// \brief Provide DenseMapInfo for AttributeSet.
+template <> struct DenseMapInfo<AttributeSet> {
+  static inline AttributeSet getEmptyKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-1);
+    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
+    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
+  }
+
+  static inline AttributeSet getTombstoneKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-2);
+    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
+    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
+  }
+
+  static unsigned getHashValue(AttributeSet AS) {
+    return (unsigned((uintptr_t)AS.SetNode) >> 4) ^
+           (unsigned((uintptr_t)AS.SetNode) >> 9);
+  }
+
+  static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
+};
+
+//===----------------------------------------------------------------------===//
+/// \class
 /// \brief This class holds the attributes for a function, its return value, and
 /// its parameters. You access the attributes for each of them via an index into
-/// the AttributeSet object. The function attributes are at index
-/// `AttributeSet::FunctionIndex', the return value is at index
-/// `AttributeSet::ReturnIndex', and the attributes for the parameters start at
-/// index `1'.
-class AttributeSet {
+/// the AttributeList object. The function attributes are at index
+/// `AttributeList::FunctionIndex', the return value is at index
+/// `AttributeList::ReturnIndex', and the attributes for the parameters start at
+/// index `AttributeList::FirstArgIndex'.
+class AttributeList {
 public:
   enum AttrIndex : unsigned {
     ReturnIndex = 0U,
-    FunctionIndex = ~0U
+    FunctionIndex = ~0U,
+    FirstArgIndex = 1,
   };
 
 private:
   friend class AttrBuilder;
-  friend class AttributeSetImpl;
+  friend class AttributeListImpl;
+  friend class AttributeSet;
   friend class AttributeSetNode;
+
   template <typename Ty> friend struct DenseMapInfo;
 
   /// \brief The attributes that we are managing. This can be null to represent
   /// the empty attributes list.
-  AttributeSetImpl *pImpl;
-
-  /// \brief The attributes for the specified index are returned.
-  AttributeSetNode *getAttributes(unsigned Index) const;
-
-  /// \brief Create an AttributeSet with the specified parameters in it.
-  static AttributeSet get(LLVMContext &C,
-                          ArrayRef<std::pair<unsigned, Attribute> > Attrs);
-  static AttributeSet get(LLVMContext &C,
-                          ArrayRef<std::pair<unsigned,
-                                             AttributeSetNode*> > Attrs);
-
-  static AttributeSet getImpl(LLVMContext &C,
-                              ArrayRef<std::pair<unsigned,
-                                                 AttributeSetNode*> > Attrs);
-
-  explicit AttributeSet(AttributeSetImpl *LI) : pImpl(LI) {}
+  AttributeListImpl *pImpl = nullptr;
 
 public:
-  AttributeSet() : pImpl(nullptr) {}
+  /// \brief Create an AttributeList with the specified parameters in it.
+  static AttributeList get(LLVMContext &C,
+                           ArrayRef<std::pair<unsigned, Attribute>> Attrs);
+  static AttributeList get(LLVMContext &C,
+                           ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
+
+  /// \brief Create an AttributeList from attribute sets for a function, its
+  /// return value, and all of its arguments.
+  static AttributeList get(LLVMContext &C, AttributeSet FnAttrs,
+                           AttributeSet RetAttrs,
+                           ArrayRef<AttributeSet> ArgAttrs);
+
+private:
+  explicit AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
+
+  static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
+
+public:
+  AttributeList() = default;
 
   //===--------------------------------------------------------------------===//
-  // AttributeSet Construction and Mutation
+  // AttributeList Construction and Mutation
   //===--------------------------------------------------------------------===//
 
-  /// \brief Return an AttributeSet with the specified parameters in it.
-  static AttributeSet get(LLVMContext &C, ArrayRef<AttributeSet> Attrs);
-  static AttributeSet get(LLVMContext &C, unsigned Index,
-                          ArrayRef<Attribute::AttrKind> Kinds);
-  static AttributeSet get(LLVMContext &C, unsigned Index,
-                          ArrayRef<StringRef> Kind);
-  static AttributeSet get(LLVMContext &C, unsigned Index, const AttrBuilder &B);
+  /// \brief Return an AttributeList with the specified parameters in it.
+  static AttributeList get(LLVMContext &C, ArrayRef<AttributeList> Attrs);
+  static AttributeList get(LLVMContext &C, unsigned Index,
+                           ArrayRef<Attribute::AttrKind> Kinds);
+  static AttributeList get(LLVMContext &C, unsigned Index,
+                           ArrayRef<StringRef> Kind);
+  static AttributeList get(LLVMContext &C, unsigned Index,
+                           const AttrBuilder &B);
 
-  /// \brief Add an attribute to the attribute set at the given index. Because
-  /// attribute sets are immutable, this returns a new set.
-  AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            Attribute::AttrKind Kind) const;
+  /// \brief Add an attribute to the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  AttributeList addAttribute(LLVMContext &C, unsigned Index,
+                             Attribute::AttrKind Kind) const;
 
-  /// \brief Add an attribute to the attribute set at the given index. Because
-  /// attribute sets are immutable, this returns a new set.
-  AttributeSet addAttribute(LLVMContext &C, unsigned Index, StringRef Kind,
-                            StringRef Value = StringRef()) const;
+  /// \brief Add an attribute to the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  AttributeList addAttribute(LLVMContext &C, unsigned Index, StringRef Kind,
+                             StringRef Value = StringRef()) const;
 
-  /// Add an attribute to the attribute set at the given indices. Because
-  /// attribute sets are immutable, this returns a new set.
-  AttributeSet addAttribute(LLVMContext &C, ArrayRef<unsigned> Indices,
-                            Attribute A) const;
+  /// Add an attribute to the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  AttributeList addAttribute(LLVMContext &C, unsigned Index, Attribute A) const;
 
-  /// \brief Add attributes to the attribute set at the given index. Because
-  /// attribute sets are immutable, this returns a new set.
-  AttributeSet addAttributes(LLVMContext &C, unsigned Index,
-                             AttributeSet Attrs) const;
+  /// \brief Add attributes to the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  AttributeList addAttributes(LLVMContext &C, unsigned Index,
+                              const AttrBuilder &B) const;
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  AttributeList addParamAttribute(LLVMContext &C, unsigned ArgNo,
+                                  Attribute::AttrKind Kind) const {
+    return addAttribute(C, ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  AttributeList addParamAttribute(LLVMContext &C, unsigned ArgNo,
+                                  StringRef Kind,
+                                  StringRef Value = StringRef()) const {
+    return addAttribute(C, ArgNo + FirstArgIndex, Kind, Value);
+  }
+
+  /// Add an attribute to the attribute list at the given arg indices. Returns a
+  /// new list because attribute lists are immutable.
+  AttributeList addParamAttribute(LLVMContext &C, ArrayRef<unsigned> ArgNos,
+                                  Attribute A) const;
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  AttributeList addParamAttributes(LLVMContext &C, unsigned ArgNo,
+                                   const AttrBuilder &B) const {
+    return addAttributes(C, ArgNo + FirstArgIndex, B);
+  }
 
   /// \brief Remove the specified attribute at the specified index from this
-  /// attribute list. Because attribute lists are immutable, this returns the
-  /// new list.
-  AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
-                               Attribute::AttrKind Kind) const;
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeAttribute(LLVMContext &C, unsigned Index,
+                                Attribute::AttrKind Kind) const;
 
   /// \brief Remove the specified attribute at the specified index from this
-  /// attribute list. Because attribute lists are immutable, this returns the
-  /// new list.
-  AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
-                               StringRef Kind) const;
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeAttribute(LLVMContext &C, unsigned Index,
+                                StringRef Kind) const;
 
   /// \brief Remove the specified attributes at the specified index from this
-  /// attribute list. Because attribute lists are immutable, this returns the
-  /// new list.
-  AttributeSet removeAttributes(LLVMContext &C, unsigned Index,
-                                AttributeSet Attrs) const;
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeAttributes(LLVMContext &C, unsigned Index,
+                                 const AttrBuilder &AttrsToRemove) const;
 
-  /// \brief Remove the specified attributes at the specified index from this
-  /// attribute list. Because attribute lists are immutable, this returns the
-  /// new list.
-  AttributeSet removeAttributes(LLVMContext &C, unsigned Index,
-                                const AttrBuilder &Attrs) const;
+  /// \brief Remove all attributes at the specified index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeAttributes(LLVMContext &C, unsigned Index) const;
 
-  /// \brief Add the dereferenceable attribute to the attribute set at the given
-  /// index. Because attribute sets are immutable, this returns a new set.
-  AttributeSet addDereferenceableAttr(LLVMContext &C, unsigned Index,
-                                      uint64_t Bytes) const;
+  /// \brief Remove the specified attribute at the specified arg index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeParamAttribute(LLVMContext &C, unsigned ArgNo,
+                                     Attribute::AttrKind Kind) const {
+    return removeAttribute(C, ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// \brief Remove the specified attribute at the specified arg index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeParamAttribute(LLVMContext &C, unsigned ArgNo,
+                                     StringRef Kind) const {
+    return removeAttribute(C, ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// \brief Remove the specified attribute at the specified arg index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeParamAttributes(LLVMContext &C, unsigned ArgNo,
+                                      const AttrBuilder &AttrsToRemove) const {
+    return removeAttributes(C, ArgNo + FirstArgIndex, AttrsToRemove);
+  }
+
+  /// \brief Remove all attributes at the specified arg index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  AttributeList removeParamAttributes(LLVMContext &C, unsigned ArgNo) const {
+    return removeAttributes(C, ArgNo + FirstArgIndex);
+  }
+
+  /// \Brief Add the dereferenceable attribute to the attribute set at the given
+  /// index. Returns a new list because attribute lists are immutable.
+  AttributeList addDereferenceableAttr(LLVMContext &C, unsigned Index,
+                                       uint64_t Bytes) const;
+
+  /// \Brief Add the dereferenceable attribute to the attribute set at the given
+  /// arg index. Returns a new list because attribute lists are immutable.
+  AttributeList addDereferenceableParamAttr(LLVMContext &C, unsigned ArgNo,
+                                            uint64_t Bytes) const {
+    return addDereferenceableAttr(C, ArgNo + FirstArgIndex, Bytes);
+  }
 
   /// \brief Add the dereferenceable_or_null attribute to the attribute set at
-  /// the given index. Because attribute sets are immutable, this returns a new
-  /// set.
-  AttributeSet addDereferenceableOrNullAttr(LLVMContext &C, unsigned Index,
-                                            uint64_t Bytes) const;
+  /// the given index. Returns a new list because attribute lists are immutable.
+  AttributeList addDereferenceableOrNullAttr(LLVMContext &C, unsigned Index,
+                                             uint64_t Bytes) const;
+
+  /// \brief Add the dereferenceable_or_null attribute to the attribute set at
+  /// the given arg index. Returns a new list because attribute lists are
+  /// immutable.
+  AttributeList addDereferenceableOrNullParamAttr(LLVMContext &C,
+                                                  unsigned ArgNo,
+                                                  uint64_t Bytes) const {
+    return addDereferenceableOrNullAttr(C, ArgNo + FirstArgIndex, Bytes);
+  }
 
   /// Add the allocsize attribute to the attribute set at the given index.
-  /// Because attribute sets are immutable, this returns a new set.
-  AttributeSet addAllocSizeAttr(LLVMContext &C, unsigned Index,
-                                unsigned ElemSizeArg,
-                                const Optional<unsigned> &NumElemsArg);
+  /// Returns a new list because attribute lists are immutable.
+  AttributeList addAllocSizeAttr(LLVMContext &C, unsigned Index,
+                                 unsigned ElemSizeArg,
+                                 const Optional<unsigned> &NumElemsArg);
+
+  /// Add the allocsize attribute to the attribute set at the given arg index.
+  /// Returns a new list because attribute lists are immutable.
+  AttributeList addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo,
+                                      unsigned ElemSizeArg,
+                                      const Optional<unsigned> &NumElemsArg) {
+    return addAllocSizeAttr(C, ArgNo + FirstArgIndex, ElemSizeArg, NumElemsArg);
+  }
 
   //===--------------------------------------------------------------------===//
-  // AttributeSet Accessors
+  // AttributeList Accessors
   //===--------------------------------------------------------------------===//
 
   /// \brief Retrieve the LLVM context.
   LLVMContext &getContext() const;
 
   /// \brief The attributes for the specified index are returned.
-  AttributeSet getParamAttributes(unsigned Index) const;
+  AttributeSet getAttributes(unsigned Index) const;
+
+  /// \brief The attributes for the argument or parameter at the given index are
+  /// returned.
+  AttributeSet getParamAttributes(unsigned ArgNo) const;
 
   /// \brief The attributes for the ret value are returned.
   AttributeSet getRetAttributes() const;
@@ -334,13 +535,31 @@ public:
   /// \brief Return true if attribute exists at the given index.
   bool hasAttributes(unsigned Index) const;
 
-  /// \brief Equivalent to hasAttribute(AttributeSet::FunctionIndex, Kind) but
+  /// \brief Return true if the attribute exists for the given argument
+  bool hasParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
+    return hasAttribute(ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// \brief Return true if the attribute exists for the given argument
+  bool hasParamAttr(unsigned ArgNo, StringRef Kind) const {
+    return hasAttribute(ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// \brief Return true if attributes exists for the given argument
+  bool hasParamAttrs(unsigned ArgNo) const {
+    return hasAttributes(ArgNo + FirstArgIndex);
+  }
+
+  /// \brief Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
   /// may be faster.
   bool hasFnAttribute(Attribute::AttrKind Kind) const;
 
-  /// \brief Equivalent to hasAttribute(AttributeSet::FunctionIndex, Kind) but
+  /// \brief Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
   /// may be faster.
   bool hasFnAttribute(StringRef Kind) const;
+
+  /// \brief Equivalent to hasAttribute(ArgNo + FirstArgIndex, Kind).
+  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
   /// \brief Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index
@@ -354,8 +573,21 @@ public:
   /// \brief Return the attribute object that exists at the given index.
   Attribute getAttribute(unsigned Index, StringRef Kind) const;
 
+  /// \brief Return the attribute object that exists at the arg index.
+  Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
+    return getAttribute(ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// \brief Return the attribute object that exists at the given index.
+  Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
+    return getAttribute(ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// \brief Return the alignment of the return value.
+  unsigned getRetAlignment() const;
+
   /// \brief Return the alignment for the specified function parameter.
-  unsigned getParamAlignment(unsigned Index) const;
+  unsigned getParamAlignment(unsigned ArgNo) const;
 
   /// \brief Get the stack alignment.
   unsigned getStackAlignment(unsigned Index) const;
@@ -363,9 +595,21 @@ public:
   /// \brief Get the number of dereferenceable bytes (or zero if unknown).
   uint64_t getDereferenceableBytes(unsigned Index) const;
 
+  /// \brief Get the number of dereferenceable bytes (or zero if unknown) of an
+  /// arg.
+  uint64_t getParamDereferenceableBytes(unsigned ArgNo) const {
+    return getDereferenceableBytes(ArgNo + FirstArgIndex);
+  }
+
   /// \brief Get the number of dereferenceable_or_null bytes (or zero if
   /// unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned Index) const;
+
+  /// \brief Get the number of dereferenceable_or_null bytes (or zero if
+  /// unknown) of an arg.
+  uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const {
+    return getDereferenceableOrNullBytes(ArgNo + FirstArgIndex);
+  }
 
   /// Get the allocsize argument numbers (or pair(0, 0) if unknown).
   std::pair<unsigned, Optional<unsigned>>
@@ -374,22 +618,24 @@ public:
   /// \brief Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
-  typedef ArrayRef<Attribute>::iterator iterator;
+  //===--------------------------------------------------------------------===//
+  // AttributeList Introspection
+  //===--------------------------------------------------------------------===//
 
-  iterator begin(unsigned Slot) const;
-  iterator end(unsigned Slot) const;
+  using iterator = const AttributeSet *;
+
+  iterator begin() const;
+  iterator end() const;
+
+  unsigned getNumAttrSets() const;
+
+  /// Use these to iterate over the valid attribute indices.
+  unsigned index_begin() const { return AttributeList::FunctionIndex; }
+  unsigned index_end() const { return getNumAttrSets() - 1; }
 
   /// operator==/!= - Provide equality predicates.
-  bool operator==(const AttributeSet &RHS) const {
-    return pImpl == RHS.pImpl;
-  }
-  bool operator!=(const AttributeSet &RHS) const {
-    return pImpl != RHS.pImpl;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // AttributeSet Introspection
-  //===--------------------------------------------------------------------===//
+  bool operator==(const AttributeList &RHS) const { return pImpl == RHS.pImpl; }
+  bool operator!=(const AttributeList &RHS) const { return pImpl != RHS.pImpl; }
 
   /// \brief Return a raw pointer that uniquely identifies this attribute list.
   void *getRawPointer() const {
@@ -397,43 +643,35 @@ public:
   }
 
   /// \brief Return true if there are no attributes.
-  bool isEmpty() const {
-    return getNumSlots() == 0;
-  }
-
-  /// \brief Return the number of slots used in this attribute list.  This is
-  /// the number of arguments that have an attribute set on them (including the
-  /// function itself).
-  unsigned getNumSlots() const;
-
-  /// \brief Return the index for the given slot.
-  unsigned getSlotIndex(unsigned Slot) const;
-
-  /// \brief Return the attributes at the given slot.
-  AttributeSet getSlotAttributes(unsigned Slot) const;
+  bool isEmpty() const { return pImpl == nullptr; }
 
   void dump() const;
 };
 
 //===----------------------------------------------------------------------===//
 /// \class
-/// \brief Provide DenseMapInfo for AttributeSet.
-template<> struct DenseMapInfo<AttributeSet> {
-  static inline AttributeSet getEmptyKey() {
+/// \brief Provide DenseMapInfo for AttributeList.
+template <> struct DenseMapInfo<AttributeList> {
+  static inline AttributeList getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetImpl*>(Val));
+    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
-  static inline AttributeSet getTombstoneKey() {
+
+  static inline AttributeList getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetImpl*>(Val));
+    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
-  static unsigned getHashValue(AttributeSet AS) {
+
+  static unsigned getHashValue(AttributeList AS) {
     return (unsigned((uintptr_t)AS.pImpl) >> 4) ^
            (unsigned((uintptr_t)AS.pImpl) >> 9);
   }
-  static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
+
+  static bool isEqual(AttributeList LHS, AttributeList RHS) {
+    return LHS == RHS;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -445,22 +683,19 @@ template<> struct DenseMapInfo<AttributeSet> {
 class AttrBuilder {
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::map<std::string, std::string> TargetDepAttrs;
-  uint64_t Alignment;
-  uint64_t StackAlignment;
-  uint64_t DerefBytes;
-  uint64_t DerefOrNullBytes;
-  uint64_t AllocSizeArgs;
+  uint64_t Alignment = 0;
+  uint64_t StackAlignment = 0;
+  uint64_t DerefBytes = 0;
+  uint64_t DerefOrNullBytes = 0;
+  uint64_t AllocSizeArgs = 0;
 
 public:
-  AttrBuilder()
-      : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0), AllocSizeArgs(0) {}
-  AttrBuilder(const Attribute &A)
-      : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0), AllocSizeArgs(0) {
+  AttrBuilder() = default;
+  AttrBuilder(const Attribute &A) {
     addAttribute(A);
   }
-  AttrBuilder(AttributeSet AS, unsigned Idx);
+  AttrBuilder(AttributeList AS, unsigned Idx);
+  AttrBuilder(AttributeSet AS);
 
   void clear();
 
@@ -477,7 +712,7 @@ public:
   AttrBuilder &removeAttribute(Attribute::AttrKind Val);
 
   /// \brief Remove the attributes from the builder.
-  AttrBuilder &removeAttributes(AttributeSet A, uint64_t Index);
+  AttrBuilder &removeAttributes(AttributeList A, uint64_t WithoutIndex);
 
   /// \brief Remove the target-dependent attribute to the builder.
   AttrBuilder &removeAttribute(StringRef A);
@@ -507,7 +742,7 @@ public:
 
   /// \brief Return true if the builder has any attribute that's in the
   /// specified attribute.
-  bool hasAttributes(AttributeSet A, uint64_t Index) const;
+  bool hasAttributes(AttributeList A, uint64_t Index) const;
 
   /// \brief Return true if the builder has an alignment attribute.
   bool hasAlignmentAttr() const;
@@ -559,11 +794,11 @@ public:
   bool empty() const { return Attrs.none(); }
 
   // Iterators for target-dependent attributes.
-  typedef std::pair<std::string, std::string>                td_type;
-  typedef std::map<std::string, std::string>::iterator       td_iterator;
-  typedef std::map<std::string, std::string>::const_iterator td_const_iterator;
-  typedef llvm::iterator_range<td_iterator>                  td_range;
-  typedef llvm::iterator_range<td_const_iterator>            td_const_range;
+  using td_type = std::pair<std::string, std::string>;
+  using td_iterator = std::map<std::string, std::string>::iterator;
+  using td_const_iterator = std::map<std::string, std::string>::const_iterator;
+  using td_range = iterator_range<td_iterator>;
+  using td_const_range = iterator_range<td_const_iterator>;
 
   td_iterator td_begin()             { return TargetDepAttrs.begin(); }
   td_iterator td_end()               { return TargetDepAttrs.end(); }
@@ -596,8 +831,8 @@ bool areInlineCompatible(const Function &Caller, const Function &Callee);
 /// \brief Merge caller's and callee's attributes.
 void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 
-} // end AttributeFuncs namespace
+} // end namespace AttributeFuncs
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_ATTRIBUTES_H

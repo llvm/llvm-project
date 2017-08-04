@@ -38,11 +38,16 @@ ParseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
                  File.end());
   SmallVector<Token, 16> Tokens;
   Token Tok;
+  int NestedParens = 0;
   while (!RawLexer.LexFromRawLexer(Tok)) {
-    if (Tok.is(tok::semi) || Tok.is(tok::l_brace))
+    if ((Tok.is(tok::semi) || Tok.is(tok::l_brace)) && NestedParens == 0)
       break;
     if (Sources.isBeforeInTranslationUnit(Range.getEnd(), Tok.getLocation()))
       break;
+    if (Tok.is(tok::l_paren))
+      ++NestedParens;
+    else if (Tok.is(tok::r_paren))
+      --NestedParens;
     if (Tok.is(tok::raw_identifier)) {
       IdentifierInfo &Info = Result.Context->Idents.get(StringRef(
           Sources.getCharacterData(Tok.getLocation()), Tok.getLength()));
@@ -147,14 +152,13 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       // end of the declaration of the function, but prefer to put it on the
       // same line as the declaration if the beginning brace for the start of
       // the body falls on the next line.
-      Token LastNonCommentToken;
-      for (Token T : Tokens) {
-        if (!T.is(tok::comment)) {
-          LastNonCommentToken = T;
-        }
-      }
-      InsertLoc = LastNonCommentToken.getEndLoc();
       ReplacementText = " override";
+      auto LastTokenIter = std::prev(Tokens.end());
+      // When try statement is used instead of compound statement as
+      // method body - insert override keyword before it.
+      if (LastTokenIter->is(tok::kw_try))
+        LastTokenIter = std::prev(LastTokenIter);
+      InsertLoc = LastTokenIter->getEndLoc();
     }
 
     if (!InsertLoc.isValid()) {

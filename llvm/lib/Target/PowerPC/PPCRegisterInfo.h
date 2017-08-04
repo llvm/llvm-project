@@ -83,6 +83,7 @@ public:
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool isCallerPreservedPhysReg(unsigned PhysReg, const MachineFunction &MF) const override;
 
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {

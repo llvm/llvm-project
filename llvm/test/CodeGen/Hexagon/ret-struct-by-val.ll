@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; CHECK: r0 = add(r0, r1)
+; CHECK: r0 = add(r0,r1)
 
 ; Allow simple structures to be returned by value.
 

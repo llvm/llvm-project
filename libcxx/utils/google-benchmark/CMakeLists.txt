@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8.12)
 project (benchmark)
 
 foreach(p
@@ -11,8 +11,11 @@ foreach(p
 endforeach()
 
 option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)
+option(BENCHMARK_ENABLE_EXCEPTIONS "Enable the use of exceptions in the benchmark library." ON)
 option(BENCHMARK_ENABLE_LTO "Enable link time optimisation of the benchmark library." OFF)
 option(BENCHMARK_USE_LIBCXX "Build and test using libc++ as the standard library." OFF)
+option(BENCHMARK_BUILD_32_BITS "Build a 32 bit version of the library" OFF)
+
 # Make sure we can import out CMake functions
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -33,12 +36,20 @@ include(CheckCXXCompilerFlag)
 include(AddCXXCompilerFlag)
 include(CXXFeatureCheck)
 
+if (BENCHMARK_BUILD_32_BITS)
+  add_required_cxx_compiler_flag(-m32)
+endif()
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Turn compiler warnings up to 11
   string(REGEX REPLACE "[-/]W[1-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
+  if (NOT BENCHMARK_ENABLE_EXCEPTIONS)
+    add_cxx_compiler_flag(-EHs-)
+    add_cxx_compiler_flag(-EHa-)
+  endif()
   # Link time optimisation
   if (BENCHMARK_ENABLE_LTO)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
@@ -80,12 +91,20 @@ else()
   add_cxx_compiler_flag(-Wshorten-64-to-32)
   add_cxx_compiler_flag(-Wfloat-equal)
   add_cxx_compiler_flag(-fstrict-aliasing)
+  if (NOT BENCHMARK_ENABLE_EXCEPTIONS)
+    add_cxx_compiler_flag(-fno-exceptions)
+  endif()
   if (NOT BENCHMARK_USE_LIBCXX)
     add_cxx_compiler_flag(-Wzero-as-null-pointer-constant)
   endif()
   if (HAVE_CXX_FLAG_FSTRICT_ALIASING)
-    add_cxx_compiler_flag(-Wstrict-aliasing)
+    if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Intel") #ICC17u2: Many false positives for Wstrict-aliasing
+      add_cxx_compiler_flag(-Wstrict-aliasing)
+    endif()
   endif()
+  # ICC17u2: overloaded virtual function "benchmark::Fixture::SetUp" is only partially overridden
+  # (because of deprecated overload)
+  add_cxx_compiler_flag(-wd654)  
   add_cxx_compiler_flag(-Wthread-safety)
   if (HAVE_CXX_FLAG_WTHREAD_SAFETY)
     cxx_feature_check(THREAD_SAFETY_ATTRIBUTES)
@@ -162,7 +181,10 @@ cxx_feature_check(POSIX_REGEX)
 if(NOT HAVE_STD_REGEX AND NOT HAVE_GNU_POSIX_REGEX AND NOT HAVE_POSIX_REGEX)
   message(FATAL_ERROR "Failed to determine the source files for the regular expression backend")
 endif()
-
+if (NOT BENCHMARK_ENABLE_EXCEPTIONS AND HAVE_STD_REGEX
+        AND NOT HAVE_GNU_POSIX_REGEX AND NOT HAVE_POSIX_REGEX)
+  message(WARNING "Using std::regex with exceptions disabled is not fully supported")
+endif()
 cxx_feature_check(STEADY_CLOCK)
 # Ensure we have pthreads
 find_package(Threads REQUIRED)

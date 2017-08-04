@@ -1,11 +1,12 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:     %run %t valid   2>&1
-// RUN: not %run %t invalid 2>&1 | FileCheck %s
+// RUN: %run %t valid   2>&1
+// RUN: %run %t invalid 2>&1
 
 // Tests that the various aligned allocation functions work as intended. Also
 // tests for the condition where the alignment is not a power of 2.
 
 #include <assert.h>
+#include <errno.h>
 #include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,17 +25,16 @@ int main(int argc, char **argv)
   void *p = nullptr;
   size_t alignment = 1U << 12;
   size_t size = 1U << 12;
+  int err;
 
   assert(argc == 2);
 
   if (!strcmp(argv[1], "valid")) {
     posix_memalign(&p, alignment, size);
-    if (!p)
-      return 1;
+    assert(p);
     free(p);
     p = aligned_alloc(alignment, size);
-    if (!p)
-      return 1;
+    assert(p);
     free(p);
     // Tests various combinations of alignment and sizes
     for (int i = (sizeof(void *) == 4) ? 3 : 4; i < 19; i++) {
@@ -43,8 +43,7 @@ int main(int argc, char **argv)
         size = 0x800 * j;
         for (int k = 0; k < 3; k++) {
           p = memalign(alignment, size - (2 * sizeof(void *) * k));
-          if (!p)
-            return 1;
+          assert(p);
           free(p);
         }
       }
@@ -54,17 +53,28 @@ int main(int argc, char **argv)
     for (int i = 19; i <= 24; i++) {
       for (int k = 0; k < 3; k++) {
         p = memalign(alignment, 0x1000 - (2 * sizeof(void *) * k));
-        if (!p)
-          return 1;
+        assert(p);
         free(p);
       }
     }
   }
   if (!strcmp(argv[1], "invalid")) {
+    // Alignment is not a power of 2.
     p = memalign(alignment - 1, size);
-    free(p);
+    assert(!p);
+    // Size is not a multiple of alignment.
+    p = aligned_alloc(alignment, size >> 1);
+    assert(!p);
+    void *p_unchanged = (void *)0x42UL;
+    p = p_unchanged;
+    // Alignment is not a power of 2.
+    err = posix_memalign(&p, 3, size);
+    assert(p == p_unchanged);
+    assert(err == EINVAL);
+    // Alignment is a power of 2, but not a multiple of size(void *).
+    err = posix_memalign(&p, 2, size);
+    assert(p == p_unchanged);
+    assert(err == EINVAL);
   }
   return 0;
 }
-
-// CHECK: ERROR: alignment is not a power of 2

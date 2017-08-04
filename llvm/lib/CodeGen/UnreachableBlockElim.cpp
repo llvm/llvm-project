@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -195,18 +196,31 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
         }
 
       if (phi->getNumOperands() == 3) {
-        unsigned Input = phi->getOperand(1).getReg();
-        unsigned Output = phi->getOperand(0).getReg();
-
-        phi++->eraseFromParent();
+        const MachineOperand &Input = phi->getOperand(1);
+        const MachineOperand &Output = phi->getOperand(0);
+        unsigned InputReg = Input.getReg();
+        unsigned OutputReg = Output.getReg();
+        assert(Output.getSubReg() == 0 && "Cannot have output subregister");
         ModifiedPHI = true;
 
-        if (Input != Output) {
+        if (InputReg != OutputReg) {
           MachineRegisterInfo &MRI = F.getRegInfo();
-          MRI.constrainRegClass(Input, MRI.getRegClass(Output));
-          MRI.replaceRegWith(Output, Input);
+          unsigned InputSub = Input.getSubReg();
+          if (InputSub == 0 &&
+              MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg))) {
+            MRI.replaceRegWith(OutputReg, InputReg);
+          } else {
+            // The input register to the PHI has a subregister or it can't be
+            // constrained to the proper register class:
+            // insert a COPY instead of simply replacing the output
+            // with the input.
+            const TargetInstrInfo *TII = F.getSubtarget().getInstrInfo();
+            BuildMI(*BB, BB->getFirstNonPHI(), phi->getDebugLoc(),
+                    TII->get(TargetOpcode::COPY), OutputReg)
+                .addReg(InputReg, getRegState(Input), InputSub);
+          }
+          phi++->eraseFromParent();
         }
-
         continue;
       }
 

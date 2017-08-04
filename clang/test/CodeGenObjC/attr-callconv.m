@@ -9,5 +9,5 @@
     // CHECK: define{{.*}}x86_stdcallcc{{.*}}Test test
     
 - (void)test2 __attribute__((ms_abi)) {}
-    // CHECK: define{{.*}}x86_64_win64cc{{.*}}Test test2
+    // CHECK: define{{.*}}win64cc{{.*}}Test test2
 @end

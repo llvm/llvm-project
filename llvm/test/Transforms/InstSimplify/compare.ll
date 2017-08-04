@@ -69,7 +69,7 @@ define i1 @gep4() {
 
 define i1 @PR31262() {
 ; CHECK-LABEL: @PR31262(
-; CHECK-NEXT:    ret i1 icmp uge (i32* getelementptr ([1 x i32], [1 x i32]* @a, i64 0, i64 undef), i32* getelementptr inbounds ([1 x i32], [1 x i32]* @a, i32 0, i32 0))
+; CHECK-NEXT:    ret i1 icmp uge (i32* getelementptr ([1 x i32], [1 x i32]* @a, i32 0, i32 undef), i32* getelementptr inbounds ([1 x i32], [1 x i32]* @a, i32 0, i32 0))
 ;
   %idx = getelementptr inbounds [1 x i32], [1 x i32]* @a, i64 0, i64 undef
   %cmp = icmp uge i32* %idx, getelementptr inbounds ([1 x i32], [1 x i32]* @a, i32 0, i32 0)
@@ -576,13 +576,41 @@ define i1 @srem3(i16 %X, i32 %Y) {
   ret i1 %E
 }
 
-define i1 @udiv2(i32 %X, i32 %Y, i32 %Z) {
+define i1 @udiv2(i32 %Z) {
 ; CHECK-LABEL: @udiv2(
+; CHECK-NEXT:    ret i1 true
+;
   %A = udiv exact i32 10, %Z
   %B = udiv exact i32 20, %Z
   %C = icmp ult i32 %A, %B
   ret i1 %C
-; CHECK: ret i1 true
+}
+
+; Exact sdiv and equality preds can simplify.
+
+define i1 @sdiv_exact_equality(i32 %Z) {
+; CHECK-LABEL: @sdiv_exact_equality(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = sdiv exact i32 10, %Z
+  %B = sdiv exact i32 20, %Z
+  %C = icmp eq i32 %A, %B
+  ret i1 %C
+}
+
+; But not other preds: PR32949 - https://bugs.llvm.org/show_bug.cgi?id=32949
+
+define i1 @sdiv_exact_not_equality(i32 %Z) {
+; CHECK-LABEL: @sdiv_exact_not_equality(
+; CHECK-NEXT:    [[A:%.*]] = sdiv exact i32 10, %Z
+; CHECK-NEXT:    [[B:%.*]] = sdiv exact i32 20, %Z
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = sdiv exact i32 10, %Z
+  %B = sdiv exact i32 20, %Z
+  %C = icmp ult i32 %A, %B
+  ret i1 %C
 }
 
 define i1 @udiv3(i32 %X, i32 %Y) {
@@ -1249,4 +1277,20 @@ define void @icmp_slt_sge_or(i32 %Ax, i32 %Bx) {
 ; CHECK: call void @helper_i1(i1 false)
 ; CHECK: call void @helper_i1(i1 true)
   ret void
+}
+
+define i1 @constant_fold_inttoptr_null() {
+; CHECK-LABEL: @constant_fold_inttoptr_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = icmp eq i32* inttoptr (i64 32 to i32*), null
+  ret i1 %x
+}
+
+define i1 @constant_fold_null_inttoptr() {
+; CHECK-LABEL: @constant_fold_null_inttoptr(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = icmp eq i32* null, inttoptr (i64 32 to i32*)
+  ret i1 %x
 }

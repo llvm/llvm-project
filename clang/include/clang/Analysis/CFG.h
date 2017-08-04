@@ -58,6 +58,7 @@ public:
     Statement,
     Initializer,
     NewAllocator,
+    LifetimeEnds,
     // dtor kind
     AutomaticObjectDtor,
     DeleteDtor,
@@ -164,6 +165,28 @@ private:
   CFGNewAllocator() {}
   static bool isKind(const CFGElement &elem) {
     return elem.getKind() == NewAllocator;
+  }
+};
+
+/// Represents the point where the lifetime of an automatic object ends
+class CFGLifetimeEnds : public CFGElement {
+public:
+  explicit CFGLifetimeEnds(const VarDecl *var, const Stmt *stmt)
+      : CFGElement(LifetimeEnds, var, stmt) {}
+
+  const VarDecl *getVarDecl() const {
+    return static_cast<VarDecl *>(Data1.getPointer());
+  }
+
+  const Stmt *getTriggerStmt() const {
+    return static_cast<Stmt *>(Data2.getPointer());
+  }
+
+private:
+  friend class CFGElement;
+  CFGLifetimeEnds() {}
+  static bool isKind(const CFGElement &elem) {
+    return elem.getKind() == LifetimeEnds;
   }
 };
 
@@ -701,6 +724,10 @@ public:
     Elements.push_back(CFGAutomaticObjDtor(VD, S), C);
   }
 
+  void appendLifetimeEnds(VarDecl *VD, Stmt *S, BumpVectorContext &C) {
+    Elements.push_back(CFGLifetimeEnds(VD, S), C);
+  }
+
   void appendDeleteDtor(CXXRecordDecl *RD, CXXDeleteExpr *DE, BumpVectorContext &C) {
     Elements.push_back(CFGDeleteDtor(RD, DE), C);
   }
@@ -715,6 +742,19 @@ public:
   }
   iterator insertAutomaticObjDtor(iterator I, VarDecl *VD, Stmt *S) {
     *I = CFGAutomaticObjDtor(VD, S);
+    return ++I;
+  }
+
+  // Scope leaving must be performed in reversed order. So insertion is in two
+  // steps. First we prepare space for some number of elements, then we insert
+  // the elements beginning at the last position in prepared space.
+  iterator beginLifetimeEndsInsert(iterator I, size_t Cnt,
+                                   BumpVectorContext &C) {
+    return iterator(
+        Elements.insert(I.base(), Cnt, CFGLifetimeEnds(nullptr, nullptr), C));
+  }
+  iterator insertLifetimeEnds(iterator I, VarDecl *VD, Stmt *S) {
+    *I = CFGLifetimeEnds(VD, S);
     return ++I;
   }
 };
@@ -753,6 +793,7 @@ public:
     bool AddEHEdges;
     bool AddInitializers;
     bool AddImplicitDtors;
+    bool AddLifetime;
     bool AddTemporaryDtors;
     bool AddStaticInitBranches;
     bool AddCXXNewAllocator;
@@ -774,8 +815,10 @@ public:
 
     BuildOptions()
       : forcedBlkExprs(nullptr), Observer(nullptr),
-        PruneTriviallyFalseEdges(true), AddEHEdges(false),
+        PruneTriviallyFalseEdges(true),
+        AddEHEdges(false),
         AddInitializers(false), AddImplicitDtors(false),
+        AddLifetime(false),
         AddTemporaryDtors(false), AddStaticInitBranches(false),
         AddCXXNewAllocator(false), AddCXXDefaultInitExprInCtors(false) {}
   };

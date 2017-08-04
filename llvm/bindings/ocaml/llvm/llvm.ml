@@ -20,6 +20,10 @@ type llattribute
 type llmemorybuffer
 type llmdkind
 
+exception FeatureDisabled of string
+
+let () = Callback.register_exception "Llvm.FeatureDisabled" (FeatureDisabled "")
+
 module TypeKind = struct
   type t =
   | Void
@@ -459,6 +463,8 @@ external is_packed : lltype -> bool = "llvm_is_packed"
 external is_opaque : lltype -> bool = "llvm_is_opaque"
 
 (*--... Operations on pointer, vector, and array types .....................--*)
+
+external subtypes : lltype -> lltype array = "llvm_subtypes"
 external array_type : lltype -> int -> lltype = "llvm_array_type"
 external pointer_type : lltype -> lltype = "llvm_pointer_type"
 external qualified_pointer_type : lltype -> int -> lltype

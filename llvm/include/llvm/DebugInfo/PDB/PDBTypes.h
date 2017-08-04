@@ -1,4 +1,4 @@
-//===- PDBTypes.h - Defines enums for various fields contained in PDB ---*-===//
+//===- PDBTypes.h - Defines enums for various fields contained in PDB ----====//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,9 +10,10 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBTYPES_H
 #define LLVM_DEBUGINFO_PDB_PDBTYPES_H
 
-#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -20,21 +21,11 @@
 namespace llvm {
 namespace pdb {
 
+class IPDBDataStream;
+class IPDBLineNumber;
+class IPDBSourceFile;
 class PDBSymDumper;
 class PDBSymbol;
-
-class IPDBDataStream;
-template <class T> class IPDBEnumChildren;
-class IPDBLineNumber;
-class IPDBRawSymbol;
-class IPDBSession;
-class IPDBSourceFile;
-
-typedef IPDBEnumChildren<PDBSymbol> IPDBEnumSymbols;
-typedef IPDBEnumChildren<IPDBSourceFile> IPDBEnumSourceFiles;
-typedef IPDBEnumChildren<IPDBDataStream> IPDBEnumDataStreams;
-typedef IPDBEnumChildren<IPDBLineNumber> IPDBEnumLineNumbers;
-
 class PDBSymbolExe;
 class PDBSymbolCompiland;
 class PDBSymbolCompilandDetails;
@@ -67,11 +58,16 @@ class PDBSymbolTypeManaged;
 class PDBSymbolTypeDimension;
 class PDBSymbolUnknown;
 
+using IPDBEnumSymbols = IPDBEnumChildren<PDBSymbol>;
+using IPDBEnumSourceFiles = IPDBEnumChildren<IPDBSourceFile>;
+using IPDBEnumDataStreams = IPDBEnumChildren<IPDBDataStream>;
+using IPDBEnumLineNumbers = IPDBEnumChildren<IPDBLineNumber>;
+
 /// Specifies which PDB reader implementation is to be used.  Only a value
-/// of PDB_ReaderType::DIA is supported.
+/// of PDB_ReaderType::DIA is currently supported, but Native is in the works.
 enum class PDB_ReaderType {
   DIA = 0,
-  Raw = 1,
+  Native = 1,
 };
 
 /// An enumeration indicating the type of data contained in this table.
@@ -104,7 +100,7 @@ enum class PDB_Checksum { None = 0, MD5 = 1, SHA1 = 2 };
 
 /// These values correspond to the CV_CPU_TYPE_e enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
-typedef codeview::CPUType PDB_Cpu;
+using PDB_Cpu = codeview::CPUType;
 
 enum class PDB_Machine {
   Invalid = 0xffff,
@@ -135,12 +131,11 @@ enum class PDB_Machine {
 /// at the following locations:
 ///   https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
 ///   https://msdn.microsoft.com/en-us/library/windows/desktop/ms680207(v=vs.85).aspx
-///
-typedef codeview::CallingConvention PDB_CallingConv;
+using PDB_CallingConv = codeview::CallingConvention;
 
 /// These values correspond to the CV_CFL_LANG enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
-typedef codeview::SourceLanguage PDB_Lang;
+using PDB_Lang = codeview::SourceLanguage;
 
 /// These values correspond to the DataKind enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/b2x2t313.aspx
@@ -273,9 +268,9 @@ enum PDB_VariantType {
 };
 
 struct Variant {
-  Variant() : Type(PDB_VariantType::Empty) {}
+  Variant() = default;
 
-  Variant(const Variant &Other) : Type(PDB_VariantType::Empty) {
+  Variant(const Variant &Other) {
     *this = Other;
   }
 
@@ -284,7 +279,7 @@ struct Variant {
       delete[] Value.String;
   }
 
-  PDB_VariantType Type;
+  PDB_VariantType Type = PDB_VariantType::Empty;
   union {
     bool Bool;
     int8_t Int8;
@@ -344,18 +339,20 @@ struct Variant {
   }
 };
 
+} // end namespace pdb
 } // end namespace llvm
-}
 
 namespace std {
+
 template <> struct hash<llvm::pdb::PDB_SymType> {
-  typedef llvm::pdb::PDB_SymType argument_type;
-  typedef std::size_t result_type;
+  using argument_type = llvm::pdb::PDB_SymType;
+  using result_type = std::size_t;
 
   result_type operator()(const argument_type &Arg) const {
     return std::hash<int>()(static_cast<int>(Arg));
   }
 };
+
 } // end namespace std
 
 #endif // LLVM_DEBUGINFO_PDB_PDBTYPES_H

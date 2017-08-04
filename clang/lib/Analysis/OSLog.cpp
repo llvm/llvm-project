@@ -10,11 +10,11 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
-using llvm::APInt;
 
 using clang::analyze_os_log::OSLogBufferItem;
 using clang::analyze_os_log::OSLogBufferLayout;
 
+namespace {
 class OSLogFormatStringHandler
     : public analyze_format_string::FormatStringHandler {
 private:
@@ -166,6 +166,7 @@ public:
     }
   }
 };
+} // end anonymous namespace
 
 bool clang::analyze_os_log::computeOSLogBufferLayout(
     ASTContext &Ctx, const CallExpr *E, OSLogBufferLayout &Layout) {

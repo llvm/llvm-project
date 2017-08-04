@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <random>
 
 // template<class RealType = double>
@@ -24,7 +26,6 @@ double f(double x)
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         typedef std::piecewise_constant_distribution<> D;
         typedef D::param_type P;
@@ -75,5 +76,4 @@ int main()
         assert(dn[0] == 0.203125);
         assert(dn[1] == 0.1484375);
     }
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

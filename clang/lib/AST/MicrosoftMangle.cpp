@@ -942,6 +942,9 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
       break;
     }
 
+    case DeclarationName::CXXDeductionGuideName:
+      llvm_unreachable("Can't mangle a deduction guide name!");
+
     case DeclarationName::CXXUsingDirective:
       llvm_unreachable("Can't mangle a using directive name!");
   }
@@ -963,16 +966,71 @@ void MicrosoftCXXNameMangler::mangleNestedName(const NamedDecl *ND) {
     }
 
     if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID =
-          Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                "cannot mangle a local inside this block yet");
-      Diags.Report(BD->getLocation(), DiagID);
+      auto Discriminate =
+          [](StringRef Name, const unsigned Discriminator,
+             const unsigned ParameterDiscriminator) -> std::string {
+        std::string Buffer;
+        llvm::raw_string_ostream Stream(Buffer);
+        Stream << Name;
+        if (Discriminator)
+          Stream << '_' << Discriminator;
+        if (ParameterDiscriminator)
+          Stream << '_' << ParameterDiscriminator;
+        return Stream.str();
+      };
 
-      // FIXME: This is completely, utterly, wrong; see ItaniumMangle
-      // for how this should be done.
-      Out << "__block_invoke" << Context.getBlockId(BD, false);
-      Out << '@';
+      unsigned Discriminator = BD->getBlockManglingNumber();
+      if (!Discriminator)
+        Discriminator = Context.getBlockId(BD, /*Local=*/false);
+
+      // Mangle the parameter position as a discriminator to deal with unnamed
+      // parameters.  Rather than mangling the unqualified parameter name,
+      // always use the position to give a uniform mangling.
+      unsigned ParameterDiscriminator = 0;
+      if (const auto *MC = BD->getBlockManglingContextDecl())
+        if (const auto *P = dyn_cast<ParmVarDecl>(MC))
+          if (const auto *F = dyn_cast<FunctionDecl>(P->getDeclContext()))
+            ParameterDiscriminator =
+                F->getNumParams() - P->getFunctionScopeIndex();
+
+      DC = getEffectiveDeclContext(BD);
+
+      Out << '?';
+      mangleSourceName(Discriminate("_block_invoke", Discriminator,
+                                    ParameterDiscriminator));
+      // If we have a block mangling context, encode that now.  This allows us
+      // to discriminate between named static data initializers in the same
+      // scope.  This is handled differently from parameters, which use
+      // positions to discriminate between multiple instances.
+      if (const auto *MC = BD->getBlockManglingContextDecl())
+        if (!isa<ParmVarDecl>(MC))
+          if (const auto *ND = dyn_cast<NamedDecl>(MC))
+            mangleUnqualifiedName(ND);
+      // MS ABI and Itanium manglings are in inverted scopes.  In the case of a
+      // RecordDecl, mangle the entire scope hierachy at this point rather than
+      // just the unqualified name to get the ordering correct.
+      if (const auto *RD = dyn_cast<RecordDecl>(DC))
+        mangleName(RD);
+      else
+        Out << '@';
+      // void __cdecl
+      Out << "YAX";
+      // struct __block_literal *
+      Out << 'P';
+      // __ptr64
+      if (PointersAre64Bit)
+        Out << 'E';
+      Out << 'A';
+      mangleArtificalTagType(TTK_Struct,
+                             Discriminate("__block_literal", Discriminator,
+                                          ParameterDiscriminator));
+      Out << "@Z";
+
+      // If the effective context was a Record, we have fully mangled the
+      // qualified name and do not need to continue.
+      if (isa<RecordDecl>(DC))
+        break;
+      continue;
     } else if (const ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(DC)) {
       mangleObjCMethodName(Method);
     } else if (isa<NamedDecl>(DC)) {
@@ -1686,6 +1744,8 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   //                 ::= _N # bool
   //                     _O # <array in parameter>
   //                 ::= _T # __float80 (Intel)
+  //                 ::= _S # char16_t
+  //                 ::= _U # char32_t
   //                 ::= _W # wchar_t
   //                 ::= _Z # __float80 (Digital Mars)
   switch (T->getKind()) {
@@ -1797,10 +1857,6 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     Out << "PA";
     mangleArtificalTagType(TTK_Struct, "ocl_queue");
     break;
-  case BuiltinType::OCLNDRange:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_ndrange");
-    break;
   case BuiltinType::OCLReserveID:
     Out << "PA";
     mangleArtificalTagType(TTK_Struct, "ocl_reserveid");
@@ -1887,14 +1943,18 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
-    if (isa<CXXDestructorDecl>(D) && isStructorDecl(D) &&
-        StructorType == Dtor_Deleting) {
-      // The scalar deleting destructor takes an extra int argument.
-      // However, the FunctionType generated has 0 arguments.
-      // FIXME: This is a temporary hack.
-      // Maybe should fix the FunctionType creation instead?
-      Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
-      return;
+    if (isa<CXXDestructorDecl>(D) && isStructorDecl(D)) {
+      // The scalar deleting destructor takes an extra int argument which is not
+      // reflected in the AST.
+      if (StructorType == Dtor_Deleting) {
+        Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
+        return;
+      }
+      // The vbase destructor returns void which is not reflected in the AST.
+      if (StructorType == Dtor_Complete) {
+        Out << "XXZ";
+        return;
+      }
     }
     if (IsCtorClosure) {
       // Default constructor closure and copy constructor closure both return
@@ -1954,7 +2014,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
     // Happens for function pointer type arguments for example.
     for (unsigned I = 0, E = Proto->getNumParams(); I != E; ++I) {
       mangleArgumentType(Proto->getParamType(I), Range);
-      // Mangle each pass_object_size parameter as if it's a paramater of enum
+      // Mangle each pass_object_size parameter as if it's a parameter of enum
       // type passed directly after the parameter with the pass_object_size
       // attribute. The aforementioned enum's name is __pass_object_size, and we
       // pretend it resides in a top-level namespace called __clang.
@@ -2002,13 +2062,20 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
   // <global-function> ::= Y # global near
   //                   ::= Z # global far
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    bool IsVirtual = MD->isVirtual();
+    // When mangling vbase destructor variants, ignore whether or not the
+    // underlying destructor was defined to be virtual.
+    if (isa<CXXDestructorDecl>(MD) && isStructorDecl(MD) &&
+        StructorType == Dtor_Complete) {
+      IsVirtual = false;
+    }
     switch (MD->getAccess()) {
       case AS_none:
         llvm_unreachable("Unsupported access specifier");
       case AS_private:
         if (MD->isStatic())
           Out << 'C';
-        else if (MD->isVirtual())
+        else if (IsVirtual)
           Out << 'E';
         else
           Out << 'A';
@@ -2016,7 +2083,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
       case AS_protected:
         if (MD->isStatic())
           Out << 'K';
-        else if (MD->isVirtual())
+        else if (IsVirtual)
           Out << 'M';
         else
           Out << 'I';
@@ -2024,7 +2091,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
       case AS_public:
         if (MD->isStatic())
           Out << 'S';
-        else if (MD->isVirtual())
+        else if (IsVirtual)
           Out << 'U';
         else
           Out << 'Q';
@@ -2055,7 +2122,7 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
   switch (CC) {
     default:
       llvm_unreachable("Unsupported CC for mangling");
-    case CC_X86_64Win64:
+    case CC_Win64:
     case CC_X86_64SysV:
     case CC_C: Out << 'A'; break;
     case CC_X86Pascal: Out << 'C'; break;
@@ -2470,6 +2537,17 @@ void MicrosoftCXXNameMangler::mangleType(const AutoType *T, Qualifiers,
   DiagnosticsEngine &Diags = Context.getDiags();
   unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
     "cannot mangle this 'auto' type yet");
+  Diags.Report(Range.getBegin(), DiagID)
+    << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(
+    const DeducedTemplateSpecializationType *T, Qualifiers, SourceRange Range) {
+  assert(T->getDeducedType().isNull() && "expecting a dependent type!");
+
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+    "cannot mangle this deduced class template specialization type yet");
   Diags.Report(Range.getBegin(), DiagID)
     << Range;
 }
@@ -2997,14 +3075,14 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // N.B. The length is in terms of bytes, not characters.
   Mangler.mangleNumber(SL->getByteLength() + SL->getCharByteWidth());
 
-  auto GetLittleEndianByte = [&Mangler, &SL](unsigned Index) {
+  auto GetLittleEndianByte = [&SL](unsigned Index) {
     unsigned CharByteWidth = SL->getCharByteWidth();
     uint32_t CodeUnit = SL->getCodeUnit(Index / CharByteWidth);
     unsigned OffsetInCodeUnit = Index % CharByteWidth;
     return static_cast<char>((CodeUnit >> (8 * OffsetInCodeUnit)) & 0xff);
   };
 
-  auto GetBigEndianByte = [&Mangler, &SL](unsigned Index) {
+  auto GetBigEndianByte = [&SL](unsigned Index) {
     unsigned CharByteWidth = SL->getCharByteWidth();
     uint32_t CodeUnit = SL->getCodeUnit(Index / CharByteWidth);
     unsigned OffsetInCodeUnit = (CharByteWidth - 1) - (Index % CharByteWidth);

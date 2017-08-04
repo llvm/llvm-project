@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=arm-eabi -mattr=+v4t %s -o - | FileCheck %s
-; RUN: llc -mtriple=arm-eabi -mattr=+v4t -addr-sink-using-gep=1 %s -o - | FileCheck %s
 
 ; <rdar://problem/8686347>
 

@@ -17,7 +17,7 @@ entry:
 ; STATIC-N32: lwc1 $f0, %lo(.LCPI0_0)($[[R0]])
 ; PIC-N64: ld  $[[R0:[0-9]+]], %got_page(.LCPI0_0)
 ; PIC-N64: lwc1 $f0, %got_ofst(.LCPI0_0)($[[R0]])
-; STATIC-N64: ld  $[[R0:[0-9]+]], %got_page(.LCPI0_0)
-; STATIC-N64: lwc1 $f0, %got_ofst(.LCPI0_0)($[[R0]])
+; STATIC-N64: lui  $[[R0:[0-9]+]], %highest(.LCPI0_0)
+; STATIC-N64: lwc1 $f0, %lo(.LCPI0_0)($[[R0]])
   ret float 0x400B333340000000
 }

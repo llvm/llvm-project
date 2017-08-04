@@ -62,38 +62,30 @@ The directory for merging symbols.)"),
 namespace clang {
 namespace find_all_symbols {
 
-class YamlReporter : public clang::find_all_symbols::SymbolReporter {
+class YamlReporter : public SymbolReporter {
 public:
-  ~YamlReporter() override {
-    for (const auto &Symbol : Symbols) {
-      int FD;
-      SmallString<128> ResultPath;
-      llvm::sys::fs::createUniqueFile(
-          OutputDir + "/" + llvm::sys::path::filename(Symbol.first) +
-              "-%%%%%%.yaml",
-          FD, ResultPath);
-      llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
-      WriteSymbolInfosToStream(OS, Symbol.second);
-    }
+  void reportSymbols(StringRef FileName,
+                     const SymbolInfo::SignalMap &Symbols) override {
+    int FD;
+    SmallString<128> ResultPath;
+    llvm::sys::fs::createUniqueFile(
+        OutputDir + "/" + llvm::sys::path::filename(FileName) + "-%%%%%%.yaml",
+        FD, ResultPath);
+    llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
+    WriteSymbolInfosToStream(OS, Symbols);
   }
-
-  void reportSymbol(StringRef FileName, const SymbolInfo &Symbol) override {
-    Symbols[FileName].insert(Symbol);
-  }
-
-private:
-  std::map<std::string, std::set<SymbolInfo>> Symbols;
 };
 
 bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
   std::error_code EC;
-  std::map<SymbolInfo, int> SymbolToNumOccurrences;
+  SymbolInfo::SignalMap Symbols;
   std::mutex SymbolMutex;
-  auto AddSymbols = [&](ArrayRef<SymbolInfo> Symbols) {
+  auto AddSymbols = [&](ArrayRef<SymbolAndSignals> NewSymbols) {
     // Synchronize set accesses.
     std::unique_lock<std::mutex> LockGuard(SymbolMutex);
-    for (const auto &Symbol : Symbols)
-      ++SymbolToNumOccurrences[Symbol];
+    for (const auto &Symbol : NewSymbols) {
+      Symbols[Symbol.Symbol] += Symbol.Signals;
+    }
   };
 
   // Load all symbol files in MergeDir.
@@ -109,8 +101,13 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
               llvm::errs() << "Can't open " << Path << "\n";
               return;
             }
-            std::vector<SymbolInfo> Symbols =
+            std::vector<SymbolAndSignals> Symbols =
                 ReadSymbolInfosFromYAML(Buffer.get()->getBuffer());
+            for (auto &Symbol : Symbols) {
+              // Only count one occurrence per file, to avoid spam.
+              Symbol.Signals.Seen = std::min(Symbol.Signals.Seen, 1u);
+              Symbol.Signals.Used = std::min(Symbol.Signals.Used, 1u);
+            }
             // FIXME: Merge without creating such a heavy contention point.
             AddSymbols(Symbols);
           },
@@ -124,14 +121,7 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
                  << '\n';
     return false;
   }
-  std::set<SymbolInfo> Result;
-  for (const auto &Entry : SymbolToNumOccurrences) {
-    const auto &Symbol = Entry.first;
-    Result.insert(SymbolInfo(Symbol.getName(), Symbol.getSymbolKind(),
-                             Symbol.getFilePath(), Symbol.getLineNumber(),
-                             Symbol.getContexts(), Entry.second));
-  }
-  WriteSymbolInfosToStream(OS, Result);
+  WriteSymbolInfosToStream(OS, Symbols);
   return true;
 }
 

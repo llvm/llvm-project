@@ -70,8 +70,7 @@ private:
     CommentHandlerAction(CommentHandlerVisitor *Visitor)
         : TestAction(Visitor) { }
 
-    bool BeginSourceFileAction(CompilerInstance &CI,
-                               StringRef FileName) override {
+    bool BeginSourceFileAction(CompilerInstance &CI) override {
       CommentHandlerVisitor *V =
           static_cast<CommentHandlerVisitor*>(this->Visitor);
       V->PP = &CI.getPreprocessor();

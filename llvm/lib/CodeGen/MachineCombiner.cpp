@@ -8,10 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 // The machine combiner pass uses machine trace metrics to ensure the combined
-// instructions does not lengthen the critical path or the resource depth.
+// instructions do not lengthen the critical path or the resource depth.
 //===----------------------------------------------------------------------===//
-
-#define DEBUG_TYPE "machine-combiner"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,6 +29,8 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "machine-combiner"
 
 STATISTIC(NumInstCombined, "Number of machineinst combined");
 
@@ -86,11 +86,11 @@ private:
 char MachineCombiner::ID = 0;
 char &llvm::MachineCombinerID = MachineCombiner::ID;
 
-INITIALIZE_PASS_BEGIN(MachineCombiner, "machine-combiner",
+INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
                       "Machine InstCombiner", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
-INITIALIZE_PASS_END(MachineCombiner, "machine-combiner", "Machine InstCombiner",
+INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
                     false, false)
 
 void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -135,7 +135,9 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
   for (auto *InstrPtr : InsInstrs) { // for each Use
     unsigned IDepth = 0;
-    DEBUG(dbgs() << "NEW INSTR "; InstrPtr->dump(TII); dbgs() << "\n";);
+    DEBUG(dbgs() << "NEW INSTR ";
+          InstrPtr->print(dbgs(), TII);
+          dbgs() << "\n";);
     for (const MachineOperand &MO : InstrPtr->operands()) {
       // Check for virtual register operand.
       if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
@@ -352,6 +354,19 @@ bool MachineCombiner::doSubstitute(unsigned NewSize, unsigned OldSize) {
   return false;
 }
 
+static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
+                                     SmallVector<MachineInstr *, 16> InsInstrs,
+                                     SmallVector<MachineInstr *, 16> DelInstrs,
+                                     MachineTraceMetrics *Traces) {
+  for (auto *InstrPtr : InsInstrs)
+    MBB->insert((MachineBasicBlock::iterator)&MI, InstrPtr);
+  for (auto *InstrPtr : DelInstrs)
+    InstrPtr->eraseFromParentAndMarkDBGValuesForRemoval();
+  ++NumInstCombined;
+  Traces->invalidate(MBB);
+  Traces->verifyAnalysis();
+}
+
 /// Substitute a slow code sequence with a faster one by
 /// evaluating instruction combining pattern.
 /// The prototype of such a pattern is MUl + ADD -> MADD. Performs instruction
@@ -406,7 +421,6 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       DenseMap<unsigned, unsigned> InstrIdxForVirtReg;
       if (!MinInstr)
         MinInstr = Traces->getEnsemble(MachineTraceMetrics::TS_MinInstrCount);
-      MachineTraceMetrics::Trace BlockTrace = MinInstr->getTrace(MBB);
       Traces->verifyAnalysis();
       TII->genAlternativeCodeSequence(MI, P, InsInstrs, DelInstrs,
                                       InstrIdxForVirtReg);
@@ -426,23 +440,23 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       // fewer instructions OR
       // the new sequence neither lengthens the critical path nor increases
       // resource pressure.
-      if (SubstituteAlways || doSubstitute(NewInstCount, OldInstCount) ||
-          (improvesCriticalPathLen(MBB, &MI, BlockTrace, InsInstrs,
-                                   DelInstrs, InstrIdxForVirtReg, P) &&
-           preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs))) {
-        for (auto *InstrPtr : InsInstrs)
-          MBB->insert((MachineBasicBlock::iterator) &MI, InstrPtr);
-        for (auto *InstrPtr : DelInstrs)
-          InstrPtr->eraseFromParentAndMarkDBGValuesForRemoval();
-
-        Changed = true;
-        ++NumInstCombined;
-
-        Traces->invalidate(MBB);
-        Traces->verifyAnalysis();
+      if (SubstituteAlways || doSubstitute(NewInstCount, OldInstCount)) {
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, Traces);
         // Eagerly stop after the first pattern fires.
+        Changed = true;
         break;
       } else {
+        // Calculating the trace metrics may be expensive,
+        // so only do this when necessary.
+        MachineTraceMetrics::Trace BlockTrace = MinInstr->getTrace(MBB);
+        if (improvesCriticalPathLen(MBB, &MI, BlockTrace, InsInstrs, DelInstrs,
+                                    InstrIdxForVirtReg, P) &&
+            preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs)) {
+          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, Traces);
+          // Eagerly stop after the first pattern fires.
+          Changed = true;
+          break;
+        }
         // Cleanup instructions of the alternative code sequence. There is no
         // use for them.
         MachineFunction *MF = MBB->getParent();

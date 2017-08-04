@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -26,6 +25,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,7 +38,7 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "machine-licm"
+#define DEBUG_TYPE "machinelicm"
 
 static cl::opt<bool>
 AvoidSpeculation("avoid-speculation",
@@ -237,13 +237,13 @@ namespace {
 
 char MachineLICM::ID = 0;
 char &llvm::MachineLICMID = MachineLICM::ID;
-INITIALIZE_PASS_BEGIN(MachineLICM, "machinelicm",
-                "Machine Loop Invariant Code Motion", false, false)
+INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
+                      "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MachineLICM, "machinelicm",
-                "Machine Loop Invariant Code Motion", false, false)
+INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
+                    "Machine Loop Invariant Code Motion", false, false)
 
 /// Test if the given loop is the outer-most loop that has a unique predecessor.
 static bool LoopIsOuterMostWithPredecessor(MachineLoop *CurLoop) {
@@ -330,7 +330,7 @@ bool MachineLICM::runOnMachineFunction(MachineFunction &MF) {
 /// Return true if instruction stores to the specified frame.
 static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
   // If we lost memory operands, conservatively assume that the instruction
-  // writes to all slots. 
+  // writes to all slots.
   if (MI->memoperands_empty())
     return true;
   for (const MachineMemOperand *MemOp : MI->memoperands()) {
@@ -708,7 +708,7 @@ void MachineLICM::SinkIntoLoop() {
   for (MachineBasicBlock::instr_iterator I = Preheader->instr_begin();
        I != Preheader->instr_end(); ++I) {
     // We need to ensure that we can safely move this instruction into the loop.
-    // As such, it must not have side-effects, e.g. such as a call has.  
+    // As such, it must not have side-effects, e.g. such as a call has.
     if (IsLoopInvariantInst(*I) && !HasLoopPHIUse(&*I))
       Candidates.push_back(&*I);
   }
@@ -837,9 +837,9 @@ MachineLICM::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
 /// constant pool.
 static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
   assert (MI.mayLoad() && "Expected MI that loads!");
-  
+
   // If we lost memory operands, conservatively assume that the instruction
-  // reads from everything.. 
+  // reads from everything..
   if (MI.memoperands_empty())
     return true;
 
@@ -895,8 +895,11 @@ bool MachineLICM::IsLoopInvariantInst(MachineInstr &I) {
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
         // it could get allocated to something with a def during allocation.
-        if (!MRI->isConstantPhysReg(Reg))
-          return false;
+        // However, if the physreg is known to always be caller saved/restored
+        // then this use is safe to hoist.
+        if (!MRI->isConstantPhysReg(Reg) &&
+            !(TRI->isCallerPreservedPhysReg(Reg, *I.getParent()->getParent())))
+            return false;
         // Otherwise it's safe to move.
         continue;
       } else if (!MO.isDead()) {
@@ -1337,7 +1340,7 @@ bool MachineLICM::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
     Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);
 
     // Since we are moving the instruction out of its basic block, we do not
-    // retain its debug location. Doing so would degrade the debugging 
+    // retain its debug location. Doing so would degrade the debugging
     // experience and adversely affect the accuracy of profiling information.
     MI->setDebugLoc(DebugLoc());
 

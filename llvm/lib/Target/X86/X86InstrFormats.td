@@ -199,7 +199,8 @@ class TAPS : TA { Prefix OpPrefix = PS; }
 class TAPD : TA { Prefix OpPrefix = PD; }
 class TAXD : TA { Prefix OpPrefix = XD; }
 class VEX    { Encoding OpEnc = EncVEX; }
-class VEX_W  { bit hasVEX_WPrefix = 1; }
+class VEX_W    { bits<2> VEX_WPrefix = 1; }
+class VEX_WIG  { bits<2> VEX_WPrefix = 2; }
 class VEX_4V : VEX { bit hasVEX_4V = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
@@ -223,6 +224,12 @@ class EVEX_CD8<int esize, CD8VForm form> {
 class Has3DNow0F0FOpcode  { bit has3DNow0F0FOpcode = 1; }
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
+
+// Specify the alternative register form instruction to replace the current
+// instruction in case it was picked during generation of memory folding tables
+class FoldGenData<string _RegisterForm> {
+    string FoldGenRegForm = _RegisterForm;
+}
 
 class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
               string AsmStr,
@@ -270,7 +277,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasREPPrefix = 0;     // Does this inst have a REP prefix?
   Encoding OpEnc = EncNormal; // Encoding used by this instruction
   bits<2> OpEncBits = OpEnc.Value;
-  bit hasVEX_WPrefix = 0;   // Does this inst set the VEX_W field?
+  bits<2> VEX_WPrefix = 0;  // Does this inst set the VEX_W field?
   bit hasVEX_4V = 0;        // Does this inst require the VEX.VVVV field?
   bit hasVEX_L = 0;         // Does this inst use large (256-bit) registers?
   bit ignoresVEX_L = 0;     // Does this instruction ignore the L-bit
@@ -303,6 +310,10 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
 
+  // Used in the memory folding generation (TableGen backend) to point to an alternative
+  // instruction to replace the current one in case it got picked during generation.
+  string FoldGenRegForm = ?;
+
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;
   let TSFlags{8-7}   = OpSizeBits;
@@ -317,7 +328,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{28-27} = ExeDomain.Value;
   let TSFlags{30-29} = OpEncBits;
   let TSFlags{38-31} = Opcode;
-  let TSFlags{39}    = hasVEX_WPrefix;
+  // Currently no need for second bit in TSFlags - W Ignore is equivalent to 0.
+  let TSFlags{39}    = VEX_WPrefix{0};
   let TSFlags{40}    = hasVEX_4V;
   let TSFlags{41}    = hasVEX_L;
   let TSFlags{42}    = hasEVEX_K;
@@ -453,7 +465,7 @@ class SI_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
          Domain d = GenericDomain>
       : I<o, F, outs, ins, asm, pattern, itin, d> {
   let Predicates = !if(!eq(OpEnc.Value, EncEVEX.Value), [HasAVX512],
-                   !if(!eq(OpEnc.Value, EncVEX.Value), [HasAVX],
+                   !if(!eq(OpEnc.Value, EncVEX.Value), [UseAVX],
                    !if(!eq(OpPrefix.Value, XS.Value), [UseSSE1],
                    !if(!eq(OpPrefix.Value, XD.Value), [UseSSE2],
                    !if(!eq(OpPrefix.Value, PD.Value), [UseSSE2],

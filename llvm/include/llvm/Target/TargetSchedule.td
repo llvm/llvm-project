@@ -139,7 +139,7 @@ class ProcResourceKind;
 // changes this to an in-order issue/dispatch resource. In this case,
 // the scheduler counts down from the cycle that the instruction
 // issues in-order, forcing a stall whenever a subsequent instruction
-// requires the same resource until the number of ResourceCyles
+// requires the same resource until the number of ResourceCycles
 // specified in WriteRes expire. Setting BufferSize=1 changes this to
 // an in-order latency resource. In this case, the scheduler models
 // producer/consumer stalls between instructions that use the
@@ -255,6 +255,9 @@ class ProcWriteResources<list<ProcResourceKind> resources> {
   // Allow a processor to mark some scheduling classes as unsupported
   // for stronger verification.
   bit Unsupported = 0;
+  // Allow a processor to mark some scheduling classes as single-issue.
+  // SingleIssue is an alias for Begin/End Group.
+  bit SingleIssue = 0;
   SchedMachineModel SchedModel = ?;
 }
 
@@ -331,7 +334,7 @@ class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
 }
 
 // Directly associate a new SchedRead type with a delay and optional
-// pipeline bypess. For use with InstRW or ItinRW.
+// pipeline bypass. For use with InstRW or ItinRW.
 class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
   ProcReadAdvance<cycles, writes>;
 

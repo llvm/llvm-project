@@ -13,16 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineScheduler.h"
-#include "R600InstrInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "R600InstrInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Pass.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 void R600SchedStrategy::initialize(ScheduleDAGMI *dag) {
   assert(dag->hasVRegLiveness() && "R600SchedStrategy needs vreg liveness");

@@ -10,29 +10,26 @@
 // caught when the related option is set.
 
 #include <assert.h>
+#include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 
 int main(int argc, char **argv)
 {
   assert(argc == 2);
   if (!strcmp(argv[1], "mallocdel")) {
     int *p = (int *)malloc(16);
-    if (!p)
-      return 1;
+    assert(p);
     delete p;
   }
   if (!strcmp(argv[1], "newfree")) {
     int *p = new int;
-    if (!p)
-      return 1;
+    assert(p);
     free((void *)p);
   }
   if (!strcmp(argv[1], "memaligndel")) {
     int *p = (int *)memalign(16, 16);
-    if (!p)
-      return 1;
+    assert(p);
     delete p;
   }
   return 0;

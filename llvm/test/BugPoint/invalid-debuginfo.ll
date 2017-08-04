@@ -1,6 +1,6 @@
 ; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes 2>&1 | FileCheck %s
 ; REQUIRES: loadable_module
-; CHECK: All DICompileUnits must be listed in llvm.dbg.cu
+; CHECK: DICompileUnit not listed in llvm.dbg.cu
 
 ; When bugpoint hacks at this testcase it will at one point create illegal IR
 ; that won't even pass the Verifier. A bugpoint *driver* built with assertions

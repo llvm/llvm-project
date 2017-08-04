@@ -29,11 +29,11 @@ entry:
 
 define i8* @bigstack() nounwind {
 entry:
- %0 = alloca i8, i32 230
+ %0 = alloca i8, i32 290
        ret i8* %0
 }
 ; PPC32-LABEL: bigstack:
-; PPC32: stwu 1, -240(1)
+; PPC32: stwu 1, -304(1)
 
 ; PPC64-LABEL: bigstack:
-; PPC64: stdu 1, -288(1)
+; PPC64: stdu 1, -352(1)

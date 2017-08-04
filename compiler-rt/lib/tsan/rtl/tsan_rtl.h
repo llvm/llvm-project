@@ -55,16 +55,22 @@ namespace __tsan {
 #if !SANITIZER_GO
 struct MapUnmapCallback;
 #if defined(__mips64) || defined(__aarch64__) || defined(__powerpc__)
-static const uptr kAllocatorSpace = 0;
-static const uptr kAllocatorSize = SANITIZER_MMAP_RANGE_SIZE;
 static const uptr kAllocatorRegionSizeLog = 20;
 static const uptr kAllocatorNumRegions =
-    kAllocatorSize >> kAllocatorRegionSizeLog;
+    SANITIZER_MMAP_RANGE_SIZE >> kAllocatorRegionSizeLog;
 typedef TwoLevelByteMap<(kAllocatorNumRegions >> 12), 1 << 12,
     MapUnmapCallback> ByteMap;
-typedef SizeClassAllocator32<kAllocatorSpace, kAllocatorSize, 0,
-    CompactSizeClassMap, kAllocatorRegionSizeLog, ByteMap,
-    MapUnmapCallback> PrimaryAllocator;
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = 0;
+  typedef __sanitizer::CompactSizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = kAllocatorRegionSizeLog;
+  typedef __tsan::ByteMap ByteMap;
+  typedef __tsan::MapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #else
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = Mapping::kHeapMemBeg;
@@ -381,6 +387,7 @@ struct ThreadState {
   // for better performance.
   int ignore_reads_and_writes;
   int ignore_sync;
+  int suppress_reports;
   // Go does not support ignores.
 #if !SANITIZER_GO
   IgnoreSet mop_ignore_set;
@@ -410,7 +417,6 @@ struct ThreadState {
   bool is_dead;
   bool is_freeing;
   bool is_vptr_access;
-  uptr external_tag;
   const uptr stk_addr;
   const uptr stk_size;
   const uptr tls_addr;
@@ -546,6 +552,10 @@ struct Context {
 
 extern Context *ctx;  // The one and the only global runtime context.
 
+ALWAYS_INLINE Flags *flags() {
+  return &ctx->flags;
+}
+
 struct ScopedIgnoreInterceptors {
   ScopedIgnoreInterceptors() {
 #if !SANITIZER_GO
@@ -560,9 +570,13 @@ struct ScopedIgnoreInterceptors {
   }
 };
 
+const char *GetObjectTypeFromTag(uptr tag);
+const char *GetReportHeaderFromTag(uptr tag);
+uptr TagFromShadowStackFrame(uptr pc);
+
 class ScopedReport {
  public:
-  explicit ScopedReport(ReportType typ);
+  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
   ~ScopedReport();
 
   void AddMemoryAccess(uptr addr, uptr external_tag, Shadow s, StackTrace stack,
@@ -593,10 +607,26 @@ class ScopedReport {
 
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
-                  MutexSet *mset);
+                  MutexSet *mset, uptr *tag = nullptr);
+
+// The stack could look like:
+//   <start> | <main> | <foo> | tag | <bar>
+// This will extract the tag and keep:
+//   <start> | <main> | <foo> | <bar>
+template<typename StackTraceTy>
+void ExtractTagFromStack(StackTraceTy *stack, uptr *tag = nullptr) {
+  if (stack->size < 2) return;
+  uptr possible_tag_pc = stack->trace[stack->size - 2];
+  uptr possible_tag = TagFromShadowStackFrame(possible_tag_pc);
+  if (possible_tag == kExternalTagNone) return;
+  stack->trace_buffer[stack->size - 2] = stack->trace_buffer[stack->size - 1];
+  stack->size -= 1;
+  if (tag) *tag = possible_tag;
+}
 
 template<typename StackTraceTy>
-void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack) {
+void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack,
+                        uptr *tag = nullptr) {
   uptr size = thr->shadow_stack_pos - thr->shadow_stack;
   uptr start = 0;
   if (size + !!toppc > kStackTraceMax) {
@@ -604,6 +634,7 @@ void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack) {
     size = kStackTraceMax - !!toppc;
   }
   stack->Init(&thr->shadow_stack[start], size, toppc);
+  ExtractTagFromStack(stack, tag);
 }
 
 
@@ -640,8 +671,6 @@ bool OutputReport(ThreadState *thr, const ScopedReport &srep);
 bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
 void PrintMatchedBenignRaces();
-
-const char *GetObjectTypeFromTag(uptr tag);
 
 #if defined(TSAN_DEBUG_OUTPUT) && TSAN_DEBUG_OUTPUT >= 1
 # define DPrintf Printf
@@ -707,16 +736,16 @@ void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);
 void MemoryRangeFreed(ThreadState *thr, uptr pc, uptr addr, uptr size);
 void MemoryRangeImitateWrite(ThreadState *thr, uptr pc, uptr addr, uptr size);
 
-void ThreadIgnoreBegin(ThreadState *thr, uptr pc);
+void ThreadIgnoreBegin(ThreadState *thr, uptr pc, bool save_stack = true);
 void ThreadIgnoreEnd(ThreadState *thr, uptr pc);
-void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc);
+void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc, bool save_stack = true);
 void ThreadIgnoreSyncEnd(ThreadState *thr, uptr pc);
 
 void FuncEntry(ThreadState *thr, uptr pc);
 void FuncExit(ThreadState *thr);
 
 int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
-void ThreadStart(ThreadState *thr, int tid, uptr os_id, bool workerthread);
+void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread);
 void ThreadFinish(ThreadState *thr);
 int ThreadTid(ThreadState *thr, uptr pc, uptr uid);
 void ThreadJoin(ThreadState *thr, uptr pc, int tid);
@@ -731,13 +760,16 @@ void ProcDestroy(Processor *proc);
 void ProcWire(Processor *proc, ThreadState *thr);
 void ProcUnwire(Processor *proc, ThreadState *thr);
 
-void MutexCreate(ThreadState *thr, uptr pc, uptr addr,
-                 bool rw, bool recursive, bool linker_init);
-void MutexDestroy(ThreadState *thr, uptr pc, uptr addr);
-void MutexLock(ThreadState *thr, uptr pc, uptr addr, int rec = 1,
-               bool try_lock = false);
-int  MutexUnlock(ThreadState *thr, uptr pc, uptr addr, bool all = false);
-void MutexReadLock(ThreadState *thr, uptr pc, uptr addr, bool try_lock = false);
+// Note: the parameter is called flagz, because flags is already taken
+// by the global function that returns flags.
+void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
+void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
+void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
+void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0,
+    int rec = 1);
+int  MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
+void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
+void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz = 0);
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr);
 void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr);
 void MutexRepair(ThreadState *thr, uptr pc, uptr addr);  // call on EOWNERDEAD

@@ -36,25 +36,57 @@ enum CPUFeature {
 };
 bool testCPUFeature(CPUFeature feature);
 
-// Tiny PRNG based on https://en.wikipedia.org/wiki/Xorshift#xorshift.2B
-// The state (128 bits) will be stored in thread local storage.
-struct Xorshift128Plus {
+INLINE u64 rotl(const u64 X, int K) {
+  return (X << K) | (X >> (64 - K));
+}
+
+// XoRoShiRo128+ PRNG (http://xoroshiro.di.unimi.it/).
+struct XoRoShiRo128Plus {
  public:
-  Xorshift128Plus();
-  u64 Next() {
-    u64 x = State[0];
-    const u64 y = State[1];
-    State[0] = y;
-    x ^= x << 23;
-    State[1] = x ^ y ^ (x >> 17) ^ (y >> 26);
-    return State[1] + y;
+  void init() {
+    if (UNLIKELY(!GetRandom(reinterpret_cast<void *>(State), sizeof(State)))) {
+      // Early processes (eg: init) do not have /dev/urandom yet, but we still
+      // have to provide them with some degree of entropy. Not having a secure
+      // seed is not as problematic for them, as they are less likely to be
+      // the target of heap based vulnerabilities exploitation attempts.
+      State[0] = NanoTime();
+      State[1] = 0;
+    }
+    fillCache();
   }
+  u8 getU8() {
+    if (UNLIKELY(isCacheEmpty()))
+      fillCache();
+    const u8 Result = static_cast<u8>(CachedBytes & 0xff);
+    CachedBytes >>= 8;
+    CachedBytesAvailable--;
+    return Result;
+  }
+  u64 getU64() { return next(); }
+
  private:
+  u8 CachedBytesAvailable;
+  u64 CachedBytes;
   u64 State[2];
+  u64 next() {
+    const u64 S0 = State[0];
+    u64 S1 = State[1];
+    const u64 Result = S0 + S1;
+    S1 ^= S0;
+    State[0] = rotl(S0, 55) ^ S1 ^ (S1 << 14);
+    State[1] = rotl(S1, 36);
+    return Result;
+  }
+  bool isCacheEmpty() {
+    return CachedBytesAvailable == 0;
+  }
+  void fillCache() {
+    CachedBytes = next();
+    CachedBytesAvailable = sizeof(CachedBytes);
+  }
 };
 
-// Software CRC32 functions, to be used when hardware support is not detected.
-u32 computeSoftwareCRC32(u32 Crc, uptr Data);
+typedef XoRoShiRo128Plus ScudoPrng;
 
 }  // namespace __scudo
 

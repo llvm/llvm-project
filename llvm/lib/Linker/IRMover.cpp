@@ -395,11 +395,12 @@ class IRLinker {
       Worklist.push_back(GV);
   }
 
-  /// Flag whether the ModuleInlineAsm string in Src should be linked with
-  /// (concatenated into) the ModuleInlineAsm string for the destination
-  /// module. It should be true for full LTO, but not when importing for
-  /// ThinLTO, otherwise we can have duplicate symbols.
-  bool LinkModuleInlineAsm;
+  /// Whether we are importing globals for ThinLTO, as opposed to linking the
+  /// source module. If this flag is set, it means that we can rely on some
+  /// other object file to define any non-GlobalValue entities defined by the
+  /// source module. This currently causes us to not link retained types in
+  /// debug info metadata and module inline asm.
+  bool IsPerformingImport;
 
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
@@ -491,10 +492,10 @@ public:
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
            std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor,
-           bool LinkModuleInlineAsm, bool IsPerformingImport)
+           bool IsPerformingImport)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
         TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs), LinkModuleInlineAsm(LinkModuleInlineAsm),
+        SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_MoveDistinctMDs | RF_IgnoreMissingLocals, &TypeMap,
                &GValMaterializer),
         AliasMCID(Mapper.registerAlternateMappingContext(AliasValueMap,
@@ -601,6 +602,7 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          /*insertbefore*/ nullptr, SGVar->getThreadLocalMode(),
                          SGVar->getType()->getAddressSpace());
   NewDGV->setAlignment(SGVar->getAlignment());
+  NewDGV->copyAttributesFrom(SGVar);
   return NewDGV;
 }
 
@@ -609,8 +611,11 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
 Function *IRLinker::copyFunctionProto(const Function *SF) {
   // If there is no linkage to be performed or we are linking from the source,
   // bring SF over.
-  return Function::Create(TypeMap.get(SF->getFunctionType()),
-                          GlobalValue::ExternalLinkage, SF->getName(), &DstM);
+  auto *F =
+      Function::Create(TypeMap.get(SF->getFunctionType()),
+                       GlobalValue::ExternalLinkage, SF->getName(), &DstM);
+  F->copyAttributesFrom(SF);
+  return F;
 }
 
 /// Set up prototypes for any aliases that come over from the source module.
@@ -618,9 +623,11 @@ GlobalValue *IRLinker::copyGlobalAliasProto(const GlobalAlias *SGA) {
   // If there is no linkage to be performed or we're linking from the source,
   // bring over SGA.
   auto *Ty = TypeMap.get(SGA->getValueType());
-  return GlobalAlias::create(Ty, SGA->getType()->getPointerAddressSpace(),
-                             GlobalValue::ExternalLinkage, SGA->getName(),
-                             &DstM);
+  auto *GA =
+      GlobalAlias::create(Ty, SGA->getType()->getPointerAddressSpace(),
+                          GlobalValue::ExternalLinkage, SGA->getName(), &DstM);
+  GA->copyAttributesFrom(SGA);
+  return GA;
 }
 
 GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
@@ -646,8 +653,6 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV->setLinkage(SGV->getLinkage());
   else if (SGV->hasExternalWeakLinkage())
     NewGV->setLinkage(GlobalValue::ExternalWeakLinkage);
-
-  NewGV->copyAttributesFrom(SGV);
 
   if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
     // Metadata for global variables and function declarations is copied eagerly.
@@ -869,9 +874,6 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
 
   if (DGV && !DGV->isDeclarationForLinker())
     return false;
-
-  if (SGV.hasAvailableExternallyLinkage())
-    return true;
 
   if (SGV.isDeclaration() || DoneLinkingBodies)
     return false;
@@ -1155,6 +1157,11 @@ Error IRLinker::linkModuleFlagsMetadata() {
         mdconst::extract<ConstantInt>(DstOp->getOperand(0));
     unsigned DstBehaviorValue = DstBehavior->getZExtValue();
 
+    auto overrideDstValue = [&]() {
+      DstModFlags->setOperand(DstIndex, SrcOp);
+      Flags[ID].first = SrcOp;
+    };
+
     // If either flag has override behavior, handle it first.
     if (DstBehaviorValue == Module::Override) {
       // Diagnose inconsistent flags which both have override behavior.
@@ -1165,8 +1172,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
       continue;
     } else if (SrcBehaviorValue == Module::Override) {
       // Update the destination flag to that of the source.
-      DstModFlags->setOperand(DstIndex, SrcOp);
-      Flags[ID].first = SrcOp;
+      overrideDstValue();
       continue;
     }
 
@@ -1201,6 +1207,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
                     "': IDs have conflicting values");
       }
       continue;
+    }
+    case Module::Max: {
+      ConstantInt *DstValue =
+          mdconst::extract<ConstantInt>(DstOp->getOperand(2));
+      ConstantInt *SrcValue =
+          mdconst::extract<ConstantInt>(SrcOp->getOperand(2));
+      if (SrcValue->getZExtValue() > DstValue->getZExtValue())
+        overrideDstValue();
+      break;
     }
     case Module::Append: {
       MDNode *DstValue = cast<MDNode>(DstOp->getOperand(2));
@@ -1241,6 +1256,18 @@ Error IRLinker::linkModuleFlagsMetadata() {
   return Error::success();
 }
 
+/// Return InlineAsm adjusted with target-specific directives if required.
+/// For ARM and Thumb, we have to add directives to select the appropriate ISA
+/// to support mixing module-level inline assembly from ARM and Thumb modules.
+static std::string adjustInlineAsm(const std::string &InlineAsm,
+                                   const Triple &Triple) {
+  if (Triple.getArch() == Triple::thumb || Triple.getArch() == Triple::thumbeb)
+    return ".text\n.balign 2\n.thumb\n" + InlineAsm;
+  if (Triple.getArch() == Triple::arm || Triple.getArch() == Triple::armeb)
+    return ".text\n.balign 4\n.arm\n" + InlineAsm;
+  return InlineAsm;
+}
+
 Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
   if (SrcM->getMaterializer())
@@ -1277,12 +1304,14 @@ Error IRLinker::run() {
   DstM.setTargetTriple(SrcTriple.merge(DstTriple));
 
   // Append the module inline asm string.
-  if (LinkModuleInlineAsm && !SrcM->getModuleInlineAsm().empty()) {
+  if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
+    std::string SrcModuleInlineAsm = adjustInlineAsm(SrcM->getModuleInlineAsm(),
+                                                     SrcTriple);
     if (DstM.getModuleInlineAsm().empty())
-      DstM.setModuleInlineAsm(SrcM->getModuleInlineAsm());
+      DstM.setModuleInlineAsm(SrcModuleInlineAsm);
     else
       DstM.setModuleInlineAsm(DstM.getModuleInlineAsm() + "\n" +
-                              SrcM->getModuleInlineAsm());
+                              SrcModuleInlineAsm);
   }
 
   // Loop over all of the linked values to compute type mappings.
@@ -1416,10 +1445,10 @@ IRMover::IRMover(Module &M) : Composite(M) {
 Error IRMover::move(
     std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
     std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor,
-    bool LinkModuleInlineAsm, bool IsPerformingImport) {
+    bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       LinkModuleInlineAsm, IsPerformingImport);
+                       IsPerformingImport);
   Error E = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return E;

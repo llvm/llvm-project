@@ -1164,7 +1164,7 @@ define <2 x i64> @ushll2d(<2 x i32>* %A) nounwind {
 
 define <8 x i16> @ushll2_8h(<16 x i8>* %A) nounwind {
 ;CHECK-LABEL: ushll2_8h:
-;CHECK: ushll2.8h v0, {{v[0-9]+}}, #1
+;CHECK: ushll.8h v0, {{v[0-9]+}}, #1
         %load1 = load <16 x i8>, <16 x i8>* %A
         %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
         %tmp2 = zext <8 x i8> %tmp1 to <8 x i16>
@@ -1174,7 +1174,7 @@ define <8 x i16> @ushll2_8h(<16 x i8>* %A) nounwind {
 
 define <4 x i32> @ushll2_4s(<8 x i16>* %A) nounwind {
 ;CHECK-LABEL: ushll2_4s:
-;CHECK: ushll2.4s v0, {{v[0-9]+}}, #1
+;CHECK: ushll.4s v0, {{v[0-9]+}}, #1
         %load1 = load <8 x i16>, <8 x i16>* %A
         %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
         %tmp2 = zext <4 x i16> %tmp1 to <4 x i32>
@@ -1184,7 +1184,7 @@ define <4 x i32> @ushll2_4s(<8 x i16>* %A) nounwind {
 
 define <2 x i64> @ushll2_2d(<4 x i32>* %A) nounwind {
 ;CHECK-LABEL: ushll2_2d:
-;CHECK: ushll2.2d v0, {{v[0-9]+}}, #1
+;CHECK: ushll.2d v0, {{v[0-9]+}}, #1
         %load1 = load <4 x i32>, <4 x i32>* %A
         %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
         %tmp2 = zext <2 x i32> %tmp1 to <2 x i64>
@@ -1221,7 +1221,7 @@ define <2 x i64> @sshll2d(<2 x i32>* %A) nounwind {
 
 define <8 x i16> @sshll2_8h(<16 x i8>* %A) nounwind {
 ;CHECK-LABEL: sshll2_8h:
-;CHECK: sshll2.8h v0, {{v[0-9]+}}, #1
+;CHECK: sshll.8h v0, {{v[0-9]+}}, #1
         %load1 = load <16 x i8>, <16 x i8>* %A
         %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
         %tmp2 = sext <8 x i8> %tmp1 to <8 x i16>
@@ -1231,7 +1231,7 @@ define <8 x i16> @sshll2_8h(<16 x i8>* %A) nounwind {
 
 define <4 x i32> @sshll2_4s(<8 x i16>* %A) nounwind {
 ;CHECK-LABEL: sshll2_4s:
-;CHECK: sshll2.4s v0, {{v[0-9]+}}, #1
+;CHECK: sshll.4s v0, {{v[0-9]+}}, #1
         %load1 = load <8 x i16>, <8 x i16>* %A
         %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
         %tmp2 = sext <4 x i16> %tmp1 to <4 x i32>
@@ -1241,7 +1241,7 @@ define <4 x i32> @sshll2_4s(<8 x i16>* %A) nounwind {
 
 define <2 x i64> @sshll2_2d(<4 x i32>* %A) nounwind {
 ;CHECK-LABEL: sshll2_2d:
-;CHECK: sshll2.2d v0, {{v[0-9]+}}, #1
+;CHECK: sshll.2d v0, {{v[0-9]+}}, #1
         %load1 = load <4 x i32>, <4 x i32>* %A
         %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
         %tmp2 = sext <2 x i32> %tmp1 to <2 x i64>

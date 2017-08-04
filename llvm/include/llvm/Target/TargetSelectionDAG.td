@@ -136,29 +136,33 @@ def SDTIntUnaryOp : SDTypeProfile<1, 1, [   // ctlz
   SDTCisSameAs<0, 1>, SDTCisInt<0>
 ]>;
 def SDTIntExtendOp : SDTypeProfile<1, 1, [  // sext, zext, anyext
-  SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntTruncOp  : SDTypeProfile<1, 1, [  // trunc
-  SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<0, 1>
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTFPUnaryOp  : SDTypeProfile<1, 1, [   // fneg, fsqrt, etc
   SDTCisSameAs<0, 1>, SDTCisFP<0>
 ]>;
 def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fround
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fextend
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
-  SDTCisFP<0>, SDTCisInt<1>
+  SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTFPToIntOp : SDTypeProfile<1, 1, [    // fp_to_[su]int
-  SDTCisInt<0>, SDTCisFP<1>
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTExtInreg : SDTypeProfile<1, 2, [     // sext_inreg
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisVT<2, OtherVT>,
   SDTCisVTSmallerThanOp<2, 1>
+]>;
+def SDTExtInvec : SDTypeProfile<1, 1, [     // sext_invec
+  SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>, SDTCisVec<1>,
+  SDTCisOpSmallerThanOp<1, 0>, SDTCisSameSizeAs<0,1>
 ]>;
 
 def SDTSetCC : SDTypeProfile<1, 3, [        // setcc
@@ -170,7 +174,7 @@ def SDTSelect : SDTypeProfile<1, 3, [       // select
 ]>;
 
 def SDTVSelect : SDTypeProfile<1, 3, [       // vselect
-  SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>, SDTCisSameNumEltsAs<0, 1>
+  SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 
 def SDTSelectCC : SDTypeProfile<1, 5, [     // select_cc
@@ -277,7 +281,7 @@ def SDTConvertOp : SDTypeProfile<1, 5, [ //cvtss, su, us, uu, ff, fs, fu, sf, su
 ]>;
 
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
-        SDTypeProfile<0, 1, constraints>;
+        SDTypeProfile<0, 2, constraints>;
 class SDCallSeqEnd<list<SDTypeConstraint> constraints> :
         SDTypeProfile<0, 2, constraints>;
 
@@ -406,6 +410,10 @@ def umax       : SDNode<"ISD::UMAX"      , SDTIntBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
 
 def sext_inreg : SDNode<"ISD::SIGN_EXTEND_INREG", SDTExtInreg>;
+def sext_invec : SDNode<"ISD::SIGN_EXTEND_VECTOR_INREG", SDTExtInvec>;
+def zext_invec : SDNode<"ISD::ZERO_EXTEND_VECTOR_INREG", SDTExtInvec>;
+
+def abs        : SDNode<"ISD::ABS"        , SDTIntUnaryOp>;
 def bitreverse : SDNode<"ISD::BITREVERSE" , SDTIntUnaryOp>;
 def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntUnaryOp>;

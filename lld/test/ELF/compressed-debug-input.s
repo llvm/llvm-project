@@ -1,4 +1,4 @@
-# REQUIRES: zlib
+# REQUIRES: zlib, x86
 
 # RUN: llvm-mc -compress-debug-sections=zlib -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: llvm-readobj -sections %t | FileCheck -check-prefix=ZLIB %s
@@ -59,7 +59,7 @@
 # DATA-NEXT:   Link: 0
 # DATA-NEXT:   Info: 0
 # DATA-NEXT:   AddressAlignment: 1
-# DATA-NEXT:   EntrySize: 1
+# DATA-NEXT:   EntrySize: 0
 # DATA-NEXT:   SectionData (
 # DATA-NEXT:     0000: 73686F72 7420756E 7369676E 65642069  |short unsigned i|
 # DATA-NEXT:     0010: 6E740075 6E736967 6E656420 696E7400  |nt.unsigned int.|

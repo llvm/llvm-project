@@ -97,6 +97,7 @@ namespace std
     template <class T> struct is_polymorphic;
     template <class T> struct is_abstract;
     template <class T> struct is_final; // C++14
+    template <class T> struct is_aggregate; // C++17
 
     template <class T, class... Args> struct is_constructible;
     template <class T>                struct is_default_constructible;
@@ -286,6 +287,8 @@ namespace std
         = is_abstract<T>::value;                                         // C++17
       template <class T> constexpr bool is_final_v
         = is_final<T>::value;                                            // C++17
+      template <class T> constexpr bool is_aggregate_v
+        = is_aggregate<T>::value;                                        // C++17
       template <class T> constexpr bool is_signed_v
         = is_signed<T>::value;                                           // C++17
       template <class T> constexpr bool is_unsigned_v
@@ -1272,11 +1275,13 @@ template <class _Tp> using remove_all_extents_t = typename remove_all_extents<_T
 
 // decay
 
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS decay
-{
-private:
-    typedef typename remove_reference<_Tp>::type _Up;
+template <class _Up, bool>
+struct __decay {
+    typedef typename remove_cv<_Up>::type type;
+};
+
+template <class _Up>
+struct __decay<_Up, true> {
 public:
     typedef typename conditional
                      <
@@ -1289,6 +1294,15 @@ public:
                               typename remove_cv<_Up>::type
                          >::type
                      >::type type;
+};
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS decay
+{
+private:
+    typedef typename remove_reference<_Tp>::type _Up;
+public:
+    typedef typename __decay<_Up, __is_referenceable<_Up>::value>::type type;
 };
 
 #if _LIBCPP_STD_VER > 11
@@ -1324,6 +1338,19 @@ is_final : public integral_constant<bool, __is_final(_Tp)> {};
 template <class _Tp> _LIBCPP_CONSTEXPR bool is_final_v
     = is_final<_Tp>::value;
 #endif
+
+// is_aggregate
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
+is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
+
+#if !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+constexpr bool is_aggregate_v = is_aggregate<_Tp>::value;
+#endif
+
+#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
 
 // is_base_of
 
@@ -1954,11 +1981,18 @@ public:
     typedef typename common_type<typename common_type<_Tp, _Up>::type, _Vp>::type type;
 };
 
+template <>
+struct _LIBCPP_TEMPLATE_VIS common_type<void, void, void>
+{
+public:
+    typedef void type;
+};
+
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, void, void>
 {
 public:
-    typedef typename decay<_Tp>::type type;
+    typedef typename common_type<_Tp, _Tp>::type type;
 };
 
 template <class _Tp, class _Up>
@@ -1980,9 +2014,7 @@ struct _LIBCPP_TEMPLATE_VIS common_type {};
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
-{
-    typedef typename decay<_Tp>::type type;
-};
+    : public common_type<_Tp, _Tp> {};
 
 // bullet 3 - sizeof...(Tp) == 2
 
@@ -4706,5 +4738,36 @@ struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+// std::byte
+namespace std  // purposefully not versioned
+{
+template <class _Integer>
+  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
+  operator<<=(byte& __lhs, _Integer __shift) noexcept
+  { return __lhs = byte(static_cast<unsigned char>(__lhs) << __shift); }
+  
+template <class _Integer>
+  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
+  operator<< (byte  __lhs, _Integer __shift) noexcept
+  { return         byte(static_cast<unsigned char>(__lhs) << __shift); }
+
+template <class _Integer>
+  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
+  operator>>=(byte& __lhs, _Integer __shift) noexcept
+  { return __lhs = byte(static_cast<unsigned char>(__lhs) >> __shift); }
+
+template <class _Integer>
+  constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
+  operator>> (byte  __lhs, _Integer __shift) noexcept
+  { return         byte(static_cast<unsigned char>(__lhs) >> __shift); }
+  
+template <class _Integer>
+  constexpr typename enable_if<is_integral_v<_Integer>, _Integer>::type
+  to_integer(byte __b) noexcept { return _Integer(__b); }
+
+}
+#endif
 
 #endif  // _LIBCPP_TYPE_TRAITS

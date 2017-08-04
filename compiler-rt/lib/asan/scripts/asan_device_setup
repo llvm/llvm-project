@@ -52,7 +52,7 @@ function adb_remount {
     local STORAGE=`$ADB shell mount | grep /system | cut -d ' ' -f1`
     if [ "$STORAGE" != "" ]; then
       echo Remounting $STORAGE at /system
-      $ADB shell su -c "mount -o remount,rw $STORAGE /system"
+      $ADB shell su -c "mount -o rw,remount $STORAGE /system"
     else
       echo Failed to get storage device name for "/system" mount point
     fi
@@ -327,11 +327,6 @@ exec $_to \$@
 EOF
 }
 
-# On Android-L not allowing user segv handler breaks some applications.
-if [[ PRE_L -eq 0 ]]; then
-    ASAN_OPTIONS="$ASAN_OPTIONS,allow_user_segv_handler=1"
-fi
-
 if [[ x$extra_options != x ]] ; then
     ASAN_OPTIONS="$ASAN_OPTIONS,$extra_options"
 fi
@@ -415,15 +410,15 @@ if ! ( cd "$TMPDIRBASE" && diff -qr old/ new/ ) ; then
       install "$TMPDIR/asanwrapper" /system/bin 755
       install "$TMPDIR/asanwrapper64" /system/bin 755
 
-      adb_shell ln -s $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
-      adb_shell ln -s $ASAN_RT64 /system/lib64/$ASAN_RT_SYMLINK
+      adb_shell ln -sf $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
+      adb_shell ln -sf $ASAN_RT64 /system/lib64/$ASAN_RT_SYMLINK
     else
       install "$TMPDIR/$ASAN_RT" /system/lib 644
       install "$TMPDIR/app_process32" /system/bin 755 $CTX
       install "$TMPDIR/app_process.wrap" /system/bin 755 $CTX
       install "$TMPDIR/asanwrapper" /system/bin 755 $CTX
 
-      adb_shell ln -s $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
+      adb_shell ln -sf $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
 
       adb_shell rm /system/bin/app_process
       adb_shell ln -s /system/bin/app_process.wrap /system/bin/app_process

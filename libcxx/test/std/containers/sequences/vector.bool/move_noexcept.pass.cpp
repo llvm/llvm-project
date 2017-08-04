@@ -31,24 +31,29 @@ struct some_alloc
 
 int main()
 {
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::vector<bool> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::vector<bool, test_allocator<bool>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::vector<bool, other_allocator<bool>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
     {
-        typedef std::vector<bool, some_alloc<bool>> C;
     //  In C++17, move constructors for allocators are not allowed to throw
 #if TEST_STD_VER > 14
-        LIBCPP_STATIC_ASSERT( std::is_nothrow_move_constructible<C>::value, "");
+#if defined(_LIBCPP_VERSION)
+        typedef std::vector<bool, some_alloc<bool>> C;
+        static_assert( std::is_nothrow_move_constructible<C>::value, "");
+#endif // _LIBCPP_VERSION
 #else
+        typedef std::vector<bool, some_alloc<bool>> C;
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");
 #endif
     }

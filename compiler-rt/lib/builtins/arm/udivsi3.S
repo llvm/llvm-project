@@ -37,7 +37,16 @@ DEFINE_COMPILERRT_FUNCTION(__udivsi3)
 	beq     LOCAL_LABEL(divby0)
 	udiv	r0, r0, r1
 	bx  	lr
-#else
+
+LOCAL_LABEL(divby0):
+	mov     r0, #0
+#  ifdef __ARM_EABI__
+	b       __aeabi_idiv0
+#  else
+	JMP(lr)
+#  endif
+
+#else /* ! __ARM_ARCH_EXT_IDIV__ */
 	cmp	r1, #1
 	bcc	LOCAL_LABEL(divby0)
 #if __ARM_ARCH_ISA_THUMB == 1
@@ -186,9 +195,12 @@ LOCAL_LABEL(skip_1):
 LOCAL_LABEL(divby0):
 	movs	r0, #0
 #      if defined(__ARM_EABI__)
+	push {r7, lr}
 	bl	__aeabi_idiv0 // due to relocation limit, can't use b.
-#      endif
+	pop  {r7, pc}
+#      else
 	JMP(lr)
+#      endif
 
 
 #if __ARM_ARCH_ISA_THUMB == 1
@@ -251,16 +263,6 @@ LOCAL_LABEL(div0block):
 	mov	r0, r3
 	JMP(lr)
 #endif /* __ARM_ARCH_EXT_IDIV__ */
-
-#if __ARM_ARCH_EXT_IDIV__
-LOCAL_LABEL(divby0):
-        mov     r0, #0
-#  ifdef __ARM_EABI__
-        b       __aeabi_idiv0
-#  else
-        JMP(lr)
-#  endif
-#endif
 
 END_COMPILERRT_FUNCTION(__udivsi3)
 

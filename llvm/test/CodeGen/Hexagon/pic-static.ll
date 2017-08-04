@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=hexagon-- -mcpu=hexagonv5 -relocation-model=pic < %s | FileCheck %s
 
-; CHECK-DAG: r{{[0-9]+}} = add({{pc|PC}}, ##_GLOBAL_OFFSET_TABLE_@PCREL)
-; CHECK-DAG: r{{[0-9]+}} = add({{pc|PC}}, ##x@PCREL)
-; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}{{.*}}+{{.*}}##bar@GOT)
+; CHECK-DAG: r{{[0-9]+}} = add({{pc|PC}},##_GLOBAL_OFFSET_TABLE_@PCREL)
+; CHECK-DAG: r{{[0-9]+}} = add({{pc|PC}},##x@PCREL)
+; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}+##bar@GOT)
 
 @x = internal global i32 9, align 4
 @bar = external global i32*

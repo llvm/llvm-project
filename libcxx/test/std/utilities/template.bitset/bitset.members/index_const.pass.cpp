@@ -10,11 +10,16 @@
 // test constexpr bool operator[](size_t pos) const;
 
 #include <bitset>
+#include <type_traits>
 #include <cstdlib>
 #include <cassert>
 
-#if defined(__clang__)
+#include "test_macros.h"
+
+#if defined(TEST_COMPILER_CLANG)
 #pragma clang diagnostic ignored "-Wtautological-compare"
+#elif defined(TEST_COMPILER_C1XX)
+#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
 #endif
 
 template <std::size_t N>
@@ -31,7 +36,8 @@ template <std::size_t N>
 void test_index_const()
 {
     const std::bitset<N> v1 = make_bitset<N>();
-    if (N > 0)
+    const bool greater_than_0 = std::integral_constant<bool, (N > 0)>::value; // avoid compiler warnings
+    if (greater_than_0)
     {
         assert(v1[N/2] == v1.test(N/2));
     }

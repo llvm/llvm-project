@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-member-function -Wno-unused-local-typedefs -Wno-c++11-extensions -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-member-function -Wno-unused-local-typedefs -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-template -Wunused-member-function -Wno-unused-local-typedefs -Wno-c++11-extensions -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused -Wunused-template -Wunused-member-function -Wno-unused-local-typedefs -std=c++14 %s
 
 #ifdef HEADER
 
@@ -65,7 +65,7 @@ namespace {
   template <> void TS<int>::m() { }  // expected-warning{{unused}}
 
   template <typename T>
-  void tf() { }
+  void tf() { }  // expected-warning{{unused}}
   template <> void tf<int>() { }  // expected-warning{{unused}}
   
   struct VS {
@@ -198,6 +198,18 @@ namespace test8 {
 static void func();
 void bar() { void func() __attribute__((used)); }
 static void func() {}
+}
+
+namespace test9 {
+template<typename T>
+static void completeRedeclChainForTemplateSpecialization() { } // expected-warning {{unused}}
+}
+
+namespace test10 {
+#if __cplusplus >= 201103L
+template<class T>
+constexpr T pi = T(3.14); // expected-warning {{unused}}
+#endif
 }
 
 namespace pr19713 {

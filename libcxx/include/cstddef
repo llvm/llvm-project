@@ -28,6 +28,7 @@ Types:
     size_t
     max_align_t
     nullptr_t
+    byte // C++17
 
 }  // std
 
@@ -48,7 +49,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 using ::ptrdiff_t;
 using ::size_t;
 
-#if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T)
+#if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T) || \
+    defined(__DEFINED_max_align_t)
 // Re-use the compiler's <stddef.h> max_align_t where possible.
 using ::max_align_t;
 #else
@@ -56,5 +58,33 @@ typedef long double max_align_t;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+namespace std  // purposefully not versioned
+{
+enum class byte : unsigned char {};
+
+constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
+{ return __lhs = byte(static_cast<unsigned char>(__lhs) | static_cast<unsigned char>(__rhs)); }
+constexpr byte  operator| (byte  __lhs, byte __rhs) noexcept
+{ return         byte(static_cast<unsigned char>(__lhs) | static_cast<unsigned char>(__rhs)); }
+
+constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
+{ return __lhs = byte(static_cast<unsigned char>(__lhs) & static_cast<unsigned char>(__rhs)); }
+constexpr byte  operator& (byte  __lhs, byte __rhs) noexcept
+{ return         byte(static_cast<unsigned char>(__lhs) & static_cast<unsigned char>(__rhs)); }
+
+constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept 
+{ return __lhs = byte(static_cast<unsigned char>(__lhs) ^ static_cast<unsigned char>(__rhs)); }
+constexpr byte  operator^ (byte  __lhs, byte __rhs) noexcept
+{ return         byte(static_cast<unsigned char>(__lhs) ^ static_cast<unsigned char>(__rhs)); }
+
+constexpr byte  operator~ (byte __b) noexcept
+{ return  byte(~static_cast<unsigned char>(__b)); }
+
+}
+
+#include <type_traits>  // rest of byte
+#endif
 
 #endif  // _LIBCPP_CSTDDEF

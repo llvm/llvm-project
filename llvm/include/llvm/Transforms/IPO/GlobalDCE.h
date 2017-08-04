@@ -18,6 +18,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_GLOBALDCE_H
 #define LLVM_TRANSFORMS_IPO_GLOBALDCE_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include <unordered_map>
@@ -31,14 +33,23 @@ public:
 
 private:
   SmallPtrSet<GlobalValue*, 32> AliveGlobals;
-  SmallPtrSet<Constant *, 8> SeenConstants;
+
+  /// Global -> Global that uses this global.
+  std::unordered_multimap<GlobalValue *, GlobalValue *> GVDependencies;
+
+  /// Constant -> Globals that use this global cache.
+  std::unordered_map<Constant *, SmallPtrSet<GlobalValue *, 8>>
+      ConstantDependenciesCache;
+
+  /// Comdat -> Globals in that Comdat section.
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
 
-  /// Mark the specific global value as needed, and
-  /// recursively mark anything that it uses as also needed.
-  void GlobalIsNeeded(GlobalValue *GV);
-  void MarkUsedGlobalsAsNeeded(Constant *C);
+  void UpdateGVDependencies(GlobalValue &GV);
+  void MarkLive(GlobalValue &GV,
+                SmallVectorImpl<GlobalValue *> *Updates = nullptr);
   bool RemoveUnusedGlobalValue(GlobalValue &GV);
+
+  void ComputeDependencies(Value *V, SmallPtrSetImpl<GlobalValue *> &U);
 };
 
 }

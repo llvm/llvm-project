@@ -13,9 +13,13 @@ int foo(int S::* ps, S *s)
 
 struct S2 {
   int bitfield : 1;
+  struct {
+    int anon_bitfield : 1;
+  };
 };
 
 int S2::*pf = &S2::bitfield; // expected-error {{address of bit-field requested}}
+int S2::*anon_pf = &S2::anon_bitfield; // expected-error {{address of bit-field requested}}
 
 struct S3 {
   void m();

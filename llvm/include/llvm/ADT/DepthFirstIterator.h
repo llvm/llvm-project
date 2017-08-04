@@ -68,13 +68,14 @@ public:
 // cross edges in the spanning tree but is not used in the common case.
 template <typename NodeRef, unsigned SmallSize=8>
 struct df_iterator_default_set : public SmallPtrSet<NodeRef, SmallSize> {
-  typedef SmallPtrSet<NodeRef, SmallSize>  BaseSet;
-  typedef typename BaseSet::iterator iterator;
-  std::pair<iterator,bool> insert(NodeRef N) { return BaseSet::insert(N) ; }
+  using BaseSet = SmallPtrSet<NodeRef, SmallSize>;
+  using iterator = typename BaseSet::iterator;
+
+  std::pair<iterator,bool> insert(NodeRef N) { return BaseSet::insert(N); }
   template <typename IterT>
   void insert(IterT Begin, IterT End) { BaseSet::insert(Begin,End); }
 
-  void completed(NodeRef) { }
+  void completed(NodeRef) {}
 };
 
 // Generic Depth First Iterator
@@ -85,15 +86,14 @@ template <class GraphT,
 class df_iterator
     : public std::iterator<std::forward_iterator_tag, typename GT::NodeRef>,
       public df_iterator_storage<SetType, ExtStorage> {
-  typedef std::iterator<std::forward_iterator_tag, typename GT::NodeRef> super;
-
-  typedef typename GT::NodeRef NodeRef;
-  typedef typename GT::ChildIteratorType ChildItTy;
+  using super = std::iterator<std::forward_iterator_tag, typename GT::NodeRef>;
+  using NodeRef = typename GT::NodeRef;
+  using ChildItTy = typename GT::ChildIteratorType;
 
   // First element is node reference, second is the 'next child' to visit.
   // The second child is initialized lazily to pick up graph changes during the
   // DFS.
-  typedef std::pair<NodeRef, Optional<ChildItTy>> StackElement;
+  using StackElement = std::pair<NodeRef, Optional<ChildItTy>>;
 
   // VisitStack - Used to maintain the ordering.  Top = current block
   std::vector<StackElement> VisitStack;
@@ -103,12 +103,15 @@ private:
     this->Visited.insert(Node);
     VisitStack.push_back(StackElement(Node, None));
   }
+
   inline df_iterator() = default; // End is when stack is empty
+
   inline df_iterator(NodeRef Node, SetType &S)
       : df_iterator_storage<SetType, ExtStorage>(S) {
     if (this->Visited.insert(Node).second)
       VisitStack.push_back(StackElement(Node, None));
   }
+
   inline df_iterator(SetType &S)
     : df_iterator_storage<SetType, ExtStorage>(S) {
     // End is when stack is empty
@@ -135,14 +138,14 @@ private:
         }
       }
       this->Visited.completed(Node);
-      
+
       // Oops, ran out of successors... go up a level on the stack.
       VisitStack.pop_back();
     } while (!VisitStack.empty());
   }
 
 public:
-  typedef typename super::pointer pointer;
+  using pointer = typename super::pointer;
 
   // Provide static begin and end methods as our public "constructors"
   static df_iterator begin(const GraphT &G) {

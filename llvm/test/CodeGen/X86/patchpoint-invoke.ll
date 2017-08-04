@@ -45,7 +45,7 @@ threw:
 ; Verify that the stackmap section got emitted:
 ; CHECK-LABEL: __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 2
+; CHECK-NEXT:   .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions

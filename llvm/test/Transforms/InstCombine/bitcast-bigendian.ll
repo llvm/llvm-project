@@ -9,8 +9,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define float @test2(<2 x float> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> %A, i32 1
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> %B to <2 x float>
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[B:%.*]] to <2 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[BC]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -29,8 +29,8 @@ define float @test2(<2 x float> %A, <2 x i32> %B) {
 
 define float @test3(<2 x float> %A, <2 x i64> %B) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> %A, i32 0
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> %B to <4 x float>
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[BC2]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP24]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -51,8 +51,8 @@ define float @test3(<2 x float> %A, <2 x i64> %B) {
 
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 %B, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 %A, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %tmp38 = zext i32 %A to i64
@@ -65,8 +65,8 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float %B, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float %A, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %tmp37 = bitcast float %A to i32
@@ -81,9 +81,8 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float %A, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float 4.200000e+01, i32 1
-; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float undef, float 4.200000e+01>, float [[A:%.*]], i32 0
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32
   %tmp24 = zext i32 %tmp23 to i64
@@ -93,12 +92,12 @@ define <2 x float> @test6(float %A){
   ret <2 x float> %tmp35
 }
 
-; Verify that 'xor' of vector and constant is done as a vector bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
 ; CHECK-LABEL: @xor_bitcast_vec_to_vec(
-; CHECK-NEXT:    [[T21:%.*]] = xor <1 x i64> %a, <i64 4294967298>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <1 x i64> [[T21]] to <2 x i32>
+; CHECK-NEXT:    [[T1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[T2:%.*]] = xor <2 x i32> [[T1]], <i32 1, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast <1 x i64> %a to <2 x i32>
@@ -106,12 +105,12 @@ define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
   ret <2 x i32> %t2
 }
 
-; Verify that 'and' of integer and constant is done as a vector bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
 ; CHECK-LABEL: @and_bitcast_vec_to_int(
-; CHECK-NEXT:    [[T21:%.*]] = and <2 x i32> %a, <i32 0, i32 3>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <2 x i32> [[T21]] to i64
+; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i32> [[A:%.*]] to i64
+; CHECK-NEXT:    [[T2:%.*]] = and i64 [[T1]], 3
 ; CHECK-NEXT:    ret i64 [[T2]]
 ;
   %t1 = bitcast <2 x i32> %a to i64
@@ -119,12 +118,12 @@ define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
   ret i64 %t2
 }
 
-; Verify that 'or' of vector and constant is done as an integer bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 ; CHECK-LABEL: @or_bitcast_int_to_vec(
-; CHECK-NEXT:    [[T21:%.*]] = or i64 %a, 4294967298
-; CHECK-NEXT:    [[T2:%.*]] = bitcast i64 [[T21]] to <2 x i32>
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i64 [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[T2:%.*]] = or <2 x i32> [[T1]], <i32 1, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast i64 %a to <2 x i32>

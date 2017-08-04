@@ -14,21 +14,21 @@
 # RUN: llvm-readobj -symbols -r %t | FileCheck -check-prefix=DEFCOMM %s
 
 # CHECK:        Symbol {
-# CHECK:          Name: common (1)
+# CHECK:          Name: common
 # CHECK-NEXT:     Value: 0x4
 # CHECK-NEXT:     Size: 4
-# CHECK-NEXT:     Binding: Global (0x1)
-# CHECK-NEXT:     Type: Object (0x1)
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Object
 # CHECK-NEXT:     Other: 0
 # CHECK-NEXT:     Section: Common (0xFFF2)
 # CHECK-NEXT:   }
 
 # DEFCOMM:      Symbol {
-# DEFCOMM:        Name: common (1)
+# DEFCOMM:        Name: common
 # DEFCOMM-NEXT:   Value: 0x0
 # DEFCOMM-NEXT:   Size: 4
-# DEFCOMM-NEXT:   Binding: Global (0x1)
-# DEFCOMM-NEXT:   Type: Object (0x1)
+# DEFCOMM-NEXT:   Binding: Global
+# DEFCOMM-NEXT:   Type: Object
 # DEFCOMM-NEXT:   Other: 0
 # DEFCOMM-NEXT:   Section: COMMON (0x2)
 # DEFCOMM-NEXT: }

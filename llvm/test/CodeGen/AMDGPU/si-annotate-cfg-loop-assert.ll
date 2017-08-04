@@ -6,7 +6,7 @@
 ; CHECK s_or_b64 exec, exec
 ; CHECK s_andn2_b64 exec, exec
 ; CHECK s_cbranch_execnz
-define void @test(i32 %arg, i32 %arg1) {
+define amdgpu_kernel void @test(i32 %arg, i32 %arg1) {
 bb:
   %tmp = icmp ne i32 %arg, 0
   %tmp7 = icmp ne i32 %arg1, 0

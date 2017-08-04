@@ -35,7 +35,7 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 
@@ -132,12 +132,12 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
-# CHECK-NEXT:  - { id: 2, class: gpr64 }
-# CHECK-NEXT:  - { id: 3, class: gpr32 }
-# CHECK-NEXT:  - { id: 4, class: gpr64 }
-# CHECK-NEXT:  - { id: 5, class: gpr32 }
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -180,12 +180,12 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
-# CHECK-NEXT:  - { id: 2, class: fpr64 }
-# CHECK-NEXT:  - { id: 3, class: gpr32 }
-# CHECK-NEXT:  - { id: 4, class: gpr32 }
-# CHECK-NEXT:  - { id: 5, class: gpr32 }
+# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: fpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '' }
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -223,9 +223,9 @@ regBankSelected: true
 tracksRegLiveness: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
-# CHECK-NEXT:  - { id: 2, class: fpr32 }
+# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: fpr32, preferred-register: '' }
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -260,16 +260,16 @@ regBankSelected: true
 tracksRegLiveness: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
-# CHECK-NEXT:  - { id: 2, class: gpr32 }
-# CHECK-NEXT:  - { id: 3, class: gpr32 }
-# CHECK-NEXT:  - { id: 4, class: gpr64 }
-# CHECK-NEXT:  - { id: 5, class: gpr64 }
-# CHECK-NEXT:  - { id: 6, class: gpr64 }
-# CHECK-NEXT:  - { id: 7, class: gpr64 }
-# CHECK-NEXT:  - { id: 8, class: gpr64 }
-# CHECK-NEXT:  - { id: 9, class: gpr64 }
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 6, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 7, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 8, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 9, class: gpr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

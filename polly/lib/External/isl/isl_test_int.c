@@ -261,6 +261,9 @@ static void int_test_divexact(isl_int expected, isl_int lhs, isl_int rhs)
 
 		isl_int_fdiv_q_ui(result, lhs, rhsulong);
 		assert(isl_int_eq(expected, result));
+
+		isl_int_cdiv_q_ui(result, lhs, rhsulong);
+		assert(isl_int_eq(expected, result));
 	}
 
 	isl_int_clear(result);
@@ -358,11 +361,19 @@ static void int_test_fdiv(isl_int expected, isl_int lhs, isl_int rhs)
 
 static void int_test_cdiv(isl_int expected, isl_int lhs, isl_int rhs)
 {
+	unsigned long rhsulong;
 	isl_int result;
 	isl_int_init(result);
 
 	isl_int_cdiv_q(result, lhs, rhs);
 	assert(isl_int_eq(expected, result));
+
+	if (isl_int_fits_ulong(rhs)) {
+		rhsulong = isl_int_get_ui(rhs);
+
+		isl_int_cdiv_q_ui(result, lhs, rhsulong);
+		assert(isl_int_eq(expected, result));
+	}
 
 	isl_int_clear(result);
 }
@@ -466,6 +477,17 @@ static void int_test_abs_cmp(isl_int expected, isl_int lhs, isl_int rhs)
 	assert(-exp == sgn(isl_int_abs_cmp(rhs, lhs)));
 }
 
+/* If "expected" is equal to 1, then check that "rhs" divides "lhs".
+ * If "expected" is equal to 0, then check that "rhs" does not divide "lhs".
+ */
+static void int_test_divisible(isl_int expected, isl_int lhs, isl_int rhs)
+{
+	int exp;
+
+	exp = isl_int_get_si(expected);
+	assert(isl_int_is_divisible_by(lhs, rhs) == exp);
+}
+
 struct {
 	void (*fn)(isl_int, isl_int, isl_int);
 	char *expected, *lhs, *rhs;
@@ -550,6 +572,11 @@ struct {
 	{ &int_test_cdiv, "0", "1", "-2" },
 	{ &int_test_cdiv, "1", "-1", "-2" },
 
+	{ &int_test_cdiv, "1073741824", "2147483647", "2" },
+	{ &int_test_cdiv, "1073741824", "2147483648", "2" },
+	{ &int_test_cdiv, "-1073741824", "-2147483648", "2" },
+	{ &int_test_cdiv, "-1073741823", "-2147483647", "2" },
+
 	{ &int_test_tdiv, "0", "1", "2" },
 	{ &int_test_tdiv, "0", "-1", "2" },
 	{ &int_test_tdiv, "0", "1", "-2" },
@@ -596,6 +623,22 @@ struct {
 	{ &int_test_abs_cmp, "-1", "5", "9223372036854775807" },
 	{ &int_test_cmps, "1", "5", "-9223372036854775809" },
 	{ &int_test_abs_cmp, "-1", "5", "-9223372036854775809" },
+
+	{ &int_test_divisible, "1", "0", "0" },
+	{ &int_test_divisible, "0", "1", "0" },
+	{ &int_test_divisible, "0", "2", "0" },
+	{ &int_test_divisible, "0", "2147483647", "0" },
+	{ &int_test_divisible, "0", "9223372036854775807", "0" },
+	{ &int_test_divisible, "1", "0", "1" },
+	{ &int_test_divisible, "1", "1", "1" },
+	{ &int_test_divisible, "1", "2", "1" },
+	{ &int_test_divisible, "1", "2147483647", "1" },
+	{ &int_test_divisible, "1", "9223372036854775807", "1" },
+	{ &int_test_divisible, "1", "0", "2" },
+	{ &int_test_divisible, "0", "1", "2" },
+	{ &int_test_divisible, "1", "2", "2" },
+	{ &int_test_divisible, "0", "2147483647", "2" },
+	{ &int_test_divisible, "0", "9223372036854775807", "2" },
 };
 
 /* Tests the isl_int_* function to give the expected results. Tests are

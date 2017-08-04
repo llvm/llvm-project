@@ -1,5 +1,6 @@
 /*
  * Copyright 2008-2009 Katholieke Universiteit Leuven
+ * Copyright 2011      INRIA Saclay
  *
  * Use of this software is governed by the MIT license
  *
@@ -299,6 +300,36 @@ uint32_t isl_seq_hash(isl_int *p, unsigned len, uint32_t hash)
 		hash = isl_int_hash(p[i], hash);
 	}
 	return hash;
+}
+
+/* Given two affine expressions "p" of length p_len (including the
+ * denominator and the constant term) and "subs" of length subs_len,
+ * plug in "subs" for the variable at position "pos".
+ * The variables of "subs" and "p" are assumed to match up to subs_len,
+ * but "p" may have additional variables.
+ * "v" is an initialized isl_int that can be used internally.
+ *
+ * In particular, if "p" represents the expression
+ *
+ *	(a i + g)/m
+ *
+ * with i the variable at position "pos" and "subs" represents the expression
+ *
+ *	f/d
+ *
+ * then the result represents the expression
+ *
+ *	(a f + d g)/(m d)
+ *
+ */
+void isl_seq_substitute(isl_int *p, int pos, isl_int *subs,
+	int p_len, int subs_len, isl_int v)
+{
+	isl_int_set(v, p[1 + pos]);
+	isl_int_set_si(p[1 + pos], 0);
+	isl_seq_combine(p + 1, subs[0], p + 1, v, subs + 1, subs_len - 1);
+	isl_seq_scale(p + subs_len, p + subs_len, subs[0], p_len - subs_len);
+	isl_int_mul(p[0], p[0], subs[0]);
 }
 
 uint32_t isl_seq_get_hash(isl_int *p, unsigned len)

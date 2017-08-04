@@ -67,12 +67,9 @@ static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
       error(IO.mapStringZ(N));
       error(IO.mapStringZ(U));
     } else {
-      size_t BytesNeeded = Name.size() + 1;
-      StringRef N = Name;
-      if (BytesNeeded > BytesLeft) {
-        size_t BytesToDrop = std::min(N.size(), BytesToDrop);
-        N = N.drop_back(BytesToDrop);
-      }
+      // Cap the length of the string at however many bytes we have available,
+      // plus one for the required null terminator.
+      auto N = StringRef(Name).take_front(BytesLeft - 1);
       error(IO.mapStringZ(N));
     }
   } else {
@@ -173,6 +170,15 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArgListRecord &Record) {
+  error(IO.mapVectorN<uint32_t>(
+      Record.ArgIndices,
+      [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
+
+  return Error::success();
+}
+
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
+                                          StringListRecord &Record) {
   error(IO.mapVectorN<uint32_t>(
       Record.StringIndices,
       [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
@@ -368,6 +374,14 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           TypeServer2Record &Record) {
+  error(IO.mapGuid(Record.Guid));
+  error(IO.mapInteger(Record.Age));
+  error(IO.mapStringZ(Record.Name));
+  return Error::success();
+}
+
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR, LabelRecord &Record) {
+  error(IO.mapEnum(Record.Mode));
   return Error::success();
 }
 

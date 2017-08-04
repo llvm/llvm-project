@@ -28,11 +28,11 @@
 int main()
 {
     {
-        typedef std::codecvt_utf8<wchar_t> C;
+        typedef std::codecvt_utf8<char32_t> C;
         C c;
-        wchar_t w = 0;
+        char32_t w = 0;
         char n[4] = {char(0xF1), char(0x80), char(0x80), char(0x83)};
-        wchar_t* wp = nullptr;
+        char32_t* wp = nullptr;
         std::mbstate_t m;
         const char* np = nullptr;
         std::codecvt_base::result r = c.in(m, n, n+4, np, &w, &w+1, wp);
@@ -67,11 +67,11 @@ int main()
         assert(w == 0x56);
     }
     {
-        typedef std::codecvt_utf8<wchar_t, 0x1000> C;
+        typedef std::codecvt_utf8<char32_t, 0x1000> C;
         C c;
-        wchar_t w = 0;
+        char32_t w = 0;
         char n[4] = {char(0xF1), char(0x80), char(0x80), char(0x83)};
-        wchar_t* wp = nullptr;
+        char32_t* wp = nullptr;
         std::mbstate_t m;
         const char* np = nullptr;
         std::codecvt_base::result r = c.in(m, n, n+4, np, &w, &w+1, wp);
@@ -106,11 +106,11 @@ int main()
         assert(w == 0x56);
     }
     {
-        typedef std::codecvt_utf8<wchar_t, 0xFFFFFFFF, std::consume_header> C;
+        typedef std::codecvt_utf8<char32_t, 0xFFFFFFFF, std::consume_header> C;
         C c;
-        wchar_t w = 0;
+        char32_t w = 0;
         char n[7] = {char(0xEF), char(0xBB), char(0xBF), char(0xF1), char(0x80), char(0x80), char(0x83)};
-        wchar_t* wp = nullptr;
+        char32_t* wp = nullptr;
         std::mbstate_t m;
         const char* np = nullptr;
         std::codecvt_base::result r = c.in(m, n, n+7, np, &w, &w+1, wp);

@@ -175,7 +175,7 @@ TEST_CASE(access_denied_on_recursion_test_case)
         TEST_CHECK(ec);
         TEST_CHECK(it == endIt);
     }
-    // Same as obove but test operator++().
+    // Same as above but test operator++().
     {
         std::error_code ec = GetTestEC();
         recursive_directory_iterator it(startDir, ec);
@@ -222,7 +222,7 @@ TEST_CASE(access_denied_on_recursion_test_case)
         TEST_REQUIRE(ec);
         TEST_REQUIRE(it == endIt);
     }
-    // Same as obove but testing the throwing constructors
+    // Same as above but testing the throwing constructors
     {
         TEST_REQUIRE_THROW(filesystem_error,
                            recursive_directory_iterator(permDeniedDir));

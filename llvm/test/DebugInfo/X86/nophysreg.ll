@@ -55,8 +55,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; Function Attrs: alwaysinline ssp uwtable
 define void @_Z2f21A(i32* %p5.coerce0, i32 %p5.coerce1) #0 !dbg !11 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %p5.coerce0, i64 0, metadata !16, metadata !33), !dbg !34
-  tail call void @llvm.dbg.value(metadata i32 %p5.coerce1, i64 0, metadata !16, metadata !35), !dbg !34
+  tail call void @llvm.dbg.value(metadata i32* %p5.coerce0, metadata !16, metadata !33), !dbg !34
+  tail call void @llvm.dbg.value(metadata i32 %p5.coerce1, metadata !16, metadata !35), !dbg !34
   tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !16, metadata !36), !dbg !34
   tail call void @_Z2f1Pii(i32* %p5.coerce0, i32 %p5.coerce1), !dbg !37
   ret void, !dbg !38
@@ -88,27 +88,27 @@ while.cond.loopexit:                              ; preds = %while.body4, %while
 
 while.body:                                       ; preds = %entry, %while.cond.loopexit
   store i32 0, i32* %ref.tmp, align 4, !dbg !41, !tbaa !42
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !46
+  call void @llvm.dbg.value(metadata i32* %x, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !46
   call void @_Z4funcRKiS0_(i32* dereferenceable(4) %x, i32* dereferenceable(4) %ref.tmp), !dbg !47
   %call29 = call i32 @_Z4condv(), !dbg !48
   %tobool310 = icmp eq i32 %call29, 0, !dbg !48
   br i1 %tobool310, label %while.cond.loopexit, label %while.body4, !dbg !49
 
 while.body4:                                      ; preds = %while.body, %while.body4
-  call void @llvm.dbg.value(metadata i8* %y, i64 0, metadata !23, metadata !DIExpression(DW_OP_deref)), !dbg !50
+  call void @llvm.dbg.value(metadata i8* %y, metadata !23, metadata !DIExpression(DW_OP_deref)), !dbg !50
   call void @_Z4funcPv(i8* %y), !dbg !51
-  call void @llvm.dbg.value(metadata i8* %j, i64 0, metadata !26, metadata !DIExpression(DW_OP_deref)), !dbg !52
+  call void @llvm.dbg.value(metadata i8* %j, metadata !26, metadata !DIExpression(DW_OP_deref)), !dbg !52
   call void @_Z4funcPv(i8* %j), !dbg !53
-  call void @llvm.dbg.value(metadata i8* %I, i64 0, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !54
+  call void @llvm.dbg.value(metadata i8* %I, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !54
   call void @_Z4funcPv(i8* %I), !dbg !55
   store i32 0, i32* %ref.tmp5, align 4, !dbg !56, !tbaa !42
   store i32 0, i32* %ref.tmp6, align 4, !dbg !57, !tbaa !42
   call void @_Z4funcRKiS0_(i32* dereferenceable(4) %ref.tmp5, i32* dereferenceable(4) %ref.tmp6), !dbg !58
   call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !28, metadata !36), !dbg !59
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !28, metadata !33), !dbg !59
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !46
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !60, metadata !33), !dbg !62
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !60, metadata !35), !dbg !62
+  call void @llvm.dbg.value(metadata i32* %x, metadata !28, metadata !33), !dbg !59
+  call void @llvm.dbg.value(metadata i32* %x, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !46
+  call void @llvm.dbg.value(metadata i32* %x, metadata !60, metadata !33), !dbg !62
+  call void @llvm.dbg.value(metadata i32 undef, metadata !60, metadata !35), !dbg !62
   call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !60, metadata !36), !dbg !62
   call void @_Z2f1Pii(i32* %x, i32 undef), !dbg !63
   %call2 = call i32 @_Z4condv(), !dbg !48
@@ -126,7 +126,7 @@ declare void @_Z4funcRKiS0_(i32* dereferenceable(4), i32* dereferenceable(4))
 declare void @_Z4funcPv(i8*)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { alwaysinline ssp uwtable }
 attributes #1 = { nounwind readnone }

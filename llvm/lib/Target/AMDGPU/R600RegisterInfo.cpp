@@ -56,6 +56,18 @@ BitVector R600RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+// Dummy to not crash RegisterClassInfo.
+static const MCPhysReg CalleeSavedReg = AMDGPU::NoRegister;
+
+const MCPhysReg *R600RegisterInfo::getCalleeSavedRegs(
+  const MachineFunction *) const {
+  return &CalleeSavedReg;
+}
+
+unsigned R600RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+  return AMDGPU::NoRegister;
+}
+
 unsigned R600RegisterInfo::getHWRegChan(unsigned reg) const {
   return this->getEncodingValue(reg) >> HW_CHAN_SHIFT;
 }

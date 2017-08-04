@@ -89,7 +89,7 @@ void test_counted()
     auto ret = std::uninitialized_move_n(It(values), 1, FIt(p));
     assert(ret.first == It(values +1));
     assert(ret.second == FIt(p +1));
-    assert(Counted::constructed = 1);
+    assert(Counted::constructed == 1);
     assert(Counted::count == 1);
     assert(p[0].value == 1);
     assert(values[0] == 0);

@@ -790,7 +790,7 @@ def : T_RRI_pat <S6_rol_i_r_xacc, int_hexagon_S6_rol_i_r_xacc>;
 defm : T_VR_pat <V6_extractw, int_hexagon_V6_extractw>;
 defm : T_VR_pat <V6_vinsertwr, int_hexagon_V6_vinsertwr>;
 
-def : T_PPQ_pat <S2_cabacencbin, int_hexagon_S2_cabacencbin>;
+//def : T_PPQ_pat <S2_cabacencbin, int_hexagon_S2_cabacencbin>;
 
 def: Pat<(v64i16 (trunc v64i32:$Vdd)),
          (v64i16 (V6_vpackwh_sat_128B

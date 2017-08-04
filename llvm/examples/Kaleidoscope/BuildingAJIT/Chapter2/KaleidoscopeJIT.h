@@ -1,4 +1,4 @@
-//===----- KaleidoscopeJIT.h - A simple JIT for Kaleidoscope ----*- C++ -*-===//
+//===- KaleidoscopeJIT.h - A simple JIT for Kaleidoscope --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,13 +17,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
@@ -44,22 +44,23 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  ObjectLinkingLayer<> ObjectLayer;
-  IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
-  typedef std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>
-    OptimizeFunction;
+  using OptimizeFunction =
+      std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
 public:
-  typedef decltype(OptimizeLayer)::ModuleSetHandleT ModuleHandle;
+  using ModuleHandle = decltype(OptimizeLayer)::ModuleHandleT;
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
-                      [this](std::unique_ptr<Module> M) {
+                      [this](std::shared_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
@@ -85,15 +86,10 @@ public:
           return JITSymbol(nullptr);
         });
 
-    // Build a singleton module set to hold our module.
-    std::vector<std::unique_ptr<Module>> Ms;
-    Ms.push_back(std::move(M));
-
     // Add the set to the JIT with the resolver we created above and a newly
     // created SectionMemoryManager.
-    return OptimizeLayer.addModuleSet(std::move(Ms),
-                                      make_unique<SectionMemoryManager>(),
-                                      std::move(Resolver));
+    return cantFail(OptimizeLayer.addModule(std::move(M),
+                                            std::move(Resolver)));
   }
 
   JITSymbol findSymbol(const std::string Name) {
@@ -104,11 +100,11 @@ public:
   }
 
   void removeModule(ModuleHandle H) {
-    OptimizeLayer.removeModuleSet(H);
+    cantFail(OptimizeLayer.removeModule(H));
   }
 
 private:
-  std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> M) {
+  std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> M) {
     // Create a function pass manager.
     auto FPM = llvm::make_unique<legacy::FunctionPassManager>(M.get());
 

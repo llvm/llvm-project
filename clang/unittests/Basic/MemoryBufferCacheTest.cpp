@@ -19,7 +19,8 @@ namespace {
 std::unique_ptr<MemoryBuffer> getBuffer(int I) {
   SmallVector<char, 8> Bytes;
   raw_svector_ostream(Bytes) << "data:" << I;
-  return MemoryBuffer::getMemBuffer(StringRef(Bytes.data(), Bytes.size()));
+  return MemoryBuffer::getMemBuffer(StringRef(Bytes.data(), Bytes.size()), "",
+                                    /* RequiresNullTerminator = */ false);
 }
 
 TEST(MemoryBufferCacheTest, addBuffer) {
@@ -49,7 +50,6 @@ TEST(MemoryBufferCacheTest, addBuffer) {
 
   // Replace the middle buffer.
   B2 = getBuffer(2);
-  ASSERT_NE(RawB2, B2.get());
   RawB2 = B2.get();
   EXPECT_EQ(RawB2, &Cache.addBuffer("2", std::move(B2)));
 

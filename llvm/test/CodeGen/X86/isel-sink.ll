@@ -1,5 +1,4 @@
 ; RUN: llc < %s -march=x86 | FileCheck %s
-; RUN: llc < %s -march=x86 -addr-sink-using-gep=1 | FileCheck %s
 
 define i32 @test(i32* %X, i32 %B) {
 ; CHECK-LABEL: test:

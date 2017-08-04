@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
-// Instruction scheduling annotations for out-of-order CPUs.
+// Instruction scheduling annotations for in-order and out-of-order CPUs.
 // These annotations are independent of the itinerary class defined below.
 // Here we define the subtarget independent read/write per-operand resources.
 // The subtarget schedule definitions will then map these to the subtarget's
@@ -54,6 +54,9 @@
 //  }
 //  def : ReadAdvance<ReadAdvanceALUsr, 3>;
 
+//===----------------------------------------------------------------------===//
+// Sched definitions for integer pipeline instructions
+//
 // Basic ALU operation.
 def WriteALU : SchedWrite;
 def ReadALU : SchedRead;
@@ -69,29 +72,84 @@ def WriteCMP : SchedWrite;
 def WriteCMPsi : SchedWrite;
 def WriteCMPsr : SchedWrite;
 
-// Division.
-def WriteDiv : SchedWrite;
+// Multiplys.
+def WriteMUL16   : SchedWrite; // 16-bit multiply.
+def WriteMUL32   : SchedWrite; // 32-bit multiply.
+def WriteMUL64Lo : SchedWrite; // 64-bit result. Low reg.
+def WriteMUL64Hi : SchedWrite; // 64-bit result. High reg.
+def ReadMUL  : SchedRead;
 
-// Loads.
+// Multiply-accumulates.
+def WriteMAC16   : SchedWrite; // 16-bit mac.
+def WriteMAC32   : SchedWrite; // 32-bit mac.
+def WriteMAC64Lo : SchedWrite; // 64-bit mac. Low reg.
+def WriteMAC64Hi : SchedWrite; // 64-bit mac. High reg.
+def ReadMAC : SchedRead;
+
+// Divisions.
+def WriteDIV : SchedWrite;
+
+// Loads/Stores.
 def WriteLd : SchedWrite;
 def WritePreLd : SchedWrite;
+def WriteST : SchedWrite;
 
 // Branches.
 def WriteBr : SchedWrite;
 def WriteBrL : SchedWrite;
 def WriteBrTbl : SchedWrite;
 
-// Fixpoint conversions.
-def WriteCvtFP : SchedWrite;
-
 // Noop.
 def WriteNoop : SchedWrite;
+
+//===----------------------------------------------------------------------===//
+// Sched definitions for floating-point and neon instructions
+//
+// Floating point conversions
+def WriteFPCVT : SchedWrite;
+def WriteFPMOV : SchedWrite; // FP -> GPR and vice-versa
+
+// ALU operations (32/64-bit)
+def WriteFPALU32 : SchedWrite;
+def WriteFPALU64 : SchedWrite;
+
+// Multiplication
+def WriteFPMUL32 : SchedWrite;
+def WriteFPMUL64 : SchedWrite;
+def ReadFPMUL    : SchedRead; // multiplier read
+def ReadFPMAC    : SchedRead; // accumulator read
+
+// Multiply-accumulate
+def WriteFPMAC32 : SchedWrite;
+def WriteFPMAC64 : SchedWrite;
+
+// Division
+def WriteFPDIV32 : SchedWrite;
+def WriteFPDIV64 : SchedWrite;
+
+// Square-root
+def WriteFPSQRT32 : SchedWrite;
+def WriteFPSQRT64 : SchedWrite;
+
+// Vector load and stores
+def WriteVLD1 : SchedWrite;
+def WriteVLD2 : SchedWrite;
+def WriteVLD3 : SchedWrite;
+def WriteVLD4 : SchedWrite;
+def WriteVST1 : SchedWrite;
+def WriteVST2 : SchedWrite;
+def WriteVST3 : SchedWrite;
+def WriteVST4 : SchedWrite;
+
 
 // Define TII for use in SchedVariant Predicates.
 def : PredicateProlog<[{
   const ARMBaseInstrInfo *TII =
     static_cast<const ARMBaseInstrInfo*>(SchedModel->getInstrInfo());
   (void)TII;
+  const ARMSubtarget *STI =
+    static_cast<const ARMSubtarget*>(SchedModel->getSubtargetInfo());
+  (void)STI;
 }]>;
 
 def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(*MI)}]>;
@@ -365,3 +423,5 @@ include "ARMScheduleA8.td"
 include "ARMScheduleA9.td"
 include "ARMScheduleSwift.td"
 include "ARMScheduleR52.td"
+include "ARMScheduleA57.td"
+include "ARMScheduleM3.td"

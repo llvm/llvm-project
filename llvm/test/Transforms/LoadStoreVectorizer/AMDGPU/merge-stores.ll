@@ -10,7 +10,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i8(
 ; CHECK: store <2 x i8> <i8 -56, i8 123>, <2 x i8> addrspace(1)* %{{[0-9]+}}, align 2
-define void @merge_global_store_2_constants_i8(i8 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i8(i8 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i32 1
 
   store i8 123, i8 addrspace(1)* %out.gep.1
@@ -20,7 +20,7 @@ define void @merge_global_store_2_constants_i8(i8 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i8_natural_align
 ; CHECK: store <2 x i8>
-define void @merge_global_store_2_constants_i8_natural_align(i8 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i8_natural_align(i8 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i32 1
 
   store i8 123, i8 addrspace(1)* %out.gep.1
@@ -30,7 +30,7 @@ define void @merge_global_store_2_constants_i8_natural_align(i8 addrspace(1)* %o
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i16
 ; CHECK: store <2 x i16> <i16 456, i16 123>, <2 x i16> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_2_constants_i16(i16 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i16(i16 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
 
   store i16 123, i16 addrspace(1)* %out.gep.1
@@ -40,7 +40,7 @@ define void @merge_global_store_2_constants_i16(i16 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_2_constants_0_i16
 ; CHECK: store <2 x i16> zeroinitializer, <2 x i16> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_2_constants_0_i16(i16 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_0_i16(i16 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
 
   store i16 0, i16 addrspace(1)* %out.gep.1
@@ -50,7 +50,7 @@ define void @merge_global_store_2_constants_0_i16(i16 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i16_natural_align
 ; CHECK: store <2 x i16>
-define void @merge_global_store_2_constants_i16_natural_align(i16 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(i16 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
 
   store i16 123, i16 addrspace(1)* %out.gep.1
@@ -60,7 +60,7 @@ define void @merge_global_store_2_constants_i16_natural_align(i16 addrspace(1)* 
 
 ; CHECK-LABEL: @merge_global_store_2_constants_half_natural_align
 ; CHECK: store <2 x half>
-define void @merge_global_store_2_constants_half_natural_align(half addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(half addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
 
   store half 2.0, half addrspace(1)* %out.gep.1
@@ -70,7 +70,7 @@ define void @merge_global_store_2_constants_half_natural_align(half addrspace(1)
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i32
 ; CHECK: store <2 x i32> <i32 456, i32 123>, <2 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_2_constants_i32(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i32(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
 
   store i32 123, i32 addrspace(1)* %out.gep.1
@@ -80,7 +80,7 @@ define void @merge_global_store_2_constants_i32(i32 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i32_f32
 ; CHECK: store <2 x i32> <i32 456, i32 1065353216>, <2 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_2_constants_i32_f32(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i32_f32(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.1.bc = bitcast i32 addrspace(1)* %out.gep.1 to float addrspace(1)*
   store float 1.0, float addrspace(1)* %out.gep.1.bc
@@ -90,7 +90,7 @@ define void @merge_global_store_2_constants_i32_f32(i32 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_2_constants_f32_i32
 ; CHECK  store <2 x float> <float 4.000000e+00, float 0x370EC00000000000>, <2 x float> addrspace(1)* %{{[0-9]+$}}
-define void @merge_global_store_2_constants_f32_i32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_f32_i32(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.1.bc = bitcast float addrspace(1)* %out.gep.1 to i32 addrspace(1)*
   store i32 123, i32 addrspace(1)* %out.gep.1.bc
@@ -100,7 +100,7 @@ define void @merge_global_store_2_constants_f32_i32(float addrspace(1)* %out) #0
 
 ; CHECK-LABEL: @merge_global_store_4_constants_i32
 ; CHECK: store <4 x i32> <i32 1234, i32 123, i32 456, i32 333>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_4_constants_i32(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_4_constants_i32(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3
@@ -114,7 +114,7 @@ define void @merge_global_store_4_constants_i32(i32 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_4_constants_f32_order
 ; CHECK: store <4 x float> <float 8.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>, <4 x float> addrspace(1)* %{{[0-9]+}}
-define void @merge_global_store_4_constants_f32_order(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_4_constants_f32_order(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr float, float addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr float, float addrspace(1)* %out, i32 3
@@ -129,7 +129,7 @@ define void @merge_global_store_4_constants_f32_order(float addrspace(1)* %out) 
 ; First store is out of order.
 ; CHECK-LABEL: @merge_global_store_4_constants_f32
 ; CHECK: store <4 x float> <float 8.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>, <4 x float> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_4_constants_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_4_constants_f32(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr float, float addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr float, float addrspace(1)* %out, i32 3
@@ -143,7 +143,7 @@ define void @merge_global_store_4_constants_f32(float addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_4_constants_mixed_i32_f32
 ; CHECK: store <4 x i32> <i32 1090519040, i32 11, i32 1073741824, i32 17>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_4_constants_mixed_i32_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_4_constants_mixed_i32_f32(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr float, float addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr float, float addrspace(1)* %out, i32 3
@@ -160,7 +160,7 @@ define void @merge_global_store_4_constants_mixed_i32_f32(float addrspace(1)* %o
 
 ; CHECK-LABEL: @merge_global_store_3_constants_i32
 ; CHECK: store <3 x i32> <i32 1234, i32 123, i32 456>, <3 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_3_constants_i32(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_3_constants_i32(i32 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
 
@@ -172,7 +172,7 @@ define void @merge_global_store_3_constants_i32(i32 addrspace(1)* %out) #0 {
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i64
 ; CHECK: store <2 x i64> <i64 456, i64 123>, <2 x i64> addrspace(1)* %{{[0-9]+}}, align 8
-define void @merge_global_store_2_constants_i64(i64 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_2_constants_i64(i64 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i64, i64 addrspace(1)* %out, i64 1
 
   store i64 123, i64 addrspace(1)* %out.gep.1
@@ -183,7 +183,7 @@ define void @merge_global_store_2_constants_i64(i64 addrspace(1)* %out) #0 {
 ; CHECK-LABEL: @merge_global_store_4_constants_i64
 ; CHECK: store <2 x i64> <i64 456, i64 333>, <2 x i64> addrspace(1)* %{{[0-9]+}}, align 8
 ; CHECK: store <2 x i64> <i64 1234, i64 123>, <2 x i64> addrspace(1)* %{{[0-9]+}}, align 8
-define void @merge_global_store_4_constants_i64(i64 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @merge_global_store_4_constants_i64(i64 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i64, i64 addrspace(1)* %out, i64 1
   %out.gep.2 = getelementptr i64, i64 addrspace(1)* %out, i64 2
   %out.gep.3 = getelementptr i64, i64 addrspace(1)* %out, i64 3
@@ -202,7 +202,7 @@ define void @merge_global_store_4_constants_i64(i64 addrspace(1)* %out) #0 {
 ; CHECK: [[INSERT0:%[^ ]+]] = insertelement <2 x i32> undef, i32 [[ELT0]], i32 0
 ; CHECK: [[INSERT1:%[^ ]+]] = insertelement <2 x i32> [[INSERT0]], i32 [[ELT1]], i32 1
 ; CHECK: store <2 x i32> [[INSERT1]]
-define void @merge_global_store_2_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 1
 
@@ -220,7 +220,7 @@ define void @merge_global_store_2_adjacent_loads_i32(i32 addrspace(1)* %out, i32
 ; CHECK: insertelement
 ; CHECK: insertelement
 ; CHECK: store <2 x i32>
-define void @merge_global_store_2_adjacent_loads_i32_nonzero_base(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32_nonzero_base(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %in.gep.0 = getelementptr i32, i32 addrspace(1)* %in, i32 2
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 3
 
@@ -241,7 +241,7 @@ define void @merge_global_store_2_adjacent_loads_i32_nonzero_base(i32 addrspace(
 ; CHECK: [[INSERT0:%[^ ]+]] = insertelement <2 x i32> undef, i32 [[ELT1]], i32 0
 ; CHECK: [[INSERT1:%[^ ]+]] = insertelement <2 x i32> [[INSERT0]], i32 [[ELT0]], i32 1
 ; CHECK: store <2 x i32> [[INSERT1]]
-define void @merge_global_store_2_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 1
 
@@ -256,7 +256,7 @@ define void @merge_global_store_2_adjacent_loads_shuffle_i32(i32 addrspace(1)* %
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i32
 ; CHECK: load <4 x i32>
 ; CHECK: store <4 x i32>
-define void @merge_global_store_4_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3
@@ -279,7 +279,7 @@ define void @merge_global_store_4_adjacent_loads_i32(i32 addrspace(1)* %out, i32
 ; CHECK-LABEL: @merge_global_store_3_adjacent_loads_i32
 ; CHECK: load <3 x i32>
 ; CHECK: store <3 x i32>
-define void @merge_global_store_3_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 1
@@ -298,7 +298,7 @@ define void @merge_global_store_3_adjacent_loads_i32(i32 addrspace(1)* %out, i32
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_f32
 ; CHECK: load <4 x float>
 ; CHECK: store <4 x float>
-define void @merge_global_store_4_adjacent_loads_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr float, float addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr float, float addrspace(1)* %out, i32 3
@@ -321,7 +321,7 @@ define void @merge_global_store_4_adjacent_loads_f32(float addrspace(1)* %out, f
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i32_nonzero_base
 ; CHECK: load <4 x i32>
 ; CHECK: store <4 x i32>
-define void @merge_global_store_4_adjacent_loads_i32_nonzero_base(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32_nonzero_base(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %in.gep.0 = getelementptr i32, i32 addrspace(1)* %in, i32 11
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 12
   %in.gep.2 = getelementptr i32, i32 addrspace(1)* %in, i32 13
@@ -346,7 +346,7 @@ define void @merge_global_store_4_adjacent_loads_i32_nonzero_base(i32 addrspace(
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_inverse_i32
 ; CHECK: load <4 x i32>
 ; CHECK: store <4 x i32>
-define void @merge_global_store_4_adjacent_loads_inverse_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3
@@ -373,7 +373,7 @@ define void @merge_global_store_4_adjacent_loads_inverse_i32(i32 addrspace(1)* %
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_shuffle_i32
 ; CHECK: load <4 x i32>
 ; CHECK: store <4 x i32>
-define void @merge_global_store_4_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3
@@ -408,7 +408,7 @@ define void @merge_global_store_4_adjacent_loads_shuffle_i32(i32 addrspace(1)* %
 ; CHECK: insertelement <4 x i8>
 ; CHECK: insertelement <4 x i8>
 ; CHECK: store <4 x i8>
-define void @merge_global_store_4_adjacent_loads_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i8 1
   %out.gep.2 = getelementptr i8, i8 addrspace(1)* %out, i8 2
   %out.gep.3 = getelementptr i8, i8 addrspace(1)* %out, i8 3
@@ -431,7 +431,7 @@ define void @merge_global_store_4_adjacent_loads_i8(i8 addrspace(1)* %out, i8 ad
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i8_natural_align
 ; CHECK: load <4 x i8>
 ; CHECK: store <4 x i8>
-define void @merge_global_store_4_adjacent_loads_i8_natural_align(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8_natural_align(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i8 1
   %out.gep.2 = getelementptr i8, i8 addrspace(1)* %out, i8 2
   %out.gep.3 = getelementptr i8, i8 addrspace(1)* %out, i8 3
@@ -454,7 +454,7 @@ define void @merge_global_store_4_adjacent_loads_i8_natural_align(i8 addrspace(1
 ; CHECK-LABEL: @merge_global_store_4_vector_elts_loads_v4i32
 ; CHECK: load <4 x i32>
 ; CHECK: store <4 x i32>
-define void @merge_global_store_4_vector_elts_loads_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @merge_global_store_4_vector_elts_loads_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3
@@ -474,7 +474,7 @@ define void @merge_global_store_4_vector_elts_loads_v4i32(i32 addrspace(1)* %out
 
 ; CHECK-LABEL: @merge_local_store_2_constants_i8
 ; CHECK: store <2 x i8> <i8 -56, i8 123>, <2 x i8> addrspace(3)* %{{[0-9]+}}, align 2
-define void @merge_local_store_2_constants_i8(i8 addrspace(3)* %out) #0 {
+define amdgpu_kernel void @merge_local_store_2_constants_i8(i8 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(3)* %out, i32 1
 
   store i8 123, i8 addrspace(3)* %out.gep.1
@@ -484,7 +484,7 @@ define void @merge_local_store_2_constants_i8(i8 addrspace(3)* %out) #0 {
 
 ; CHECK-LABEL: @merge_local_store_2_constants_i32
 ; CHECK: store <2 x i32> <i32 456, i32 123>, <2 x i32> addrspace(3)* %{{[0-9]+}}, align 4
-define void @merge_local_store_2_constants_i32(i32 addrspace(3)* %out) #0 {
+define amdgpu_kernel void @merge_local_store_2_constants_i32(i32 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(3)* %out, i32 1
 
   store i32 123, i32 addrspace(3)* %out.gep.1
@@ -495,7 +495,7 @@ define void @merge_local_store_2_constants_i32(i32 addrspace(3)* %out) #0 {
 ; CHECK-LABEL: @merge_local_store_2_constants_i32_align_2
 ; CHECK: store i32
 ; CHECK: store i32
-define void @merge_local_store_2_constants_i32_align_2(i32 addrspace(3)* %out) #0 {
+define amdgpu_kernel void @merge_local_store_2_constants_i32_align_2(i32 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(3)* %out, i32 1
 
   store i32 123, i32 addrspace(3)* %out.gep.1, align 2
@@ -506,7 +506,7 @@ define void @merge_local_store_2_constants_i32_align_2(i32 addrspace(3)* %out) #
 ; CHECK-LABEL: @merge_local_store_4_constants_i32
 ; CHECK: store <2 x i32> <i32 456, i32 333>, <2 x i32> addrspace(3)*
 ; CHECK: store <2 x i32> <i32 1234, i32 123>, <2 x i32> addrspace(3)*
-define void @merge_local_store_4_constants_i32(i32 addrspace(3)* %out) #0 {
+define amdgpu_kernel void @merge_local_store_4_constants_i32(i32 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(3)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(3)* %out, i32 2
   %out.gep.3 = getelementptr i32, i32 addrspace(3)* %out, i32 3
@@ -521,7 +521,7 @@ define void @merge_local_store_4_constants_i32(i32 addrspace(3)* %out) #0 {
 ; CHECK-LABEL: @merge_global_store_5_constants_i32
 ; CHECK: store <4 x i32> <i32 9, i32 12, i32 16, i32 -12>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
 ; CHECK: store i32
-define void @merge_global_store_5_constants_i32(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @merge_global_store_5_constants_i32(i32 addrspace(1)* %out) {
   store i32 9, i32 addrspace(1)* %out, align 4
   %idx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
   store i32 12, i32 addrspace(1)* %idx1, align 4
@@ -537,7 +537,7 @@ define void @merge_global_store_5_constants_i32(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @merge_global_store_6_constants_i32
 ; CHECK: store <4 x i32> <i32 13, i32 15, i32 62, i32 63>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
 ; CHECK: store <2 x i32> <i32 11, i32 123>, <2 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_6_constants_i32(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @merge_global_store_6_constants_i32(i32 addrspace(1)* %out) {
   store i32 13, i32 addrspace(1)* %out, align 4
   %idx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
   store i32 15, i32 addrspace(1)* %idx1, align 4
@@ -555,7 +555,7 @@ define void @merge_global_store_6_constants_i32(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @merge_global_store_7_constants_i32
 ; CHECK: store <4 x i32> <i32 34, i32 999, i32 65, i32 33>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
 ; CHECK: store <3 x i32> <i32 98, i32 91, i32 212>, <3 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
   store i32 34, i32 addrspace(1)* %out, align 4
   %idx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
   store i32 999, i32 addrspace(1)* %idx1, align 4
@@ -575,7 +575,7 @@ define void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @merge_global_store_8_constants_i32
 ; CHECK: store <4 x i32> <i32 34, i32 999, i32 65, i32 33>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
 ; CHECK: store <4 x i32> <i32 98, i32 91, i32 212, i32 999>, <4 x i32> addrspace(1)* %{{[0-9]+}}, align 4
-define void @merge_global_store_8_constants_i32(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @merge_global_store_8_constants_i32(i32 addrspace(1)* %out) {
   store i32 34, i32 addrspace(1)* %out, align 4
   %idx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
   store i32 999, i32 addrspace(1)* %idx1, align 4
@@ -597,7 +597,7 @@ define void @merge_global_store_8_constants_i32(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @copy_v3i32_align4
 ; CHECK: %vec = load <3 x i32>, <3 x i32> addrspace(1)* %in, align 4
 ; CHECK: store <3 x i32> %vec, <3 x i32> addrspace(1)* %out
-define void @copy_v3i32_align4(<3 x i32> addrspace(1)* noalias %out, <3 x i32> addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @copy_v3i32_align4(<3 x i32> addrspace(1)* noalias %out, <3 x i32> addrspace(1)* noalias %in) #0 {
   %vec = load <3 x i32>, <3 x i32> addrspace(1)* %in, align 4
   store <3 x i32> %vec, <3 x i32> addrspace(1)* %out
   ret void
@@ -606,7 +606,7 @@ define void @copy_v3i32_align4(<3 x i32> addrspace(1)* noalias %out, <3 x i32> a
 ; CHECK-LABEL: @copy_v3i64_align4
 ; CHECK: %vec = load <3 x i64>, <3 x i64> addrspace(1)* %in, align 4
 ; CHECK: store <3 x i64> %vec, <3 x i64> addrspace(1)* %out
-define void @copy_v3i64_align4(<3 x i64> addrspace(1)* noalias %out, <3 x i64> addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @copy_v3i64_align4(<3 x i64> addrspace(1)* noalias %out, <3 x i64> addrspace(1)* noalias %in) #0 {
   %vec = load <3 x i64>, <3 x i64> addrspace(1)* %in, align 4
   store <3 x i64> %vec, <3 x i64> addrspace(1)* %out
   ret void
@@ -615,7 +615,7 @@ define void @copy_v3i64_align4(<3 x i64> addrspace(1)* noalias %out, <3 x i64> a
 ; CHECK-LABEL: @copy_v3f32_align4
 ; CHECK: %vec = load <3 x float>, <3 x float> addrspace(1)* %in, align 4
 ; CHECK: store <3 x float>
-define void @copy_v3f32_align4(<3 x float> addrspace(1)* noalias %out, <3 x float> addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @copy_v3f32_align4(<3 x float> addrspace(1)* noalias %out, <3 x float> addrspace(1)* noalias %in) #0 {
   %vec = load <3 x float>, <3 x float> addrspace(1)* %in, align 4
   %fadd = fadd <3 x float> %vec, <float 1.0, float 2.0, float 4.0>
   store <3 x float> %fadd, <3 x float> addrspace(1)* %out
@@ -625,7 +625,7 @@ define void @copy_v3f32_align4(<3 x float> addrspace(1)* noalias %out, <3 x floa
 ; CHECK-LABEL: @copy_v3f64_align4
 ; CHECK: %vec = load <3 x double>, <3 x double> addrspace(1)* %in, align 4
 ; CHECK: store <3 x double> %fadd, <3 x double> addrspace(1)* %out
-define void @copy_v3f64_align4(<3 x double> addrspace(1)* noalias %out, <3 x double> addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @copy_v3f64_align4(<3 x double> addrspace(1)* noalias %out, <3 x double> addrspace(1)* noalias %in) #0 {
   %vec = load <3 x double>, <3 x double> addrspace(1)* %in, align 4
   %fadd = fadd <3 x double> %vec, <double 1.0, double 2.0, double 4.0>
   store <3 x double> %fadd, <3 x double> addrspace(1)* %out

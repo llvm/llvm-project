@@ -154,3 +154,10 @@ ASAN_FLAG(bool, halt_on_error, true,
           "(WARNING: USE AT YOUR OWN RISK!)")
 ASAN_FLAG(bool, use_odr_indicator, false,
           "Use special ODR indicator symbol for ODR violation detection")
+ASAN_FLAG(bool, allocator_frees_and_returns_null_on_realloc_zero, true,
+          "realloc(p, 0) is equivalent to free(p) by default (Same as the "
+          "POSIX standard). If set to false, realloc(p, 0) will return a "
+          "pointer to an allocated space which can not be used.")
+ASAN_FLAG(bool, verify_asan_link_order, true,
+          "Check position of ASan runtime in library list (needs to be disabled"
+          " when other library has to be preloaded system-wide)")

@@ -184,7 +184,7 @@ def s_cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 CPSR))> {
 
 // ARM special operands for disassembly only.
 //
-def SetEndAsmOperand : ImmAsmOperand {
+def SetEndAsmOperand : ImmAsmOperand<0,1> {
   let Name = "SetEndImm";
   let ParserMethod = "parseSetEndImm";
 }
@@ -221,25 +221,25 @@ def banked_reg : Operand<i32> {
 //     16       imm6<5:4> = '01', 16 - <imm> is encoded in imm6<3:0>
 //     32       imm6<5> = '1', 32 - <imm> is encoded in imm6<4:0>
 //     64       64 - <imm> is encoded in imm6<5:0>
-def shr_imm8_asm_operand : ImmAsmOperand { let Name = "ShrImm8"; }
+def shr_imm8_asm_operand : ImmAsmOperand<1,8> { let Name = "ShrImm8"; }
 def shr_imm8  : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm <= 8; }]> {
   let EncoderMethod = "getShiftRight8Imm";
   let DecoderMethod = "DecodeShiftRight8Imm";
   let ParserMatchClass = shr_imm8_asm_operand;
 }
-def shr_imm16_asm_operand : ImmAsmOperand { let Name = "ShrImm16"; }
+def shr_imm16_asm_operand : ImmAsmOperand<1,16> { let Name = "ShrImm16"; }
 def shr_imm16 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm <= 16; }]> {
   let EncoderMethod = "getShiftRight16Imm";
   let DecoderMethod = "DecodeShiftRight16Imm";
   let ParserMatchClass = shr_imm16_asm_operand;
 }
-def shr_imm32_asm_operand : ImmAsmOperand { let Name = "ShrImm32"; }
+def shr_imm32_asm_operand : ImmAsmOperand<1,32> { let Name = "ShrImm32"; }
 def shr_imm32 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm <= 32; }]> {
   let EncoderMethod = "getShiftRight32Imm";
   let DecoderMethod = "DecodeShiftRight32Imm";
   let ParserMatchClass = shr_imm32_asm_operand;
 }
-def shr_imm64_asm_operand : ImmAsmOperand { let Name = "ShrImm64"; }
+def shr_imm64_asm_operand : ImmAsmOperand<1,64> { let Name = "ShrImm64"; }
 def shr_imm64 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm <= 64; }]> {
   let EncoderMethod = "getShiftRight64Imm";
   let DecoderMethod = "DecodeShiftRight64Imm";
@@ -261,10 +261,19 @@ def const_pool_asm_imm : Operand<i32> {
 // Note: When EmitPriority == 1, the alias will be used for printing
 class ARMInstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[IsARM]>;
+class ARMInstSubst<string Asm, dag Result, bit EmitPriority = 0>
+      : InstAlias<Asm, Result, EmitPriority>,
+        Requires<[IsARM,UseNegativeImmediates]>;
 class  tInstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[IsThumb]>;
+class  tInstSubst<string Asm, dag Result, bit EmitPriority = 0>
+      : InstAlias<Asm, Result, EmitPriority>,
+        Requires<[IsThumb,UseNegativeImmediates]>;
 class t2InstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[IsThumb2]>;
+class t2InstSubst<string Asm, dag Result, bit EmitPriority = 0>
+      : InstAlias<Asm, Result, EmitPriority>,
+        Requires<[IsThumb2,UseNegativeImmediates]>;
 class VFP2InstAlias<string Asm, dag Result, bit EmitPriority = 0>
       : InstAlias<Asm, Result, EmitPriority>, Requires<[HasVFP2]>;
 class VFP2DPInstAlias<string Asm, dag Result, bit EmitPriority = 0>
@@ -948,7 +957,7 @@ class ADivA1I<bits<3> opcod, dag oops, dag iops,
 }
 
 // PKH instructions
-def PKHLSLAsmOperand : ImmAsmOperand {
+def PKHLSLAsmOperand : ImmAsmOperand<0,31> {
   let Name = "PKHLSLImm";
   let ParserMethod = "parsePKHLSLImm";
 }
@@ -1012,9 +1021,6 @@ class Thumb2DSPPat<dag pattern, dag result> : Pat<pattern, result> {
 }
 class Thumb2DSPMulPat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsThumb2, UseMulOps, HasDSP];
-}
-class Thumb2ExtractPat<dag pattern, dag result> : Pat<pattern, result> {
-  list<Predicate> Predicates = [IsThumb2, HasT2ExtractPack];
 }
 //===----------------------------------------------------------------------===//
 // Thumb Instruction Format Definitions.

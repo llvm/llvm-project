@@ -17,6 +17,7 @@
 #define POLLY_BLOCK_GENERATORS_H
 
 #include "polly/CodeGen/IRBuilder.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -46,9 +47,7 @@ public:
   /// Map types to resolve scalar dependences.
   ///
   ///@{
-
-  /// @see The ScalarMap and PHIOpMap member.
-  using ScalarAllocaMapTy = DenseMap<AssertingVH<Value>, AssertingVH<Value>>;
+  using AllocaMapTy = DenseMap<const ScopArrayInfo *, AssertingVH<AllocaInst>>;
 
   /// Simple vector of instructions to store escape users.
   using EscapeUserVectorTy = SmallVector<Instruction *, 4>;
@@ -71,7 +70,6 @@ public:
   /// @param SE          The scalar evolution info for the current function
   /// @param DT          The dominator tree of this function.
   /// @param ScalarMap   Map from scalars to their demoted location.
-  /// @param PHIOpMap    Map from PHIs to their demoted operand location.
   /// @param EscapeMap   Map from scalars to their escape users and locations.
   /// @param GlobalMap   A mapping from llvm::Values used in the original scop
   ///                    region to a new set of llvm::Values. Each reference to
@@ -80,10 +78,9 @@ public:
   /// @param ExprBuilder An expression builder to generate new access functions.
   /// @param StartBlock  The first basic block after the RTC.
   BlockGenerator(PollyIRBuilder &Builder, LoopInfo &LI, ScalarEvolution &SE,
-                 DominatorTree &DT, ScalarAllocaMapTy &ScalarMap,
-                 ScalarAllocaMapTy &PHIOpMap, EscapeUsersAllocaMapTy &EscapeMap,
-                 ValueMapT &GlobalMap, IslExprBuilder *ExprBuilder,
-                 BasicBlock *StartBlock);
+                 DominatorTree &DT, AllocaMapTy &ScalarMap,
+                 EscapeUsersAllocaMapTy &EscapeMap, ValueMapT &GlobalMap,
+                 IslExprBuilder *ExprBuilder, BasicBlock *StartBlock);
 
   /// Copy the basic block.
   ///
@@ -99,21 +96,7 @@ public:
   void copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
                 isl_id_to_ast_expr *NewAccesses);
 
-  /// Return the scalar alloca for @p ScalarBase.
-  ///
-  /// If no alloca was mapped to @p ScalarBase a new one is created.
-  ///
-  /// @param ScalarBase The demoted scalar value.
-  /// @param GlobalMap  A mapping from Allocas to other memory locations that
-  ///                   can be used to replace the original alloca locations
-  ///                   with new memory locations, e.g. when passing values to
-  ///                   subfunctions while offloading parallel sections.
-  ///
-  /// @returns The alloca for @p ScalarBase or a replacement value taken from
-  ///          GlobalMap.
-  Value *getOrCreateScalarAlloca(Value *ScalarBase);
-
-  /// Remove a Value's allocation from the ScalarMap.
+  /// Remove a ScopArrayInfo's allocation from the ScalarMap.
   ///
   /// This function allows to remove values from the ScalarMap. This is useful
   /// if the corresponding alloca instruction will be deleted (or moved into
@@ -121,18 +104,8 @@ public:
   /// AssertingVH will trigger due to us still keeping reference to this
   /// scalar.
   ///
-  /// @param ScalarBase The value to remove.
-  void freeScalarAlloc(Value *ScalarBase) { ScalarMap.erase(ScalarBase); }
-
-  /// Return the PHi-node alloca for @p ScalarBase.
-  ///
-  /// If no alloca was mapped to @p ScalarBase a new one is created.
-  ///
-  /// @param ScalarBase The demoted scalar value.
-  ///
-  /// @returns The alloca for @p ScalarBase or a replacement value taken from
-  ///          GlobalMap.
-  Value *getOrCreatePHIAlloca(Value *ScalarBase);
+  /// @param Array The array for which the alloca was generated.
+  void freeScalarAlloc(ScopArrayInfo *Array) { ScalarMap.erase(Array); }
 
   /// Return the alloca for @p Access.
   ///
@@ -180,41 +153,38 @@ protected:
   /// The entry block of the current function.
   BasicBlock *EntryBB;
 
-  /// Maps to resolve scalar dependences for PHI operands and scalars.
+  /// Map to resolve scalar dependences for PHI operands and scalars.
   ///
   /// When translating code that contains scalar dependences as they result from
-  /// inter-block scalar dependences (including the use of data carrying
-  /// PHI nodes), we do not directly regenerate in-register SSA code, but
-  /// instead allocate some stack memory through which these scalar values are
-  /// passed. Only a later pass of -mem2reg will then (re)introduce in-register
+  /// inter-block scalar dependences (including the use of data carrying PHI
+  /// nodes), we do not directly regenerate in-register SSA code, but instead
+  /// allocate some stack memory through which these scalar values are passed.
+  /// Only a later pass of -mem2reg will then (re)introduce in-register
   /// computations.
   ///
   /// To keep track of the memory location(s) used to store the data computed by
-  /// a given SSA instruction, we use the maps 'ScalarMap' and 'PHIOpMap'. Each
-  /// maps a given scalar value to a junk of stack allocated memory.
+  /// a given SSA instruction, we use the map 'ScalarMap'. ScalarMap maps a
+  /// given ScopArrayInfo to the junk of stack allocated memory, that is
+  /// used for code generation.
   ///
-  /// 'ScalarMap' is used for normal scalar dependences that go from a scalar
-  /// definition to its use. Such dependences are lowered by directly writing
-  /// the value an instruction computes into the corresponding chunk of memory
-  /// and reading it back from this chunk of memory right before every use of
-  /// this original scalar value. The memory locations in 'ScalarMap' end with
-  /// '.s2a'.
+  /// Up to two different ScopArrayInfo objects are associated with each
+  /// llvm::Value:
   ///
-  /// 'PHIOpMap' is used to model PHI nodes. For each PHI nodes we introduce,
-  /// besides the memory in 'ScalarMap', a second chunk of memory into which we
-  /// write at the end of each basic block preceeding the PHI instruction the
-  /// value passed through this basic block. At the place where the PHI node is
-  /// executed, we replace the PHI node with a load from the corresponding
-  /// memory location in the 'PHIOpMap' table. The memory locations in
-  /// 'PHIOpMap' end with '.phiops'.
+  /// MemoryType::Value objects are used for normal scalar dependences that go
+  /// from a scalar definition to its use. Such dependences are lowered by
+  /// directly writing the value an instruction computes into the corresponding
+  /// chunk of memory and reading it back from this chunk of memory right before
+  /// every use of this original scalar value. The memory allocations for
+  /// MemoryType::Value objects end with '.s2a'.
   ///
-  /// The ScopArrayInfo objects of accesses that belong to a PHI node may have
-  /// identical base pointers, even though they refer to two different memory
-  /// locations, the normal '.s2a' locations and the special '.phiops'
-  /// locations. For historic reasons we keep such accesses in two maps
-  /// 'ScalarMap' and 'PHIOpMap', index by the BasePointer. An alternative
-  /// implemenation, could use a single map that uses the ScopArrayInfo object
-  /// as index.
+  /// MemoryType::PHI (and MemoryType::ExitPHI) objects are used to model PHI
+  /// nodes. For each PHI nodes we introduce, besides the Array of type
+  /// MemoryType::Value, a second chunk of memory into which we write at the end
+  /// of each basic block preceding the PHI instruction the value passed
+  /// through this basic block. At the place where the PHI node is executed, we
+  /// replace the PHI node with a load from the corresponding MemoryType::PHI
+  /// memory location. The memory allocations for MemoryType::PHI end with
+  /// '.phiops'.
   ///
   /// Example:
   ///
@@ -259,9 +229,8 @@ protected:
   ///                                           add = add.s2a
   ///      ... = add                            ... = add
   ///
-  ///      ScalarMap = { x1 -> x1.s2a, x2 -> x2.s2a, add -> add.s2a }
-  ///      PHIOpMap =  { x2 -> x2.phiops }
-  ///
+  ///      ScalarMap = { x1:Value -> x1.s2a, x2:Value -> x2.s2a,
+  ///                    add:Value -> add.s2a, x2:PHI -> x2.phiops }
   ///
   ///  ??? Why does a PHI-node require two memory chunks ???
   ///
@@ -300,14 +269,8 @@ protected:
   ///  PHI node, has been run and has overwritten the PHI's old value. Hence, a
   ///  single memory location is not enough to code-generate a PHI node.
   ///
-  ///{
-  ///
   /// Memory locations used for the special PHI node modeling.
-  ScalarAllocaMapTy &PHIOpMap;
-
-  /// Memory locations used to model scalar dependences.
-  ScalarAllocaMapTy &ScalarMap;
-  ///}
+  AllocaMapTy &ScalarMap;
 
   /// Map from instructions to their escape users as well as the alloca.
   EscapeUsersAllocaMapTy &EscapeMap;
@@ -355,19 +318,6 @@ protected:
               ValueMapT &BBMap, LoopToScevMapT &LTS,
               isl_id_to_ast_expr *NewAccesses);
 
-  /// Return the alloca for @p ScalarBase in @p Map.
-  ///
-  /// If no alloca was mapped to @p ScalarBase in @p Map a new one is created
-  /// and named after @p ScalarBase with the suffix @p NameExt.
-  ///
-  /// @param ScalarBase The demoted scalar value.
-  /// @param Map        The map we should look for a mapped alloca value.
-  /// @param NameExt    The suffix we add to the name of a new created alloca.
-  ///
-  /// @returns The alloca for @p ScalarBase.
-  Value *getOrCreateAlloca(Value *ScalarBase, ScalarAllocaMapTy &Map,
-                           const char *NameExt);
-
   /// Generate reload of scalars demoted to memory and needed by @p Stmt.
   ///
   /// @param Stmt  The statement we generate code for.
@@ -378,6 +328,33 @@ protected:
   void generateScalarLoads(ScopStmt &Stmt, LoopToScevMapT &LTS,
                            ValueMapT &BBMap,
                            __isl_keep isl_id_to_ast_expr *NewAccesses);
+
+  /// Generate instructions that compute whether one instance of @p Set is
+  /// executed.
+  ///
+  /// @param Stmt      The statement we generate code for.
+  /// @param Subdomain A set in the space of @p Stmt's domain. Elements not in
+  ///                  @p Stmt's domain are ignored.
+  ///
+  /// @return An expression of type i1, generated into the current builder
+  ///         position, that evaluates to 1 if the executed instance is part of
+  ///         @p Set.
+  Value *buildContainsCondition(ScopStmt &Stmt, const isl::set &Subdomain);
+
+  /// Generate code that executes in a subset of @p Stmt's domain.
+  ///
+  /// @param Stmt        The statement we generate code for.
+  /// @param Subdomain   The condition for some code to be executed.
+  /// @param Subject     A name for the code that is executed
+  ///                    conditionally. Used to name new basic blocks and
+  ///                    instructions.
+  /// @param GenThenFunc Callback which generates the code to be executed
+  ///                    when the current executed instance is in @p Set. The
+  ///                    IRBuilder's position is moved to within the block that
+  ///                    executes conditionally for this callback.
+  void generateConditionalExecution(ScopStmt &Stmt, const isl::set &Subdomain,
+                                    StringRef Subject,
+                                    const std::function<void()> &GenThenFunc);
 
   /// Generate the scalar stores for the given statement.
   ///
@@ -396,11 +373,11 @@ protected:
                                     ValueMapT &BBMap,
                                     __isl_keep isl_id_to_ast_expr *NewAccesses);
 
-  /// Handle users of @p Inst outside the SCoP.
+  /// Handle users of @p Array outside the SCoP.
   ///
   /// @param S         The current SCoP.
-  /// @param Inst      The current instruction we check.
-  void handleOutsideUsers(const Scop &S, Instruction *Inst);
+  /// @param Inst      The ScopArrayInfo to handle.
+  void handleOutsideUsers(const Scop &S, ScopArrayInfo *Array);
 
   /// Find scalar statements that have outside users.
   ///
@@ -603,8 +580,9 @@ protected:
   /// Invalidate the scalar evolution expressions for a scop.
   ///
   /// This function invalidates the scalar evolution results for all
-  /// instructions that are part of a given scop. This is necessary to ensure
-  /// that later scops do not obtain scalar evolution expressions that reference
+  /// instructions that are part of a given scop, and the loops
+  /// surrounding the users of merge blocks. This is necessary to ensure that
+  /// later scops do not obtain scalar evolution expressions that reference
   /// values that earlier dominated the later scop, but have been moved in the
   /// conditional part of an earlier scop and consequently do not any more
   /// dominate the later scop.
@@ -706,7 +684,7 @@ private:
   /// Load a vector initialized from a single scalar in memory
   ///
   /// In case all elements of a vector are initialized to the same
-  /// scalar value, this value is loaded and shuffeled into all elements
+  /// scalar value, this value is loaded and shuffled into all elements
   /// of the vector.
   ///
   /// %splat_one = load <1 x double>* %p
@@ -817,14 +795,21 @@ public:
                 __isl_keep isl_id_to_ast_expr *IdToAstExp);
 
 private:
-  /// A map from old to new blocks in the region.
-  DenseMap<BasicBlock *, BasicBlock *> BlockMap;
+  /// A map from old to the first new block in the region, that was created to
+  /// model the old basic block.
+  DenseMap<BasicBlock *, BasicBlock *> StartBlockMap;
 
-  /// The "BBMaps" for the whole region (one for each block).
+  /// A map from old to the last new block in the region, that was created to
+  /// model the old basic block.
+  DenseMap<BasicBlock *, BasicBlock *> EndBlockMap;
+
+  /// The "BBMaps" for the whole region (one for each block). In case a basic
+  /// block is code generated to multiple basic blocks (e.g., for partial
+  /// writes), the StartBasic is used as index for the RegionMap.
   DenseMap<BasicBlock *, ValueMapT> RegionMaps;
 
   /// Mapping to remember PHI nodes that still need incoming values.
-  using PHINodePairTy = std::pair<const PHINode *, PHINode *>;
+  using PHINodePairTy = std::pair<PHINode *, PHINode *>;
   DenseMap<BasicBlock *, SmallVector<PHINodePairTy, 4>> IncompletePHINodeMap;
 
   /// Repair the dominance tree after we created a copy block for @p BB.
@@ -834,13 +819,84 @@ private:
 
   /// Add the new operand from the copy of @p IncomingBB to @p PHICopy.
   ///
+  /// PHI nodes, which may have (multiple) edges that enter from outside the
+  /// non-affine subregion and even from outside the scop, are code generated as
+  /// follows:
+  ///
+  /// # Original
+  ///
+  ///   Region: %A-> %exit
+  ///   NonAffine Stmt: %nonaffB -> %D (includes %nonaffB, %nonaffC)
+  ///
+  ///     pre:
+  ///       %val = add i64 1, 1
+  ///
+  ///     A:
+  ///      br label %nonaff
+  ///
+  ///     nonaffB:
+  ///       %phi = phi i64 [%val, %A], [%valC, %nonAffC], [%valD, %D]
+  ///       %cmp = <nonaff>
+  ///       br i1 %cmp, label %C, label %nonaffC
+  ///
+  ///     nonaffC:
+  ///       %valC = add i64 1, 1
+  ///       br i1 undef, label %D, label %nonaffB
+  ///
+  ///     D:
+  ///       %valD = ...
+  ///       %exit_cond = <loopexit>
+  ///       br i1 %exit_cond, label %nonaffB, label %exit
+  ///
+  ///     exit:
+  ///       ...
+  ///
+  ///  - %start and %C enter from outside the non-affine region.
+  ///  - %nonaffC enters from within the non-affine region.
+  ///
+  ///  # New
+  ///
+  ///    polly.A:
+  ///       store i64 %val, i64* %phi.phiops
+  ///       br label %polly.nonaffA.entry
+  ///
+  ///    polly.nonaffB.entry:
+  ///       %phi.phiops.reload = load i64, i64* %phi.phiops
+  ///       br label %nonaffB
+  ///
+  ///    polly.nonaffB:
+  ///       %polly.phi = [%phi.phiops.reload, %nonaffB.entry],
+  ///                    [%p.valC, %polly.nonaffC]
+  ///
+  ///    polly.nonaffC:
+  ///       %p.valC = add i64 1, 1
+  ///       br i1 undef, label %polly.D, label %polly.nonaffB
+  ///
+  ///    polly.D:
+  ///        %p.valD = ...
+  ///        store i64 %p.valD, i64* %phi.phiops
+  ///        %p.exit_cond = <loopexit>
+  ///        br i1 %p.exit_cond, label %polly.nonaffB, label %exit
+  ///
+  /// Values that enter the PHI from outside the non-affine region are stored
+  /// into the stack slot %phi.phiops by statements %polly.A and %polly.D and
+  /// reloaded in %polly.nonaffB.entry, a basic block generated before the
+  /// actual non-affine region.
+  ///
+  /// When generating the PHI node of the non-affine region in %polly.nonaffB,
+  /// incoming edges from outside the region are combined into a single branch
+  /// from %polly.nonaffB.entry which has as incoming value the value reloaded
+  /// from the %phi.phiops stack slot. Incoming edges from within the region
+  /// refer to the copied instructions (%p.valC) and basic blocks
+  /// (%polly.nonaffC) of the non-affine region.
+  ///
   /// @param Stmt       The statement to code generate.
   /// @param PHI        The original PHI we copy.
   /// @param PHICopy    The copy of @p PHI.
   /// @param IncomingBB An incoming block of @p PHI.
   /// @param LTS        A map from old loops to new induction variables as
   /// SCEVs.
-  void addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI, PHINode *PHICopy,
+  void addOperandToPHI(ScopStmt &Stmt, PHINode *PHI, PHINode *PHICopy,
                        BasicBlock *IncomingBB, LoopToScevMapT &LTS);
 
   /// Create a PHI that combines the incoming values from all incoming blocks
@@ -854,8 +910,8 @@ private:
   /// leaving the subregion because the exiting block as an edge back into the
   /// subregion.
   ///
-  /// @param MA    The WRITE of MK_PHI/MK_ExitPHI for a PHI in the subregion's
-  ///              exit block.
+  /// @param MA    The WRITE of MemoryKind::PHI/MemoryKind::ExitPHI for a PHI in
+  ///              the subregion's exit block.
   /// @param LTS   Virtual induction variable mapping.
   /// @param BBMap A mapping from old values to their new values in this block.
   /// @param L     Loop surrounding this region statement.

@@ -1,4 +1,4 @@
-//===------- llvm/CodeGen/ScheduleDAG.h - Common Base Class------*- C++ -*-===//
+//===- llvm/CodeGen/ScheduleDAG.h - Common Base Class -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the ScheduleDAG class, which is used as the common
-// base class for instruction schedulers. This encapsulates the scheduling DAG,
-// which is shared between SelectionDAG and MachineInstr scheduling.
+/// \file Implements the ScheduleDAG class, which is used as the common base
+/// class for instruction schedulers. This encapsulates the scheduling DAG,
+/// which is shared between SelectionDAG and MachineInstr scheduling.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,41 +20,46 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLowering.h"
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <string>
+#include <vector>
 
 namespace llvm {
-  class SUnit;
-  class MachineConstantPool;
-  class MachineFunction;
-  class MachineRegisterInfo;
-  class MachineInstr;
-  struct MCSchedClassDesc;
-  class TargetRegisterInfo;
-  class ScheduleDAG;
-  class SDNode;
-  class TargetInstrInfo;
-  class MCInstrDesc;
-  class TargetMachine;
-  class TargetRegisterClass;
-  template<class Graph> class GraphWriter;
 
-  /// SDep - Scheduling dependency. This represents one direction of an
-  /// edge in the scheduling DAG.
+template<class Graph> class GraphWriter;
+class MachineFunction;
+class MachineRegisterInfo;
+class MCInstrDesc;
+struct MCSchedClassDesc;
+class ScheduleDAG;
+class SDNode;
+class SUnit;
+class TargetInstrInfo;
+class TargetMachine;
+class TargetRegisterClass;
+class TargetRegisterInfo;
+
+  /// Scheduling dependency. This represents one direction of an edge in the
+  /// scheduling DAG.
   class SDep {
   public:
-    /// Kind - These are the different kinds of scheduling dependencies.
+    /// These are the different kinds of scheduling dependencies.
     enum Kind {
       Data,        ///< Regular data dependence (aka true-dependence).
-      Anti,        ///< A register anti-dependedence (aka WAR).
+      Anti,        ///< A register anti-dependence (aka WAR).
       Output,      ///< A register output-dependence (aka WAW).
       Order        ///< Any other ordering dependency.
     };
 
     // Strong dependencies must be respected by the scheduler. Artificial
     // dependencies may be removed only if they are redundant with another
-    // strong depedence.
+    // strong dependence.
     //
     // Weak dependencies may be violated by the scheduling strategy, but only if
     // the strategy can prove it is correct to do so.
@@ -71,33 +76,32 @@ namespace llvm {
     };
 
   private:
-    /// Dep - A pointer to the depending/depended-on SUnit, and an enum
+    /// \brief A pointer to the depending/depended-on SUnit, and an enum
     /// indicating the kind of the dependency.
     PointerIntPair<SUnit *, 2, Kind> Dep;
 
-    /// Contents - A union discriminated by the dependence kind.
+    /// A union discriminated by the dependence kind.
     union {
-      /// Reg - For Data, Anti, and Output dependencies, the associated
-      /// register. For Data dependencies that don't currently have a register
-      /// assigned, this is set to zero.
+      /// For Data, Anti, and Output dependencies, the associated register. For
+      /// Data dependencies that don't currently have a register/ assigned, this
+      /// is set to zero.
       unsigned Reg;
 
-      /// Order - Additional information about Order dependencies.
+      /// Additional information about Order dependencies.
       unsigned OrdKind; // enum OrderKind
     } Contents;
 
-    /// Latency - The time associated with this edge. Often this is just
-    /// the value of the Latency field of the predecessor, however advanced
-    /// models may provide additional information about specific edges.
+    /// The time associated with this edge. Often this is just the value of the
+    /// Latency field of the predecessor, however advanced models may provide
+    /// additional information about specific edges.
     unsigned Latency;
 
   public:
-    /// SDep - Construct a null SDep. This is only for use by container
-    /// classes which require default constructors. SUnits may not
-    /// have null SDep edges.
+    /// Constructs a null SDep. This is only for use by container classes which
+    /// require default constructors. SUnits may not/ have null SDep edges.
     SDep() : Dep(nullptr, Data) {}
 
-    /// SDep - Construct an SDep with the specified values.
+    /// Constructs an SDep with the specified values.
     SDep(SUnit *S, Kind kind, unsigned Reg)
       : Dep(S, kind), Contents() {
       switch (kind) {
@@ -116,12 +120,13 @@ namespace llvm {
         break;
       }
     }
+
     SDep(SUnit *S, OrderKind kind)
       : Dep(S, Order), Contents(), Latency(0) {
       Contents.OrdKind = kind;
     }
 
-    /// Return true if the specified SDep is equivalent except for latency.
+    /// Returns true if the specified SDep is equivalent except for latency.
     bool overlaps(const SDep &Other) const;
 
     bool operator==(const SDep &Other) const {
@@ -132,100 +137,95 @@ namespace llvm {
       return !operator==(Other);
     }
 
-    /// getLatency - Return the latency value for this edge, which roughly
-    /// means the minimum number of cycles that must elapse between the
-    /// predecessor and the successor, given that they have this edge
-    /// between them.
+    /// \brief Returns the latency value for this edge, which roughly means the
+    /// minimum number of cycles that must elapse between the predecessor and
+    /// the successor, given that they have this edge between them.
     unsigned getLatency() const {
       return Latency;
     }
 
-    /// setLatency - Set the latency for this edge.
+    /// Sets the latency for this edge.
     void setLatency(unsigned Lat) {
       Latency = Lat;
     }
 
-    //// getSUnit - Return the SUnit to which this edge points.
+    //// Returns the SUnit to which this edge points.
     SUnit *getSUnit() const;
 
-    //// setSUnit - Assign the SUnit to which this edge points.
+    //// Assigns the SUnit to which this edge points.
     void setSUnit(SUnit *SU);
 
-    /// getKind - Return an enum value representing the kind of the dependence.
+    /// Returns an enum value representing the kind of the dependence.
     Kind getKind() const;
 
-    /// isCtrl - Shorthand for getKind() != SDep::Data.
+    /// Shorthand for getKind() != SDep::Data.
     bool isCtrl() const {
       return getKind() != Data;
     }
 
-    /// isNormalMemory - Test if this is an Order dependence between two
-    /// memory accesses where both sides of the dependence access memory
-    /// in non-volatile and fully modeled ways.
+    /// \brief Tests if this is an Order dependence between two memory accesses
+    /// where both sides of the dependence access memory in non-volatile and
+    /// fully modeled ways.
     bool isNormalMemory() const {
       return getKind() == Order && (Contents.OrdKind == MayAliasMem
                                     || Contents.OrdKind == MustAliasMem);
     }
 
-    /// isBarrier - Test if this is an Order dependence that is marked
-    /// as a barrier.
+    /// Tests if this is an Order dependence that is marked as a barrier.
     bool isBarrier() const {
       return getKind() == Order && Contents.OrdKind == Barrier;
     }
 
-    /// isNormalMemoryOrBarrier - Test if this is could be any kind of memory
-    /// dependence.
+    /// Tests if this is could be any kind of memory dependence.
     bool isNormalMemoryOrBarrier() const {
       return (isNormalMemory() || isBarrier());
     }
 
-    /// isMustAlias - Test if this is an Order dependence that is marked
-    /// as "must alias", meaning that the SUnits at either end of the edge
-    /// have a memory dependence on a known memory location.
+    /// \brief Tests if this is an Order dependence that is marked as
+    /// "must alias", meaning that the SUnits at either end of the edge have a
+    /// memory dependence on a known memory location.
     bool isMustAlias() const {
       return getKind() == Order && Contents.OrdKind == MustAliasMem;
     }
 
-    /// isWeak - Test if this a weak dependence. Weak dependencies are
-    /// considered DAG edges for height computation and other heuristics, but do
-    /// not force ordering. Breaking a weak edge may require the scheduler to
-    /// compensate, for example by inserting a copy.
+    /// Tests if this a weak dependence. Weak dependencies are considered DAG
+    /// edges for height computation and other heuristics, but do not force
+    /// ordering. Breaking a weak edge may require the scheduler to compensate,
+    /// for example by inserting a copy.
     bool isWeak() const {
       return getKind() == Order && Contents.OrdKind >= Weak;
     }
 
-    /// isArtificial - Test if this is an Order dependence that is marked
-    /// as "artificial", meaning it isn't necessary for correctness.
+    /// \brief Tests if this is an Order dependence that is marked as
+    /// "artificial", meaning it isn't necessary for correctness.
     bool isArtificial() const {
       return getKind() == Order && Contents.OrdKind == Artificial;
     }
 
-    /// isCluster - Test if this is an Order dependence that is marked
-    /// as "cluster", meaning it is artificial and wants to be adjacent.
+    /// \brief Tests if this is an Order dependence that is marked as "cluster",
+    /// meaning it is artificial and wants to be adjacent.
     bool isCluster() const {
       return getKind() == Order && Contents.OrdKind == Cluster;
     }
 
-    /// isAssignedRegDep - Test if this is a Data dependence that is
-    /// associated with a register.
+    /// Tests if this is a Data dependence that is associated with a register.
     bool isAssignedRegDep() const {
       return getKind() == Data && Contents.Reg != 0;
     }
 
-    /// getReg - Return the register associated with this edge. This is
-    /// only valid on Data, Anti, and Output edges. On Data edges, this
-    /// value may be zero, meaning there is no associated register.
+    /// Returns the register associated with this edge. This is only valid on
+    /// Data, Anti, and Output edges. On Data edges, this value may be zero,
+    /// meaning there is no associated register.
     unsigned getReg() const {
       assert((getKind() == Data || getKind() == Anti || getKind() == Output) &&
              "getReg called on non-register dependence edge!");
       return Contents.Reg;
     }
 
-    /// setReg - Assign the associated register for this edge. This is
-    /// only valid on Data, Anti, and Output edges. On Anti and Output
-    /// edges, this value must not be zero. On Data edges, the value may
-    /// be zero, which would mean that no specific register is associated
-    /// with this edge.
+    /// Assigns the associated register for this edge. This is only valid on
+    /// Data, Anti, and Output edges. On Anti and Output edges, this value must
+    /// not be zero. On Data edges, the value may be zero, which would mean that
+    /// no specific register is associated with this edge.
     void setReg(unsigned Reg) {
       assert((getKind() == Data || getKind() == Anti || getKind() == Output) &&
              "setReg called on non-register dependence edge!");
@@ -235,120 +235,109 @@ namespace llvm {
              "SDep::Output edge cannot use the zero register!");
       Contents.Reg = Reg;
     }
+
+    raw_ostream &print(raw_ostream &O,
+                       const TargetRegisterInfo *TRI = nullptr) const;
   };
 
   template <>
   struct isPodLike<SDep> { static const bool value = true; };
 
-  /// SUnit - Scheduling unit. This is a node in the scheduling DAG.
+  /// Scheduling unit. This is a node in the scheduling DAG.
   class SUnit {
   private:
     enum : unsigned { BoundaryID = ~0u };
 
-    SDNode *Node;                       // Representative node.
-    MachineInstr *Instr;                // Alternatively, a MachineInstr.
+    SDNode *Node = nullptr;        ///< Representative node.
+    MachineInstr *Instr = nullptr; ///< Alternatively, a MachineInstr.
+
   public:
-    SUnit *OrigNode;                    // If not this, the node from which
-                                        // this node was cloned.
-                                        // (SD scheduling only)
+    SUnit *OrigNode = nullptr; ///< If not this, the node from which this node 
+                               /// was cloned. (SD scheduling only)
 
-    const MCSchedClassDesc *SchedClass; // NULL or resolved SchedClass.
+    const MCSchedClassDesc *SchedClass =
+        nullptr; ///< nullptr or resolved SchedClass.
 
-    // Preds/Succs - The SUnits before/after us in the graph.
-    SmallVector<SDep, 4> Preds;  // All sunit predecessors.
-    SmallVector<SDep, 4> Succs;  // All sunit successors.
+    SmallVector<SDep, 4> Preds;  ///< All sunit predecessors.
+    SmallVector<SDep, 4> Succs;  ///< All sunit successors.
 
     typedef SmallVectorImpl<SDep>::iterator pred_iterator;
     typedef SmallVectorImpl<SDep>::iterator succ_iterator;
     typedef SmallVectorImpl<SDep>::const_iterator const_pred_iterator;
     typedef SmallVectorImpl<SDep>::const_iterator const_succ_iterator;
 
-    unsigned NodeNum;                   // Entry # of node in the node vector.
-    unsigned NodeQueueId;               // Queue id of node.
-    unsigned NumPreds;                  // # of SDep::Data preds.
-    unsigned NumSuccs;                  // # of SDep::Data sucss.
-    unsigned NumPredsLeft;              // # of preds not scheduled.
-    unsigned NumSuccsLeft;              // # of succs not scheduled.
-    unsigned WeakPredsLeft;             // # of weak preds not scheduled.
-    unsigned WeakSuccsLeft;             // # of weak succs not scheduled.
-    unsigned short NumRegDefsLeft;      // # of reg defs with no scheduled use.
-    unsigned short Latency;             // Node latency.
-    bool isVRegCycle      : 1;          // May use and def the same vreg.
-    bool isCall           : 1;          // Is a function call.
-    bool isCallOp         : 1;          // Is a function call operand.
-    bool isTwoAddress     : 1;          // Is a two-address instruction.
-    bool isCommutable     : 1;          // Is a commutable instruction.
-    bool hasPhysRegUses   : 1;          // Has physreg uses.
-    bool hasPhysRegDefs   : 1;          // Has physreg defs that are being used.
-    bool hasPhysRegClobbers : 1;        // Has any physreg defs, used or not.
-    bool isPending        : 1;          // True once pending.
-    bool isAvailable      : 1;          // True once available.
-    bool isScheduled      : 1;          // True once scheduled.
-    bool isScheduleHigh   : 1;          // True if preferable to schedule high.
-    bool isScheduleLow    : 1;          // True if preferable to schedule low.
-    bool isCloned         : 1;          // True if this node has been cloned.
-    bool isUnbuffered     : 1;          // Uses an unbuffered resource.
-    bool hasReservedResource : 1;       // Uses a reserved resource.
-    Sched::Preference SchedulingPref;   // Scheduling preference.
+    unsigned NodeNum = BoundaryID;     ///< Entry # of node in the node vector.
+    unsigned NodeQueueId = 0;          ///< Queue id of node.
+    unsigned NumPreds = 0;             ///< # of SDep::Data preds.
+    unsigned NumSuccs = 0;             ///< # of SDep::Data sucss.
+    unsigned NumPredsLeft = 0;         ///< # of preds not scheduled.
+    unsigned NumSuccsLeft = 0;         ///< # of succs not scheduled.
+    unsigned WeakPredsLeft = 0;        ///< # of weak preds not scheduled.
+    unsigned WeakSuccsLeft = 0;        ///< # of weak succs not scheduled.
+    unsigned short NumRegDefsLeft = 0; ///< # of reg defs with no scheduled use.
+    unsigned short Latency = 0;        ///< Node latency.
+    bool isVRegCycle      : 1;         ///< May use and def the same vreg.
+    bool isCall           : 1;         ///< Is a function call.
+    bool isCallOp         : 1;         ///< Is a function call operand.
+    bool isTwoAddress     : 1;         ///< Is a two-address instruction.
+    bool isCommutable     : 1;         ///< Is a commutable instruction.
+    bool hasPhysRegUses   : 1;         ///< Has physreg uses.
+    bool hasPhysRegDefs   : 1;         ///< Has physreg defs that are being used.
+    bool hasPhysRegClobbers : 1;       ///< Has any physreg defs, used or not.
+    bool isPending        : 1;         ///< True once pending.
+    bool isAvailable      : 1;         ///< True once available.
+    bool isScheduled      : 1;         ///< True once scheduled.
+    bool isScheduleHigh   : 1;         ///< True if preferable to schedule high.
+    bool isScheduleLow    : 1;         ///< True if preferable to schedule low.
+    bool isCloned         : 1;         ///< True if this node has been cloned.
+    bool isUnbuffered     : 1;         ///< Uses an unbuffered resource.
+    bool hasReservedResource : 1;      ///< Uses a reserved resource.
+    Sched::Preference SchedulingPref = Sched::None; ///< Scheduling preference.
 
   private:
-    bool isDepthCurrent   : 1;          // True if Depth is current.
-    bool isHeightCurrent  : 1;          // True if Height is current.
-    unsigned Depth;                     // Node depth.
-    unsigned Height;                    // Node height.
+    bool isDepthCurrent   : 1;         ///< True if Depth is current.
+    bool isHeightCurrent  : 1;         ///< True if Height is current.
+    unsigned Depth = 0;                ///< Node depth.
+    unsigned Height = 0;               ///< Node height.
+
   public:
-    unsigned TopReadyCycle; // Cycle relative to start when node is ready.
-    unsigned BotReadyCycle; // Cycle relative to end when node is ready.
+    unsigned TopReadyCycle = 0; ///< Cycle relative to start when node is ready.
+    unsigned BotReadyCycle = 0; ///< Cycle relative to end when node is ready.
 
-    const TargetRegisterClass *CopyDstRC; // Is a special copy node if not null.
-    const TargetRegisterClass *CopySrcRC;
+    const TargetRegisterClass *CopyDstRC =
+        nullptr; ///< Is a special copy node if != nullptr.
+    const TargetRegisterClass *CopySrcRC = nullptr;
 
-    /// SUnit - Construct an SUnit for pre-regalloc scheduling to represent
-    /// an SDNode and any nodes flagged to it.
+    /// \brief Constructs an SUnit for pre-regalloc scheduling to represent an
+    /// SDNode and any nodes flagged to it.
     SUnit(SDNode *node, unsigned nodenum)
-      : Node(node), Instr(nullptr), OrigNode(nullptr), SchedClass(nullptr),
-        NodeNum(nodenum), NodeQueueId(0), NumPreds(0), NumSuccs(0),
-        NumPredsLeft(0), NumSuccsLeft(0), WeakPredsLeft(0), WeakSuccsLeft(0),
-        NumRegDefsLeft(0), Latency(0), isVRegCycle(false), isCall(false),
+      : Node(node), NodeNum(nodenum), isVRegCycle(false), isCall(false),
         isCallOp(false), isTwoAddress(false), isCommutable(false),
         hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
         isPending(false), isAvailable(false), isScheduled(false),
         isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false),
-        SchedulingPref(Sched::None), isDepthCurrent(false),
-        isHeightCurrent(false), Depth(0), Height(0), TopReadyCycle(0),
-        BotReadyCycle(0), CopyDstRC(nullptr), CopySrcRC(nullptr) {}
+        isUnbuffered(false), hasReservedResource(false), isDepthCurrent(false),
+        isHeightCurrent(false) {}
 
-    /// SUnit - Construct an SUnit for post-regalloc scheduling to represent
-    /// a MachineInstr.
+    /// \brief Constructs an SUnit for post-regalloc scheduling to represent a
+    /// MachineInstr.
     SUnit(MachineInstr *instr, unsigned nodenum)
-      : Node(nullptr), Instr(instr), OrigNode(nullptr), SchedClass(nullptr),
-        NodeNum(nodenum), NodeQueueId(0), NumPreds(0), NumSuccs(0),
-        NumPredsLeft(0), NumSuccsLeft(0), WeakPredsLeft(0), WeakSuccsLeft(0),
-        NumRegDefsLeft(0), Latency(0), isVRegCycle(false), isCall(false),
+      : Instr(instr), NodeNum(nodenum), isVRegCycle(false), isCall(false),
         isCallOp(false), isTwoAddress(false), isCommutable(false),
         hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
         isPending(false), isAvailable(false), isScheduled(false),
         isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false),
-        SchedulingPref(Sched::None), isDepthCurrent(false),
-        isHeightCurrent(false), Depth(0), Height(0), TopReadyCycle(0),
-        BotReadyCycle(0), CopyDstRC(nullptr), CopySrcRC(nullptr) {}
+        isUnbuffered(false), hasReservedResource(false), isDepthCurrent(false),
+        isHeightCurrent(false) {}
 
-    /// SUnit - Construct a placeholder SUnit.
+    /// \brief Constructs a placeholder SUnit.
     SUnit()
-      : Node(nullptr), Instr(nullptr), OrigNode(nullptr), SchedClass(nullptr),
-        NodeNum(BoundaryID), NodeQueueId(0), NumPreds(0), NumSuccs(0),
-        NumPredsLeft(0), NumSuccsLeft(0), WeakPredsLeft(0), WeakSuccsLeft(0),
-        NumRegDefsLeft(0), Latency(0), isVRegCycle(false), isCall(false),
-        isCallOp(false), isTwoAddress(false), isCommutable(false),
-        hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
-        isPending(false), isAvailable(false), isScheduled(false),
-        isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false),
-        SchedulingPref(Sched::None), isDepthCurrent(false),
-        isHeightCurrent(false), Depth(0), Height(0), TopReadyCycle(0),
-        BotReadyCycle(0), CopyDstRC(nullptr), CopySrcRC(nullptr) {}
+      : isVRegCycle(false), isCall(false), isCallOp(false), isTwoAddress(false),
+        isCommutable(false), hasPhysRegUses(false), hasPhysRegDefs(false),
+        hasPhysRegClobbers(false), isPending(false), isAvailable(false),
+        isScheduled(false), isScheduleHigh(false), isScheduleLow(false),
+        isCloned(false), isUnbuffered(false), hasReservedResource(false),
+        isDepthCurrent(false), isHeightCurrent(false) {}
 
     /// \brief Boundary nodes are placeholders for the boundary of the
     /// scheduling region.
@@ -356,49 +345,47 @@ namespace llvm {
     /// BoundaryNodes can have DAG edges, including Data edges, but they do not
     /// correspond to schedulable entities (e.g. instructions) and do not have a
     /// valid ID. Consequently, always check for boundary nodes before accessing
-    /// an assoicative data structure keyed on node ID.
+    /// an associative data structure keyed on node ID.
     bool isBoundaryNode() const { return NodeNum == BoundaryID; }
 
-    /// setNode - Assign the representative SDNode for this SUnit.
-    /// This may be used during pre-regalloc scheduling.
+    /// Assigns the representative SDNode for this SUnit. This may be used
+    /// during pre-regalloc scheduling.
     void setNode(SDNode *N) {
       assert(!Instr && "Setting SDNode of SUnit with MachineInstr!");
       Node = N;
     }
 
-    /// getNode - Return the representative SDNode for this SUnit.
-    /// This may be used during pre-regalloc scheduling.
+    /// Returns the representative SDNode for this SUnit. This may be used
+    /// during pre-regalloc scheduling.
     SDNode *getNode() const {
       assert(!Instr && "Reading SDNode of SUnit with MachineInstr!");
       return Node;
     }
 
-    /// isInstr - Return true if this SUnit refers to a machine instruction as
+    /// \brief Returns true if this SUnit refers to a machine instruction as
     /// opposed to an SDNode.
     bool isInstr() const { return Instr; }
 
-    /// setInstr - Assign the instruction for the SUnit.
-    /// This may be used during post-regalloc scheduling.
+    /// Assigns the instruction for the SUnit. This may be used during
+    /// post-regalloc scheduling.
     void setInstr(MachineInstr *MI) {
       assert(!Node && "Setting MachineInstr of SUnit with SDNode!");
       Instr = MI;
     }
 
-    /// getInstr - Return the representative MachineInstr for this SUnit.
-    /// This may be used during post-regalloc scheduling.
+    /// Returns the representative MachineInstr for this SUnit. This may be used
+    /// during post-regalloc scheduling.
     MachineInstr *getInstr() const {
       assert(!Node && "Reading MachineInstr of SUnit with SDNode!");
       return Instr;
     }
 
-    /// addPred - This adds the specified edge as a pred of the current node if
-    /// not already.  It also adds the current node as a successor of the
-    /// specified node.
+    /// Adds the specified edge as a pred of the current node if not already.
+    /// It also adds the current node as a successor of the specified node.
     bool addPred(const SDep &D, bool Required = true);
 
-    /// addPredBarrier - This adds a barrier edge to SU by calling
-    /// addPred(), with latency 0 generally or latency 1 for a store
-    /// followed by a load.
+    /// \brief Adds a barrier edge to SU by calling addPred(), with latency 0
+    /// generally or latency 1 for a store followed by a load.
     bool addPredBarrier(SUnit *SU) {
       SDep Dep(SU, SDep::Barrier);
       unsigned TrueMemOrderLatency =
@@ -407,20 +394,19 @@ namespace llvm {
       return addPred(Dep);
     }
 
-    /// removePred - This removes the specified edge as a pred of the current
-    /// node if it exists.  It also removes the current node as a successor of
-    /// the specified node.
+    /// Removes the specified edge as a pred of the current node if it exists.
+    /// It also removes the current node as a successor of the specified node.
     void removePred(const SDep &D);
 
-    /// getDepth - Return the depth of this node, which is the length of the
-    /// maximum path up to any node which has no predecessors.
+    /// Returns the depth of this node, which is the length of the maximum path
+    /// up to any node which has no predecessors.
     unsigned getDepth() const {
       if (!isDepthCurrent)
         const_cast<SUnit *>(this)->ComputeDepth();
       return Depth;
     }
 
-    /// getHeight - Return the height of this node, which is the length of the
+    /// \brief Returns the height of this node, which is the length of the
     /// maximum path down to any node which has no successors.
     unsigned getHeight() const {
       if (!isHeightCurrent)
@@ -428,38 +414,36 @@ namespace llvm {
       return Height;
     }
 
-    /// setDepthToAtLeast - If NewDepth is greater than this node's
-    /// depth value, set it to be the new depth value. This also
-    /// recursively marks successor nodes dirty.
+    /// \brief If NewDepth is greater than this node's depth value, sets it to
+    /// be the new depth value. This also recursively marks successor nodes
+    /// dirty.
     void setDepthToAtLeast(unsigned NewDepth);
 
-    /// setDepthToAtLeast - If NewDepth is greater than this node's
-    /// depth value, set it to be the new height value. This also
-    /// recursively marks predecessor nodes dirty.
+    /// \brief If NewDepth is greater than this node's depth value, set it to be
+    /// the new height value. This also recursively marks predecessor nodes
+    /// dirty.
     void setHeightToAtLeast(unsigned NewHeight);
 
-    /// setDepthDirty - Set a flag in this node to indicate that its
-    /// stored Depth value will require recomputation the next time
-    /// getDepth() is called.
+    /// \brief Sets a flag in this node to indicate that its stored Depth value
+    /// will require recomputation the next time getDepth() is called.
     void setDepthDirty();
 
-    /// setHeightDirty - Set a flag in this node to indicate that its
-    /// stored Height value will require recomputation the next time
-    /// getHeight() is called.
+    /// \brief Sets a flag in this node to indicate that its stored Height value
+    /// will require recomputation the next time getHeight() is called.
     void setHeightDirty();
 
-    /// isPred - Test if node N is a predecessor of this node.
-    bool isPred(SUnit *N) {
-      for (unsigned i = 0, e = (unsigned)Preds.size(); i != e; ++i)
-        if (Preds[i].getSUnit() == N)
+    /// Tests if node N is a predecessor of this node.
+    bool isPred(const SUnit *N) const {
+      for (const SDep &Pred : Preds)
+        if (Pred.getSUnit() == N)
           return true;
       return false;
     }
 
-    /// isSucc - Test if node N is a successor of this node.
-    bool isSucc(SUnit *N) {
-      for (unsigned i = 0, e = (unsigned)Succs.size(); i != e; ++i)
-        if (Succs[i].getSUnit() == N)
+    /// Tests if node N is a successor of this node.
+    bool isSucc(const SUnit *N) const {
+      for (const SDep &Succ : Succs)
+        if (Succ.getSUnit() == N)
           return true;
       return false;
     }
@@ -471,20 +455,23 @@ namespace llvm {
       return NumSuccsLeft == 0;
     }
 
-    /// \brief Order this node's predecessor edges such that the critical path
+    /// \brief Orders this node's predecessor edges such that the critical path
     /// edge occurs first.
     void biasCriticalPath();
 
     void dump(const ScheduleDAG *G) const;
     void dumpAll(const ScheduleDAG *G) const;
-    void print(raw_ostream &O, const ScheduleDAG *G) const;
+    raw_ostream &print(raw_ostream &O,
+                       const SUnit *N = nullptr,
+                       const SUnit *X = nullptr) const;
+    raw_ostream &print(raw_ostream &O, const ScheduleDAG *G) const;
 
   private:
     void ComputeDepth();
     void ComputeHeight();
   };
 
-  /// Return true if the specified SDep is equivalent except for latency.
+  /// Returns true if the specified SDep is equivalent except for latency.
   inline bool SDep::overlaps(const SDep &Other) const {
     if (Dep != Other.Dep)
       return false;
@@ -499,31 +486,33 @@ namespace llvm {
     llvm_unreachable("Invalid dependency kind!");
   }
 
-  //// getSUnit - Return the SUnit to which this edge points.
+  //// Returns the SUnit to which this edge points.
   inline SUnit *SDep::getSUnit() const { return Dep.getPointer(); }
 
-  //// setSUnit - Assign the SUnit to which this edge points.
+  //// Assigns the SUnit to which this edge points.
   inline void SDep::setSUnit(SUnit *SU) { Dep.setPointer(SU); }
 
-  /// getKind - Return an enum value representing the kind of the dependence.
+  /// Returns an enum value representing the kind of the dependence.
   inline SDep::Kind SDep::getKind() const { return Dep.getInt(); }
 
   //===--------------------------------------------------------------------===//
-  /// SchedulingPriorityQueue - This interface is used to plug different
-  /// priorities computation algorithms into the list scheduler. It implements
-  /// the interface of a standard priority queue, where nodes are inserted in
-  /// arbitrary order and returned in priority order.  The computation of the
-  /// priority and the representation of the queue are totally up to the
-  /// implementation to decide.
-  ///
+
+  /// \brief This interface is used to plug different priorities computation
+  /// algorithms into the list scheduler. It implements the interface of a
+  /// standard priority queue, where nodes are inserted in arbitrary order and
+  /// returned in priority order.  The computation of the priority and the
+  /// representation of the queue are totally up to the implementation to
+  /// decide.
   class SchedulingPriorityQueue {
     virtual void anchor();
-    unsigned CurCycle;
+
+    unsigned CurCycle = 0;
     bool HasReadyFilter;
+
   public:
-    SchedulingPriorityQueue(bool rf = false):
-      CurCycle(0), HasReadyFilter(rf) {}
-    virtual ~SchedulingPriorityQueue() {}
+    SchedulingPriorityQueue(bool rf = false) :  HasReadyFilter(rf) {}
+
+    virtual ~SchedulingPriorityQueue() = default;
 
     virtual bool isBottomUp() const = 0;
 
@@ -542,6 +531,7 @@ namespace llvm {
       assert(!HasReadyFilter && "The ready filter must override isReady()");
       return true;
     }
+
     virtual void push(SUnit *U) = 0;
 
     void push_all(const std::vector<SUnit *> &Nodes) {
@@ -556,10 +546,9 @@ namespace llvm {
 
     virtual void dump(ScheduleDAG *) const {}
 
-    /// scheduledNode - As each node is scheduled, this method is invoked.  This
-    /// allows the priority function to adjust the priority of related
-    /// unscheduled nodes, for example.
-    ///
+    /// As each node is scheduled, this method is invoked.  This allows the
+    /// priority function to adjust the priority of related unscheduled nodes,
+    /// for example.
     virtual void scheduledNode(SUnit *) {}
 
     virtual void unscheduledNode(SUnit *) {}
@@ -575,14 +564,14 @@ namespace llvm {
 
   class ScheduleDAG {
   public:
-    const TargetMachine &TM;              // Target processor
-    const TargetInstrInfo *TII;           // Target instruction information
-    const TargetRegisterInfo *TRI;        // Target processor register info
-    MachineFunction &MF;                  // Machine function
-    MachineRegisterInfo &MRI;             // Virtual/real register map
-    std::vector<SUnit> SUnits;            // The scheduling units.
-    SUnit EntrySU;                        // Special node for the region entry.
-    SUnit ExitSU;                         // Special node for the region exit.
+    const TargetMachine &TM;            ///< Target processor
+    const TargetInstrInfo *TII;         ///< Target instruction information
+    const TargetRegisterInfo *TRI;      ///< Target processor register info
+    MachineFunction &MF;                ///< Machine function
+    MachineRegisterInfo &MRI;           ///< Virtual/real register map
+    std::vector<SUnit> SUnits;          ///< The scheduling units.
+    SUnit EntrySU;                      ///< Special node for the region entry.
+    SUnit ExitSU;                       ///< Special node for the region exit.
 
 #ifdef NDEBUG
     static const bool StressSched = false;
@@ -594,43 +583,39 @@ namespace llvm {
 
     virtual ~ScheduleDAG();
 
-    /// clearDAG - clear the DAG state (between regions).
+    /// Clears the DAG state (between regions).
     void clearDAG();
 
-    /// getInstrDesc - Return the MCInstrDesc of this SUnit.
-    /// Return NULL for SDNodes without a machine opcode.
+    /// Returns the MCInstrDesc of this SUnit.
+    /// Returns NULL for SDNodes without a machine opcode.
     const MCInstrDesc *getInstrDesc(const SUnit *SU) const {
       if (SU->isInstr()) return &SU->getInstr()->getDesc();
       return getNodeDesc(SU->getNode());
     }
 
-    /// viewGraph - Pop up a GraphViz/gv window with the ScheduleDAG rendered
-    /// using 'dot'.
-    ///
+    /// Pops up a GraphViz/gv window with the ScheduleDAG rendered using 'dot'.
     virtual void viewGraph(const Twine &Name, const Twine &Title);
     virtual void viewGraph();
 
     virtual void dumpNode(const SUnit *SU) const = 0;
 
-    /// getGraphNodeLabel - Return a label for an SUnit node in a visualization
-    /// of the ScheduleDAG.
+    /// Returns a label for an SUnit node in a visualization of the ScheduleDAG.
     virtual std::string getGraphNodeLabel(const SUnit *SU) const = 0;
 
-    /// getDAGLabel - Return a label for the region of code covered by the DAG.
+    /// Returns a label for the region of code covered by the DAG.
     virtual std::string getDAGName() const = 0;
 
-    /// addCustomGraphFeatures - Add custom features for a visualization of
-    /// the ScheduleDAG.
+    /// Adds custom features for a visualization of the ScheduleDAG.
     virtual void addCustomGraphFeatures(GraphWriter<ScheduleDAG*> &) const {}
 
 #ifndef NDEBUG
-    /// VerifyScheduledDAG - Verify that all SUnits were scheduled and that
-    /// their state is consistent. Return the number of scheduled SUnits.
+    /// \brief Verifies that all SUnits were scheduled and that their state is
+    /// consistent. Returns the number of scheduled SUnits.
     unsigned VerifyScheduledDAG(bool isBottomUp);
 #endif
 
   private:
-    // Return the MCInstrDesc of this SDNode or NULL.
+    /// Returns the MCInstrDesc of this SDNode or NULL.
     const MCInstrDesc *getNodeDesc(const SDNode *Node) const;
   };
 
@@ -640,6 +625,7 @@ namespace llvm {
     unsigned Operand;
 
     SUnitIterator(SUnit *N, unsigned Op) : Node(N), Operand(Op) {}
+
   public:
     bool operator==(const SUnitIterator& x) const {
       return Operand == x.Operand;
@@ -666,7 +652,8 @@ namespace llvm {
 
     unsigned getOperand() const { return Operand; }
     const SUnit *getNode() const { return Node; }
-    /// isCtrlDep - Test if this is not an SDep::Data dependence.
+
+    /// Tests if this is not an SDep::Data dependence.
     bool isCtrlDep() const {
       return getSDep().isCtrl();
     }
@@ -700,56 +687,61 @@ namespace llvm {
     }
   };
 
-  /// ScheduleDAGTopologicalSort is a class that computes a topological
-  /// ordering for SUnits and provides methods for dynamically updating
-  /// the ordering as new edges are added.
+  /// This class can compute a topological ordering for SUnits and provides
+  /// methods for dynamically updating the ordering as new edges are added.
   ///
   /// This allows a very fast implementation of IsReachable, for example.
-  ///
   class ScheduleDAGTopologicalSort {
-    /// SUnits - A reference to the ScheduleDAG's SUnits.
+    /// A reference to the ScheduleDAG's SUnits.
     std::vector<SUnit> &SUnits;
     SUnit *ExitSU;
 
-    /// Index2Node - Maps topological index to the node number.
+    /// Maps topological index to the node number.
     std::vector<int> Index2Node;
-    /// Node2Index - Maps the node number to its topological index.
+    /// Maps the node number to its topological index.
     std::vector<int> Node2Index;
-    /// Visited - a set of nodes visited during a DFS traversal.
+    /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
 
-    /// DFS - make a DFS traversal and mark all nodes affected by the
-    /// edge insertion. These nodes will later get new topological indexes
-    /// by means of the Shift method.
+    /// Makes a DFS traversal and mark all nodes affected by the edge insertion.
+    /// These nodes will later get new topological indexes by means of the Shift
+    /// method.
     void DFS(const SUnit *SU, int UpperBound, bool& HasLoop);
 
-    /// Shift - reassign topological indexes for the nodes in the DAG
-    /// to preserve the topological ordering.
+    /// \brief Reassigns topological indexes for the nodes in the DAG to
+    /// preserve the topological ordering.
     void Shift(BitVector& Visited, int LowerBound, int UpperBound);
 
-    /// Allocate - assign the topological index to the node n.
+    /// Assigns the topological index to the node n.
     void Allocate(int n, int index);
 
   public:
     ScheduleDAGTopologicalSort(std::vector<SUnit> &SUnits, SUnit *ExitSU);
 
-    /// InitDAGTopologicalSorting - create the initial topological
-    /// ordering from the DAG to be scheduled.
+    /// Creates the initial topological ordering from the DAG to be scheduled.
     void InitDAGTopologicalSorting();
 
-    /// IsReachable - Checks if SU is reachable from TargetSU.
+    /// Returns an array of SUs that are both in the successor
+    /// subtree of StartSU and in the predecessor subtree of TargetSU.
+    /// StartSU and TargetSU are not in the array.
+    /// Success is false if TargetSU is not in the successor subtree of
+    /// StartSU, else it is true.
+    std::vector<int> GetSubGraph(const SUnit &StartSU, const SUnit &TargetSU,
+                                 bool &Success);
+
+    /// Checks if \p SU is reachable from \p TargetSU.
     bool IsReachable(const SUnit *SU, const SUnit *TargetSU);
 
-    /// WillCreateCycle - Return true if addPred(TargetSU, SU) creates a cycle.
+    /// Returns true if addPred(TargetSU, SU) creates a cycle.
     bool WillCreateCycle(SUnit *TargetSU, SUnit *SU);
 
-    /// AddPred - Updates the topological ordering to accommodate an edge
-    /// to be added from SUnit X to SUnit Y.
+    /// \brief Updates the topological ordering to accommodate an edge to be
+    /// added from SUnit \p X to SUnit \p Y.
     void AddPred(SUnit *Y, SUnit *X);
 
-    /// RemovePred - Updates the topological ordering to accommodate an
-    /// an edge to be removed from the specified node N from the predecessors
-    /// of the current node M.
+    /// \brief Updates the topological ordering to accommodate an an edge to be
+    /// removed from the specified node \p N from the predecessors of the
+    /// current node \p M.
     void RemovePred(SUnit *M, SUnit *N);
 
     typedef std::vector<int>::iterator iterator;
@@ -766,6 +758,7 @@ namespace llvm {
     reverse_iterator rend() { return Index2Node.rend(); }
     const_reverse_iterator rend() const { return Index2Node.rend(); }
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_SCHEDULEDAG_H

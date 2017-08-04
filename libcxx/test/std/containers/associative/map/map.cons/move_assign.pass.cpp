@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // class map
@@ -23,7 +25,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
@@ -144,7 +145,6 @@ int main()
         assert(m3.key_comp() == C(5));
         assert(m1.empty());
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
@@ -185,6 +185,4 @@ int main()
         assert(m3.key_comp() == C(5));
         assert(m1.empty());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

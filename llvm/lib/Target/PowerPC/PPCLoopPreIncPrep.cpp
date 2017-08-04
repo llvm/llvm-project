@@ -39,6 +39,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -72,9 +73,10 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopPreIncPrep() : FunctionPass(ID), TM(nullptr) {
+    PPCLoopPreIncPrep() : FunctionPass(ID) {
       initializePPCLoopPreIncPrepPass(*PassRegistry::getPassRegistry());
     }
+
     PPCLoopPreIncPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
       initializePPCLoopPreIncPrepPass(*PassRegistry::getPassRegistry());
     }
@@ -93,7 +95,7 @@ namespace {
     bool rotateLoop(Loop *L);
 
   private:
-    PPCTargetMachine *TM;
+    PPCTargetMachine *TM = nullptr;
     DominatorTree *DT;
     LoopInfo *LI;
     ScalarEvolution *SE;

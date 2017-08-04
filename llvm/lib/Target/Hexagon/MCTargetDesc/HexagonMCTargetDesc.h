@@ -41,6 +41,18 @@ extern cl::opt<bool> HexagonDisableDuplex;
 extern const InstrStage HexagonStages[];
 
 MCInstrInfo *createHexagonMCInstrInfo();
+MCRegisterInfo *createHexagonMCRegisterInfo(StringRef TT);
+
+namespace Hexagon_MC {
+  StringRef ParseHexagonTriple(const Triple &TT, StringRef CPU);
+  StringRef selectHexagonCPU(const Triple &TT, StringRef CPU);
+
+  /// Create a Hexagon MCSubtargetInfo instance. This is exposed so Asm parser,
+  /// etc. do not need to go through TargetRegistry.
+  MCSubtargetInfo *createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU,
+                                                StringRef FS);
+  unsigned GetELFFlags(const MCSubtargetInfo &STI);
+}
 
 MCCodeEmitter *createHexagonMCCodeEmitter(const MCInstrInfo &MCII,
                                           const MCRegisterInfo &MRI,
@@ -54,13 +66,9 @@ MCAsmBackend *createHexagonAsmBackend(const Target &T,
 MCObjectWriter *createHexagonELFObjectWriter(raw_pwrite_stream &OS,
                                              uint8_t OSABI, StringRef CPU);
 
-namespace Hexagon_MC {
+unsigned HexagonGetLastSlot();
 
-  StringRef selectHexagonCPU(const Triple &TT, StringRef CPU);
-
-} // end namespace Hexagon_MC
-
-} // end namespace llvm
+} // End llvm namespace
 
 // Define symbolic names for Hexagon registers.  This defines a mapping from
 // register name to register number.

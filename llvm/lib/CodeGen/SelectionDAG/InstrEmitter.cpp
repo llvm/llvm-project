@@ -161,7 +161,8 @@ EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone, bool IsCloned,
   if (VRBase) {
     DstRC = MRI->getRegClass(VRBase);
   } else if (UseRC) {
-    assert(UseRC->hasType(VT) && "Incompatible phys register def and uses!");
+    assert(TRI->isTypeLegalForClass(*UseRC, VT) &&
+           "Incompatible phys register def and uses!");
     DstRC = UseRC;
   } else {
     DstRC = TLI->getRegClassFor(VT);
@@ -235,7 +236,6 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
 
     if (II.OpInfo[i].isOptionalDef()) {
       // Optional def must be a physical register.
-      unsigned NumResults = CountResults(Node);
       VRBase = cast<RegisterSDNode>(Node->getOperand(i-NumResults))->getReg();
       assert(TargetRegisterInfo::isPhysicalRegister(VRBase));
       MIB.addReg(VRBase, RegState::Define);
@@ -589,7 +589,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     } else
       AddOperand(MIB, N0, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
                  IsClone, IsCloned);
-    // Add the subregster being inserted
+    // Add the subregister being inserted
     AddOperand(MIB, N1, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
                IsClone, IsCloned);
     MIB.addImm(SubIdx);
@@ -673,7 +673,6 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
 MachineInstr *
 InstrEmitter::EmitDbgValue(SDDbgValue *SD,
                            DenseMap<SDValue, unsigned> &VRBaseMap) {
-  uint64_t Offset = SD->getOffset();
   MDNode *Var = SD->getVariable();
   MDNode *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
@@ -685,7 +684,7 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
     return BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
         .addFrameIndex(SD->getFrameIx())
-        .addImm(Offset)
+        .addImm(0)
         .addMetadata(Var)
         .addMetadata(Expr);
   }
@@ -727,11 +726,9 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
 
   // Indirect addressing is indicated by an Imm as the second parameter.
   if (SD->isIndirect())
-    MIB.addImm(Offset);
-  else {
-    assert(Offset == 0 && "direct value cannot have an offset");
+    MIB.addImm(0U);
+  else
     MIB.addReg(0U, RegState::Debug);
-  }
 
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);

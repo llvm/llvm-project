@@ -20,7 +20,7 @@ declare void @llvm.amdgcn.s.incperflevel(i32) #0
 ; GCN: s_incperflevel 13{{$}}
 ; GCN: s_incperflevel 14{{$}}
 ; GCN: s_incperflevel 15{{$}}
-define void @test_s_incperflevel(i32 %x) #0 {
+define amdgpu_kernel void @test_s_incperflevel(i32 %x) #0 {
   call void @llvm.amdgcn.s.incperflevel(i32 0)
   call void @llvm.amdgcn.s.incperflevel(i32 1)
   call void @llvm.amdgcn.s.incperflevel(i32 2)

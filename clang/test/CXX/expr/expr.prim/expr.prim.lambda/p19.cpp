@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 %s -Wunused -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wunused -Wno-unused-lambda-capture -verify
 
 struct MoveOnly {
   MoveOnly(MoveOnly&&);

@@ -6,3 +6,12 @@ void f() {
 }
 
 typedef auto PR25449(); // expected-error {{'auto' not allowed in typedef}}
+
+thread_local auto x; // expected-error {{requires an initializer}}
+
+void g() {
+  [](auto){}(0);
+#if __cplusplus == 201103L
+  // expected-error@-2 {{'auto' not allowed in lambda parameter}}
+#endif
+}

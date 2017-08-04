@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "gtest/gtest.h"
 #include <stdlib.h>
 #if defined(__APPLE__)
@@ -87,6 +87,7 @@ protected:
       EXPECT_TRUE(convStatus);
       return EnvStorage.back().c_str();
 #else
+      (void)this;
       return Var;
 #endif
     };

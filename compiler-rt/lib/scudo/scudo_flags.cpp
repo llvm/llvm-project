@@ -68,7 +68,7 @@ void initFlags() {
   // Sanity checks and default settings for the Quarantine parameters.
 
   if (f->QuarantineSizeMb < 0) {
-    const int DefaultQuarantineSizeMb = 64;
+    const int DefaultQuarantineSizeMb = FIRST_32_SECOND_64(4, 16);
     f->QuarantineSizeMb = DefaultQuarantineSizeMb;
   }
   // We enforce an upper limit for the quarantine size of 4Gb.
@@ -76,13 +76,18 @@ void initFlags() {
     dieWithMessage("ERROR: the quarantine size is too large\n");
   }
   if (f->ThreadLocalQuarantineSizeKb < 0) {
-    const int DefaultThreadLocalQuarantineSizeKb = 1024;
+    const int DefaultThreadLocalQuarantineSizeKb =
+        FIRST_32_SECOND_64(64, 256);
     f->ThreadLocalQuarantineSizeKb = DefaultThreadLocalQuarantineSizeKb;
   }
   // And an upper limit of 128Mb for the thread quarantine cache.
   if (f->ThreadLocalQuarantineSizeKb > (128 * 1024)) {
     dieWithMessage("ERROR: the per thread quarantine cache size is too "
                    "large\n");
+  }
+  if (f->ThreadLocalQuarantineSizeKb == 0 && f->QuarantineSizeMb > 0) {
+    dieWithMessage("ERROR: ThreadLocalQuarantineSizeKb can be set to 0 only "
+                   "when QuarantineSizeMb is set to 0\n");
   }
 }
 

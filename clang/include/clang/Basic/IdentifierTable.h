@@ -73,6 +73,9 @@ class IdentifierInfo {
                                    // partially) from an AST file.
   bool ChangedAfterLoad       : 1; // True if identifier has changed from the
                                    // definition loaded from an AST file.
+  bool FEChangedAfterLoad     : 1; // True if identifier's frontend information
+                                   // has changed from the definition loaded
+                                   // from an AST file.
   bool RevertedTokenID        : 1; // True if revertTokenIDToIdentifier was
                                    // called.
   bool OutOfDate              : 1; // True if there may be additional
@@ -80,7 +83,7 @@ class IdentifierInfo {
                                    // stored externally.
   bool IsModulesImport        : 1; // True if this is the 'import' contextual
                                    // keyword.
-  // 30 bit left in 64-bit word.
+  // 29 bit left in 64-bit word.
 
   void *FETokenInfo;               // Managed by the language front-end.
   llvm::StringMapEntry<IdentifierInfo*> *Entry;
@@ -269,10 +272,6 @@ public:
   /// this identifier is a C++ alternate representation of an operator.
   void setIsCPlusPlusOperatorKeyword(bool Val = true) {
     IsCPPOperatorKeyword = Val;
-    if (Val)
-      NeedsHandleIdentifier = true;
-    else
-      RecomputeNeedsHandleIdentifier();
   }
   bool isCPlusPlusOperatorKeyword() const { return IsCPPOperatorKeyword; }
 
@@ -312,6 +311,18 @@ public:
   /// an AST file.
   void setChangedSinceDeserialization() {
     ChangedAfterLoad = true;
+  }
+
+  /// \brief Determine whether the frontend token information for this
+  /// identifier has changed since it was loaded from an AST file.
+  bool hasFETokenInfoChangedSinceDeserialization() const {
+    return FEChangedAfterLoad;
+  }
+  
+  /// \brief Note that the frontend token information for this identifier has
+  /// changed since it was loaded from an AST file.
+  void setFETokenInfoChangedSinceDeserialization() {
+    FEChangedAfterLoad = true;
   }
 
   /// \brief Determine whether the information for this identifier is out of
@@ -366,10 +377,9 @@ private:
   /// This method is very tied to the definition of HandleIdentifier.  Any
   /// change to it should be reflected here.
   void RecomputeNeedsHandleIdentifier() {
-    NeedsHandleIdentifier =
-      (isPoisoned() | hasMacroDefinition() | isCPlusPlusOperatorKeyword() |
-       isExtensionToken() | isFutureCompatKeyword() || isOutOfDate() ||
-       isModulesImport());
+    NeedsHandleIdentifier = isPoisoned() || hasMacroDefinition() ||
+                            isExtensionToken() || isFutureCompatKeyword() ||
+                            isOutOfDate() || isModulesImport();
   }
 };
 
@@ -820,6 +830,7 @@ public:
 #define OVERLOADED_OPERATOR(Name,Spelling,Token,Unary,Binary,MemberOnly) \
     CXXOperator##Name,
 #include "clang/Basic/OperatorKinds.def"
+    CXXDeductionGuide,
     CXXLiteralOperator,
     CXXUsingDirective,
     NUM_EXTRA_KINDS

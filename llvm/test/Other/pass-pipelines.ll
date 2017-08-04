@@ -24,7 +24,7 @@
 ; CHECK-O2: Dead Argument Elimination
 ; CHECK-O2-NEXT: FunctionPass Manager
 ; CHECK-O2-NOT: Manager
-; Very carefully asert the CGSCC pass pipeline as it is fragile and unusually
+; Very carefully assert the CGSCC pass pipeline as it is fragile and unusually
 ; susceptible to phase ordering issues.
 ; CHECK-O2: CallGraph Construction
 ; CHECK-O2-NEXT: Globals Alias Analysis
@@ -85,6 +85,7 @@
 ; CHECK-O2: FunctionPass Manager
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Loop Sink
+; CHECK-O2: Simplify the CFG
 ; CHECK-O2-NOT: Manager
 ;
 ; FIXME: There really shouldn't be another pass manager, especially one that

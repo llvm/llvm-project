@@ -4,7 +4,7 @@
 # RUN:         foo = 123; \
 # RUN:         . = 0x1000; \
 # RUN:         . = 0x2000; \
-# RUN:         .bar : { . = . + 1; } \
+# RUN:         .bar : { *(.bar) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld -o %t -T %t.script %t.o -shared
 # RUN: llvm-readobj -s %t | FileCheck %s
@@ -16,3 +16,5 @@
 # CHECK-NEXT:   SHF_EXECINSTR
 # CHECK-NEXT: ]
 # CHECK-NEXT: Address: 0x1000
+
+.section .bar, "aw"

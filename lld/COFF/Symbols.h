@@ -30,7 +30,6 @@ using llvm::object::coff_import_header;
 using llvm::object::coff_symbol_generic;
 
 class ArchiveFile;
-class BitcodeFile;
 class InputFile;
 class ObjectFile;
 struct Symbol;
@@ -51,14 +50,13 @@ public:
     DefinedImportThunkKind,
     DefinedImportDataKind,
     DefinedAbsoluteKind,
-    DefinedRelativeKind,
-    DefinedBitcodeKind,
+    DefinedSyntheticKind,
 
     UndefinedKind,
     LazyKind,
 
     LastDefinedCOFFKind = DefinedCommonKind,
-    LastDefinedKind = DefinedBitcodeKind,
+    LastDefinedKind = DefinedSyntheticKind,
   };
 
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
@@ -81,7 +79,7 @@ protected:
   friend SymbolTable;
   explicit SymbolBody(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
-        IsReplaceable(false), WrittenToSymtab(false), Name(N) {}
+        WrittenToSymtab(false), Name(N) {}
 
   const unsigned SymbolKind : 8;
   unsigned IsExternal : 1;
@@ -89,11 +87,9 @@ protected:
   // This bit is used by the \c DefinedRegular subclass.
   unsigned IsCOMDAT : 1;
 
-  // This bit is used by the \c DefinedBitcode subclass.
-  unsigned IsReplaceable : 1;
-
 public:
-  // This bit is used by Writer::createSymbolAndStringTable().
+  // This bit is used by Writer::createSymbolAndStringTable() to prevent
+  // symbols from being written to the symbol table more than once.
   unsigned WrittenToSymtab : 1;
 
 protected:
@@ -104,7 +100,7 @@ protected:
 // etc.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef N = "") : SymbolBody(K, N) {}
+  Defined(Kind K, StringRef N) : SymbolBody(K, N) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() <= LastDefinedKind;
@@ -114,35 +110,30 @@ public:
   // writer sets and uses RVAs.
   uint64_t getRVA();
 
-  // Returns the RVA relative to the beginning of the output section.
-  // Used to implement SECREL relocation type.
-  uint64_t getSecrel();
-
-  // Returns the output section index.
-  // Used to implement SECTION relocation type.
-  uint64_t getSectionIndex();
-
-  // Returns true if this symbol points to an executable (e.g. .text) section.
-  // Used to implement ARM relocations.
-  bool isExecutable();
+  // Returns the chunk containing this symbol. Absolute symbols and __ImageBase
+  // do not have chunks, so this may return null.
+  Chunk *getChunk();
 };
 
-// Symbols defined via a COFF object file.
+// Symbols defined via a COFF object file or bitcode file.  For COFF files, this
+// stores a coff_symbol_generic*, and names of internal symbols are lazily
+// loaded through that. For bitcode files, Sym is nullptr and the name is stored
+// as a StringRef.
 class DefinedCOFF : public Defined {
   friend SymbolBody;
 public:
-  DefinedCOFF(Kind K, ObjectFile *F, COFFSymbolRef S)
-      : Defined(K), File(F), Sym(S.getGeneric()) {}
+  DefinedCOFF(Kind K, InputFile *F, StringRef N, const coff_symbol_generic *S)
+      : Defined(K, N), File(F), Sym(S) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() <= LastDefinedCOFFKind;
   }
 
-  ObjectFile *getFile() { return File; }
+  InputFile *getFile() { return File; }
 
   COFFSymbolRef getCOFFSymbol();
 
-  ObjectFile *File;
+  InputFile *File;
 
 protected:
   const coff_symbol_generic *Sym;
@@ -151,10 +142,13 @@ protected:
 // Regular defined symbols read from object file symbol tables.
 class DefinedRegular : public DefinedCOFF {
 public:
-  DefinedRegular(ObjectFile *F, COFFSymbolRef S, SectionChunk *C)
-      : DefinedCOFF(DefinedRegularKind, F, S), Data(&C->Repl) {
-    IsExternal = S.isExternal();
-    IsCOMDAT = C->isCOMDAT();
+  DefinedRegular(InputFile *F, StringRef N, bool IsCOMDAT,
+                 bool IsExternal = false,
+                 const coff_symbol_generic *S = nullptr,
+                 SectionChunk *C = nullptr)
+      : DefinedCOFF(DefinedRegularKind, F, N, S), Data(C ? &C->Repl : nullptr) {
+    this->IsExternal = IsExternal;
+    this->IsCOMDAT = IsCOMDAT;
   }
 
   static bool classof(const SymbolBody *S) {
@@ -172,9 +166,11 @@ private:
 
 class DefinedCommon : public DefinedCOFF {
 public:
-  DefinedCommon(ObjectFile *F, COFFSymbolRef S, CommonChunk *C)
-      : DefinedCOFF(DefinedCommonKind, F, S), Data(C) {
-    IsExternal = S.isExternal();
+  DefinedCommon(InputFile *F, StringRef N, uint64_t Size,
+                const coff_symbol_generic *S = nullptr,
+                CommonChunk *C = nullptr)
+      : DefinedCOFF(DefinedCommonKind, F, N, S), Data(C), Size(Size) {
+    this->IsExternal = true;
   }
 
   static bool classof(const SymbolBody *S) {
@@ -182,11 +178,13 @@ public:
   }
 
   uint64_t getRVA() { return Data->getRVA(); }
+  Chunk *getChunk() { return Data; }
 
 private:
   friend SymbolTable;
-  uint64_t getSize() { return Sym->Value; }
+  uint64_t getSize() const { return Size; }
   CommonChunk *Data;
+  uint64_t Size;
 };
 
 // Absolute symbols.
@@ -207,28 +205,34 @@ public:
   uint64_t getRVA() { return VA - Config->ImageBase; }
   void setVA(uint64_t V) { VA = V; }
 
+  // The sentinel absolute symbol section index. Section index relocations
+  // against absolute symbols resolve to this 16 bit number, and it is the
+  // largest valid section index plus one. This is written by the Writer.
+  static uint16_t OutputSectionIndex;
+  uint16_t getSecIdx() { return OutputSectionIndex; }
+
 private:
   uint64_t VA;
 };
 
-// This is a kind of absolute symbol but relative to the image base.
-// Unlike absolute symbols, relocations referring this kind of symbols
-// are subject of the base relocation. This type is used rarely --
-// mainly for __ImageBase.
-class DefinedRelative : public Defined {
+// This symbol is used for linker-synthesized symbols like __ImageBase and
+// __safe_se_handler_table.
+class DefinedSynthetic : public Defined {
 public:
-  explicit DefinedRelative(StringRef Name, uint64_t V = 0)
-      : Defined(DefinedRelativeKind, Name), RVA(V) {}
+  explicit DefinedSynthetic(StringRef Name, Chunk *C)
+      : Defined(DefinedSyntheticKind, Name), C(C) {}
 
   static bool classof(const SymbolBody *S) {
-    return S->kind() == DefinedRelativeKind;
+    return S->kind() == DefinedSyntheticKind;
   }
 
-  uint64_t getRVA() { return RVA; }
-  void setRVA(uint64_t V) { RVA = V; }
+  // A null chunk indicates that this is __ImageBase. Otherwise, this is some
+  // other synthesized chunk, like SEHTableChunk.
+  uint32_t getRVA() { return C ? C->getRVA() : 0; }
+  Chunk *getChunk() { return C; }
 
 private:
-  uint64_t RVA;
+  Chunk *C;
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -290,12 +294,13 @@ public:
   }
 
   uint64_t getRVA() { return File->Location->getRVA(); }
+  Chunk *getChunk() { return File->Location; }
+  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
+
   StringRef getDLLName() { return File->DLLName; }
   StringRef getExternalName() { return File->ExternalName; }
-  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
-private:
   ImportFile *File;
 };
 
@@ -314,6 +319,8 @@ public:
 
   uint64_t getRVA() { return Data->getRVA(); }
   Chunk *getChunk() { return Data; }
+
+  DefinedImportData *WrappedSym;
 
 private:
   Chunk *Data;
@@ -340,32 +347,12 @@ private:
   LocalImportChunk *Data;
 };
 
-class DefinedBitcode : public Defined {
-  friend SymbolBody;
-public:
-  DefinedBitcode(BitcodeFile *F, StringRef N, bool IsReplaceable)
-      : Defined(DefinedBitcodeKind, N), File(F) {
-    // IsReplaceable tracks whether the bitcode symbol may be replaced with some
-    // other (defined, common or bitcode) symbol. This is the case for common,
-    // comdat and weak external symbols. We try to replace bitcode symbols with
-    // "real" symbols (see SymbolTable::add{Regular,Bitcode}), and resolve the
-    // result against the real symbol from the combined LTO object.
-    this->IsReplaceable = IsReplaceable;
-  }
-
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == DefinedBitcodeKind;
-  }
-
-  BitcodeFile *File;
-};
-
 inline uint64_t Defined::getRVA() {
   switch (kind()) {
   case DefinedAbsoluteKind:
     return cast<DefinedAbsolute>(this)->getRVA();
-  case DefinedRelativeKind:
-    return cast<DefinedRelative>(this)->getRVA();
+  case DefinedSyntheticKind:
+    return cast<DefinedSynthetic>(this)->getRVA();
   case DefinedImportDataKind:
     return cast<DefinedImportData>(this)->getRVA();
   case DefinedImportThunkKind:
@@ -376,11 +363,32 @@ inline uint64_t Defined::getRVA() {
     return cast<DefinedCommon>(this)->getRVA();
   case DefinedRegularKind:
     return cast<DefinedRegular>(this)->getRVA();
-  case DefinedBitcodeKind:
-    llvm_unreachable("There is no address for a bitcode symbol.");
   case LazyKind:
   case UndefinedKind:
     llvm_unreachable("Cannot get the address for an undefined symbol.");
+  }
+  llvm_unreachable("unknown symbol kind");
+}
+
+inline Chunk *Defined::getChunk() {
+  switch (kind()) {
+  case DefinedRegularKind:
+    return cast<DefinedRegular>(this)->getChunk();
+  case DefinedAbsoluteKind:
+    return nullptr;
+  case DefinedSyntheticKind:
+    return cast<DefinedSynthetic>(this)->getChunk();
+  case DefinedImportDataKind:
+    return cast<DefinedImportData>(this)->getChunk();
+  case DefinedImportThunkKind:
+    return cast<DefinedImportThunk>(this)->getChunk();
+  case DefinedLocalImportKind:
+    return cast<DefinedLocalImport>(this)->getChunk();
+  case DefinedCommonKind:
+    return cast<DefinedCommon>(this)->getChunk();
+  case LazyKind:
+  case UndefinedKind:
+    llvm_unreachable("Cannot get the chunk of an undefined symbol.");
   }
   llvm_unreachable("unknown symbol kind");
 }
@@ -401,10 +409,9 @@ struct Symbol {
   // This field is used to store the Symbol's SymbolBody. This instantiation of
   // AlignedCharArrayUnion gives us a struct with a char array field that is
   // large and aligned enough to store any derived class of SymbolBody.
-  llvm::AlignedCharArrayUnion<DefinedRegular, DefinedCommon, DefinedAbsolute,
-                              DefinedRelative, Lazy, Undefined,
-                              DefinedImportData, DefinedImportThunk,
-                              DefinedLocalImport, DefinedBitcode>
+  llvm::AlignedCharArrayUnion<
+      DefinedRegular, DefinedCommon, DefinedAbsolute, DefinedSynthetic, Lazy,
+      Undefined, DefinedImportData, DefinedImportThunk, DefinedLocalImport>
       Body;
 
   SymbolBody *body() {

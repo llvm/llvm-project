@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -40,25 +40,24 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-namespace {
-  struct SrcMgrDiagInfo {
-    const MDNode *LocInfo;
-    LLVMContext::InlineAsmDiagHandlerTy DiagHandler;
-    void *DiagContext;
-  };
-}
-
 /// srcMgrDiagHandler - This callback is invoked when the SourceMgr for an
 /// inline asm has an error in it.  diagInfo is a pointer to the SrcMgrDiagInfo
 /// struct above.
 static void srcMgrDiagHandler(const SMDiagnostic &Diag, void *diagInfo) {
-  SrcMgrDiagInfo *DiagInfo = static_cast<SrcMgrDiagInfo *>(diagInfo);
+  AsmPrinter::SrcMgrDiagInfo *DiagInfo =
+      static_cast<AsmPrinter::SrcMgrDiagInfo *>(diagInfo);
   assert(DiagInfo && "Diagnostic context not passed down?");
+
+  // Look up a LocInfo for the buffer this diagnostic is coming from.
+  unsigned BufNum = DiagInfo->SrcMgr.FindBufferContainingLoc(Diag.getLoc());
+  const MDNode *LocInfo = nullptr;
+  if (BufNum > 0 && BufNum <= DiagInfo->LocInfos.size())
+    LocInfo = DiagInfo->LocInfos[BufNum-1];
 
   // If the inline asm had metadata associated with it, pull out a location
   // cookie corresponding to which line the error occurred on.
   unsigned LocCookie = 0;
-  if (const MDNode *LocInfo = DiagInfo->LocInfo) {
+  if (LocInfo) {
     unsigned ErrorLine = Diag.getLineNo()-1;
     if (ErrorLine >= LocInfo->getNumOperands())
       ErrorLine = 0;
@@ -99,35 +98,39 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
     return;
   }
 
-  SourceMgr SrcMgr;
-  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+  if (!DiagInfo) {
+    DiagInfo = make_unique<SrcMgrDiagInfo>();
 
-  SrcMgrDiagInfo DiagInfo;
+    MCContext &Context = MMI->getContext();
+    Context.setInlineSourceManager(&DiagInfo->SrcMgr);
 
-  // If the current LLVMContext has an inline asm handler, set it in SourceMgr.
-  LLVMContext &LLVMCtx = MMI->getModule()->getContext();
-  bool HasDiagHandler = false;
-  if (LLVMCtx.getInlineAsmDiagnosticHandler() != nullptr) {
-    // If the source manager has an issue, we arrange for srcMgrDiagHandler
-    // to be invoked, getting DiagInfo passed into it.
-    DiagInfo.LocInfo = LocMDNode;
-    DiagInfo.DiagHandler = LLVMCtx.getInlineAsmDiagnosticHandler();
-    DiagInfo.DiagContext = LLVMCtx.getInlineAsmDiagnosticContext();
-    SrcMgr.setDiagHandler(srcMgrDiagHandler, &DiagInfo);
-    HasDiagHandler = true;
+    LLVMContext &LLVMCtx = MMI->getModule()->getContext();
+    if (LLVMCtx.getInlineAsmDiagnosticHandler()) {
+      DiagInfo->DiagHandler = LLVMCtx.getInlineAsmDiagnosticHandler();
+      DiagInfo->DiagContext = LLVMCtx.getInlineAsmDiagnosticContext();
+      DiagInfo->SrcMgr.setDiagHandler(srcMgrDiagHandler, DiagInfo.get());
+    }
   }
 
+  SourceMgr &SrcMgr = DiagInfo->SrcMgr;
+  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+
   std::unique_ptr<MemoryBuffer> Buffer;
-  if (isNullTerminated)
-    Buffer = MemoryBuffer::getMemBuffer(Str, "<inline asm>");
-  else
-    Buffer = MemoryBuffer::getMemBufferCopy(Str, "<inline asm>");
+  // The inline asm source manager will outlive Str, so make a copy of the
+  // string for SourceMgr to own.
+  Buffer = MemoryBuffer::getMemBufferCopy(Str, "<inline asm>");
 
   // Tell SrcMgr about this buffer, it takes ownership of the buffer.
-  SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+  unsigned BufNum = SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+
+  // Store LocMDNode in DiagInfo, using BufNum as an identifier.
+  if (LocMDNode) {
+    DiagInfo->LocInfos.resize(BufNum);
+    DiagInfo->LocInfos[BufNum-1] = LocMDNode;
+  }
 
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI));
+      createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI, BufNum));
 
   // We create a new MCInstrInfo here since we might be at the module level
   // and not have a MachineFunction to initialize the TargetInstrInfo from and
@@ -141,6 +144,9 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                        " we don't have an asm parser for this target\n");
   Parser->setAssemblerDialect(Dialect);
   Parser->setTargetParser(*TAP.get());
+  if (Dialect == InlineAsm::AD_Intel)
+    // We need this flag to be able to parse numbers like "0bH"
+    Parser->setParsingInlineAsm(true);
   if (MF) {
     const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
     TAP->SetFrameRegister(TRI->getFrameRegister(*MF));
@@ -151,7 +157,8 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   int Res = Parser->Run(/*NoInitialTextSection*/ true,
                         /*NoFinalize*/ true);
   emitInlineAsmEnd(STI, &TAP->getSTI());
-  if (Res && !HasDiagHandler)
+
+  if (Res && !DiagInfo->DiagHandler)
     report_fatal_error("Error parsing inline asm\n");
 }
 

@@ -78,8 +78,8 @@ void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
 
 bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
-  // or RAUW'd undef, so use an array of WeakVH for the PHIs to delete.
-  SmallVector<WeakVH, 8> PHIs;
+  // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
+  SmallVector<WeakTrackingVH, 8> PHIs;
   for (BasicBlock::iterator I = BB->begin();
        PHINode *PN = dyn_cast<PHINode>(I); ++I)
     PHIs.push_back(PN);
@@ -646,9 +646,10 @@ llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
   }
 
   if (LI) {
-    Loop *L = LI->getLoopFor(Head);
-    L->addBasicBlockToLoop(ThenBlock, *LI);
-    L->addBasicBlockToLoop(Tail, *LI);
+    if (Loop *L = LI->getLoopFor(Head)) {
+      L->addBasicBlockToLoop(ThenBlock, *LI);
+      L->addBasicBlockToLoop(Tail, *LI);
+    }
   }
 
   return CheckTerm;

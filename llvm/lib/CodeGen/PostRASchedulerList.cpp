@@ -200,7 +200,7 @@ namespace {
 
 char &llvm::PostRASchedulerID = PostRAScheduler::ID;
 
-INITIALIZE_PASS(PostRAScheduler, "post-RA-sched",
+INITIALIZE_PASS(PostRAScheduler, DEBUG_TYPE,
                 "Post RA top-down list latency scheduler", false, false)
 
 SchedulePostRATDList::SchedulePostRATDList(
@@ -367,7 +367,7 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
     Scheduler.finishBlock();
 
     // Update register kills
-    Scheduler.fixupKills(&MBB);
+    Scheduler.fixupKills(MBB);
   }
 
   return true;

@@ -7,11 +7,19 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; Make sure that we can handle multiple integer induction variables.
+;
 ; CHECK-LABEL: @multi_int_induction(
-; CHECK: vector.body:
-; CHECK:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:  %[[VAR:.*]] = trunc i64 %index to i32
-; CHECK:  %offset.idx = add i32 190, %[[VAR]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    %vec.ind = phi <2 x i32> [ <i32 190, i32 191>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK:         [[TMP3:%.*]] = add i64 %index, 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* %A, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> %vec.ind, <2 x i32>* [[TMP6]], align 4
+; CHECK:         %index.next = add i64 %index, 2
+; CHECK-NEXT:    %vec.ind.next = add <2 x i32> %vec.ind, <i32 2, i32 2>
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 define void @multi_int_induction(i32* %A, i32 %N) {
 for.body.lr.ph:
   br label %for.body
@@ -301,59 +309,59 @@ for.end:
 ;
 ; CHECK-LABEL: @scalarize_induction_variable_05(
 ; CHECK: vector.body:
-; CHECK:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue2 ]
+; CHECK:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; CHECK:   %[[I0:.+]] = add i32 %index, 0
 ; CHECK:   getelementptr inbounds i32, i32* %a, i32 %[[I0]]
 ; CHECK: pred.udiv.if:
 ; CHECK:   udiv i32 {{.*}}, %[[I0]]
-; CHECK: pred.udiv.if1:
+; CHECK: pred.udiv.if{{[0-9]+}}:
 ; CHECK:   %[[I1:.+]] = add i32 %index, 1
 ; CHECK:   udiv i32 {{.*}}, %[[I1]]
 ;
 ; UNROLL-NO_IC-LABEL: @scalarize_induction_variable_05(
 ; UNROLL-NO-IC: vector.body:
-; UNROLL-NO-IC:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue11 ]
+; UNROLL-NO-IC:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; UNROLL-NO-IC:   %[[I0:.+]] = add i32 %index, 0
 ; UNROLL-NO-IC:   %[[I2:.+]] = add i32 %index, 2
 ; UNROLL-NO-IC:   getelementptr inbounds i32, i32* %a, i32 %[[I0]]
 ; UNROLL-NO-IC:   getelementptr inbounds i32, i32* %a, i32 %[[I2]]
 ; UNROLL-NO-IC: pred.udiv.if:
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I0]]
-; UNROLL-NO-IC: pred.udiv.if6:
+; UNROLL-NO-IC: pred.udiv.if{{[0-9]+}}:
 ; UNROLL-NO-IC:   %[[I1:.+]] = add i32 %index, 1
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I1]]
-; UNROLL-NO-IC: pred.udiv.if8:
+; UNROLL-NO-IC: pred.udiv.if{{[0-9]+}}:
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I2]]
-; UNROLL-NO-IC: pred.udiv.if10:
+; UNROLL-NO-IC: pred.udiv.if{{[0-9]+}}:
 ; UNROLL-NO-IC:   %[[I3:.+]] = add i32 %index, 3
 ; UNROLL-NO-IC:   udiv i32 {{.*}}, %[[I3]]
 ;
 ; IND-LABEL: @scalarize_induction_variable_05(
 ; IND: vector.body:
-; IND:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue2 ]
+; IND:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; IND:   %[[E0:.+]] = sext i32 %index to i64
 ; IND:   getelementptr inbounds i32, i32* %a, i64 %[[E0]]
 ; IND: pred.udiv.if:
 ; IND:   udiv i32 {{.*}}, %index
-; IND: pred.udiv.if1:
+; IND: pred.udiv.if{{[0-9]+}}:
 ; IND:   %[[I1:.+]] = or i32 %index, 1
 ; IND:   udiv i32 {{.*}}, %[[I1]]
 ;
 ; UNROLL-LABEL: @scalarize_induction_variable_05(
 ; UNROLL: vector.body:
-; UNROLL:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue11 ]
+; UNROLL:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %pred.udiv.continue{{[0-9]+}} ]
 ; UNROLL:   %[[I2:.+]] = or i32 %index, 2
 ; UNROLL:   %[[E0:.+]] = sext i32 %index to i64
 ; UNROLL:   %[[G0:.+]] = getelementptr inbounds i32, i32* %a, i64 %[[E0]]
 ; UNROLL:   getelementptr i32, i32* %[[G0]], i64 2
 ; UNROLL: pred.udiv.if:
 ; UNROLL:   udiv i32 {{.*}}, %index
-; UNROLL: pred.udiv.if6:
+; UNROLL: pred.udiv.if{{[0-9]+}}:
 ; UNROLL:   %[[I1:.+]] = or i32 %index, 1
 ; UNROLL:   udiv i32 {{.*}}, %[[I1]]
-; UNROLL: pred.udiv.if8:
+; UNROLL: pred.udiv.if{{[0-9]+}}:
 ; UNROLL:   udiv i32 {{.*}}, %[[I2]]
-; UNROLL: pred.udiv.if10:
+; UNROLL: pred.udiv.if{{[0-9]+}}:
 ; UNROLL:   %[[I3:.+]] = or i32 %index, 3
 ; UNROLL:   udiv i32 {{.*}}, %[[I3]]
 
@@ -493,13 +501,13 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; condition and branch directly to the scalar loop.
 
 ; CHECK-LABEL: max_i32_backedgetaken
-; CHECK:  br i1 true, label %scalar.ph, label %min.iters.checked
+; CHECK:  br i1 true, label %scalar.ph, label %vector.ph
 
 ; CHECK: middle.block:
 ; CHECK:  %[[v9:.+]] = extractelement <2 x i32> %bin.rdx, i32 0
 ; CHECK: scalar.ph:
 ; CHECK:  %bc.resume.val = phi i32 [ 0, %middle.block ], [ 0, %[[v0:.+]] ]
-; CHECK:  %bc.merge.rdx = phi i32 [ 1, %[[v0:.+]] ], [ 1, %min.iters.checked ], [ %[[v9]], %middle.block ]
+; CHECK:  %bc.merge.rdx = phi i32 [ 1, %[[v0:.+]] ], [ %[[v9]], %middle.block ]
 
 define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 
@@ -764,4 +772,125 @@ for.body:
 
 exit:
   ret void
+}
+
+; CHECK-LABEL: @non_primary_iv_trunc(
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:         [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
+; CHECK:         [[TMP3:%.*]] = add i64 %index, 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* %a, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP6]], align 4
+; CHECK-NEXT:    %index.next = add i64 %index, 2
+; CHECK:         [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 4, i32 4>
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
+define void @non_primary_iv_trunc(i32* %a, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %j = phi i64 [ %j.next, %for.body ], [ 0, %entry ]
+  %tmp0 = getelementptr inbounds i32, i32* %a, i64 %i
+  %tmp1 = trunc i64 %j to i32
+  store i32 %tmp1, i32* %tmp0, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %j.next = add nuw nsw i64 %j, 2
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; PR32419. Ensure we transform truncated non-primary induction variables. In
+; the test case below we replace %tmp1 with a new induction variable. Because
+; the truncated value is non-primary, we must compute an offset from the
+; primary induction variable.
+;
+; CHECK-LABEL: @PR32419(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE4:.*]] ]
+; CHECK:         [[OFFSET_IDX:%.*]] = add i32 -20, [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
+; CHECK:         [[TMP8:%.*]] = add i16 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = urem i16 %b, [[TMP8]]
+; CHECK:         [[TMP15:%.*]] = add i16 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = urem i16 %b, [[TMP15]]
+; CHECK:       [[PRED_UREM_CONTINUE4]]:
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
+;
+define i32 @PR32419(i32 %a, i16 %b) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ -20, %entry ], [ %i.next, %for.inc ]
+  %tmp0 = phi i32 [ %a, %entry ], [ %tmp6, %for.inc ]
+  %tmp1 = trunc i32 %i to i16
+  %tmp2 = icmp eq i16 %tmp1, 0
+  br i1 %tmp2, label %for.inc, label %for.cond
+
+for.cond:
+  %tmp3 = urem i16 %b, %tmp1
+  br label %for.inc
+
+for.inc:
+  %tmp4 = phi i16 [ %tmp3, %for.cond ], [ 0, %for.body ]
+  %tmp5 = sext i16 %tmp4 to i32
+  %tmp6 = or i32 %tmp0, %tmp5
+  %i.next = add nsw i32 %i, 1
+  %cond = icmp eq i32 %i.next, 0
+  br i1 %cond, label %for.end, label %for.body
+
+for.end:
+  %tmp7 = phi i32 [ %tmp6, %for.inc ]
+  ret i32 %tmp7
+}
+
+; Ensure that the shuffle vector for first order recurrence is inserted
+; correctly after all the phis. These new phis correspond to new IVs 
+; that are generated by optimizing non-free truncs of IVs to IVs themselves 
+define i64 @trunc_with_first_order_recurrence() {
+; CHECK-LABEL: trunc_with_first_order_recurrence
+; CHECK-LABEL: vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    %vec.phi = phi <2 x i64>
+; CHECK-NEXT:    %vec.ind = phi <2 x i64> [ <i64 1, i64 2>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK-NEXT:    %vec.ind2 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next3, %vector.body ]
+; CHECK-NEXT:    %vector.recur = phi <2 x i32> [ <i32 undef, i32 42>, %vector.ph ], [ %vec.ind5, %vector.body ]
+; CHECK-NEXT:    %vec.ind5 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next6, %vector.body ]
+; CHECK-NEXT:    %vec.ind7 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next8, %vector.body ]
+; CHECK-NEXT:    shufflevector <2 x i32> %vector.recur, <2 x i32> %vec.ind5, <2 x i32> <i32 1, i32 2>
+entry:
+  br label %loop
+
+exit:                                        ; preds = %loop
+  %.lcssa = phi i64 [ %c23, %loop ]
+  ret i64 %.lcssa
+
+loop:                                         ; preds = %loop, %entry
+  %c5 = phi i64 [ %c23, %loop ], [ 0, %entry ]
+  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 1, %entry ]
+  %x = phi i32 [ %c24, %loop ], [ 1, %entry ]
+  %y = phi i32 [ %c6, %loop ], [ 42, %entry ]
+  %c6 = trunc i64 %indvars.iv to i32
+  %c8 = mul i32 %x, %c6
+  %c9 = add i32 %c8, 42
+  %c10 = add i32 %y, %c6
+  %c11 = add i32 %c10, %c9
+  %c12 = sext i32 %c11 to i64
+  %c13 = add i64 %c5, %c12
+  %indvars.iv.tr = trunc i64 %indvars.iv to i32
+  %c14 = shl i32 %indvars.iv.tr, 1
+  %c15 = add i32 %c9, %c14
+  %c16 = sext i32 %c15 to i64
+  %c23 = add i64 %c13, %c16
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %c24 = add nuw nsw i32 %x, 1
+  %exitcond.i = icmp eq i64 %indvars.iv.next, 114
+  br i1 %exitcond.i, label %exit, label %loop
+
 }

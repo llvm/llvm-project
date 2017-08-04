@@ -6,46 +6,51 @@
 
 target triple = "amdgcn--"
 
-declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.image.load.v4f32.v2i32.v8i32(<2 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float) #2
-
-define amdgpu_vs void @wrapper(i32 inreg, i32) {
+define amdgpu_vs void @wrapper(i32 inreg %arg, i32 %arg1) {
 main_body:
-  %2 = add i32 %1, %0
-  %3 = call <4 x float> @llvm.SI.vs.load.input(<16 x i8> undef, i32 0, i32 %2)
-  %4 = extractelement <4 x float> %3, i32 1
-  %5 = fptosi float %4 to i32
-  %6 = insertelement <2 x i32> undef, i32 %5, i32 1
+  %tmp = add i32 %arg1, %arg
+  %tmp2 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %tmp, i32 0, i1 false, i1 false)
+  %tmp3 = extractelement <4 x float> %tmp2, i32 1
+  %tmp4 = fptosi float %tmp3 to i32
+  %tmp5 = insertelement <2 x i32> undef, i32 %tmp4, i32 1
   br label %loop11.i
 
 loop11.i:                                         ; preds = %endif46.i, %main_body
-  %7 = phi i32 [ 0, %main_body ], [ %15, %endif46.i ]
-  %8 = icmp sgt i32 %7, 999
-  br i1 %8, label %main.exit, label %if16.i
+  %tmp6 = phi i32 [ 0, %main_body ], [ %tmp14, %endif46.i ]
+  %tmp7 = icmp sgt i32 %tmp6, 999
+  br i1 %tmp7, label %main.exit, label %if16.i
 
 if16.i:                                           ; preds = %loop11.i
-  %9 = call <4 x float> @llvm.amdgcn.image.load.v4f32.v2i32.v8i32(<2 x i32> %6, <8 x i32> undef, i32 15, i1 true, i1 false, i1 false, i1 false)
-  %10 = extractelement <4 x float> %9, i32 0
-  %11 = fcmp ult float 0.000000e+00, %10
-  br i1 %11, label %if28.i, label %endif46.i
+  %tmp8 = call <4 x float> @llvm.amdgcn.image.load.v4f32.v2i32.v8i32(<2 x i32> %tmp5, <8 x i32> undef, i32 15, i1 true, i1 false, i1 false, i1 false)
+  %tmp9 = extractelement <4 x float> %tmp8, i32 0
+  %tmp10 = fcmp ult float 0.000000e+00, %tmp9
+  br i1 %tmp10, label %if28.i, label %endif46.i
 
 if28.i:                                           ; preds = %if16.i
-  %12 = bitcast float %10 to i32
-  %13 = shl i32 %12, 16
-  %14 = bitcast i32 %13 to float
+  %tmp11 = bitcast float %tmp9 to i32
+  %tmp12 = shl i32 %tmp11, 16
+  %tmp13 = bitcast i32 %tmp12 to float
   br label %main.exit
 
 endif46.i:                                        ; preds = %if16.i
-  %15 = add i32 %7, 1
+  %tmp14 = add i32 %tmp6, 1
   br label %loop11.i
 
 main.exit:                                        ; preds = %if28.i, %loop11.i
-  %16 = phi float [ %14, %if28.i ], [ 0x36F0800000000000, %loop11.i ]
-  call void @llvm.SI.export(i32 15, i32 0, i32 0, i32 32, i32 0, float %16, float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000)
+  %tmp15 = phi float [ %tmp13, %if28.i ], [ 0x36F0800000000000, %loop11.i ]
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %tmp15, float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000, i1 false, i1 false) #0
   ret void
 }
 
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind readonly }
-attributes #2 = { nounwind }
+; Function Attrs: nounwind
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+
+; Function Attrs: nounwind readnone
+declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #2
+
+; Function Attrs: nounwind readonly
+declare <4 x float> @llvm.amdgcn.image.load.v4f32.v2i32.v8i32(<2 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }

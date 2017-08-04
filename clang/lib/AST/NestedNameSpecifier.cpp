@@ -290,6 +290,7 @@ NestedNameSpecifier::print(raw_ostream &OS,
   case TypeSpecWithTemplate:
     OS << "template ";
     // Fall through to print the type.
+    LLVM_FALLTHROUGH;
 
   case TypeSpec: {
     const Type *T = getAsType();
@@ -689,4 +690,35 @@ NestedNameSpecifierLocBuilder::getWithLocInContext(ASTContext &Context) const {
   void *Mem = Context.Allocate(BufferSize, alignof(void *));
   memcpy(Mem, Buffer, BufferSize);
   return NestedNameSpecifierLoc(Representation, Mem);
+}
+
+NestedNameSpecifier *NestedNameSpecifier::getRequiredQualification(
+    ASTContext &Context, const DeclContext *CurContext,
+    const DeclContext *TargetContext) {
+  SmallVector<const DeclContext *, 4> TargetParents;
+
+  for (const DeclContext *CommonAncestor = TargetContext;
+       CommonAncestor && !CommonAncestor->Encloses(CurContext);
+       CommonAncestor = CommonAncestor->getLookupParent()) {
+    if (CommonAncestor->isTransparentContext() ||
+        CommonAncestor->isFunctionOrMethod())
+      continue;
+
+    TargetParents.push_back(CommonAncestor);
+  }
+
+  NestedNameSpecifier *Result = nullptr;
+  while (!TargetParents.empty()) {
+    const DeclContext *Parent = TargetParents.pop_back_val();
+
+    if (const NamespaceDecl *Namespace = dyn_cast<NamespaceDecl>(Parent)) {
+      if (!Namespace->getIdentifier())
+        continue;
+
+      Result = NestedNameSpecifier::Create(Context, Result, Namespace);
+    } else if (const TagDecl *TD = dyn_cast<TagDecl>(Parent))
+      Result = NestedNameSpecifier::Create(
+          Context, Result, false, Context.getTypeDeclType(TD).getTypePtr());
+  }
+  return Result;
 }

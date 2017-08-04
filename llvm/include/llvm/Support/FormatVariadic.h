@@ -27,8 +27,8 @@
 #define LLVM_SUPPORT_FORMATVARIADIC_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatCommon.h"
 #include "llvm/Support/FormatProviders.h"
@@ -196,7 +196,7 @@ public:
 // "}}" to print a literal '}'.
 //
 // ===Parameter Indexing===
-// `index` specifies the index of the paramter in the parameter pack to format
+// `index` specifies the index of the parameter in the parameter pack to format
 // into the output.  Note that it is possible to refer to the same parameter
 // index multiple times in a given format string.  This makes it possible to
 // output the same value multiple times without passing it multiple times to the

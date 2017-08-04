@@ -742,7 +742,7 @@ uint64_t RuntimeDyldCheckerImpl::getSymbolLocalAddr(StringRef Symbol) const {
 uint64_t RuntimeDyldCheckerImpl::getSymbolRemoteAddr(StringRef Symbol) const {
   if (auto InternalSymbol = getRTDyld().getSymbol(Symbol))
     return InternalSymbol.getAddress();
-  return getRTDyld().Resolver.findSymbol(Symbol).getAddress();
+  return cantFail(getRTDyld().Resolver.findSymbol(Symbol).getAddress());
 }
 
 uint64_t RuntimeDyldCheckerImpl::readMemoryAtAddr(uint64_t SrcAddr,
@@ -861,6 +861,15 @@ RuntimeDyldCheckerImpl::getSubsectionStartingAt(StringRef Name) const {
                        SymInfo.getOffset());
 }
 
+Optional<uint64_t>
+RuntimeDyldCheckerImpl::getSectionLoadAddress(void *LocalAddress) const {
+  for (auto &S : getRTDyld().Sections) {
+    if (S.getAddress() == LocalAddress)
+      return S.getLoadAddress();
+  }
+  return Optional<uint64_t>();
+}
+
 void RuntimeDyldCheckerImpl::registerSection(
     StringRef FilePath, unsigned SectionID) {
   StringRef FileName = sys::path::filename(FilePath);
@@ -934,4 +943,9 @@ std::pair<uint64_t, std::string>
 RuntimeDyldChecker::getSectionAddr(StringRef FileName, StringRef SectionName,
                                    bool LocalAddress) {
   return Impl->getSectionAddr(FileName, SectionName, LocalAddress);
+}
+
+Optional<uint64_t>
+RuntimeDyldChecker::getSectionLoadAddress(void *LocalAddress) const {
+  return Impl->getSectionLoadAddress(LocalAddress);
 }

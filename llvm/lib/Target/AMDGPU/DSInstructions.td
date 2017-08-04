@@ -88,18 +88,6 @@ class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
   let has_vdst = 0;
 }
 
-class DS_1A_Off8_NORET<string opName> : DS_Pseudo<opName,
-  (outs),
-  (ins VGPR_32:$addr, offset0:$offset0, offset1:$offset1, gds:$gds),
-  "$addr $offset0$offset1$gds"> {
-
-  let has_data0 = 0;
-  let has_data1 = 0;
-  let has_vdst  = 0;
-  let has_offset = 0;
-  let AsmMatchConverter = "cvtDSOffset01";
-}
-
 class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
@@ -143,10 +131,24 @@ class DS_1A2D_RET<string opName,
   let hasPostISelHook = 1;
 }
 
-class DS_1A_RET<string opName, RegisterClass rc = VGPR_32>
+class DS_1A2D_Off8_RET<string opName,
+                       RegisterClass rc = VGPR_32,
+                       RegisterClass src = rc>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
-  (ins VGPR_32:$addr, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, src:$data0, src:$data1, offset0:$offset0, offset1:$offset1, gds:$gds),
+  "$vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
+
+  let has_offset = 0;
+  let AsmMatchConverter = "cvtDSOffset01";
+
+  let hasPostISelHook = 1;
+}
+
+class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, Operand ofs = offset>
+: DS_Pseudo<opName,
+  (outs rc:$vdst),
+  (ins VGPR_32:$addr, ofs:$offset, gds:$gds),
   "$vdst, $addr$offset$gds"> {
 
   let has_data0 = 0;
@@ -174,6 +176,7 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   let has_data1 = 0;
   let has_gds = 0;
   let gdsValue = 1;
+  let AsmMatchConverter = "cvtDSGds";
 }
 
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
@@ -202,20 +205,46 @@ class DS_1A <string opName> : DS_Pseudo<opName,
   let has_data1 = 0;
 }
 
-class DS_1A_GDS <string opName> : DS_Pseudo<opName,
-  (outs),
-  (ins VGPR_32:$addr),
-  "$addr gds"> {
+class DS_GWS <string opName, dag ins, string asmOps>
+: DS_Pseudo<opName, (outs), ins, asmOps> {
 
-  let has_vdst    = 0;
-  let has_data0   = 0;
-  let has_data1   = 0;
-  let has_offset  = 0;
+  let has_vdst  = 0;
+  let has_addr  = 0;
+  let has_data0 = 0;
+  let has_data1 = 0;
+
+  let has_gds   = 0;
+  let gdsValue  = 1;
+  let AsmMatchConverter = "cvtDSGds";
+}
+
+class DS_GWS_0D <string opName>
+: DS_GWS<opName,
+  (ins offset:$offset, gds:$gds), "$offset gds">;
+
+class DS_GWS_1D <string opName>
+: DS_GWS<opName,
+  (ins VGPR_32:$data0, offset:$offset, gds:$gds), "$data0$offset gds"> {
+
+  let has_data0 = 1;
+}
+
+class DS_VOID <string opName> : DS_Pseudo<opName,
+  (outs), (ins), ""> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 1;
+  let UseNamedOperandTable = 0;
+  let AsmMatchConverter = "";
+
+  let has_vdst = 0;
+  let has_addr = 0;
+  let has_data0 = 0;
+  let has_data1 = 0;
+  let has_offset = 0;
   let has_offset0 = 0;
   let has_offset1 = 0;
-
-  let has_gds     = 0;
-  let gdsValue    = 1;
+  let has_gds = 0;
 }
 
 class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag>
@@ -324,9 +353,9 @@ def DS_MAX_RTN_F32    : DS_1A1D_RET <"ds_max_rtn_f32">,
 
 def DS_WRXCHG_RTN_B32      : DS_1A1D_RET<"ds_wrxchg_rtn_b32">,
                              AtomicNoRet<"", 1>;
-def DS_WRXCHG2_RTN_B32     : DS_1A2D_RET<"ds_wrxchg2_rtn_b32", VReg_64, VGPR_32>,
+def DS_WRXCHG2_RTN_B32     : DS_1A2D_Off8_RET<"ds_wrxchg2_rtn_b32", VReg_64, VGPR_32>,
                              AtomicNoRet<"", 1>;
-def DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_RET<"ds_wrxchg2st64_rtn_b32", VReg_64, VGPR_32>,
+def DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_Off8_RET<"ds_wrxchg2st64_rtn_b32", VReg_64, VGPR_32>,
                              AtomicNoRet<"", 1>;
 
 def DS_ADD_RTN_U64    : DS_1A1D_RET<"ds_add_rtn_u64", VReg_64>,
@@ -365,17 +394,17 @@ def DS_MAX_RTN_F64    : DS_1A1D_RET<"ds_max_rtn_f64", VReg_64>,
                         AtomicNoRet<"ds_max_f64", 1>;
 
 def DS_WRXCHG_RTN_B64      : DS_1A1D_RET<"ds_wrxchg_rtn_b64", VReg_64>,
-                             AtomicNoRet<"ds_wrxchg_b64", 1>;
-def DS_WRXCHG2_RTN_B64     : DS_1A2D_RET<"ds_wrxchg2_rtn_b64", VReg_128, VReg_64>,
-                             AtomicNoRet<"ds_wrxchg2_b64", 1>;
-def DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_RET<"ds_wrxchg2st64_rtn_b64", VReg_128, VReg_64>,
-                             AtomicNoRet<"ds_wrxchg2st64_b64", 1>;
+                             AtomicNoRet<"", 1>;
+def DS_WRXCHG2_RTN_B64     : DS_1A2D_Off8_RET<"ds_wrxchg2_rtn_b64", VReg_128, VReg_64>,
+                             AtomicNoRet<"", 1>;
+def DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_Off8_RET<"ds_wrxchg2st64_rtn_b64", VReg_128, VReg_64>,
+                             AtomicNoRet<"", 1>;
 
-def DS_GWS_INIT       : DS_1A_GDS<"ds_gws_init">;
-def DS_GWS_SEMA_V     : DS_1A_GDS<"ds_gws_sema_v">;
-def DS_GWS_SEMA_BR    : DS_1A_GDS<"ds_gws_sema_br">;
-def DS_GWS_SEMA_P     : DS_1A_GDS<"ds_gws_sema_p">;
-def DS_GWS_BARRIER    : DS_1A_GDS<"ds_gws_barrier">;
+def DS_GWS_INIT       : DS_GWS_1D<"ds_gws_init">;
+def DS_GWS_SEMA_V     : DS_GWS_0D<"ds_gws_sema_v">;
+def DS_GWS_SEMA_BR    : DS_GWS_1D<"ds_gws_sema_br">;
+def DS_GWS_SEMA_P     : DS_GWS_0D<"ds_gws_sema_p">;
+def DS_GWS_BARRIER    : DS_GWS_1D<"ds_gws_barrier">;
 
 def DS_ADD_SRC2_U32   : DS_1A<"ds_add_src2_u32">;
 def DS_SUB_SRC2_U32   : DS_1A<"ds_sub_src2_u32">;
@@ -386,7 +415,7 @@ def DS_MIN_SRC2_I32   : DS_1A<"ds_min_src2_i32">;
 def DS_MAX_SRC2_I32   : DS_1A<"ds_max_src2_i32">;
 def DS_MIN_SRC2_U32   : DS_1A<"ds_min_src2_u32">;
 def DS_MAX_SRC2_U32   : DS_1A<"ds_max_src2_u32">;
-def DS_AND_SRC2_B32   : DS_1A<"ds_and_src_b32">;
+def DS_AND_SRC2_B32   : DS_1A<"ds_and_src2_b32">;
 def DS_OR_SRC2_B32    : DS_1A<"ds_or_src2_b32">;
 def DS_XOR_SRC2_B32   : DS_1A<"ds_xor_src2_b32">;
 def DS_MIN_SRC2_F32   : DS_1A<"ds_min_src2_f32">;
@@ -407,11 +436,11 @@ def DS_XOR_SRC2_B64   : DS_1A<"ds_xor_src2_b64">;
 def DS_MIN_SRC2_F64   : DS_1A<"ds_min_src2_f64">;
 def DS_MAX_SRC2_F64   : DS_1A<"ds_max_src2_f64">;
 
-def DS_WRITE_SRC2_B32 : DS_1A_Off8_NORET<"ds_write_src2_b32">;
-def DS_WRITE_SRC2_B64 : DS_1A_Off8_NORET<"ds_write_src2_b64">;
+def DS_WRITE_SRC2_B32 : DS_1A<"ds_write_src2_b32">;
+def DS_WRITE_SRC2_B64 : DS_1A<"ds_write_src2_b64">;
 
 let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1 in {
-def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32">;
+def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", VGPR_32, SwizzleImm>;
 }
 
 let mayStore = 0 in {
@@ -429,30 +458,34 @@ def DS_READ2_B64     : DS_1A_Off8_RET<"ds_read2_b64", VReg_128>;
 def DS_READ2ST64_B64 : DS_1A_Off8_RET<"ds_read2st64_b64", VReg_128>;
 }
 
-let SubtargetPredicate = isSICI in {
 def DS_CONSUME       : DS_0A_RET<"ds_consume">;
 def DS_APPEND        : DS_0A_RET<"ds_append">;
 def DS_ORDERED_COUNT : DS_1A_RET_GDS<"ds_ordered_count">;
-}
 
 //===----------------------------------------------------------------------===//
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
-// Remaining instructions:
-// DS_NOP
-// DS_GWS_SEMA_RELEASE_ALL
-// DS_WRAP_RTN_B32
-// DS_CNDXCHG32_RTN_B64
-// DS_WRITE_B96
-// DS_WRITE_B128
-// DS_CONDXCHG32_RTN_B128
-// DS_READ_B96
-// DS_READ_B128
 
 let SubtargetPredicate = isCIVI in {
 
-def DS_WRAP_RTN_F32 : DS_1A1D_RET <"ds_wrap_rtn_f32">,
-                      AtomicNoRet<"ds_wrap_f32", 1>;
+def DS_WRAP_RTN_B32 : DS_1A2D_RET<"ds_wrap_rtn_b32">, AtomicNoRet<"", 1>;
+
+def DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET<"ds_condxchg32_rtn_b64", VReg_64>,
+                            AtomicNoRet<"", 1>;
+
+def DS_GWS_SEMA_RELEASE_ALL : DS_GWS_0D<"ds_gws_sema_release_all">;
+
+let mayStore = 0 in {
+def DS_READ_B96 : DS_1A_RET<"ds_read_b96", VReg_96>;
+def DS_READ_B128: DS_1A_RET<"ds_read_b128", VReg_128>;
+} // End mayStore = 0
+
+let mayLoad = 0 in {
+def DS_WRITE_B96 : DS_1A1D_NORET<"ds_write_b96", VReg_96>;
+def DS_WRITE_B128 : DS_1A1D_NORET<"ds_write_b128", VReg_128>;
+} // End mayLoad = 0
+
+def DS_NOP : DS_VOID<"ds_nop">;
 
 } // let SubtargetPredicate = isCIVI
 
@@ -623,6 +656,7 @@ def DS_CMPST_B32_si       : DS_Real_si<0x10, DS_CMPST_B32>;
 def DS_CMPST_F32_si       : DS_Real_si<0x11, DS_CMPST_F32>;
 def DS_MIN_F32_si         : DS_Real_si<0x12, DS_MIN_F32>;
 def DS_MAX_F32_si         : DS_Real_si<0x13, DS_MAX_F32>;
+def DS_NOP_si             : DS_Real_si<0x14, DS_NOP>;
 def DS_GWS_INIT_si        : DS_Real_si<0x19, DS_GWS_INIT>;
 def DS_GWS_SEMA_V_si      : DS_Real_si<0x1a, DS_GWS_SEMA_V>;
 def DS_GWS_SEMA_BR_si     : DS_Real_si<0x1b, DS_GWS_SEMA_BR>;
@@ -651,8 +685,10 @@ def DS_CMPST_RTN_F32_si   : DS_Real_si<0x31, DS_CMPST_RTN_F32>;
 def DS_MIN_RTN_F32_si     : DS_Real_si<0x32, DS_MIN_RTN_F32>;
 def DS_MAX_RTN_F32_si     : DS_Real_si<0x33, DS_MAX_RTN_F32>;
 
-// FIXME: this instruction is actually CI/VI
-def DS_WRAP_RTN_F32_si    : DS_Real_si<0x34, DS_WRAP_RTN_F32>;
+// These instruction are CI/VI only
+def DS_WRAP_RTN_B32_si    : DS_Real_si<0x34, DS_WRAP_RTN_B32>;
+def DS_CONDXCHG32_RTN_B64_si   : DS_Real_si<0x7e, DS_CONDXCHG32_RTN_B64>;
+def DS_GWS_SEMA_RELEASE_ALL_si : DS_Real_si<0x18, DS_GWS_SEMA_RELEASE_ALL>;
 
 def DS_SWIZZLE_B32_si     : DS_Real_si<0x35, DS_SWIZZLE_B32>;
 def DS_READ_B32_si        : DS_Real_si<0x36, DS_READ_B32>;
@@ -744,6 +780,10 @@ def DS_WRITE_SRC2_B64_si  : DS_Real_si<0xcd, DS_WRITE_SRC2_B64>;
 
 def DS_MIN_SRC2_F64_si    : DS_Real_si<0xd2, DS_MIN_SRC2_F64>;
 def DS_MAX_SRC2_F64_si    : DS_Real_si<0xd3, DS_MAX_SRC2_F64>;
+def DS_WRITE_B96_si       : DS_Real_si<0xde, DS_WRITE_B96>;
+def DS_WRITE_B128_si      : DS_Real_si<0xdf, DS_WRITE_B128>;
+def DS_READ_B96_si        : DS_Real_si<0xfe, DS_READ_B96>;
+def DS_READ_B128_si       : DS_Real_si<0xff, DS_READ_B128>;
 
 //===----------------------------------------------------------------------===//
 // VIInstructions.td
@@ -787,12 +827,13 @@ def DS_CMPST_B32_vi       : DS_Real_vi<0x10, DS_CMPST_B32>;
 def DS_CMPST_F32_vi       : DS_Real_vi<0x11, DS_CMPST_F32>;
 def DS_MIN_F32_vi         : DS_Real_vi<0x12, DS_MIN_F32>;
 def DS_MAX_F32_vi         : DS_Real_vi<0x13, DS_MAX_F32>;
+def DS_NOP_vi             : DS_Real_vi<0x14, DS_NOP>;
 def DS_ADD_F32_vi         : DS_Real_vi<0x15, DS_ADD_F32>;
-def DS_GWS_INIT_vi        : DS_Real_vi<0x19, DS_GWS_INIT>;
-def DS_GWS_SEMA_V_vi      : DS_Real_vi<0x1a, DS_GWS_SEMA_V>;
-def DS_GWS_SEMA_BR_vi     : DS_Real_vi<0x1b, DS_GWS_SEMA_BR>;
-def DS_GWS_SEMA_P_vi      : DS_Real_vi<0x1c, DS_GWS_SEMA_P>;
-def DS_GWS_BARRIER_vi     : DS_Real_vi<0x1d, DS_GWS_BARRIER>;
+def DS_GWS_INIT_vi        : DS_Real_vi<0x99, DS_GWS_INIT>;
+def DS_GWS_SEMA_V_vi      : DS_Real_vi<0x9a, DS_GWS_SEMA_V>;
+def DS_GWS_SEMA_BR_vi     : DS_Real_vi<0x9b, DS_GWS_SEMA_BR>;
+def DS_GWS_SEMA_P_vi      : DS_Real_vi<0x9c, DS_GWS_SEMA_P>;
+def DS_GWS_BARRIER_vi     : DS_Real_vi<0x9d, DS_GWS_BARRIER>;
 def DS_WRITE_B8_vi        : DS_Real_vi<0x1e, DS_WRITE_B8>;
 def DS_WRITE_B16_vi       : DS_Real_vi<0x1f, DS_WRITE_B16>;
 def DS_ADD_RTN_U32_vi     : DS_Real_vi<0x20, DS_ADD_RTN_U32>;
@@ -815,7 +856,7 @@ def DS_CMPST_RTN_B32_vi   : DS_Real_vi<0x30, DS_CMPST_RTN_B32>;
 def DS_CMPST_RTN_F32_vi   : DS_Real_vi<0x31, DS_CMPST_RTN_F32>;
 def DS_MIN_RTN_F32_vi     : DS_Real_vi<0x32, DS_MIN_RTN_F32>;
 def DS_MAX_RTN_F32_vi     : DS_Real_vi<0x33, DS_MAX_RTN_F32>;
-def DS_WRAP_RTN_F32_vi    : DS_Real_vi<0x34, DS_WRAP_RTN_F32>;
+def DS_WRAP_RTN_B32_vi    : DS_Real_vi<0x34, DS_WRAP_RTN_B32>;
 def DS_ADD_RTN_F32_vi     : DS_Real_vi<0x35, DS_ADD_RTN_F32>;
 def DS_READ_B32_vi        : DS_Real_vi<0x36, DS_READ_B32>;
 def DS_READ2_B32_vi       : DS_Real_vi<0x37, DS_READ2_B32>;
@@ -824,6 +865,9 @@ def DS_READ_I8_vi         : DS_Real_vi<0x39, DS_READ_I8>;
 def DS_READ_U8_vi         : DS_Real_vi<0x3a, DS_READ_U8>;
 def DS_READ_I16_vi        : DS_Real_vi<0x3b, DS_READ_I16>;
 def DS_READ_U16_vi        : DS_Real_vi<0x3c, DS_READ_U16>;
+def DS_CONSUME_vi         : DS_Real_vi<0xbd, DS_CONSUME>;
+def DS_APPEND_vi          : DS_Real_vi<0xbe, DS_APPEND>;
+def DS_ORDERED_COUNT_vi   : DS_Real_vi<0xbf, DS_ORDERED_COUNT>;
 def DS_SWIZZLE_B32_vi     : DS_Real_vi<0x3d, DS_SWIZZLE_B32>;
 def DS_PERMUTE_B32_vi     : DS_Real_vi<0x3e, DS_PERMUTE_B32>;
 def DS_BPERMUTE_B32_vi    : DS_Real_vi<0x3f, DS_BPERMUTE_B32>;
@@ -865,6 +909,8 @@ def DS_MSKOR_RTN_B64_vi   : DS_Real_vi<0x6c, DS_MSKOR_RTN_B64>;
 def DS_WRXCHG_RTN_B64_vi  : DS_Real_vi<0x6d, DS_WRXCHG_RTN_B64>;
 def DS_WRXCHG2_RTN_B64_vi : DS_Real_vi<0x6e, DS_WRXCHG2_RTN_B64>;
 def DS_WRXCHG2ST64_RTN_B64_vi : DS_Real_vi<0x6f, DS_WRXCHG2ST64_RTN_B64>;
+def DS_CONDXCHG32_RTN_B64_vi   : DS_Real_vi<0x7e, DS_CONDXCHG32_RTN_B64>;
+def DS_GWS_SEMA_RELEASE_ALL_vi : DS_Real_vi<0x98, DS_GWS_SEMA_RELEASE_ALL>;
 def DS_CMPST_RTN_B64_vi   : DS_Real_vi<0x70, DS_CMPST_RTN_B64>;
 def DS_CMPST_RTN_F64_vi   : DS_Real_vi<0x71, DS_CMPST_RTN_F64>;
 def DS_MIN_RTN_F64_vi     : DS_Real_vi<0x72, DS_MIN_RTN_F64>;
@@ -904,3 +950,7 @@ def DS_XOR_SRC2_B64_vi    : DS_Real_vi<0xcb, DS_XOR_SRC2_B64>;
 def DS_WRITE_SRC2_B64_vi  : DS_Real_vi<0xcd, DS_WRITE_SRC2_B64>;
 def DS_MIN_SRC2_F64_vi    : DS_Real_vi<0xd2, DS_MIN_SRC2_F64>;
 def DS_MAX_SRC2_F64_vi    : DS_Real_vi<0xd3, DS_MAX_SRC2_F64>;
+def DS_WRITE_B96_vi       : DS_Real_vi<0xde, DS_WRITE_B96>;
+def DS_WRITE_B128_vi      : DS_Real_vi<0xdf, DS_WRITE_B128>;
+def DS_READ_B96_vi        : DS_Real_vi<0xfe, DS_READ_B96>;
+def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;

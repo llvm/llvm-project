@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 ; RUN: ld.lld -m elf_x86_64 %t.o -o %t.so -save-temps -shared
 ; RUN: llvm-dis %t.so.0.4.opt.bc -o - | FileCheck %s

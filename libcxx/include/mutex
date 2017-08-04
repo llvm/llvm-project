@@ -109,15 +109,17 @@ public:
     lock_guard& operator=(lock_guard const&) = delete;
 };
 
-template <class... MutexTypes> // Variadic lock_guard only provided in ABI V2.
-class lock_guard
+template <class... MutexTypes>
+class scoped_lock // C++17
 {
 public:
-    explicit lock_guard(MutexTypes&... m);
-    lock_guard(MutexTypes&... m, adopt_lock_t);
-    ~lock_guard();
-    lock_guard(lock_guard const&) = delete;
-    lock_guard& operator=(lock_guard const&) = delete;
+    using mutex_type = Mutex;  // If MutexTypes... consists of the single type Mutex
+
+    explicit scoped_lock(MutexTypes&... m);
+    scoped_lock(MutexTypes&... m, adopt_lock_t);
+    ~scoped_lock();
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
 private:
     tuple<MutexTypes&...> pm; // exposition only
 };
@@ -189,16 +191,18 @@ template<class Callable, class ...Args>
 #include <__mutex_base>
 #include <functional>
 #include <memory>
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 #include <tuple>
 #endif
 #include <__threading_support>
 
-#include <__undef_min_max>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -248,6 +252,7 @@ public:
         bool try_lock_for(const chrono::duration<_Rep, _Period>& __d)
             {return try_lock_until(chrono::steady_clock::now() + __d);}
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
     void unlock() _NOEXCEPT;
 };
@@ -291,6 +296,7 @@ public:
         bool try_lock_for(const chrono::duration<_Rep, _Period>& __d)
             {return try_lock_until(chrono::steady_clock::now() + __d);}
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
     void unlock() _NOEXCEPT;
 };
@@ -339,7 +345,7 @@ try_lock(_L0& __l0, _L1& __l1)
     return 0;
 }
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
 int
@@ -358,7 +364,7 @@ try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3)
     return __r;
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1>
 void
@@ -387,7 +393,7 @@ lock(_L0& __l0, _L1& __l1)
     }
 }
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class ..._L3>
 void
@@ -462,19 +468,96 @@ void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
     _VSTD::__unlock(__l2, __l3...);
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // _LIBCPP_CXX03_LANG
 
+#if _LIBCPP_STD_VER > 14
+template <class ..._Mutexes>
+class _LIBCPP_TEMPLATE_VIS scoped_lock;
+
+template <>
+class _LIBCPP_TEMPLATE_VIS scoped_lock<> {
+public:
+    explicit scoped_lock() {}
+    ~scoped_lock() = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(adopt_lock_t) {}
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+};
+
+template <class _Mutex>
+class _LIBCPP_TEMPLATE_VIS scoped_lock<_Mutex> {
+public:
+    typedef _Mutex  mutex_type;
+private:
+    mutex_type& __m_;
+public:
+    explicit scoped_lock(mutex_type & __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+        : __m_(__m) {__m_.lock();}
+
+    ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
+        : __m_(__m) {}
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+};
+
+template <class ..._MArgs>
+class _LIBCPP_TEMPLATE_VIS scoped_lock
+{
+    static_assert(sizeof...(_MArgs) > 1, "At least 2 lock types required");
+    typedef tuple<_MArgs&...> _MutexTuple;
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    explicit scoped_lock(_MArgs&... __margs)
+      : __t_(__margs...)
+    {
+        _VSTD::lock(__margs...);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    scoped_lock(_MArgs&... __margs, adopt_lock_t)
+        : __t_(__margs...)
+    {
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    ~scoped_lock() {
+        typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
+        __unlock_unpack(_Indices{}, __t_);
+    }
+
+    scoped_lock(scoped_lock const&) = delete;
+    scoped_lock& operator=(scoped_lock const&) = delete;
+
+private:
+    template <size_t ..._Indx>
+    _LIBCPP_INLINE_VISIBILITY
+    static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
+        _VSTD::__unlock(_VSTD::get<_Indx>(__mt)...);
+    }
+
+    _MutexTuple __t_;
+};
+
+#endif // _LIBCPP_STD_VER > 14
 #endif // !_LIBCPP_HAS_NO_THREADS
 
 struct _LIBCPP_TEMPLATE_VIS once_flag;
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Callable, class... _Args>
 _LIBCPP_INLINE_VISIBILITY
 void call_once(once_flag&, _Callable&&, _Args&&...);
 
-#else  // _LIBCPP_HAS_NO_VARIADICS
+#else  // _LIBCPP_CXX03_LANG
 
 template<class _Callable>
 _LIBCPP_INLINE_VISIBILITY
@@ -484,7 +567,7 @@ template<class _Callable>
 _LIBCPP_INLINE_VISIBILITY
 void call_once(once_flag&, const _Callable&);
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // _LIBCPP_CXX03_LANG
 
 struct _LIBCPP_TEMPLATE_VIS once_flag
 {
@@ -498,11 +581,11 @@ private:
 
     unsigned long __state_;
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
     template<class _Callable, class... _Args>
     friend
     void call_once(once_flag&, _Callable&&, _Args&&...);
-#else  // _LIBCPP_HAS_NO_VARIADICS
+#else  // _LIBCPP_CXX03_LANG
     template<class _Callable>
     friend
     void call_once(once_flag&, _Callable&);
@@ -510,10 +593,10 @@ private:
     template<class _Callable>
     friend
     void call_once(once_flag&, const _Callable&);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // _LIBCPP_CXX03_LANG
 };
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Fp>
 class __call_once_param
@@ -568,7 +651,7 @@ __call_once_proxy(void* __vp)
 
 _LIBCPP_FUNC_VIS void __call_once(volatile unsigned long&, void*, void(*)(void*));
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
 template<class _Callable, class... _Args>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -584,7 +667,7 @@ call_once(once_flag& __flag, _Callable&& __func, _Args&&... __args)
     }
 }
 
-#else  // _LIBCPP_HAS_NO_VARIADICS
+#else  // _LIBCPP_CXX03_LANG
 
 template<class _Callable>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -603,72 +686,17 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 call_once(once_flag& __flag, const _Callable& __func)
 {
-    if (__flag.__state_ != ~0ul)
+    if (__libcpp_acquire_load(&__flag.__state_) != ~0ul)
     {
         __call_once_param<const _Callable> __p(__func);
         __call_once(__flag.__state_, &__p, &__call_once_proxy<const _Callable>);
     }
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-
-#if defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD) \
-    && !defined(_LIBCPP_CXX03_LANG)
-template <>
-class _LIBCPP_TEMPLATE_VIS lock_guard<> {
-public:
-    explicit lock_guard() {}
-    ~lock_guard() = default;
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lock_guard(adopt_lock_t) {}
-
-    lock_guard(lock_guard const&) = delete;
-    lock_guard& operator=(lock_guard const&) = delete;
-};
-
-template <class ..._MArgs>
-class _LIBCPP_TEMPLATE_VIS lock_guard
-{
-    static_assert(sizeof...(_MArgs) >= 2, "At least 2 lock types required");
-    typedef tuple<_MArgs&...> _MutexTuple;
-
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    explicit lock_guard(_MArgs&... __margs)
-      : __t_(__margs...)
-    {
-        _VSTD::lock(__margs...);
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    lock_guard(_MArgs&... __margs, adopt_lock_t)
-        : __t_(__margs...)
-    {
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    ~lock_guard() {
-        typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
-        __unlock_unpack(_Indices{}, __t_);
-    }
-
-    lock_guard(lock_guard const&) = delete;
-    lock_guard& operator=(lock_guard const&) = delete;
-
-private:
-    template <size_t ..._Indx>
-    _LIBCPP_INLINE_VISIBILITY
-    static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
-        _VSTD::__unlock(_VSTD::get<_Indx>(__mt)...);
-    }
-
-    _MutexTuple __t_;
-};
-
-#endif // _LIBCPP_ABI_VARIADIC_LOCK_GUARD
+#endif  // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_MUTEX

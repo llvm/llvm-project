@@ -463,7 +463,7 @@ define <4 x i32> @gt_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: gt_v4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
@@ -476,7 +476,7 @@ define <4 x i32> @gt_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX512-LABEL: gt_v4i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX512-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
@@ -782,7 +782,7 @@ define <4 x i32> @lt_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: lt_v4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
@@ -795,7 +795,7 @@ define <4 x i32> @lt_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX512-LABEL: lt_v4i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX512-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0

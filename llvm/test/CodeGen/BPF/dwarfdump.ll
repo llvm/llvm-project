@@ -1,5 +1,7 @@
 ; RUN: llc -O2 -march=bpfel %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump -debug-dump=line %t | FileCheck %s
+; RUN: llc -O2 -march=bpfeb %s -o %t -filetype=obj
+; RUN: llvm-dwarfdump -debug-dump=line %t | FileCheck %s
 
 source_filename = "testprog.c"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"

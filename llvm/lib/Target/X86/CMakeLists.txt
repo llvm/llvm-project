@@ -10,11 +10,20 @@ tablegen(LLVM X86GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM X86GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM X86GenEVEX2VEXTables.inc -gen-x86-EVEX2VEX-tables)
+if(LLVM_BUILD_GLOBAL_ISEL)
+  tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
+  tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
+endif()
+
 add_public_tablegen_target(X86CommonTableGen)
 
 # Add GlobalISel files if the build option was enabled.
 set(GLOBAL_ISEL_FILES
   X86CallLowering.cpp
+  X86LegalizerInfo.cpp
+  X86RegisterBankInfo.cpp
+  X86InstructionSelector.cpp
   )
 
 if(LLVM_BUILD_GLOBAL_ISEL)
@@ -28,6 +37,7 @@ endif()
 set(sources
   X86AsmPrinter.cpp
   X86CallFrameOptimization.cpp
+  X86CmovConversion.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
   X86FixupBWInsts.cpp
@@ -43,6 +53,7 @@ set(sources
   X86EvexToVex.cpp
   X86MCInstLower.cpp
   X86MachineFunctionInfo.cpp
+  X86MacroFusion.cpp
   X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
   X86RegisterInfo.cpp

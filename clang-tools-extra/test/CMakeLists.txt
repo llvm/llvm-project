@@ -31,22 +31,21 @@ if(CLANG_TOOLS_TEST_USE_VG)
 endif()
 
 set(CLANG_TOOLS_TEST_DEPS
-  # Base line deps.
-  FileCheck count not
-
   # clang-tidy tests require it.
   clang-headers
 
   # For the clang-tidy libclang integration test.
   c-index-test
+  # For the clang-apply-replacements test that uses clang-rename.
+  clang-rename
 
   # Individual tools we test.
   clang-apply-replacements
   clang-change-namespace
+  clangd
   clang-include-fixer
   clang-move
   clang-query
-  clang-rename
   clang-reorder-fields
   clang-tidy
   find-all-symbols
@@ -57,10 +56,20 @@ set(CLANG_TOOLS_TEST_DEPS
   ExtraToolsUnitTests
   )
 
+set(llvm_utils
+  FileCheck count not
+  )
+
+foreach(t ${llvm_utils})
+  if(TARGET ${t})
+    list(APPEND CLANG_TOOLS_TEST_DEPS ${t})
+  endif()
+endforeach()
+
 add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
   ARGS ${CLANG_TOOLS_TEST_EXTRA_ARGS}
   )
-set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
 
+set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")

@@ -5,12 +5,9 @@ what goes in or not.
 
 The list is sorted by surname and formatted to allow easy grepping and
 beautification by scripts. The fields are: name (N), email (E), web-address
-(W), PGP key ID and fingerprint (P), description (D), and snail-mail address
-(S). Each entry should contain at least the (N), (E) and (D) fields.
-
-N: Joe Abbey
-E: jabbey@arxan.com
-D: LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
+(W), PGP key ID and fingerprint (P), description (D), snail-mail address
+(S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
+(D) fields.
 
 N: Justin Bogner
 E: mail@justinbogner.com
@@ -20,6 +17,11 @@ D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 N: Alex Bradbury
 E: asb@lowrisc.org
 D: RISC-V backend (lib/Target/RISCV/*)
+
+N: Matthias Braun
+E: matze@braunis.de
+I: MatzeB
+D: Instruction Scheduling
 
 N: Chandler Carruth
 E: chandlerc@gmail.com
@@ -33,6 +35,10 @@ D: parts of code generator not covered by someone else
 N: Eric Christopher
 E: echristo@gmail.com
 D: Debug Information, inline assembly
+
+N: Andrey Churbanov
+E: andrey.churbanov@intel.com
+D: OpenMP runtime library
 
 N: Greg Clayton
 E: gclayton@apple.com
@@ -48,7 +54,7 @@ D: libc++
 
 N: Peter Collingbourne
 E: peter@pcc.me.uk
-D: llgo, libLTO (lib/LTO/* tools/lto/*)
+D: llgo, libLTO (lib/LTO/* tools/lto/*), LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
 N: Quentin Colombet
 E: qcolombet@apple.com
@@ -64,7 +70,7 @@ D: Branch weights and BlockFrequencyInfo
 
 N: Hal Finkel
 E: hfinkel@anl.gov
-D: BBVectorize, the loop reroller, alias analysis and the PowerPC target
+D: The loop reroller, alias analysis and the PowerPC target
 
 N: Dan Gohman
 E: sunfish@mozilla.com
@@ -96,7 +102,7 @@ D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
 
 N: Teresa Johnson
 E: tejohnson@google.com
-D: Gold plugin (tools/gold/*)
+D: Gold plugin (tools/gold/*) and IR Linker
 
 N: Galina Kistanova
 E: gkistanova@gmail.com
@@ -132,7 +138,7 @@ E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
 
 N: Dylan McKay
-E: dylanmckay34@gmail.com
+E: me@dylanmckay.io
 D: AVR Backend
 
 N: Tim Northover
@@ -180,9 +186,8 @@ E: alexei.starovoitov@gmail.com
 D: BPF backend
 
 N: Tom Stellard
-E: thomas.stellard@amd.com
-E: mesa-dev@lists.freedesktop.org
-D: Release manager for the 3.5 and 3.6 branches, R600 Backend, libclc
+E: tstellar@redhat.com
+D: Stable release management (x.y.[1-9] releases), AMDGPU Backend, libclc
 
 N: Evgeniy Stepanov
 E: eugenis@google.com
@@ -190,19 +195,12 @@ D: MemorySanitizer (LLVM part)
 
 N: Craig Topper
 E: craig.topper@gmail.com
+E: craig.topper@intel.com
 D: X86 Backend
-
-N: Andrew Trick
-E: atrick@apple.com
-D: Instruction Scheduling
 
 N: Ulrich Weigand
 E: uweigand@de.ibm.com
 D: SystemZ Backend
-
-N: Teresa Johnson
-E: tejohnson@google.com
-D: IR Linker
 
 N: Hans Wennborg
 E: hans@chromium.org
@@ -211,7 +209,3 @@ D: Release management (x.y.0 releases)
 N: whitequark
 E: whitequark@whitequark.org
 D: OCaml bindings
-
-N: Andrey Churbanov
-E: andrey.churbanov@intel.com
-D: OpenMP runtime library

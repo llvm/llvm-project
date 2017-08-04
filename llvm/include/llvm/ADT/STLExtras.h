@@ -23,11 +23,13 @@
 #include <cstdlib> // for qsort
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <utility> // for std::pair
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -43,6 +45,10 @@ namespace detail {
 
 template <typename RangeT>
 using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
+
+template <typename RangeT>
+using ValueOfRange = typename std::remove_reference<decltype(
+    *std::begin(std::declval<RangeT &>()))>::type;
 
 } // End detail namespace
 
@@ -94,6 +100,8 @@ class function_ref<Ret(Params...)> {
   }
 
 public:
+  function_ref() : callback(nullptr) {}
+
   template <typename Callable>
   function_ref(Callable &&callable,
                typename std::enable_if<
@@ -104,6 +112,8 @@ public:
   Ret operator()(Params ...params) const {
     return callback(callable, std::forward<Params>(params)...);
   }
+
+  operator bool() const { return callback; }
 };
 
 // deleter - Very very very simple method that is used to invoke operator
@@ -123,7 +133,7 @@ inline void deleter(T *Ptr) {
 //===----------------------------------------------------------------------===//
 
 // mapped_iterator - This is a simple iterator adapter that causes a function to
-// be dereferenced whenever operator* is invoked on the iterator.
+// be applied whenever operator* is invoked on the iterator.
 //
 template <class RootIt, class UnaryFunc>
 class mapped_iterator {
@@ -134,9 +144,8 @@ public:
           iterator_category;
   typedef typename std::iterator_traits<RootIt>::difference_type
           difference_type;
-  typedef typename std::result_of<
-            UnaryFunc(decltype(*std::declval<RootIt>()))>
-          ::type value_type;
+  typedef decltype(std::declval<UnaryFunc>()(*std::declval<RootIt>()))
+          value_type;
 
   typedef void pointer;
   //typedef typename UnaryFunc::result_type *pointer;
@@ -356,65 +365,126 @@ template <size_t... I> struct index_sequence;
 template <class... Ts> struct index_sequence_for;
 
 namespace detail {
-template <typename... Iters> class zip_first {
-public:
-  typedef std::input_iterator_tag iterator_category;
-  typedef std::tuple<decltype(*std::declval<Iters>())...> value_type;
+using std::declval;
+
+// We have to alias this since inlining the actual type at the usage site
+// in the parameter list of iterator_facade_base<> below ICEs MSVC 2017.
+template<typename... Iters> struct ZipTupleType {
+  typedef std::tuple<decltype(*declval<Iters>())...> type;
+};
+
+template <typename ZipType, typename... Iters>
+using zip_traits = iterator_facade_base<
+    ZipType, typename std::common_type<std::bidirectional_iterator_tag,
+                                       typename std::iterator_traits<
+                                           Iters>::iterator_category...>::type,
+    // ^ TODO: Implement random access methods.
+    typename ZipTupleType<Iters...>::type,
+    typename std::iterator_traits<typename std::tuple_element<
+        0, std::tuple<Iters...>>::type>::difference_type,
+    // ^ FIXME: This follows boost::make_zip_iterator's assumption that all
+    // inner iterators have the same difference_type. It would fail if, for
+    // instance, the second field's difference_type were non-numeric while the
+    // first is.
+    typename ZipTupleType<Iters...>::type *,
+    typename ZipTupleType<Iters...>::type>;
+
+template <typename ZipType, typename... Iters>
+struct zip_common : public zip_traits<ZipType, Iters...> {
+  using Base = zip_traits<ZipType, Iters...>;
+  using value_type = typename Base::value_type;
+
   std::tuple<Iters...> iterators;
 
-private:
-  template <size_t... Ns> value_type deres(index_sequence<Ns...>) {
+protected:
+  template <size_t... Ns> value_type deref(index_sequence<Ns...>) const {
     return value_type(*std::get<Ns>(iterators)...);
   }
 
-  template <size_t... Ns> decltype(iterators) tup_inc(index_sequence<Ns...>) {
+  template <size_t... Ns>
+  decltype(iterators) tup_inc(index_sequence<Ns...>) const {
     return std::tuple<Iters...>(std::next(std::get<Ns>(iterators))...);
   }
 
-public:
-  value_type operator*() { return deres(index_sequence_for<Iters...>{}); }
-
-  void operator++() { iterators = tup_inc(index_sequence_for<Iters...>{}); }
-
-  bool operator!=(const zip_first<Iters...> &other) const {
-    return std::get<0>(iterators) != std::get<0>(other.iterators);
+  template <size_t... Ns>
+  decltype(iterators) tup_dec(index_sequence<Ns...>) const {
+    return std::tuple<Iters...>(std::prev(std::get<Ns>(iterators))...);
   }
-  zip_first(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
+
+public:
+  zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
+
+  value_type operator*() { return deref(index_sequence_for<Iters...>{}); }
+
+  const value_type operator*() const {
+    return deref(index_sequence_for<Iters...>{});
+  }
+
+  ZipType &operator++() {
+    iterators = tup_inc(index_sequence_for<Iters...>{});
+    return *reinterpret_cast<ZipType *>(this);
+  }
+
+  ZipType &operator--() {
+    static_assert(Base::IsBidirectional,
+                  "All inner iterators must be at least bidirectional.");
+    iterators = tup_dec(index_sequence_for<Iters...>{});
+    return *reinterpret_cast<ZipType *>(this);
+  }
 };
 
-template <typename... Iters> class zip_shortest : public zip_first<Iters...> {
+template <typename... Iters>
+struct zip_first : public zip_common<zip_first<Iters...>, Iters...> {
+  using Base = zip_common<zip_first<Iters...>, Iters...>;
+
+  bool operator==(const zip_first<Iters...> &other) const {
+    return std::get<0>(this->iterators) == std::get<0>(other.iterators);
+  }
+
+  zip_first(Iters &&... ts) : Base(std::forward<Iters>(ts)...) {}
+};
+
+template <typename... Iters>
+class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
   template <size_t... Ns>
-  bool test(const zip_first<Iters...> &other, index_sequence<Ns...>) const {
+  bool test(const zip_shortest<Iters...> &other, index_sequence<Ns...>) const {
     return all_of(std::initializer_list<bool>{std::get<Ns>(this->iterators) !=
                                               std::get<Ns>(other.iterators)...},
                   identity<bool>{});
   }
 
 public:
-  bool operator!=(const zip_first<Iters...> &other) const {
-    return test(other, index_sequence_for<Iters...>{});
+  using Base = zip_common<zip_shortest<Iters...>, Iters...>;
+
+  bool operator==(const zip_shortest<Iters...> &other) const {
+    return !test(other, index_sequence_for<Iters...>{});
   }
-  zip_shortest(Iters &&... ts)
-      : zip_first<Iters...>(std::forward<Iters>(ts)...) {}
+
+  zip_shortest(Iters &&... ts) : Base(std::forward<Iters>(ts)...) {}
 };
 
 template <template <typename...> class ItType, typename... Args> class zippy {
 public:
-  typedef ItType<decltype(std::begin(std::declval<Args>()))...> iterator;
+  using iterator = ItType<decltype(std::begin(std::declval<Args>()))...>;
+  using iterator_category = typename iterator::iterator_category;
+  using value_type = typename iterator::value_type;
+  using difference_type = typename iterator::difference_type;
+  using pointer = typename iterator::pointer;
+  using reference = typename iterator::reference;
 
 private:
   std::tuple<Args...> ts;
 
-  template <size_t... Ns> iterator begin_impl(index_sequence<Ns...>) {
+  template <size_t... Ns> iterator begin_impl(index_sequence<Ns...>) const {
     return iterator(std::begin(std::get<Ns>(ts))...);
   }
-  template <size_t... Ns> iterator end_impl(index_sequence<Ns...>) {
+  template <size_t... Ns> iterator end_impl(index_sequence<Ns...>) const {
     return iterator(std::end(std::get<Ns>(ts))...);
   }
 
 public:
-  iterator begin() { return begin_impl(index_sequence_for<Args...>{}); }
-  iterator end() { return end_impl(index_sequence_for<Args...>{}); }
+  iterator begin() const { return begin_impl(index_sequence_for<Args...>{}); }
+  iterator end() const { return end_impl(index_sequence_for<Args...>{}); }
   zippy(Args &&... ts_) : ts(std::forward<Args>(ts_)...) {}
 };
 } // End detail namespace
@@ -640,6 +710,18 @@ struct is_one_of<T, U, Ts...> {
       std::is_same<T, U>::value || is_one_of<T, Ts...>::value;
 };
 
+/// \brief traits class for checking whether type T is a base class for all
+///  the given types in the variadic list.
+template <typename T, typename... Ts> struct are_base_of {
+  static const bool value = true;
+};
+
+template <typename T, typename U, typename... Ts>
+struct are_base_of<T, U, Ts...> {
+  static const bool value =
+      std::is_base_of<T, U>::value && are_base_of<T, Ts...>::value;
+};
+
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays
 //===----------------------------------------------------------------------===//
@@ -777,6 +859,13 @@ auto remove_if(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
   return std::remove_if(std::begin(Range), std::end(Range), P);
 }
 
+/// Provide wrappers to std::copy_if which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename OutputIt, typename UnaryPredicate>
+OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
+  return std::copy_if(std::begin(Range), std::end(Range), Out, P);
+}
+
 /// Wrapper function around std::find to detect if an element exists
 /// in a container.
 template <typename R, typename E>
@@ -813,6 +902,15 @@ OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate P) {
 template <typename R, typename UnaryPredicate>
 auto partition(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
   return std::partition(std::begin(Range), std::end(Range), P);
+}
+
+/// \brief Given a range of type R, iterate the entire range and return a
+/// SmallVector with elements of the vector.  This is useful, for example,
+/// when you want to iterate a range and then sort the results.
+template <unsigned Size, typename R>
+SmallVector<typename std::remove_const<detail::ValueOfRange<R>>::type, Size>
+to_vector(R &&Range) {
+  return {std::begin(Range), std::end(Range)};
 }
 
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
@@ -909,47 +1007,85 @@ template <typename T> struct deref {
 };
 
 namespace detail {
-template <typename R> class enumerator_impl {
-public:
-  template <typename X> struct result_pair {
-    result_pair(std::size_t Index, X Value) : Index(Index), Value(Value) {}
+template <typename R> class enumerator_iter;
 
-    const std::size_t Index;
-    X Value;
-  };
+template <typename R> struct result_pair {
+  friend class enumerator_iter<R>;
 
-  class iterator {
-    typedef
-        typename std::iterator_traits<IterOfRange<R>>::reference iter_reference;
-    typedef result_pair<iter_reference> result_type;
+  result_pair() : Index(-1) {}
+  result_pair(std::size_t Index, IterOfRange<R> Iter)
+      : Index(Index), Iter(Iter) {}
 
-  public:
-    iterator(IterOfRange<R> &&Iter, std::size_t Index)
-        : Iter(Iter), Index(Index) {}
+  result_pair<R> &operator=(const result_pair<R> &Other) {
+    Index = Other.Index;
+    Iter = Other.Iter;
+    return *this;
+  }
 
-    result_type operator*() const { return result_type(Index, *Iter); }
-
-    iterator &operator++() {
-      ++Iter;
-      ++Index;
-      return *this;
-    }
-
-    bool operator!=(const iterator &RHS) const { return Iter != RHS.Iter; }
-
-  private:
-    IterOfRange<R> Iter;
-    std::size_t Index;
-  };
-
-public:
-  explicit enumerator_impl(R &&Range) : Range(std::forward<R>(Range)) {}
-
-  iterator begin() { return iterator(std::begin(Range), 0); }
-  iterator end() { return iterator(std::end(Range), std::size_t(-1)); }
+  std::size_t index() const { return Index; }
+  const ValueOfRange<R> &value() const { return *Iter; }
+  ValueOfRange<R> &value() { return *Iter; }
 
 private:
-  R Range;
+  std::size_t Index;
+  IterOfRange<R> Iter;
+};
+
+template <typename R>
+class enumerator_iter
+    : public iterator_facade_base<
+          enumerator_iter<R>, std::forward_iterator_tag, result_pair<R>,
+          typename std::iterator_traits<IterOfRange<R>>::difference_type,
+          typename std::iterator_traits<IterOfRange<R>>::pointer,
+          typename std::iterator_traits<IterOfRange<R>>::reference> {
+  using result_type = result_pair<R>;
+
+public:
+  explicit enumerator_iter(IterOfRange<R> EndIter)
+    : Result(std::numeric_limits<size_t>::max(), EndIter) { }
+
+  enumerator_iter(std::size_t Index, IterOfRange<R> Iter)
+      : Result(Index, Iter) {}
+
+  result_type &operator*() { return Result; }
+  const result_type &operator*() const { return Result; }
+
+  enumerator_iter<R> &operator++() {
+    assert(Result.Index != std::numeric_limits<size_t>::max());
+    ++Result.Iter;
+    ++Result.Index;
+    return *this;
+  }
+
+  bool operator==(const enumerator_iter<R> &RHS) const {
+    // Don't compare indices here, only iterators.  It's possible for an end
+    // iterator to have different indices depending on whether it was created
+    // by calling std::end() versus incrementing a valid iterator.
+    return Result.Iter == RHS.Result.Iter;
+  }
+
+  enumerator_iter<R> &operator=(const enumerator_iter<R> &Other) {
+    Result = Other.Result;
+    return *this;
+  }
+
+private:
+  result_type Result;
+};
+
+template <typename R> class enumerator {
+public:
+  explicit enumerator(R &&Range) : TheRange(std::forward<R>(Range)) {}
+
+  enumerator_iter<R> begin() {
+    return enumerator_iter<R>(0, std::begin(TheRange));
+  }
+  enumerator_iter<R> end() {
+    return enumerator_iter<R>(std::end(TheRange));
+  }
+
+private:
+  R TheRange;
 };
 }
 
@@ -959,7 +1095,7 @@ private:
 ///
 /// std::vector<char> Items = {'A', 'B', 'C', 'D'};
 /// for (auto X : enumerate(Items)) {
-///   printf("Item %d - %c\n", X.Index, X.Value);
+///   printf("Item %d - %c\n", X.index(), X.value());
 /// }
 ///
 /// Output:
@@ -968,8 +1104,8 @@ private:
 ///   Item 2 - C
 ///   Item 3 - D
 ///
-template <typename R> detail::enumerator_impl<R> enumerate(R &&Range) {
-  return detail::enumerator_impl<R>(std::forward<R>(Range));
+template <typename R> detail::enumerator<R> enumerate(R &&TheRange) {
+  return detail::enumerator<R>(std::forward<R>(TheRange));
 }
 
 namespace detail {

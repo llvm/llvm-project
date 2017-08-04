@@ -1,4 +1,4 @@
-//===--- Option.cpp - Abstract Driver Options -----------------------------===//
+//===- Option.cpp - Abstract Driver Options -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,22 +7,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Option/Option.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::opt;
 
 Option::Option(const OptTable::Info *info, const OptTable *owner)
   : Info(info), Owner(owner) {
-
   // Multi-level aliases are not supported. This just simplifies option
   // tracking, it is not an inherent limitation.
   assert((!Info || !getAlias().isValid() || !getAlias().getAlias().isValid()) &&
@@ -45,6 +47,7 @@ void Option::print(raw_ostream &O) const {
     P(UnknownClass);
     P(FlagClass);
     P(JoinedClass);
+    P(ValuesClass);
     P(SeparateClass);
     P(CommaJoinedClass);
     P(MultiArgClass);

@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
-; RUN: %llc_dwarf -split-dwarf=Enable < %s -filetype=obj | llvm-dwarfdump - | FileCheck --check-prefix=FISSION %s
+; RUN: %llc_dwarf -split-dwarf-file=foo.dwo < %s -filetype=obj | llvm-dwarfdump - | FileCheck --check-prefix=FISSION %s
 
 ; darwin has a workaround for a linker bug so it always emits one line table entry
 ; XFAIL: darwin
@@ -13,10 +13,9 @@
 ; CHECK-NOT: file_names[
 
 ; CHECK: .debug_pubnames contents:
-; CHECK-NOT: Offset
+; CHECK-NOT: {{^}}0x
 
-; CHECK: .debug_pubtypes contents:
-; CHECK-NOT: Offset
+; CHECK: contents:
 
 ; Don't emit DW_AT_addr_base when there are no addresses.
 ; FISSION-NOT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]
@@ -24,8 +23,10 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.1 (trunk 143523)", isOptimized: true, emissionKind: FullDebug, file: !4, enums: !2, retainedTypes: !2, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.1 (trunk 143523)", isOptimized: true, emissionKind: FullDebug, file: !4, enums: !2, retainedTypes: !6, globals: !2)
 !2 = !{}
 !3 = !DIFile(filename: "empty.c", directory: "/home/nlewycky")
 !4 = !DIFile(filename: "empty.c", directory: "/home/nlewycky")
 !5 = !{i32 1, !"Debug Info Version", i32 3}
+!6 = !{!7}
+!7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

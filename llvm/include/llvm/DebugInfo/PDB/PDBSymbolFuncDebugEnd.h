@@ -34,7 +34,7 @@ public:
   FORWARD_SYMBOL_METHOD(hasFarReturn)
   FORWARD_SYMBOL_METHOD(hasInterruptReturn)
   FORWARD_SYMBOL_METHOD(isStatic)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getLocationType)
   FORWARD_SYMBOL_METHOD(hasNoInlineAttribute)
   FORWARD_SYMBOL_METHOD(hasNoReturnAttribute)

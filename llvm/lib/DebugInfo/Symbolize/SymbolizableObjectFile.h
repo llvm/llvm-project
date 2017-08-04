@@ -1,4 +1,4 @@
-//===-- SymbolizableObjectFile.h -------------------------------- C++ -----===//
+//===- SymbolizableObjectFile.h ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,14 +13,20 @@
 #ifndef LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
 #define LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/Support/ErrorOr.h"
+#include <cstdint>
 #include <map>
+#include <memory>
+#include <string>
+#include <system_error>
 
 namespace llvm {
+
 class DataExtractor;
-}
 
-namespace llvm {
 namespace symbolize {
 
 class SymbolizableObjectFile : public SymbolizableModule {
@@ -65,6 +71,7 @@ private:
     // If size is 0, assume that symbol occupies the whole memory range up to
     // the following symbol.
     uint64_t Size;
+
     friend bool operator<(const SymbolDesc &s1, const SymbolDesc &s2) {
       return s1.Addr < s2.Addr;
     }
@@ -76,7 +83,8 @@ private:
                          std::unique_ptr<DIContext> DICtx);
 };
 
-}  // namespace symbolize
-}  // namespace llvm
+} // end namespace symbolize
 
-#endif  // LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H
+} // end namespace llvm
+
+#endif // LLVM_LIB_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEOBJECTFILE_H

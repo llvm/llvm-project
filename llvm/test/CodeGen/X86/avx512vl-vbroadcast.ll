@@ -5,14 +5,14 @@ declare void @func_f32(float)
 define <8 x float> @_256_broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: _256_broadcast_ss_spill:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:  .Lcfi0:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq func_f32
-; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %ymm0 # 4-byte Folded Reload
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    vbroadcastss (%rsp), %ymm0 # 16-byte Folded Reload
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
   %a  = fadd float %x, %x
   call void @func_f32(float %a)
@@ -24,14 +24,14 @@ define <8 x float> @_256_broadcast_ss_spill(float %x) {
 define <4 x float> @_128_broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: _128_broadcast_ss_spill:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:  .Lcfi1:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq func_f32
-; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    vbroadcastss (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
   %a  = fadd float %x, %x
   call void @func_f32(float %a)
@@ -44,14 +44,14 @@ declare void @func_f64(double)
 define <4 x double> @_256_broadcast_sd_spill(double %x) {
 ; CHECK-LABEL: _256_broadcast_sd_spill:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:  .Lcfi2:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq func_f64
-; CHECK-NEXT:    vbroadcastsd (%rsp), %ymm0 # 8-byte Folded Reload
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    vbroadcastsd (%rsp), %ymm0 # 16-byte Folded Reload
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
   %a  = fadd double %x, %x
   call void @func_f64(double %a)

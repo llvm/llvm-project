@@ -58,5 +58,5 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 ; CHECK: ![[FOO:[0-9]+]] = distinct !DISubprogram(name: "foo"
 ; CHECK: ![[BLOCK:[0-9]+]] = distinct !DILexicalBlock(scope: ![[FOO]],{{.*}} line: 3)
 ; CHECK: ![[THEN]] = !DILocation(line: 3, scope: ![[BLOCKFILE:[0-9]+]])
-; CHECK: ![[BLOCKFILE]] = !DILexicalBlockFile(scope: ![[BLOCK]],{{.*}} discriminator: 1)
+; CHECK: ![[BLOCKFILE]] = !DILexicalBlockFile(scope: ![[BLOCK]],{{.*}} discriminator: 2)
 ; CHECK: ![[END]] = !DILocation(line: 4, scope: ![[FOO]])

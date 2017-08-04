@@ -16,11 +16,11 @@
 #include "AVRSubtarget.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;

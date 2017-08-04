@@ -27,7 +27,5 @@ A f() {
   return c;
 }
 
-// CHECK: !llvm.module.flags = !{{{.*}}}
-// CHECK: !{{[0-9]+}} = !{i32 6, !"Linker Options", ![[link_opts:[0-9]+]]}
-// CHECK: ![[link_opts]] = !{![[dyn_tls_init:[0-9]+]]}
+// CHECK: !llvm.linker.options = !{![[dyn_tls_init:[0-9]+]]}
 // CHECK: ![[dyn_tls_init]] = !{!"/include:___dyn_tls_init@12"}

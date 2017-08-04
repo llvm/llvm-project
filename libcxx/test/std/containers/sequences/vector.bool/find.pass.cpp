@@ -12,7 +12,7 @@
 
 // std::find with vector<bool>::iterator
 
-// http://llvm.org/bugs/show_bug.cgi?id=16816
+// https://bugs.llvm.org/show_bug.cgi?id=16816
 
 #include <vector>
 #include <algorithm>

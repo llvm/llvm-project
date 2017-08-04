@@ -2,8 +2,8 @@
 ;
 ; Generate loop1 instruction for double loop sequence.
 
-; CHECK: loop1(.LBB{{.}}_{{.}}, #100)
-; CHECK: loop0(.LBB{{.}}_{{.}}, #100)
+; CHECK: loop1(.LBB{{.}}_{{.}},#100)
+; CHECK: loop0(.LBB{{.}}_{{.}},#100)
 ; CHECK: endloop0
 ; CHECK: endloop1
 
@@ -12,9 +12,9 @@ entry:
   %array = alloca [100 x i32], align 8
   %doublearray = alloca [100 x [100 x i32]], align 8
   %0 = bitcast [100 x i32]* %array to i8*
-  call void @llvm.lifetime.start(i64 400, i8* %0) #1
+  call void @llvm.lifetime.start.p0i8(i64 400, i8* %0) #1
   %1 = bitcast [100 x [100 x i32]]* %doublearray to i8*
-  call void @llvm.lifetime.start(i64 40000, i8* %1) #1
+  call void @llvm.lifetime.start.p0i8(i64 40000, i8* %1) #1
   %arrayidx1 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* %doublearray, i32 0, i32 10, i32 10
   %arrayidx2.gep = getelementptr [100 x i32], [100 x i32]* %array, i32 0, i32 0
   br label %for.body
@@ -56,11 +56,11 @@ for.inc15:
 
 for.end17:
   %3 = load i32, i32* %arrayidx1, align 8
-  call void @llvm.lifetime.end(i64 40000, i8* %1) #1
-  call void @llvm.lifetime.end(i64 400, i8* %0) #1
+  call void @llvm.lifetime.end.p0i8(i64 40000, i8* %1) #1
+  call void @llvm.lifetime.end.p0i8(i64 400, i8* %0) #1
   ret i32 %3
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

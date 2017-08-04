@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-compatibility -fms-extensions -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-win32 -fms-compatibility -fms-extensions -fsyntax-only -verify -std=c++11 %s
 // MSVC produces similar diagnostics.
 
 __declspec(selectany) void foo() { } // expected-error{{'selectany' can only be applied to data items with external linkage}}

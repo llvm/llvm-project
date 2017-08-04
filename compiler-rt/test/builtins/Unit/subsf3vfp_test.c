@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- subsf3vfp_test.c - Test __subsf3vfp -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -19,7 +20,7 @@
 
 extern COMPILER_RT_ABI float __subsf3vfp(float a, float b);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__subsf3vfp(float a, float b)
 {
     float actual = __subsf3vfp(a, b);
@@ -33,7 +34,7 @@ int test__subsf3vfp(float a, float b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__subsf3vfp(1.0, 1.0))
         return 1;
     if (test__subsf3vfp(1234.567, 765.4321))

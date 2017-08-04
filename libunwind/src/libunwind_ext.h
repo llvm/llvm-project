@@ -33,7 +33,7 @@ extern void unw_iterate_dwarf_unwind_cache(void (*func)(unw_word_t ip_start,
 extern void _unw_add_dynamic_fde(unw_word_t fde);
 extern void _unw_remove_dynamic_fde(unw_word_t fde);
 
-#if _LIBUNWIND_ARM_EHABI
+#if defined(_LIBUNWIND_ARM_EHABI)
 extern const uint32_t* decode_eht_entry(const uint32_t*, size_t*, size_t*);
 extern _Unwind_Reason_Code _Unwind_VRS_Interpret(_Unwind_Context *context,
                                                  const uint32_t *data,

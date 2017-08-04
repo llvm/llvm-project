@@ -5,7 +5,7 @@
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 0(
-define void @test_0(i32 %in0, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_0(i32 %in0, i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in0) #0
   store i32 %0, i32 addrspace(1)* %out
@@ -17,7 +17,7 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 1(
-define void @test_1(i32 %in0, i32 %in1, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_1(i32 %in0, i32 %in1, i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in1) #0
   store i32 %0, i32 addrspace(1)* %out
@@ -29,7 +29,7 @@ entry:
 ; EG: MOV [[VAL]], literal.x
 ; EG-NEXT: LSHR
 ; EG-NEXT: 2(
-define void @test_2(i32 %in0, i32 %in1, i32 %in2, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_2(i32 %in0, i32 %in1, i32 %in2, i32 addrspace(1)* %out) {
 entry:
   %0 = call i32 @llvm.OpenCL.sampler.get.resource.id(i32 %in2) #0
   store i32 %0, i32 addrspace(1)* %out

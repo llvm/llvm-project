@@ -94,7 +94,7 @@ struct HexagonDCE : public DeadCodeElimination {
 
 
 bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
-  auto mapRegs = [MI,&EM] (RegisterRef DstR, RegisterRef SrcR) -> void {
+  auto mapRegs = [&EM] (RegisterRef DstR, RegisterRef SrcR) -> void {
     EM.insert(std::make_pair(DstR, SrcR));
   };
 

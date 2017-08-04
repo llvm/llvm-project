@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -24,7 +25,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLowering.h"
@@ -44,7 +44,7 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
                                           const TargetMachine &TM) {
   Ctx = &ctx;
   // `Initialize` can be called more than once.
-  if (Mang != nullptr) delete Mang;
+  delete Mang;
   Mang = new Mangler();
   InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(),
                        TM.getCodeModel(), *Ctx);
@@ -240,6 +240,20 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
   if (GO->hasSection())
     return getExplicitSectionGlobal(GO, Kind, TM);
 
+  if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
+    auto Attrs = GVar->getAttributes();
+    if ((Attrs.hasAttribute("bss-section") && Kind.isBSS()) ||
+        (Attrs.hasAttribute("data-section") && Kind.isData()) ||
+        (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()))  {
+       return getExplicitSectionGlobal(GO, Kind, TM);
+    }
+  }
+
+  if (auto *F = dyn_cast<Function>(GO)) {
+    if (F->hasFnAttribute("implicit-section-name"))
+      return getExplicitSectionGlobal(GO, Kind, TM);
+  }
+
   // Use default section depending on the 'type' of global
   return SelectSectionForGlobal(GO, Kind, TM);
 }
@@ -264,10 +278,7 @@ bool TargetLoweringObjectFile::shouldPutJumpTableInFunctionSection(
   // in discardable section
   // FIXME: this isn't the right predicate, should be based on the MCSection
   // for the function.
-  if (F.isWeakForLinker())
-    return true;
-
-  return false;
+  return F.isWeakForLinker();
 }
 
 /// Given a mergable constant with the specified size and relocation

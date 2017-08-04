@@ -16,6 +16,21 @@ entry:
   ret i32 %d
 }
 
+define <2 x i32> @t1vec(<2 x i16> %x, <2 x i32> %y) {
+; CHECK-LABEL: @t1vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i32> [[Y:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[D:%.*]] = lshr <2 x i32> [[CONV]], [[TMP0]]
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+entry:
+  %conv = zext <2 x i16> %x to <2 x i32>
+  %s = shl <2 x i32> <i32 2, i32 2>, %y
+  %d = sdiv <2 x i32> %conv, %s
+  ret <2 x i32> %d
+}
+
 ; rdar://11721329
 define i64 @t2(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t2(

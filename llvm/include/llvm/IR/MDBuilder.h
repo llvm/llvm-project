@@ -15,7 +15,9 @@
 #ifndef LLVM_IR_MDBUILDER_H
 #define LLVM_IR_MDBUILDER_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/DataTypes.h"
 #include <utility>
 
@@ -63,8 +65,11 @@ public:
   /// Return metadata specifying that a branch or switch is unpredictable.
   MDNode *createUnpredictable();
 
-  /// Return metadata containing the entry count for a function.
-  MDNode *createFunctionEntryCount(uint64_t Count);
+  /// Return metadata containing the entry \p Count for a function, and the
+  /// GUIDs stored in \p Imports that need to be imported for sample PGO, to
+  /// enable the same inlines as the profiled optimized binary
+  MDNode *createFunctionEntryCount(uint64_t Count,
+                                   const DenseSet<GlobalValue::GUID> *Imports);
 
   /// Return metadata containing the section prefix for a function.
   MDNode *createFunctionSectionPrefix(StringRef Prefix);

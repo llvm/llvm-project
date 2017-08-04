@@ -3,7 +3,7 @@
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     { Stmt_S2[i0, 0] -> Stmt_S1[1 + i0, 0] : 0 <= i0 <= 97; Stmt_S1[i0, 0] -> Stmt_S2[i0, 0] : 0 <= i0 <= 98 }
 ; CHECK-NEXT: WAR dependences:
-; CHECK-NEXT:     {  }
+; CHECK-NEXT:     { Stmt_S2[i0, 0] -> Stmt_S1[1 + i0, 0] : 0 <= i0 <= 97; Stmt_S1[i0, 0] -> Stmt_S2[i0, 0] : 0 <= i0 <= 98 }
 ; CHECK-NEXT: WAW dependences:
 ; CHECK-NEXT:     { Stmt_S2[i0, 0] -> Stmt_S1[1 + i0, 0] : 0 <= i0 <= 97; Stmt_S1[i0, 0] -> Stmt_S2[i0, 0] : 0 <= i0 <= 98 }
 ; CHECK-NEXT: Reduction dependences:

@@ -64,7 +64,7 @@ ENDIF:                                            ; preds = %LOOP
   br i1 %tmp51, label %LOOP, label %LOOP.outer
 }
 
-; OPT-LABEL: define void @multi_if_break_loop(
+; OPT-LABEL: define amdgpu_kernel void @multi_if_break_loop(
 ; OPT: llvm.amdgcn.break
 ; OPT: llvm.amdgcn.loop
 ; OPT: llvm.amdgcn.if.break
@@ -79,7 +79,7 @@ ENDIF:                                            ; preds = %LOOP
 ; Uses a copy intsead of an or
 ; GCN: s_mov_b64 [[COPY:s\[[0-9]+:[0-9]+\]]], [[BREAK_REG]]
 ; GCN: s_or_b64 [[BREAK_REG]], exec, [[COPY]]
-define void @multi_if_break_loop(i32 %arg) #0 {
+define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp = sub i32 %id, %arg

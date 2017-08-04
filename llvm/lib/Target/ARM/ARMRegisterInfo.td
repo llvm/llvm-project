@@ -245,6 +245,10 @@ def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
 // the general GPR register class above (MOV, e.g.)
 def tGPR : RegisterClass<"ARM", [i32], 32, (trunc GPR, 8)>;
 
+// Thumb registers R0-R7 and the PC. Some instructions like TBB or THH allow
+// the PC to be used as a destination operand as well.
+def tGPRwithpc : RegisterClass<"ARM", [i32], 32, (add tGPR, PC)>;
+
 // The high registers in thumb mode, R8-R15.
 def hGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, tGPR)>;
 

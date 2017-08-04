@@ -14,6 +14,7 @@
 #include "clang-c/Index.h"
 #include "CXString.h"
 #include "clang/ARCMigrate/ARCMT.h"
+#include "clang/Config/config.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "llvm/Support/FileSystem.h"
 

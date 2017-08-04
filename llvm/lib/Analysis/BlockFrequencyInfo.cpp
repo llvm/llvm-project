@@ -26,7 +26,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "block-freq"
 
-#ifndef NDEBUG
 static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
     "view-block-freq-propagation-dags", cl::Hidden,
     cl::desc("Pop up a window to show a dag displaying how block "
@@ -55,7 +54,28 @@ cl::opt<unsigned>
                                 "is no less than the max frequency of the "
                                 "function multiplied by this percent."));
 
+// Command line option to turn on CFG dot dump after profile annotation.
+cl::opt<bool>
+    PGOViewCounts("pgo-view-counts", cl::init(false), cl::Hidden,
+                  cl::desc("A boolean option to show CFG dag with "
+                           "block profile counts and branch probabilities "
+                           "right after PGO profile annotation step. The "
+                           "profile counts are computed using branch "
+                           "probabilities from the runtime profile data and "
+                           "block frequency propagation algorithm. To view "
+                           "the raw counts from the profile, use option "
+                           "-pgo-view-raw-counts instead. To limit graph "
+                           "display to only one function, use filtering option "
+                           "-view-bfi-func-name."));
+
 namespace llvm {
+
+static GVDAGType getGVDT() {
+
+  if (PGOViewCounts)
+    return GVDT_Count;
+  return ViewBlockFreqPropagationDAG;
+}
 
 template <>
 struct GraphTraits<BlockFrequencyInfo *> {
@@ -89,8 +109,7 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
   std::string getNodeLabel(const BasicBlock *Node,
                            const BlockFrequencyInfo *Graph) {
 
-    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph,
-                                           ViewBlockFreqPropagationDAG);
+    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph, getGVDT());
   }
 
   std::string getNodeAttributes(const BasicBlock *Node,
@@ -107,7 +126,6 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
 };
 
 } // end namespace llvm
-#endif
 
 BlockFrequencyInfo::BlockFrequencyInfo() {}
 
@@ -132,19 +150,26 @@ BlockFrequencyInfo &BlockFrequencyInfo::operator=(BlockFrequencyInfo &&RHS) {
 // template instantiated which is not available in the header.
 BlockFrequencyInfo::~BlockFrequencyInfo() {}
 
+bool BlockFrequencyInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                                    FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<BlockFrequencyAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 void BlockFrequencyInfo::calculate(const Function &F,
                                    const BranchProbabilityInfo &BPI,
                                    const LoopInfo &LI) {
   if (!BFI)
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, LI);
-#ifndef NDEBUG
   if (ViewBlockFreqPropagationDAG != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F.getName().equals(ViewBlockFreqFuncName))) {
     view();
   }
-#endif
 }
 
 BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
@@ -171,16 +196,32 @@ void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB, uint64_t Freq) {
   BFI->setBlockFreq(BB, Freq);
 }
 
+void BlockFrequencyInfo::setBlockFreqAndScale(
+    const BasicBlock *ReferenceBB, uint64_t Freq,
+    SmallPtrSetImpl<BasicBlock *> &BlocksToScale) {
+  assert(BFI && "Expected analysis to be available");
+  // Use 128 bits APInt to avoid overflow.
+  APInt NewFreq(128, Freq);
+  APInt OldFreq(128, BFI->getBlockFreq(ReferenceBB).getFrequency());
+  APInt BBFreq(128, 0);
+  for (auto *BB : BlocksToScale) {
+    BBFreq = BFI->getBlockFreq(BB).getFrequency();
+    // Multiply first by NewFreq and then divide by OldFreq
+    // to minimize loss of precision.
+    BBFreq *= NewFreq;
+    // udiv is an expensive operation in the general case. If this ends up being
+    // a hot spot, one of the options proposed in
+    // https://reviews.llvm.org/D28535#650071 could be used to avoid this.
+    BBFreq = BBFreq.udiv(OldFreq);
+    BFI->setBlockFreq(BB, BBFreq.getLimitedValue());
+  }
+  BFI->setBlockFreq(ReferenceBB, Freq);
+}
+
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
 void BlockFrequencyInfo::view() const {
-// This code is only for debugging.
-#ifndef NDEBUG
   ViewGraph(const_cast<BlockFrequencyInfo *>(this), "BlockFrequencyDAGs");
-#else
-  errs() << "BlockFrequencyInfo::view is only available in debug builds on "
-            "systems with Graphviz or gv!\n";
-#endif // NDEBUG
 }
 
 const Function *BlockFrequencyInfo::getFunction() const {

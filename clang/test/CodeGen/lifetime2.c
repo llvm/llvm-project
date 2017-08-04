@@ -21,7 +21,7 @@ int foo (int n) {
 
 // CHECK-LABEL: @no_goto_bypass
 void no_goto_bypass() {
-  // O2: @llvm.lifetime.start(i64 1
+  // O2: @llvm.lifetime.start.p0i8(i64 1
   char x;
 l1:
   bar(&x, 1);
@@ -29,14 +29,14 @@ l1:
   bar(y, 5);
   goto l1;
   // Infinite loop
-  // O2-NOT: @llvm.lifetime.end(
+  // O2-NOT: @llvm.lifetime.end.p0i8(
 }
 
 // CHECK-LABEL: @goto_bypass
 void goto_bypass() {
   {
-    // O2-NOT: @llvm.lifetime.start(i64 1
-    // O2-NOT: @llvm.lifetime.end(i64 1
+    // O2-NOT: @llvm.lifetime.start.p0i8(i64 1
+    // O2-NOT: @llvm.lifetime.end.p0i8(i64 1
     char x;
   l1:
     bar(&x, 1);
@@ -48,16 +48,16 @@ void goto_bypass() {
 void no_switch_bypass(int n) {
   switch (n) {
   case 1: {
-    // O2: @llvm.lifetime.start(i64 1
-    // O2: @llvm.lifetime.end(i64 1
+    // O2: @llvm.lifetime.start.p0i8(i64 1
+    // O2: @llvm.lifetime.end.p0i8(i64 1
     char x;
     bar(&x, 1);
     break;
   }
   case 2:
     n = n;
-    // O2: @llvm.lifetime.start(i64 5
-    // O2: @llvm.lifetime.end(i64 5
+    // O2: @llvm.lifetime.start.p0i8(i64 5
+    // O2: @llvm.lifetime.end.p0i8(i64 5
     char y[5];
     bar(y, 5);
     break;
@@ -69,8 +69,8 @@ void switch_bypass(int n) {
   switch (n) {
   case 1:
     n = n;
-    // O2-NOT: @llvm.lifetime.start(i64 1
-    // O2-NOT: @llvm.lifetime.end(i64 1
+    // O2-NOT: @llvm.lifetime.start.p0i8(i64 1
+    // O2-NOT: @llvm.lifetime.end.p0i8(i64 1
     char x;
     bar(&x, 1);
     break;
@@ -93,8 +93,8 @@ L:
 // O2-LABEL: @jump_backward_over_declaration(
 // O2: %[[p:.*]] = alloca i32*
 // O2: %[[v0:.*]] = bitcast i32** %[[p]] to i8*
-// O2: call void @llvm.lifetime.start(i64 {{.*}}, i8* %[[v0]])
-// O2-NOT: call void @llvm.lifetime.start(
+// O2: call void @llvm.lifetime.start.p0i8(i64 {{.*}}, i8* %[[v0]])
+// O2-NOT: call void @llvm.lifetime.start.p0i8(
 
 extern void foo2(int p);
 

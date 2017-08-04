@@ -21,7 +21,7 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Value.h"  // PointerLikeTypeTraits<Value*>
+#include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -58,6 +58,11 @@ struct MachinePointerInfo {
       return MachinePointerInfo(V.get<const Value*>(), Offset+O);
     return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O);
   }
+
+  /// Return true if memory region [V, V+Offset+Size) is known to be
+  /// dereferenceable.
+  bool isDereferenceable(unsigned Size, LLVMContext &C,
+                         const DataLayout &DL) const;
 
   /// Return the LLVM IR address space number that this pointer points into.
   unsigned getAddrSpace() const;
@@ -109,6 +114,9 @@ public:
     MOInvariant = 1u << 5,
 
     // Reserved for use by target-specific passes.
+    // Targets may override getSerializableMachineMemOperandTargetFlags() to
+    // enable MIR serialization/parsing of these flags.  If more of these flags
+    // are added, the MIR printing/parsing code will need to be updated as well.
     MOTargetFlag1 = 1u << 6,
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,
@@ -119,8 +127,8 @@ public:
 private:
   /// Atomic information for this memory operation.
   struct MachineAtomicInfo {
-    /// Synchronization scope for this memory operation.
-    unsigned SynchScope : 1;      // enum SynchronizationScope
+    /// Synchronization scope ID for this memory operation.
+    unsigned SSID : 8;            // SyncScope::ID
     /// Atomic ordering requirements for this memory operation. For cmpxchg
     /// atomic operations, atomic ordering requirements when store occurs.
     unsigned Ordering : 4;        // enum AtomicOrdering
@@ -147,7 +155,7 @@ public:
                     unsigned base_alignment,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
-                    SynchronizationScope SynchScope = CrossThread,
+                    SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
@@ -197,9 +205,9 @@ public:
   /// Return the range tag for the memory reference.
   const MDNode *getRanges() const { return Ranges; }
 
-  /// Return the synchronization scope for this memory operation.
-  SynchronizationScope getSynchScope() const {
-    return static_cast<SynchronizationScope>(AtomicInfo.SynchScope);
+  /// Returns the synchronization scope ID for this memory operation.
+  SyncScope::ID getSyncScopeID() const {
+    return static_cast<SyncScope::ID>(AtomicInfo.SSID);
   }
 
   /// Return the atomic ordering requirements for this memory operation. For

@@ -56,20 +56,24 @@ void RegistryMaps::registerMatcher(
   registerMatcher(#name, internal::makeMatcherAutoMarshall(                    \
                              ::clang::ast_matchers::name, #name));
 
+#define REGISTER_MATCHER_OVERLOAD(name)                                        \
+  registerMatcher(#name,                                                       \
+      llvm::make_unique<internal::OverloadedMatcherDescriptor>(name##Callbacks))
+
 #define SPECIFIC_MATCHER_OVERLOAD(name, Id)                                    \
   static_cast<::clang::ast_matchers::name##_Type##Id>(                         \
       ::clang::ast_matchers::name)
 
+#define MATCHER_OVERLOAD_ENTRY(name, Id)                                       \
+        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, Id), \
+                                          #name)
+
 #define REGISTER_OVERLOADED_2(name)                                            \
   do {                                                                         \
-    std::unique_ptr<MatcherDescriptor> Callbacks[] = {                         \
-        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 0),  \
-                                          #name),                              \
-        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 1),  \
-                                          #name)};                             \
-    registerMatcher(                                                           \
-        #name,                                                                 \
-        llvm::make_unique<internal::OverloadedMatcherDescriptor>(Callbacks));  \
+    std::unique_ptr<MatcherDescriptor> name##Callbacks[] = {                   \
+        MATCHER_OVERLOAD_ENTRY(name, 0),                                       \
+        MATCHER_OVERLOAD_ENTRY(name, 1)};                                      \
+    REGISTER_MATCHER_OVERLOAD(name);                                           \
   } while (0)
 
 /// \brief Generate a registry map with all the known matchers.
@@ -83,7 +87,6 @@ RegistryMaps::RegistryMaps() {
   // findAll
   //
   // Other:
-  // equals
   // equalsNode
 
   REGISTER_OVERLOADED_2(callee);
@@ -95,6 +98,13 @@ RegistryMaps::RegistryMaps() {
   REGISTER_OVERLOADED_2(pointsTo);
   REGISTER_OVERLOADED_2(references);
   REGISTER_OVERLOADED_2(thisPointerType);
+
+  std::unique_ptr<MatcherDescriptor> equalsCallbacks[] = {
+      MATCHER_OVERLOAD_ENTRY(equals, 0),
+      MATCHER_OVERLOAD_ENTRY(equals, 1),
+      MATCHER_OVERLOAD_ENTRY(equals, 2),
+  };
+  REGISTER_MATCHER_OVERLOAD(equals);
 
   REGISTER_MATCHER(accessSpecDecl);
   REGISTER_MATCHER(addrLabelExpr);
@@ -153,6 +163,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(cxxRecordDecl);
   REGISTER_MATCHER(cxxReinterpretCastExpr);
   REGISTER_MATCHER(cxxStaticCastExpr);
+  REGISTER_MATCHER(cxxStdInitializerListExpr);
   REGISTER_MATCHER(cxxTemporaryObjectExpr);
   REGISTER_MATCHER(cxxThisExpr);
   REGISTER_MATCHER(cxxThrowExpr);
@@ -296,6 +307,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isCatchAll);
   REGISTER_MATCHER(isClass);
   REGISTER_MATCHER(isConst);
+  REGISTER_MATCHER(isConstexpr);
   REGISTER_MATCHER(isConstQualified);
   REGISTER_MATCHER(isCopyAssignmentOperator);
   REGISTER_MATCHER(isCopyConstructor);
@@ -330,6 +342,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isPublic);
   REGISTER_MATCHER(isPure);
   REGISTER_MATCHER(isSignedInteger);
+  REGISTER_MATCHER(isStaticStorageClass);
   REGISTER_MATCHER(isStruct);
   REGISTER_MATCHER(isTemplateInstantiation);
   REGISTER_MATCHER(isUnion);
@@ -359,9 +372,14 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(nullStmt);
   REGISTER_MATCHER(numSelectorArgs);
   REGISTER_MATCHER(ofClass);
+  REGISTER_MATCHER(objcCategoryDecl);
   REGISTER_MATCHER(objcInterfaceDecl);
+  REGISTER_MATCHER(objcIvarDecl);
   REGISTER_MATCHER(objcMessageExpr);
+  REGISTER_MATCHER(objcMethodDecl);
   REGISTER_MATCHER(objcObjectPointerType);
+  REGISTER_MATCHER(objcPropertyDecl);
+  REGISTER_MATCHER(objcProtocolDecl);
   REGISTER_MATCHER(on);
   REGISTER_MATCHER(onImplicitObjectArgument);
   REGISTER_MATCHER(opaqueValueExpr);
@@ -412,6 +430,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(typedefNameDecl);
   REGISTER_MATCHER(typedefType);
   REGISTER_MATCHER(typeAliasDecl);
+  REGISTER_MATCHER(typeAliasTemplateDecl);
   REGISTER_MATCHER(typeLoc);
   REGISTER_MATCHER(unaryExprOrTypeTraitExpr);
   REGISTER_MATCHER(unaryOperator);

@@ -58,13 +58,14 @@ class LoopRotate {
   AssumptionCache *AC;
   DominatorTree *DT;
   ScalarEvolution *SE;
+  const SimplifyQuery &SQ;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
-             DominatorTree *DT, ScalarEvolution *SE)
-      : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE) {
-  }
+             DominatorTree *DT, ScalarEvolution *SE, const SimplifyQuery &SQ)
+      : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
+        SQ(SQ) {}
   bool processLoop(Loop *L);
 
 private:
@@ -79,7 +80,8 @@ private:
 /// to merge the two values.  Do this now.
 static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
                                             BasicBlock *OrigPreheader,
-                                            ValueToValueMapTy &ValueMap) {
+                                            ValueToValueMapTy &ValueMap,
+                                SmallVectorImpl<PHINode*> *InsertedPHIs) {
   // Remove PHI node entries that are no longer live.
   BasicBlock::iterator I, E = OrigHeader->end();
   for (I = OrigHeader->begin(); PHINode *PN = dyn_cast<PHINode>(I); ++I)
@@ -87,7 +89,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 
   // Now fix up users of the instructions in OrigHeader, inserting PHI nodes
   // as necessary.
-  SSAUpdater SSA;
+  SSAUpdater SSA(InsertedPHIs);
   for (I = OrigHeader->begin(); I != E; ++I) {
     Value *OrigHeaderVal = &*I;
 
@@ -169,6 +171,38 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
             NewVal = UndefValue::get(OrigHeaderVal->getType());
           U = MetadataAsValue::get(C, ValueAsMetadata::get(NewVal));
         }
+      }
+    }
+  }
+}
+
+/// Propagate dbg.value intrinsics through the newly inserted Phis.
+static void insertDebugValues(BasicBlock *OrigHeader,
+                              SmallVectorImpl<PHINode*> &InsertedPHIs) {
+  ValueToValueMapTy DbgValueMap;
+
+  // Map existing PHI nodes to their dbg.values.
+  for (auto &I : *OrigHeader) {
+    if (auto DbgII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      if (auto *Loc = dyn_cast_or_null<PHINode>(DbgII->getVariableLocation()))
+        DbgValueMap.insert({Loc, DbgII});
+    }
+  }
+
+  // Then iterate through the new PHIs and look to see if they use one of the
+  // previously mapped PHIs. If so, insert a new dbg.value intrinsic that will
+  // propagate the info through the new PHI.
+  LLVMContext &C = OrigHeader->getContext();
+  for (auto PHI : InsertedPHIs) {
+    for (auto VI : PHI->operand_values()) {
+      auto V = DbgValueMap.find(VI);
+      if (V != DbgValueMap.end()) {
+        auto *DbgII = cast<DbgInfoIntrinsic>(V->second);
+        Instruction *NewDbgII = DbgII->clone();
+        auto PhiMAV = MetadataAsValue::get(C, ValueAsMetadata::get(PHI));
+        NewDbgII->setOperand(0, PhiMAV);
+        BasicBlock *Parent = PHI->getParent();
+        NewDbgII->insertBefore(Parent->getFirstNonPHIOrDbgOrLifetime());
       }
     }
   }
@@ -278,8 +312,6 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   for (; PHINode *PN = dyn_cast<PHINode>(I); ++I)
     ValueMap[PN] = PN->getIncomingValueForBlock(OrigPreheader);
 
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-
   // For the rest of the instructions, either hoist to the OrigPreheader if
   // possible or create a clone in the OldPreHeader if not.
   TerminatorInst *LoopEntryBranch = OrigPreheader->getTerminator();
@@ -309,14 +341,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // With the operands remapped, see if the instruction constant folds or is
     // otherwise simplifyable.  This commonly occurs because the entry from PHI
     // nodes allows icmps and other instructions to fold.
-    // FIXME: Provide TLI, DT, AC to SimplifyInstruction.
-    Value *V = SimplifyInstruction(C, DL);
+    Value *V = SimplifyInstruction(C, SQ);
     if (V && LI->replacementPreservesLCSSAForm(C, V)) {
       // If so, then delete the temporary instruction and stick the folded value
       // in the map.
       ValueMap[Inst] = V;
       if (!C->mayHaveSideEffects()) {
-        delete C;
+        C->deleteValue();
         C = nullptr;
       }
     } else {
@@ -347,9 +378,18 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // remove the corresponding incoming values from the PHI nodes in OrigHeader.
   LoopEntryBranch->eraseFromParent();
 
+
+  SmallVector<PHINode*, 2> InsertedPHIs;
   // If there were any uses of instructions in the duplicated block outside the
   // loop, update them, inserting PHI nodes as required
-  RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap);
+  RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap,
+                                  &InsertedPHIs);
+
+  // Attach dbg.value intrinsics to the new phis if that phi uses a value that
+  // previously had debug metadata attached. This keeps the debug info
+  // up-to-date in the loop body.
+  if (!InsertedPHIs.empty())
+    insertDebugValues(OrigHeader, InsertedPHIs);
 
   // NewHeader is now the header of the loop.
   L->moveToHeader(NewHeader);
@@ -445,10 +485,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           DomTreeNode *Node = HeaderChildren[I];
           BasicBlock *BB = Node->getBlock();
 
-          pred_iterator PI = pred_begin(BB);
-          BasicBlock *NearestDom = *PI;
-          for (pred_iterator PE = pred_end(BB); PI != PE; ++PI)
-            NearestDom = DT->findNearestCommonDominator(NearestDom, *PI);
+          BasicBlock *NearestDom = nullptr;
+          for (BasicBlock *Pred : predecessors(BB)) {
+            // Consider only reachable basic blocks.
+            if (!DT->getNode(Pred))
+              continue;
+
+            if (!NearestDom) {
+              NearestDom = Pred;
+              continue;
+            }
+
+            NearestDom = DT->findNearestCommonDominator(NearestDom, Pred);
+            assert(NearestDom && "No NearestCommonDominator found");
+          }
+
+          assert(NearestDom && "Nearest dominator not found");
 
           // Remember if this changes the DomTree.
           if (Node->getIDom()->getBlock() != NearestDom) {
@@ -629,11 +681,15 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
                                       LoopStandardAnalysisResults &AR,
                                       LPMUpdater &) {
   int Threshold = EnableHeaderDuplication ? DefaultRotationThreshold : 0;
-  LoopRotate LR(Threshold, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE);
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
+  LoopRotate LR(Threshold, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
+                SQ);
 
   bool Changed = LR.processLoop(&L);
   if (!Changed)
     return PreservedAnalyses::all();
+
   return getLoopPassPreservedAnalyses();
 }
 
@@ -671,7 +727,8 @@ public:
     auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     auto *SE = SEWP ? &SEWP->getSE() : nullptr;
-    LoopRotate LR(MaxHeaderSize, LI, TTI, AC, DT, SE);
+    const SimplifyQuery SQ = getBestSimplifyQuery(*this, F);
+    LoopRotate LR(MaxHeaderSize, LI, TTI, AC, DT, SE, SQ);
     return LR.processLoop(L);
   }
 };

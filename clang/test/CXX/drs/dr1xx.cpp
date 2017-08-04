@@ -535,13 +535,15 @@ namespace dr145 { // dr145: yes
   }
 }
 
-namespace dr147 { // dr147: no
+namespace dr147 { // dr147: yes
   namespace example1 {
     template<typename> struct A {
       template<typename T> A(T);
     };
-    // FIXME: This appears to be valid, and EDG and G++ accept.
+    // Per core issue 1435, this is ill-formed because A<int>::A<int> does not
+    // name the injected-class-name. (A<int>::A does, though.)
     template<> template<> A<int>::A<int>(int) {} // expected-error {{out-of-line constructor for 'A' cannot have template arguments}}
+    template<> template<> A<float>::A(float) {}
   }
   namespace example2 {
     struct A { A(); };

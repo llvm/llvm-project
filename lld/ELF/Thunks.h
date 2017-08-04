@@ -15,8 +15,7 @@
 namespace lld {
 namespace elf {
 class SymbolBody;
-template <class ELFT> class InputSection;
-
+class ThunkSection;
 // Class to describe an instance of a Thunk.
 // A Thunk is a code-sequence inserted by the linker in between a caller and
 // the callee. The relocation to the callee is redirected to the Thunk, which
@@ -24,31 +23,39 @@ template <class ELFT> class InputSection;
 // include transferring control from non-pi to pi and changing state on
 // targets like ARM.
 //
-// Thunks can be created for DefinedRegular and Shared Symbols. The Thunk
-// is stored in a field of the Symbol Destination.
-// Thunks to be written to an InputSection are recorded by the InputSection.
-template <class ELFT> class Thunk {
-  typedef typename ELFT::uint uintX_t;
-
+// Thunks can be created for DefinedRegular, Shared and Undefined Symbols.
+// Thunks are assigned to synthetic ThunkSections
+class Thunk {
 public:
-  Thunk(const SymbolBody &Destination, const InputSection<ELFT> &Owner);
+  Thunk(const SymbolBody &Destination);
   virtual ~Thunk();
 
   virtual uint32_t size() const { return 0; }
-  virtual void writeTo(uint8_t *Buf) const {}
-  uintX_t getVA() const;
+  virtual void writeTo(uint8_t *Buf, ThunkSection &IS) const {}
 
-protected:
+  // All Thunks must define at least one symbol ThunkSym so that we can
+  // redirect relocations to it.
+  virtual void addSymbols(ThunkSection &IS) {}
+
+  // Some Thunks must be placed immediately before their Target as they elide
+  // a branch and fall through to the first Symbol in the Target.
+  virtual InputSection *getTargetInputSection() const { return nullptr; }
+
+  // To reuse a Thunk the caller as identified by the RelocType must be
+  // compatible with it.
+  virtual bool isCompatibleWith(uint32_t RelocType) const { return true; }
+
+  // The alignment requirement for this Thunk, defaults to the size of the
+  // typical code section alignment.
   const SymbolBody &Destination;
-  const InputSection<ELFT> &Owner;
+  SymbolBody *ThunkSym;
   uint64_t Offset;
+  uint32_t Alignment = 4;
 };
 
-// For a Relocation to symbol S from InputSection Src, create a Thunk and
-// update the fields of S and the InputSection that the Thunk body will be
-// written to. At present there are implementations for ARM and Mips Thunks.
-template <class ELFT>
-void addThunk(uint32_t RelocType, SymbolBody &S, InputSection<ELFT> &Src);
+// For a Relocation to symbol S create a Thunk to be added to a synthetic
+// ThunkSection. At present there are implementations for ARM and Mips Thunks.
+Thunk *addThunk(uint32_t RelocType, SymbolBody &S);
 
 } // namespace elf
 } // namespace lld

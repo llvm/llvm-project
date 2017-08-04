@@ -71,7 +71,7 @@ private:
   // Allocate raw space for N elements of type T.  If T has a ctor or dtor, we
   // don't want it to be automatically run, so we need to represent the space as
   // something else.  Use an array of char of sufficient alignment.
-  typedef AlignedCharArrayUnion<T> U;
+  using U = AlignedCharArrayUnion<T>;
   U FirstEl;
   // Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
@@ -96,19 +96,19 @@ protected:
   void setEnd(T *P) { this->EndX = P; }
 
 public:
-  typedef size_t size_type;
-  typedef ptrdiff_t difference_type;
-  typedef T value_type;
-  typedef T *iterator;
-  typedef const T *const_iterator;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using value_type = T;
+  using iterator = T *;
+  using const_iterator = const T *;
 
-  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-  typedef std::reverse_iterator<iterator> reverse_iterator;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
 
-  typedef T &reference;
-  typedef const T &const_reference;
-  typedef T *pointer;
-  typedef const T *const_pointer;
+  using reference = T &;
+  using const_reference = const T &;
+  using pointer = T *;
+  using const_pointer = const T *;
 
   // forward iterator creation methods.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -319,12 +319,12 @@ public:
 /// reduce code duplication based on the SmallVector 'N' template parameter.
 template <typename T>
 class SmallVectorImpl : public SmallVectorTemplateBase<T, isPodLike<T>::value> {
-  typedef SmallVectorTemplateBase<T, isPodLike<T>::value > SuperClass;
+  using SuperClass = SmallVectorTemplateBase<T, isPodLike<T>::value>;
 
 public:
-  typedef typename SuperClass::iterator iterator;
-  typedef typename SuperClass::const_iterator const_iterator;
-  typedef typename SuperClass::size_type size_type;
+  using iterator = typename SuperClass::iterator;
+  using const_iterator = typename SuperClass::const_iterator;
+  using size_type = typename SuperClass::size_type;
 
 protected:
   // Default ctor - Initialize to empty.
@@ -388,7 +388,10 @@ public:
   void swap(SmallVectorImpl &RHS);
 
   /// Add the specified range to the end of the SmallVector.
-  template<typename in_iter>
+  template <typename in_iter,
+            typename = typename std::enable_if<std::is_convertible<
+                typename std::iterator_traits<in_iter>::iterator_category,
+                std::input_iterator_tag>::value>::type>
   void append(in_iter in_start, in_iter in_end) {
     size_type NumInputs = std::distance(in_start, in_end);
     // Grow allocated space if needed.
@@ -415,12 +418,24 @@ public:
     append(IL.begin(), IL.end());
   }
 
+  // FIXME: Consider assigning over existing elements, rather than clearing &
+  // re-initializing them - for all assign(...) variants.
+
   void assign(size_type NumElts, const T &Elt) {
     clear();
     if (this->capacity() < NumElts)
       this->grow(NumElts);
     this->setEnd(this->begin()+NumElts);
     std::uninitialized_fill(this->begin(), this->end(), Elt);
+  }
+
+  template <typename in_iter,
+            typename = typename std::enable_if<std::is_convertible<
+                typename std::iterator_traits<in_iter>::iterator_category,
+                std::input_iterator_tag>::value>::type>
+  void assign(in_iter in_start, in_iter in_end) {
+    clear();
+    append(in_start, in_end);
   }
 
   void assign(std::initializer_list<T> IL) {
@@ -571,7 +586,10 @@ public:
     return I;
   }
 
-  template<typename ItTy>
+  template <typename ItTy,
+            typename = typename std::enable_if<std::is_convertible<
+                typename std::iterator_traits<ItTy>::iterator_category,
+                std::input_iterator_tag>::value>::type>
   iterator insert(iterator I, ItTy From, ItTy To) {
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
@@ -845,15 +863,17 @@ class SmallVector : public SmallVectorImpl<T> {
   SmallVectorStorage<T, N> Storage;
 
 public:
-  SmallVector() : SmallVectorImpl<T>(N) {
-  }
+  SmallVector() : SmallVectorImpl<T>(N) {}
 
   explicit SmallVector(size_t Size, const T &Value = T())
     : SmallVectorImpl<T>(N) {
     this->assign(Size, Value);
   }
 
-  template<typename ItTy>
+  template <typename ItTy,
+            typename = typename std::enable_if<std::is_convertible<
+                typename std::iterator_traits<ItTy>::iterator_category,
+                std::input_iterator_tag>::value>::type>
   SmallVector(ItTy S, ItTy E) : SmallVectorImpl<T>(N) {
     this->append(S, E);
   }
@@ -883,14 +903,14 @@ public:
       SmallVectorImpl<T>::operator=(::std::move(RHS));
   }
 
-  const SmallVector &operator=(SmallVector &&RHS) {
-    SmallVectorImpl<T>::operator=(::std::move(RHS));
-    return *this;
-  }
-
   SmallVector(SmallVectorImpl<T> &&RHS) : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
       SmallVectorImpl<T>::operator=(::std::move(RHS));
+  }
+
+  const SmallVector &operator=(SmallVector &&RHS) {
+    SmallVectorImpl<T>::operator=(::std::move(RHS));
+    return *this;
   }
 
   const SmallVector &operator=(SmallVectorImpl<T> &&RHS) {

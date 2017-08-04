@@ -1774,6 +1774,16 @@ int testNoCheckerDataPropogationFromLogicalOpOperandToOpResult(void) {
    return ok; // no warning
 }
 
+void (*fnptr)(int);
+void freeIndirectFunctionPtr() {
+  void *p = (void *)fnptr;
+  free(p); // expected-warning {{Argument to free() is a function pointer}}
+}
+
+void freeFunctionPtr() {
+  free((void *)fnptr); // expected-warning {{Argument to free() is a function pointer}}
+}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 

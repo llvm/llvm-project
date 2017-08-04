@@ -1,4 +1,4 @@
-//===-- llvm/ADT/GraphTraits.h - Graph traits template ----------*- C++ -*-===//
+//===- llvm/ADT/GraphTraits.h - Graph traits template -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,6 +17,8 @@
 
 #ifndef LLVM_ADT_GRAPHTRAITS_H
 #define LLVM_ADT_GRAPHTRAITS_H
+
+#include "llvm/ADT/iterator_range.h"
 
 namespace llvm {
 
@@ -39,7 +41,6 @@ struct GraphTraits {
   // static ChildIteratorType child_end  (NodeRef)
   //    Return iterators that point to the beginning and ending of the child
   //    node list for the specified node.
-  //
 
   // typedef  ...iterator nodes_iterator; - dereference to a NodeRef
   // static nodes_iterator nodes_begin(GraphType *G)
@@ -48,8 +49,6 @@ struct GraphTraits {
 
   // static unsigned       size       (GraphType *G)
   //    Return total number of nodes in the graph
-  //
-
 
   // If anyone tries to use this class without having an appropriate
   // specialization, make an error.  If you get this error, it's because you
@@ -57,10 +56,8 @@ struct GraphTraits {
   // graph, or you need to define it for a new graph type. Either that or
   // your argument to XXX_begin(...) is unknown or needs to have the proper .h
   // file #include'd.
-  //
-  typedef typename GraphType::UnknownGraphTypeError NodeRef;
+  using NodeRef = typename GraphType::UnknownGraphTypeError;
 };
-
 
 // Inverse - This class is used as a little marker class to tell the graph
 // iterator to iterate over the graph in a graph defined "Inverse" ordering.
@@ -72,7 +69,7 @@ struct GraphTraits {
 // for (; I != E; ++I) { ... }
 //
 // Which is equivalent to:
-// df_iterator<Inverse<Method*> > I = idf_begin(M), E = idf_end(M);
+// df_iterator<Inverse<Method*>> I = idf_begin(M), E = idf_end(M);
 // for (; I != E; ++I) { ... }
 //
 template <class GraphType>
@@ -86,6 +83,34 @@ struct Inverse {
 // inverse falls back to the original graph.
 template <class T> struct GraphTraits<Inverse<Inverse<T>>> : GraphTraits<T> {};
 
-} // End llvm namespace
+// Provide iterator ranges for the graph traits nodes and children
+template <class GraphType>
+iterator_range<typename GraphTraits<GraphType>::nodes_iterator>
+nodes(const GraphType &G) {
+  return make_range(GraphTraits<GraphType>::nodes_begin(G),
+                    GraphTraits<GraphType>::nodes_end(G));
+}
+template <class GraphType>
+iterator_range<typename GraphTraits<Inverse<GraphType>>::nodes_iterator>
+inverse_nodes(const GraphType &G) {
+  return make_range(GraphTraits<Inverse<GraphType>>::nodes_begin(G),
+                    GraphTraits<Inverse<GraphType>>::nodes_end(G));
+}
 
-#endif
+template <class GraphType>
+iterator_range<typename GraphTraits<GraphType>::ChildIteratorType>
+children(const typename GraphTraits<GraphType>::NodeRef &G) {
+  return make_range(GraphTraits<GraphType>::child_begin(G),
+                    GraphTraits<GraphType>::child_end(G));
+}
+
+template <class GraphType>
+iterator_range<typename GraphTraits<Inverse<GraphType>>::ChildIteratorType>
+inverse_children(const typename GraphTraits<GraphType>::NodeRef &G) {
+  return make_range(GraphTraits<Inverse<GraphType>>::child_begin(G),
+                    GraphTraits<Inverse<GraphType>>::child_end(G));
+}
+
+} // end namespace llvm
+
+#endif // LLVM_ADT_GRAPHTRAITS_H

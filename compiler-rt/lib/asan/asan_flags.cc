@@ -61,7 +61,7 @@ void InitializeFlags() {
   {
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
-    cf.detect_leaks = CAN_SANITIZE_LEAKS;
+    cf.detect_leaks = cf.detect_leaks && CAN_SANITIZE_LEAKS;
     cf.external_symbolizer_path = GetEnv("ASAN_SYMBOLIZER_PATH");
     cf.malloc_context_size = kDefaultMallocContextSize;
     cf.intercept_tls_get_addr = true;
@@ -194,13 +194,14 @@ void InitializeFlags() {
     Report("WARNING: strchr* interceptors are enabled even though "
            "replace_str=0. Use intercept_strchr=0 to disable them.");
   }
+  if (!f->replace_str && common_flags()->intercept_strndup) {
+    Report("WARNING: strndup* interceptors are enabled even though "
+           "replace_str=0. Use intercept_strndup=0 to disable them.");
+  }
 }
 
 }  // namespace __asan
 
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
-extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-const char* __asan_default_options() { return ""; }
-}  // extern "C"
-#endif
+SANITIZER_INTERFACE_WEAK_DEF(const char*, __asan_default_options, void) {
+  return "";
+}

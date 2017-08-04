@@ -38,7 +38,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# CHECK: NEEDED SharedLibrary ({{.*}}.so)
+# CHECK: NEEDED Shared library: [{{.*}}.so]
 
 .section .text.foo, "ax"
 .globl foo

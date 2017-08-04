@@ -14,19 +14,23 @@
 // using the default "import library" generated when linking the DLL RTL.
 //
 // This includes:
+//  - creating weak aliases to default implementation imported from asan dll.
 //  - forwarding the detect_stack_use_after_return runtime option
 //  - working around deficiencies of the MD runtime
 //  - installing a custom SEH handler
 //
 //===----------------------------------------------------------------------===//
 
-// Only compile this code when building asan_dynamic_runtime_thunk.lib
-// Using #ifdef rather than relying on Makefiles etc.
-// simplifies the build procedure.
-#ifdef ASAN_DYNAMIC_RUNTIME_THUNK
-#include "asan_globals_win.h"
+#ifdef SANITIZER_DYNAMIC_RUNTIME_THUNK
+#define SANITIZER_IMPORT_INTERFACE 1
+#include "sanitizer_common/sanitizer_win_defs.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+// Define weak alias for all weak functions imported from asan dll.
+#define INTERFACE_FUNCTION(Name)
+#define INTERFACE_WEAK_FUNCTION(Name) WIN_WEAK_IMPORT_DEF(Name)
+#include "asan_interface.inc"
 
 // First, declare CRT sections we'll be using in this file
 #pragma section(".CRT$XIB", long, read)  // NOLINT
@@ -122,6 +126,6 @@ __declspec(allocate(".CRT$XCAB")) int (*__asan_seh_interceptor)() =
     SetSEHFilter;
 }
 
-ASAN_LINK_GLOBALS_WIN()
+WIN_FORCE_LINK(__asan_dso_reg_hook)
 
-#endif // ASAN_DYNAMIC_RUNTIME_THUNK
+#endif // SANITIZER_DYNAMIC_RUNTIME_THUNK

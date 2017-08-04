@@ -14,28 +14,13 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray_defs.h"
-#include "xray_emulate_tsc.h"
 #include "xray_interface_internal.h"
 #include <atomic>
 #include <cassert>
 
-
-extern "C" void __clear_cache(void* start, void* end);
+extern "C" void __clear_cache(void *start, void *end);
 
 namespace __xray {
-
-uint64_t cycleFrequency() XRAY_NEVER_INSTRUMENT {
-  // There is no instruction like RDTSCP in user mode on ARM.  ARM's CP15 does
-  //   not have a constant frequency like TSC on x86[_64]; it may go faster or
-  //   slower depending on CPU's turbo or power saving modes.  Furthermore, to
-  //   read from CP15 on ARM a kernel modification or a driver is needed.
-  //   We can not require this from users of compiler-rt.
-  // So on ARM we use clock_gettime(2) which gives the result in nanoseconds.
-  //   To get the measurements per second, we scale this by the number of
-  //   nanoseconds per second, pretending that the TSC frequency is 1GHz and
-  //   one TSC tick is 1 nanosecond.
-  return NanosecondsPerSecond;
-}
 
 // The machine codes for some instructions used in runtime patching.
 enum class PatchOpcodes : uint32_t {
@@ -100,14 +85,15 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
         reinterpret_cast<std::atomic<uint32_t> *>(FirstAddress),
         uint32_t(PatchOpcodes::PO_B32), std::memory_order_release);
   }
-  __clear_cache(reinterpret_cast<char*>(FirstAddress),
-      reinterpret_cast<char*>(CurAddress));
+  __clear_cache(reinterpret_cast<char *>(FirstAddress),
+                reinterpret_cast<char *>(CurAddress));
   return true;
 }
 
 bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
-                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  return patchSled(Enable, FuncId, Sled, __xray_FunctionEntry);
+                        const XRaySledEntry &Sled,
+                        void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
+  return patchSled(Enable, FuncId, Sled, Trampoline);
 }
 
 bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
@@ -117,9 +103,20 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
 
 bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
                            const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: In the future we'd need to distinguish between non-tail exits and
-  // tail exits for better information preservation.
-  return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
+  return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
 }
 
+bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
+                      const XRaySledEntry &Sled)
+    XRAY_NEVER_INSTRUMENT { // FIXME: Implement in aarch64?
+  return false;
+}
+
+// FIXME: Maybe implement this better?
+bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
+
 } // namespace __xray
+
+extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {
+  // FIXME: this will have to be implemented in the trampoline assembly file
+}

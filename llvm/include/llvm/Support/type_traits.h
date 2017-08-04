@@ -14,10 +14,9 @@
 #ifndef LLVM_SUPPORT_TYPE_TRAITS_H
 #define LLVM_SUPPORT_TYPE_TRAITS_H
 
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 #include <utility>
-
-#include "llvm/Support/Compiler.h"
 
 #ifndef __has_feature
 #define LLVM_DEFINED_HAS_FEATURE
@@ -51,7 +50,7 @@ struct isPodLike {
 
 // std::pair's are pod-like if their elements are.
 template<typename T, typename U>
-struct isPodLike<std::pair<T, U> > {
+struct isPodLike<std::pair<T, U>> {
   static const bool value = isPodLike<T>::value && isPodLike<U>::value;
 };
 
@@ -63,7 +62,7 @@ struct isPodLike<std::pair<T, U> > {
 /// Also note that enum classes aren't implicitly convertible to integral types,
 /// the value may therefore need to be explicitly converted before being used.
 template <typename T> class is_integral_or_enum {
-  typedef typename std::remove_reference<T>::type UnderlyingT;
+  using UnderlyingT = typename std::remove_reference<T>::type;
 
 public:
   static const bool value =
@@ -76,26 +75,36 @@ public:
 
 /// \brief If T is a pointer, just return it. If it is not, return T&.
 template<typename T, typename Enable = void>
-struct add_lvalue_reference_if_not_pointer { typedef T &type; };
+struct add_lvalue_reference_if_not_pointer { using type = T &; };
 
 template <typename T>
 struct add_lvalue_reference_if_not_pointer<
     T, typename std::enable_if<std::is_pointer<T>::value>::type> {
-  typedef T type;
+  using type = T;
 };
 
 /// \brief If T is a pointer to X, return a pointer to const X. If it is not,
 /// return const T.
 template<typename T, typename Enable = void>
-struct add_const_past_pointer { typedef const T type; };
+struct add_const_past_pointer { using type = const T; };
 
 template <typename T>
 struct add_const_past_pointer<
     T, typename std::enable_if<std::is_pointer<T>::value>::type> {
-  typedef const typename std::remove_pointer<T>::type *type;
+  using type = const typename std::remove_pointer<T>::type *;
 };
 
-}
+template <typename T, typename Enable = void>
+struct const_pointer_or_const_ref {
+  using type = const T &;
+};
+template <typename T>
+struct const_pointer_or_const_ref<
+    T, typename std::enable_if<std::is_pointer<T>::value>::type> {
+  using type = typename add_const_past_pointer<T>::type;
+};
+
+} // end namespace llvm
 
 // If the compiler supports detecting whether a class is final, define
 // an LLVM_IS_FINAL macro. If it cannot be defined properly, this
@@ -110,4 +119,4 @@ struct add_const_past_pointer<
 #undef __has_feature
 #endif
 
-#endif
+#endif // LLVM_SUPPORT_TYPE_TRAITS_H

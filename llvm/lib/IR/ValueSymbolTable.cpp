@@ -1,4 +1,4 @@
-//===-- ValueSymbolTable.cpp - Implement the ValueSymbolTable class -------===//
+//===- ValueSymbolTable.cpp - Implement the ValueSymbolTable class --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"

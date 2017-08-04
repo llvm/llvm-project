@@ -147,27 +147,27 @@ int main()
     }
     {
         struct ThrowsMove {
-          ThrowsMove() noexcept {}
-          ThrowsMove(ThrowsMove const&) noexcept {}
-          ThrowsMove(ThrowsMove &&) noexcept(false) {}
-          ThrowsMove& operator=(ThrowsMove const&) noexcept { return *this; }
-          ThrowsMove& operator=(ThrowsMove &&) noexcept { return *this; }
+            ThrowsMove() noexcept {}
+            ThrowsMove(ThrowsMove const&) noexcept {}
+            ThrowsMove(ThrowsMove &&) noexcept(false) {}
+            ThrowsMove& operator=(ThrowsMove const&) noexcept { return *this; }
+            ThrowsMove& operator=(ThrowsMove &&) noexcept { return *this; }
         };
         static_assert(!std::is_nothrow_move_assignable<optional<ThrowsMove>>::value, "");
         struct ThrowsMoveAssign {
-          ThrowsMoveAssign() noexcept {}
-          ThrowsMoveAssign(ThrowsMoveAssign const&) noexcept {}
-          ThrowsMoveAssign(ThrowsMoveAssign &&) noexcept {}
-          ThrowsMoveAssign& operator=(ThrowsMoveAssign const&) noexcept { return *this; }
-          ThrowsMoveAssign& operator=(ThrowsMoveAssign &&) noexcept(false) { return *this; }
+            ThrowsMoveAssign() noexcept {}
+            ThrowsMoveAssign(ThrowsMoveAssign const&) noexcept {}
+            ThrowsMoveAssign(ThrowsMoveAssign &&) noexcept {}
+            ThrowsMoveAssign& operator=(ThrowsMoveAssign const&) noexcept { return *this; }
+            ThrowsMoveAssign& operator=(ThrowsMoveAssign &&) noexcept(false) { return *this; }
         };
         static_assert(!std::is_nothrow_move_assignable<optional<ThrowsMoveAssign>>::value, "");
         struct NoThrowMove {
-          NoThrowMove() noexcept(false) {}
-          NoThrowMove(NoThrowMove const&) noexcept(false) {}
-          NoThrowMove(NoThrowMove &&) noexcept {}
-          NoThrowMove& operator=(NoThrowMove const&) noexcept { return *this; }
-          NoThrowMove& operator=(NoThrowMove&&) noexcept { return *this; }
+            NoThrowMove() noexcept(false) {}
+            NoThrowMove(NoThrowMove const&) noexcept(false) {}
+            NoThrowMove(NoThrowMove &&) noexcept {}
+            NoThrowMove& operator=(NoThrowMove const&) noexcept { return *this; }
+            NoThrowMove& operator=(NoThrowMove&&) noexcept { return *this; }
         };
         static_assert(std::is_nothrow_move_assignable<optional<NoThrowMove>>::value, "");
     }

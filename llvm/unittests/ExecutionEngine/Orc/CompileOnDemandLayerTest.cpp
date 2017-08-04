@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
+#include "OrcTestCommon.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -50,13 +50,14 @@ public:
 
 TEST(CompileOnDemandLayerTest, FindSymbol) {
   auto MockBaseLayer = createMockBaseLayer<int>(
-      DoNothingAndReturn<int>(0), DoNothingAndReturn<void>(),
+      DoNothingAndReturn<int>(0),
+      [](int Handle) { return Error::success(); },
       [](const std::string &Name, bool) {
         if (Name == "foo")
           return JITSymbol(1, JITSymbolFlags::Exported);
         return JITSymbol(nullptr);
       },
-      DoNothingAndReturn<JITSymbol>(nullptr));
+      ReturnNullJITSymbol());
 
   typedef decltype(MockBaseLayer) MockBaseLayerT;
   DummyCallbackManager CallbackMgr;

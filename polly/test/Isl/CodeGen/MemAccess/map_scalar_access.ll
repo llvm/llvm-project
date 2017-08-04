@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop-postfix=transformed -polly-import-jscop -analyze          < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop-postfix=transformed -polly-import-jscop -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-import-jscop-postfix=transformed -polly-import-jscop -analyze          < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop-postfix=transformed -polly-import-jscop -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 
 define void @map_scalar_access(double* noalias nonnull %A) {
 entry:
@@ -66,10 +66,10 @@ return:
 ; CHECK-NEXT:                 { Stmt_reduction_for[i0, i1] -> [0, 1, i1, 0] };
 ; CHECK-NEXT:             ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_reduction_for[i0, i1] -> MemRef_phi__phi[] };
-; CHECK-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:             MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_reduction_for[i0, i1] -> MemRef_phi[] };
-; CHECK-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:         Stmt_body
 ; CHECK-NEXT:             Domain :=
 ; CHECK-NEXT:                 { Stmt_body[0, i1] : 0 <= i1 <= 3 };
@@ -77,10 +77,10 @@ return:
 ; CHECK-NEXT:                 { Stmt_body[i0, i1] -> [0, 1, i1, 1] };
 ; CHECK-NEXT:             MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_body[i0, i1] -> MemRef_add[] };
-; CHECK-NEXT:            new: { Stmt_body[i0, i1] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_body[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:             ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_body[i0, i1] -> MemRef_phi[] };
-; CHECK-NEXT:            new: { Stmt_body[i0, i1] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_body[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:         Stmt_reduction_inc
 ; CHECK-NEXT:             Domain :=
 ; CHECK-NEXT:                 { Stmt_reduction_inc[0, i1] : 0 <= i1 <= 3 };
@@ -88,10 +88,10 @@ return:
 ; CHECK-NEXT:                 { Stmt_reduction_inc[i0, i1] -> [0, 1, i1, 2] };
 ; CHECK-NEXT:             ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_add[] };
-; CHECK-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:             MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_phi__phi[] };
-; CHECK-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[0] };
 ; CHECK-NEXT:         Stmt_reduction_exit
 ; CHECK-NEXT:             Domain :=
 ; CHECK-NEXT:                 { Stmt_reduction_exit[0] };
@@ -99,10 +99,10 @@ return:
 ; CHECK-NEXT:                 { Stmt_reduction_exit[i0] -> [0, 2, 0, 0] };
 ; CHECK-NEXT:             MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 { Stmt_reduction_exit[i0] -> MemRef_A[0] };
-; CHECK-NEXT:            new: { Stmt_reduction_exit[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_reduction_exit[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:             ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_reduction_exit[i0] -> MemRef_phi[] };
-; CHECK-NEXT:            new: { Stmt_reduction_exit[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:            new: { Stmt_reduction_exit[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:     }
 ; CHECK:      New access function '{ Stmt_outer_for[i0] -> MemRef_A[i0] }' detected in JSCOP file
 ; CHECK-NEXT: New access function '{ Stmt_reduction_for[i0, i1] -> MemRef_A[i0] }' detected in JSCOP file

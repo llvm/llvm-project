@@ -1,4 +1,4 @@
-//==-- llvm/Target/TargetSubtargetInfo.h - Target Information ----*- C++ -*-==//
+//===- llvm/Target/TargetSubtargetInfo.h - Target Information ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,22 +18,31 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
 #include <vector>
 
+
 namespace llvm {
 
 class CallLowering;
+class InstrItineraryData;
+struct InstrStage;
 class InstructionSelector;
 class LegalizerInfo;
 class MachineInstr;
+struct MachineSchedPolicy;
+struct MCReadAdvanceEntry;
+struct MCWriteLatencyEntry;
+struct MCWriteProcResEntry;
 class RegisterBankInfo;
 class SDep;
 class SelectionDAGTargetInfo;
+struct SubtargetFeatureKV;
+struct SubtargetInfoKV;
 class SUnit;
 class TargetFrameLowering;
 class TargetInstrInfo;
@@ -41,7 +50,7 @@ class TargetLowering;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
-struct MachineSchedPolicy;
+class Triple;
 
 //===----------------------------------------------------------------------===//
 ///
@@ -63,13 +72,13 @@ protected: // Can only create subclasses...
 public:
   // AntiDepBreakMode - Type of anti-dependence breaking that should
   // be performed before post-RA scheduling.
-  typedef enum { ANTIDEP_NONE, ANTIDEP_CRITICAL, ANTIDEP_ALL } AntiDepBreakMode;
-  typedef SmallVectorImpl<const TargetRegisterClass *> RegClassVector;
+  using AntiDepBreakMode = enum { ANTIDEP_NONE, ANTIDEP_CRITICAL, ANTIDEP_ALL };
+  using RegClassVector = SmallVectorImpl<const TargetRegisterClass *>;
 
   TargetSubtargetInfo() = delete;
   TargetSubtargetInfo(const TargetSubtargetInfo &) = delete;
-  void operator=(const TargetSubtargetInfo &) = delete;
-  virtual ~TargetSubtargetInfo();
+  TargetSubtargetInfo &operator=(const TargetSubtargetInfo &) = delete;
+  ~TargetSubtargetInfo() override;
 
   virtual bool isXRaySupported() const { return false; }
 
@@ -111,7 +120,6 @@ public:
 
   /// getRegisterInfo - If register information is available, return it.  If
   /// not, return null.
-  ///
   virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
 
   /// If the information for the register banks is available, return it.
@@ -120,7 +128,6 @@ public:
 
   /// getInstrItineraryData - Returns instruction itinerary data for the target
   /// or specific subtarget.
-  ///
   virtual const InstrItineraryData *getInstrItineraryData() const {
     return nullptr;
   }
@@ -142,6 +149,9 @@ public:
   /// scheduler (though see below for an option to turn this off and use the
   /// TargetLowering preference). It does not yet disable the postRA scheduler.
   virtual bool enableMachineScheduler() const;
+
+  /// \brief Support printing of [latency:throughput] comment in output .S file.
+  virtual bool supportPrintSchedInfo() const { return false; }
 
   /// \brief True if the machine scheduler should disable the TLI preference
   /// for preRA scheduling with the source level scheduler.
@@ -227,6 +237,10 @@ public:
   /// Please use MachineRegisterInfo::subRegLivenessEnabled() instead where
   /// possible.
   virtual bool enableSubRegLiveness() const { return false; }
+
+  /// Returns string representation of scheduler comment
+  std::string getSchedInfoStr(const MachineInstr &MI) const override;
+  std::string getSchedInfoStr(MCInst const &MCI) const override;
 };
 
 } // end namespace llvm

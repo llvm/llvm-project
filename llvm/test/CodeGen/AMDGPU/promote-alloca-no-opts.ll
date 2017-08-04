@@ -5,7 +5,7 @@
 ; NOOPTS: workgroup_group_segment_byte_size = 0{{$}}
 ; NOOPTS-NOT ds_write
 ; OPTS: ds_write
-define void @promote_alloca_i32_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
+define amdgpu_kernel void @promote_alloca_i32_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i32]]
   %gep0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %alloca, i32 0, i32 0, i32 0
@@ -21,7 +21,7 @@ entry:
 ; ALL-LABEL: {{^}}optnone_promote_alloca_i32_array_array:
 ; ALL: workgroup_group_segment_byte_size = 0{{$}}
 ; ALL-NOT ds_write
-define void @optnone_promote_alloca_i32_array_array(i32 addrspace(1)* %out, i32 %index) #1 {
+define amdgpu_kernel void @optnone_promote_alloca_i32_array_array(i32 addrspace(1)* %out, i32 %index) #1 {
 entry:
   %alloca = alloca [2 x [2 x i32]]
   %gep0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %alloca, i32 0, i32 0, i32 0

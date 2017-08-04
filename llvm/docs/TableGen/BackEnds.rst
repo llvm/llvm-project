@@ -228,6 +228,12 @@ CTags
 format. A helper script, utils/TableGen/tdtags, provides an easier-to-use
 interface; run 'tdtags -H' for documentation.
 
+X86EVEX2VEX
+-----------
+
+**Purpose**: This X86 specific tablegen backend emits tables that map EVEX
+encoded instructions to their VEX encoded identical instruction.
+
 Clang BackEnds
 ==============
 

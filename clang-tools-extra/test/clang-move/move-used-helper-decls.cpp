@@ -259,12 +259,43 @@
 
 // CHECK-OLD-FUN2-H-NOT: inline void Fun2() {}
 
+// ----------------------------------------------------------------------------
+// Test moving used helper function and its transively used functions.
+// ----------------------------------------------------------------------------
+// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
+// RUN: clang-move -names="b::Fun3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN3-CPP %s
+// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-FUN3-CPP %s
+
+// CHECK-NEW-FUN3-CPP: #include "{{.*}}new_helper_decls_test.h"
+// CHECK-NEW-FUN3-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-FUN3-CPP-NEXT: namespace b {
+// CHECK-NEW-FUN3-CPP-NEXT: namespace {
+// CHECK-NEW-FUN3-CPP-NEXT: void HelperFun7();
+// CHECK-NEW-FUN3-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-FUN3-CPP-NEXT: class HelperC4;
+// CHECK-NEW-FUN3-CPP-NEXT: } // namespace
+// CHECK-NEW-FUN3-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-FUN3-CPP-NEXT: void Fun3() {
+// CHECK-NEW-FUN3-CPP-NEXT:   HelperFun7();
+// CHECK-NEW-FUN3-CPP-NEXT:   HelperC4 *t;
+// CHECK-NEW-FUN3-CPP-NEXT: }
+// CHECK-NEW-FUN3-CPP-NEXT: namespace {
+// CHECK-NEW-FUN3-CPP-NEXT: void HelperFun7() {}
+// CHECK-NEW-FUN3-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-FUN3-CPP-NEXT: class HelperC4 {};
+// CHECK-NEW-FUN3-CPP-NEXT: } // namespace
+// CHECK-NEW-FUN3-CPP-NEXT: } // namespace b
+//
+// CHECK-OLD-FUN3-CPP-NOT: void HelperFun7();
+// CHECK-OLD-FUN3-CPP-NOT: void HelperFun7() {}
+// CHECK-OLD-FUN3-CPP-NOT: void Fun3() { HelperFun7(); }
 
 // ----------------------------------------------------------------------------
 // Test moving all symbols in headers.
 // ----------------------------------------------------------------------------
 // RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class1, a::Class2, a::Class3, a::Class4, a::Class5, a::Class5, a::Class6, a::Class7, a::Fun1, a::Fun2" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: clang-move -names="a::Class1, a::Class2, a::Class3, a::Class4, a::Class5, a::Class5, a::Class6, a::Class7, a::Fun1, a::Fun2, b::Fun3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
 // RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.h -check-prefix=CHECK-NEW-H %s
 // RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CPP %s
 // RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
@@ -384,5 +415,24 @@
 // CHECK-NEW-CPP-NEXT: void Fun1() { HelperFun5(); }
 // CHECK-NEW-CPP-SAME: {{[[:space:]]}}
 // CHECK-NEW-CPP-NEXT: } // namespace a
+// CHECK-NEW-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-CPP-NEXT: namespace b {
+// CHECK-NEW-CPP-NEXT: namespace {
+// CHECK-NEW-CPP-NEXT: void HelperFun7();
+// CHECK-NEW-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-CPP-NEXT: class HelperC4;
+// CHECK-NEW-CPP-NEXT: } // namespace
+// CHECK-NEW-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-CPP-NEXT: void Fun3() {
+// CHECK-NEW-CPP-NEXT:   HelperFun7();
+// CHECK-NEW-CPP-NEXT:   HelperC4 *t;
+// CHECK-NEW-CPP-NEXT: }
+// CHECK-NEW-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-CPP-NEXT: namespace {
+// CHECK-NEW-CPP-NEXT: void HelperFun7() {}
+// CHECK-NEW-CPP-SAME: {{[[:space:]]}}
+// CHECK-NEW-CPP-NEXT: class HelperC4 {};
+// CHECK-NEW-CPP-NEXT: } // namespace
+// CHECK-NEW-CPP-NEXT: } // namespace b
 
 // CHECK-EMPTY: {{^}}{{$}}

@@ -83,7 +83,7 @@ _start:
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 1
-# CHECK-NEXT:     EntrySize: 1
+# CHECK-NEXT:     EntrySize: 0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 3
@@ -238,8 +238,9 @@ _start:
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t %t -o %t2 2>&1 | FileCheck --check-prefix=DUP %s
-# DUP: {{.*}}:(.text+0x0): duplicate symbol '_start'
-# DUP: {{.*}}:(.text+0x0): previous definition was here
+# DUP:      duplicate symbol: _start
+# DUP-NEXT: >>> defined at {{.*}}:(.text+0x0)
+# DUP-NEXT: >>> defined at {{.*}}:(.text+0x0)
 
 # RUN: not ld.lld %t -o %t -m wrong_emul_fbsd 2>&1 | FileCheck --check-prefix=UNKNOWN_EMUL %s
 # UNKNOWN_EMUL: unknown emulation: wrong_emul_fbsd

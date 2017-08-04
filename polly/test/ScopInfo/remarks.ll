@@ -2,7 +2,7 @@
 ; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: SCoP begins here.
-; CHECK: remark: test/ScopInfo/remarks.c:9:15: Inbounds assumption:    [N, M, Debug] -> {  : N <= 0 or (N > 0 and M <= 100) }
+; CHECK: remark: test/ScopInfo/remarks.c:9:15: Inbounds assumption:    [N, M, Debug] -> {  : M <= 100 }
 ; CHECK: remark: test/ScopInfo/remarks.c:13:7: No-error restriction:    [N, M, Debug] -> {  : N > 0 and M >= 0 and (Debug < 0 or Debug > 0) }
 ; CHECK: remark: test/ScopInfo/remarks.c:8:5: Finite loop restriction:    [N, M, Debug] -> {  : N > 0 and (M <= -2 or M = -1) }
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: No-overflows restriction:    [N, M, Debug] -> {  : M <= -2147483649 - N or M >= 2147483648 - N }

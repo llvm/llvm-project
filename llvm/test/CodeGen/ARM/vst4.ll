@@ -12,7 +12,7 @@ define void @vst4i8(i8* %A, <8 x i8>* %B) nounwind {
 ;Check for a post-increment updating store with register increment.
 define void @vst4i8_update(i8** %ptr, <8 x i8>* %B, i32 %inc) nounwind {
 ;CHECK-LABEL: vst4i8_update:
-;CHECK: vst4.8 {d16, d17, d18, d19}, [r1:128], r2
+;CHECK: vst4.8 {d16, d17, d18, d19}, [r{{[0-9]+}}:128], r2
 	%A = load i8*, i8** %ptr
 	%tmp1 = load <8 x i8>, <8 x i8>* %B
 	call void @llvm.arm.neon.vst4.p0i8.v8i8(i8* %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 16)
@@ -62,7 +62,7 @@ define void @vst4i64(i64* %A, <1 x i64>* %B) nounwind {
 
 define void @vst4i64_update(i64** %ptr, <1 x i64>* %B) nounwind {
 ;CHECK-LABEL: vst4i64_update:
-;CHECK: vst1.64	{d16, d17, d18, d19}, [r1]!
+;CHECK: vst1.64	{d16, d17, d18, d19}, [r{{[0-9]+}}]!
         %A = load i64*, i64** %ptr
         %tmp0 = bitcast i64* %A to i8*
         %tmp1 = load <1 x i64>, <1 x i64>* %B
@@ -116,8 +116,8 @@ define void @vst4Qf(float* %A, <4 x float>* %B) nounwind {
 ;Check for a post-increment updating store.
 define void @vst4Qf_update(float** %ptr, <4 x float>* %B) nounwind {
 ;CHECK-LABEL: vst4Qf_update:
-;CHECK: vst4.32 {d16, d18, d20, d22}, [r1]!
-;CHECK: vst4.32 {d17, d19, d21, d23}, [r1]!
+  ;CHECK: vst4.32 {d16, d18, d20, d22}, [r[[REG:[0-9]+]]]!
+;CHECK: vst4.32 {d17, d19, d21, d23}, [r[[REG]]]!
 	%A = load float*, float** %ptr
 	%tmp0 = bitcast float* %A to i8*
 	%tmp1 = load <4 x float>, <4 x float>* %B

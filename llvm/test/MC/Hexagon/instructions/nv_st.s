@@ -9,7 +9,7 @@
 # CHECK: 1f 40 7f 70
 # CHECK-NEXT: 11 c2 a0 48
 { r31 = r31
-  memb(#17) = r31.new }
+  memb(gp+#17) = r31.new }
 # CHECK: 1f 40 7f 70
 # CHECK-NEXT: 15 c2 b1 a1
 { r31 = r31
@@ -105,7 +105,7 @@
 # CHECK: 1f 40 7f 70
 # CHECK-NEXT: 15 ca a0 48
 { r31 = r31
-  memh(#42) = r31.new }
+  memh(gp+#42) = r31.new }
 # CHECK: 1f 40 7f 70
 # CHECK-NEXT: 15 ca b1 a1
 { r31 = r31
@@ -201,7 +201,7 @@
 # CHECK: 1f 40 7f 70
 # CHECK-NEXT: 15 d2 a0 48
 { r31 = r31
-  memw(#84) = r31.new }
+  memw(gp+#84) = r31.new }
 # CHECK: 1f 40 7f 70
 # CHECK-NEXT: 15 d2 b1 a1
 { r31 = r31

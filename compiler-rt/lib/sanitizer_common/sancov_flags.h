@@ -32,9 +32,9 @@ inline SancovFlags* sancov_flags() { return &sancov_flags_dont_use_directly; }
 
 void InitializeSancovFlags();
 
+}  // namespace __sancov
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char*
 __sancov_default_options();
-
-}  // namespace __sancov
 
 #endif

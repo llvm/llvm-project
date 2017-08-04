@@ -74,18 +74,18 @@ void BrainF::header(LLVMContext& C) {
 
   //declare i32 @getchar()
   getchar_func = cast<Function>(module->
-    getOrInsertFunction("getchar", IntegerType::getInt32Ty(C), NULL));
+    getOrInsertFunction("getchar", IntegerType::getInt32Ty(C)));
 
   //declare i32 @putchar(i32)
   putchar_func = cast<Function>(module->
     getOrInsertFunction("putchar", IntegerType::getInt32Ty(C),
-                        IntegerType::getInt32Ty(C), NULL));
+                        IntegerType::getInt32Ty(C)));
 
   //Function header
 
   //define void @brainf()
   brainf_func = cast<Function>(module->
-    getOrInsertFunction("brainf", Type::getVoidTy(C), NULL));
+    getOrInsertFunction("brainf", Type::getVoidTy(C)));
 
   builder = new IRBuilder<>(BasicBlock::Create(C, label, brainf_func));
 
@@ -156,7 +156,7 @@ void BrainF::header(LLVMContext& C) {
     //declare i32 @puts(i8 *)
     Function *puts_func = cast<Function>(module->
       getOrInsertFunction("puts", IntegerType::getInt32Ty(C),
-                      PointerType::getUnqual(IntegerType::getInt8Ty(C)), NULL));
+                      PointerType::getUnqual(IntegerType::getInt8Ty(C))));
 
     //brainf.aberror:
     aberrorbb = BasicBlock::Create(C, label, brainf_func);

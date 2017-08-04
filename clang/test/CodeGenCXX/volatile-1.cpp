@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -Wno-unused-value -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-unused-value -triple %itanium_abi_triple -emit-llvm %s -std=c++98 -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-unused-value -triple %itanium_abi_triple -emit-llvm %s -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // CHECK: @i = global [[INT:i[0-9]+]] 0
 volatile int i, j, k;
@@ -22,18 +23,22 @@ void test() {
 
   asm("nop"); // CHECK: call void asm
 
-  // should not load
+  // should not load in C++98
   i;
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* @i
 
   (float)(ci);
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* getelementptr inbounds ([[CINT]], [[CINT]]* @ci, i32 0, i32 0)
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* getelementptr inbounds ([[CINT]], [[CINT]]* @ci, i32 0, i32 1)
   // CHECK-NEXT: sitofp [[INT]]
 
-  // These are not uses in C++:
+  // These are not uses in C++98:
   //   [expr.static.cast]p6:
   //     The lvalue-to-rvalue . . . conversions are not applied to the expression.
   (void)ci;
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* getelementptr inbounds ([[CINT]], [[CINT]]* @ci, i32 0, i32 0)
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* getelementptr inbounds ([[CINT]], [[CINT]]* @ci, i32 0, i32 1)
+
   (void)a;
 
   (void)(ci=ci);
@@ -126,7 +131,8 @@ void test() {
   // CHECK-NEXT: load volatile
   // CHECK-NEXT: sitofp
 
-  (void)i;
+  (void)i; // This is now a load in C++11
+  // CHECK11-NEXT: load volatile
 
   i=i;
   // CHECK-NEXT: load volatile
@@ -155,13 +161,15 @@ void test() {
   // CHECK-NEXT: br label
   // CHECK:      phi
 
-  (void)(i,(i=i));
+  (void)(i,(i=i)); // first i is also a load in C++11
+  // CHECK11-NEXT: load volatile
   // CHECK-NEXT: load volatile
   // CHECK-NEXT: store volatile
 
-  i=i,k;
+  i=i,k; // k is also a load in C++11
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* @i
   // CHECK-NEXT: store volatile {{.*}}, [[INT]]* @i
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* @k
 
   (i=j,k=j);
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* @j
@@ -169,11 +177,14 @@ void test() {
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* @j
   // CHECK-NEXT: store volatile {{.*}}, [[INT]]* @k
 
-  (i=j,k);
+  (i=j,k); // k is also a load in C++11
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* @j
   // CHECK-NEXT: store volatile {{.*}}, [[INT]]* @i
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* @k
 
-  (i,j);
+  (i,j); // i and j both are loads in C++11
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* @i
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* @j
 
   // Extra load in C++.
   i=c=k;
@@ -190,7 +201,9 @@ void test() {
   // CHECK-NEXT: add nsw [[INT]]
   // CHECK-NEXT: store volatile
 
-  ci;
+  ci; // ci is a load in C++11
+  // CHECK11-NEXT: load volatile {{.*}} @ci, i32 0, i32 0
+  // CHECK11-NEXT: load volatile {{.*}} @ci, i32 0, i32 1
 
   asm("nop"); // CHECK-NEXT: call void asm
 
@@ -338,8 +351,9 @@ void test() {
   // CHECK-NEXT: load volatile
   // CHECK-NEXT: add
 
-  (i,j)=k;
+  (i,j)=k; // i is also a load in C++11
   // CHECK-NEXT: load volatile [[INT]], [[INT]]* @k
+  // CHECK11-NEXT: load volatile [[INT]], [[INT]]* @i
   // CHECK-NEXT: store volatile {{.*}}, [[INT]]* @j
 
   (j=k,i)=i;

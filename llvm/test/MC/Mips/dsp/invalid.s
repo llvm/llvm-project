@@ -31,8 +31,8 @@
   shilo $ac1, -64          # CHECK: :[[@LINE]]:15: error: expected 6-bit signed immediate
   repl.qb $2, -1           # CHECK: :[[@LINE]]:15: error: expected 8-bit unsigned immediate
   repl.qb $2, 256          # CHECK: :[[@LINE]]:15: error: expected 8-bit unsigned immediate
-  repl.ph $2, -1           # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
-  repl.ph $2, 1024         # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
+  repl.ph $2, -513         # CHECK: :[[@LINE]]:15: error: expected 10-bit signed immediate
+  repl.ph $2, 512          # CHECK: :[[@LINE]]:15: error: expected 10-bit signed immediate
   rddsp $2, -1             # CHECK: :[[@LINE]]:13: error: expected 10-bit unsigned immediate
   rddsp $2, 1024           # CHECK: :[[@LINE]]:13: error: expected 10-bit unsigned immediate
   wrdsp $5, -1             # CHECK: :[[@LINE]]:13: error: expected 10-bit unsigned immediate

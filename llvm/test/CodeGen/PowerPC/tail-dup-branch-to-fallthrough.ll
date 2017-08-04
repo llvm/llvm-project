@@ -3,7 +3,7 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
 
 declare void @f1()
 declare void @f2()
@@ -54,11 +54,11 @@ if.else:                                      ; preds = %sw.default
   br label %dup2
 
 dup1:                                         ; preds = %sw.0, %sw.1
-  call void @llvm.lifetime.end(i64 8, i8* nonnull undef) #0
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull undef) #0
   unreachable
 
 dup2:                                         ; preds = %if.then, %if.else
-  call void @llvm.lifetime.end(i64 8, i8* nonnull undef) #0
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull undef) #0
   unreachable
 }
 

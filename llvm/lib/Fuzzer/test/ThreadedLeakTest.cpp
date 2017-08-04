@@ -2,8 +2,8 @@
 // License. See LICENSE.TXT for details.
 
 // The fuzzer should find a leak in a non-main thread.
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <thread>
 
 static volatile int *Sink;

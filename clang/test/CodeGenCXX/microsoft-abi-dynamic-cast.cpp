@@ -138,6 +138,6 @@ S3 *f(S2 &s) {
 // CHECK:    [[CALL:%.*]] = invoke i8* @__RTDynamicCast
 
 // CHECK:    [[BC:%.*]] = bitcast i8* [[CALL]] to %"struct.PR25606::S3"*
-// CHECK:    call x86_thiscallcc void @"\01??_DCleanup@PR25606@@QAE@XZ"(
+// CHECK:    call x86_thiscallcc void @"\01??_DCleanup@PR25606@@QAEXXZ"(
 // CHECK:    ret %"struct.PR25606::S3"* [[BC]]
 }

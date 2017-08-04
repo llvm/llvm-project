@@ -1,0 +1,47 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            MEMORY
+    Memories:
+      - Initial:         0x00000003
+  - Type:            DATA
+    Segments:
+      - MemoryIndex:      0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           4
+        Content:         '10001000'
+    Relocations:
+      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+        Index:           0
+        Offset:          0x00000006
+        Addend:          8
+      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+        Index:           0
+        Offset:          0x00000006
+        Addend:          -6
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:   - Type:            DATA
+# CHECK-NEXT:     Relocations:
+# CHECK-NEXT:      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+# CHECK-NEXT:        Index:           0
+# CHECK-NEXT:        Offset:          0x00000006
+# CHECK-NEXT:        Addend:          8
+# CHECK-NEXT:      - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+# CHECK-NEXT:        Index:           0
+# CHECK-NEXT:        Offset:          0x00000006
+# CHECK-NEXT:        Addend:          -6
+# CHECK-NEXT:     Segments:
+# CHECK-NEXT:       - SectionOffset:   6
+# CHECK-NEXT:         MemoryIndex:     0
+# CHECK-NEXT:         Offset:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           4
+# CHECK-NEXT:         Content:         '10001000'
+# CHECK-NEXT: ...

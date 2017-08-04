@@ -29,3 +29,5 @@ RUN: not llvm-nm -D %p/Inputs/trivial-object-test.coff-i386 2>&1 \
 RUN:         | FileCheck %s -check-prefix ERROR
 
 ERROR: File format has no dynamic symbol table.
+
+RUN: llvm-nm -D %p/Inputs/trivial-object-test.elf-i386 | count 0

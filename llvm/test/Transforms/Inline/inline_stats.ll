@@ -36,9 +36,12 @@ define void @internal3() {
     ret void
 }
 
+declare void @external_decl()
+
 define void @external1() alwaysinline !thinlto_src_module !0 {
     call fastcc void @internal2()
     call fastcc void @external2();
+    call void @external_decl();
     ret void
 }
 

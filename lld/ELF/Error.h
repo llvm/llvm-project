@@ -15,9 +15,13 @@
 // Error prints out an error message and increment a global variable
 // ErrorCount to record the fact that we met an error condition. It does
 // not exit, so it is safe for a lld-as-a-library use case. It is generally
-// useful because it can report more than one errors in a single run.
+// useful because it can report more than one error in a single run.
 //
 // Warn doesn't do anything but printing out a given message.
+//
+// It is not recommended to use llvm::outs() or llvm::errs() directly
+// in LLD because they are not thread-safe. The functions declared in
+// this file are mutually excluded, so you want to use them instead.
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,18 +37,14 @@ namespace elf {
 
 extern uint64_t ErrorCount;
 extern llvm::raw_ostream *ErrorOS;
-extern llvm::StringRef Argv0;
 
 void log(const Twine &Msg);
+void message(const Twine &Msg);
 void warn(const Twine &Msg);
-
 void error(const Twine &Msg);
-void error(std::error_code EC, const Twine &Prefix);
+LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 
 LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
-LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
-LLVM_ATTRIBUTE_NORETURN void fatal(std::error_code EC, const Twine &Prefix);
-LLVM_ATTRIBUTE_NORETURN void fatal(Error &E, const Twine &Prefix);
 
 // check() functions are convenient functions to strip errors
 // from error-or-value objects.
@@ -68,7 +68,7 @@ template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {
 
 template <class T> T check(Expected<T> E, const Twine &Prefix) {
   if (!E)
-    fatal(Prefix + ": " + errorToErrorCode(E.takeError()).message());
+    fatal(Prefix + ": " + toString(E.takeError()));
   return std::move(*E);
 }
 

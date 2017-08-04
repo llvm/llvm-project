@@ -1,4 +1,4 @@
-//===- llvm/Transforms/Utils/VectorUtils.h - Vector utilities -*- C++ -*-=====//
+//===- llvm/Analysis/VectorUtils.h - Vector utilities -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
-#define LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
+#ifndef LLVM_ANALYSIS_VECTORUTILS_H
+#define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
 
@@ -122,6 +123,58 @@ computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
 ///
 /// This function always sets a (possibly null) value for each K in Kinds.
 Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
+
+/// \brief Create an interleave shuffle mask.
+///
+/// This function creates a shuffle mask for interleaving \p NumVecs vectors of
+/// vectorization factor \p VF into a single wide vector. The mask is of the
+/// form:
+///
+///   <0, VF, VF * 2, ..., VF * (NumVecs - 1), 1, VF + 1, VF * 2 + 1, ...>
+///
+/// For example, the mask for VF = 4 and NumVecs = 2 is:
+///
+///   <0, 4, 1, 5, 2, 6, 3, 7>.
+Constant *createInterleaveMask(IRBuilder<> &Builder, unsigned VF,
+                               unsigned NumVecs);
+
+/// \brief Create a stride shuffle mask.
+///
+/// This function creates a shuffle mask whose elements begin at \p Start and
+/// are incremented by \p Stride. The mask can be used to deinterleave an
+/// interleaved vector into separate vectors of vectorization factor \p VF. The
+/// mask is of the form:
+///
+///   <Start, Start + Stride, ..., Start + Stride * (VF - 1)>
+///
+/// For example, the mask for Start = 0, Stride = 2, and VF = 4 is:
+///
+///   <0, 2, 4, 6>
+Constant *createStrideMask(IRBuilder<> &Builder, unsigned Start,
+                           unsigned Stride, unsigned VF);
+
+/// \brief Create a sequential shuffle mask.
+///
+/// This function creates shuffle mask whose elements are sequential and begin
+/// at \p Start.  The mask contains \p NumInts integers and is padded with \p
+/// NumUndefs undef values. The mask is of the form:
+///
+///   <Start, Start + 1, ... Start + NumInts - 1, undef_1, ... undef_NumUndefs>
+///
+/// For example, the mask for Start = 0, NumInsts = 4, and NumUndefs = 4 is:
+///
+///   <0, 1, 2, 3, undef, undef, undef, undef>
+Constant *createSequentialMask(IRBuilder<> &Builder, unsigned Start,
+                               unsigned NumInts, unsigned NumUndefs);
+
+/// \brief Concatenate a list of vectors.
+///
+/// This function generates code that concatenate the vectors in \p Vecs into a
+/// single large vector. The number of vectors should be greater than one, and
+/// their element types should be the same. The number of elements in the
+/// vectors should also be the same; however, if the last vector has fewer
+/// elements, it will be padded with undefs.
+Value *concatenateVectors(IRBuilder<> &Builder, ArrayRef<Value *> Vecs);
 
 } // llvm namespace
 

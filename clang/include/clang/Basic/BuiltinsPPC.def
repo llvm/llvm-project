@@ -51,10 +51,10 @@ BUILTIN(__builtin_altivec_vavguw, "V4UiV4UiV4Ui", "")
 
 BUILTIN(__builtin_altivec_vrfip, "V4fV4f", "")
 
-BUILTIN(__builtin_altivec_vcfsx, "V4fV4ii", "")
-BUILTIN(__builtin_altivec_vcfux, "V4fV4ii", "")
-BUILTIN(__builtin_altivec_vctsxs, "V4SiV4fi", "")
-BUILTIN(__builtin_altivec_vctuxs, "V4UiV4fi", "")
+BUILTIN(__builtin_altivec_vcfsx, "V4fV4iIi", "")
+BUILTIN(__builtin_altivec_vcfux, "V4fV4iIi", "")
+BUILTIN(__builtin_altivec_vctsxs, "V4SiV4fIi", "")
+BUILTIN(__builtin_altivec_vctuxs, "V4UiV4fIi", "")
 
 BUILTIN(__builtin_altivec_dss, "vUi", "")
 BUILTIN(__builtin_altivec_dssall, "v", "")
@@ -419,6 +419,9 @@ BUILTIN(__builtin_vsx_xvtstdcsp, "V4UiV4fIi", "")
 
 BUILTIN(__builtin_vsx_insertword, "V16UcV4UiV16UcIi", "")
 BUILTIN(__builtin_vsx_extractuword, "V2ULLiV16UcIi", "")
+
+BUILTIN(__builtin_vsx_xxpermdi, "v.", "t")
+BUILTIN(__builtin_vsx_xxsldwi, "v.", "t")
 
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")

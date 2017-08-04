@@ -19,4 +19,4 @@
 type = Library
 name = Object
 parent = Libraries
-required_libraries = BitReader Core MC MCParser Support
+required_libraries = BitReader Core MC BinaryFormat MCParser Support

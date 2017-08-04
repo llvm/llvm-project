@@ -1,4 +1,4 @@
-//===------ LiveDebugValues.cpp - Tracking Debug Value MIs ----------------===//
+//===------ LiveDebugValues.cpp - Tracking Debug Value MIs ----------------===//G
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
@@ -43,7 +44,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "live-debug-values"
+#define DEBUG_TYPE "livedebugvalues"
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 
@@ -114,10 +115,7 @@ private:
     /// The value location. Stored separately to avoid repeatedly
     /// extracting it from MI.
     union {
-      struct {
-        uint32_t RegNo;
-        uint32_t Offset;
-      } RegisterLoc;
+      uint64_t RegNo;
       uint64_t Hash;
     } Loc;
 
@@ -130,17 +128,7 @@ private:
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
-        Loc.RegisterLoc.RegNo = RegNo;
-        int64_t Offset =
-            MI.isIndirectDebugValue() ? MI.getOperand(1).getImm() : 0;
-        // We don't support offsets larger than 4GiB here. They are
-        // slated to be replaced with DIExpressions anyway.
-        // With indirect debug values used for spill locations, Offset 
-        // can be negative.
-        if (Offset == INT64_MIN || std::abs(Offset) >= (1LL << 32))
-          Kind = InvalidKind;
-        else
-          Loc.RegisterLoc.Offset = Offset;
+        Loc.RegNo = RegNo;
       }
     }
 
@@ -148,7 +136,7 @@ private:
     /// otherwise return 0.
     unsigned isDescribedByReg() const {
       if (Kind == RegisterKind)
-        return Loc.RegisterLoc.RegNo;
+        return Loc.RegNo;
       return 0;
     }
 
@@ -156,7 +144,9 @@ private:
     /// dominates MBB.
     bool dominates(MachineBasicBlock &MBB) const { return UVS.dominates(&MBB); }
 
-    void dump() const { MI.dump(); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump() const { MI.dump(); }
+#endif
 
     bool operator==(const VarLoc &Other) const {
       return Var == Other.Var && Loc.Hash == Other.Loc.Hash;
@@ -281,7 +271,7 @@ public:
 
 char LiveDebugValues::ID = 0;
 char &llvm::LiveDebugValuesID = LiveDebugValues::ID;
-INITIALIZE_PASS(LiveDebugValues, "livedebugvalues", "Live DEBUG_VALUE analysis",
+INITIALIZE_PASS(LiveDebugValues, DEBUG_TYPE, "Live DEBUG_VALUE analysis",
                 false, false)
 
 /// Default construct and initialize the pass.
@@ -300,6 +290,7 @@ void LiveDebugValues::getAnalysisUsage(AnalysisUsage &AU) const {
 //            Debug Range Extension Implementation
 //===----------------------------------------------------------------------===//
 
+#ifndef NDEBUG
 void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
                                        const VarLocInMBB &V,
                                        const VarLocMap &VarLocIDs,
@@ -318,6 +309,7 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
   }
   Out << "\n";
 }
+#endif
 
 /// Given a spill instruction, extract the register and offset used to
 /// address the spill location in a target independent way.
@@ -455,11 +447,15 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
       // iterator in our caller.
       unsigned SpillBase;
       int SpillOffset = extractSpillBaseRegAndOffset(MI, SpillBase);
+      const Module *M = MF->getMMI().getModule();
       const MachineInstr *DMI = &VarLocIDs[ID].MI;
+      auto *SpillExpr = DIExpression::prepend(
+          DMI->getDebugExpression(), DIExpression::NoDeref, SpillOffset);
+      // Add the expression to the metadata graph so isn't lost in MIR dumps.
+      M->getNamedMetadata("llvm.dbg.mir")->addOperand(SpillExpr);
       MachineInstr *SpDMI =
-          BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase, 0,
-                  DMI->getDebugVariable(), DMI->getDebugExpression());
-      SpDMI->getOperand(1).setImm(SpillOffset);
+          BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase,
+                  DMI->getDebugVariable(), SpillExpr);
       DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
             SpDMI->print(dbgs(), false, TII));
 
@@ -578,7 +574,7 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
     const MachineInstr *DMI = &DiffIt.MI;
     MachineInstr *MI =
         BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
-                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(), 0,
+                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(),
                 DMI->getDebugVariable(), DMI->getDebugExpression());
     if (DMI->isIndirectDebugValue())
       MI->getOperand(1).setImm(DMI->getOperand(1).getImm());
@@ -696,6 +692,11 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getFunction()->getSubprogram())
     // LiveDebugValues will already have removed all DBG_VALUEs.
+    return false;
+
+  // Skip functions from NoDebug compilation units.
+  if (MF.getFunction()->getSubprogram()->getUnit()->getEmissionKind() ==
+      DICompileUnit::NoDebug)
     return false;
 
   TRI = MF.getSubtarget().getRegisterInfo();

@@ -23,9 +23,29 @@ class ScalarEvolution;
 class Value;
 class Loop;
 class LoadInst;
+class CallInst;
 } // namespace llvm
 
 namespace polly {
+
+/// Check if a call is side-effect free and has only constant arguments.
+///
+/// Such calls can be re-generated easily, so we do not need to model them
+/// as scalar dependences.
+///
+/// @param Call The call to check.
+bool isConstCall(llvm::CallInst *Call);
+
+/// Check if some parameters in the affine expression might hide induction
+/// variables. If this is the case, we will try to delinearize the accesses
+/// taking into account this information to possibly obtain a memory access
+/// with more structure. Currently we assume that each parameter that
+/// comes from a function call might depend on a (virtual) induction variable.
+/// This covers calls to 'get_global_id' and 'get_local_id' as they commonly
+/// arise in OpenCL code, while not catching any false-positives in our current
+/// tests.
+bool hasIVParams(const llvm::SCEV *Expr);
+
 /// Find the loops referenced from a SCEV expression.
 ///
 /// @param Expr The SCEV expression to scan for loops.
@@ -45,13 +65,14 @@ void findValues(const llvm::SCEV *Expr, llvm::ScalarEvolution &SE,
 /// Returns true when the SCEV contains references to instructions within the
 /// region.
 ///
-/// @param S The SCEV to analyze.
+/// @param Expr The SCEV to analyze.
 /// @param R The region in which we look for dependences.
 /// @param Scope Location where the value is needed.
 /// @param AllowLoops Whether loop recurrences outside the loop that are in the
 ///                   region count as dependence.
-bool hasScalarDepsInsideRegion(const llvm::SCEV *S, const llvm::Region *R,
-                               llvm::Loop *Scope, bool AllowLoops);
+bool hasScalarDepsInsideRegion(const llvm::SCEV *Expr, const llvm::Region *R,
+                               llvm::Loop *Scope, bool AllowLoops,
+                               const InvariantLoadsSetTy &ILS);
 bool isAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                   const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
                   InvariantLoadsSetTy *ILS = nullptr);

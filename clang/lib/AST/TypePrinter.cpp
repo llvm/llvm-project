@@ -84,11 +84,12 @@ namespace {
     unsigned Indentation;
     bool HasEmptyPlaceHolder;
     bool InsideCCAttribute;
+    bool IgnoreFunctionProtoTypeConstQual;
 
   public:
     explicit TypePrinter(const PrintingPolicy &Policy, unsigned Indentation = 0)
-      : Policy(Policy), Indentation(Indentation),
-        HasEmptyPlaceHolder(false), InsideCCAttribute(false) { }
+        : Policy(Policy), Indentation(Indentation), HasEmptyPlaceHolder(false),
+          InsideCCAttribute(false), IgnoreFunctionProtoTypeConstQual(false) {}
 
     void print(const Type *ty, Qualifiers qs, raw_ostream &OS,
                StringRef PlaceHolder);
@@ -96,7 +97,7 @@ namespace {
 
     static bool canPrefixQualifiers(const Type *T, bool &NeedARCStrongQualifier);
     void spaceBeforePlaceHolder(raw_ostream &OS);
-    void printTypeSpec(const NamedDecl *D, raw_ostream &OS);
+    void printTypeSpec(NamedDecl *D, raw_ostream &OS);
 
     void printBefore(const Type *ty, Qualifiers qs, raw_ostream &OS);
     void printBefore(QualType T, raw_ostream &OS);
@@ -104,6 +105,7 @@ namespace {
     void printAfter(QualType T, raw_ostream &OS);
     void AppendScope(DeclContext *DC, raw_ostream &OS);
     void printTag(TagDecl *T, raw_ostream &OS);
+    void printFunctionAfter(const FunctionType::ExtInfo &Info, raw_ostream &OS);
 #define ABSTRACT_TYPE(CLASS, PARENT)
 #define TYPE(CLASS, PARENT) \
     void print##CLASS##Before(const CLASS##Type *T, raw_ostream &OS); \
@@ -189,6 +191,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Elaborated:
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
+    case Type::DeducedTemplateSpecialization:
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
     case Type::DependentName:
@@ -684,6 +687,40 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   FunctionType::ExtInfo Info = T->getExtInfo();
 
+  printFunctionAfter(Info, OS);
+
+  if (unsigned quals = T->getTypeQuals()) {
+    if (IgnoreFunctionProtoTypeConstQual)
+      quals &= ~unsigned(Qualifiers::Const);
+    if (quals) {
+      OS << ' ';
+      AppendTypeQualList(OS, quals, Policy.Restrict);
+    }
+  }
+
+  switch (T->getRefQualifier()) {
+  case RQ_None:
+    break;
+
+  case RQ_LValue:
+    OS << " &";
+    break;
+
+  case RQ_RValue:
+    OS << " &&";
+    break;
+  }
+  T->printExceptionSpecification(OS, Policy);
+
+  if (T->hasTrailingReturn()) {
+    OS << " -> ";
+    print(T->getReturnType(), OS, StringRef());
+  } else
+    printAfter(T->getReturnType(), OS);
+}
+
+void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
+                                     raw_ostream &OS) {
   if (!InsideCCAttribute) {
     switch (Info.getCC()) {
     case CC_C:
@@ -719,7 +756,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     case CC_IntelOclBicc:
       OS << " __attribute__((intel_ocl_bicc))";
       break;
-    case CC_X86_64Win64:
+    case CC_Win64:
       OS << " __attribute__((ms_abi))";
       break;
     case CC_X86_64SysV:
@@ -746,34 +783,13 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   if (Info.getNoReturn())
     OS << " __attribute__((noreturn))";
+  if (Info.getProducesResult())
+    OS << " __attribute__((ns_returns_retained))";
   if (Info.getRegParm())
     OS << " __attribute__((regparm ("
        << Info.getRegParm() << ")))";
-
-  if (unsigned quals = T->getTypeQuals()) {
-    OS << ' ';
-    AppendTypeQualList(OS, quals, Policy.Restrict);
-  }
-
-  switch (T->getRefQualifier()) {
-  case RQ_None:
-    break;
-    
-  case RQ_LValue:
-    OS << " &";
-    break;
-    
-  case RQ_RValue:
-    OS << " &&";
-    break;
-  }
-  T->printExceptionSpecification(OS, Policy);
-
-  if (T->hasTrailingReturn()) {
-    OS << " -> ";
-    print(T->getReturnType(), OS, StringRef());
-  } else
-    printAfter(T->getReturnType(), OS);
+  if (Info.getNoCallerSavedRegs())
+    OS << " __attribute__((no_caller_saved_registers))";
 }
 
 void TypePrinter::printFunctionNoProtoBefore(const FunctionNoProtoType *T, 
@@ -792,12 +808,18 @@ void TypePrinter::printFunctionNoProtoAfter(const FunctionNoProtoType *T,
   SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
   
   OS << "()";
-  if (T->getNoReturnAttr())
-    OS << " __attribute__((noreturn))";
+  printFunctionAfter(T->getExtInfo(), OS);
   printAfter(T->getReturnType(), OS);
 }
 
-void TypePrinter::printTypeSpec(const NamedDecl *D, raw_ostream &OS) {
+void TypePrinter::printTypeSpec(NamedDecl *D, raw_ostream &OS) {
+
+  // Compute the full nested-name-specifier for this type.
+  // In C, this will always be empty except when the type
+  // being printed is anonymous within other Record.
+  if (!Policy.SuppressScope)
+    AppendScope(D->getDeclContext(), OS);
+
   IdentifierInfo *II = D->getIdentifier();
   OS << II->getName();
   spaceBeforePlaceHolder(OS);
@@ -888,6 +910,24 @@ void TypePrinter::printAutoAfter(const AutoType *T, raw_ostream &OS) {
     printAfter(T->getDeducedType(), OS);
 }
 
+void TypePrinter::printDeducedTemplateSpecializationBefore(
+    const DeducedTemplateSpecializationType *T, raw_ostream &OS) {
+  // If the type has been deduced, print the deduced type.
+  if (!T->getDeducedType().isNull()) {
+    printBefore(T->getDeducedType(), OS);
+  } else {
+    IncludeStrongLifetimeRAII Strong(Policy);
+    T->getTemplateName().print(OS, Policy);
+    spaceBeforePlaceHolder(OS);
+  }
+}
+void TypePrinter::printDeducedTemplateSpecializationAfter(
+    const DeducedTemplateSpecializationType *T, raw_ostream &OS) {
+  // If the type has been deduced, print the deduced type.
+  if (!T->getDeducedType().isNull())
+    printAfter(T->getDeducedType(), OS);
+}
+
 void TypePrinter::printAtomicBefore(const AtomicType *T, raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
@@ -974,6 +1014,13 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
     OS << Typedef->getIdentifier()->getName();
+  } else if (Policy.UseStdFunctionForLambda && isa<CXXRecordDecl>(D) &&
+             cast<CXXRecordDecl>(D)->isLambda()) {
+    OS << "std::function<";
+    QualType T = cast<CXXRecordDecl>(D)->getLambdaCallOperator()->getType();
+    SaveAndRestore<bool> NoConst(IgnoreFunctionProtoTypeConstQual, true);
+    print(T, OS, "");
+    OS << '>';
   } else {
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)
@@ -1242,6 +1289,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   if (T->getAttrKind() == AttributedType::attr_objc_inert_unsafe_unretained)
     return;
 
+  // Don't print ns_returns_retained unless it had an effect.
+  if (T->getAttrKind() == AttributedType::attr_ns_returns_retained &&
+      !T->getEquivalentType()->castAs<FunctionType>()
+                             ->getExtInfo().getProducesResult())
+    return;
+
   // Print nullability type specifiers that occur after
   if (T->getAttrKind() == AttributedType::attr_nonnull ||
       T->getAttrKind() == AttributedType::attr_nullable ||
@@ -1331,6 +1384,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     case Qualifiers::OCL_Autoreleasing: OS << "autoreleasing"; break;
     }
     OS << ')';
+    break;
+
+  case AttributedType::attr_ns_returns_retained:
+    OS << "ns_returns_retained";
     break;
 
   // FIXME: When Sema learns to form this AttributedType, avoid printing the
@@ -1627,14 +1684,22 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
         OS << "__local";
         break;
       case LangAS::opencl_constant:
+      case LangAS::cuda_constant:
         OS << "__constant";
         break;
       case LangAS::opencl_generic:
         OS << "__generic";
         break;
+      case LangAS::cuda_device:
+        OS << "__device";
+        break;
+      case LangAS::cuda_shared:
+        OS << "__shared";
+        break;
       default:
+        assert(addrspace >= LangAS::FirstTargetAddressSpace);
         OS << "__attribute__((address_space(";
-        OS << addrspace;
+        OS << addrspace - LangAS::FirstTargetAddressSpace;
         OS << ")))";
     }
   }

@@ -220,7 +220,7 @@ getSection(const object::MachOObjectFile &Obj,
 // The function also tries to find a hole in the address map to fit the __DWARF
 // segment of \a DwarfSegmentSize size. \a EndAddress is updated to point at the
 // highest segment address.
-// When the __LINKEDIT segment is transfered, its offset and size are set resp.
+// When the __LINKEDIT segment is transferred, its offset and size are set resp.
 // to \a LinkeditOffset and \a LinkeditSize.
 template <typename SegmentTy>
 static void transferSegmentAndSections(

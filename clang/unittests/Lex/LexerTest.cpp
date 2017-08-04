@@ -18,6 +18,8 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/MacroArgs.h"
+#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -26,24 +28,6 @@
 using namespace clang;
 
 namespace {
-
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
 
 // The test fixture.
 class LexerTest : public ::testing::Test {
@@ -59,26 +43,33 @@ protected:
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
   }
 
-  std::vector<Token> Lex(StringRef Source) {
+  std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
+                                         TrivialModuleLoader &ModLoader) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    VoidModuleLoader ModLoader;
     MemoryBufferCache PCMCache;
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
-    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
-                    /*IILookup =*/nullptr,
-                    /*OwnsHeaderSearch =*/false);
-    PP.Initialize(*Target);
-    PP.EnterMainSourceFile();
+    std::unique_ptr<Preprocessor> PP = llvm::make_unique<Preprocessor>(
+        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
+        PCMCache, HeaderInfo, ModLoader,
+        /*IILookup =*/nullptr,
+        /*OwnsHeaderSearch =*/false);
+    PP->Initialize(*Target);
+    PP->EnterMainSourceFile();
+    return PP;
+  }
+
+  std::vector<Token> Lex(StringRef Source) {
+    TrivialModuleLoader ModLoader;
+    auto PP = CreatePP(Source, ModLoader);
 
     std::vector<Token> toks;
     while (1) {
       Token tok;
-      PP.Lex(tok);
+      PP->Lex(tok);
       if (tok.is(tok::eof))
         break;
       toks.push_back(tok);
@@ -381,6 +372,52 @@ TEST_F(LexerTest, DontMergeMacroArgsFromDifferentMacroFiles) {
   // sure that we get the correct end location (the comma after "helper1").
   SourceLocation helper1ArgLoc = toks[20].getLocation();
   EXPECT_EQ(SourceMgr.getFileIDSize(SourceMgr.getFileID(helper1ArgLoc)), 8U);
+}
+
+TEST_F(LexerTest, DontOverallocateStringifyArgs) {
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP("\"StrArg\", 5, 'C'", ModLoader);
+
+  llvm::BumpPtrAllocator Allocator;
+  std::array<IdentifierInfo *, 3> ParamList;
+  MacroInfo *MI = PP->AllocateMacroInfo({});
+  MI->setIsFunctionLike();
+  MI->setParameterList(ParamList, Allocator);
+  EXPECT_EQ(3u, MI->getNumParams());
+  EXPECT_TRUE(MI->isFunctionLike());
+
+  Token Eof;
+  Eof.setKind(tok::eof);
+  std::vector<Token> ArgTokens;
+  while (1) {
+    Token tok;
+    PP->Lex(tok);
+    if (tok.is(tok::eof)) {
+      ArgTokens.push_back(Eof);
+      break;
+    }
+    if (tok.is(tok::comma))
+      ArgTokens.push_back(Eof);
+    else
+      ArgTokens.push_back(tok);
+  }
+
+  auto MacroArgsDeleter = [&PP](MacroArgs *M) { M->destroy(*PP); };
+  std::unique_ptr<MacroArgs, decltype(MacroArgsDeleter)> MA(
+      MacroArgs::create(MI, ArgTokens, false, *PP), MacroArgsDeleter);
+  Token Result = MA->getStringifiedArgument(0, *PP, {}, {});
+  EXPECT_EQ(tok::string_literal, Result.getKind());
+  EXPECT_STREQ("\"\\\"StrArg\\\"\"", Result.getLiteralData());
+  Result = MA->getStringifiedArgument(1, *PP, {}, {});
+  EXPECT_EQ(tok::string_literal, Result.getKind());
+  EXPECT_STREQ("\"5\"", Result.getLiteralData());
+  Result = MA->getStringifiedArgument(2, *PP, {}, {});
+  EXPECT_EQ(tok::string_literal, Result.getKind());
+  EXPECT_STREQ("\"'C'\"", Result.getLiteralData());
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(MA->getStringifiedArgument(3, *PP, {}, {}),
+               "Invalid argument number!");
+#endif
 }
 
 } // anonymous namespace

@@ -41,8 +41,8 @@ using namespace llvm;
 STATISTIC(NumRemoved, "Number of instructions removed");
 STATISTIC(NumBranchesRemoved, "Number of branch instructions removed");
 
-// This is a tempoary option until we change the interface
-// to this pass based on optimization level.
+// This is a temporary option until we change the interface to this pass based
+// on optimization level.
 static cl::opt<bool> RemoveControlFlowFlag("adce-remove-control-flow",
                                            cl::init(true), cl::Hidden);
 
@@ -110,7 +110,7 @@ class AggressiveDeadCodeElimination {
 
   /// The set of blocks which we have determined whose control
   /// dependence sources must be live and which have not had
-  /// those dependences analyized.
+  /// those dependences analyzed.
   SmallPtrSet<BasicBlock *, 16> NewLiveBlocks;
 
   /// Set up auxiliary data structures for Instructions and BasicBlocks and
@@ -145,7 +145,7 @@ class AggressiveDeadCodeElimination {
   /// was removed.
   bool removeDeadInstructions();
 
-  /// Identify connected sections of the control flow grap which have
+  /// Identify connected sections of the control flow graph which have
   /// dead terminators and rewrite the control flow graph to remove them.
   void updateDeadRegions();
 
@@ -234,7 +234,7 @@ void AggressiveDeadCodeElimination::initialize() {
         return Iter != end() && Iter->second;
       }
     } State;
-    
+
     State.reserve(F.size());
     // Iterate over blocks in depth-first pre-order and
     // treat all edges to a block already seen as loop back edges
@@ -251,25 +251,6 @@ void AggressiveDeadCodeElimination::initialize() {
           break;
         }
     }
-  }
-
-  // Mark blocks live if there is no path from the block to the
-  // return of the function or a successor for which this is true.
-  // This protects IDFCalculator which cannot handle such blocks.
-  for (auto &BBInfoPair : BlockInfo) {
-    auto &BBInfo = BBInfoPair.second;
-    if (BBInfo.terminatorIsLive())
-      continue;
-    auto *BB = BBInfo.BB;
-    if (!PDT.getNode(BB)) {
-      markLive(BBInfo.Terminator);
-      continue;
-    }
-    for (auto *Succ : successors(BB))
-      if (!PDT.getNode(Succ)) {
-        markLive(BBInfo.Terminator);
-        break;
-      }
   }
 
   // Mark blocks live if there is no path from the block to the
@@ -579,7 +560,7 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
         PreferredSucc = Info;
     }
     assert((PreferredSucc && PreferredSucc->PostOrder > 0) &&
-           "Failed to find safe successor for dead branc");
+           "Failed to find safe successor for dead branch");
     bool First = true;
     for (auto *Succ : successors(BB)) {
       if (!First || Succ != PreferredSucc->BB)
@@ -594,13 +575,13 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
 
 // reverse top-sort order
 void AggressiveDeadCodeElimination::computeReversePostOrder() {
-  
-  // This provides a post-order numbering of the reverse conrtol flow graph
+
+  // This provides a post-order numbering of the reverse control flow graph
   // Note that it is incomplete in the presence of infinite loops but we don't
   // need numbers blocks which don't reach the end of the functions since
   // all branches in those blocks are forced live.
-  
-  // For each block without successors, extend the DFS from the bloack
+
+  // For each block without successors, extend the DFS from the block
   // backward through the graph
   SmallPtrSet<BasicBlock*, 16> Visited;
   unsigned PostOrder = 0;
@@ -644,8 +625,8 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   if (!AggressiveDeadCodeElimination(F, PDT).performDeadCodeElimination())
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
-  auto PA = PreservedAnalyses();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   return PA;
 }

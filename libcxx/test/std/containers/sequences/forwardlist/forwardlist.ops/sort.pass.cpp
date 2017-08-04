@@ -15,9 +15,12 @@
 #include <iterator>
 #include <algorithm>
 #include <vector>
+#include <random>
 #include <cassert>
 
 #include "min_allocator.h"
+
+std::mt19937 randomness;
 
 template <class C>
 void test(int N)
@@ -27,7 +30,7 @@ void test(int N)
     V v;
     for (int i = 0; i < N; ++i)
         v.push_back(i);
-    std::random_shuffle(v.begin(), v.end());
+    std::shuffle(v.begin(), v.end(), randomness);
     C c(v.begin(), v.end());
     c.sort();
     assert(distance(c.begin(), c.end()) == N);

@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -23,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -103,10 +103,10 @@ namespace {
 
 char LocalStackSlotPass::ID = 0;
 char &llvm::LocalStackSlotAllocationID = LocalStackSlotPass::ID;
-INITIALIZE_PASS_BEGIN(LocalStackSlotPass, "localstackalloc",
+INITIALIZE_PASS_BEGIN(LocalStackSlotPass, DEBUG_TYPE,
                       "Local Stack Slot Allocation", false, false)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_END(LocalStackSlotPass, "localstackalloc",
+INITIALIZE_PASS_END(LocalStackSlotPass, DEBUG_TYPE,
                     "Local Stack Slot Allocation", false, false)
 
 

@@ -14,13 +14,19 @@
 
 #include "llvm/Support/Threading.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Atomic.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/thread.h"
+
 #include <cassert>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace llvm;
+
+//===----------------------------------------------------------------------===//
+//=== WARNING: Implementation here must contain only TRULY operating system
+//===          independent code.
+//===----------------------------------------------------------------------===//
 
 bool llvm::llvm_is_multithreaded() {
 #if LLVM_ENABLE_THREADS != 0
@@ -30,100 +36,47 @@ bool llvm::llvm_is_multithreaded() {
 #endif
 }
 
-#if LLVM_ENABLE_THREADS != 0 && defined(HAVE_PTHREAD_H)
-#include <pthread.h>
-
-struct ThreadInfo {
-  void (*UserFn)(void *);
-  void *UserData;
-};
-static void *ExecuteOnThread_Dispatch(void *Arg) {
-  ThreadInfo *TI = reinterpret_cast<ThreadInfo*>(Arg);
-  TI->UserFn(TI->UserData);
-  return nullptr;
-}
-
-void llvm::llvm_execute_on_thread(void (*Fn)(void*), void *UserData,
-                                  unsigned RequestedStackSize) {
-  ThreadInfo Info = { Fn, UserData };
-  pthread_attr_t Attr;
-  pthread_t Thread;
-
-  // Construct the attributes object.
-  if (::pthread_attr_init(&Attr) != 0)
-    return;
-
-  // Set the requested stack size, if given.
-  if (RequestedStackSize != 0) {
-    if (::pthread_attr_setstacksize(&Attr, RequestedStackSize) != 0)
-      goto error;
-  }
-
-  // Construct and execute the thread.
-  if (::pthread_create(&Thread, &Attr, ExecuteOnThread_Dispatch, &Info) != 0)
-    goto error;
-
-  // Wait for the thread and clean up.
-  ::pthread_join(Thread, nullptr);
-
- error:
-  ::pthread_attr_destroy(&Attr);
-}
-#elif LLVM_ENABLE_THREADS!=0 && defined(LLVM_ON_WIN32)
-#include "Windows/WindowsSupport.h"
-#include <process.h>
-
-// Windows will at times define MemoryFence.
-#ifdef MemoryFence
-#undef MemoryFence
-#endif
-
-struct ThreadInfo {
-  void (*func)(void*);
-  void *param;
-};
-
-static unsigned __stdcall ThreadCallback(void *param) {
-  struct ThreadInfo *info = reinterpret_cast<struct ThreadInfo *>(param);
-  info->func(info->param);
-
-  return 0;
-}
-
-void llvm::llvm_execute_on_thread(void (*Fn)(void*), void *UserData,
-                                  unsigned RequestedStackSize) {
-  struct ThreadInfo param = { Fn, UserData };
-
-  HANDLE hThread = (HANDLE)::_beginthreadex(NULL,
-                                            RequestedStackSize, ThreadCallback,
-                                            &param, 0, NULL);
-
-  if (hThread) {
-    // We actually don't care whether the wait succeeds or fails, in
-    // the same way we don't care whether the pthread_join call succeeds
-    // or fails.  There's not much we could do if this were to fail. But
-    // on success, this call will wait until the thread finishes executing
-    // before returning.
-    (void)::WaitForSingleObject(hThread, INFINITE);
-    ::CloseHandle(hThread);
-  }
-}
-#else
+#if LLVM_ENABLE_THREADS == 0 ||                                                \
+    (!defined(LLVM_ON_WIN32) && !defined(HAVE_PTHREAD_H))
 // Support for non-Win32, non-pthread implementation.
-void llvm::llvm_execute_on_thread(void (*Fn)(void*), void *UserData,
+void llvm::llvm_execute_on_thread(void (*Fn)(void *), void *UserData,
                                   unsigned RequestedStackSize) {
-  (void) RequestedStackSize;
+  (void)RequestedStackSize;
   Fn(UserData);
 }
 
-#endif
+unsigned llvm::heavyweight_hardware_concurrency() { return 1; }
 
+uint64_t llvm::get_threadid() { return 0; }
+
+uint32_t llvm::get_max_thread_name_length() { return 0; }
+
+void llvm::set_thread_name(const Twine &Name) {}
+
+void llvm::get_thread_name(SmallVectorImpl<char> &Name) { Name.clear(); }
+
+#else
+
+#include <thread>
 unsigned llvm::heavyweight_hardware_concurrency() {
-#if !LLVM_ENABLE_THREADS
-  return 1;
-#endif
+  // Since we can't get here unless LLVM_ENABLE_THREADS == 1, it is safe to use
+  // `std::thread` directly instead of `llvm::thread` (and indeed, doing so
+  // allows us to not define `thread` in the llvm namespace, which conflicts
+  // with some platforms such as FreeBSD whose headers also define a struct
+  // called `thread` in the global namespace which can cause ambiguity due to
+  // ADL.
   int NumPhysical = sys::getHostNumPhysicalCores();
   if (NumPhysical == -1)
-    return thread::hardware_concurrency();
+    return std::thread::hardware_concurrency();
   return NumPhysical;
 }
+
+// Include the platform-specific parts of this class.
+#ifdef LLVM_ON_UNIX
+#include "Unix/Threading.inc"
+#endif
+#ifdef LLVM_ON_WIN32
+#include "Windows/Threading.inc"
+#endif
+
+#endif

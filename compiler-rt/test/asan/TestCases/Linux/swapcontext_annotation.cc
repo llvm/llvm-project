@@ -4,10 +4,11 @@
 // RUN: %clangxx_asan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck <( seq 60 | xargs -i -- grep LOOPCHECK %s ) --check-prefix LOOPCHECK
-// RUN: %clangxx_asan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck <( seq 60 | xargs -i -- grep LOOPCHECK %s ) --check-prefix LOOPCHECK
-// RUN: %clangxx_asan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck <( seq 60 | xargs -i -- grep LOOPCHECK %s ) --check-prefix LOOPCHECK
-// RUN: %clangxx_asan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck <( seq 60 | xargs -i -- grep LOOPCHECK %s ) --check-prefix LOOPCHECK
+// RUN: seq 60 | xargs -i -- grep LOOPCHECK %s > %t.checks
+// RUN: %clangxx_asan -std=c++11 -lpthread -O0 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_asan -std=c++11 -lpthread -O1 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_asan -std=c++11 -lpthread -O2 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
+// RUN: %clangxx_asan -std=c++11 -lpthread -O3 %s -o %t && %run %t 2>&1 | FileCheck %t.checks --check-prefix LOOPCHECK
 
 //
 // This test is too subtle to try on non-x86 arch for now.

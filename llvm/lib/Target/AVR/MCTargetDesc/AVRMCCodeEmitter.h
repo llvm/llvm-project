@@ -63,13 +63,14 @@ private:
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const;
 
-  /// Takes the compliment of a number (~0 - val).
+  /// Takes the complement of a number (~0 - val).
   unsigned encodeComplement(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
 
   /// Encodes an immediate value with a given fixup.
-  template <AVR::Fixups Fixup>
+  /// \tparam Offset The offset into the instruction for the fixup.
+  template <AVR::Fixups Fixup, unsigned Offset>
   unsigned encodeImm(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const;

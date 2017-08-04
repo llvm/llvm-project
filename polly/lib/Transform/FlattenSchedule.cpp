@@ -17,6 +17,7 @@
 #include "polly/FlattenAlgo.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
+#include "polly/Support/ISLOStream.h"
 #define DEBUG_TYPE "polly-flatten-schedule"
 
 using namespace polly;
@@ -27,10 +28,11 @@ namespace {
 /// Print a schedule to @p OS.
 ///
 /// Prints the schedule for each statements on a new line.
-void printSchedule(raw_ostream &OS, NonowningIslPtr<isl_union_map> Schedule,
+void printSchedule(raw_ostream &OS, const isl::union_map &Schedule,
                    int indent) {
-  foreachElt(Schedule, [&OS, indent](IslPtr<isl_map> Map) {
+  Schedule.foreach_map([&OS, indent](isl::map Map) -> isl::stat {
     OS.indent(indent) << Map << "\n";
+    return isl::stat::ok;
   });
 }
 
@@ -41,7 +43,7 @@ private:
   const FlattenSchedule &operator=(const FlattenSchedule &) = delete;
 
   std::shared_ptr<isl_ctx> IslCtx;
-  IslPtr<isl_union_map> OldSchedule;
+  isl::union_map OldSchedule;
 
 public:
   static char ID;
@@ -62,8 +64,7 @@ public:
     DEBUG(printSchedule(dbgs(), OldSchedule, 2));
 
     auto Domains = give(S.getDomains());
-    auto RestrictedOldSchedule = give(
-        isl_union_map_intersect_domain(OldSchedule.copy(), Domains.copy()));
+    auto RestrictedOldSchedule = OldSchedule.intersect_domain(Domains);
     DEBUG(dbgs() << "Old schedule with domains:\n");
     DEBUG(printSchedule(dbgs(), RestrictedOldSchedule, 2));
 
@@ -72,8 +73,7 @@ public:
     DEBUG(dbgs() << "Flattened new schedule:\n");
     DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 
-    NewSchedule =
-        give(isl_union_map_gist_domain(NewSchedule.take(), Domains.take()));
+    NewSchedule = NewSchedule.gist_domain(Domains);
     DEBUG(dbgs() << "Gisted, flattened new schedule:\n");
     DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 

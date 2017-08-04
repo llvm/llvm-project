@@ -35,9 +35,9 @@ class MachODumper {
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugAbbrev(DWARFContextInMemory &DCtx,
+  void dumpDebugAbbrev(DWARFContext &DCtx,
                        std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugStrings(DWARFContextInMemory &DCtx,
+  void dumpDebugStrings(DWARFContext &DCtx,
                         std::unique_ptr<MachOYAML::Object> &Y);
 
 public:
@@ -187,8 +187,8 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   dumpLoadCommands(Y);
   dumpLinkEdit(Y);
 
-  DWARFContextInMemory DICtx(Obj);
-  if (auto Err = dwarf2yaml(DICtx, Y->DWARF))
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  if (auto Err = dwarf2yaml(*DICtx, Y->DWARF))
     return errorCodeToError(Err);
   return std::move(Y);
 }
@@ -216,7 +216,7 @@ void MachODumper::dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y) {
         MachO::swapStruct(LC.Data.load_command_data);
       EndPtr = processLoadCommandData<MachO::load_command>(LC, LoadCmd);
       break;
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
     }
     auto RemainingBytes = LoadCmd.C.cmdsize - (EndPtr - LoadCmd.Ptr);
     if (!std::all_of(EndPtr, &EndPtr[RemainingBytes],
@@ -261,6 +261,7 @@ void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
       ULEB = decodeULEB128(OpCode + 1, &Count);
       RebaseOp.ExtraData.push_back(ULEB);
       OpCode += Count;
+      LLVM_FALLTHROUGH;
     // Intentionally no break here -- This opcode has two ULEB values
     case MachO::REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
     case MachO::REBASE_OPCODE_ADD_ADDR_ULEB:
@@ -308,6 +309,7 @@ void MachODumper::dumpBindOpcodes(
       ULEB = decodeULEB128(OpCode + 1, &Count);
       BindOp.ULEBExtraData.push_back(ULEB);
       OpCode += Count;
+      LLVM_FALLTHROUGH;
     // Intentionally no break here -- this opcode has two ULEB values
 
     case MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB:

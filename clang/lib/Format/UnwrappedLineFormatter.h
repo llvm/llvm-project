@@ -32,9 +32,11 @@ public:
                          WhitespaceManager *Whitespaces,
                          const FormatStyle &Style,
                          const AdditionalKeywords &Keywords,
-                         bool *IncompleteFormat)
+                         const SourceManager &SourceMgr,
+                         FormattingAttemptStatus *Status)
       : Indenter(Indenter), Whitespaces(Whitespaces), Style(Style),
-        Keywords(Keywords), IncompleteFormat(IncompleteFormat) {}
+        Keywords(Keywords), SourceMgr(SourceMgr),
+        Status(Status) {}
 
   /// \brief Format the current block and return the penalty.
   unsigned format(const SmallVectorImpl<AnnotatedLine *> &Lines,
@@ -44,9 +46,8 @@ public:
 private:
   /// \brief Add a new line and the required indent before the first Token
   /// of the \c UnwrappedLine if there was no structural parsing error.
-  void formatFirstToken(FormatToken &RootToken,
-                        const AnnotatedLine *PreviousLine, unsigned IndentLevel,
-                        unsigned Indent, bool InPPDirective);
+  void formatFirstToken(const AnnotatedLine &Line,
+                        const AnnotatedLine *PreviousLine, unsigned Indent);
 
   /// \brief Returns the column limit for a line, taking into account whether we
   /// need an escaped newline due to a continued preprocessor directive.
@@ -57,13 +58,15 @@ private:
   // starting from a specific additional offset. Improves performance if there
   // are many nested blocks.
   std::map<std::pair<const SmallVectorImpl<AnnotatedLine *> *, unsigned>,
-           unsigned> PenaltyCache;
+           unsigned>
+      PenaltyCache;
 
   ContinuationIndenter *Indenter;
   WhitespaceManager *Whitespaces;
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
-  bool *IncompleteFormat;
+  const SourceManager &SourceMgr;
+  FormattingAttemptStatus *Status;
 };
 } // end namespace format
 } // end namespace clang

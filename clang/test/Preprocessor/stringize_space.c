@@ -18,3 +18,14 @@ f(
     1)
 
 // CHECK: {{^}}"-1"
+
+#define paste(a,b) str(a<b##ld)
+paste(hello1, wor)
+paste(hello2,
+      wor)
+paste(hello3,
+wor)
+
+// CHECK: {{^}}"hello1<world"
+// CHECK: {{^}}"hello2<world"
+// CHECK: {{^}}"hello3<world"

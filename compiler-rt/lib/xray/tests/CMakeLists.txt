@@ -8,14 +8,15 @@ set(XRAY_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/include
-  -I${COMPILER_RT_SOURCE_DIR}/lib/xray)
+  -I${COMPILER_RT_SOURCE_DIR}/lib/xray
+  -I${COMPILER_RT_SOURCE_DIR}/lib)
 
 macro(xray_compile obj_list source arch)
   get_filename_component(basename ${source} NAME)
   set(output_obj "${basename}.${arch}.o")
   get_target_flags_for_arch(${arch} TARGET_CFLAGS)
   if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND COMPILE_DEPS gtest_main xray-fdr)
+    list(APPEND COMPILE_DEPS gtest_main xray)
   endif()
   clang_compile(${output_obj} ${source}
     CFLAGS ${XRAY_UNITTEST_CFLAGS} ${TARGET_CFLAGS}
@@ -38,16 +39,17 @@ macro(add_xray_unittest testname)
       get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
       set(TEST_DEPS ${TEST_OBJECTS})
       if(NOT COMPILER_RT_STANDALONE_BUILD)
-        list(APPEND TEST_DEPS gtest_main xray-fdr)
+        list(APPEND TEST_DEPS gtest_main xray)
       endif()
       if(NOT APPLE)
-        add_compiler_rt_test(XRayUnitTests ${testname}
+        add_compiler_rt_test(XRayUnitTests ${testname}-${arch}
           OBJECTS ${TEST_OBJECTS}
           DEPS ${TEST_DEPS}
           LINK_FLAGS ${TARGET_LINK_FLAGS}
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
           -lpthread
-          -L${COMPILER_RT_LIBRARY_OUTPUT_DIR} -lclang_rt.xray-fdr-${arch})
+          -L${COMPILER_RT_LIBRARY_OUTPUT_DIR} -lclang_rt.xray-${arch}
+          -ldl -lrt)
       endif()
       # FIXME: Figure out how to run even just the unit tests on APPLE.
     endforeach()

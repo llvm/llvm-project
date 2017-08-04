@@ -3,8 +3,13 @@
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: not ld.lld %t.o %t2.so -o %t.exe -pie 2>&1 | FileCheck %s
 
-// CHECK: {{.*}}.o:(.text+0x0): can't create dynamic relocation R_X86_64_64 against symbol 'bar' defined in {{.*}}.so
-// CHECK: {{.*}}.o:(.text+0x8): can't create dynamic relocation R_X86_64_64 against symbol 'foo' defined in {{.*}}.so
+// CHECK: can't create dynamic relocation R_X86_64_64 against symbol: bar
+// CHECK: >>> defined in {{.*}}.so
+// CHECK: >>> referenced by {{.*}}.o:(.text+0x0)
+
+// CHECK: can't create dynamic relocation R_X86_64_64 against symbol: foo
+// CHECK: >>> defined in {{.*}}.so
+// CHECK: >>> referenced by {{.*}}.o:(.text+0x8)
 
 .global _start
 _start:

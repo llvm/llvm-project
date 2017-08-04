@@ -14,6 +14,7 @@
 #include "ForRangeCopyCheck.h"
 #include "ImplicitCastInLoopCheck.h"
 #include "InefficientStringConcatenationCheck.h"
+#include "InefficientVectorOperationCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitialization.h"
 #include "UnnecessaryValueParamCheck.h"
@@ -33,6 +34,8 @@ public:
         "performance-implicit-cast-in-loop");
     CheckFactories.registerCheck<InefficientStringConcatenationCheck>(
         "performance-inefficient-string-concatenation");
+    CheckFactories.registerCheck<InefficientVectorOperationCheck>(
+        "performance-inefficient-vector-operation");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
         "performance-type-promotion-in-math-fn");
     CheckFactories.registerCheck<UnnecessaryCopyInitialization>(

@@ -205,15 +205,25 @@ define <2 x i32> @test16(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %tmp3
 }
 
-; FIXME: Optimize vector xor.  Currently only commute operands.
 define <2 x i32> @test17(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: test17
-; CHECK-NEXT: %tmp1 = xor <2 x i32> %x, %y
-; CHECK-NEXT: %tmp2 = xor <2 x i32> %x, %y
-; CHECK-NEXT: %tmp3 = xor <2 x i32> %tmp1, %tmp2
+; CHECK-NEXT: ret <2 x i32> zeroinitializer
 
   %tmp1 = xor <2 x i32> %x, %y
   %tmp2 = xor <2 x i32> %y, %x
   %tmp3 = xor <2 x i32> %tmp1, %tmp2
   ret <2 x i32> %tmp3
+}
+
+define <2 x i32> @test18(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: test18
+; CHECK-NEXT: %tmp5 = xor <2 x i32> %y, %x
+; CHECK-NEXT: ret <2 x i32> %tmp5
+
+  %tmp1 = xor <2 x i32> %x, %y
+  %tmp2 = xor <2 x i32> %y, %x
+  %tmp3 = xor <2 x i32> %x, %y
+  %tmp4 = xor <2 x i32> %tmp1, %tmp2
+  %tmp5 = xor <2 x i32> %tmp4, %tmp3
+  ret <2 x i32> %tmp5
 }

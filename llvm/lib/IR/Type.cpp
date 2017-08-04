@@ -1,4 +1,4 @@
-//===-- Type.cpp - Implement the Type class -------------------------------===//
+//===- Type.cpp - Implement the Type class --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,10 +13,23 @@
 
 #include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include <algorithm>
-#include <cstdarg>
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <utility>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -39,12 +52,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   default:
     return nullptr;
   }
-}
-
-Type *Type::getScalarType() const {
-  if (auto *VTy = dyn_cast<VectorType>(this))
-    return VTy->getElementType();
-  return const_cast<Type*>(this);
 }
 
 bool Type::isIntegerTy(unsigned Bitwidth) const {
@@ -226,7 +233,6 @@ PointerType *Type::getInt64PtrTy(LLVMContext &C, unsigned AS) {
   return getInt64Ty(C)->getPointerTo(AS);
 }
 
-
 //===----------------------------------------------------------------------===//
 //                       IntegerType Implementation
 //===----------------------------------------------------------------------===//
@@ -368,7 +374,8 @@ void StructType::setName(StringRef Name) {
   if (Name == getName()) return;
 
   StringMap<StructType *> &SymbolTable = getContext().pImpl->NamedStructTypes;
-  typedef StringMap<StructType *>::MapEntryTy EntryTy;
+
+  using EntryTy = StringMap<StructType *>::MapEntryTy;
 
   // If this struct already had a name, remove its symbol table entry. Don't
   // delete the data yet because it may be part of the new name.
@@ -425,21 +432,6 @@ StructType *StructType::get(LLVMContext &Context, bool isPacked) {
   return get(Context, None, isPacked);
 }
 
-StructType *StructType::get(Type *type, ...) {
-  assert(type && "Cannot create a struct type with no elements with this");
-  LLVMContext &Ctx = type->getContext();
-  va_list ap;
-  SmallVector<llvm::Type*, 8> StructFields;
-  va_start(ap, type);
-  while (type) {
-    StructFields.push_back(type);
-    type = va_arg(ap, llvm::Type*);
-  }
-  auto *Ret = llvm::StructType::get(Ctx, StructFields);
-  va_end(ap);
-  return Ret;
-}
-
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,
                                StringRef Name, bool isPacked) {
   StructType *ST = create(Context, Name);
@@ -466,21 +458,6 @@ StructType *StructType::create(ArrayRef<Type*> Elements) {
   assert(!Elements.empty() &&
          "This method may not be invoked with an empty list");
   return create(Elements[0]->getContext(), Elements, StringRef());
-}
-
-StructType *StructType::create(StringRef Name, Type *type, ...) {
-  assert(type && "Cannot create a struct type with no elements with this");
-  LLVMContext &Ctx = type->getContext();
-  va_list ap;
-  SmallVector<llvm::Type*, 8> StructFields;
-  va_start(ap, type);
-  while (type) {
-    StructFields.push_back(type);
-    type = va_arg(ap, llvm::Type*);
-  }
-  auto *Ret = llvm::StructType::create(Ctx, StructFields, Name);
-  va_end(ap);
-  return Ret;
 }
 
 bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
@@ -514,19 +491,6 @@ StringRef StructType::getName() const {
   return ((StringMapEntry<StructType*> *)SymbolTableEntry)->getKey();
 }
 
-void StructType::setBody(Type *type, ...) {
-  assert(type && "Cannot create a struct type with no elements with this");
-  va_list ap;
-  SmallVector<llvm::Type*, 8> StructFields;
-  va_start(ap, type);
-  while (type) {
-    StructFields.push_back(type);
-    type = va_arg(ap, llvm::Type*);
-  }
-  setBody(StructFields);
-  va_end(ap);
-}
-
 bool StructType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
@@ -545,7 +509,6 @@ bool StructType::isLayoutIdentical(StructType *Other) const {
 StructType *Module::getTypeByName(StringRef Name) const {
   return getContext().pImpl->NamedStructTypes.lookup(Name);
 }
-
 
 //===----------------------------------------------------------------------===//
 //                       CompositeType Implementation
@@ -575,7 +538,7 @@ bool CompositeType::indexValid(const Value *V) const {
   if (auto *STy = dyn_cast<StructType>(this)) {
     // Structure indexes require (vectors of) 32-bit integer constants.  In the
     // vector case all of the indices must be equal.
-    if (!V->getType()->getScalarType()->isIntegerTy(32))
+    if (!V->getType()->isIntOrIntVectorTy(32))
       return false;
     const Constant *C = dyn_cast<Constant>(V);
     if (C && V->getType()->isVectorTy())
@@ -594,7 +557,6 @@ bool CompositeType::indexValid(unsigned Idx) const {
   // Sequential types can be indexed by any integer.
   return true;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                           ArrayType Implementation
@@ -666,7 +628,6 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
     Entry = new (CImpl->TypeAllocator) PointerType(EltTy, AddressSpace);
   return Entry;
 }
-
 
 PointerType::PointerType(Type *E, unsigned AddrSpace)
   : Type(E->getContext(), PointerTyID), PointeeTy(E) {

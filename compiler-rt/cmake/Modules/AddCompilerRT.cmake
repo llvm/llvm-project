@@ -110,6 +110,13 @@ function(add_compiler_rt_runtime name type)
     "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;LINK_LIBS;OBJECT_LIBS"
     ${ARGN})
   set(libnames)
+  # Until we support this some other way, build compiler-rt runtime without LTO
+  # to allow non-LTO projects to link with it.
+  if(COMPILER_RT_HAS_FNO_LTO_FLAG)
+    set(NO_LTO_FLAGS "-fno-lto")
+  else()
+    set(NO_LTO_FLAGS "")
+  endif()
   if(APPLE)
     foreach(os ${LIB_OS})
       if(type STREQUAL "STATIC")
@@ -121,7 +128,7 @@ function(add_compiler_rt_runtime name type)
       list_intersect(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
       if(LIB_ARCHS_${libname})
         list(APPEND libnames ${libname})
-        set(extra_cflags_${libname} ${DARWIN_${os}_CFLAGS} ${LIB_CFLAGS})
+        set(extra_cflags_${libname} ${DARWIN_${os}_CFLAGS} ${NO_LTO_FLAGS} ${LIB_CFLAGS})
         set(output_name_${libname} ${libname}${COMPILER_RT_OS_SUFFIX})
         set(sources_${libname} ${LIB_SOURCES})
         format_object_libs(sources_${libname} ${os} ${LIB_OBJECT_LIBS})
@@ -149,7 +156,7 @@ function(add_compiler_rt_runtime name type)
       set(sources_${libname} ${LIB_SOURCES})
       format_object_libs(sources_${libname} ${arch} ${LIB_OBJECT_LIBS})
       set(libnames ${libnames} ${libname})
-      set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${LIB_CFLAGS})
+      set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${NO_LTO_FLAGS} ${LIB_CFLAGS})
     endforeach()
   endif()
 
@@ -202,6 +209,14 @@ function(add_compiler_rt_runtime name type)
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
+      endif()
+      if(APPLE)
+        # Ad-hoc sign the dylibs
+        add_custom_command(TARGET ${libname}
+          POST_BUILD  
+          COMMAND codesign --sign - $<TARGET_FILE:${libname}>
+          WORKING_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+        )
       endif()
     endif()
     install(TARGETS ${libname}
@@ -380,6 +395,7 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
+               -DLIBCXX_STANDALONE_BUILD=On
     LOG_BUILD 1
     LOG_CONFIGURE 1
     LOG_INSTALL 1

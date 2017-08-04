@@ -1,8 +1,8 @@
 ; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-ast -analyze < %s | FileCheck %s -check-prefix=AST
 ; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-import-jscop-dir=%S -polly-ast -analyze < %s | FileCheck %s -check-prefix=AST-STRIDE4
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-import-jscop-dir=%S -polly-codegen -S < %s | FileCheck %s -check-prefix=IR-STRIDE4
+; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-ast -analyze < %s | FileCheck %s -check-prefix=AST-STRIDE4
+; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-codegen -S < %s | FileCheck %s -check-prefix=IR-STRIDE4
 
 ; This extensive test case tests the creation of the full set of OpenMP calls
 ; as well as the subfunction creation using a trivial loop as example.
@@ -31,17 +31,13 @@
 ; IR-NEXT:   %polly.par.userContext = alloca
 
 ; IR-LABEL: polly.parallel.for:
-; IR-NEXT:   %0 = bitcast {}* %polly.par.userContext to i8*
-; IR-NEXT:   call void @llvm.lifetime.start(i64 0, i8* %0)
 ; IR-NEXT:   %polly.par.userContext1 = bitcast {}* %polly.par.userContext to i8*
 ; IR-NEXT:   call void @GOMP_parallel_loop_runtime_start(void (i8*)* @single_parallel_loop_polly_subfn, i8* %polly.par.userContext1, i32 0, i64 0, i64 1024, i64 1)
 ; IR-NEXT:   call void @single_parallel_loop_polly_subfn(i8* %polly.par.userContext1)
 ; IR-NEXT:   call void @GOMP_parallel_end()
-; IR-NEXT:   %1 = bitcast {}* %polly.par.userContext to i8*
-; IR-NEXT:   call void @llvm.lifetime.end(i64 8, i8* %1)
 ; IR-NEXT:   br label %polly.exiting
 
-; IR: define internal void @single_parallel_loop_polly_subfn(i8* %polly.par.userContext) #2
+; IR: define internal void @single_parallel_loop_polly_subfn(i8* %polly.par.userContext) #1
 ; IR-LABEL: polly.par.setup:
 ; IR-NEXT:   %polly.par.LBPtr = alloca i64
 ; IR-NEXT:   %polly.par.UBPtr = alloca i64
@@ -74,14 +70,13 @@
 ; IR-NEXT:   %[[gep:[._a-zA-Z0-9]*]] = getelementptr [1024 x float], [1024 x float]* {{.*}}, i64 0, i64 %polly.indvar
 ; IR-NEXT:   store float 1.000000e+00, float* %[[gep]]
 ; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
-; IR-NEXT:   %polly.adjust_ub = sub i64 %polly.par.UBAdjusted, 1
-; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, %polly.adjust_ub
+; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, %polly.par.UBAdjusted
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 ; IR-LABEL: polly.loop_preheader:
 ; IR-NEXT:   br label %polly.loop_header
 
-; IR: attributes #2 = { "polly.skip.fn" }
+; IR: attributes #1 = { "polly.skip.fn" }
 
 ; IR-STRIDE4:   call void @GOMP_parallel_loop_runtime_start(void (i8*)* @single_parallel_loop_polly_subfn, i8* %polly.par.userContext1, i32 0, i64 0, i64 1024, i64 4)
 ; IR-STRIDE4:  add nsw i64 %polly.indvar, 3

@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallSet.h"
@@ -22,6 +21,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/raw_ostream.h"
@@ -108,12 +108,12 @@ namespace {
 
 char MachineCSE::ID = 0;
 char &llvm::MachineCSEID = MachineCSE::ID;
-INITIALIZE_PASS_BEGIN(MachineCSE, "machine-cse",
-                "Machine Common Subexpression Elimination", false, false)
+INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
+                      "Machine Common Subexpression Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MachineCSE, "machine-cse",
-                "Machine Common Subexpression Elimination", false, false)
+INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
+                    "Machine Common Subexpression Elimination", false, false)
 
 /// The source register of a COPY machine instruction can be propagated to all
 /// its users, and this propagation could increase the probability of finding
@@ -180,8 +180,8 @@ MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
     I = skipDebugInstructionsForward(I, E);
 
     if (I == E)
-      // Reached end of block, register is obviously dead.
-      return true;
+      // Reached end of block, we don't know if register is dead or not.
+      return false;
 
     bool SeenDef = false;
     for (const MachineOperand &MO : I->operands()) {

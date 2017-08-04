@@ -20,7 +20,7 @@ declare void @llvm.amdgcn.s.sleep(i32) #0
 ; GCN: s_sleep 13{{$}}
 ; GCN: s_sleep 14{{$}}
 ; GCN: s_sleep 15{{$}}
-define void @test_s_sleep(i32 %x) #0 {
+define amdgpu_kernel void @test_s_sleep(i32 %x) #0 {
   call void @llvm.amdgcn.s.sleep(i32 0)
   call void @llvm.amdgcn.s.sleep(i32 1)
   call void @llvm.amdgcn.s.sleep(i32 2)

@@ -64,6 +64,10 @@ struct BigWithDtor {
   int a, b, c, d, e, f;
 };
 
+struct BaseNoByval : Small {
+  int bb;
+};
+
 // WIN32: declare void @"{{.*take_bools_and_chars.*}}"
 // WIN32:       (<{ i8, [3 x i8], i8, [3 x i8], %struct.SmallWithDtor,
 // WIN32:           i8, [3 x i8], i8, [3 x i8], i32, i8, [3 x i8] }>* inalloca)
@@ -126,6 +130,12 @@ void medium_arg(Medium s) {}
 // WIN32: define void @"\01?medium_arg@@YAXUMedium@@@Z"(i32 %s.0, i32 %s.1)
 // WIN64: define void @"\01?medium_arg@@YAXUMedium@@@Z"(i64 %s.coerce)
 // WOA: define arm_aapcs_vfpcc void @"\01?medium_arg@@YAXUMedium@@@Z"([2 x i32] %s.coerce)
+
+void base_no_byval_arg(BaseNoByval s) {}
+// LINUX-LABEL: define void @_Z17base_no_byval_arg11BaseNoByval(%struct.BaseNoByval* byval align 4 %s)
+// WIN32: define void @"\01?base_no_byval_arg@@YAXUBaseNoByval@@@Z"(i32 %s.0, i32 %s.1)
+// WIN64: define void @"\01?base_no_byval_arg@@YAXUBaseNoByval@@@Z"(i64 %s.coerce)
+// WOA: define arm_aapcs_vfpcc void @"\01?base_no_byval_arg@@YAXUBaseNoByval@@@Z"([2 x i32] %s.coerce)
 
 void small_arg_with_ctor(SmallWithCtor s) {}
 // LINUX-LABEL: define void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* byval align 4 %s)

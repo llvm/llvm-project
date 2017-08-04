@@ -99,7 +99,9 @@ define <4 x i16> @vget_low16(<8 x i16>* %A) nounwind {
 define <8 x i8> @vget_high8(<16 x i8>* %A) nounwind {
 ; CHECK: vget_high8
 ; CHECK-NOT: vst
-; CHECK-LE: vmov r0, r1, d17
+; CHECK-LE-NOT: vld1.64 {d16, d17}, [r0]
+; CHECK-LE: vldr  d16, [r0, #8]
+; CHECK-LE: vmov  r0, r1, d16
 ; CHECK-BE: vmov r1, r0, d16
 	%tmp1 = load <16 x i8>, <16 x i8>* %A
         %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

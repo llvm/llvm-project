@@ -53,3 +53,31 @@ void isl_imath_submul_ui(mp_int rop, mp_int op1, unsigned long op2)
 
 	mp_int_clear(&temp);
 }
+
+/* Compute the division of lhs by a rhs of type unsigned long, rounding towards
+ * positive infinity (Ceil).
+ */
+void isl_imath_cdiv_q_ui(mp_int rop, mp_int lhs, unsigned long rhs)
+{
+	mpz_t temp;
+	mp_int_init(&temp);
+
+	mp_int_set_uvalue(&temp, rhs);
+	impz_cdiv_q(rop, lhs, &temp);
+
+	mp_int_clear(&temp);
+}
+
+/* Compute the division of lhs by a rhs of type unsigned long, rounding towards
+ * negative infinity (Floor).
+ */
+void isl_imath_fdiv_q_ui(mp_int rop, mp_int lhs, unsigned long rhs)
+{
+	mpz_t temp;
+	mp_int_init(&temp);
+
+	mp_int_set_uvalue(&temp, rhs);
+	impz_fdiv_q(rop, lhs, &temp);
+
+	mp_int_clear(&temp);
+}

@@ -28,8 +28,8 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <map>
-#include <unordered_map>
 #include <system_error>
+#include <unordered_map>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -213,7 +213,7 @@ public:
   }
 };
 
-/// @brief Symbol info for RuntimeDyld. 
+/// @brief Symbol info for RuntimeDyld.
 class SymbolTableEntry {
 public:
   SymbolTableEntry()
@@ -417,7 +417,7 @@ protected:
                        StubMap &Stubs) = 0;
 
   /// \brief Resolve relocations to external symbols.
-  void resolveExternalSymbols();
+  Error resolveExternalSymbols();
 
   // \brief Compute an upper bound of the memory that is required to load all
   // sections
@@ -426,12 +426,23 @@ protected:
                               uint64_t &RODataSize, uint32_t &RODataAlign,
                               uint64_t &RWDataSize, uint32_t &RWDataAlign);
 
+  // \brief Compute GOT size
+  unsigned computeGOTSize(const ObjectFile &Obj);
+
   // \brief Compute the stub buffer size required for a section
   unsigned computeSectionStubBufSize(const ObjectFile &Obj,
                                      const SectionRef &Section);
 
   // \brief Implementation of the generic part of the loadObject algorithm.
   Expected<ObjSectionToIDMap> loadObjectImpl(const object::ObjectFile &Obj);
+
+  // \brief Return size of Global Offset Table (GOT) entry
+  virtual size_t getGOTEntrySize() { return 0; }
+
+  // \brief Return true if the relocation R may require allocating a GOT entry.
+  virtual bool relocationNeedsGot(const RelocationRef &R) const {
+    return false;
+  }
 
   // \brief Return true if the relocation R may require allocating a stub.
   virtual bool relocationNeedsStub(const RelocationRef &R) const {
@@ -504,7 +515,7 @@ public:
 
   virtual void registerEHFrames();
 
-  virtual void deregisterEHFrames();
+  void deregisterEHFrames();
 
   virtual Error finalizeLoad(const ObjectFile &ObjImg,
                              ObjSectionToIDMap &SectionMap) {

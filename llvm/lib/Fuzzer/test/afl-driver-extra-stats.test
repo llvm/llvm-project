@@ -1,3 +1,5 @@
+REQUIRES: posix
+
 ; Test that not specifying an extra stats file isn't broken.
 RUN: unset AFL_DRIVER_EXTRA_STATS_FILENAME
 RUN: AFLDriverTest

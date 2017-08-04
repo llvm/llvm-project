@@ -261,6 +261,10 @@ module config {
   config_macros [exhaustive] WANT_FOO, WANT_BAR
 }
 
+module diag_flags {
+  header "diag_flags.h"
+}
+
 module diag_pragma {
   header "diag_pragma.h"
 }
@@ -341,6 +345,12 @@ module DebugCXX {
 
 module DebugObjC {
   header "DebugObjC.h"
+}
+
+module DebugObjCImport {
+  module SubModule {
+    header "DebugObjCImport.h"
+  }
 }
 
 module ImportNameInDir {

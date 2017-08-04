@@ -11,8 +11,8 @@
 #include "mutex"
 #include "limits"
 #include "system_error"
-#include "cassert"
 #include "include/atomic_support.h"
+#include "__undef_macros"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 #ifndef _LIBCPP_HAS_NO_THREADS
@@ -37,7 +37,7 @@ mutex::lock()
 bool
 mutex::try_lock() _NOEXCEPT
 {
-    return __libcpp_mutex_trylock(&__m_) == 0;
+    return __libcpp_mutex_trylock(&__m_);
 }
 
 void
@@ -45,7 +45,7 @@ mutex::unlock() _NOEXCEPT
 {
     int ec = __libcpp_mutex_unlock(&__m_);
     (void)ec;
-    assert(ec == 0);
+    _LIBCPP_ASSERT(ec == 0, "call to mutex::unlock failed");
 }
 
 // recursive_mutex
@@ -61,7 +61,7 @@ recursive_mutex::~recursive_mutex()
 {
     int e = __libcpp_recursive_mutex_destroy(&__m_);
     (void)e;
-    assert(e == 0);
+    _LIBCPP_ASSERT(e == 0, "call to ~recursive_mutex() failed");
 }
 
 void
@@ -77,13 +77,13 @@ recursive_mutex::unlock() _NOEXCEPT
 {
     int e = __libcpp_recursive_mutex_unlock(&__m_);
     (void)e;
-    assert(e == 0);
+    _LIBCPP_ASSERT(e == 0, "call to recursive_mutex::unlock() failed");
 }
 
 bool
 recursive_mutex::try_lock() _NOEXCEPT
 {
-    return __libcpp_recursive_mutex_trylock(&__m_) == 0;
+    return __libcpp_recursive_mutex_trylock(&__m_);
 }
 
 // timed_mutex

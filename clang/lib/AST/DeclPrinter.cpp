@@ -119,6 +119,13 @@ void Decl::print(raw_ostream &Out, const PrintingPolicy &Policy,
   Printer.Visit(const_cast<Decl*>(this));
 }
 
+void TemplateParameterList::print(raw_ostream &Out,
+                                  const PrintingPolicy &Policy,
+                                  unsigned Indentation) const {
+  DeclPrinter Printer(Out, Policy, Indentation);
+  Printer.printTemplateParameters(this);
+}
+
 static QualType GetBaseType(QualType T) {
   // FIXME: This should be on the Type class!
   QualType BaseType = T;
@@ -464,6 +471,7 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
 
 void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   Out << *D;
+  prettyPrintAttributes(D);
   if (Expr *Init = D->getInitExpr()) {
     Out << " = ";
     Init->printPretty(Out, nullptr, Policy, Indentation);
@@ -477,17 +485,25 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   if (D->isFunctionTemplateSpecialization())
     Out << "template<> ";
+  else if (!D->getDescribedFunctionTemplate()) {
+    for (unsigned I = 0, NumTemplateParams = D->getNumTemplateParameterLists();
+         I < NumTemplateParams; ++I)
+      printTemplateParameters(D->getTemplateParameterList(I));
+  }
 
   CXXConstructorDecl *CDecl = dyn_cast<CXXConstructorDecl>(D);
   CXXConversionDecl *ConversionDecl = dyn_cast<CXXConversionDecl>(D);
+  CXXDeductionGuideDecl *GuideDecl = dyn_cast<CXXDeductionGuideDecl>(D);
   if (!Policy.SuppressSpecifiers) {
-    switch (D->getStorageClass()) {
-    case SC_None: break;
-    case SC_Extern: Out << "extern "; break;
-    case SC_Static: Out << "static "; break;
-    case SC_PrivateExtern: Out << "__private_extern__ "; break;
-    case SC_Auto: case SC_Register:
-      llvm_unreachable("invalid for functions");
+    if (!Policy.SupressStorageClassSpecifiers) {
+      switch (D->getStorageClass()) {
+      case SC_None: break;
+      case SC_Extern: Out << "extern "; break;
+      case SC_Static: Out << "static "; break;
+      case SC_PrivateExtern: Out << "__private_extern__ "; break;
+      case SC_Auto: case SC_Register:
+        llvm_unreachable("invalid for functions");
+      }
     }
 
     if (D->isInlineSpecified())  Out << "inline ";
@@ -495,7 +511,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isModulePrivate())    Out << "__module_private__ ";
     if (D->isConstexpr() && !D->isExplicitlyDefaulted()) Out << "constexpr ";
     if ((CDecl && CDecl->isExplicitSpecified()) ||
-        (ConversionDecl && ConversionDecl->isExplicit()))
+        (ConversionDecl && ConversionDecl->isExplicitSpecified()) ||
+        (GuideDecl && GuideDecl->isExplicitSpecified()))
       Out << "explicit ";
   }
 
@@ -509,6 +526,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
   Proto += D->getNameInfo().getAsString();
+  if (GuideDecl)
+    Proto = GuideDecl->getDeducedTemplate()->getDeclName().getAsString();
   if (const TemplateArgumentList *TArgs = D->getTemplateSpecializationArgs()) {
     llvm::raw_string_ostream POut(Proto);
     DeclPrinter TArgPrinter(POut, SubPolicy, Indentation);
@@ -658,7 +677,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       }
     } else if (!ConversionDecl && !isa<CXXDestructorDecl>(D)) {
       if (FT && FT->hasTrailingReturn()) {
-        Out << "auto " << Proto << " -> ";
+        if (!GuideDecl)
+          Out << "auto ";
+        Out << Proto << " -> ";
         Proto.clear();
       }
       AFT->getReturnType().print(Out, Policy, Proto);
@@ -1048,9 +1069,18 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
 
 void DeclPrinter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   prettyPrintPragmas(D->getTemplatedDecl());
+  // Print any leading template parameter lists.
+  if (const FunctionDecl *FD = D->getTemplatedDecl()) {
+    for (unsigned I = 0, NumTemplateParams = FD->getNumTemplateParameterLists();
+         I < NumTemplateParams; ++I)
+      printTemplateParameters(FD->getTemplateParameterList(I));
+  }
   VisitRedeclarableTemplateDecl(D);
 
-  if (PrintInstantiation) {
+  // Never print "instantiations" for deduction guides (they don't really
+  // have them).
+  if (PrintInstantiation &&
+      !isa<CXXDeductionGuideDecl>(D->getTemplatedDecl())) {
     FunctionDecl *PrevDecl = D->getTemplatedDecl();
     const FunctionDecl *Def;
     if (PrevDecl->isDefined(Def) && Def != PrevDecl)
@@ -1168,7 +1198,9 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
   for (const auto *PI : OMD->parameters()) {
     // FIXME: selector is missing here!
     pos = name.find_first_of(':', lastPos);
-    Out << " " << name.substr(lastPos, pos - lastPos) << ':';
+    if (lastPos != 0)
+      Out << " ";
+    Out << name.substr(lastPos, pos - lastPos) << ':';
     PrintObjCMethodType(OMD->getASTContext(), 
                         PI->getObjCDeclQualifier(),
                         PI->getType());
@@ -1177,7 +1209,7 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
   }
 
   if (OMD->param_begin() == OMD->param_end())
-    Out << " " << name;
+    Out << name;
 
   if (OMD->isVariadic())
       Out << ", ...";

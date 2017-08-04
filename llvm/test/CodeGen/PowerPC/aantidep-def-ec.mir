@@ -48,22 +48,6 @@ tracksRegLiveness: true
 liveins:         
   - { reg: '%x3' }
   - { reg: '%x4' }
-calleeSavedRegisters: [ '%cr2', '%cr3', '%cr4', '%f14', '%f15', '%f16', 
-                        '%f17', '%f18', '%f19', '%f20', '%f21', '%f22', 
-                        '%f23', '%f24', '%f25', '%f26', '%f27', '%f28', 
-                        '%f29', '%f30', '%f31', '%r14', '%r15', '%r16', 
-                        '%r17', '%r18', '%r19', '%r20', '%r21', '%r22', 
-                        '%r23', '%r24', '%r25', '%r26', '%r27', '%r28', 
-                        '%r29', '%r30', '%r31', '%v20', '%v21', '%v22', 
-                        '%v23', '%v24', '%v25', '%v26', '%v27', '%v28', 
-                        '%v29', '%v30', '%v31', '%vf20', '%vf21', '%vf22', 
-                        '%vf23', '%vf24', '%vf25', '%vf26', '%vf27', '%vf28', 
-                        '%vf29', '%vf30', '%vf31', '%x14', '%x15', '%x16', 
-                        '%x17', '%x18', '%x19', '%x20', '%x21', '%x22', 
-                        '%x23', '%x24', '%x25', '%x26', '%x27', '%x28', 
-                        '%x29', '%x30', '%x31', '%cr2eq', '%cr3eq', '%cr4eq', 
-                        '%cr2gt', '%cr3gt', '%cr4gt', '%cr2lt', '%cr3lt', 
-                        '%cr4lt', '%cr2un', '%cr3un', '%cr4un' ]
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false

@@ -17,9 +17,9 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/CallingConv.h"
@@ -110,8 +110,8 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
          Builder.FuncInfo.StatepointStackSlots.size() &&
          "Broken invariant");
 
-  StatepointMaxSlotsRequired = std::max<unsigned long>(
-      StatepointMaxSlotsRequired, Builder.FuncInfo.StatepointStackSlots.size());
+  StatepointMaxSlotsRequired.updateMax(
+      Builder.FuncInfo.StatepointStackSlots.size());
 
   return SpillSlot;
 }
@@ -242,7 +242,8 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
 
   // Cache this slot so we find it when going through the normal
   // assignment loop.
-  SDValue Loc = Builder.DAG.getTargetFrameIndex(*Index, Incoming.getValueType());
+  SDValue Loc =
+      Builder.DAG.getTargetFrameIndex(*Index, Builder.getFrameIndexTy());
   Builder.StatepointLowering.setLocation(Incoming, Loc);
 }
 
@@ -343,7 +344,7 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
                                                        Builder);
     int Index = cast<FrameIndexSDNode>(Loc)->getIndex();
     // We use TargetFrameIndex so that isel will not select it into LEA
-    Loc = Builder.DAG.getTargetFrameIndex(Index, Incoming.getValueType());
+    Loc = Builder.DAG.getTargetFrameIndex(Index, Builder.getFrameIndexTy());
 
     // TODO: We can create TokenFactor node instead of
     //       chaining stores one after another, this may allow
@@ -391,8 +392,10 @@ static void lowerIncomingStatepointValue(SDValue Incoming, bool LiveInOnly,
     // This handles allocas as arguments to the statepoint (this is only
     // really meaningful for a deopt value.  For GC, we'd be trying to
     // relocate the address of the alloca itself?)
+    assert(Incoming.getValueType() == Builder.getFrameIndexTy() &&
+           "Incoming value is a frame index!");
     Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
-                                                  Incoming.getValueType()));
+                                                  Builder.getFrameIndexTy()));
   } else if (LiveInOnly) {
     // If this value is live in (not live-on-return, or live-through), we can
     // treat it the same way patchpoint treats it's "live in" values.  We'll 
@@ -527,8 +530,10 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SDValue Incoming = Builder.getValue(V);
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
       // This handles allocas as arguments to the statepoint
+      assert(Incoming.getValueType() == Builder.getFrameIndexTy() &&
+             "Incoming value is a frame index!");
       Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
-                                                    Incoming.getValueType()));
+                                                    Builder.getFrameIndexTy()));
     }
   }
 
@@ -813,7 +818,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   SI.GCTransitionArgs =
       ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
   SI.ID = ISP.getID();
-  SI.DeoptState = ArrayRef<const Use>(ISP.vm_state_begin(), ISP.vm_state_end());
+  SI.DeoptState = ArrayRef<const Use>(ISP.deopt_begin(), ISP.deopt_end());
   SI.StatepointFlags = ISP.getFlags();
   SI.NumPatchBytes = ISP.getNumPatchBytes();
   SI.EHPadBB = EHPadBB;
@@ -835,7 +840,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
       //       completely and make statepoint call to return a tuple.
       unsigned Reg = FuncInfo.CreateRegs(RetTy);
       RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                       DAG.getDataLayout(), Reg, RetTy);
+                       DAG.getDataLayout(), Reg, RetTy, true);
       SDValue Chain = DAG.getEntryNode();
 
       RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
@@ -949,8 +954,8 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     return;
   }
 
-  SDValue SpillSlot = DAG.getTargetFrameIndex(*DerivedPtrLocation,
-                                              SD.getValueType());
+  SDValue SpillSlot =
+      DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
 
   // Be conservative: flush all pending loads
   // TODO: Probably we can be less restrictive on this,
@@ -958,7 +963,9 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   SDValue Chain = getRoot();
 
   SDValue SpillLoad =
-      DAG.getLoad(SpillSlot.getValueType(), getCurSDLoc(), Chain, SpillSlot,
+      DAG.getLoad(DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                           Relocate.getType()),
+                  getCurSDLoc(), Chain, SpillSlot,
                   MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
                                                     *DerivedPtrLocation));
 

@@ -1,3 +1,6 @@
+// RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// UNSUPPORTED: armhf-target-arch
+// see pr 32475.
 //===-- mulsc3_test.c - Test __mulsc3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -15,6 +18,8 @@
 #include <math.h>
 #include <complex.h>
 #include <stdio.h>
+
+// REQUIRES: c99-complex
 
 // Returns: the product of a + ib and c + id
 

@@ -57,7 +57,7 @@
   !17 = !{!18}
   !18 = !DISubrange(count: 4)
   !19 = !DILocation(line: 4, column: 13, scope: !9)
-  !20 = !DIExpression(DW_OP_plus, 1, DW_OP_minus, 1)
+  !20 = !DIExpression(DW_OP_plus_uconst, 1, DW_OP_constu, 1, DW_OP_minus)
   !21 = !DILocation(line: 4, column: 7, scope: !9)
   !22 = !DILocation(line: 5, column: 9, scope: !9)
   !23 = !DILocation(line: 5, column: 18, scope: !9)

@@ -100,6 +100,37 @@ struct Mapping {
 };
 
 #define TSAN_MID_APP_RANGE 1
+#elif defined(__aarch64__) && defined(__APPLE__)
+/*
+C/C++ on Darwin/iOS/ARM64 (36-bit VMA, 64 GB VM)
+0000 0000 00 - 0100 0000 00: -                                    (4 GB)
+0100 0000 00 - 0200 0000 00: main binary, modules, thread stacks  (4 GB)
+0200 0000 00 - 0300 0000 00: heap                                 (4 GB)
+0300 0000 00 - 0400 0000 00: -                                    (4 GB)
+0400 0000 00 - 0c00 0000 00: shadow memory                       (32 GB)
+0c00 0000 00 - 0d00 0000 00: -                                    (4 GB)
+0d00 0000 00 - 0e00 0000 00: metainfo                             (4 GB)
+0e00 0000 00 - 0f00 0000 00: -                                    (4 GB)
+0f00 0000 00 - 1000 0000 00: traces                               (4 GB)
+*/
+struct Mapping {
+  static const uptr kLoAppMemBeg   = 0x0100000000ull;
+  static const uptr kLoAppMemEnd   = 0x0200000000ull;
+  static const uptr kHeapMemBeg    = 0x0200000000ull;
+  static const uptr kHeapMemEnd    = 0x0300000000ull;
+  static const uptr kShadowBeg     = 0x0400000000ull;
+  static const uptr kShadowEnd     = 0x0c00000000ull;
+  static const uptr kMetaShadowBeg = 0x0d00000000ull;
+  static const uptr kMetaShadowEnd = 0x0e00000000ull;
+  static const uptr kTraceMemBeg   = 0x0f00000000ull;
+  static const uptr kTraceMemEnd   = 0x1000000000ull;
+  static const uptr kHiAppMemBeg   = 0x1000000000ull;
+  static const uptr kHiAppMemEnd   = 0x1000000000ull;
+  static const uptr kAppMemMsk     =          0x0ull;
+  static const uptr kAppMemXor     =          0x0ull;
+  static const uptr kVdsoBeg       = 0x7000000000000000ull;
+};
+
 #elif defined(__aarch64__)
 // AArch64 supports multiple VMA which leads to multiple address transformation
 // functions.  To support these multiple VMAS transformations and mappings TSAN
@@ -389,7 +420,7 @@ uptr MappingImpl(void) {
 
 template<int Type>
 uptr MappingArchImpl(void) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return MappingImpl<Mapping39, Type>();
     case 42: return MappingImpl<Mapping42, Type>();
@@ -542,7 +573,7 @@ bool IsAppMemImpl(uptr mem) {
 
 ALWAYS_INLINE
 bool IsAppMem(uptr mem) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return IsAppMemImpl<Mapping39>(mem);
     case 42: return IsAppMemImpl<Mapping42>(mem);
@@ -569,7 +600,7 @@ bool IsShadowMemImpl(uptr mem) {
 
 ALWAYS_INLINE
 bool IsShadowMem(uptr mem) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return IsShadowMemImpl<Mapping39>(mem);
     case 42: return IsShadowMemImpl<Mapping42>(mem);
@@ -596,7 +627,7 @@ bool IsMetaMemImpl(uptr mem) {
 
 ALWAYS_INLINE
 bool IsMetaMem(uptr mem) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return IsMetaMemImpl<Mapping39>(mem);
     case 42: return IsMetaMemImpl<Mapping42>(mem);
@@ -633,7 +664,7 @@ uptr MemToShadowImpl(uptr x) {
 
 ALWAYS_INLINE
 uptr MemToShadow(uptr x) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return MemToShadowImpl<Mapping39>(x);
     case 42: return MemToShadowImpl<Mapping42>(x);
@@ -672,7 +703,7 @@ u32 *MemToMetaImpl(uptr x) {
 
 ALWAYS_INLINE
 u32 *MemToMeta(uptr x) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return MemToMetaImpl<Mapping39>(x);
     case 42: return MemToMetaImpl<Mapping42>(x);
@@ -724,7 +755,7 @@ uptr ShadowToMemImpl(uptr s) {
 
 ALWAYS_INLINE
 uptr ShadowToMem(uptr s) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return ShadowToMemImpl<Mapping39>(s);
     case 42: return ShadowToMemImpl<Mapping42>(s);
@@ -759,7 +790,7 @@ uptr GetThreadTraceImpl(int tid) {
 
 ALWAYS_INLINE
 uptr GetThreadTrace(int tid) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return GetThreadTraceImpl<Mapping39>(tid);
     case 42: return GetThreadTraceImpl<Mapping42>(tid);
@@ -789,7 +820,7 @@ uptr GetThreadTraceHeaderImpl(int tid) {
 
 ALWAYS_INLINE
 uptr GetThreadTraceHeader(int tid) {
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39: return GetThreadTraceHeaderImpl<Mapping39>(tid);
     case 42: return GetThreadTraceHeaderImpl<Mapping42>(tid);
@@ -816,6 +847,7 @@ void FlushShadowMemory();
 void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive);
 int ExtractResolvFDs(void *state, int *fds, int nfd);
 int ExtractRecvmsgFDs(void *msg, int *fds, int nfd);
+void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size);
 
 int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,
     void *abstime), void *c, void *m, void *abstime,

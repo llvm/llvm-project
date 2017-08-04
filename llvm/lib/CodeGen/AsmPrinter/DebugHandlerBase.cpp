@@ -115,12 +115,35 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DITypeRef TyRef) {
   return getBaseTypeSize(BaseType);
 }
 
+static bool hasDebugInfo(const MachineModuleInfo *MMI,
+                         const MachineFunction *MF) {
+  if (!MMI->hasDebugInfo())
+    return false;
+  auto *SP = MF->getFunction()->getSubprogram();
+  if (!SP)
+    return false;
+  assert(SP->getUnit());
+  auto EK = SP->getUnit()->getEmissionKind();
+  if (EK == DICompileUnit::NoDebug)
+    return false;
+  return true;
+}
+
 void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
+  PrevInstBB = nullptr;
+
+  if (!Asm || !hasDebugInfo(MMI, MF)) {
+    skippedNonDebugFunction();
+    return;
+  }
+
   // Grab the lexical scopes for the function, if we don't have any of those
   // then we're not going to be able to do anything.
   LScopes.initialize(*MF);
-  if (LScopes.empty())
+  if (LScopes.empty()) {
+    beginFunctionImpl(MF);
     return;
+  }
 
   // Make sure that each lexical scope will have a begin/end label.
   identifyScopeMarkers();
@@ -167,6 +190,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 
   PrevInstLoc = DebugLoc();
   PrevLabel = Asm->getFunctionBegin();
+  beginFunctionImpl(MF);
 }
 
 void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
@@ -228,6 +252,8 @@ void DebugHandlerBase::endInstruction() {
 }
 
 void DebugHandlerBase::endFunction(const MachineFunction *MF) {
+  if (hasDebugInfo(MMI, MF))
+    endFunctionImpl(MF);
   DbgValues.clear();
   LabelsBeforeInsn.clear();
   LabelsAfterInsn.clear();

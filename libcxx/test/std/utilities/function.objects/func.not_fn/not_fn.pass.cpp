@@ -414,7 +414,14 @@ void throws_in_constructor_test()
         throw 42;
       }
       ThrowsOnCopy() = default;
-      bool operator()() const { assert(false); }
+      bool operator()() const {
+        assert(false);
+#if defined(TEST_COMPILER_C1XX)
+        __assume(0);
+#else
+        __builtin_unreachable();
+#endif
+      }
     };
     {
         ThrowsOnCopy cp;

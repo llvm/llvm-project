@@ -76,7 +76,7 @@ void check_enum_types()
 
 
 enum enum1 { zero = 0, one = 1 };
-enum enum2 {
+enum enum2 : unsigned long {
   value = std::numeric_limits<unsigned long>::max()
 };
 

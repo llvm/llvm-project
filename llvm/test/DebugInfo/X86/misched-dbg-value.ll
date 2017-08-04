@@ -51,12 +51,12 @@ source_filename = "test/DebugInfo/X86/misched-dbg-value.ll"
 ; Function Attrs: nounwind optsize
 define void @Proc8(i32* nocapture %Array1Par, [51 x i32]* nocapture %Array2Par, i32 %IntParI1, i32 %IntParI2) #0 !dbg !61 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %Array1Par, i64 0, metadata !67, metadata !73), !dbg !74
-  tail call void @llvm.dbg.value(metadata [51 x i32]* %Array2Par, i64 0, metadata !68, metadata !73), !dbg !75
-  tail call void @llvm.dbg.value(metadata i32 %IntParI1, i64 0, metadata !69, metadata !73), !dbg !76
-  tail call void @llvm.dbg.value(metadata i32 %IntParI2, i64 0, metadata !70, metadata !73), !dbg !77
+  tail call void @llvm.dbg.value(metadata i32* %Array1Par, metadata !67, metadata !73), !dbg !74
+  tail call void @llvm.dbg.value(metadata [51 x i32]* %Array2Par, metadata !68, metadata !73), !dbg !75
+  tail call void @llvm.dbg.value(metadata i32 %IntParI1, metadata !69, metadata !73), !dbg !76
+  tail call void @llvm.dbg.value(metadata i32 %IntParI2, metadata !70, metadata !73), !dbg !77
   %add = add i32 %IntParI1, 5, !dbg !78
-  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !71, metadata !73), !dbg !78
+  tail call void @llvm.dbg.value(metadata i32 %add, metadata !71, metadata !73), !dbg !78
   %idxprom = sext i32 %add to i64, !dbg !79
   %arrayidx = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom, !dbg !79
   store i32 %IntParI2, i32* %arrayidx, align 4, !dbg !79
@@ -68,7 +68,7 @@ entry:
   %idxprom7 = sext i32 %add6 to i64, !dbg !81
   %arrayidx8 = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom7, !dbg !81
   store i32 %add, i32* %arrayidx8, align 4, !dbg !81
-  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !72, metadata !73), !dbg !82
+  tail call void @llvm.dbg.value(metadata i32 %add, metadata !72, metadata !73), !dbg !82
   br label %for.body, !dbg !82
 
 for.body:                                         ; preds = %for.body, %entry
@@ -77,7 +77,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx13 = getelementptr inbounds [51 x i32], [51 x i32]* %Array2Par, i64 %idxprom, i64 %indvars.iv, !dbg !84
   store i32 %add, i32* %arrayidx13, align 4, !dbg !84
   %inc = add nsw i32 %IntIndex.046, 1, !dbg !82
-  tail call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !72, metadata !73), !dbg !82
+  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !72, metadata !73), !dbg !82
   %cmp = icmp sgt i32 %inc, %add3, !dbg !82
   %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !82
   br i1 %cmp, label %for.end, label %for.body, !dbg !82
@@ -99,7 +99,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind optsize }
 attributes #1 = { nounwind readnone }

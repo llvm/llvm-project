@@ -219,7 +219,7 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
   assert(F && "Bad assembly?");
 
   auto &BB = F->getEntryBlock();
-  ArrayRef<bool> ExpectedAnswers = {
+  bool ExpectedAnswers[] = {
       true,  // call void @nounwind_readonly(i32* %p)
       true,  // call void @nounwind_argmemonly(i32* %p)
       false, // call void @throws_but_readonly(i32* %p)
@@ -238,4 +238,23 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
         << "Incorrect answer at instruction " << Index << " = " << I;
     Index++;
   }
+}
+
+TEST(ValueTracking, ComputeNumSignBits_PR32045) {
+  StringRef Assembly = "define i32 @f(i32 %a) { "
+                       "  %val = ashr i32 %a, -1 "
+                       "  ret i32 %val "
+                       "} ";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto *RVal =
+      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
+  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
 }

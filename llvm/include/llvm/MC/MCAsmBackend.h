@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCAsmBackend.h - MC Asm Backend -----------------*- C++ -*-===//
+//===- llvm/MC/MCAsmBackend.h - MC Asm Backend ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,35 +12,33 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCAsmLayout;
 class MCAssembler;
 class MCCFIInstruction;
-class MCELFObjectTargetWriter;
 struct MCFixupKindInfo;
 class MCFragment;
 class MCInst;
-class MCRelaxableFragment;
 class MCObjectWriter;
-class MCSection;
+class MCRelaxableFragment;
 class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
 
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
-  MCAsmBackend(const MCAsmBackend &) = delete;
-  void operator=(const MCAsmBackend &) = delete;
-
 protected: // Can only create subclasses.
   MCAsmBackend();
 
 public:
+  MCAsmBackend(const MCAsmBackend &) = delete;
+  MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
 
   /// lifetime management
@@ -62,20 +60,20 @@ public:
   /// Get information on a fixup kind.
   virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;
 
-  /// Target hook to adjust the literal value of a fixup if necessary.
-  /// IsResolved signals whether the caller believes a relocation is needed; the
-  /// target can modify the value. The default does nothing.
-  virtual void processFixupValue(const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFixup &Fixup, const MCFragment *DF,
-                                 const MCValue &Target, uint64_t &Value,
-                                 bool &IsResolved) {}
+  /// Hook to check if a relocation is needed for some target specific reason.
+  virtual bool shouldForceRelocation(const MCAssembler &Asm,
+                                     const MCFixup &Fixup,
+                                     const MCValue &Target) {
+    return false;
+  }
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
-  /// appropriate.
-  virtual void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                          uint64_t Value, bool IsPCRel) const = 0;
+  /// appropriate. Errors (such as an out of range fixup value) should be
+  /// reported via \p Ctx.
+  virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                          const MCValue &Target, MutableArrayRef<char> Data,
+                          uint64_t Value, bool IsResolved) const = 0;
 
   /// @}
 
@@ -136,6 +134,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCASMBACKEND_H

@@ -23,8 +23,8 @@
 #ifndef LLVM_LIB_ANALYSIS_OBJCARCANALYSISUTILS_H
 #define LLVM_LIB_ANALYSIS_OBJCARCANALYSISUTILS_H
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/Passes.h"

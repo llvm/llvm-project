@@ -13,19 +13,19 @@ typedef __SIZE_TYPE__ size_t;
 
 void test_ReadWriteBarrier() { _ReadWriteBarrier(); }
 // CHECK-LABEL: define void @test_ReadWriteBarrier
-// CHECK:   fence singlethread seq_cst
+// CHECK:   fence syncscope("singlethread") seq_cst
 // CHECK:   ret void
 // CHECK: }
 
 void test_ReadBarrier() { _ReadBarrier(); }
 // CHECK-LABEL: define void @test_ReadBarrier
-// CHECK:   fence singlethread seq_cst
+// CHECK:   fence syncscope("singlethread") seq_cst
 // CHECK:   ret void
 // CHECK: }
 
 void test_WriteBarrier() { _WriteBarrier(); }
 // CHECK-LABEL: define void @test_WriteBarrier
-// CHECK:   fence singlethread seq_cst
+// CHECK:   fence syncscope("singlethread") seq_cst
 // CHECK:   ret void
 // CHECK: }
 

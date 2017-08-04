@@ -69,6 +69,32 @@ extern "C" {
   int __sanitizer_get_module_and_offset_for_pc(
       __sanitizer::uptr pc, char *module_path,
       __sanitizer::uptr module_path_len, __sanitizer::uptr *pc_offset);
-  } // extern "C"
+
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_cmp();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_cmp1();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_cmp2();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_cmp4();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_cmp8();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_switch();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_div4();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_div8();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_gep();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_pc_indir();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_pc_guard(__sanitizer::u32*);
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_pc_guard_init(__sanitizer::u32*,
+                                           __sanitizer::u32*);
+} // extern "C"
 
 #endif  // SANITIZER_INTERFACE_INTERNAL_H

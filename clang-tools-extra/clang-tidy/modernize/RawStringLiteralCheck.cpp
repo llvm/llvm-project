@@ -101,10 +101,13 @@ std::string asRawStringLiteral(const StringLiteral *Literal,
 RawStringLiteralCheck::RawStringLiteralCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      DelimiterStem(Options.get("DelimiterStem", "lit")) {}
+      DelimiterStem(Options.get("DelimiterStem", "lit")),
+      ReplaceShorterLiterals(Options.get("ReplaceShorterLiterals", false)) {}
 
 void RawStringLiteralCheck::storeOptions(ClangTidyOptions::OptionMap &Options) {
   ClangTidyCheck::storeOptions(Options);
+  this->Options.store(Options, "ReplaceShorterLiterals",
+                      ReplaceShorterLiterals);
 }
 
 void RawStringLiteralCheck::registerMatchers(MatchFinder *Finder) {
@@ -121,19 +124,25 @@ void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
   if (Literal->getLocStart().isMacroID())
     return;
 
-  if (containsEscapedCharacters(Result, Literal))
-    replaceWithRawStringLiteral(Result, Literal);
+  if (containsEscapedCharacters(Result, Literal)) {
+    std::string Replacement = asRawStringLiteral(Literal, DelimiterStem);
+    if (ReplaceShorterLiterals ||
+        Replacement.length() <=
+            Lexer::MeasureTokenLength(Literal->getLocStart(),
+                                      *Result.SourceManager, getLangOpts()))
+      replaceWithRawStringLiteral(Result, Literal, Replacement);
+  }
 }
 
 void RawStringLiteralCheck::replaceWithRawStringLiteral(
-    const MatchFinder::MatchResult &Result, const StringLiteral *Literal) {
+    const MatchFinder::MatchResult &Result, const StringLiteral *Literal,
+    StringRef Replacement) {
   CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Literal->getSourceRange()),
       *Result.SourceManager, getLangOpts());
   diag(Literal->getLocStart(),
        "escaped string literal can be written as a raw string literal")
-      << FixItHint::CreateReplacement(
-             CharRange, asRawStringLiteral(Literal, DelimiterStem));
+      << FixItHint::CreateReplacement(CharRange, Replacement);
 }
 
 } // namespace modernize

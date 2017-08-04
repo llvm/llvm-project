@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
-; CHECK: sub(r29, r[[REG:[0-9]+]])
+; CHECK: sub(r29,r[[REG:[0-9]+]])
 ; CHECK: r29 = r[[REG]]
 
 target triple = "hexagon-unknown-unknown"

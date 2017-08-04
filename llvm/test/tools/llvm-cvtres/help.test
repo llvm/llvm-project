@@ -1,0 +1,13 @@
+; RUN: llvm-cvtres /h > %t
+; RUN: FileCheck -input-file=%t %s -check-prefix=HELP_TEST
+
+; HELP_TEST: 	  OVERVIEW: Resource Converter
+; HELP_TEST-DAG:  USAGE: cvtres [options] <inputs>
+; HELP_TEST-DAG:  OPTIONS:
+; HELP_TEST-NEXT:   /DEFINE:symbol 
+; HELP_TEST-NEXT:   /FOLDDUPS:     
+; HELP_TEST-NEXT:   /MACHINE:{ARM|EBC|IA64|X64|X86}
+; HELP_TEST-DAG:    /NOLOGO        
+; HELP_TEST-NEXT:   /OUT:filename  
+; HELP_TEST-NEXT:   /READONLY      
+; HELP_TEST-NEXT:   /VERBOSE

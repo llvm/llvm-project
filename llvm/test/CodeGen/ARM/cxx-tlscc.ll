@@ -26,7 +26,7 @@ declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 ; THUMB-LABEL: _ZTW2sg
 ; THUMB: push {{.*}}lr
 ; THUMB: blx
-; THUMB: bne [[TH_end:.?LBB0_[0-9]+]]
+; THUMB: bne{{(.w)?}} [[TH_end:.?LBB0_[0-9]+]]
 ; THUMB: blx
 ; THUMB: tlv_atexit
 ; THUMB: [[TH_end]]:

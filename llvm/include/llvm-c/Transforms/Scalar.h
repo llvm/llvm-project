@@ -44,6 +44,9 @@ void LLVMAddAlignmentFromAssumptionsPass(LLVMPassManagerRef PM);
 /** See llvm::createCFGSimplificationPass function. */
 void LLVMAddCFGSimplificationPass(LLVMPassManagerRef PM);
 
+/** See llvm::createLateCFGSimplificationPass function. */
+void LLVMAddLateCFGSimplificationPass(LLVMPassManagerRef PM);
+
 /** See llvm::createDeadStoreEliminationPass function. */
 void LLVMAddDeadStoreEliminationPass(LLVMPassManagerRef PM);
 

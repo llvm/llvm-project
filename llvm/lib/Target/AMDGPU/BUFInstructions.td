@@ -11,7 +11,9 @@ def MUBUFAddr32 : ComplexPattern<i64, 9, "SelectMUBUFAddr32">;
 def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
 def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
 
-def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
+def MUBUFScratchOffen : ComplexPattern<i64, 4, "SelectMUBUFScratchOffen", [], [SDNPWantRoot]>;
+def MUBUFScratchOffset : ComplexPattern<i64, 3, "SelectMUBUFScratchOffset", [], [SDNPWantRoot], 20>;
+
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
 def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
@@ -21,8 +23,8 @@ def MUBUFIntrinsicVOffset : ComplexPattern<i32, 3, "SelectMUBUFIntrinsicVOffset"
 class MubufLoad <SDPatternOperator op> : PatFrag <
   (ops node:$ptr), (op node:$ptr), [{
   auto const AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS;
+  return AS == AMDGPUASI.GLOBAL_ADDRESS ||
+         AS == AMDGPUASI.CONSTANT_ADDRESS;
 }]>;
 
 def mubuf_load          : MubufLoad <load>;
@@ -55,6 +57,11 @@ class MUBUFAddr64Table <bit is_addr64, string suffix = ""> {
   string OpName = NAME # suffix;
 }
 
+class MTBUFAddr64Table <bit is_addr64, string suffix = ""> {
+  bit IsAddr64 = is_addr64;
+  string OpName = NAME # suffix;
+}
+
 //===----------------------------------------------------------------------===//
 // MTBUF classes
 //===----------------------------------------------------------------------===//
@@ -76,14 +83,31 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
   let EXP_CNT = 1;
   let MTBUF = 1;
   let Uses = [EXEC];
-
   let hasSideEffects = 0;
   let SchedRW = [WriteVMEM];
+
+  let AsmMatchConverter = "cvtMtbuf";
+
+  bits<1> offen       = 0;
+  bits<1> idxen       = 0;
+  bits<1> addr64      = 0;
+  bits<1> has_vdata   = 1;
+  bits<1> has_vaddr   = 1;
+  bits<1> has_glc     = 1;
+  bits<1> glc_value   = 0; // the value for glc if no such operand
+  bits<4> dfmt_value  = 1; // the value for dfmt if no such operand
+  bits<3> nfmt_value  = 0; // the value for nfmt if no such operand
+  bits<1> has_srsrc   = 1;
+  bits<1> has_soffset = 1;
+  bits<1> has_offset  = 1;
+  bits<1> has_slc     = 1;
+  bits<1> has_tfe     = 1;
+  bits<1> has_dfmt    = 1;
+  bits<1> has_nfmt    = 1;
 }
 
 class MTBUF_Real <MTBUF_Pseudo ps> :
-  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
-  Enc64 {
+  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []> {
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
@@ -95,56 +119,167 @@ class MTBUF_Real <MTBUF_Pseudo ps> :
   let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
 
-  bits<8> vdata;
   bits<12> offset;
-  bits<1> offen;
-  bits<1> idxen;
-  bits<1> glc;
-  bits<1> addr64;
-  bits<4> dfmt;
-  bits<3> nfmt;
-  bits<8> vaddr;
-  bits<7> srsrc;
-  bits<1> slc;
-  bits<1> tfe;
-  bits<8> soffset;
-
-  let Inst{11-0}  = offset;
-  let Inst{12}    = offen;
-  let Inst{13}    = idxen;
-  let Inst{14}    = glc;
-  let Inst{22-19} = dfmt;
-  let Inst{25-23} = nfmt;
-  let Inst{31-26} = 0x3a; //encoding
-  let Inst{39-32} = vaddr;
-  let Inst{47-40} = vdata;
-  let Inst{52-48} = srsrc{6-2};
-  let Inst{54}    = slc;
-  let Inst{55}    = tfe;
-  let Inst{63-56} = soffset;
+  bits<1>  glc;
+  bits<4>  dfmt;
+  bits<3>  nfmt;
+  bits<8>  vaddr;
+  bits<8>  vdata;
+  bits<7>  srsrc;
+  bits<1>  slc;
+  bits<1>  tfe;
+  bits<8>  soffset;
 }
 
-class MTBUF_Load_Pseudo <string opName, RegisterClass regClass> : MTBUF_Pseudo <
-  opName, (outs regClass:$dst),
-  (ins u16imm:$offset, i1imm:$offen, i1imm:$idxen, i1imm:$glc, i1imm:$addr64,
-       i8imm:$dfmt, i8imm:$nfmt, VGPR_32:$vaddr, SReg_128:$srsrc,
-       i1imm:$slc, i1imm:$tfe, SCSrc_b32:$soffset),
-  " $dst, $offset, $offen, $idxen, $glc, $addr64, $dfmt,"#
-  " $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset"> {
+class getMTBUFInsDA<list<RegisterClass> vdataList,
+                    list<RegisterClass> vaddrList=[]> {
+  RegisterClass vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
+  RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
+  dag InsNoData = !if(!empty(vaddrList),
+    (ins                    SReg_128:$srsrc, SCSrc_b32:$soffset,
+         offset:$offset, DFMT:$dfmt, NFMT:$nfmt, GLC:$glc, slc:$slc, tfe:$tfe),
+    (ins vaddrClass:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
+         offset:$offset, DFMT:$dfmt, NFMT:$nfmt, GLC:$glc, slc:$slc, tfe:$tfe)
+  );
+  dag InsData = !if(!empty(vaddrList),
+    (ins vdataClass:$vdata,                    SReg_128:$srsrc,
+         SCSrc_b32:$soffset, offset:$offset, DFMT:$dfmt, NFMT:$nfmt, GLC:$glc,
+         slc:$slc, tfe:$tfe),
+    (ins vdataClass:$vdata, vaddrClass:$vaddr, SReg_128:$srsrc,
+         SCSrc_b32:$soffset, offset:$offset, DFMT:$dfmt, NFMT:$nfmt, GLC:$glc,
+         slc:$slc, tfe:$tfe)
+  );
+  dag ret = !if(!empty(vdataList), InsNoData, InsData);
+}
+
+class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[]> {
+  dag ret =
+    !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList>.ret,
+    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPR_32]>.ret,
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMTBUFInsDA<vdataList, [VGPR_32]>.ret,
+    !if(!eq(addrKind, BUFAddrKind.BothEn), getMTBUFInsDA<vdataList, [VReg_64]>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Addr64), getMTBUFInsDA<vdataList, [VReg_64]>.ret,
+    (ins))))));
+}
+
+class getMTBUFAsmOps<int addrKind> {
+  string Pfx =
+    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc, $dfmt, $nfmt, $soffset",
+    !if(!eq(addrKind, BUFAddrKind.OffEn),
+            "$vaddr, $srsrc, $dfmt, $nfmt, $soffset offen",
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),
+            "$vaddr, $srsrc, $dfmt, $nfmt, $soffset idxen",
+    !if(!eq(addrKind, BUFAddrKind.BothEn),
+            "$vaddr, $srsrc, $dfmt, $nfmt, $soffset idxen offen",
+    !if(!eq(addrKind, BUFAddrKind.Addr64),
+            "$vaddr, $srsrc, $dfmt, $nfmt, $soffset addr64",
+    "")))));
+  string ret = Pfx # "$offset";
+}
+
+class MTBUF_SetupAddr<int addrKind> {
+  bits<1> offen  = !if(!eq(addrKind, BUFAddrKind.OffEn), 1,
+                   !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
+
+  bits<1> idxen  = !if(!eq(addrKind, BUFAddrKind.IdxEn), 1,
+                   !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
+
+  bits<1> addr64 = !if(!eq(addrKind, BUFAddrKind.Addr64), 1, 0);
+
+  bits<1> has_vaddr = !if(!eq(addrKind, BUFAddrKind.Offset), 0, 1);
+}
+
+class MTBUF_Load_Pseudo <string opName,
+                         int addrKind,
+                         RegisterClass vdataClass,
+                         list<dag> pattern=[],
+                         // Workaround bug bz30254
+                         int addrKindCopy = addrKind>
+  : MTBUF_Pseudo<opName,
+                 (outs vdataClass:$vdata),
+                 getMTBUFIns<addrKindCopy>.ret,
+                 " $vdata, " # getMTBUFAsmOps<addrKindCopy>.ret # "$glc$slc$tfe",
+                 pattern>,
+    MTBUF_SetupAddr<addrKindCopy> {
+  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
   let mayLoad = 1;
   let mayStore = 0;
 }
 
-class MTBUF_Store_Pseudo <string opName, RegisterClass regClass> : MTBUF_Pseudo <
-  opName, (outs),
-  (ins regClass:$vdata, u16imm:$offset, i1imm:$offen, i1imm:$idxen, i1imm:$glc,
-       i1imm:$addr64, i8imm:$dfmt, i8imm:$nfmt, VGPR_32:$vaddr,
-       SReg_128:$srsrc, i1imm:$slc, i1imm:$tfe, SCSrc_b32:$soffset),
-  " $vdata, $offset, $offen, $idxen, $glc, $addr64, $dfmt,"#
-  " $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset"> {
+multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
+                              ValueType load_vt = i32,
+                              SDPatternOperator ld = null_frag> {
+
+  def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass,
+    [(set load_vt:$vdata,
+     (ld (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset, i8:$dfmt,
+                      i8:$nfmt, i1:$glc, i1:$slc, i1:$tfe)))]>,
+    MTBUFAddr64Table<0>;
+
+  def _ADDR64 : MTBUF_Load_Pseudo <opName, BUFAddrKind.Addr64, vdataClass,
+    [(set load_vt:$vdata,
+     (ld (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset,
+                      i8:$dfmt, i8:$nfmt, i1:$glc, i1:$slc, i1:$tfe)))]>,
+    MTBUFAddr64Table<1>;
+
+  def _OFFEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass>;
+  def _IDXEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass>;
+  def _BOTHEN : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+
+  let DisableWQM = 1 in {
+    def _OFFSET_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass>;
+    def _OFFEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass>;
+    def _IDXEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass>;
+    def _BOTHEN_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+  }
+}
+
+class MTBUF_Store_Pseudo <string opName,
+                          int addrKind,
+                          RegisterClass vdataClass,
+                          list<dag> pattern=[],
+                          // Workaround bug bz30254
+                          int addrKindCopy = addrKind,
+                          RegisterClass vdataClassCopy = vdataClass>
+  : MTBUF_Pseudo<opName,
+                 (outs),
+                 getMTBUFIns<addrKindCopy, [vdataClassCopy]>.ret,
+                 " $vdata, " # getMTBUFAsmOps<addrKindCopy>.ret # "$glc$slc$tfe",
+                 pattern>,
+    MTBUF_SetupAddr<addrKindCopy> {
+  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
   let mayLoad = 0;
   let mayStore = 1;
 }
+
+multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
+                               ValueType store_vt = i32,
+                               SDPatternOperator st = null_frag> {
+
+  def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass,
+    [(st store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
+                                       i16:$offset, i8:$dfmt, i8:$nfmt, i1:$glc,
+                                       i1:$slc, i1:$tfe))]>,
+    MTBUFAddr64Table<0>;
+
+  def _ADDR64 : MTBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, vdataClass,
+    [(st store_vt:$vdata, (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset,
+                                       i16:$offset, i8:$dfmt, i8:$nfmt, i1:$glc,
+                                       i1:$slc, i1:$tfe))]>,
+    MTBUFAddr64Table<1>;
+
+  def _OFFEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass>;
+  def _IDXEN  : MTBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass>;
+  def _BOTHEN : MTBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+
+  let DisableWQM = 1 in {
+    def _OFFSET_exact : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass>;
+    def _OFFEN_exact  : MTBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, vdataClass>;
+    def _IDXEN_exact  : MTBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass>;
+    def _BOTHEN_exact : MTBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, vdataClass>;
+  }
+}
+
 
 //===----------------------------------------------------------------------===//
 // MUBUF classes
@@ -674,14 +809,14 @@ def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
 // MTBUF Instructions
 //===----------------------------------------------------------------------===//
 
-//def TBUFFER_LOAD_FORMAT_X    : MTBUF_ <0, "tbuffer_load_format_x", []>;
-//def TBUFFER_LOAD_FORMAT_XY   : MTBUF_ <1, "tbuffer_load_format_xy", []>;
-//def TBUFFER_LOAD_FORMAT_XYZ  : MTBUF_ <2, "tbuffer_load_format_xyz", []>;
-def TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Load_Pseudo  <"tbuffer_load_format_xyzw", VReg_128>;
-def TBUFFER_STORE_FORMAT_X    : MTBUF_Store_Pseudo <"tbuffer_store_format_x", VGPR_32>;
-def TBUFFER_STORE_FORMAT_XY   : MTBUF_Store_Pseudo <"tbuffer_store_format_xy", VReg_64>;
-def TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Store_Pseudo <"tbuffer_store_format_xyz", VReg_128>;
-def TBUFFER_STORE_FORMAT_XYZW : MTBUF_Store_Pseudo <"tbuffer_store_format_xyzw", VReg_128>;
+defm TBUFFER_LOAD_FORMAT_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_x",     VGPR_32>;
+defm TBUFFER_LOAD_FORMAT_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xy",    VReg_64>;
+defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xyz",   VReg_128>;
+defm TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xyzw",  VReg_128>;
+defm TBUFFER_STORE_FORMAT_X    : MTBUF_Pseudo_Stores <"tbuffer_store_format_x",    VGPR_32>;
+defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_xy",   VReg_64>;
+defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyz",  VReg_128>;
+defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyzw", VReg_128>;
 
 } // End let SubtargetPredicate = isGCN
 
@@ -704,12 +839,6 @@ def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
 //===----------------------------------------------------------------------===//
 
 let Predicates = [isGCN] in {
-
-// int_SI_vs_load_input
-def : Pat<
-  (SIload_input v4i32:$tlst, imm:$attr_offset, i32:$buf_idx_vgpr),
-  (BUFFER_LOAD_FORMAT_XYZW_IDXEN $buf_idx_vgpr, $tlst, (i32 0), imm:$attr_offset, 0, 0, 0)
->;
 
 // Offset in an 32-bit VGPR
 def : Pat <
@@ -964,21 +1093,30 @@ defm : MUBUFLoad_Pattern <BUFFER_LOAD_UBYTE_OFFSET, i16, mubuf_az_extloadi8>;
 
 } // End Predicates = [Has16BitInsts]
 
-class MUBUFScratchLoadPat <MUBUF_Pseudo Instr, ValueType vt, PatFrag ld> : Pat <
-  (vt (ld (MUBUFScratch v4i32:$srsrc, i32:$vaddr,
-                        i32:$soffset, u16imm:$offset))),
-  (Instr $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
->;
+multiclass MUBUFScratchLoadPat <MUBUF_Pseudo InstrOffen,
+                                MUBUF_Pseudo InstrOffset,
+                                ValueType vt, PatFrag ld> {
+  def : Pat <
+    (vt (ld (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
+                               i32:$soffset, u16imm:$offset))),
+    (InstrOffen $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
 
-def : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, i32, sextloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, i32, extloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, i16, sextloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, i16, extloadi8_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_SSHORT_OFFEN, i32, sextloadi16_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, i32, extloadi16_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORD_OFFEN, i32, load_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX2_OFFEN, v2i32, load_private>;
-def : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX4_OFFEN, v4i32, load_private>;
+  def : Pat <
+    (vt (ld (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u16imm:$offset))),
+    (InstrOffset $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
+}
+
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, BUFFER_LOAD_SBYTE_OFFSET, i32, sextloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, BUFFER_LOAD_UBYTE_OFFSET, i32, extloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_SBYTE_OFFEN, BUFFER_LOAD_SBYTE_OFFSET, i16, sextloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_UBYTE_OFFEN, BUFFER_LOAD_UBYTE_OFFSET, i16, extloadi8_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_SSHORT_OFFEN, BUFFER_LOAD_SSHORT_OFFSET, i32, sextloadi16_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_USHORT_OFFEN, BUFFER_LOAD_USHORT_OFFSET, i32, extloadi16_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORD_OFFEN, BUFFER_LOAD_DWORD_OFFSET, i32, load_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX2_OFFEN, BUFFER_LOAD_DWORDX2_OFFSET, v2i32, load_private>;
+defm : MUBUFScratchLoadPat <BUFFER_LOAD_DWORDX4_OFFEN, BUFFER_LOAD_DWORDX4_OFFSET, v4i32, load_private>;
 
 // BUFFER_LOAD_DWORD*, addr64=0
 multiclass MUBUF_Load_Dword <ValueType vt,
@@ -1060,40 +1198,126 @@ multiclass MUBUFStore_Pattern <MUBUF_Pseudo Instr_OFFSET, ValueType vt,
 defm : MUBUFStore_Pattern <BUFFER_STORE_BYTE_OFFSET, i16, truncstorei8_global>;
 defm : MUBUFStore_Pattern <BUFFER_STORE_SHORT_OFFSET, i16, global_store>;
 
-class MUBUFScratchStorePat <MUBUF_Pseudo Instr, ValueType vt, PatFrag st> : Pat <
-  (st vt:$value, (MUBUFScratch v4i32:$srsrc, i32:$vaddr, i32:$soffset,
-                               u16imm:$offset)),
-  (Instr $value, $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
->;
+multiclass MUBUFScratchStorePat <MUBUF_Pseudo InstrOffen,
+                                 MUBUF_Pseudo InstrOffset,
+                                 ValueType vt, PatFrag st> {
+  def : Pat <
+    (st vt:$value, (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
+                                      i32:$soffset, u16imm:$offset)),
+    (InstrOffen $value, $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
 
-def : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, i32, truncstorei8_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, i32, truncstorei16_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, i16, truncstorei8_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, i16, store_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, i32, store_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, v2i32, store_private>;
-def : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, v4i32, store_private>;
+  def : Pat <
+    (st vt:$value, (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset,
+                                       u16imm:$offset)),
+    (InstrOffset $value, $srsrc, $soffset, $offset, 0, 0, 0)
+  >;
+}
+
+defm : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, BUFFER_STORE_BYTE_OFFSET, i32, truncstorei8_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, BUFFER_STORE_SHORT_OFFSET, i32, truncstorei16_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_BYTE_OFFEN, BUFFER_STORE_BYTE_OFFSET, i16, truncstorei8_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_SHORT_OFFEN, BUFFER_STORE_SHORT_OFFSET, i16, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORD_OFFEN, BUFFER_STORE_DWORD_OFFSET, i32, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX2_OFFEN, BUFFER_STORE_DWORDX2_OFFSET, v2i32, store_private>;
+defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, BUFFER_STORE_DWORDX4_OFFSET, v4i32, store_private>;
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns
 //===----------------------------------------------------------------------===//
 
-// TBUFFER_STORE_FORMAT_*, addr64=0
-class MTBUF_StoreResource <ValueType vt, int num_channels, MTBUF_Pseudo opcode> : Pat<
-  (SItbuffer_store v4i32:$rsrc, vt:$vdata, num_channels, i32:$vaddr,
-                   i32:$soffset, imm:$inst_offset, imm:$dfmt,
-                   imm:$nfmt, imm:$offen, imm:$idxen,
-                   imm:$glc, imm:$slc, imm:$tfe),
-  (opcode
-    $vdata, (as_i16imm $inst_offset), (as_i1imm $offen), (as_i1imm $idxen),
-    (as_i1imm $glc), 0, (as_i8imm $dfmt), (as_i8imm $nfmt), $vaddr, $rsrc,
-    (as_i1imm $slc), (as_i1imm $tfe), $soffset)
->;
+//===----------------------------------------------------------------------===//
+// tbuffer_load/store_format patterns
+//===----------------------------------------------------------------------===//
 
-def : MTBUF_StoreResource <i32, 1, TBUFFER_STORE_FORMAT_X>;
-def : MTBUF_StoreResource <v2i32, 2, TBUFFER_STORE_FORMAT_XY>;
-def : MTBUF_StoreResource <v4i32, 3, TBUFFER_STORE_FORMAT_XYZ>;
-def : MTBUF_StoreResource <v4i32, 4, TBUFFER_STORE_FORMAT_XYZW>;
+multiclass MTBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
+                                  string opcode> {
+  def : Pat<
+    (vt (name v4i32:$rsrc, 0, 0, i32:$soffset, imm:$offset,
+              imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc)),
+    (!cast<MTBUF_Pseudo>(opcode # _OFFSET) $rsrc, $soffset, (as_i16imm $offset),
+      (as_i8imm $dfmt), (as_i8imm $nfmt), (as_i1imm $glc), (as_i1imm $slc), 0)
+  >;
+
+  def : Pat<
+    (vt (name v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, imm:$offset,
+              imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc)),
+    (!cast<MTBUF_Pseudo>(opcode # _IDXEN) $vindex, $rsrc, $soffset, (as_i16imm $offset),
+      (as_i8imm $dfmt), (as_i8imm $nfmt), (as_i1imm $glc), (as_i1imm $slc), 0)
+  >;
+
+  def : Pat<
+    (vt (name v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc)),
+    (!cast<MTBUF_Pseudo>(opcode # _OFFEN) $voffset, $rsrc, $soffset, (as_i16imm $offset),
+      (as_i8imm $dfmt), (as_i8imm $nfmt), (as_i1imm $glc), (as_i1imm $slc), 0)
+  >;
+
+  def : Pat<
+    (vt (name v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc)),
+    (!cast<MTBUF_Pseudo>(opcode # _BOTHEN)
+      (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
+      $rsrc, $soffset, (as_i16imm $offset),
+      (as_i8imm $dfmt), (as_i8imm $nfmt), (as_i1imm $glc), (as_i1imm $slc), 0)
+  >;
+}
+
+defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, i32,   "TBUFFER_LOAD_FORMAT_X">;
+defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v2i32, "TBUFFER_LOAD_FORMAT_XY">;
+defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v4i32, "TBUFFER_LOAD_FORMAT_XYZW">;
+defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, f32,   "TBUFFER_LOAD_FORMAT_X">;
+defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v2f32, "TBUFFER_LOAD_FORMAT_XY">;
+defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v4f32, "TBUFFER_LOAD_FORMAT_XYZW">;
+
+multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
+                                   string opcode> {
+  def : Pat<
+    (name vt:$vdata, v4i32:$rsrc, 0, 0, i32:$soffset, imm:$offset,
+          imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc),
+    (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact) $vdata, $rsrc, $soffset,
+                                (as_i16imm $offset), (as_i8imm $dfmt),
+                                (as_i8imm $nfmt), (as_i1imm $glc),
+                                (as_i1imm $slc), 0)
+  >;
+
+  def : Pat<
+    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, imm:$offset,
+          imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc),
+    (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact) $vdata, $vindex, $rsrc, $soffset,
+                                   (as_i16imm $offset), (as_i8imm $dfmt),
+                                   (as_i8imm $nfmt), (as_i1imm $glc),
+                                   (as_i1imm $slc), 0)
+  >;
+
+  def : Pat<
+    (name vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc),
+    (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact) $vdata, $voffset, $rsrc, $soffset,
+                                   (as_i16imm $offset), (as_i8imm $dfmt),
+                                   (as_i8imm $nfmt), (as_i1imm $glc),
+                                   (as_i1imm $slc), 0)
+  >;
+
+  def : Pat<
+    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset,
+          imm:$offset, imm:$dfmt, imm:$nfmt, imm:$glc, imm:$slc),
+    (!cast<MTBUF_Pseudo>(opcode # _BOTHEN_exact)
+      $vdata,
+      (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
+      $rsrc, $soffset, (as_i16imm $offset),
+      (as_i8imm $dfmt), (as_i8imm $nfmt), (as_i1imm $glc), (as_i1imm $slc), 0)
+  >;
+}
+
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, i32,   "TBUFFER_STORE_FORMAT_X">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v2i32, "TBUFFER_STORE_FORMAT_XY">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_x3, v4i32, "TBUFFER_STORE_FORMAT_XYZ">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v4i32, "TBUFFER_STORE_FORMAT_XYZW">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, f32,   "TBUFFER_STORE_FORMAT_X">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v2f32, "TBUFFER_STORE_FORMAT_XY">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_x3, v4f32, "TBUFFER_STORE_FORMAT_XYZ">;
+defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v4f32, "TBUFFER_STORE_FORMAT_XYZW">;
 
 } // End let Predicates = [isGCN]
 
@@ -1209,21 +1433,44 @@ def BUFFER_WBINVL1_si           : MUBUF_Real_si <0x71, BUFFER_WBINVL1>;
 
 class MTBUF_Real_si <bits<3> op, MTBUF_Pseudo ps> :
   MTBUF_Real<ps>,
+  Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI> {
   let AssemblerPredicate=isSICI;
   let DecoderNamespace="SICI";
 
-  bits<1> addr64;
-  let Inst{15}    = addr64;
+  let Inst{11-0}  = !if(ps.has_offset, offset, ?);
+  let Inst{12}    = ps.offen;
+  let Inst{13}    = ps.idxen;
+  let Inst{14}    = !if(ps.has_glc, glc, ps.glc_value);
+  let Inst{15}    = ps.addr64;
   let Inst{18-16} = op;
+  let Inst{22-19} = !if(ps.has_dfmt, dfmt, ps.dfmt_value);
+  let Inst{25-23} = !if(ps.has_nfmt, nfmt, ps.nfmt_value);
+  let Inst{31-26} = 0x3a; //encoding
+  let Inst{39-32} = !if(ps.has_vaddr, vaddr, ?);
+  let Inst{47-40} = !if(ps.has_vdata, vdata, ?);
+  let Inst{52-48} = !if(ps.has_srsrc, srsrc{6-2}, ?);
+  let Inst{54}    = !if(ps.has_slc, slc, ?);
+  let Inst{55}    = !if(ps.has_tfe, tfe, ?);
+  let Inst{63-56} = !if(ps.has_soffset, soffset, ?);
 }
 
-def TBUFFER_LOAD_FORMAT_XYZW_si  : MTBUF_Real_si <3, TBUFFER_LOAD_FORMAT_XYZW>;
-def TBUFFER_STORE_FORMAT_X_si    : MTBUF_Real_si <4, TBUFFER_STORE_FORMAT_X>;
-def TBUFFER_STORE_FORMAT_XY_si   : MTBUF_Real_si <5, TBUFFER_STORE_FORMAT_XY>;
-def TBUFFER_STORE_FORMAT_XYZ_si  : MTBUF_Real_si <6, TBUFFER_STORE_FORMAT_XYZ>;
-def TBUFFER_STORE_FORMAT_XYZW_si : MTBUF_Real_si <7, TBUFFER_STORE_FORMAT_XYZW>;
+multiclass MTBUF_Real_AllAddr_si<bits<3> op> {
+  def _OFFSET_si : MTBUF_Real_si <op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET")>;
+  def _ADDR64_si : MTBUF_Real_si <op, !cast<MTBUF_Pseudo>(NAME#"_ADDR64")>;
+  def _OFFEN_si  : MTBUF_Real_si <op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN")>;
+  def _IDXEN_si  : MTBUF_Real_si <op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN")>;
+  def _BOTHEN_si : MTBUF_Real_si <op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN")>;
+}
 
+defm TBUFFER_LOAD_FORMAT_X     : MTBUF_Real_AllAddr_si <0>;
+defm TBUFFER_LOAD_FORMAT_XY    : MTBUF_Real_AllAddr_si <1>;
+//defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Real_AllAddr_si <2>;
+defm TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Real_AllAddr_si <3>;
+defm TBUFFER_STORE_FORMAT_X    : MTBUF_Real_AllAddr_si <4>;
+defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Real_AllAddr_si <5>;
+defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Real_AllAddr_si <6>;
+defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Real_AllAddr_si <7>;
 
 //===----------------------------------------------------------------------===//
 // CI
@@ -1335,16 +1582,39 @@ def BUFFER_WBINVL1_VOL_vi       : MUBUF_Real_vi <0x3f, BUFFER_WBINVL1_VOL>;
 
 class MTBUF_Real_vi <bits<4> op, MTBUF_Pseudo ps> :
   MTBUF_Real<ps>,
+  Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI> {
   let AssemblerPredicate=isVI;
   let DecoderNamespace="VI";
 
+  let Inst{11-0}  = !if(ps.has_offset, offset, ?);
+  let Inst{12}    = ps.offen;
+  let Inst{13}    = ps.idxen;
+  let Inst{14}    = !if(ps.has_glc, glc, ps.glc_value);
   let Inst{18-15} = op;
+  let Inst{22-19} = !if(ps.has_dfmt, dfmt, ps.dfmt_value);
+  let Inst{25-23} = !if(ps.has_nfmt, nfmt, ps.nfmt_value);
+  let Inst{31-26} = 0x3a; //encoding
+  let Inst{39-32} = !if(ps.has_vaddr, vaddr, ?);
+  let Inst{47-40} = !if(ps.has_vdata, vdata, ?);
+  let Inst{52-48} = !if(ps.has_srsrc, srsrc{6-2}, ?);
+  let Inst{54}    = !if(ps.has_slc, slc, ?);
+  let Inst{55}    = !if(ps.has_tfe, tfe, ?);
+  let Inst{63-56} = !if(ps.has_soffset, soffset, ?);
 }
 
-def TBUFFER_LOAD_FORMAT_XYZW_vi  : MTBUF_Real_vi <3, TBUFFER_LOAD_FORMAT_XYZW>;
-def TBUFFER_STORE_FORMAT_X_vi    : MTBUF_Real_vi <4, TBUFFER_STORE_FORMAT_X>;
-def TBUFFER_STORE_FORMAT_XY_vi   : MTBUF_Real_vi <5, TBUFFER_STORE_FORMAT_XY>;
-def TBUFFER_STORE_FORMAT_XYZ_vi  : MTBUF_Real_vi <6, TBUFFER_STORE_FORMAT_XYZ>;
-def TBUFFER_STORE_FORMAT_XYZW_vi : MTBUF_Real_vi <7, TBUFFER_STORE_FORMAT_XYZW>;
+multiclass MTBUF_Real_AllAddr_vi<bits<4> op> {
+  def _OFFSET_vi : MTBUF_Real_vi <op, !cast<MTBUF_Pseudo>(NAME#"_OFFSET")>;
+  def _OFFEN_vi  : MTBUF_Real_vi <op, !cast<MTBUF_Pseudo>(NAME#"_OFFEN")>;
+  def _IDXEN_vi  : MTBUF_Real_vi <op, !cast<MTBUF_Pseudo>(NAME#"_IDXEN")>;
+  def _BOTHEN_vi : MTBUF_Real_vi <op, !cast<MTBUF_Pseudo>(NAME#"_BOTHEN")>;
+}
 
+defm TBUFFER_LOAD_FORMAT_X     : MTBUF_Real_AllAddr_vi <0>;
+defm TBUFFER_LOAD_FORMAT_XY    : MTBUF_Real_AllAddr_vi <1>;
+//defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Real_AllAddr_vi <2>;
+defm TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Real_AllAddr_vi <3>;
+defm TBUFFER_STORE_FORMAT_X    : MTBUF_Real_AllAddr_vi <4>;
+defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Real_AllAddr_vi <5>;
+defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Real_AllAddr_vi <6>;
+defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Real_AllAddr_vi <7>;

@@ -17,7 +17,7 @@ cleanup:
 
 suspend:
   %r = phi i32 [%n, %entry], [1, %cleanup]
-  call void @llvm.coro.end(i8* %hdl, i1 false)  
+  call i1 @llvm.coro.end(i8* %hdl, i1 false)  
   call void @print(i32 %r)
   ret i8* %hdl
 }
@@ -41,7 +41,7 @@ declare void @llvm.coro.destroy(i8*)
   
 declare token @llvm.coro.id(i32, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
-declare void @llvm.coro.end(i8*, i1) 
+declare i1 @llvm.coro.end(i8*, i1) 
 
 declare noalias i8* @malloc(i32)
 declare void @print(i32)

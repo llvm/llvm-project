@@ -1,3 +1,5 @@
+// REQUIRES-ANY: arm-target-arch,armv6m-target-arch
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- aeabi_frsub.c - Test __aeabi_frsub --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

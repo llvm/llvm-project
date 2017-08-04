@@ -1,5 +1,4 @@
 # RUN: llc -run-pass=arm-cp-islands -o - %s | FileCheck %s
-# XFAIL: *
 
 # Test created by tweaking the register allocation after stopping the IR below
 # just before constant islands. We were forwarding the table index to the end of
@@ -191,7 +190,6 @@
 name:            foo
 alignment:       1
 exposesReturnsTwice: false
-noVRegs:         true
 legalized:       false
 regBankSelected: false
 selected:        false
@@ -290,7 +288,6 @@ body:             |
 name:            bar
 alignment:       1
 exposesReturnsTwice: false
-noVRegs:         true
 legalized:       false
 regBankSelected: false
 selected:        false

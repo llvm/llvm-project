@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads, libcpp-has-thread-api-external
+// REQUIRES: libcpp-has-thread-api-pthread
 
 // <thread>
 

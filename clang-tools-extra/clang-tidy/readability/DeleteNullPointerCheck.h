@@ -16,7 +16,8 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-/// Check whether the 'if' statement is unnecessary before calling 'delete' on a pointer.
+/// Check whether the 'if' statement is unnecessary before calling 'delete' on a
+/// pointer.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability-delete-null-pointer.html

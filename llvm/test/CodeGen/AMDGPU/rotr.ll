@@ -6,7 +6,7 @@
 ; R600: BIT_ALIGN_INT
 
 ; SI: v_alignbit_b32
-define void @rotr_i32(i32 addrspace(1)* %in, i32 %x, i32 %y) {
+define amdgpu_kernel void @rotr_i32(i32 addrspace(1)* %in, i32 %x, i32 %y) {
 entry:
   %tmp0 = sub i32 32, %y
   %tmp1 = shl i32 %x, %tmp0
@@ -22,7 +22,7 @@ entry:
 
 ; SI: v_alignbit_b32
 ; SI: v_alignbit_b32
-define void @rotr_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @rotr_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
 entry:
   %tmp0 = sub <2 x i32> <i32 32, i32 32>, %y
   %tmp1 = shl <2 x i32> %x, %tmp0
@@ -42,7 +42,7 @@ entry:
 ; SI: v_alignbit_b32
 ; SI: v_alignbit_b32
 ; SI: v_alignbit_b32
-define void @rotr_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @rotr_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
 entry:
   %tmp0 = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %y
   %tmp1 = shl <4 x i32> %x, %tmp0

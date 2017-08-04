@@ -49,7 +49,7 @@ static cl::opt<bool> CheckEarlyAvail("check-early-avail", cl::Hidden,
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 namespace {
 class HexagonCallMutation : public ScheduleDAGMutation {
@@ -74,7 +74,9 @@ bool HexagonCallMutation::shouldTFRICallBind(const HexagonInstrInfo &HII,
     return false;
 
   // TypeXTYPE are 64 bit operations.
-  if (HII.getType(*Inst2.getInstr()) == HexagonII::TypeXTYPE)
+  unsigned Type = HII.getType(*Inst2.getInstr());
+  if (Type == HexagonII::TypeS_2op || Type == HexagonII::TypeS_3op ||
+    Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM)
     return true;
   return false;
 }
@@ -561,40 +563,33 @@ void ConvergingVLIWScheduler::readyQueueVerboseDump(
 }
 #endif
 
-/// getSingleUnscheduledPred - If there is exactly one unscheduled predecessor
-/// of SU, return it, otherwise return null.
-static SUnit *getSingleUnscheduledPred(SUnit *SU) {
-  SUnit *OnlyAvailablePred = nullptr;
-  for (SUnit::const_pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    SUnit &Pred = *I->getSUnit();
-    if (!Pred.isScheduled) {
-      // We found an available, but not scheduled, predecessor.  If it's the
-      // only one we have found, keep track of it... otherwise give up.
-      if (OnlyAvailablePred && OnlyAvailablePred != &Pred)
-        return nullptr;
-      OnlyAvailablePred = &Pred;
-    }
+/// isSingleUnscheduledPred - If SU2 is the only unscheduled predecessor
+/// of SU, return true (we may have duplicates)
+static inline bool isSingleUnscheduledPred(SUnit *SU, SUnit *SU2) {
+  if (SU->NumPredsLeft == 0)
+    return false;
+
+  for (auto &Pred : SU->Preds) {
+    // We found an available, but not scheduled, predecessor.
+    if (!Pred.getSUnit()->isScheduled && (Pred.getSUnit() != SU2))
+      return false;
   }
-  return OnlyAvailablePred;
+
+  return true;
 }
 
-/// getSingleUnscheduledSucc - If there is exactly one unscheduled successor
-/// of SU, return it, otherwise return null.
-static SUnit *getSingleUnscheduledSucc(SUnit *SU) {
-  SUnit *OnlyAvailableSucc = nullptr;
-  for (SUnit::const_succ_iterator I = SU->Succs.begin(), E = SU->Succs.end();
-       I != E; ++I) {
-    SUnit &Succ = *I->getSUnit();
-    if (!Succ.isScheduled) {
-      // We found an available, but not scheduled, successor.  If it's the
-      // only one we have found, keep track of it... otherwise give up.
-      if (OnlyAvailableSucc && OnlyAvailableSucc != &Succ)
-        return nullptr;
-      OnlyAvailableSucc = &Succ;
-    }
+/// isSingleUnscheduledSucc - If SU2 is the only unscheduled successor
+/// of SU, return true (we may have duplicates)
+static inline bool isSingleUnscheduledSucc(SUnit *SU, SUnit *SU2) {
+  if (SU->NumSuccsLeft == 0)
+    return false;
+
+  for (auto &Succ : SU->Succs) {
+    // We found an available, but not scheduled, successor.
+    if (!Succ.getSUnit()->isScheduled && (Succ.getSUnit() != SU2))
+      return false;
   }
-  return OnlyAvailableSucc;
+  return true;
 }
 
 // Constants used to denote relative importance of
@@ -671,12 +666,12 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
     // Count the number of nodes that
     // this node is the sole unscheduled node for.
     for (const SDep &SI : SU->Succs)
-      if (getSingleUnscheduledPred(SI.getSUnit()) == SU)
+      if (isSingleUnscheduledPred(SI.getSUnit(), SU))
         ++NumNodesBlocking;
   } else {
     // How many unscheduled predecessors block this node?
     for (const SDep &PI : SU->Preds)
-      if (getSingleUnscheduledSucc(PI.getSUnit()) == SU)
+      if (isSingleUnscheduledSucc(PI.getSUnit(), SU))
         ++NumNodesBlocking;
   }
   ResCount += (NumNodesBlocking * ScaleTwo);
@@ -742,7 +737,7 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
 
   // Give less preference to an instruction that will cause a stall with
   // an instruction in the previous packet.
-  if (QII.isV60VectorInstruction(Instr)) {
+  if (QII.isHVXVec(Instr)) {
     // Check for stalls in the previous packet.
     if (Q.getID() == TopQID) {
       for (auto J : Top.ResourceModel->OldPacket)

@@ -49,8 +49,11 @@ static const char OpPrecedence[] = {
   4, // IC_MINUS
   5, // IC_MULTIPLY
   5, // IC_DIVIDE
-  6, // IC_RPAREN
-  7, // IC_LPAREN
+  5, // IC_MOD
+  6, // IC_NOT
+  7, // IC_NEG
+  8, // IC_RPAREN
+  9, // IC_LPAREN
   0, // IC_IMM
   0  // IC_REGISTER
 };
@@ -92,16 +95,31 @@ private:
     IC_MINUS,
     IC_MULTIPLY,
     IC_DIVIDE,
+    IC_MOD,
+    IC_NOT,
+    IC_NEG,
     IC_RPAREN,
     IC_LPAREN,
     IC_IMM,
     IC_REGISTER
   };
 
+  enum IntelOperatorKind {
+    IOK_INVALID = 0,
+    IOK_LENGTH,
+    IOK_SIZE,
+    IOK_TYPE,
+    IOK_OFFSET
+  };
+
   class InfixCalculator {
     typedef std::pair< InfixCalculatorTok, int64_t > ICToken;
     SmallVector<InfixCalculatorTok, 4> InfixOperatorStack;
     SmallVector<ICToken, 4> PostfixStack;
+
+    bool isUnaryOperator(const InfixCalculatorTok Op) {
+      return Op == IC_NEG || Op == IC_NOT;
+    }
 
   public:
     int64_t popOperand() {
@@ -184,6 +202,22 @@ private:
         ICToken Op = PostfixStack[i];
         if (Op.first == IC_IMM || Op.first == IC_REGISTER) {
           OperandStack.push_back(Op);
+        } else if (isUnaryOperator(Op.first)) {
+          assert (OperandStack.size() > 0 && "Too few operands.");
+          ICToken Operand = OperandStack.pop_back_val();
+          assert (Operand.first == IC_IMM &&
+                  "Unary operation with a register!");
+          switch (Op.first) {
+          default:
+            report_fatal_error("Unexpected operator!");
+            break;
+          case IC_NEG:
+            OperandStack.push_back(std::make_pair(IC_IMM, -Operand.second));
+            break;
+          case IC_NOT:
+            OperandStack.push_back(std::make_pair(IC_IMM, ~Operand.second));
+            break;
+          }
         } else {
           assert (OperandStack.size() > 1 && "Too few operands.");
           int64_t Val;
@@ -212,6 +246,12 @@ private:
                     "Divide operation with an immediate and a register!");
             assert (Op2.second != 0 && "Division by zero!");
             Val = Op1.second / Op2.second;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_MOD:
+            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                    "Modulo operation with an immediate and a register!");
+            Val = Op1.second % Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_OR:
@@ -263,6 +303,7 @@ private:
     IES_NOT,
     IES_MULTIPLY,
     IES_DIVIDE,
+    IES_MOD,
     IES_LBRAC,
     IES_RBRAC,
     IES_LPAREN,
@@ -413,10 +454,16 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_OR:
+      case IES_XOR:
+      case IES_AND:
+      case IES_LSHIFT:
+      case IES_RSHIFT:
       case IES_PLUS:
       case IES_NOT:
       case IES_MULTIPLY:
       case IES_DIVIDE:
+      case IES_MOD:
       case IES_LPAREN:
       case IES_RPAREN:
       case IES_LBRAC:
@@ -424,11 +471,12 @@ private:
       case IES_INTEGER:
       case IES_REGISTER:
         State = IES_MINUS;
-        // Only push the minus operator if it is not a unary operator.
-        if (!(CurrState == IES_PLUS || CurrState == IES_MINUS ||
-              CurrState == IES_MULTIPLY || CurrState == IES_DIVIDE ||
-              CurrState == IES_LPAREN || CurrState == IES_LBRAC))
+        // push minus operator if it is not a negate operator
+        if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
+            CurrState == IES_INTEGER  || CurrState == IES_RBRAC)
           IC.pushOperator(IC_MINUS);
+        else
+          IC.pushOperator(IC_NEG);
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
           // a scale of 1.
@@ -450,9 +498,21 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_OR:
+      case IES_XOR:
+      case IES_AND:
+      case IES_LSHIFT:
+      case IES_RSHIFT:
       case IES_PLUS:
+      case IES_MINUS:
       case IES_NOT:
+      case IES_MULTIPLY:
+      case IES_DIVIDE:
+      case IES_MOD:
+      case IES_LPAREN:
+      case IES_LBRAC:
         State = IES_NOT;
+        IC.pushOperator(IC_NOT);
         break;
       }
       PrevState = CurrState;
@@ -517,6 +577,7 @@ private:
       case IES_LSHIFT:
       case IES_RSHIFT:
       case IES_DIVIDE:
+      case IES_MOD:
       case IES_MULTIPLY:
       case IES_LPAREN:
         State = IES_INTEGER;
@@ -531,26 +592,6 @@ private:
           }
           // Get the scale and replace the 'Register * Scale' with '0'.
           IC.popOperator();
-        } else if ((PrevState == IES_PLUS || PrevState == IES_MINUS ||
-                    PrevState == IES_OR || PrevState == IES_AND ||
-                    PrevState == IES_LSHIFT || PrevState == IES_RSHIFT ||
-                    PrevState == IES_MULTIPLY || PrevState == IES_DIVIDE ||
-                    PrevState == IES_LPAREN || PrevState == IES_LBRAC ||
-                    PrevState == IES_NOT || PrevState == IES_XOR) &&
-                   CurrState == IES_MINUS) {
-          // Unary minus.  No need to pop the minus operand because it was never
-          // pushed.
-          IC.pushOperand(IC_IMM, -TmpInt); // Push -Imm.
-        } else if ((PrevState == IES_PLUS || PrevState == IES_MINUS ||
-                    PrevState == IES_OR || PrevState == IES_AND ||
-                    PrevState == IES_LSHIFT || PrevState == IES_RSHIFT ||
-                    PrevState == IES_MULTIPLY || PrevState == IES_DIVIDE ||
-                    PrevState == IES_LPAREN || PrevState == IES_LBRAC ||
-                    PrevState == IES_NOT || PrevState == IES_XOR) &&
-                   CurrState == IES_NOT) {
-          // Unary not.  No need to pop the not operand because it was never
-          // pushed.
-          IC.pushOperand(IC_IMM, ~TmpInt); // Push ~Imm.
         } else {
           IC.pushOperand(IC_IMM, TmpInt);
         }
@@ -583,6 +624,19 @@ private:
       case IES_RPAREN:
         State = IES_DIVIDE;
         IC.pushOperator(IC_DIVIDE);
+        break;
+      }
+    }
+    void onMod() {
+      PrevState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+        State = IES_MOD;
+        IC.pushOperator(IC_MOD);
         break;
       }
     }
@@ -639,18 +693,8 @@ private:
       case IES_RSHIFT:
       case IES_MULTIPLY:
       case IES_DIVIDE:
+      case IES_MOD:
       case IES_LPAREN:
-        // FIXME: We don't handle this type of unary minus or not, yet.
-        if ((PrevState == IES_PLUS || PrevState == IES_MINUS ||
-            PrevState == IES_OR || PrevState == IES_AND ||
-            PrevState == IES_LSHIFT || PrevState == IES_RSHIFT ||
-            PrevState == IES_MULTIPLY || PrevState == IES_DIVIDE ||
-            PrevState == IES_LPAREN || PrevState == IES_LBRAC ||
-            PrevState == IES_NOT || PrevState == IES_XOR) &&
-            (CurrState == IES_MINUS || CurrState == IES_NOT)) {
-          State = IES_ERROR;
-          break;
-        }
         State = IES_LPAREN;
         IC.pushOperator(IC_LPAREN);
         break;
@@ -704,10 +748,12 @@ private:
   std::unique_ptr<X86Operand> ParseIntelOperand();
   std::unique_ptr<X86Operand> ParseIntelOffsetOfOperator();
   bool ParseIntelDotOperator(const MCExpr *Disp, const MCExpr *&NewDisp);
-  std::unique_ptr<X86Operand> ParseIntelOperator(unsigned OpKind);
+  unsigned IdentifyIntelOperator(StringRef Name);
+  unsigned ParseIntelOperator(unsigned OpKind);
   std::unique_ptr<X86Operand>
   ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start, unsigned Size);
   std::unique_ptr<X86Operand> ParseRoundingModeOp(SMLoc Start, SMLoc End);
+  bool ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM);
   bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
   std::unique_ptr<X86Operand>
   ParseIntelBracExpression(unsigned SegReg, SMLoc Start, int64_t ImmDisp,
@@ -766,11 +812,6 @@ private:
 
   bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
 
-  /// MS-compatibility:
-  /// Obtain an appropriate size qualifier, when facing its absence,
-  /// upon AVX512 vector/broadcast memory operand
-  unsigned AdjustAVX512Mem(unsigned Size, X86Operand* UnsizedMemOpNext);
-
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
     return getSTI().getFeatureBits()[X86::Mode64Bit];
@@ -814,6 +855,7 @@ private:
   /// }
 
 public:
+
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti), MII(mii), InstInfo(nullptr),
@@ -1195,27 +1237,16 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
                                  Identifier, Info.OpDecl);
   }
 
+
   // We either have a direct symbol reference, or an offset from a symbol.  The
   // parser always puts the symbol on the LHS, so look there for size
   // calculation purposes.
+  unsigned FrontendSize = 0;
   const MCBinaryExpr *BinOp = dyn_cast<MCBinaryExpr>(Disp);
   bool IsSymRef =
       isa<MCSymbolRefExpr>(BinOp ? BinOp->getLHS() : Disp);
-  if (IsSymRef) {
-    if (!Size) {
-      Size = Info.Type * 8; // Size is in terms of bits in this context.
-      if (Size)
-        InstInfo->AsmRewrites->emplace_back(AOK_SizeDirective, Start,
-                                            /*Len=*/0, Size);
-    if (AllowBetterSizeMatch)
-      // Handle cases where size qualifier is absent, upon an indirect symbol
-      // reference - e.g. "vaddps zmm1, zmm2, [var]"
-      // set Size to zero to allow matching mechansim to try and find a better
-      // size qualifier than our initial guess, based on available variants of
-      // the given instruction
-      Size = 0;
-    }
-  }
+  if (IsSymRef && !Size && Info.Type)
+    FrontendSize = Info.Type * 8; // Size is in terms of bits in this context.
 
   // When parsing inline assembly we set the base register to a non-zero value
   // if we don't know the actual value at this time.  This is necessary to
@@ -1223,7 +1254,7 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
   BaseReg = BaseReg ? BaseReg : 1;
   return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, BaseReg,
                                IndexReg, Scale, Start, End, Size, Identifier,
-                               Info.OpDecl);
+                               Info.OpDecl, FrontendSize);
 }
 
 static void
@@ -1266,10 +1297,12 @@ RewriteIntelBracExpression(SmallVectorImpl<AsmRewrite> &AsmRewrites,
     }
   }
   // Remove all the ImmPrefix rewrites within the brackets.
+  // We may have some Imm rewrties as a result of an operator applying,
+  // remove them as well
   for (AsmRewrite &AR : AsmRewrites) {
     if (AR.Loc.getPointer() < StartInBrac.getPointer())
       continue;
-    if (AR.Kind == AOK_ImmPrefix)
+    if (AR.Kind == AOK_ImmPrefix || AR.Kind == AOK_Imm)
       AR.Kind = AOK_Delete;
   }
   const char *SymLocPtr = SymName.data();
@@ -1286,6 +1319,32 @@ RewriteIntelBracExpression(SmallVectorImpl<AsmRewrite> &AsmRewrites,
   }
 }
 
+// Some binary bitwise operators have a named synonymous
+// Query a candidate string for being such a named operator
+// and if so - invoke the appropriate handler
+bool X86AsmParser::ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM) {
+  // A named operator should be either lower or upper case, but not a mix
+  if (Name.compare(Name.lower()) && Name.compare(Name.upper()))
+    return false;
+  if (Name.equals_lower("not"))
+    SM.onNot();
+  else if (Name.equals_lower("or"))
+    SM.onOr();
+  else if (Name.equals_lower("shl"))
+    SM.onLShift();
+  else if (Name.equals_lower("shr"))
+    SM.onRShift();
+  else if (Name.equals_lower("xor"))
+    SM.onXor();
+  else if (Name.equals_lower("and"))
+    SM.onAnd();
+  else if (Name.equals_lower("mod"))
+    SM.onMod();
+  else
+    return false;
+  return true;
+}
+
 bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -1295,16 +1354,17 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   while (!Done) {
     bool UpdateLocLex = true;
 
+    AsmToken::TokenKind TK = getLexer().getKind();
     // The period in the dot operator (e.g., [ebx].foo.bar) is parsed as an
     // identifier.  Don't try an parse it as a register.
-    if (PrevTK != AsmToken::Error && Tok.getString().startswith("."))
+    if (PrevTK != AsmToken::Error && Tok.getString().startswith(".") &&
+        TK != AsmToken::Identifier)
       break;
 
     // If we're parsing an immediate expression, we don't expect a '['.
     if (SM.getStopOnLBrac() && getLexer().getKind() == AsmToken::LBrac)
       break;
 
-    AsmToken::TokenKind TK = getLexer().getKind();
     switch (TK) {
     default: {
       if (SM.isValidEndState()) {
@@ -1324,31 +1384,36 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
+      UpdateLocLex = false;
       if (TK != AsmToken::String && !ParseRegister(TmpReg, IdentLoc, End)) {
         SM.onRegister(TmpReg);
-        UpdateLocLex = false;
-        break;
-      } else {
-        if (!isParsingInlineAsm()) {
-          if (getParser().parsePrimaryExpr(Val, End))
-            return Error(Tok.getLoc(), "Unexpected identifier!");
-        } else {
-          // This is a dot operator, not an adjacent identifier.
-          if (Identifier.find('.') != StringRef::npos &&
-              PrevTK == AsmToken::RBrac) {
-            return false;
-          } else {
-            InlineAsmIdentifierInfo &Info = SM.getIdentifierInfo();
-            if (ParseIntelIdentifier(Val, Identifier, Info,
-                                     /*Unevaluated=*/false, End))
-              return true;
-          }
-        }
+      } else if (ParseIntelNamedOperator(Identifier, SM)) {
+        UpdateLocLex = true;
+      } else if (!isParsingInlineAsm()) {
+        if (getParser().parsePrimaryExpr(Val, End))
+          return Error(Tok.getLoc(), "Unexpected identifier!");
         SM.onIdentifierExpr(Val, Identifier);
-        UpdateLocLex = false;
-        break;
+      } else if (unsigned OpKind = IdentifyIntelOperator(Identifier)) {
+        if (OpKind == IOK_OFFSET) 
+          return Error(IdentLoc, "Dealing OFFSET operator as part of"
+            "a compound immediate expression is yet to be supported");
+        int64_t Val = ParseIntelOperator(OpKind);
+        if (!Val)
+          return true;
+        StringRef ErrMsg;
+        if (SM.onInteger(Val, ErrMsg))
+          return Error(IdentLoc, ErrMsg);
+      } else if (Identifier.find('.') != StringRef::npos &&
+            PrevTK == AsmToken::RBrac) {
+          return false;
+      } else {
+        InlineAsmIdentifierInfo &Info = SM.getIdentifierInfo();
+        if (ParseIntelIdentifier(Val, Identifier, Info,
+                                 /*Unevaluated=*/false, End))
+          return true;
+        SM.onIdentifierExpr(Val, Identifier);
       }
-      return Error(Tok.getLoc(), "Unexpected identifier!");
+      break;
     }
     case AsmToken::Integer: {
       StringRef ErrMsg;
@@ -1678,8 +1743,7 @@ bool X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
   if (isParsingInlineAsm() && Tok.is(AsmToken::Identifier)) {
     SMLoc Loc = SMLoc::getFromPointer(DotDispStr.data());
     unsigned Len = DotDispStr.size();
-    unsigned Val = OrigDispVal + DotDispVal;
-    InstInfo->AsmRewrites->emplace_back(AOK_DotOperator, Loc, Len, Val);
+    InstInfo->AsmRewrites->emplace_back(AOK_DotOperator, Loc, Len, DotDispVal);
   }
 
   NewDisp = MCConstantExpr::create(OrigDispVal + DotDispVal, getContext());
@@ -1715,11 +1779,16 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOffsetOfOperator() {
                                OffsetOfLoc, Identifier, Info.OpDecl);
 }
 
-enum IntelOperatorKind {
-  IOK_LENGTH,
-  IOK_SIZE,
-  IOK_TYPE
-};
+// Query a candidate string for being an Intel assembly operator
+// Report back its kind, or IOK_INVALID if does not evaluated as a known one
+unsigned X86AsmParser::IdentifyIntelOperator(StringRef Name) {
+  return StringSwitch<unsigned>(Name)
+    .Cases("TYPE","type",IOK_TYPE)
+    .Cases("SIZE","size",IOK_SIZE)
+    .Cases("LENGTH","length",IOK_LENGTH)
+    .Cases("OFFSET","offset",IOK_OFFSET)
+    .Default(IOK_INVALID);
+}
 
 /// Parse the 'LENGTH', 'TYPE' and 'SIZE' operators.  The LENGTH operator
 /// returns the number of elements in an array.  It returns the value 1 for
@@ -1727,7 +1796,7 @@ enum IntelOperatorKind {
 /// variable.  A variable's size is the product of its LENGTH and TYPE.  The
 /// TYPE operator returns the size of a C or C++ type or variable. If the
 /// variable is an array, TYPE returns the size of a single element.
-std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperator(unsigned OpKind) {
+unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc TypeLoc = Tok.getLoc();
@@ -1739,11 +1808,13 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperator(unsigned OpKind) {
   StringRef Identifier = Tok.getString();
   if (ParseIntelIdentifier(Val, Identifier, Info,
                            /*Unevaluated=*/true, End))
-    return nullptr;
+    return 0;
 
-  if (!Info.OpDecl)
-    return ErrorOperand(Start, "unable to lookup expression");
-
+  if (!Info.OpDecl) {
+    Error(Start, "unable to lookup expression");
+    return 0;
+  }
+  
   unsigned CVal = 0;
   switch(OpKind) {
   default: llvm_unreachable("Unexpected operand kind!");
@@ -1757,8 +1828,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperator(unsigned OpKind) {
   unsigned Len = End.getPointer() - TypeLoc.getPointer();
   InstInfo->AsmRewrites->emplace_back(AOK_Imm, TypeLoc, Len, CVal);
 
-  const MCExpr *Imm = MCConstantExpr::create(CVal, getContext());
-  return X86Operand::CreateImm(Imm, Start, End);
+  return CVal;
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
@@ -1766,18 +1836,12 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   const AsmToken &Tok = Parser.getTok();
   SMLoc Start, End;
 
-  // Offset, length, type and size operators.
-  if (isParsingInlineAsm()) {
-    StringRef AsmTokStr = Tok.getString();
-    if (AsmTokStr == "offset" || AsmTokStr == "OFFSET")
+  // FIXME: Offset operator
+  // Should be handled as part of immediate expression, as other operators
+  // Currently, only supported as a stand-alone operand
+  if (isParsingInlineAsm())
+    if (IdentifyIntelOperator(Tok.getString()) == IOK_OFFSET)
       return ParseIntelOffsetOfOperator();
-    if (AsmTokStr == "length" || AsmTokStr == "LENGTH")
-      return ParseIntelOperator(IOK_LENGTH);
-    if (AsmTokStr == "size" || AsmTokStr == "SIZE")
-      return ParseIntelOperator(IOK_SIZE);
-    if (AsmTokStr == "type" || AsmTokStr == "TYPE")
-      return ParseIntelOperator(IOK_TYPE);
-  }
 
   bool PtrInOperand = false;
   unsigned Size = getIntelMemOperandSize(Tok.getString());
@@ -2360,7 +2424,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     Name == "lock" || Name == "rep" ||
     Name == "repe" || Name == "repz" ||
     Name == "repne" || Name == "repnz" ||
-    Name == "rex64" || Name == "data16";
+    Name == "rex64" || Name == "data16" || Name == "data32";
 
   bool CurlyAsEndOfStatement = false;
   // This does the actual operand parsing.  Don't parse any more if we have a
@@ -2389,8 +2453,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         break;
      }
 
-    // In MS inline asm curly braces mark the begining/end of a block, therefore
-    // they should be interepreted as end of statement
+    // In MS inline asm curly braces mark the beginning/end of a block,
+    // therefore they should be interepreted as end of statement
     CurlyAsEndOfStatement =
         isParsingIntelSyntax() && isParsingInlineAsm() &&
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
@@ -2842,23 +2906,6 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   return true;
 }
 
-unsigned X86AsmParser::AdjustAVX512Mem(unsigned Size,
-    X86Operand* UnsizedMemOpNext) {
-  // Check for the existence of an AVX512 platform
-  if (!getSTI().getFeatureBits()[X86::FeatureAVX512])
-    return 0;
-  // Allow adjusting upon a (x|y|z)mm
-  if (Size == 512 || Size == 256 || Size == 128)
-    return Size;
-  // This is an allegadly broadcasting mem op adjustment,
-  // allow some more inquiring to validate it
-  if (Size == 64 || Size == 32)
-    return UnsizedMemOpNext && UnsizedMemOpNext->isToken() &&
-      UnsizedMemOpNext->getToken().substr(0, 4).equals("{1to") ? Size : 0;
-  // Do not allow any other type of adjustments
-  return 0;
-}
-
 bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                 OperandVector &Operands,
                                                 MCStreamer &Out,
@@ -2878,19 +2925,14 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
-  // If unsized memory operand was found - obtain following operand.
-  // For use in AdjustAVX512Mem
-  X86Operand *UnsizedMemOpNext = nullptr;
   for (const auto &Op : Operands) {
     X86Operand *X86Op = static_cast<X86Operand *>(Op.get());
-    if (UnsizedMemOp) {
-      UnsizedMemOpNext = X86Op;
+    if (X86Op->isMemUnsized()) {
+      UnsizedMemOp = X86Op;
       // Have we found an unqualified memory operand,
       // break. IA allows only one memory operand.
       break;
     }
-    if (X86Op->isMemUnsized())
-      UnsizedMemOp = X86Op;
   }
 
   // Allow some instructions to have implicitly pointer-sized operands.  This is
@@ -2936,7 +2978,6 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // If an unsized memory operand is present, try to match with each memory
   // operand size.  In Intel assembly, the size is not part of the instruction
   // mnemonic.
-  unsigned MatchedSize = 0;
   if (UnsizedMemOp && UnsizedMemOp->isMemUnsized()) {
     static const unsigned MopSizes[] = {8, 16, 32, 64, 80, 128, 256, 512};
     for (unsigned Size : MopSizes) {
@@ -2951,17 +2992,10 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
       // If this returned as a missing feature failure, remember that.
       if (Match.back() == Match_MissingFeature)
         ErrorInfoMissingFeature = ErrorInfoIgnore;
-      if (M == Match_Success)
-        // MS-compatability:
-        // Adjust AVX512 vector/broadcast memory operand,
-        // when facing the absence of a size qualifier.
-        // Match GCC behavior on respective cases.
-        MatchedSize = AdjustAVX512Mem(Size, UnsizedMemOpNext);
     }
 
     // Restore the size of the unsized memory operand if we modified it.
-    if (UnsizedMemOp)
-      UnsizedMemOp->Mem.Size = 0;
+    UnsizedMemOp->Mem.Size = 0;
   }
 
   // If we haven't matched anything yet, this is not a basic integer or FPU
@@ -2985,20 +3019,30 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
                  Op.getLocRange(), MatchingInlineAsm);
   }
 
+  unsigned NumSuccessfulMatches =
+      std::count(std::begin(Match), std::end(Match), Match_Success);
+
+  // If matching was ambiguous and we had size information from the frontend,
+  // try again with that. This handles cases like "movxz eax, m8/m16".
+  if (UnsizedMemOp && NumSuccessfulMatches > 1 &&
+      UnsizedMemOp->getMemFrontendSize()) {
+    UnsizedMemOp->Mem.Size = UnsizedMemOp->getMemFrontendSize();
+    unsigned M = MatchInstruction(
+        Operands, Inst, ErrorInfo, MatchingInlineAsm, isParsingIntelSyntax());
+    if (M == Match_Success)
+      NumSuccessfulMatches = 1;
+
+    // Add a rewrite that encodes the size information we used from the
+    // frontend.
+    InstInfo->AsmRewrites->emplace_back(
+        AOK_SizeDirective, UnsizedMemOp->getStartLoc(),
+        /*Len=*/0, UnsizedMemOp->getMemFrontendSize());
+  }
+
   // If exactly one matched, then we treat that as a successful match (and the
   // instruction will already have been filled in correctly, since the failing
   // matches won't have modified it).
-  unsigned NumSuccessfulMatches =
-      std::count(std::begin(Match), std::end(Match), Match_Success);
   if (NumSuccessfulMatches == 1) {
-    if (MatchedSize && isParsingInlineAsm() && isParsingIntelSyntax())
-      // MS compatibility -
-      // Fix the rewrite according to the matched memory size
-      // MS inline assembly only
-      for (AsmRewrite &AR : *InstInfo->AsmRewrites)
-        if ((AR.Loc.getPointer() == UnsizedMemOp->StartLoc.getPointer()) &&
-            (AR.Kind == AOK_SizeDirective))
-          AR.Val = MatchedSize;
     // Some instructions need post-processing to, for example, tweak which
     // encoding is selected. Loop on it while changes happen so the individual
     // transformations can chain off each other.
@@ -3015,7 +3059,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
            "multiple matches only possible with unsized memory operands");
     return Error(UnsizedMemOp->getStartLoc(),
                  "ambiguous operand size for instruction '" + Mnemonic + "\'",
-                 UnsizedMemOp->getLocRange(), MatchingInlineAsm);
+                 UnsizedMemOp->getLocRange());
   }
 
   // If one instruction matched with a missing feature, report this as a
@@ -3052,6 +3096,7 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
   else if (IDVal.startswith(".code"))
     return ParseDirectiveCode(IDVal, DirectiveID.getLoc());
   else if (IDVal.startswith(".att_syntax")) {
+    getParser().setParsingInlineAsm(false);
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       if (Parser.getTok().getString() == "prefix")
         Parser.Lex();
@@ -3064,6 +3109,7 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   } else if (IDVal.startswith(".intel_syntax")) {
     getParser().setAssemblerDialect(1);
+    getParser().setParsingInlineAsm(true);
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       if (Parser.getTok().getString() == "noprefix")
         Parser.Lex();

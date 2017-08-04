@@ -134,9 +134,6 @@ OPTIONS
 BUGS
 ----
 
- * :program:`llvm-nm` cannot demangle C++ mangled names, like GNU :program:`nm`
-   can.
-
  * :program:`llvm-nm` does not support the full set of arguments that GNU
    :program:`nm` does.
 

@@ -102,7 +102,7 @@ define void @fptrunc_frommem8(<8 x double>* %in, <8 x float>* %out) {
 ; X32-AVX-NEXT:    vcvtpd2psy (%ecx), %xmm0
 ; X32-AVX-NEXT:    vcvtpd2psy 32(%ecx), %xmm1
 ; X32-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vmovupd %ymm0, (%eax)
+; X32-AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X32-AVX-NEXT:    vzeroupper
 ; X32-AVX-NEXT:    retl
 ;
@@ -123,7 +123,7 @@ define void @fptrunc_frommem8(<8 x double>* %in, <8 x float>* %out) {
 ; X64-AVX-NEXT:    vcvtpd2psy (%rdi), %xmm0
 ; X64-AVX-NEXT:    vcvtpd2psy 32(%rdi), %xmm1
 ; X64-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX-NEXT:    vmovupd %ymm0, (%rsi)
+; X64-AVX-NEXT:    vmovups %ymm0, (%rsi)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
 entry:

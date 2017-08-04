@@ -7,7 +7,7 @@ define i16 @sccweqand(i16 %a, i16 %b) nounwind {
   ret i16 %t3
 }
 ; CHECK-LABEL: sccweqand:
-; CHECK: if r1 == r2
+; CHECK: if r1 == 0
 
 define i16 @sccwneand(i16 %a, i16 %b) nounwind {
   %t1 = and i16 %a, %b
@@ -16,7 +16,7 @@ define i16 @sccwneand(i16 %a, i16 %b) nounwind {
   ret i16 %t3
 }
 ; CHECK-LABEL: sccwneand:
-; CHECK: if r1 != r2
+; CHECK: if r1 != 0
 
 define i16 @sccwne(i16 %a, i16 %b) nounwind {
   %t1 = icmp ne i16 %a, %b

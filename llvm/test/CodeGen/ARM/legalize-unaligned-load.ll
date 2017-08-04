@@ -10,7 +10,7 @@
 ; CHECK-NOT: str
 ; CHECK: ldr
 ; CHECK: str
-; CHECK: bx
+; CHECK: {{bx|pop.*pc}}
 define i32 @get_set_complex({ float, float }* noalias nocapture %retptr,
                             { i8*, i32 }** noalias nocapture readnone %excinfo,
                             i8* noalias nocapture readnone %env,

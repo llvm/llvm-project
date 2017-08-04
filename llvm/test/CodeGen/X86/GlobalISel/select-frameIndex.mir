@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=x86_64-linux-gnu    -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64
+# RUN: llc -mtriple=i386-linux-gnu      -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnux32 -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ABI
+
+--- |
+  define i32* @allocai32() {
+    %ptr1 = alloca i32
+    ret i32* %ptr1
+  }
+
+...
+---
+name:            allocai32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            allocai32
+# CHECK: registers:
+# CHECK-X32:     - { id: 0, class: gr32 }
+# CHECK-X32ABI:  - { id: 0, class: gr32 }
+# CHECK-X64:     - { id: 0, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+stack:
+  - { id: 0, name: ptr1, offset: 0, size: 4, alignment: 4 }
+
+# CHECK-X32:    %0 = LEA32r %stack.0.ptr1, 1, _, 0, _
+# CHECK-X32ABI: %0 = LEA64_32r %stack.0.ptr1, 1, _, 0, _
+# CHECK-X64:    %0 = LEA64r %stack.0.ptr1, 1, _, 0, _
+body:             |
+  bb.1 (%ir-block.0):
+    %0(p0) = G_FRAME_INDEX %stack.0.ptr1
+    %eax = COPY %0(p0)
+    RET 0, implicit %eax
+
+...

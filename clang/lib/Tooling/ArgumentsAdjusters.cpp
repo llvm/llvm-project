@@ -42,10 +42,30 @@ ArgumentsAdjuster getClangStripOutputAdjuster() {
         AdjustedArgs.push_back(Args[i]);
 
       if (Arg == "-o") {
-        // Output is specified as -o foo. Skip the next argument also.
+        // Output is specified as -o foo. Skip the next argument too.
         ++i;
       }
       // Else, the output is specified as -ofoo. Just do nothing.
+    }
+    return AdjustedArgs;
+  };
+}
+
+ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
+  return [](const CommandLineArguments &Args, StringRef /*unused*/) {
+    CommandLineArguments AdjustedArgs;
+    for (size_t i = 0, e = Args.size(); i < e; ++i) {
+      StringRef Arg = Args[i];
+      // All dependency-file options begin with -M. These include -MM,
+      // -MF, -MG, -MP, -MT, -MQ, -MD, and -MMD.
+      if (!Arg.startswith("-M"))
+        AdjustedArgs.push_back(Args[i]);
+
+      if ((Arg == "-MF") || (Arg == "-MT") || (Arg == "-MQ") ||
+          (Arg == "-MD") || (Arg == "-MMD")) {
+        // Output is specified as -MX foo. Skip the next argument also.
+        ++i;
+      }
     }
     return AdjustedArgs;
   };
@@ -83,4 +103,3 @@ ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
 
 } // end namespace tooling
 } // end namespace clang
-

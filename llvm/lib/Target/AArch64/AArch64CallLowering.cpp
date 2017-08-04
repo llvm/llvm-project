@@ -219,7 +219,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     auto &DL = F.getParent()->getDataLayout();
 
     ArgInfo OrigArg{VReg, Val->getType()};
-    setArgFlags(OrigArg, AttributeSet::ReturnIndex, DL, F);
+    setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
@@ -238,7 +238,6 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                                const Function &F,
                                                ArrayRef<unsigned> VRegs) const {
-  auto &Args = F.getArgumentList();
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -246,9 +245,9 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
-  for (auto &Arg : Args) {
+  for (auto &Arg : F.args()) {
     ArgInfo OrigArg{VRegs[i], Arg.getType()};
-    setArgFlags(OrigArg, i + 1, DL, F);
+    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
     bool Split = false;
     LLT Ty = MRI.getType(VRegs[i]);
     unsigned Dst = VRegs[i];
@@ -303,6 +302,7 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 }
 
 bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
+                                    CallingConv::ID CallConv,
                                     const MachineOperand &Callee,
                                     const ArgInfo &OrigRet,
                                     ArrayRef<ArgInfo> OrigArgs) const {
@@ -322,9 +322,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Find out which ABI gets to decide where things go.
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   CCAssignFn *AssignFnFixed =
-      TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
+      TLI.CCAssignFnForCall(CallConv, /*IsVarArg=*/false);
   CCAssignFn *AssignFnVarArg =
-      TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/true);
+      TLI.CCAssignFnForCall(CallConv, /*IsVarArg=*/true);
 
   auto CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
 
@@ -332,7 +332,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // uses of arg registers.
   auto MIB = MIRBuilder.buildInstrNoInsert(Callee.isReg() ? AArch64::BLR
                                                           : AArch64::BL);
-  MIB.addOperand(Callee);
+  MIB.add(Callee);
 
   // Tell the call which registers are clobbered.
   auto TRI = MF.getSubtarget().getRegisterInfo();
@@ -380,7 +380,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
   }
 
-  CallSeqStart.addImm(Handler.StackSize);
+  CallSeqStart.addImm(Handler.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
       .addImm(Handler.StackSize)
       .addImm(0);

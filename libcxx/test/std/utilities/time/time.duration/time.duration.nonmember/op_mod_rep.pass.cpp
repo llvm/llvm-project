@@ -19,6 +19,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -26,7 +28,7 @@ int main()
     ns = ns % 6;
     assert(ns.count() == 3);
     }
-#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+#if TEST_STD_VER >= 11
     {
     constexpr std::chrono::nanoseconds ns(15);
     constexpr std::chrono::nanoseconds ns2 = ns % 6;

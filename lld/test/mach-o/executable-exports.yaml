@@ -42,5 +42,5 @@ global-symbols:
 ...
 
 # CHECK-NOT:  _myHidden
-# CHECK:      0x00000FFD  _myRegular
-# CHECK:      0x00000FFE  _myWeak [weak_def]
+# CHECK:      0x100000FFD  _myRegular
+# CHECK:      0x100000FFE  _myWeak [weak_def]

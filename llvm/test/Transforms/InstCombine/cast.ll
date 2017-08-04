@@ -1432,3 +1432,93 @@ define <2 x i32> @test90() {
   %tmp6 = bitcast <4 x half> <half undef, half undef, half undef, half 0xH3C00> to <2 x i32>
   ret <2 x i32> %tmp6
 }
+
+; Do not optimize to ashr i64 (shift by 48 > 96 - 64)
+define i64 @test91(i64 %A) {
+; CHECK-LABEL: @test91(
+; CHECK-NEXT:    [[B:%.*]] = sext i64 %A to i96
+; CHECK-NEXT:    [[C:%.*]] = lshr i96 [[B]], 48
+; CHECK-NEXT:    [[D:%.*]] = trunc i96 [[C]] to i64
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %B = sext i64 %A to i96
+  %C = lshr i96 %B, 48
+  %D = trunc i96 %C to i64
+  ret i64 %D
+}
+
+; Do optimize to ashr i64 (shift by 32 <= 96 - 64)
+define i64 @test92(i64 %A) {
+; CHECK-LABEL: @test92(
+; CHECK-NEXT:    [[C:%.*]] = ashr i64 %A, 32
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %B = sext i64 %A to i96
+  %C = lshr i96 %B, 32
+  %D = trunc i96 %C to i64
+  ret i64 %D
+}
+
+; When optimizing to ashr i32, don't shift by more than 31.
+define i32 @test93(i32 %A) {
+; CHECK-LABEL: @test93(
+; CHECK-NEXT:    [[C:%.*]] = ashr i32 %A, 31
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %B = sext i32 %A to i96
+  %C = lshr i96 %B, 64
+  %D = trunc i96 %C to i32
+  ret i32 %D
+}
+
+; The following four tests sext + lshr + trunc patterns.
+; PR33078
+
+define i8 @pr33078_1(i8 %A) {
+; CHECK-LABEL: @pr33078_1(
+; CHECK-NEXT:    [[C:%.*]] = ashr i8 [[A:%.*]], 7
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %B = sext i8 %A to i16
+  %C = lshr i16 %B, 8
+  %D = trunc i16 %C to i8
+  ret i8 %D
+}
+
+define i12 @pr33078_2(i8 %A) {
+; CHECK-LABEL: @pr33078_2(
+; CHECK-NEXT:    [[C:%.*]] = ashr i8 [[A:%.*]], 4
+; CHECK-NEXT:    [[D:%.*]] = sext i8 [[C]] to i12
+; CHECK-NEXT:    ret i12 [[D]]
+;
+  %B = sext i8 %A to i16
+  %C = lshr i16 %B, 4
+  %D = trunc i16 %C to i12
+  ret i12 %D
+}
+
+define i4 @pr33078_3(i8 %A) {
+; CHECK-LABEL: @pr33078_3(
+; CHECK-NEXT:    [[B:%.*]] = sext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = lshr i16 [[B]], 12
+; CHECK-NEXT:    [[D:%.*]] = trunc i16 [[C]] to i4
+; CHECK-NEXT:    ret i4 [[D]]
+;
+  %B = sext i8 %A to i16
+  %C = lshr i16 %B, 12
+  %D = trunc i16 %C to i4
+  ret i4 %D
+}
+
+define i8 @pr33078_4(i3 %x) {
+; Don't turn this in an `ashr`. This was getting miscompiled
+; CHECK-LABEL: @pr33078_4(
+; CHECK-NEXT:    [[B:%.*]] = sext i3 %x to i16
+; CHECK-NEXT:    [[C:%.*]] = lshr i16 [[B]], 13
+; CHECK-NEXT:    [[D:%.*]] = trunc i16 [[C]] to i8
+; CHECK-NEXT:    ret i8 [[D]]
+  %B = sext i3 %x to i16
+  %C = lshr i16 %B, 13
+  %D = trunc i16 %C to i8
+  ret i8 %D
+}

@@ -33,7 +33,6 @@ int main()
         typedef test_compare<std::equal_to<int> > Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
-        typedef std::pair<int, std::string> P;
         C c1(0, Hash(1), Compare(1), Alloc(1, 1));
         C c2(0, Hash(2), Compare(2), Alloc(1, 2));
         c2.max_load_factor(2);
@@ -218,7 +217,6 @@ int main()
         typedef test_compare<std::equal_to<int> > Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
-        typedef std::pair<int, std::string> P;
         C c1(0, Hash(1), Compare(1), Alloc(1));
         C c2(0, Hash(2), Compare(2), Alloc(2));
         c2.max_load_factor(2);
@@ -403,7 +401,6 @@ int main()
         typedef test_compare<std::equal_to<int> > Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
-        typedef std::pair<int, std::string> P;
         C c1(0, Hash(1), Compare(1), Alloc());
         C c2(0, Hash(2), Compare(2), Alloc());
         c2.max_load_factor(2);

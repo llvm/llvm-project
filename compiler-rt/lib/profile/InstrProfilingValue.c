@@ -220,6 +220,35 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
 }
 
 /*
+ * The target values are partitioned into multiple regions/ranges. There is one
+ * contiguous region which is precise -- every value in the range is tracked
+ * individually. A value outside the precise region will be collapsed into one
+ * value depending on the region it falls in.
+ *
+ * There are three regions:
+ * 1. (-inf, PreciseRangeStart) and (PreciseRangeLast, LargeRangeValue) belong
+ * to one region -- all values here should be mapped to one value of
+ * "PreciseRangeLast + 1".
+ * 2. [PreciseRangeStart, PreciseRangeLast]
+ * 3. Large values: [LargeValue, +inf) maps to one value of LargeValue.
+ *
+ * The range for large values is optional. The default value of INT64_MIN
+ * indicates it is not specified.
+ */
+COMPILER_RT_VISIBILITY void __llvm_profile_instrument_range(
+    uint64_t TargetValue, void *Data, uint32_t CounterIndex,
+    int64_t PreciseRangeStart, int64_t PreciseRangeLast, int64_t LargeValue) {
+
+  if (LargeValue != INT64_MIN && (int64_t)TargetValue >= LargeValue)
+    TargetValue = LargeValue;
+  else if ((int64_t)TargetValue < PreciseRangeStart ||
+           (int64_t)TargetValue > PreciseRangeLast)
+    TargetValue = PreciseRangeLast + 1;
+
+  __llvm_profile_instrument_target(TargetValue, Data, CounterIndex);
+}
+
+/*
  * A wrapper struct that represents value profile runtime data.
  * Like InstrProfRecord class which is used by profiling host tools,
  * ValueProfRuntimeRecord also implements the abstract intefaces defined in

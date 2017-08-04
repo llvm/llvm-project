@@ -1,4 +1,4 @@
-; RUN: llc -debug-only=misched -march=amdgcn -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC -check-prefix=DEBUG %s
+; RUN: llc -debug-only=machine-scheduler -march=amdgcn -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC -check-prefix=DEBUG %s
 ; REQUIRES: asserts
 
 ; Verify that the extload generated from %eval has the default
@@ -9,7 +9,7 @@
 ; DEBUG: mem:LD2[<unknown>]{{[^(]}}
 ; DEBUG: {{^}}# End machine code for function extload_align.
 
-define void @extload_align(i32* %out, i32 %index) #0 {
+define amdgpu_kernel void @extload_align(i32* %out, i32 %index) #0 {
   %v0 = alloca [4 x i16]
   %a1 = getelementptr inbounds [4 x i16], [4 x i16]* %v0, i32 0, i32 0
   %a2 = getelementptr inbounds [4 x i16], [4 x i16]* %v0, i32 0, i32 1

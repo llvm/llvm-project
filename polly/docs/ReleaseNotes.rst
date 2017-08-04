@@ -1,107 +1,97 @@
-========================
-Release Notes (upcoming)
-========================
+============================
+Release Notes 5.0 (upcoming)
+============================
 
-In Polly 4 the following important changes have been incorporated.
+In Polly 5 the following important changes have been incorporated.
 
+.. warning::
 
-Polly directly available in clang/opt/bugpoint
-----------------------------------------------
+  These releaes notes are for the next release of Polly and describe
+  the new features that have recently been committed to our development
+  branch.
 
-Polly supported since a long time to be directly linked into tools such as
-opt/clang/bugpoint. Since this release, the default for a source checkout that
-contains Polly is to provide Polly directly through these tools, rather than as
-an additional module. This makes using Polly significantly easier.
+- Change ...
 
-Instead of
+-----------------------------------
+Robustness testing: AOSP and FFMPEG
+-----------------------------------
 
-.. code-block:: bash
+Polly can now compile all of Android. While most of Android is not the primary
+target of polyhedral data locality optimizations, Android provides us with a
+large and diverse set of robustness tests.  Our new `nightly build bot
+<http://lab.llvm.org:8011/builders/aosp-O3-polly-before-vectorizer-unprofitable>`_
+ensures we do not regress.
 
-    opt -load lib/LLVMPolly.so -O3 -polly file.ll
-    clang -Xclang -load -Xclang lib/LLVMPolly.so -O3 -mllvm -polly file.ll
+Polly also successfully compiles `FFMPEG <http://fate.ffmpeg.org/>`_ and
+obviously the `LLVM test suite
+<http://lab.llvm.org:8011/console?category=polly>`_.
 
-one can now use
+---------------------------------------------------------
+C++ bindings for isl math library improve maintainability
+---------------------------------------------------------
 
-.. code-block:: bash
+In the context of `Polly Labs <pollylabs.org>`_, a new set of C++ bindings was
+developed for the isl math library. Thanks to the new isl C++ interface there
+is no need for manual memory management any more and programming with integer
+sets became easier in general.
 
-    opt -O3 -polly file.ll
-    clang -O3 -mllvm -polly file.c
+Today::
 
+    void isDiffEmptyOrUnionTheUniverse(isl::set S1, isl::set S2) {
+      isl::set Difference = S1.subtract(S2);
+      isl::set Union = S1.unite(S2);
 
-Increased analysis coverage
----------------------------
+      if (Difference.is_empty())
+        return true;
 
-Polly's modeling has been improved to increase the applicability of Polly. The
-following code pieces are newly supported:
+      if (Union.is_universe())
+        return true;
 
-Arrays accessed through different types
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-It is not uncommon that one array stores elements of different types. Polly now
-can model and optimize such code.
-
-.. code-block:: c
-
-    void multiple_types(char *Short, char *Float, char *Double) {
-      for (long i = 0; i < 100; i++) {
-        Short[i] = *(short *)&Short[2 * i];
-        Float[i] = *(float *)&Float[4 * i];
-        Double[i] = *(double *)&Double[8 * i];
-      }
+      return false;
     }
 
+Before::
 
-If the accesses are not aligned with the size of the access type we model them
-as multiple accesses to an array of smaller elements. This is especially
-useful for structs containing different typed elements as accesses to them are
-represented using only one base pointer, namely the ``struct`` itself.  In the
-example below the accesses to ``s`` are all modeled as if ``s`` was a single
-char array because the accesses to ``s->A`` and ``s->B`` are not aligned with
-their respective type size (both are off-by-one due to the ``char`` field in
-the ``struct``).
+    void isDiffEmptyOrUnionTheUniverse(__isl_take isl_set S1,
+                                       __isl_take isl_set S2) {
+      isl_set *Difference = isl_set_subtract(isl_set_copy(S1),
+                                             isl_set_copy(S2));
 
-.. code-block:: c
+      isl_set *Union = isl_set_union(S1, S2);
 
-    struct S {
-      char Offset;
-      int A[100];
-      double B[100];
-    };
+      isl_bool IsEmpty = isl_set_is_empty(Difference);
+      isl_set_free(Difference);
 
-    void struct_accesses(struct S *s) {
-      for (long i = 0; i < 100; i++)
-        s->B[i] += s->A[i];
+      if (IsEmpty == isl_bool_error)
+        llvm_unreachable();
+
+      if (IsEmpty)
+        return true;
+
+      isl_bool IsUniverse = isl_set_is_Universe(Union);
+      isl_set_free(Union);
+
+      if (IsUniverse == isl_bool_error)
+        llvm_unreachable();
+
+      if (IsUniverse)
+        return true;
+
+      return false;
     }
 
+--------------------------
+Improved Polly Diagnostics
+--------------------------
 
+Polly now uses the LLVM OptimizationDiagnosticInfo API for emitting diagnostic remarks.
+This allows Polly remarks to appear in the yaml optimization record when compiling
+with the flag -fsave-optimization-record. This also allow Polly remarks to appear in the opt-viewer
+tool, allowing for remarks to be viewed next to the source code, and sorted by hotness.
 
-Function calls with known side effects
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
+Polly-ACC works with Julia
+--------------------------
 
-Function calls that have only known memory effects can be represented as
-accesses in the polyhedral model. While calls without side effects were
-supported before, we now allow and model two other kinds. The first are
-intrinsic calls to ``memcpy``, ``memmove`` and ``memset``. These calls can be
-represented precisely if the pointers involved are known and the given length
-is affine. Additionally, we allow to over-approximate function calls that are
-known only to read memory, read memory accessible through pointer arguments or
-access only memory accessible through pointer arguments. See also the function
-attributes ``readonly`` and ``argmemonly`` for more information.
-
-Fine-grain dependences analysis
--------------------------------
-
-In addition of the ScopStmt wise dependences analysis, now the "polly-dependence"
-pass provides dependences analysis at memory reference wise and memory access wise.
-The memory reference wise analysis distinguishes the accessed references in the
-same statement, and generates dependences relationships between (statement, reference)
-pairs. The memory access wise analysis distinguishes accesses in the same statement,
-and generates dependences relationships between (statement, access) pairs. These
-fine-grain dependences are enabled by "-polly-dependences-analysis-level=reference-wise"
-and "-polly-dependences-analysis-level=access-wise", respectively.
-
-Update of the isl math library
-------------------------------
-
-We imported the latest version of the isl math library into Polly.
-
+Polly can now offload Julia to GPUs. This feature is enabled by setting the 
+USE_POLLY_ACC variable to 1, i.e. USE_POLLY_ACC:=1.

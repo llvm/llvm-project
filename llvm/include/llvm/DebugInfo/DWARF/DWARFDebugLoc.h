@@ -1,4 +1,4 @@
-//===-- DWARFDebugLoc.h -----------------------------------------*- C++ -*-===//
+//===- DWARFDebugLoc.h ------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGLOC_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGLOC_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
-#include "llvm/Support/DataExtractor.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -38,22 +39,19 @@ class DWARFDebugLoc {
     SmallVector<Entry, 2> Entries;
   };
 
-  typedef SmallVector<LocationList, 4> LocationLists;
+  using LocationLists = SmallVector<LocationList, 4>;
 
   /// A list of all the variables in the debug_loc section, each one describing
   /// the locations in which the variable is stored.
   LocationLists Locations;
 
-  /// A map used to resolve binary relocations.
-  const RelocAddrMap &RelocMap;
-
 public:
-  DWARFDebugLoc(const RelocAddrMap &LocRelocMap) : RelocMap(LocRelocMap) {}
   /// Print the location lists found within the debug_loc section.
   void dump(raw_ostream &OS) const;
+
   /// Parse the debug_loc section accessible via the 'data' parameter using the
-  /// specified address size to interpret the address ranges.
-  void parse(DataExtractor data, unsigned AddressSize);
+  /// address size also given in 'data' to interpret the address ranges.
+  void parse(const DWARFDataExtractor &data);
 };
 
 class DWARFDebugLocDWO {
@@ -68,7 +66,7 @@ class DWARFDebugLocDWO {
     SmallVector<Entry, 2> Entries;
   };
 
-  typedef SmallVector<LocationList, 4> LocationLists;
+  using LocationLists = SmallVector<LocationList, 4>;
 
   LocationLists Locations;
 
@@ -76,6 +74,7 @@ public:
   void parse(DataExtractor data);
   void dump(raw_ostream &OS) const;
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H

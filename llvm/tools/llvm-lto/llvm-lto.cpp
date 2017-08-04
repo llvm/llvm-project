@@ -23,7 +23,6 @@
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
-#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -285,7 +284,7 @@ void printIndexStats() {
 
     unsigned Calls = 0, Refs = 0, Functions = 0, Alias = 0, Globals = 0;
     for (auto &Summaries : *Index) {
-      for (auto &Summary : Summaries.second) {
+      for (auto &Summary : Summaries.second.SummaryList) {
         Refs += Summary->refs().size();
         if (auto *FuncSummary = dyn_cast<FunctionSummary>(Summary.get())) {
           Functions++;
@@ -332,12 +331,9 @@ static void createCombinedModuleSummaryIndex() {
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
-    std::unique_ptr<ModuleSummaryIndex> Index =
-        ExitOnErr(llvm::getModuleSummaryIndexForFile(Filename));
-    // Skip files without a module summary.
-    if (!Index)
-      continue;
-    CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
+    std::unique_ptr<MemoryBuffer> MB =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
+    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex, ++NextModuleId));
   }
   std::error_code EC;
   assert(!OutputFilename.empty());
@@ -387,7 +383,7 @@ loadAllFilesForIndex(const ModuleSummaryIndex &Index) {
 
   for (auto &ModPath : Index.modulePaths()) {
     const auto &Filename = ModPath.first();
-    auto CurrentActivity = "loading file '" + Filename + "'";
+    std::string CurrentActivity = ("loading file '" + Filename + "'").str();
     auto InputOrErr = MemoryBuffer::getFile(Filename);
     error(InputOrErr, "error " + CurrentActivity);
     InputBuffers.push_back(std::move(*InputOrErr));
@@ -479,7 +475,7 @@ private:
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
-      StringRef CurrentActivity = "loading file '" + Filename + "'";
+      std::string CurrentActivity = "loading file '" + Filename + "'";
       auto InputOrErr = MemoryBuffer::getFile(Filename);
       error(InputOrErr, "error " + CurrentActivity);
       InputBuffers.push_back(std::move(*InputOrErr));
@@ -714,7 +710,7 @@ private:
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
-      StringRef CurrentActivity = "loading file '" + Filename + "'";
+      std::string CurrentActivity = "loading file '" + Filename + "'";
       auto InputOrErr = MemoryBuffer::getFile(Filename);
       error(InputOrErr, "error " + CurrentActivity);
       InputBuffers.push_back(std::move(*InputOrErr));

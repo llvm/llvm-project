@@ -204,6 +204,14 @@ class ScopedInErrorReport {
       error_report_callback(buffer_copy.data());
     }
 
+    if (halt_on_error_ && common_flags()->abort_on_error) {
+      // On Android the message is truncated to 512 characters.
+      // FIXME: implement "compact" error format, possibly without, or with
+      // highly compressed stack traces?
+      // FIXME: or just use the summary line as abort message?
+      SetAbortMessage(buffer_copy.data());
+    }
+
     // In halt_on_error = false mode, reset the current error object (before
     // unlocking).
     if (!halt_on_error_)
@@ -496,9 +504,6 @@ void __sanitizer_ptr_cmp(void *a, void *b) {
 }
 } // extern "C"
 
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
 // Provide default implementation of __asan_on_error that does nothing
 // and may be overriden by user.
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE NOINLINE
-void __asan_on_error() {}
-#endif
+SANITIZER_INTERFACE_WEAK_DEF(void, __asan_on_error, void) {}

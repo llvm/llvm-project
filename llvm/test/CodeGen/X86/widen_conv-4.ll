@@ -91,7 +91,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2-NEXT:    shll $8, %edx
 ; X86-SSE2-NEXT:    movzbl (%esp), %esi
 ; X86-SSE2-NEXT:    orl %edx, %esi
-; X86-SSE2-NEXT:    pinsrw $0, %esi, %xmm0
+; X86-SSE2-NEXT:    movd %esi, %xmm0
 ; X86-SSE2-NEXT:    movzbl 2(%ecx), %ecx
 ; X86-SSE2-NEXT:    pinsrw $1, %ecx, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -130,9 +130,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE2-LABEL: convert_v3i8_to_v3f32:
 ; X64-SSE2:       # BB#0: # %entry
 ; X64-SSE2-NEXT:    movzwl (%rsi), %eax
-; X64-SSE2-NEXT:    movd %rax, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; X64-SSE2-NEXT:    movq %rax, %xmm0
 ; X64-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X64-SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
@@ -140,7 +138,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE2-NEXT:    shll $8, %eax
 ; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
 ; X64-SSE2-NEXT:    orl %eax, %ecx
-; X64-SSE2-NEXT:    pinsrw $0, %ecx, %xmm0
+; X64-SSE2-NEXT:    movd %ecx, %xmm0
 ; X64-SSE2-NEXT:    movzbl 2(%rsi), %eax
 ; X64-SSE2-NEXT:    pinsrw $1, %eax, %xmm0
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -156,9 +154,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE42:       # BB#0: # %entry
 ; X64-SSE42-NEXT:    movzbl 2(%rsi), %eax
 ; X64-SSE42-NEXT:    movzwl (%rsi), %ecx
-; X64-SSE42-NEXT:    movd %rcx, %xmm0
-; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; X64-SSE42-NEXT:    movq %rcx, %xmm0
 ; X64-SSE42-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-SSE42-NEXT:    pinsrd $2, %eax, %xmm0
 ; X64-SSE42-NEXT:    pand {{.*}}(%rip), %xmm0

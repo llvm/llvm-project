@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc  < %s | FileCheck %s
+; RUN: llc -march=sparc -verify-machineinstrs < %s | FileCheck %s
 
 @g = common global [32 x i32] zeroinitializer, align 16
 @h = common global [16 x i64] zeroinitializer, align 16
@@ -6,6 +6,7 @@
 ;; Ensures that we don't use registers which are supposed to be reserved.
 
 ; CHECK-LABEL: use_all_i32_regs:
+; CHECK: save %sp
 ; CHECK-NOT: %g0
 ; CHECK-NOT: %g1
 ; CHECK-NOT: %g5
@@ -86,6 +87,7 @@ entry:
 
 
 ; CHECK-LABEL: use_all_i64_regs:
+; CHECK: save %sp
 ; CHECK-NOT: %g0
 ; CHECK-NOT: %g1
 ; CHECK-NOT: %g4

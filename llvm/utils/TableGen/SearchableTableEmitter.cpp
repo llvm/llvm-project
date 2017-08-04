@@ -112,8 +112,8 @@ private:
 void SearchableTableEmitter::emitMappingEnum(std::vector<Record *> &Items,
                                              Record *InstanceClass,
                                              raw_ostream &OS) {
-  std::string EnumNameField = InstanceClass->getValueAsString("EnumNameField");
-  std::string EnumValueField;
+  StringRef EnumNameField = InstanceClass->getValueAsString("EnumNameField");
+  StringRef EnumValueField;
   if (!InstanceClass->isValueUnset("EnumValueField"))
     EnumValueField = InstanceClass->getValueAsString("EnumValueField");
 
@@ -230,7 +230,7 @@ void SearchableTableEmitter::emitLookupDeclaration(StringRef Name,
 
 void SearchableTableEmitter::emitMapping(Record *InstanceClass,
                                          raw_ostream &OS) {
-  const std::string &TableName = InstanceClass->getName();
+  StringRef TableName = InstanceClass->getName();
   std::vector<Record *> Items = Records.getAllDerivedDefinitions(TableName);
 
   // Gather all the records we're going to need for this particular mapping.
@@ -265,8 +265,8 @@ void SearchableTableEmitter::emitMapping(Record *InstanceClass,
     ++Idx;
   }
 
-  OS << "#ifdef GET_" << StringRef(TableName).upper() << "_DECL\n";
-  OS << "#undef GET_" << StringRef(TableName).upper() << "_DECL\n";
+  OS << "#ifdef GET_" << TableName.upper() << "_DECL\n";
+  OS << "#undef GET_" << TableName.upper() << "_DECL\n";
 
   // Next emit the enum containing the top-level names for use in C++ code if
   // requested
@@ -281,8 +281,8 @@ void SearchableTableEmitter::emitMapping(Record *InstanceClass,
 
   OS << "#endif\n\n";
 
-  OS << "#ifdef GET_" << StringRef(TableName).upper() << "_IMPL\n";
-  OS << "#undef GET_" << StringRef(TableName).upper() << "_IMPL\n";
+  OS << "#ifdef GET_" << TableName.upper() << "_IMPL\n";
+  OS << "#undef GET_" << TableName.upper() << "_IMPL\n";
 
   // The primary data table contains all the fields defined for this map.
   emitPrimaryTable(TableName, FieldNames, SearchFieldNames, SearchTables, Items,

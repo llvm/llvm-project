@@ -10,7 +10,7 @@
 // This file is part of the X86 Disassembler Emitter.
 // It contains the implementation of a single recognizable instruction.
 // Documentation for the disassembler emitter in general can be found in
-//  X86DisasemblerEmitter.h.
+//  X86DisassemblerEmitter.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,125 +21,6 @@
 #include <string>
 
 using namespace llvm;
-
-#define MRM_MAPPING     \
-  MAP(C0, 64)           \
-  MAP(C1, 65)           \
-  MAP(C2, 66)           \
-  MAP(C3, 67)           \
-  MAP(C4, 68)           \
-  MAP(C5, 69)           \
-  MAP(C6, 70)           \
-  MAP(C7, 71)           \
-  MAP(C8, 72)           \
-  MAP(C9, 73)           \
-  MAP(CA, 74)           \
-  MAP(CB, 75)           \
-  MAP(CC, 76)           \
-  MAP(CD, 77)           \
-  MAP(CE, 78)           \
-  MAP(CF, 79)           \
-  MAP(D0, 80)           \
-  MAP(D1, 81)           \
-  MAP(D2, 82)           \
-  MAP(D3, 83)           \
-  MAP(D4, 84)           \
-  MAP(D5, 85)           \
-  MAP(D6, 86)           \
-  MAP(D7, 87)           \
-  MAP(D8, 88)           \
-  MAP(D9, 89)           \
-  MAP(DA, 90)           \
-  MAP(DB, 91)           \
-  MAP(DC, 92)           \
-  MAP(DD, 93)           \
-  MAP(DE, 94)           \
-  MAP(DF, 95)           \
-  MAP(E0, 96)           \
-  MAP(E1, 97)           \
-  MAP(E2, 98)           \
-  MAP(E3, 99)           \
-  MAP(E4, 100)          \
-  MAP(E5, 101)          \
-  MAP(E6, 102)          \
-  MAP(E7, 103)          \
-  MAP(E8, 104)          \
-  MAP(E9, 105)          \
-  MAP(EA, 106)          \
-  MAP(EB, 107)          \
-  MAP(EC, 108)          \
-  MAP(ED, 109)          \
-  MAP(EE, 110)          \
-  MAP(EF, 111)          \
-  MAP(F0, 112)          \
-  MAP(F1, 113)          \
-  MAP(F2, 114)          \
-  MAP(F3, 115)          \
-  MAP(F4, 116)          \
-  MAP(F5, 117)          \
-  MAP(F6, 118)          \
-  MAP(F7, 119)          \
-  MAP(F8, 120)          \
-  MAP(F9, 121)          \
-  MAP(FA, 122)          \
-  MAP(FB, 123)          \
-  MAP(FC, 124)          \
-  MAP(FD, 125)          \
-  MAP(FE, 126)          \
-  MAP(FF, 127)
-
-// A clone of X86 since we can't depend on something that is generated.
-namespace X86Local {
-  enum {
-    Pseudo        = 0,
-    RawFrm        = 1,
-    AddRegFrm     = 2,
-    RawFrmMemOffs = 3,
-    RawFrmSrc     = 4,
-    RawFrmDst     = 5,
-    RawFrmDstSrc  = 6,
-    RawFrmImm8    = 7,
-    RawFrmImm16   = 8,
-    MRMDestMem     = 32,
-    MRMSrcMem      = 33,
-    MRMSrcMem4VOp3 = 34,
-    MRMSrcMemOp4   = 35,
-    MRMXm = 39,
-    MRM0m = 40, MRM1m = 41, MRM2m = 42, MRM3m = 43,
-    MRM4m = 44, MRM5m = 45, MRM6m = 46, MRM7m = 47,
-    MRMDestReg     = 48,
-    MRMSrcReg      = 49,
-    MRMSrcReg4VOp3 = 50,
-    MRMSrcRegOp4   = 51,
-    MRMXr = 55,
-    MRM0r = 56, MRM1r = 57, MRM2r = 58, MRM3r = 59,
-    MRM4r = 60, MRM5r = 61, MRM6r = 62, MRM7r = 63,
-#define MAP(from, to) MRM_##from = to,
-    MRM_MAPPING
-#undef MAP
-  };
-
-  enum {
-    OB = 0, TB = 1, T8 = 2, TA = 3, XOP8 = 4, XOP9 = 5, XOPA = 6
-  };
-
-  enum {
-    PS = 1, PD = 2, XS = 3, XD = 4
-  };
-
-  enum {
-    VEX = 1, XOP = 2, EVEX = 3
-  };
-
-  enum {
-    OpSize16 = 1, OpSize32 = 2
-  };
-
-  enum {
-    AdSize16 = 1, AdSize32 = 2, AdSize64 = 3
-  };
-}
-
 using namespace X86Disassembler;
 
 /// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
@@ -203,7 +84,7 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   AdSize           = byteFromRec(Rec, "AdSizeBits");
   HasREX_WPrefix   = Rec->getValueAsBit("hasREX_WPrefix");
   HasVEX_4V        = Rec->getValueAsBit("hasVEX_4V");
-  HasVEX_WPrefix   = Rec->getValueAsBit("hasVEX_WPrefix");
+  VEX_WPrefix      = byteFromRec(Rec,"VEX_WPrefix");
   IgnoresVEX_L     = Rec->getValueAsBit("ignoresVEX_L");
   HasEVEX_L2Prefix = Rec->getValueAsBit("hasEVEX_L2");
   HasEVEX_K        = Rec->getValueAsBit("hasEVEX_K");
@@ -280,7 +161,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       llvm_unreachable("Don't support VEX.L if EVEX_L2 is enabled");
     }
     // VEX_L & VEX_W
-    if (HasVEX_LPrefix && HasVEX_WPrefix) {
+    if (HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_W_OPSIZE);
       else if (OpPrefix == X86Local::XS)
@@ -308,7 +189,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         llvm_unreachable("Invalid prefix");
       }
     }
-    else if (HasEVEX_L2Prefix && HasVEX_WPrefix) {
+    else if (HasEVEX_L2Prefix && VEX_WPrefix == X86Local::VEX_W1) {
       // EVEX_L2 & VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L2_W_OPSIZE);
@@ -337,7 +218,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         llvm_unreachable("Invalid prefix");
       }
     }
-    else if (HasVEX_WPrefix) {
+    else if (VEX_WPrefix == X86Local::VEX_W1) {
       // VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_W_OPSIZE);
@@ -363,7 +244,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = EVEX_KB(IC_EVEX);
     /// eof EVEX
   } else if (Encoding == X86Local::VEX || Encoding == X86Local::XOP) {
-    if (HasVEX_LPrefix && HasVEX_WPrefix) {
+    if (HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {
       if (OpPrefix == X86Local::PD)
         insnContext = IC_VEX_L_W_OPSIZE;
       else if (OpPrefix == X86Local::XS)
@@ -378,7 +259,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       }
     } else if (OpPrefix == X86Local::PD && HasVEX_LPrefix)
       insnContext = IC_VEX_L_OPSIZE;
-    else if (OpPrefix == X86Local::PD && HasVEX_WPrefix)
+    else if (OpPrefix == X86Local::PD && VEX_WPrefix == X86Local::VEX_W1)
       insnContext = IC_VEX_W_OPSIZE;
     else if (OpPrefix == X86Local::PD)
       insnContext = IC_VEX_OPSIZE;
@@ -386,11 +267,11 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_VEX_L_XS;
     else if (HasVEX_LPrefix && OpPrefix == X86Local::XD)
       insnContext = IC_VEX_L_XD;
-    else if (HasVEX_WPrefix && OpPrefix == X86Local::XS)
+    else if (VEX_WPrefix == X86Local::VEX_W1 && OpPrefix == X86Local::XS)
       insnContext = IC_VEX_W_XS;
-    else if (HasVEX_WPrefix && OpPrefix == X86Local::XD)
+    else if (VEX_WPrefix == X86Local::VEX_W1 && OpPrefix == X86Local::XD)
       insnContext = IC_VEX_W_XD;
-    else if (HasVEX_WPrefix && OpPrefix == X86Local::PS)
+    else if (VEX_WPrefix == X86Local::VEX_W1 && OpPrefix == X86Local::PS)
       insnContext = IC_VEX_W;
     else if (HasVEX_LPrefix && OpPrefix == X86Local::PS)
       insnContext = IC_VEX_L;
@@ -457,10 +338,12 @@ void RecognizableInstr::adjustOperandEncoding(OperandEncoding &encoding) {
   // The scaling factor for AVX512 compressed displacement encoding is an
   // instruction attribute.  Adjust the ModRM encoding type to include the
   // scale for compressed displacement.
-  if (encoding != ENCODING_RM || CD8_Scale == 0)
+  if ((encoding != ENCODING_RM && encoding != ENCODING_VSIB) ||CD8_Scale == 0)
     return;
   encoding = (OperandEncoding)(encoding + Log2_32(CD8_Scale));
-  assert(encoding <= ENCODING_RM_CD64 && "Invalid CDisp scaling");
+  assert(((encoding >= ENCODING_RM && encoding <= ENCODING_RM_CD64) ||
+          (encoding >= ENCODING_VSIB && encoding <= ENCODING_VSIB_CD64)) &&
+         "Invalid CDisp scaling");
 }
 
 void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
@@ -484,7 +367,7 @@ void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
     ++operandIndex;
   }
 
-  const std::string &typeName = (*Operands)[operandIndex].Rec->getName();
+  StringRef typeName = (*Operands)[operandIndex].Rec->getName();
 
   OperandEncoding encoding = encodingFromString(typeName, OpSize);
   // Adjust the encoding type for an operand based on the instruction.
@@ -662,7 +545,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     break;
   case X86Local::MRMSrcReg4VOp3:
     assert(numPhysicalOperands == 3 &&
-           "Unexpected number of operands for MRMSrcRegFrm");
+           "Unexpected number of operands for MRMSrcReg4VOp3Frm");
     HANDLE_OPERAND(roRegister)
     HANDLE_OPERAND(rmRegister)
     HANDLE_OPERAND(vvvvRegister)
@@ -702,7 +585,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     break;
   case X86Local::MRMSrcMem4VOp3:
     assert(numPhysicalOperands == 3 &&
-           "Unexpected number of operands for MRMSrcMemFrm");
+           "Unexpected number of operands for MRMSrcMem4VOp3Frm");
     HANDLE_OPERAND(roRegister)
     HANDLE_OPERAND(memory)
     HANDLE_OPERAND(vvvvRegister)
@@ -884,7 +767,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     case X86Local::MRM6m:      case X86Local::MRM7m:
       filter = new ExtendedFilter(false, Form - X86Local::MRM0m);
       break;
-    MRM_MAPPING
+    X86_INSTR_MRM_MAPPING
       filter = new ExactFilter(0xC0 + Form - X86Local::MRM_C0);   \
       break;
     } // switch (Form)
@@ -944,121 +827,121 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
     // For OpSize16 instructions, a declared 16-bit register or
     // immediate encoding is special.
     TYPE("GR16",              TYPE_Rv)
-    TYPE("i16imm",            TYPE_IMMv)
   } else if(OpSize == X86Local::OpSize32) {
     // For OpSize32 instructions, a declared 32-bit register or
     // immediate encoding is special.
     TYPE("GR32",              TYPE_Rv)
   }
-  TYPE("i16mem",              TYPE_Mv)
-  TYPE("i16imm",              TYPE_IMM16)
-  TYPE("i16i8imm",            TYPE_IMMv)
+  TYPE("i16mem",              TYPE_M)
+  TYPE("i16imm",              TYPE_IMM)
+  TYPE("i16i8imm",            TYPE_IMM)
   TYPE("GR16",                TYPE_R16)
-  TYPE("i32mem",              TYPE_Mv)
-  TYPE("i32imm",              TYPE_IMMv)
-  TYPE("i32i8imm",            TYPE_IMM32)
+  TYPE("i32mem",              TYPE_M)
+  TYPE("i32imm",              TYPE_IMM)
+  TYPE("i32i8imm",            TYPE_IMM)
   TYPE("GR32",                TYPE_R32)
   TYPE("GR32orGR64",          TYPE_R32)
-  TYPE("i64mem",              TYPE_Mv)
-  TYPE("i64i32imm",           TYPE_IMM64)
-  TYPE("i64i8imm",            TYPE_IMM64)
+  TYPE("i64mem",              TYPE_M)
+  TYPE("i64i32imm",           TYPE_IMM)
+  TYPE("i64i8imm",            TYPE_IMM)
   TYPE("GR64",                TYPE_R64)
-  TYPE("i8mem",               TYPE_M8)
-  TYPE("i8imm",               TYPE_IMM8)
+  TYPE("i8mem",               TYPE_M)
+  TYPE("i8imm",               TYPE_IMM)
   TYPE("u8imm",               TYPE_UIMM8)
   TYPE("i32u8imm",            TYPE_UIMM8)
   TYPE("GR8",                 TYPE_R8)
-  TYPE("VR128",               TYPE_XMM128)
-  TYPE("VR128X",              TYPE_XMM128)
-  TYPE("f128mem",             TYPE_M128)
-  TYPE("f256mem",             TYPE_M256)
-  TYPE("f512mem",             TYPE_M512)
-  TYPE("FR128",               TYPE_XMM128)
-  TYPE("FR64",                TYPE_XMM64)
-  TYPE("FR64X",               TYPE_XMM64)
-  TYPE("f64mem",              TYPE_M64FP)
-  TYPE("sdmem",               TYPE_M64FP)
-  TYPE("FR32",                TYPE_XMM32)
-  TYPE("FR32X",               TYPE_XMM32)
-  TYPE("f32mem",              TYPE_M32FP)
-  TYPE("ssmem",               TYPE_M32FP)
+  TYPE("VR128",               TYPE_XMM)
+  TYPE("VR128X",              TYPE_XMM)
+  TYPE("f128mem",             TYPE_M)
+  TYPE("f256mem",             TYPE_M)
+  TYPE("f512mem",             TYPE_M)
+  TYPE("FR128",               TYPE_XMM)
+  TYPE("FR64",                TYPE_XMM)
+  TYPE("FR64X",               TYPE_XMM)
+  TYPE("f64mem",              TYPE_M)
+  TYPE("sdmem",               TYPE_M)
+  TYPE("FR32",                TYPE_XMM)
+  TYPE("FR32X",               TYPE_XMM)
+  TYPE("f32mem",              TYPE_M)
+  TYPE("ssmem",               TYPE_M)
   TYPE("RST",                 TYPE_ST)
-  TYPE("i128mem",             TYPE_M128)
-  TYPE("i256mem",             TYPE_M256)
-  TYPE("i512mem",             TYPE_M512)
-  TYPE("i64i32imm_pcrel",     TYPE_REL64)
-  TYPE("i16imm_pcrel",        TYPE_REL16)
-  TYPE("i32imm_pcrel",        TYPE_REL32)
+  TYPE("i128mem",             TYPE_M)
+  TYPE("i256mem",             TYPE_M)
+  TYPE("i512mem",             TYPE_M)
+  TYPE("i64i32imm_pcrel",     TYPE_REL)
+  TYPE("i16imm_pcrel",        TYPE_REL)
+  TYPE("i32imm_pcrel",        TYPE_REL)
   TYPE("SSECC",               TYPE_IMM3)
   TYPE("XOPCC",               TYPE_IMM3)
   TYPE("AVXCC",               TYPE_IMM5)
   TYPE("AVX512ICC",           TYPE_AVX512ICC)
-  TYPE("AVX512RC",            TYPE_IMM32)
-  TYPE("brtarget32",          TYPE_RELv)
-  TYPE("brtarget16",          TYPE_RELv)
-  TYPE("brtarget8",           TYPE_REL8)
-  TYPE("f80mem",              TYPE_M80FP)
-  TYPE("lea64_32mem",         TYPE_LEA)
-  TYPE("lea64mem",            TYPE_LEA)
+  TYPE("AVX512RC",            TYPE_IMM)
+  TYPE("brtarget32",          TYPE_REL)
+  TYPE("brtarget16",          TYPE_REL)
+  TYPE("brtarget8",           TYPE_REL)
+  TYPE("f80mem",              TYPE_M)
+  TYPE("lea64_32mem",         TYPE_M)
+  TYPE("lea64mem",            TYPE_M)
   TYPE("VR64",                TYPE_MM64)
-  TYPE("i64imm",              TYPE_IMMv)
+  TYPE("i64imm",              TYPE_IMM)
   TYPE("anymem",              TYPE_M)
-  TYPE("opaque32mem",         TYPE_M1616)
-  TYPE("opaque48mem",         TYPE_M1632)
-  TYPE("opaque80mem",         TYPE_M1664)
-  TYPE("opaque512mem",        TYPE_M512)
+  TYPE("opaque32mem",         TYPE_M)
+  TYPE("opaque48mem",         TYPE_M)
+  TYPE("opaque80mem",         TYPE_M)
+  TYPE("opaque512mem",        TYPE_M)
   TYPE("SEGMENT_REG",         TYPE_SEGMENTREG)
   TYPE("DEBUG_REG",           TYPE_DEBUGREG)
   TYPE("CONTROL_REG",         TYPE_CONTROLREG)
-  TYPE("srcidx8",             TYPE_SRCIDX8)
-  TYPE("srcidx16",            TYPE_SRCIDX16)
-  TYPE("srcidx32",            TYPE_SRCIDX32)
-  TYPE("srcidx64",            TYPE_SRCIDX64)
-  TYPE("dstidx8",             TYPE_DSTIDX8)
-  TYPE("dstidx16",            TYPE_DSTIDX16)
-  TYPE("dstidx32",            TYPE_DSTIDX32)
-  TYPE("dstidx64",            TYPE_DSTIDX64)
-  TYPE("offset16_8",          TYPE_MOFFS8)
-  TYPE("offset16_16",         TYPE_MOFFS16)
-  TYPE("offset16_32",         TYPE_MOFFS32)
-  TYPE("offset32_8",          TYPE_MOFFS8)
-  TYPE("offset32_16",         TYPE_MOFFS16)
-  TYPE("offset32_32",         TYPE_MOFFS32)
-  TYPE("offset32_64",         TYPE_MOFFS64)
-  TYPE("offset64_8",          TYPE_MOFFS8)
-  TYPE("offset64_16",         TYPE_MOFFS16)
-  TYPE("offset64_32",         TYPE_MOFFS32)
-  TYPE("offset64_64",         TYPE_MOFFS64)
-  TYPE("VR256",               TYPE_XMM256)
-  TYPE("VR256X",              TYPE_XMM256)
-  TYPE("VR512",               TYPE_XMM512)
-  TYPE("VK1",                 TYPE_VK1)
-  TYPE("VK1WM",               TYPE_VK1)
-  TYPE("VK2",                 TYPE_VK2)
-  TYPE("VK2WM",               TYPE_VK2)
-  TYPE("VK4",                 TYPE_VK4)
-  TYPE("VK4WM",               TYPE_VK4)
-  TYPE("VK8",                 TYPE_VK8)
-  TYPE("VK8WM",               TYPE_VK8)
-  TYPE("VK16",                TYPE_VK16)
-  TYPE("VK16WM",              TYPE_VK16)
-  TYPE("VK32",                TYPE_VK32)
-  TYPE("VK32WM",              TYPE_VK32)
-  TYPE("VK64",                TYPE_VK64)
-  TYPE("VK64WM",              TYPE_VK64)
+  TYPE("srcidx8",             TYPE_SRCIDX)
+  TYPE("srcidx16",            TYPE_SRCIDX)
+  TYPE("srcidx32",            TYPE_SRCIDX)
+  TYPE("srcidx64",            TYPE_SRCIDX)
+  TYPE("dstidx8",             TYPE_DSTIDX)
+  TYPE("dstidx16",            TYPE_DSTIDX)
+  TYPE("dstidx32",            TYPE_DSTIDX)
+  TYPE("dstidx64",            TYPE_DSTIDX)
+  TYPE("offset16_8",          TYPE_MOFFS)
+  TYPE("offset16_16",         TYPE_MOFFS)
+  TYPE("offset16_32",         TYPE_MOFFS)
+  TYPE("offset32_8",          TYPE_MOFFS)
+  TYPE("offset32_16",         TYPE_MOFFS)
+  TYPE("offset32_32",         TYPE_MOFFS)
+  TYPE("offset32_64",         TYPE_MOFFS)
+  TYPE("offset64_8",          TYPE_MOFFS)
+  TYPE("offset64_16",         TYPE_MOFFS)
+  TYPE("offset64_32",         TYPE_MOFFS)
+  TYPE("offset64_64",         TYPE_MOFFS)
+  TYPE("VR256",               TYPE_YMM)
+  TYPE("VR256X",              TYPE_YMM)
+  TYPE("VR512",               TYPE_ZMM)
+  TYPE("VK1",                 TYPE_VK)
+  TYPE("VK1WM",               TYPE_VK)
+  TYPE("VK2",                 TYPE_VK)
+  TYPE("VK2WM",               TYPE_VK)
+  TYPE("VK4",                 TYPE_VK)
+  TYPE("VK4WM",               TYPE_VK)
+  TYPE("VK8",                 TYPE_VK)
+  TYPE("VK8WM",               TYPE_VK)
+  TYPE("VK16",                TYPE_VK)
+  TYPE("VK16WM",              TYPE_VK)
+  TYPE("VK32",                TYPE_VK)
+  TYPE("VK32WM",              TYPE_VK)
+  TYPE("VK64",                TYPE_VK)
+  TYPE("VK64WM",              TYPE_VK)
   TYPE("GR32_NOAX",           TYPE_Rv)
-  TYPE("vx64mem",             TYPE_M64)
-  TYPE("vx128mem",            TYPE_M128)
-  TYPE("vx256mem",            TYPE_M256)
-  TYPE("vy128mem",            TYPE_M128)
-  TYPE("vy256mem",            TYPE_M256)
-  TYPE("vx64xmem",            TYPE_M64)
-  TYPE("vx128xmem",           TYPE_M128)
-  TYPE("vx256xmem",           TYPE_M256)
-  TYPE("vy128xmem",           TYPE_M128)
-  TYPE("vy256xmem",           TYPE_M256)
-  TYPE("vy512mem",            TYPE_M512)
-  TYPE("vz512mem",            TYPE_M512)
+  TYPE("vx64mem",             TYPE_M)
+  TYPE("vx128mem",            TYPE_M)
+  TYPE("vx256mem",            TYPE_M)
+  TYPE("vy128mem",            TYPE_M)
+  TYPE("vy256mem",            TYPE_M)
+  TYPE("vx64xmem",            TYPE_M)
+  TYPE("vx128xmem",           TYPE_M)
+  TYPE("vx256xmem",           TYPE_M)
+  TYPE("vy128xmem",           TYPE_M)
+  TYPE("vy256xmem",           TYPE_M)
+  TYPE("vy512mem",            TYPE_M)
+  TYPE("vz256xmem",           TYPE_M)
+  TYPE("vz512mem",            TYPE_M)
   TYPE("BNDR",                TYPE_BNDR)
   errs() << "Unhandled type string " << s << "\n";
   llvm_unreachable("Unhandled type string");
@@ -1242,18 +1125,19 @@ RecognizableInstr::memoryEncodingFromString(const std::string &s,
   ENCODING("opaque48mem",     ENCODING_RM)
   ENCODING("opaque80mem",     ENCODING_RM)
   ENCODING("opaque512mem",    ENCODING_RM)
-  ENCODING("vx64mem",         ENCODING_RM)
-  ENCODING("vx128mem",        ENCODING_RM)
-  ENCODING("vx256mem",        ENCODING_RM)
-  ENCODING("vy128mem",        ENCODING_RM)
-  ENCODING("vy256mem",        ENCODING_RM)
-  ENCODING("vx64xmem",        ENCODING_RM)
-  ENCODING("vx128xmem",       ENCODING_RM)
-  ENCODING("vx256xmem",       ENCODING_RM)
-  ENCODING("vy128xmem",       ENCODING_RM)
-  ENCODING("vy256xmem",       ENCODING_RM)
-  ENCODING("vy512mem",        ENCODING_RM)
-  ENCODING("vz512mem",        ENCODING_RM)
+  ENCODING("vx64mem",         ENCODING_VSIB)
+  ENCODING("vx128mem",        ENCODING_VSIB)
+  ENCODING("vx256mem",        ENCODING_VSIB)
+  ENCODING("vy128mem",        ENCODING_VSIB)
+  ENCODING("vy256mem",        ENCODING_VSIB)
+  ENCODING("vx64xmem",        ENCODING_VSIB)
+  ENCODING("vx128xmem",       ENCODING_VSIB)
+  ENCODING("vx256xmem",       ENCODING_VSIB)
+  ENCODING("vy128xmem",       ENCODING_VSIB)
+  ENCODING("vy256xmem",       ENCODING_VSIB)
+  ENCODING("vy512mem",        ENCODING_VSIB)
+  ENCODING("vz256xmem",       ENCODING_VSIB)
+  ENCODING("vz512mem",        ENCODING_VSIB)
   errs() << "Unhandled memory encoding " << s << "\n";
   llvm_unreachable("Unhandled memory encoding");
 }

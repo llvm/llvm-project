@@ -73,6 +73,18 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
       Arg->getType().isTriviallyCopyableType(*Result.Context);
 
   if (IsConstArg || IsTriviallyCopyable) {
+    if (const CXXRecordDecl *R = Arg->getType()->getAsCXXRecordDecl()) {
+      // According to [expr.prim.lambda]p3, "whether the closure type is
+      // trivially copyable" property can be changed by the implementation of
+      // the language, so we shouldn't rely on it when issuing diagnostics.
+      if (R->isLambda())
+        return;
+      // Don't warn when the type is not copyable.
+      for (const auto *Ctor : R->ctors()) {
+        if (Ctor->isCopyConstructor() && Ctor->isDeleted())
+          return;
+      }
+    }
     bool IsVariable = isa<DeclRefExpr>(Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;

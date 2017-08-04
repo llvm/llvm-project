@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=exynos-m1 -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck --check-prefix=EXYNOS %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=exynos-m1 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck --check-prefix=EXYNOS %s
 
 ; Test ldr clustering.
 ; CHECK: ********** MI Scheduling **********

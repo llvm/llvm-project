@@ -46,6 +46,9 @@ void InitializeShadowMemory() {
 #elif defined(__mips64)
   const uptr kMadviseRangeBeg  = 0xff00000000ull;
   const uptr kMadviseRangeSize = 0x0100000000ull;
+#elif defined(__aarch64__) && defined(__APPLE__)
+  uptr kMadviseRangeBeg = LoAppMemBeg();
+  uptr kMadviseRangeSize = LoAppMemEnd() - LoAppMemBeg();
 #elif defined(__aarch64__)
   uptr kMadviseRangeBeg = 0;
   uptr kMadviseRangeSize = 0;
@@ -115,21 +118,24 @@ static void ProtectRange(uptr beg, uptr end) {
 void CheckAndProtect() {
   // Ensure that the binary is indeed compiled with -pie.
   MemoryMappingLayout proc_maps(true);
-  uptr p, end, prot;
-  while (proc_maps.Next(&p, &end, 0, 0, 0, &prot)) {
-    if (IsAppMem(p))
+  MemoryMappedSegment segment;
+  while (proc_maps.Next(&segment)) {
+    if (IsAppMem(segment.start)) continue;
+    if (segment.start >= HeapMemEnd() && segment.start < HeapEnd()) continue;
+    if (segment.protection == 0)  // Zero page or mprotected.
       continue;
-    if (p >= HeapMemEnd() &&
-        p < HeapEnd())
-      continue;
-    if (prot == 0)  // Zero page or mprotected.
-      continue;
-    if (p >= VdsoBeg())  // vdso
+    if (segment.start >= VdsoBeg())  // vdso
       break;
-    Printf("FATAL: ThreadSanitizer: unexpected memory mapping %p-%p\n", p, end);
+    Printf("FATAL: ThreadSanitizer: unexpected memory mapping %p-%p\n",
+           segment.start, segment.end);
     Die();
   }
 
+#if defined(__aarch64__) && defined(__APPLE__)
+  ProtectRange(HeapMemEnd(), ShadowBeg());
+  ProtectRange(ShadowEnd(), MetaShadowBeg());
+  ProtectRange(MetaShadowEnd(), TraceMemBeg());
+#else
   ProtectRange(LoAppMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
 #ifdef TSAN_MID_APP_RANGE
@@ -143,6 +149,7 @@ void CheckAndProtect() {
   ProtectRange(TraceMemBeg(), TraceMemEnd());
   ProtectRange(TraceMemEnd(), HeapMemBeg());
   ProtectRange(HeapEnd(), HiAppMemBeg());
+#endif
 }
 #endif
 

@@ -11,35 +11,43 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mccodeemitter"
 
 namespace {
+
 class X86MCCodeEmitter : public MCCodeEmitter {
-  X86MCCodeEmitter(const X86MCCodeEmitter &) = delete;
-  void operator=(const X86MCCodeEmitter &) = delete;
   const MCInstrInfo &MCII;
   MCContext &Ctx;
+
 public:
   X86MCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
     : MCII(mcii), Ctx(ctx) {
   }
-
-  ~X86MCCodeEmitter() override {}
+  X86MCCodeEmitter(const X86MCCodeEmitter &) = delete;
+  X86MCCodeEmitter &operator=(const X86MCCodeEmitter &) = delete;
+  ~X86MCCodeEmitter() override = default;
 
   bool is64BitMode(const MCSubtargetInfo &STI) const {
     return STI.getFeatureBits()[X86::Mode64Bit];
@@ -106,8 +114,7 @@ public:
                      SmallVectorImpl<MCFixup> &Fixups,
                      int ImmOffset = 0) const;
 
-  inline static uint8_t ModRMByte(unsigned Mod, unsigned RegOpcode,
-                                  unsigned RM) {
+  static uint8_t ModRMByte(unsigned Mod, unsigned RegOpcode, unsigned RM) {
     assert(Mod < 4 && RegOpcode < 8 && RM < 8 && "ModRM Fields out of range!");
     return RM | (RegOpcode << 3) | (Mod << 6);
   }
@@ -148,12 +155,6 @@ public:
 };
 
 } // end anonymous namespace
-
-MCCodeEmitter *llvm::createX86MCCodeEmitter(const MCInstrInfo &MCII,
-                                            const MCRegisterInfo &MRI,
-                                            MCContext &Ctx) {
-  return new X86MCCodeEmitter(MCII, Ctx);
-}
 
 /// isDisp8 - Return true if this signed displacement fits in a 8-bit
 /// sign-extended field.
@@ -1436,7 +1437,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case X86II::MRM0r: case X86II::MRM1r:
   case X86II::MRM2r: case X86II::MRM3r:
   case X86II::MRM4r: case X86II::MRM5r:
-  case X86II::MRM6r: case X86II::MRM7r: {
+  case X86II::MRM6r: case X86II::MRM7r:
     if (HasVEX_4V) // Skip the register dst (which is encoded in VEX_VVVV).
       ++CurOp;
     if (HasEVEX_K) // Skip writemask
@@ -1446,13 +1447,12 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
                      (Form == X86II::MRMXr) ? 0 : Form-X86II::MRM0r,
                      CurByte, OS);
     break;
-  }
 
   case X86II::MRMXm:
   case X86II::MRM0m: case X86II::MRM1m:
   case X86II::MRM2m: case X86II::MRM3m:
   case X86II::MRM4m: case X86II::MRM5m:
-  case X86II::MRM6m: case X86II::MRM7m: {
+  case X86II::MRM6m: case X86II::MRM7m:
     if (HasVEX_4V) // Skip the register dst (which is encoded in VEX_VVVV).
       ++CurOp;
     if (HasEVEX_K) // Skip writemask
@@ -1463,7 +1463,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
                      Rex, CurByte, OS, Fixups, STI);
     CurOp += X86::AddrNumOperands;
     break;
-  }
+
   case X86II::MRM_C0: case X86II::MRM_C1: case X86II::MRM_C2:
   case X86II::MRM_C3: case X86II::MRM_C4: case X86II::MRM_C5:
   case X86II::MRM_C6: case X86II::MRM_C7: case X86II::MRM_C8:
@@ -1526,4 +1526,10 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
     abort();
   }
 #endif
+}
+
+MCCodeEmitter *llvm::createX86MCCodeEmitter(const MCInstrInfo &MCII,
+                                            const MCRegisterInfo &MRI,
+                                            MCContext &Ctx) {
+  return new X86MCCodeEmitter(MCII, Ctx);
 }

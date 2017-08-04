@@ -15,7 +15,7 @@ declare void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* nocapture, i8 addrspace
 
 ; HSA-LABEL: {{^}}test_no_round_size_1:
 ; HSA: workgroup_group_segment_byte_size = 38
-define void @test_no_round_size_1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_no_round_size_1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align16.0.bc, i8 addrspace(1)* %in, i32 38, i32 4, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align16.0.bc, i32 38, i32 4, i1 false)
@@ -34,7 +34,7 @@ define void @test_no_round_size_1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #
 ; HSA-LABEL: {{^}}test_round_size_2:
 ; HSA: workgroup_group_segment_byte_size = 86
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_2(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_2(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align16.0.bc, i8 addrspace(1)* %in, i32 38, i32 4, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align16.0.bc, i32 38, i32 4, i1 false)
@@ -50,7 +50,7 @@ define void @test_round_size_2(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
 ; HSA-LABEL: {{^}}test_round_size_2_align_8:
 ; HSA: workgroup_group_segment_byte_size = 86
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_2_align_8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_2_align_8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align16.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align16.0.bc, i32 38, i32 8, i1 false)
@@ -65,7 +65,7 @@ define void @test_round_size_2_align_8(i8 addrspace(1)* %out, i8 addrspace(1)* %
 ; HSA-LABEL: {{^}}test_round_local_lds_and_arg:
 ; HSA: workgroup_group_segment_byte_size = 38
 ; HSA: group_segment_alignment = 4
-define void @test_round_local_lds_and_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 addrspace(3)* %lds.arg) #1 {
+define amdgpu_kernel void @test_round_local_lds_and_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 addrspace(3)* %lds.arg) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align16.0.bc, i8 addrspace(1)* %in, i32 38, i32 4, i1 false)
 
@@ -78,7 +78,7 @@ define void @test_round_local_lds_and_arg(i8 addrspace(1)* %out, i8 addrspace(1)
 ; HSA-LABEL: {{^}}test_round_lds_arg:
 ; HSA: workgroup_group_segment_byte_size = 0
 ; HSA: group_segment_alignment = 4
-define void @test_round_lds_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 addrspace(3)* %lds.arg) #1 {
+define amdgpu_kernel void @test_round_lds_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 addrspace(3)* %lds.arg) #1 {
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.arg, i8 addrspace(1)* %in, i32 38, i32 4, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.arg, i32 38, i32 4, i1 false)
   ret void
@@ -88,7 +88,7 @@ define void @test_round_lds_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 
 ; HSA-LABEL: {{^}}test_high_align_lds_arg:
 ; HSA: workgroup_group_segment_byte_size = 0
 ; HSA: group_segment_alignment = 4
-define void @test_high_align_lds_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 addrspace(3)* align 64 %lds.arg) #1 {
+define amdgpu_kernel void @test_high_align_lds_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in, i8 addrspace(3)* align 64 %lds.arg) #1 {
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.arg, i8 addrspace(1)* %in, i32 38, i32 64, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.arg, i32 38, i32 64, i1 false)
   ret void
@@ -98,7 +98,7 @@ define void @test_high_align_lds_arg(i8 addrspace(1)* %out, i8 addrspace(1)* %in
 ; HSA-LABEL: {{^}}test_missing_alignment_size_2_order0:
 ; HSA: workgroup_group_segment_byte_size = 212
 ; HSA: group_segment_alignment = 4
-define void @test_missing_alignment_size_2_order0(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_missing_alignment_size_2_order0(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.missing.align.0.bc = bitcast [39 x i32] addrspace(3)* @lds.missing.align.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.missing.align.0.bc, i8 addrspace(1)* %in, i32 160, i32 4, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.missing.align.0.bc, i32 160, i32 4, i1 false)
@@ -114,7 +114,7 @@ define void @test_missing_alignment_size_2_order0(i8 addrspace(1)* %out, i8 addr
 ; HSA-LABEL: {{^}}test_missing_alignment_size_2_order1:
 ; HSA: workgroup_group_segment_byte_size = 216
 ; HSA: group_segment_alignment = 4
-define void @test_missing_alignment_size_2_order1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_missing_alignment_size_2_order1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.missing.align.1.bc = bitcast [7 x i64] addrspace(3)* @lds.missing.align.1 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.missing.align.1.bc, i8 addrspace(1)* %in, i32 56, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.missing.align.1.bc, i32 56, i32 8, i1 false)
@@ -142,7 +142,7 @@ define void @test_missing_alignment_size_2_order1(i8 addrspace(1)* %out, i8 addr
 ; HSA-LABEL: {{^}}test_round_size_3_order0:
 ; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_3_order0(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_3_order0(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align32.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align32.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align32.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align32.0.bc, i32 38, i32 8, i1 false)
@@ -163,7 +163,7 @@ define void @test_round_size_3_order0(i8 addrspace(1)* %out, i8 addrspace(1)* %i
 ; HSA-LABEL: {{^}}test_round_size_3_order1:
 ; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_3_order1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_3_order1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align32.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align32.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align32.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align32.0.bc, i32 38, i32 8, i1 false)
@@ -184,7 +184,7 @@ define void @test_round_size_3_order1(i8 addrspace(1)* %out, i8 addrspace(1)* %i
 ; HSA-LABEL: {{^}}test_round_size_3_order2:
 ; HSA: workgroup_group_segment_byte_size = 150
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_3_order2(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_3_order2(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align16.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align16.0.bc, i32 38, i32 8, i1 false)
@@ -205,7 +205,7 @@ define void @test_round_size_3_order2(i8 addrspace(1)* %out, i8 addrspace(1)* %i
 ; HSA-LABEL: {{^}}test_round_size_3_order3:
 ; HSA: workgroup_group_segment_byte_size = 118
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_3_order3(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_3_order3(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align16.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align16.0.bc, i32 38, i32 8, i1 false)
@@ -226,7 +226,7 @@ define void @test_round_size_3_order3(i8 addrspace(1)* %out, i8 addrspace(1)* %i
 ; HSA-LABEL: {{^}}test_round_size_3_order4:
 ; HSA: workgroup_group_segment_byte_size = 142
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_3_order4(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_3_order4(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align8.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align8.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align8.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align8.0.bc, i32 38, i32 8, i1 false)
@@ -247,7 +247,7 @@ define void @test_round_size_3_order4(i8 addrspace(1)* %out, i8 addrspace(1)* %i
 ; HSA-LABEL: {{^}}test_round_size_3_order5:
 ; HSA: workgroup_group_segment_byte_size = 126
 ; HSA: group_segment_alignment = 4
-define void @test_round_size_3_order5(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @test_round_size_3_order5(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align8.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align8.0 to i8 addrspace(3)*
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %lds.align8.0.bc, i8 addrspace(1)* %in, i32 38, i32 8, i1 false)
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out, i8 addrspace(3)* %lds.align8.0.bc, i32 38, i32 8, i1 false)

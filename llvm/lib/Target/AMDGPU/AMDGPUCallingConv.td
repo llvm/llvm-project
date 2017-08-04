@@ -13,11 +13,13 @@
 
 // Inversion of CCIfInReg
 class CCIfNotInReg<CCAction A> : CCIf<"!ArgFlags.isInReg()", A> {}
+class CCIfExtend<CCAction A>
+  : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
 
 // Calling convention for SI
 def CC_SI : CallingConv<[
 
-  CCIfInReg<CCIfType<[f32, i32] , CCAssignToReg<[
+  CCIfInReg<CCIfType<[f32, i32, f16] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
     SGPR16, SGPR17, SGPR18, SGPR19, SGPR20, SGPR21, SGPR22, SGPR23,
@@ -25,17 +27,13 @@ def CC_SI : CallingConv<[
     SGPR32, SGPR33, SGPR34, SGPR35, SGPR36, SGPR37, SGPR38, SGPR39
   ]>>>,
 
-  CCIfInReg<CCIfType<[i64] , CCAssignToRegWithShadow<
-    [ SGPR0, SGPR2, SGPR4, SGPR6, SGPR8, SGPR10, SGPR12, SGPR14,
-      SGPR16, SGPR18, SGPR20, SGPR22, SGPR24, SGPR26, SGPR28, SGPR30,
-      SGPR32, SGPR34, SGPR36, SGPR38 ],
-    [ SGPR1, SGPR3, SGPR5, SGPR7, SGPR9, SGPR11, SGPR13, SGPR15,
-      SGPR17, SGPR19, SGPR21, SGPR23, SGPR25, SGPR27, SGPR29, SGPR31,
-      SGPR33, SGPR35, SGPR37, SGPR39 ]
-  >>>,
+  // We have no way of referring to the generated register tuples
+  // here, so use a custom function.
+  CCIfInReg<CCIfType<[i64], CCCustom<"allocateSGPRTuple">>>,
+  CCIfByVal<CCIfType<[i64], CCCustom<"allocateSGPRTuple">>>,
 
   // 32*4 + 4 is the minimum for a fetch shader consumer with 32 inputs.
-  CCIfNotInReg<CCIfType<[f32, i32] , CCAssignToReg<[
+  CCIfNotInReg<CCIfType<[f32, i32, f16] , CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
@@ -53,20 +51,10 @@ def CC_SI : CallingConv<[
     VGPR112, VGPR113, VGPR114, VGPR115, VGPR116, VGPR117, VGPR118, VGPR119,
     VGPR120, VGPR121, VGPR122, VGPR123, VGPR124, VGPR125, VGPR126, VGPR127,
     VGPR128, VGPR129, VGPR130, VGPR131, VGPR132, VGPR133, VGPR134, VGPR135
-  ]>>>,
-
-  CCIfByVal<CCIfType<[i64] , CCAssignToRegWithShadow<
-    [ SGPR0, SGPR2, SGPR4, SGPR6, SGPR8, SGPR10, SGPR12, SGPR14,
-      SGPR16, SGPR18, SGPR20, SGPR22, SGPR24, SGPR26, SGPR28, SGPR30,
-      SGPR32, SGPR34, SGPR36, SGPR38 ],
-    [ SGPR1, SGPR3, SGPR5, SGPR7, SGPR9, SGPR11, SGPR13, SGPR15,
-      SGPR17, SGPR19, SGPR21, SGPR23, SGPR25, SGPR27, SGPR29, SGPR31,
-      SGPR33, SGPR35, SGPR37, SGPR39 ]
-  >>>
-
+  ]>>>
 ]>;
 
-def RetCC_SI : CallingConv<[
+def RetCC_SI_Shader : CallingConv<[
   CCIfType<[i32] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
@@ -76,7 +64,7 @@ def RetCC_SI : CallingConv<[
   ]>>,
 
   // 32*4 + 4 is the minimum for a fetch shader with 32 outputs.
-  CCIfType<[f32] , CCAssignToReg<[
+  CCIfType<[f32, f16] , CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
@@ -111,6 +99,52 @@ def CC_R600 : CallingConv<[
 // Calling convention for compute kernels
 def CC_AMDGPU_Kernel : CallingConv<[
   CCCustom<"allocateKernArg">
+]>;
+
+def CSR_AMDGPU_VGPRs_24_255 : CalleeSavedRegs<
+  (sequence "VGPR%u", 24, 255)
+>;
+
+def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
+  (sequence "VGPR%u", 32, 255)
+>;
+
+def CSR_AMDGPU_SGPRs_32_103 : CalleeSavedRegs<
+  (sequence "SGPR%u", 32, 103)
+>;
+
+def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
+  (add CSR_AMDGPU_VGPRs_32_255, CSR_AMDGPU_SGPRs_32_103)
+>;
+
+// Calling convention for leaf functions
+def CC_AMDGPU_Func : CallingConv<[
+  CCIfByVal<CCPassByVal<4, 4>>,
+  CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i1, i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i32, f32, i16, f16, v2i16, v2f16, i1], CCAssignToReg<[
+    VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
+    VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
+    VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
+    VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
+  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64], CCCustom<"allocateVGPRTuple">>,
+  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
+  CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
+  CCIfType<[v4i32, v4f32, v2i64, v2f64], CCAssignToStack<16, 4>>,
+  CCIfType<[v8i32, v8f32], CCAssignToStack<32, 4>>,
+  CCIfType<[v16i32, v16f32], CCAssignToStack<64, 4>>
+]>;
+
+// Calling convention for leaf functions
+def RetCC_AMDGPU_Func : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i32, f32, i16, f16, v2i16, v2f16], CCAssignToReg<[
+    VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
+    VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
+    VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
+    VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
+  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64], CCCustom<"allocateVGPRTuple">>
 ]>;
 
 def CC_AMDGPU : CallingConv<[

@@ -18,35 +18,37 @@ include "llvm/TableGen/SearchableTable.td"
 // AT (address translate) instruction options.
 //===----------------------------------------------------------------------===//
 
-class AT<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+class AT<string name, bits<3> op1, bits<4> crn, bits<4> crm,
          bits<3> op2> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
   string Name = name;
-  bits<16> Encoding;
-  let Encoding{15-14} = op0;
+  bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
+  code Requires = [{ {} }];
 }
 
-def : AT<"S1E1R",  0b01, 0b000, 0b0111, 0b1000, 0b000>;
-def : AT<"S1E2R",  0b01, 0b100, 0b0111, 0b1000, 0b000>;
-def : AT<"S1E3R",  0b01, 0b110, 0b0111, 0b1000, 0b000>;
-def : AT<"S1E1W",  0b01, 0b000, 0b0111, 0b1000, 0b001>;
-def : AT<"S1E2W",  0b01, 0b100, 0b0111, 0b1000, 0b001>;
-def : AT<"S1E3W",  0b01, 0b110, 0b0111, 0b1000, 0b001>;
-def : AT<"S1E0R",  0b01, 0b000, 0b0111, 0b1000, 0b010>;
-def : AT<"S1E0W",  0b01, 0b000, 0b0111, 0b1000, 0b011>;
-def : AT<"S12E1R", 0b01, 0b100, 0b0111, 0b1000, 0b100>;
-def : AT<"S12E1W", 0b01, 0b100, 0b0111, 0b1000, 0b101>;
-def : AT<"S12E0R", 0b01, 0b100, 0b0111, 0b1000, 0b110>;
-def : AT<"S12E0W", 0b01, 0b100, 0b0111, 0b1000, 0b111>;
-def : AT<"S1E1RP", 0b01, 0b000, 0b0111, 0b1001, 0b000>;
-def : AT<"S1E1WP", 0b01, 0b000, 0b0111, 0b1001, 0b001>;
+def : AT<"S1E1R",  0b000, 0b0111, 0b1000, 0b000>;
+def : AT<"S1E2R",  0b100, 0b0111, 0b1000, 0b000>;
+def : AT<"S1E3R",  0b110, 0b0111, 0b1000, 0b000>;
+def : AT<"S1E1W",  0b000, 0b0111, 0b1000, 0b001>;
+def : AT<"S1E2W",  0b100, 0b0111, 0b1000, 0b001>;
+def : AT<"S1E3W",  0b110, 0b0111, 0b1000, 0b001>;
+def : AT<"S1E0R",  0b000, 0b0111, 0b1000, 0b010>;
+def : AT<"S1E0W",  0b000, 0b0111, 0b1000, 0b011>;
+def : AT<"S12E1R", 0b100, 0b0111, 0b1000, 0b100>;
+def : AT<"S12E1W", 0b100, 0b0111, 0b1000, 0b101>;
+def : AT<"S12E0R", 0b100, 0b0111, 0b1000, 0b110>;
+def : AT<"S12E0W", 0b100, 0b0111, 0b1000, 0b111>;
 
+let Requires = [{ {AArch64::HasV8_2aOps} }] in {
+def : AT<"S1E1RP", 0b000, 0b0111, 0b1001, 0b000>;
+def : AT<"S1E1WP", 0b000, 0b0111, 0b1001, 0b001>;
+}
 
 //===----------------------------------------------------------------------===//
 // DMB/DSB (data barrier) instruction options.
@@ -77,28 +79,31 @@ def : DB<"sy",    0xf>;
 // DC (data cache maintenance) instruction options.
 //===----------------------------------------------------------------------===//
 
-class DC<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+class DC<string name, bits<3> op1, bits<4> crn, bits<4> crm,
          bits<3> op2> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
   string Name = name;
-  bits<16> Encoding;
-  let Encoding{15-14} = op0;
+  bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
+  code Requires = [{ {} }];
 }
 
-def : DC<"ZVA",   0b01, 0b011, 0b0111, 0b0100, 0b001>;
-def : DC<"IVAC",  0b01, 0b000, 0b0111, 0b0110, 0b001>;
-def : DC<"ISW",   0b01, 0b000, 0b0111, 0b0110, 0b010>;
-def : DC<"CVAC",  0b01, 0b011, 0b0111, 0b1010, 0b001>;
-def : DC<"CSW",   0b01, 0b000, 0b0111, 0b1010, 0b010>;
-def : DC<"CVAU",  0b01, 0b011, 0b0111, 0b1011, 0b001>;
-def : DC<"CIVAC", 0b01, 0b011, 0b0111, 0b1110, 0b001>;
-def : DC<"CISW",  0b01, 0b000, 0b0111, 0b1110, 0b010>;
+def : DC<"ZVA",   0b011, 0b0111, 0b0100, 0b001>;
+def : DC<"IVAC",  0b000, 0b0111, 0b0110, 0b001>;
+def : DC<"ISW",   0b000, 0b0111, 0b0110, 0b010>;
+def : DC<"CVAC",  0b011, 0b0111, 0b1010, 0b001>;
+def : DC<"CSW",   0b000, 0b0111, 0b1010, 0b010>;
+def : DC<"CVAU",  0b011, 0b0111, 0b1011, 0b001>;
+def : DC<"CIVAC", 0b011, 0b0111, 0b1110, 0b001>;
+def : DC<"CISW",  0b000, 0b0111, 0b1110, 0b010>;
+
+let Requires = [{ {AArch64::HasV8_2aOps} }] in
+def : DC<"CVAP",  0b011, 0b0111, 0b1100, 0b001>;
 
 //===----------------------------------------------------------------------===//
 // IC (instruction cache maintenance) instruction options.
@@ -120,7 +125,7 @@ class IC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2,
 
 def : IC<"IALLUIS", 0b000, 0b0111, 0b0001, 0b000, 0>;
 def : IC<"IALLU",   0b000, 0b0111, 0b0101, 0b000, 0>;
-def : IC<"IVAU",    0b000, 0b0111, 0b0001, 0b000, 1>;
+def : IC<"IVAU",    0b011, 0b0111, 0b0101, 0b001, 1>;
 
 //===----------------------------------------------------------------------===//
 // ISB (instruction-fetch barrier) instruction options.
@@ -213,14 +218,13 @@ def : PSB<"csync", 0x11>;
 // TLBI (translation lookaside buffer invalidate) instruction options.
 //===----------------------------------------------------------------------===//
 
-class TLBI<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+class TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
              bits<3> op2, bit needsreg = 1> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
   string Name = name;
-  bits<16> Encoding;
-  let Encoding{15-14} = op0;
+  bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
@@ -228,38 +232,38 @@ class TLBI<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
   bit NeedsReg = needsreg;
 }
 
-def : TLBI<"IPAS2E1IS",    0b01, 0b100, 0b1000, 0b0000, 0b001>;
-def : TLBI<"IPAS2LE1IS",   0b01, 0b100, 0b1000, 0b0000, 0b101>;
-def : TLBI<"VMALLE1IS",    0b01, 0b000, 0b1000, 0b0011, 0b000, 0>;
-def : TLBI<"ALLE2IS",      0b01, 0b100, 0b1000, 0b0011, 0b000, 0>;
-def : TLBI<"ALLE3IS",      0b01, 0b110, 0b1000, 0b0011, 0b000, 0>;
-def : TLBI<"VAE1IS",       0b01, 0b000, 0b1000, 0b0011, 0b001>;
-def : TLBI<"VAE2IS",       0b01, 0b100, 0b1000, 0b0011, 0b001>;
-def : TLBI<"VAE3IS",       0b01, 0b110, 0b1000, 0b0011, 0b001>;
-def : TLBI<"ASIDE1IS",     0b01, 0b000, 0b1000, 0b0011, 0b010>;
-def : TLBI<"VAAE1IS",      0b01, 0b000, 0b1000, 0b0011, 0b011>;
-def : TLBI<"ALLE1IS",      0b01, 0b100, 0b1000, 0b0011, 0b100, 0>;
-def : TLBI<"VALE1IS",      0b01, 0b000, 0b1000, 0b0011, 0b101>;
-def : TLBI<"VALE2IS",      0b01, 0b100, 0b1000, 0b0011, 0b101>;
-def : TLBI<"VALE3IS",      0b01, 0b110, 0b1000, 0b0011, 0b101>;
-def : TLBI<"VMALLS12E1IS", 0b01, 0b100, 0b1000, 0b0011, 0b110, 0>;
-def : TLBI<"VAALE1IS",     0b01, 0b000, 0b1000, 0b0011, 0b111>;
-def : TLBI<"IPAS2E1",      0b01, 0b100, 0b1000, 0b0100, 0b001>;
-def : TLBI<"IPAS2LE1",     0b01, 0b100, 0b1000, 0b0100, 0b101>;
-def : TLBI<"VMALLE1",      0b01, 0b000, 0b1000, 0b0111, 0b000, 0>;
-def : TLBI<"ALLE2",        0b01, 0b100, 0b1000, 0b0111, 0b000, 0>;
-def : TLBI<"ALLE3",        0b01, 0b110, 0b1000, 0b0111, 0b000, 0>;
-def : TLBI<"VAE1",         0b01, 0b000, 0b1000, 0b0111, 0b001>;
-def : TLBI<"VAE2",         0b01, 0b100, 0b1000, 0b0111, 0b001>;
-def : TLBI<"VAE3",         0b01, 0b110, 0b1000, 0b0111, 0b001>;
-def : TLBI<"ASIDE1",       0b01, 0b000, 0b1000, 0b0111, 0b010>;
-def : TLBI<"VAAE1",        0b01, 0b000, 0b1000, 0b0111, 0b011>;
-def : TLBI<"ALLE1",        0b01, 0b100, 0b1000, 0b0111, 0b100, 0>;
-def : TLBI<"VALE1",        0b01, 0b000, 0b1000, 0b0111, 0b101>;
-def : TLBI<"VALE2",        0b01, 0b100, 0b1000, 0b0111, 0b101>;
-def : TLBI<"VALE3",        0b01, 0b110, 0b1000, 0b0111, 0b101>;
-def : TLBI<"VMALLS12E1",   0b01, 0b100, 0b1000, 0b0111, 0b110, 0>;
-def : TLBI<"VAALE1",       0b01, 0b000, 0b1000, 0b0111, 0b111>;
+def : TLBI<"IPAS2E1IS",    0b100, 0b1000, 0b0000, 0b001>;
+def : TLBI<"IPAS2LE1IS",   0b100, 0b1000, 0b0000, 0b101>;
+def : TLBI<"VMALLE1IS",    0b000, 0b1000, 0b0011, 0b000, 0>;
+def : TLBI<"ALLE2IS",      0b100, 0b1000, 0b0011, 0b000, 0>;
+def : TLBI<"ALLE3IS",      0b110, 0b1000, 0b0011, 0b000, 0>;
+def : TLBI<"VAE1IS",       0b000, 0b1000, 0b0011, 0b001>;
+def : TLBI<"VAE2IS",       0b100, 0b1000, 0b0011, 0b001>;
+def : TLBI<"VAE3IS",       0b110, 0b1000, 0b0011, 0b001>;
+def : TLBI<"ASIDE1IS",     0b000, 0b1000, 0b0011, 0b010>;
+def : TLBI<"VAAE1IS",      0b000, 0b1000, 0b0011, 0b011>;
+def : TLBI<"ALLE1IS",      0b100, 0b1000, 0b0011, 0b100, 0>;
+def : TLBI<"VALE1IS",      0b000, 0b1000, 0b0011, 0b101>;
+def : TLBI<"VALE2IS",      0b100, 0b1000, 0b0011, 0b101>;
+def : TLBI<"VALE3IS",      0b110, 0b1000, 0b0011, 0b101>;
+def : TLBI<"VMALLS12E1IS", 0b100, 0b1000, 0b0011, 0b110, 0>;
+def : TLBI<"VAALE1IS",     0b000, 0b1000, 0b0011, 0b111>;
+def : TLBI<"IPAS2E1",      0b100, 0b1000, 0b0100, 0b001>;
+def : TLBI<"IPAS2LE1",     0b100, 0b1000, 0b0100, 0b101>;
+def : TLBI<"VMALLE1",      0b000, 0b1000, 0b0111, 0b000, 0>;
+def : TLBI<"ALLE2",        0b100, 0b1000, 0b0111, 0b000, 0>;
+def : TLBI<"ALLE3",        0b110, 0b1000, 0b0111, 0b000, 0>;
+def : TLBI<"VAE1",         0b000, 0b1000, 0b0111, 0b001>;
+def : TLBI<"VAE2",         0b100, 0b1000, 0b0111, 0b001>;
+def : TLBI<"VAE3",         0b110, 0b1000, 0b0111, 0b001>;
+def : TLBI<"ASIDE1",       0b000, 0b1000, 0b0111, 0b010>;
+def : TLBI<"VAAE1",        0b000, 0b1000, 0b0111, 0b011>;
+def : TLBI<"ALLE1",        0b100, 0b1000, 0b0111, 0b100, 0>;
+def : TLBI<"VALE1",        0b000, 0b1000, 0b0111, 0b101>;
+def : TLBI<"VALE2",        0b100, 0b1000, 0b0111, 0b101>;
+def : TLBI<"VALE3",        0b110, 0b1000, 0b0111, 0b101>;
+def : TLBI<"VMALLS12E1",   0b100, 0b1000, 0b0111, 0b110, 0>;
+def : TLBI<"VAALE1",       0b000, 0b1000, 0b0111, 0b111>;
 
 
 //===----------------------------------------------------------------------===//

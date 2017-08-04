@@ -2,12 +2,10 @@
 // RUN: %run %t foo 2>&1 | count 0
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// CHECK: nullability.c:[[@LINE+2]]:51: runtime error: null pointer returned from function declared to never return null
+// CHECK: nullability.c:[[@LINE+2]]:41: runtime error: null pointer returned from function declared to never return null
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:6: note: _Nonnull return type annotation specified here
 int *_Nonnull nonnull_retval1(int *p) { return p; }
 
-// CHECK: nullability.c:1001:19: runtime error: null pointer passed as argument 1, which is declared to never be null
-// CHECK-NEXT: nullability.c:[[@LINE+3]]:36: note: _Nonnull type annotation specified here
 // CHECK: nullability.c:1001:22: runtime error: null pointer passed as argument 2, which is declared to never be null
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:56: note: _Nonnull type annotation specified here
 int *_Nonnull nonnull_retval2(int *_Nonnull arg1, int *_Nonnull arg2,

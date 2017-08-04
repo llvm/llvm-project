@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -94,8 +94,8 @@ namespace {
         // guarantee that 'I' never reaches 'BeforeHere' through a back-edge or
         // by its successors, i.e, prune if:
         //
-        //  (1) BB is an entry block or have no sucessors.
-        //  (2) There's no path coming back through BB sucessors.
+        //  (1) BB is an entry block or have no successors.
+        //  (2) There's no path coming back through BB successors.
         if (BB == &BB->getParent()->getEntryBlock() ||
             !BB->getTerminator()->getNumSuccessors())
           return true;

@@ -9,6 +9,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads, libcpp-has-thread-api-external
 
+// XFAIL: windows
+
 // <thread>
 
 // class thread

@@ -10,10 +10,11 @@
 // option is passed and the sizes do not match between allocation and
 // deallocation functions.
 
-#include <new>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <new>
 
 int main(int argc, char **argv)
 {

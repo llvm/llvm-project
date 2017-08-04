@@ -23,7 +23,7 @@ declare i8* @returner2()
 declare void @bar(i32 ()*)
 declare void @use_alloca(i8**)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 declare i8* @objc_msgSend(i8*, i8*, ...)
 

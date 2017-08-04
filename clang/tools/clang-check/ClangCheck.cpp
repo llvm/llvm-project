@@ -124,8 +124,7 @@ public:
 /// \c FixItRewriter.
 class FixItAction : public clang::FixItAction {
 public:
-  bool BeginSourceFileAction(clang::CompilerInstance& CI,
-                             StringRef Filename) override {
+  bool BeginSourceFileAction(clang::CompilerInstance& CI) override {
     FixItOpts.reset(new FixItOptions);
     Rewriter.reset(new FixItRewriter(CI.getDiagnostics(), CI.getSourceManager(),
                                      CI.getLangOpts(), FixItOpts.get()));
@@ -140,6 +139,7 @@ public:
       return clang::CreateASTDeclNodeLister();
     if (ASTDump)
       return clang::CreateASTDumper(ASTDumpFilter, /*DumpDecls=*/true,
+                                    /*Deserialize=*/false,
                                     /*DumpLookups=*/false);
     if (ASTPrint)
       return clang::CreateASTPrinter(nullptr, ASTDumpFilter);

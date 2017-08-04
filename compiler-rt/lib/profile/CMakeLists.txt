@@ -48,6 +48,7 @@ set(PROFILE_SOURCES
   InstrProfilingFile.c
   InstrProfilingMerge.c
   InstrProfilingMergeFile.c
+  InstrProfilingNameVar.c
   InstrProfilingWriter.c
   InstrProfilingPlatformDarwin.c
   InstrProfilingPlatformLinux.c

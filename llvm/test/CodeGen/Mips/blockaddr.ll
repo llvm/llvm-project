@@ -34,10 +34,14 @@ entry:
 ; PIC-N64: daddiu ${{[0-9]+}}, $[[R0]], %got_ofst(.Ltmp[[T0]])
 ; PIC-N64: ld  $[[R1:[0-9]+]], %got_page(.Ltmp[[T1:[0-9]+]])
 ; PIC-N64: daddiu ${{[0-9]+}}, $[[R1]], %got_ofst(.Ltmp[[T1]])
-; STATIC-N64: ld  $[[R2:[0-9]+]], %got_page(.Ltmp[[T2:[0-9]+]])
-; STATIC-N64: daddiu ${{[0-9]+}}, $[[R2]], %got_ofst(.Ltmp[[T2]])
-; STATIC-N64: ld  $[[R3:[0-9]+]], %got_page(.Ltmp[[T3:[0-9]+]])
-; STATIC-N64: daddiu ${{[0-9]+}}, $[[R3]], %got_ofst(.Ltmp[[T3]])
+
+; STATIC-N64: lui $[[R0:[0-9]]], %highest(.Ltmp[[L0:[0-9]]])
+; STATIC-N64: daddiu $[[R1:[0-9]]], $[[R0]], %higher(.Ltmp[[L0]])
+; STATIC-N64: dsll $[[R2:[0-9]]], $[[R1]], 16
+; STATIC-N64: daddiu $[[R3:[0-9]]], $[[R2]], %hi(.Ltmp[[L0]])
+; STATIC-N64: dsll $[[R4:[0-9]]], $[[R3]], 16
+; STATIC-N64: daddiu $[[R5:[0-9]]], $[[R4]], %lo(.Ltmp[[L0]])
+
 ; STATIC-MIPS16-1: .ent	f
 ; STATIC-MIPS16-2: .ent	f
 ; STATIC-MIPS16-1: li  $[[R1_16:[0-9]+]], %hi($tmp[[TI_16:[0-9]+]])

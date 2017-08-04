@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ;
-; CHECK: #pragma known-parallel reduction (^ : sum)
+; CHECK: #pragma known-parallel reduction (^ : MemRef_sum)
 ;        void f(int N, int M, int *sum) {
 ;          for (int i = 0; i < N; i++)
 ; CHECK:    #pragma simd

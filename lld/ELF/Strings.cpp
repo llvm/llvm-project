@@ -38,29 +38,6 @@ bool StringMatcher::match(StringRef S) const {
   return false;
 }
 
-// If an input string is in the form of "foo.N" where N is a number,
-// return N. Otherwise, returns 65536, which is one greater than the
-// lowest priority.
-int elf::getPriority(StringRef S) {
-  size_t Pos = S.rfind('.');
-  if (Pos == StringRef::npos)
-    return 65536;
-  int V;
-  if (S.substr(Pos + 1).getAsInteger(10, V))
-    return 65536;
-  return V;
-}
-
-bool elf::hasWildcard(StringRef S) {
-  return S.find_first_of("?*[") != StringRef::npos;
-}
-
-StringRef elf::unquote(StringRef S) {
-  if (!S.startswith("\""))
-    return S;
-  return S.substr(1, S.size() - 2);
-}
-
 // Converts a hex string (e.g. "deadbeef") to a vector.
 std::vector<uint8_t> elf::parseHex(StringRef S) {
   std::vector<uint8_t> Hex;
@@ -68,7 +45,7 @@ std::vector<uint8_t> elf::parseHex(StringRef S) {
     StringRef B = S.substr(0, 2);
     S = S.substr(2);
     uint8_t H;
-    if (B.getAsInteger(16, H)) {
+    if (!to_integer(B, H, 16)) {
       error("not a hexadecimal value: " + B);
       return {};
     }
@@ -91,9 +68,9 @@ bool elf::isValidCIdentifier(StringRef S) {
 
 // Returns the demangled C++ symbol name for Name.
 Optional<std::string> elf::demangle(StringRef Name) {
-  // __cxa_demangle can be used to demangle strings other than symbol
+  // itaniumDemangle can be used to demangle strings other than symbol
   // names which do not necessarily start with "_Z". Name can be
-  // either a C or C++ symbol. Don't call __cxa_demangle if the name
+  // either a C or C++ symbol. Don't call itaniumDemangle if the name
   // does not look like a C++ symbol name to avoid getting unexpected
   // result for a C symbol that happens to match a mangled type name.
   if (!Name.startswith("_Z"))

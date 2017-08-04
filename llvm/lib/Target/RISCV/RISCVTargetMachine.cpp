@@ -13,10 +13,10 @@
 
 #include "RISCVTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
@@ -32,7 +32,7 @@ static std::string computeDataLayout(const Triple &TT) {
     return "e-m:e-i64:64-n32:64-S128";
   } else {
     assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
-    return "e-m:e-i64:64-n32-S128";
+    return "e-m:e-p:32:32-i64:64-n32-S128";
   }
 }
 
@@ -51,8 +51,10 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOpt::Level OL)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM), CM, OL),
-      TLOF(make_unique<TargetLoweringObjectFileELF>()) {}
+      TLOF(make_unique<TargetLoweringObjectFileELF>()) {
+  initAsmInfo();
+}
 
 TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new TargetPassConfig(this, PM);
+  return new TargetPassConfig(*this, PM);
 }

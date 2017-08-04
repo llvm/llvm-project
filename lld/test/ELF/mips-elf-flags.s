@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %S/Inputs/mips-dynamic.s -o %t-so.o
-# RUN: ld.lld %t-so.o -shared -o %t.so
+# RUN: ld.lld %t-so.o --gc-sections -shared -o %t.so
 # RUN: llvm-readobj -h -mips-abi-flags %t.so | FileCheck -check-prefix=SO %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
@@ -30,7 +30,7 @@
 # RUN:   | FileCheck -check-prefix=EXE-R6 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
-# RUN:         -mcpu=octeon %s -o %t.o
+# RUN:         -position-independent -mcpu=octeon %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
 # RUN: llvm-readobj -h -mips-abi-flags %t.exe \
 # RUN:   | FileCheck -check-prefix=OCTEON %s

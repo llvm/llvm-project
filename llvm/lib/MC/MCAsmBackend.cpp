@@ -1,4 +1,4 @@
-//===-- MCAsmBackend.cpp - Target MC Assembly Backend ----------------------==//
+//===- MCAsmBackend.cpp - Target MC Assembly Backend ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,13 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend() {}
+MCAsmBackend::MCAsmBackend() = default;
 
-MCAsmBackend::~MCAsmBackend() {}
+MCAsmBackend::~MCAsmBackend() = default;
 
 Optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
   return None;

@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "ScheduleDAGSDNodes.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
@@ -214,6 +214,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FPOWI:                      return "fpowi";
   case ISD::SETCC:                      return "setcc";
   case ISD::SETCCE:                     return "setcce";
+  case ISD::SETCCCARRY:                 return "setcccarry";
   case ISD::SELECT:                     return "select";
   case ISD::VSELECT:                    return "vselect";
   case ISD::SELECT_CC:                  return "select_cc";
@@ -227,6 +228,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CARRY_FALSE:                return "carry_false";
   case ISD::ADDC:                       return "addc";
   case ISD::ADDE:                       return "adde";
+  case ISD::ADDCARRY:                   return "addcarry";
   case ISD::SADDO:                      return "saddo";
   case ISD::UADDO:                      return "uaddo";
   case ISD::SSUBO:                      return "ssubo";
@@ -235,6 +237,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UMULO:                      return "umulo";
   case ISD::SUBC:                       return "subc";
   case ISD::SUBE:                       return "sube";
+  case ISD::SUBCARRY:                   return "subcarry";
   case ISD::SHL_PARTS:                  return "shl_parts";
   case ISD::SRA_PARTS:                  return "sra_parts";
   case ISD::SRL_PARTS:                  return "srl_parts";
@@ -300,6 +303,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::GET_DYNAMIC_AREA_OFFSET:    return "get.dynamic.area.offset";
 
   // Bit manipulation
+  case ISD::ABS:                        return "abs";
   case ISD::BITREVERSE:                 return "bitreverse";
   case ISD::BSWAP:                      return "bswap";
   case ISD::CTPOP:                      return "ctpop";
@@ -343,6 +347,19 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     case ISD::SETFALSE:                 return "setfalse";
     case ISD::SETFALSE2:                return "setfalse2";
     }
+  case ISD::VECREDUCE_FADD:             return "vecreduce_fadd";
+  case ISD::VECREDUCE_FMUL:             return "vecreduce_fmul";
+  case ISD::VECREDUCE_ADD:              return "vecreduce_add";
+  case ISD::VECREDUCE_MUL:              return "vecreduce_mul";
+  case ISD::VECREDUCE_AND:              return "vecreduce_and";
+  case ISD::VECREDUCE_OR:               return "vecreduce_or";
+  case ISD::VECREDUCE_XOR:              return "vecreduce_xor";
+  case ISD::VECREDUCE_SMAX:             return "vecreduce_smax";
+  case ISD::VECREDUCE_SMIN:             return "vecreduce_smin";
+  case ISD::VECREDUCE_UMAX:             return "vecreduce_umax";
+  case ISD::VECREDUCE_UMIN:             return "vecreduce_umin";
+  case ISD::VECREDUCE_FMAX:             return "vecreduce_fmax";
+  case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
   }
 }
 

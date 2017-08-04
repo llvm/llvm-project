@@ -62,6 +62,18 @@ public:
   /// \brief The location of the module definition.
   SourceLocation DefinitionLoc;
 
+  enum ModuleKind {
+    /// \brief This is a module that was defined by a module map and built out
+    /// of header files.
+    ModuleMapModule,
+
+    /// \brief This is a C++ Modules TS module interface unit.
+    ModuleInterfaceUnit
+  };
+
+  /// \brief The kind of this module.
+  ModuleKind Kind = ModuleMapModule;
+
   /// \brief The parent of this module. This will be NULL for the top-level
   /// module.
   Module *Parent;
@@ -70,6 +82,10 @@ public:
   /// which the module is notionally built, and relative to which its headers
   /// are found.
   const DirectoryEntry *Directory;
+
+  /// \brief The presumed file name for the module map defining this module.
+  /// Only non-empty when building from preprocessed source.
+  std::string PresumedModuleMapFile;
 
   /// \brief The umbrella header or directory.
   llvm::PointerUnion<const DirectoryEntry *, const FileEntry *> Umbrella;
@@ -138,10 +154,18 @@ public:
   /// \brief Stored information about a header directive that was found in the
   /// module map file but has not been resolved to a file.
   struct UnresolvedHeaderDirective {
+    HeaderKind Kind = HK_Normal;
     SourceLocation FileNameLoc;
     std::string FileName;
-    bool IsUmbrella;
+    bool IsUmbrella = false;
+    bool HasBuiltinHeader = false;
+    Optional<off_t> Size;
+    Optional<time_t> ModTime;
   };
+
+  /// Headers that are mentioned in the module map file but that we have not
+  /// yet attempted to resolve to a file on the file system.
+  SmallVector<UnresolvedHeaderDirective, 1> UnresolvedHeaders;
 
   /// \brief Headers that are mentioned in the module map file but could not be
   /// found on the file system.
@@ -382,7 +406,9 @@ public:
 
   /// \brief Retrieve the full name of this module, including the path from
   /// its top-level module.
-  std::string getFullModuleName() const;
+  /// \param AllowStringLiterals If \c true, components that might not be
+  ///        lexically valid as identifiers will be emitted as string literals.
+  std::string getFullModuleName(bool AllowStringLiterals = false) const;
 
   /// \brief Whether the full name of this module is equal to joining
   /// \p nameParts with "."s.

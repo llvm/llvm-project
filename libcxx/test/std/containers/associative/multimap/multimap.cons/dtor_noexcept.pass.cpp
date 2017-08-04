@@ -43,8 +43,10 @@ int main()
         typedef std::multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
         static_assert(std::is_nothrow_destructible<C>::value, "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::multimap<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
+        static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
 }

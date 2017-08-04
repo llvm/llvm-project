@@ -104,9 +104,9 @@ foo_dep test17, // expected-warning {{'foo_dep' is deprecated}}
         test19;
 
 // rdar://problem/8518751
-enum __attribute__((deprecated)) Test20 { // expected-note {{'Test20' has been explicitly marked deprecated here}}
+enum __attribute__((deprecated)) Test20 { // expected-note 2 {{'Test20' has been explicitly marked deprecated here}}
   test20_a __attribute__((deprecated)), // expected-note {{'test20_a' has been explicitly marked deprecated here}}
-  test20_b // expected-note {{'test20_b' has been explicitly marked deprecated here}}
+  test20_b
 };
 void test20() {
   enum Test20 f; // expected-warning {{'Test20' is deprecated}}

@@ -305,3 +305,14 @@ entry:
   ret void
 ; CHECK: ret void
 }
+
+define void @inner14() readnone nounwind {
+; CHECK: define void @inner14
+  ret void
+}
+
+define void @outer14() {
+; CHECK: call void @inner14
+  call void @inner14()
+  ret void
+}

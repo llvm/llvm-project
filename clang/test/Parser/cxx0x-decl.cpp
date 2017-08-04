@@ -123,6 +123,25 @@ namespace ColonColonDecltype {
   ::decltype(S())::T invalid; // expected-error {{expected unqualified-id}}
 }
 
+namespace AliasDeclEndLocation {
+  template<typename T> struct A {};
+  // Ensure that we correctly determine the end of this declaration to be the
+  // end of the annotation token, not the beginning.
+  using B = AliasDeclEndLocation::A<int
+    > // expected-error {{expected ';' after alias declaration}}
+    +;
+  // FIXME: After splitting this >> into two > tokens, we incorrectly determine
+  // the end of the template-id to be after the *second* '>'.
+  // Perhaps we could synthesize an expansion FileID containing '> >' to fix this?
+  using C = AliasDeclEndLocation::A<int
+    >\
+> // expected-error {{expected ';' after alias declaration}}
+    ;
+  using D = AliasDeclEndLocation::A<int
+    > // expected-error {{expected ';' after alias declaration}}
+  B something_else;
+}
+
 struct Base { virtual void f() = 0; virtual void g() = 0; virtual void h() = 0; };
 struct MemberComponentOrder : Base {
   void f() override __asm__("foobar") __attribute__(( )) {}

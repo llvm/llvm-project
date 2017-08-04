@@ -18,8 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
-
-#include <__undef_min_max>
+#include <type_traits>
 
 #include <__debug>
 
@@ -27,8 +26,11 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp>
@@ -37,6 +39,15 @@ union __hash_value_type;
 template <class _Key, class _Tp>
 struct __hash_value_type;
 #endif
+
+template <class _Key, class _Cp, class _Hash,
+          bool =  is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
+class __unordered_map_hasher;
+
+template <class _Key, class _Cp, class _Pred,
+          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value
+         >
+class __unordered_map_equal;
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
@@ -126,7 +137,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 size_t
 __next_hash_pow2(size_t __n)
 {
-    return size_t(1) << (std::numeric_limits<size_t>::digits - __clz(__n-1));
+    return __n < 2 ? __n : (size_t(1) << (std::numeric_limits<size_t>::digits - __clz(__n-1)));
 }
 
 
@@ -788,8 +799,7 @@ public:
         _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
         : __data_(__size, __a) {}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     __bucket_list_deallocator(__bucket_list_deallocator&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -797,8 +807,7 @@ public:
     {
         __x.size() = 0;
     }
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     size_type& size() _NOEXCEPT {return __data_.first();}
@@ -855,6 +864,37 @@ public:
 
     template <class> friend class __hash_map_node_destructor;
 };
+
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Key, class _Hash, class _Equal, class _Alloc>
+struct __diagnose_hash_table_helper {
+  static constexpr bool __trigger_diagnostics()
+    _LIBCPP_DIAGNOSE_WARNING(__check_hash_requirements<_Key, _Hash>::value
+                         && !__invokable<_Hash const&, _Key const&>::value,
+      "the specified hash functor does not provide a const call operator")
+    _LIBCPP_DIAGNOSE_WARNING(is_copy_constructible<_Equal>::value
+                          && !__invokable<_Equal const&, _Key const&, _Key const&>::value,
+      "the specified comparator type does not provide a const call operator")
+  {
+    static_assert(__check_hash_requirements<_Key, _Hash>::value,
+      "the specified hash does not meet the Hash requirements");
+    static_assert(is_copy_constructible<_Equal>::value,
+      "the specified comparator is required to be copy constructible");
+    return true;
+  }
+};
+
+template <class _Key, class _Value, class _Hash, class _Equal, class _Alloc>
+struct __diagnose_hash_table_helper<
+  __hash_value_type<_Key, _Value>,
+  __unordered_map_hasher<_Key, __hash_value_type<_Key, _Value>, _Hash>,
+  __unordered_map_equal<_Key, __hash_value_type<_Key, _Value>, _Equal>,
+  _Alloc>
+: __diagnose_hash_table_helper<_Key, _Hash, _Equal, _Alloc>
+{
+};
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table
@@ -917,6 +957,10 @@ private:
     typedef unique_ptr<__next_pointer[], __bucket_list_deleter> __bucket_list;
     typedef allocator_traits<__pointer_allocator>          __pointer_alloc_traits;
     typedef typename __bucket_list_deleter::pointer       __node_pointer_pointer;
+
+#ifndef _LIBCPP_CXX03_LANG
+    static_assert(__diagnose_hash_table_helper<_Tp, _Hash, _Equal, _Alloc>::__trigger_diagnostics(), "");
+#endif
 
     // --- Member data begin ---
     __bucket_list                                         __bucket_list_;
@@ -1357,7 +1401,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const hasher& __hf,
                                                        const key_equal& __eql,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0, __hf),
       __p3_(1.0f, __eql)
 {
@@ -1366,7 +1410,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const hasher& __hf,
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0),
       __p3_(1.0f)
 {
@@ -1378,7 +1422,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u)
           __bucket_list_deleter(allocator_traits<__pointer_allocator>::
               select_on_container_copy_construction(
                   __u.__bucket_list_.get_deleter().__alloc()), 0)),
-      __p1_(allocator_traits<__node_allocator>::
+      __p1_(__second_tag(), allocator_traits<__node_allocator>::
           select_on_container_copy_construction(__u.__node_alloc())),
       __p2_(0, __u.hash_function()),
       __p3_(__u.__p3_)
@@ -1389,7 +1433,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0, __u.hash_function()),
       __p3_(__u.__p3_)
 {
@@ -1423,7 +1467,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
-      __p1_(__node_allocator(__a)),
+      __p1_(__second_tag(), __node_allocator(__a)),
       __p2_(0, _VSTD::move(__u.hash_function())),
       __p3_(_VSTD::move(__u.__p3_))
 {
@@ -1449,10 +1493,13 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
 {
+#if defined(_LIBCPP_CXX03_LANG)
     static_assert((is_copy_constructible<key_equal>::value),
                  "Predicate must be copy-constructible.");
     static_assert((is_copy_constructible<hasher>::value),
                  "Hasher must be copy-constructible.");
+#endif
+
     __deallocate_node(__p1_.first().__next_);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);
@@ -2621,6 +2668,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__subscriptable(const const_iterator*,
 }
 
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
+
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP__HASH_TABLE

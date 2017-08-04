@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -58,7 +58,7 @@ private:
 char ExpandPostRA::ID = 0;
 char &llvm::ExpandPostRAPseudosID = ExpandPostRA::ID;
 
-INITIALIZE_PASS(ExpandPostRA, "postrapseudos",
+INITIALIZE_PASS(ExpandPostRA, DEBUG_TYPE,
                 "Post-RA pseudo instruction expansion pass", false, false)
 
 /// TransferImplicitOperands - MI is a pseudo-instruction, and the lowered
@@ -142,8 +142,9 @@ bool ExpandPostRA::LowerCopy(MachineInstr *MI) {
   MachineOperand &DstMO = MI->getOperand(0);
   MachineOperand &SrcMO = MI->getOperand(1);
 
-  if (SrcMO.getReg() == DstMO.getReg()) {
-    DEBUG(dbgs() << "identity copy: " << *MI);
+  bool IdentityCopy = (SrcMO.getReg() == DstMO.getReg());
+  if (IdentityCopy || SrcMO.isUndef()) {
+    DEBUG(dbgs() << (IdentityCopy ? "identity copy: " : "undef copy:    ") << *MI);
     // No need to insert an identity copy instruction, but replace with a KILL
     // if liveness is changed.
     if (SrcMO.isUndef() || MI->getNumOperands() > 2) {

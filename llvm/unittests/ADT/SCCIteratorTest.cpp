@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SCCIterator.h"
-#include "gtest/gtest.h"
 #include "TestGraph.h"
+#include "gtest/gtest.h"
 #include <limits.h>
 
 using namespace llvm;
@@ -63,8 +63,9 @@ TEST(SCCIteratorTest, AllSmallGraphs) {
       // Check that every node in the SCC is reachable from every other node in
       // the SCC.
       for (unsigned i = 0; i != NUM_NODES; ++i)
-        if (NodesInThisSCC.count(i))
+        if (NodesInThisSCC.count(i)) {
           EXPECT_TRUE(NodesInThisSCC.isSubsetOf(G.NodesReachableFrom(i)));
+        }
 
       // OK, now that we now that every node in the SCC is reachable from every
       // other, this means that the set of nodes reachable from any node in the
@@ -78,8 +79,9 @@ TEST(SCCIteratorTest, AllSmallGraphs) {
             NodesReachableFromSCC.Meet(NodesInThisSCC.Complement());
 
           for (unsigned j = 0; j != NUM_NODES; ++j)
-            if (ReachableButNotInSCC.count(j))
+            if (ReachableButNotInSCC.count(j)) {
               EXPECT_TRUE(G.NodesReachableFrom(j).Meet(NodesInThisSCC).isEmpty());
+            }
 
           // The result must be the same for all other nodes in this SCC, so
           // there is no point in checking them.

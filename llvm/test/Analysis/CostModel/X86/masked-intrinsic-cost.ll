@@ -78,10 +78,10 @@ define <2 x double> @test_gather_2f64(<2 x double*> %ptrs, <2 x i1> %mask, <2 x 
 ; SKX-LABEL: test_gather_2f64
 ; SKX: Found an estimated cost of 7 {{.*}}.gather
 
-%res = call <2 x double> @llvm.masked.gather.v2f64(<2 x double*> %ptrs, i32 4, <2 x i1> %mask, <2 x double> %src0)
+%res = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> %ptrs, i32 4, <2 x i1> %mask, <2 x double> %src0)
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.masked.gather.v2f64(<2 x double*> %ptrs, i32, <2 x i1> %mask, <2 x double> %src0)
+declare <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> %ptrs, i32, <2 x i1> %mask, <2 x double> %src0)
 
 define <4 x i32> @test_gather_4i32(<4 x i32*> %ptrs, <4 x i1> %mask, <4 x i32> %src0)  {
 
@@ -94,7 +94,7 @@ define <4 x i32> @test_gather_4i32(<4 x i32*> %ptrs, <4 x i1> %mask, <4 x i32> %
 ; SKX-LABEL: test_gather_4i32
 ; SKX: Found an estimated cost of 6 {{.*}}.gather
 
-%res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
+%res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
   ret <4 x i32> %res
 }
 
@@ -109,10 +109,10 @@ define <4 x i32> @test_gather_4i32_const_mask(<4 x i32*> %ptrs, <4 x i32> %src0)
 ; SKX-LABEL: test_gather_4i32_const_mask
 ; SKX: Found an estimated cost of 6 {{.*}}.gather
 
-%res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
+%res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
   ret <4 x i32> %res
 }
-declare <4 x i32> @llvm.masked.gather.v4i32(<4 x i32*> %ptrs, i32, <4 x i1> %mask, <4 x i32> %src0)
+declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32, <4 x i1> %mask, <4 x i32> %src0)
 
 define <16 x float> @test_gather_16f32_const_mask(float* %base, <16 x i32> %ind) {
 
@@ -128,7 +128,7 @@ define <16 x float> @test_gather_16f32_const_mask(float* %base, <16 x i32> %ind)
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.v = getelementptr float, float* %base, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.v, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -146,7 +146,7 @@ define <16 x float> @test_gather_16f32_var_mask(float* %base, <16 x i32> %ind, <
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.v = getelementptr float, float* %base, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -164,7 +164,7 @@ define <16 x float> @test_gather_16f32_ra_var_mask(<16 x float*> %ptrs, <16 x i3
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.v = getelementptr float, <16 x float*> %ptrs, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -185,7 +185,7 @@ define <16 x float> @test_gather_16f32_const_mask2(float* %base, <16 x i32> %ind
   %sext_ind = sext <16 x i32> %ind to <16 x i64>
   %gep.random = getelementptr float, <16 x float*> %broadcast.splat, <16 x i64> %sext_ind
 
-  %res = call <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
@@ -204,7 +204,7 @@ define void @test_scatter_16i32(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i3
 
   %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i32> %ind
   %imask = bitcast i16 %mask to <16 x i1>
-  call void @llvm.masked.scatter.v16i32(<16 x i32>%val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
+  call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32>%val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
   ret void
 }
 
@@ -218,11 +218,11 @@ define void @test_scatter_8i32(<8 x i32>%a1, <8 x i32*> %ptr, <8 x i1>%mask) {
 ; SKX-LABEL: test_scatter_8i32
 ; SKX: Found an estimated cost of 10 {{.*}}.scatter
 
-  call void @llvm.masked.scatter.v8i32(<8 x i32> %a1, <8 x i32*> %ptr, i32 4, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %a1, <8 x i32*> %ptr, i32 4, <8 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8i32(<8 x i32> %a1, <8 x i32*> %ptr, i32, <8 x i1> %mask)
+declare void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %a1, <8 x i32*> %ptr, i32, <8 x i1> %mask)
 
 define void @test_scatter_4i32(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 ; AVX2-LABEL: test_scatter_4i32
@@ -234,7 +234,7 @@ define void @test_scatter_4i32(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 ; SKX-LABEL: test_scatter_4i32
 ; SKX: Found an estimated cost of 6 {{.*}}.scatter
 
-  call void @llvm.masked.scatter.v4i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
   ret void
 }
 
@@ -252,7 +252,7 @@ define <4 x float> @test_gather_4f32(float* %ptr, <4 x i32> %ind, <4 x i1>%mask)
   %sext_ind = sext <4 x i32> %ind to <4 x i64>
   %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
 
-  %res = call <4 x float> @llvm.masked.gather.v4f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
+  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
   ret <4 x float>%res
 }
 
@@ -270,14 +270,14 @@ define <4 x float> @test_gather_4f32_const_mask(float* %ptr, <4 x i32> %ind) {
   %sext_ind = sext <4 x i32> %ind to <4 x i64>
   %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
 
-  %res = call <4 x float> @llvm.masked.gather.v4f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
   ret <4 x float>%res
 }
 
-declare <4 x float> @llvm.masked.gather.v4f32(<4 x float*> %gep.v, i32, <4 x i1> %mask, <4 x float> )
-declare void @llvm.masked.scatter.v4i32(<4 x i32> %a1, <4 x i32*> %ptr, i32, <4 x i1> %mask)
-declare void @llvm.masked.scatter.v16i32(<16 x i32>%val, <16 x i32*> %gep.random, i32, <16 x i1> %imask)
-declare <16 x float> @llvm.masked.gather.v16f32(<16 x float*> %gep.v, i32, <16 x i1> %mask, <16 x float>)
+declare <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32, <4 x i1> %mask, <4 x float> )
+declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32, <4 x i1> %mask)
+declare void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32>%val, <16 x i32*> %gep.random, i32, <16 x i1> %imask)
+declare <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32, <16 x i1> %mask, <16 x float>)
 
 declare <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>*, i32, <16 x i1>, <16 x i32>)
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)

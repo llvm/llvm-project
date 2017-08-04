@@ -22,6 +22,23 @@
     return RawSymbol->MethodName();                                            \
   }
 
+#define FORWARD_CONCRETE_SYMBOL_ID_METHOD_WITH_NAME(ConcreteType, PrivateName, \
+                                                    PublicName)                \
+  auto PublicName##Id() const->decltype(RawSymbol->PrivateName##Id()) {        \
+    return RawSymbol->PrivateName##Id();                                       \
+  }                                                                            \
+  std::unique_ptr<ConcreteType> PublicName() const {                           \
+    uint32_t Id = PublicName##Id();                                            \
+    return getConcreteSymbolByIdHelper<ConcreteType>(Id);                      \
+  }
+
+#define FORWARD_SYMBOL_ID_METHOD_WITH_NAME(PrivateName, PublicName)            \
+  FORWARD_CONCRETE_SYMBOL_ID_METHOD_WITH_NAME(PDBSymbol, PrivateName,          \
+                                              PublicName)
+
+#define FORWARD_SYMBOL_ID_METHOD(MethodName)                                   \
+  FORWARD_SYMBOL_ID_METHOD_WITH_NAME(MethodName, MethodName)
+
 namespace llvm {
 
 class StringRef;
@@ -29,6 +46,7 @@ class raw_ostream;
 
 namespace pdb {
 class IPDBRawSymbol;
+class IPDBSession;
 
 #define DECLARE_PDB_SYMBOL_CONCRETE_TYPE(TagValue)                             \
   static const PDB_SymType Tag = TagValue;                                     \
@@ -44,6 +62,7 @@ class PDBSymbol {
 protected:
   PDBSymbol(const IPDBSession &PDBSession,
             std::unique_ptr<IPDBRawSymbol> Symbol);
+  PDBSymbol(PDBSymbol &Symbol);
 
 public:
   static std::unique_ptr<PDBSymbol>
@@ -56,19 +75,32 @@ public:
   /// unknown properties, but individual implementations of PDBSymbol may
   /// override the behavior to only dump known fields.
   virtual void dump(PDBSymDumper &Dumper) const = 0;
+
+  /// For certain PDBSymbolTypes, dumps additional information for the type that
+  /// normally goes on the right side of the symbol.
+  virtual void dumpRight(PDBSymDumper &Dumper) const {}
+
   void defaultDump(raw_ostream &OS, int Indent) const;
+  void dumpProperties() const;
+  void dumpChildStats() const;
 
   PDB_SymType getSymTag() const;
   uint32_t getSymIndexId() const;
 
   template <typename T> std::unique_ptr<T> findOneChild() const {
     auto Enumerator(findAllChildren<T>());
+    if (!Enumerator)
+      return nullptr;
     return Enumerator->getNext();
   }
+
+  std::unique_ptr<PDBSymbol> clone() const;
 
   template <typename T>
   std::unique_ptr<ConcreteSymbolEnumerator<T>> findAllChildren() const {
     auto BaseIter = RawSymbol->findChildren(T::Tag);
+    if (!BaseIter)
+      return nullptr;
     return llvm::make_unique<ConcreteSymbolEnumerator<T>>(std::move(BaseIter));
   }
   std::unique_ptr<IPDBEnumSymbols> findAllChildren(PDB_SymType Type) const;
@@ -91,8 +123,15 @@ public:
   std::unique_ptr<IPDBEnumSymbols> getChildStats(TagStats &Stats) const;
 
 protected:
+  std::unique_ptr<PDBSymbol> getSymbolByIdHelper(uint32_t Id) const;
+
+  template <typename ConcreteType>
+  std::unique_ptr<ConcreteType> getConcreteSymbolByIdHelper(uint32_t Id) const {
+    return unique_dyn_cast_or_null<ConcreteType>(getSymbolByIdHelper(Id));
+  }
+
   const IPDBSession &Session;
-  const std::unique_ptr<IPDBRawSymbol> RawSymbol;
+  std::unique_ptr<IPDBRawSymbol> RawSymbol;
 };
 
 } // namespace llvm

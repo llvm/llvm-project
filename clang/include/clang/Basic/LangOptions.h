@@ -58,6 +58,7 @@ public:
     SOB_Trapping    // -ftrapv
   };
 
+  // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     CMK_None,           ///< Not compiling a module interface at all.
     CMK_ModuleMap,      ///< Compiling a module from a module map.
@@ -101,6 +102,16 @@ public:
   /// \brief Paths to blacklist files specifying which objects
   /// (files, functions, variables) should not be instrumented.
   std::vector<std::string> SanitizerBlacklistFiles;
+
+  /// \brief Paths to the XRay "always instrument" files specifying which
+  /// objects (files, functions, variables) should be imbued with the XRay
+  /// "always instrument" attribute.
+  std::vector<std::string> XRayAlwaysInstrumentFiles;
+
+  /// \brief Paths to the XRay "never instrument" files specifying which
+  /// objects (files, functions, variables) should be imbued with the XRay
+  /// "never instrument" attribute.
+  std::vector<std::string> XRayNeverInstrumentFiles;
 
   clang::ObjCRuntime ObjCRuntime;
 
@@ -154,6 +165,11 @@ public:
   /// Are we compiling a module interface (.cppm or module map)?
   bool isCompilingModule() const {
     return getCompilingModule() != CMK_None;
+  }
+
+  /// Do we need to track the owning module for a local declaration?
+  bool trackLocalOwningModule() const {
+    return isCompilingModule() || ModulesLocalVisibility || ModulesTS;
   }
 
   bool isSignedOverflowDefined() const {

@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ;
 ; Either and or zxtb.
-; CHECK: r0 = and(r1, #255)
+; CHECK: r0 = and(r1,#255)
 
 %struct.t0 = type { i32 }
 

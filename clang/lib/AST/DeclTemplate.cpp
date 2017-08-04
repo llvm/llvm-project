@@ -208,10 +208,6 @@ void RedeclarableTemplateDecl::addSpecializationImpl(
 // FunctionTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
 
-void FunctionTemplateDecl::DeallocateCommon(void *Ptr) {
-  static_cast<Common *>(Ptr)->~Common();
-}
-
 FunctionTemplateDecl *FunctionTemplateDecl::Create(ASTContext &C,
                                                    DeclContext *DC,
                                                    SourceLocation L,
@@ -231,7 +227,7 @@ FunctionTemplateDecl *FunctionTemplateDecl::CreateDeserialized(ASTContext &C,
 RedeclarableTemplateDecl::CommonBase *
 FunctionTemplateDecl::newCommon(ASTContext &C) const {
   Common *CommonPtr = new (C) Common;
-  C.AddDeallocation(DeallocateCommon, CommonPtr);
+  C.addDestruction(CommonPtr);
   return CommonPtr;
 }
 
@@ -288,19 +284,23 @@ ArrayRef<TemplateArgument> FunctionTemplateDecl::getInjectedTemplateArgs() {
 // ClassTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
 
-void ClassTemplateDecl::DeallocateCommon(void *Ptr) {
-  static_cast<Common *>(Ptr)->~Common();
-}
-
 ClassTemplateDecl *ClassTemplateDecl::Create(ASTContext &C,
                                              DeclContext *DC,
                                              SourceLocation L,
                                              DeclarationName Name,
                                              TemplateParameterList *Params,
-                                             NamedDecl *Decl) {
+                                             NamedDecl *Decl,
+                                             Expr *AssociatedConstraints) {
   AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
-  ClassTemplateDecl *New = new (C, DC) ClassTemplateDecl(C, DC, L, Name,
-                                                         Params, Decl);
+
+  if (!AssociatedConstraints) {
+    return new (C, DC) ClassTemplateDecl(C, DC, L, Name, Params, Decl);
+  }
+
+  ConstrainedTemplateDeclInfo *const CTDI = new (C) ConstrainedTemplateDeclInfo;
+  ClassTemplateDecl *const New =
+      new (C, DC) ClassTemplateDecl(CTDI, C, DC, L, Name, Params, Decl);
+  New->setAssociatedConstraints(AssociatedConstraints);
   return New;
 }
 
@@ -340,7 +340,7 @@ ClassTemplateDecl::getPartialSpecializations() {
 RedeclarableTemplateDecl::CommonBase *
 ClassTemplateDecl::newCommon(ASTContext &C) const {
   Common *CommonPtr = new (C) Common;
-  C.AddDeallocation(DeallocateCommon, CommonPtr);
+  C.addDestruction(CommonPtr);
   return CommonPtr;
 }
 
@@ -880,13 +880,10 @@ TypeAliasTemplateDecl *TypeAliasTemplateDecl::CreateDeserialized(ASTContext &C,
                                            DeclarationName(), nullptr, nullptr);
 }
 
-void TypeAliasTemplateDecl::DeallocateCommon(void *Ptr) {
-  static_cast<Common *>(Ptr)->~Common();
-}
 RedeclarableTemplateDecl::CommonBase *
 TypeAliasTemplateDecl::newCommon(ASTContext &C) const {
   Common *CommonPtr = new (C) Common;
-  C.AddDeallocation(DeallocateCommon, CommonPtr);
+  C.addDestruction(CommonPtr);
   return CommonPtr;
 }
 
@@ -906,10 +903,6 @@ ClassScopeFunctionSpecializationDecl::CreateDeserialized(ASTContext &C,
 //===----------------------------------------------------------------------===//
 // VarTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
-
-void VarTemplateDecl::DeallocateCommon(void *Ptr) {
-  static_cast<Common *>(Ptr)->~Common();
-}
 
 VarTemplateDecl *VarTemplateDecl::getDefinition() {
   VarTemplateDecl *CurD = this;
@@ -966,7 +959,7 @@ VarTemplateDecl::getPartialSpecializations() {
 RedeclarableTemplateDecl::CommonBase *
 VarTemplateDecl::newCommon(ASTContext &C) const {
   Common *CommonPtr = new (C) Common;
-  C.AddDeallocation(DeallocateCommon, CommonPtr);
+  C.addDestruction(CommonPtr);
   return CommonPtr;
 }
 

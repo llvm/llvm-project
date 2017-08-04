@@ -86,3 +86,9 @@ namespace PR16852 {
   template<typename T> decltype(S<T>().~S()) f(); // expected-note {{candidate template ignored: couldn't infer template argument 'T'}}
   void g() { f(); } // expected-error {{no matching function for call to 'f'}}
 }
+
+class PR33189
+{
+  template <class T>
+  ~PR33189() { } // expected-error{{destructor cannot be declared as a template}}
+};

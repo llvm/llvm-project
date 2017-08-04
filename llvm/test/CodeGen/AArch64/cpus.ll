@@ -12,7 +12,7 @@
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=exynos-m3 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=falkor 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=kryo 2>&1 | FileCheck %s
-; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=vulcan 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=thunderx2t99 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=invalidcpu 2>&1 | FileCheck %s --check-prefix=INVALID
 
 ; CHECK-NOT: {{.*}}  is not a recognized processor for this target

@@ -11,15 +11,16 @@
 #include "lld/Core/File.h"
 #include "lld/Core/LLVM.h"
 #include "lld/Core/Reader.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Object/Archive.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
@@ -30,6 +31,8 @@
 #include <vector>
 
 using llvm::object::Archive;
+using llvm::file_magic;
+using llvm::identify_magic;
 
 namespace lld {
 
@@ -201,7 +204,7 @@ public:
   ArchiveReader(bool logLoading) : _logLoading(logLoading) {}
 
   bool canParse(file_magic magic, MemoryBufferRef) const override {
-    return magic == llvm::sys::fs::file_magic::archive;
+    return magic == file_magic::archive;
   }
 
   ErrorOr<std::unique_ptr<File>> loadFile(std::unique_ptr<MemoryBuffer> mb,

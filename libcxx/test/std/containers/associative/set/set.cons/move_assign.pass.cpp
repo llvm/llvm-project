@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <set>
 
 // class set
@@ -23,7 +25,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef MoveOnly V;
         typedef test_compare<std::less<MoveOnly> > C;
@@ -141,7 +142,6 @@ int main()
         assert(m3.key_comp() == C(5));
         assert(m1.empty());
     }
-#if TEST_STD_VER >= 11
     {
         typedef MoveOnly V;
         typedef test_compare<std::less<MoveOnly> > C;
@@ -181,6 +181,4 @@ int main()
         assert(m3.key_comp() == C(5));
         assert(m1.empty());
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

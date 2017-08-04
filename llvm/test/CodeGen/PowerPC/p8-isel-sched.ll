@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -ppc-gen-isel=false < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -24,10 +25,20 @@ entry:
 ; Make sure that we don't schedule all of the isels together, they should be
 ; intermixed with the adds because each isel starts a new dispatch group.
 ; CHECK-LABEL: @foo
+; CHECK-NO-ISEL-LABEL: @foo
 ; CHECK: isel
+; CHECK-NO-ISEL: bc 12, 2, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 7, 12, 0
+; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NO-ISEL: [[TRUE]]
+; CHECK-NO-ISEL-NEXT: addi 7, 11, 0
 ; CHECK: addi
 ; CHECK: isel
+; CHECK-NO-ISEL: bc 12, 2, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 10, 11, 0
+; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NO-ISEL: [[TRUE]]
+; CHECK-NO-ISEL-NEXT: addi 10, 12, 0
 ; CHECK: blr
 
 attributes #0 = { nounwind }
-

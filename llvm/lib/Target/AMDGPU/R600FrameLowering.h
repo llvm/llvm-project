@@ -25,6 +25,8 @@ public:
                     MachineBasicBlock &MBB) const override {}
   void emitEpilogue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override {}
+  int getFrameIndexReference(const MachineFunction &MF, int FI,
+                             unsigned &FrameReg) const override;
 };
 
 } // end namespace llvm

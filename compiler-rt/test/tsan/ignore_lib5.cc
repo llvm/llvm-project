@@ -6,6 +6,9 @@
 // RUN: %env_tsan_opts=suppressions='%s.supp' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-WITHSUPP
 
 // REQUIRES: stable-runtime
+// UNSUPPORTED: powerpc64le
+// FIXME: This test occasionally fails on powerpc64 LE possibly starting with
+// r279664.  Re-enable the test once the problem(s) have been fixed.
 
 // Previously the test episodically failed with:
 //   ThreadSanitizer: called_from_lib suppression '/libignore_lib1.so$' is

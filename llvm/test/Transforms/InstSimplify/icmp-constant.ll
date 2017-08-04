@@ -416,3 +416,158 @@ define <2 x i1> @tautological9_vec(<2 x i32> %x) {
   ret <2 x i1> %cmp
 }
 
+; The upper bound of the 'add' is 0.
+
+define i1 @add_nsw_neg_const1(i32 %x) {
+; CHECK-LABEL: @add_nsw_neg_const1(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw i32 %x, -2147483647
+  %cmp = icmp sgt i32 %add, 0
+  ret i1 %cmp
+}
+
+; InstCombine can fold this, but not InstSimplify.
+
+define i1 @add_nsw_neg_const2(i32 %x) {
+; CHECK-LABEL: @add_nsw_neg_const2(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, -2147483647
+  %cmp = icmp sgt i32 %add, -1
+  ret i1 %cmp
+}
+
+; The upper bound of the 'add' is 1 (move the constants to prove we're doing range-based analysis).
+
+define i1 @add_nsw_neg_const3(i32 %x) {
+; CHECK-LABEL: @add_nsw_neg_const3(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw i32 %x, -2147483646
+  %cmp = icmp sgt i32 %add, 1
+  ret i1 %cmp
+}
+
+; InstCombine can fold this, but not InstSimplify.
+
+define i1 @add_nsw_neg_const4(i32 %x) {
+; CHECK-LABEL: @add_nsw_neg_const4(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -2147483646
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, -2147483646
+  %cmp = icmp sgt i32 %add, 0
+  ret i1 %cmp
+}
+
+; The upper bound of the 'add' is 2147483647 - 42 = 2147483605 (move the constants again and try a different cmp predicate).
+
+define i1 @add_nsw_neg_const5(i32 %x) {
+; CHECK-LABEL: @add_nsw_neg_const5(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add nsw i32 %x, -42
+  %cmp = icmp ne i32 %add, 2147483606
+  ret i1 %cmp
+}
+
+; InstCombine can fold this, but not InstSimplify.
+
+define i1 @add_nsw_neg_const6(i32 %x) {
+; CHECK-LABEL: @add_nsw_neg_const6(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD]], 2147483605
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, -42
+  %cmp = icmp ne i32 %add, 2147483605
+  ret i1 %cmp
+}
+
+; The lower bound of the 'add' is -1.
+
+define i1 @add_nsw_pos_const1(i32 %x) {
+; CHECK-LABEL: @add_nsw_pos_const1(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw i32 %x, 2147483647
+  %cmp = icmp slt i32 %add, -1
+  ret i1 %cmp
+}
+
+; InstCombine can fold this, but not InstSimplify.
+
+define i1 @add_nsw_pos_const2(i32 %x) {
+; CHECK-LABEL: @add_nsw_pos_const2(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 2147483647
+  %cmp = icmp slt i32 %add, 0
+  ret i1 %cmp
+}
+
+; The lower bound of the 'add' is -2 (move the constants to prove we're doing range-based analysis).
+
+define i1 @add_nsw_pos_const3(i32 %x) {
+; CHECK-LABEL: @add_nsw_pos_const3(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw i32 %x, 2147483646
+  %cmp = icmp slt i32 %add, -2
+  ret i1 %cmp
+}
+
+; InstCombine can fold this, but not InstSimplify.
+
+define i1 @add_nsw_pos_const4(i32 %x) {
+; CHECK-LABEL: @add_nsw_pos_const4(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 2147483646
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 2147483646
+  %cmp = icmp slt i32 %add, -1
+  ret i1 %cmp
+}
+
+; The lower bound of the 'add' is -2147483648 + 42 = -2147483606 (move the constants again and change the cmp predicate).
+
+define i1 @add_nsw_pos_const5(i32 %x) {
+; CHECK-LABEL: @add_nsw_pos_const5(
+; CHECK-NEXT:    ret i1 false
+;
+  %add = add nsw i32 %x, 42
+  %cmp = icmp eq i32 %add, -2147483607
+  ret i1 %cmp
+}
+
+; InstCombine can fold this, but not InstSimplify.
+
+define i1 @add_nsw_pos_const6(i32 %x) {
+; CHECK-LABEL: @add_nsw_pos_const6(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], -2147483606
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %x, 42
+  %cmp = icmp eq i32 %add, -2147483606
+  ret i1 %cmp
+}
+
+; Verify that vectors work too.
+
+define <2 x i1> @add_nsw_pos_const5_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @add_nsw_pos_const5_splat_vec(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %add = add nsw <2 x i32> %x, <i32 42, i32 42>
+  %cmp = icmp ne <2 x i32> %add, <i32 -2147483607, i32 -2147483607>
+  ret <2 x i1> %cmp
+}
+

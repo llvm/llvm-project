@@ -7,7 +7,7 @@ mylabel:
 # CHECK: if (p0) jump
 if (p0) jump ##mylabel
 
-# CHECK: if (cmp.gtu(r5.new, r4)) jump:t
+# CHECK: if (cmp.gtu(r5.new,r4)) jump:t
 { r5 = r4
   if (cmp.gtu(r5.new, r4)) jump:t ##mylabel }
 

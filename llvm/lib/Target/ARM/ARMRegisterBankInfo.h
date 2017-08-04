@@ -16,26 +16,28 @@
 
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 
+#define GET_REGBANK_DECLARATIONS
+#include "ARMGenRegisterBank.inc"
+
 namespace llvm {
 
 class TargetRegisterInfo;
 
-namespace ARM {
-enum {
-  GPRRegBankID = 0, // General purpose registers
-  NumRegisterBanks,
+class ARMGenRegisterBankInfo : public RegisterBankInfo {
+#define GET_TARGET_REGBANK_CLASS
+#include "ARMGenRegisterBank.inc"
 };
-} // end namespace ARM
 
 /// This class provides the information for the target register banks.
-class ARMRegisterBankInfo final : public RegisterBankInfo {
+class ARMRegisterBankInfo final : public ARMGenRegisterBankInfo {
 public:
   ARMRegisterBankInfo(const TargetRegisterInfo &TRI);
 
   const RegisterBank &
   getRegBankFromRegClass(const TargetRegisterClass &RC) const override;
 
-  InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
+  const InstructionMapping &
+  getInstrMapping(const MachineInstr &MI) const override;
 };
 } // End llvm namespace.
 #endif

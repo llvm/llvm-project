@@ -13,8 +13,8 @@ T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   static T a;
 // CHECK: static T a;
-#pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N)
-  // CHECK-NEXT: #pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N)
+#pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g)
+  // CHECK-NEXT: #pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -53,19 +53,19 @@ int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;
-#pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) nogroup num_tasks(argc)
-  // CHECK-NEXT: #pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) nogroup num_tasks(argc)
+#pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) num_tasks(argc) reduction(*: g)
+  // CHECK-NEXT: #pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) num_tasks(argc) reduction(*: g)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
-#pragma omp taskloop private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc)
+#pragma omp taskloop private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc) reduction(max: a, e)
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
   // CHECK-NEXT: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp taskloop private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc)
+  // CHECK-NEXT: #pragma omp taskloop private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) shared(g) if(argc) mergeable priority(argc) grainsize(argc) reduction(max: a,e)
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: foo();

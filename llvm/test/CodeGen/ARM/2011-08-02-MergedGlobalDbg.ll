@@ -31,9 +31,9 @@ target triple = "thumbv7-apple-macosx10.7.0"
 
 ; Function Attrs: nounwind optsize ssp
 define i32 @get1(i32 %a) #0 !dbg !10 {
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !14, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !14, metadata !17), !dbg !18
   %1 = load i32, i32* @x1, align 4, !dbg !19
-  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !15, metadata !17), !dbg !19
+  tail call void @llvm.dbg.value(metadata i32 %1, metadata !15, metadata !17), !dbg !19
   store i32 %a, i32* @x1, align 4, !dbg !19
   ret i32 %1, !dbg !19
 }
@@ -41,9 +41,9 @@ define i32 @get1(i32 %a) #0 !dbg !10 {
 ; Function Attrs: nounwind optsize ssp
 
 define i32 @get2(i32 %a) #0 !dbg !20 {
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !22, metadata !17), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !22, metadata !17), !dbg !25
   %1 = load i32, i32* @x2, align 4, !dbg !26
-  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !23, metadata !17), !dbg !26
+  tail call void @llvm.dbg.value(metadata i32 %1, metadata !23, metadata !17), !dbg !26
   store i32 %a, i32* @x2, align 4, !dbg !26
   ret i32 %1, !dbg !26
 }
@@ -51,9 +51,9 @@ define i32 @get2(i32 %a) #0 !dbg !20 {
 ; Function Attrs: nounwind optsize ssp
 
 define i32 @get3(i32 %a) #0 !dbg !27 {
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !29, metadata !17), !dbg !32
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !29, metadata !17), !dbg !32
   %1 = load i32, i32* @x3, align 4, !dbg !33
-  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !30, metadata !17), !dbg !33
+  tail call void @llvm.dbg.value(metadata i32 %1, metadata !30, metadata !17), !dbg !33
   store i32 %a, i32* @x3, align 4, !dbg !33
   ret i32 %1, !dbg !33
 }
@@ -61,9 +61,9 @@ define i32 @get3(i32 %a) #0 !dbg !27 {
 ; Function Attrs: nounwind optsize ssp
 
 define i32 @get4(i32 %a) #0 !dbg !34 {
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !36, metadata !17), !dbg !39
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !36, metadata !17), !dbg !39
   %1 = load i32, i32* @x4, align 4, !dbg !40
-  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !37, metadata !17), !dbg !40
+  tail call void @llvm.dbg.value(metadata i32 %1, metadata !37, metadata !17), !dbg !40
   store i32 %a, i32* @x4, align 4, !dbg !40
   ret i32 %1, !dbg !40
 }
@@ -71,16 +71,16 @@ define i32 @get4(i32 %a) #0 !dbg !34 {
 ; Function Attrs: nounwind optsize ssp
 
 define i32 @get5(i32 %a) #0 !dbg !41 {
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !43, metadata !17), !dbg !46
+  tail call void @llvm.dbg.value(metadata i32 %a, metadata !43, metadata !17), !dbg !46
   %1 = load i32, i32* @x5, align 4, !dbg !47
-  tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !44, metadata !17), !dbg !47
+  tail call void @llvm.dbg.value(metadata i32 %1, metadata !44, metadata !17), !dbg !47
   store i32 %a, i32* @x5, align 4, !dbg !47
   ret i32 %1, !dbg !47
 }
 
 ; Function Attrs: nounwind readnone
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind optsize ssp }
 attributes #1 = { nounwind readnone }

@@ -22,7 +22,8 @@ include "LanaiInstrFormats.td"
 // -------------------------------------------------- //
 
 //  These are target-independent nodes, but have target-specific formats.
-def SDT_LanaiCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
+def SDT_LanaiCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                            SDTCisVT<1, i32>]>;
 def SDT_LanaiCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
                                           SDTCisVT<1, i32>]>;
 def SDT_LanaiCall         : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
@@ -750,9 +751,9 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber SP.
 let Defs = [SP], Uses = [SP] in {
-  def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
-                                "#ADJCALLSTACKDOWN $amt",
-                                [(CallSeqStart timm:$amt)]>;
+  def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                                "#ADJCALLSTACKDOWN $amt1 $amt2",
+                                [(CallSeqStart timm:$amt1, timm:$amt2)]>;
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                 "#ADJCALLSTACKUP $amt1 $amt2",
                                 [(CallSeqEnd timm:$amt1, timm:$amt2)]>;
@@ -769,9 +770,6 @@ let Uses = [SR] in {
                     "s$DDDI\t$Rs1",
                     [(set (i32 GPR:$Rs1), (LanaiSetCC imm:$DDDI))]>;
 }
-
-// SCC's output is already 1-bit so and'ing with 1 is redundant.
-def : Pat<(and (LanaiSetCC imm:$DDDI), 1), (SCC imm:$DDDI)>;
 
 // Select with hardware support
 let Uses = [SR], isSelect = 1 in {

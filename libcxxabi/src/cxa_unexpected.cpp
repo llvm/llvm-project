@@ -8,20 +8,16 @@
 //===----------------------------------------------------------------------===//
 
 #include <exception>
-#include <cxxabi.h>
+#include "cxxabi.h"
 #include "cxa_exception.hpp"
 
 namespace __cxxabiv1
 {
 
-#pragma GCC visibility push(default)
-
 extern "C"
 {
 
 }
-
-#pragma GCC visibility pop
 
 }  // namespace __cxxabiv1
 

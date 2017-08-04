@@ -1,4 +1,4 @@
-//===-- llvm/InlineAsm.h - Class to represent inline asm strings-*- C++ -*-===//
+//===- llvm/InlineAsm.h - Class to represent inline asm strings -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,7 +28,7 @@ class FunctionType;
 class PointerType;
 template <class ConstantClass> class ConstantUniqueMap;
 
-class InlineAsm : public Value {
+class InlineAsm final : public Value {
 public:
   enum AsmDialect {
     AD_ATT,
@@ -48,7 +48,6 @@ private:
   InlineAsm(FunctionType *Ty, const std::string &AsmString,
             const std::string &Constraints, bool hasSideEffects,
             bool isAlignStack, AsmDialect asmDialect);
-  ~InlineAsm() override;
 
   /// When the ConstantUniqueMap merges two types and makes two InlineAsms
   /// identical, it destroys one of them with this method.
@@ -95,39 +94,41 @@ public:
     isClobber           // '~x'
   };
 
-  typedef std::vector<std::string> ConstraintCodeVector;
+  using ConstraintCodeVector = std::vector<std::string>;
 
   struct SubConstraintInfo {
     /// MatchingInput - If this is not -1, this is an output constraint where an
     /// input constraint is required to match it (e.g. "0").  The value is the
     /// constraint number that matches this one (for example, if this is
     /// constraint #0 and constraint #4 has the value "0", this will be 4).
-    signed char MatchingInput;
+    signed char MatchingInput = -1;
+
     /// Code - The constraint code, either the register name (in braces) or the
     /// constraint letter/number.
     ConstraintCodeVector Codes;
+
     /// Default constructor.
-    SubConstraintInfo() : MatchingInput(-1) {}
+    SubConstraintInfo() = default;
   };
 
-  typedef std::vector<SubConstraintInfo> SubConstraintInfoVector;
+  using SubConstraintInfoVector = std::vector<SubConstraintInfo>;
   struct ConstraintInfo;
-  typedef std::vector<ConstraintInfo> ConstraintInfoVector;
+  using ConstraintInfoVector = std::vector<ConstraintInfo>;
 
   struct ConstraintInfo {
     /// Type - The basic type of the constraint: input/output/clobber
     ///
-    ConstraintPrefix Type;
+    ConstraintPrefix Type = isInput;
 
     /// isEarlyClobber - "&": output operand writes result before inputs are all
     /// read.  This is only ever set for an output operand.
-    bool isEarlyClobber;
+    bool isEarlyClobber = false;
 
     /// MatchingInput - If this is not -1, this is an output constraint where an
     /// input constraint is required to match it (e.g. "0").  The value is the
     /// constraint number that matches this one (for example, if this is
     /// constraint #0 and constraint #4 has the value "0", this will be 4).
-    signed char MatchingInput;
+    signed char MatchingInput = -1;
 
     /// hasMatchingInput - Return true if this is an output constraint that has
     /// a matching input constraint.
@@ -135,30 +136,30 @@ public:
 
     /// isCommutative - This is set to true for a constraint that is commutative
     /// with the next operand.
-    bool isCommutative;
+    bool isCommutative = false;
 
     /// isIndirect - True if this operand is an indirect operand.  This means
     /// that the address of the source or destination is present in the call
     /// instruction, instead of it being returned or passed in explicitly.  This
     /// is represented with a '*' in the asm string.
-    bool isIndirect;
+    bool isIndirect = false;
 
     /// Code - The constraint code, either the register name (in braces) or the
     /// constraint letter/number.
     ConstraintCodeVector Codes;
 
     /// isMultipleAlternative - '|': has multiple-alternative constraints.
-    bool isMultipleAlternative;
+    bool isMultipleAlternative = false;
 
     /// multipleAlternatives - If there are multiple alternative constraints,
     /// this array will contain them.  Otherwise it will be empty.
     SubConstraintInfoVector multipleAlternatives;
 
     /// The currently selected alternative constraint index.
-    unsigned currentAlternativeIndex;
+    unsigned currentAlternativeIndex = 0;
 
     /// Default constructor.
-    ConstraintInfo();
+    ConstraintInfo() = default;
 
     /// Parse - Analyze the specified string (e.g. "=*&{eax}") and fill in the
     /// fields in this structure.  If the constraint string is not understood,
@@ -182,7 +183,7 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return V->getValueID() == Value::InlineAsmVal;
   }
 

@@ -212,7 +212,12 @@ namespace X86II {
     /// the offset from beginning of section.
     ///
     /// This is the TLS offset for the COFF/Windows TLS mechanism.
-    MO_SECREL
+    MO_SECREL,
+
+    /// MO_ABS8 - On a symbol operand this indicates that the symbol is known
+    /// to be an absolute symbol in range [0,128), so we can use the @ABS8
+    /// symbol modifier.
+    MO_ABS8,
   };
 
   enum : uint64_t {

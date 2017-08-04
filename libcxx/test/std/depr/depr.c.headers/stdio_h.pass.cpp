@@ -99,7 +99,7 @@
 
 #include <cstdarg>
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" // for tmpnam
 #endif
@@ -107,7 +107,7 @@
 int main()
 {
     FILE* fp = 0;
-    fpos_t fpos = {};
+    fpos_t fpos = fpos_t();
     size_t s = 0;
     char* cp = 0;
     char arr[] = {'a', 'b'};

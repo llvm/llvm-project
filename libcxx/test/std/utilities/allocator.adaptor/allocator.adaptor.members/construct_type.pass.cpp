@@ -31,7 +31,6 @@
 //   OUTERMOST_ALLOC_TRAITS(*this)::construct(
 //      OUTERMOST (*this), p, std::forward<Args>(args)...).
 void test_bullet_one() {
-    using VoidAlloc1 = CountingAllocator<void, 1>;
     using VoidAlloc2 = CountingAllocator<void, 2>;
 
     AllocController POuter;
@@ -41,7 +40,6 @@ void test_bullet_one() {
         using Outer = CountingAllocator<T, 1>;
         using Inner = CountingAllocator<T, 2>;
         using SA = std::scoped_allocator_adaptor<Outer, Inner>;
-        using SAInner = std::scoped_allocator_adaptor<Inner>;
         static_assert(!std::uses_allocator<T, Outer>::value, "");
         static_assert(!std::uses_allocator<T, Inner>::value, "");
         T* ptr = (T*)::operator new(sizeof(T));
@@ -66,7 +64,6 @@ void test_bullet_one() {
 // true, calls OUTERMOST_ALLOC_TRAITS(*this)::construct(OUTERMOST (*this), p,
 //     allocator_arg, inner_allocator(), std::forward<Args>(args)...).
 void test_bullet_two() {
-    using VoidAlloc1 = CountingAllocator<void, 1>;
     using VoidAlloc2 = CountingAllocator<void, 2>;
 
     AllocController POuter;
@@ -76,7 +73,6 @@ void test_bullet_two() {
         using Outer = CountingAllocator<T, 1>;
         using Inner = CountingAllocator<T, 2>;
         using SA = std::scoped_allocator_adaptor<Outer, Inner>;
-        using SAInner = std::scoped_allocator_adaptor<Inner>;
         static_assert(!std::uses_allocator<T, Outer>::value, "");
         static_assert(std::uses_allocator<T, Inner>::value, "");
         T* ptr = (T*)::operator new(sizeof(T));
@@ -101,7 +97,6 @@ void test_bullet_two() {
 // OUTERMOST_ALLOC_TRAITS(*this)::construct(OUTERMOST (*this), p,
 //   std::forward<Args>(args)..., inner_allocator()).
 void test_bullet_three() {
-    using VoidAlloc1 = CountingAllocator<void, 1>;
     using VoidAlloc2 = CountingAllocator<void, 2>;
 
     AllocController POuter;
@@ -111,7 +106,6 @@ void test_bullet_three() {
         using Outer = CountingAllocator<T, 1>;
         using Inner = CountingAllocator<T, 2>;
         using SA = std::scoped_allocator_adaptor<Outer, Inner>;
-        using SAInner = std::scoped_allocator_adaptor<Inner>;
         static_assert(!std::uses_allocator<T, Outer>::value, "");
         static_assert(std::uses_allocator<T, Inner>::value, "");
         T* ptr = (T*)::operator new(sizeof(T));

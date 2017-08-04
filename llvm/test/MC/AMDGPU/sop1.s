@@ -232,9 +232,17 @@ s_movreld_b64 s[2:3], s[4:5]
 // SICI: s_movreld_b64 s[2:3], s[4:5] ; encoding: [0x04,0x31,0x82,0xbe]
 // VI:   s_movreld_b64 s[2:3], s[4:5] ; encoding: [0x04,0x2d,0x82,0xbe]
 
-s_cbranch_join s[4:5]
-// SICI: s_cbranch_join s[4:5] ; encoding: [0x04,0x32,0x80,0xbe]
-// VI:   s_cbranch_join s[4:5] ; encoding: [0x04,0x2e,0x80,0xbe]
+s_cbranch_join s4
+// SICI: s_cbranch_join s4 ; encoding: [0x04,0x32,0x80,0xbe]
+// VI:   s_cbranch_join s4 ; encoding: [0x04,0x2e,0x80,0xbe]
+
+s_cbranch_join 1
+// NOSICI: error: invalid operand for instruction
+// NOVI: error: invalid operand for instruction
+
+s_cbranch_join 100
+// NOSICI: error: invalid operand for instruction
+// NOVI: error: invalid operand for instruction
 
 s_abs_i32 s1, s2
 // SICI: s_abs_i32 s1, s2 ; encoding: [0x02,0x34,0x81,0xbe]

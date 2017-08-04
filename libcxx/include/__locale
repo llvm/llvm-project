@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <cctype>
 #include <locale.h>
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
+#if defined(_LIBCPP_MSVCRT_LIKE)
 # include <support/win32/locale_win32.h>
 #elif defined(_AIX)
 # include <support/ibm/xlocale.h>
@@ -34,18 +34,39 @@
 # include <support/solaris/xlocale.h>
 #elif defined(_NEWLIB_VERSION)
 # include <support/newlib/xlocale.h>
-#elif (defined(__GLIBC__) || defined(__APPLE__)      || defined(__FreeBSD__) \
+#elif (defined(__APPLE__)      || defined(__FreeBSD__) \
     || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
 # include <xlocale.h>
+#elif defined(__Fuchsia__)
+# include <support/fuchsia/xlocale.h>
 #elif defined(_LIBCPP_HAS_MUSL_LIBC)
 # include <support/musl/xlocale.h>
-#endif // __GLIBC__ || __APPLE__ || __FreeBSD__ || __sun__ || __EMSCRIPTEN__ || __IBMCPP__
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if !defined(_LIBCPP_LOCALE__L_EXTENSIONS) || defined(_LIBCPP_MSVCRT)
+struct __libcpp_locale_guard {
+  _LIBCPP_INLINE_VISIBILITY
+  __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
+
+  _LIBCPP_INLINE_VISIBILITY
+  ~__libcpp_locale_guard() {
+    if (__old_loc_)
+      uselocale(__old_loc_);
+  }
+
+  locale_t __old_loc_;
+private:
+  __libcpp_locale_guard(__libcpp_locale_guard const&);
+  __libcpp_locale_guard& operator=(__libcpp_locale_guard const&);
+};
+#endif
+
 
 class _LIBCPP_TYPE_VIS locale;
 
@@ -67,6 +88,7 @@ public:
     class _LIBCPP_TYPE_VIS id;
 
     typedef int category;
+    _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
     static const category // values assigned here are for exposition only
         none     = 0,
         collate  = LC_COLLATE_MASK,
@@ -92,13 +114,16 @@ public:
 
     const locale& operator=(const locale&)  _NOEXCEPT;
 
-    template <class _Facet> locale combine(const locale&) const;
+    template <class _Facet>
+      _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+      locale combine(const locale&) const;
 
     // locale operations:
     string name() const;
     bool operator==(const locale&) const;
     bool operator!=(const locale& __y) const {return !(*this == __y);}
     template <class _CharT, class _Traits, class _Allocator>
+      _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
       bool operator()(const basic_string<_CharT, _Traits, _Allocator>&,
                       const basic_string<_CharT, _Traits, _Allocator>&) const;
 
@@ -342,7 +367,7 @@ public:
     static const mask punct  = _ISpunct;
     static const mask xdigit = _ISxdigit;
     static const mask blank  = _ISblank;
-#elif defined(_LIBCPP_MSVCRT)
+#elif defined(_LIBCPP_MSVCRT_LIKE)
     typedef unsigned short mask;
     static const mask space  = _SPACE;
     static const mask print  = _BLANK|_PUNCT|_ALPHA|_DIGIT;

@@ -1,5 +1,6 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefix=YAML
 
 ; C++ source to regenerate:
 ; $ cat t.cpp
@@ -80,13 +81,13 @@
 ; OBJ:       DisplayName: first
 ; OBJ:       LinkageName: ?first@@3HA
 ; OBJ:     }
-; OBJ:     ThreadLocalDataSym {
+; OBJ:     GlobalTLS {
 ; OBJ:       DataOffset: ?middle@@3PEBHEB+0x0
 ; OBJ:       Type: const int* (0x1001)
 ; OBJ:       DisplayName: middle
 ; OBJ:       LinkageName: ?middle@@3PEBHEB
 ; OBJ:     }
-; OBJ:     DataSym {
+; OBJ:     GlobalData {
 ; OBJ:       Kind: S_GDATA32 (0x110D)
 ; OBJ:       DataOffset: ?last@@3HA+0x0
 ; OBJ:       Type: int (0x74)
@@ -96,11 +97,11 @@
 ; OBJ:   ]
 ; OBJ: ]
 ; OBJ: CodeViewDebugInfo [
-; OBJ:   Section: .debug$S (7)
+; OBJ:   Section: .debug$S (8)
 ; OBJ:   Magic: 0x4
 ; OBJ:   Subsection [
 ; OBJ:     SubSectionType: Symbols (0xF1)
-; OBJ:     DataSym {
+; OBJ:     GlobalData {
 ; OBJ:       DataOffset: ?comdat@?$A@X@@2HB+0x0
 ; OBJ:       Type: const int (0x1000)
 ; OBJ:       DisplayName: comdat
@@ -108,6 +109,43 @@
 ; OBJ:     }
 ; OBJ:   ]
 ; OBJ: ]
+
+; YAML-LABEL:  - Name:            '.debug$S'
+; YAML:    Subsections:
+; YAML:      - !Symbols
+; YAML:        Records:
+; YAML:          - Kind:            S_COMPILE3
+; YAML:            Compile3Sym:
+; YAML:      - !Symbols
+; YAML:        Records:
+; YAML:          - Kind:            S_LDATA32
+; YAML:            DataSym:
+; YAML-NOT: Segment
+; YAML:              Type:            116
+; YAML-NOT: Segment
+; YAML:              DisplayName:     first
+; YAML-NOT: Segment
+; YAML:          - Kind:            S_GTHREAD32
+; YAML:            ThreadLocalDataSym:
+; YAML:              Type:            4097
+; YAML:              DisplayName:     middle
+; YAML:          - Kind:            S_GDATA32
+; YAML:            DataSym:
+; YAML-NOT: Segment
+; YAML:              Type:            116
+; YAML-NOT: Offset
+; YAML-NOT: Segment
+; YAML:              DisplayName:     last
+; YAML-NOT: Segment
+
+; The missing offsets are represented as relocations against this section.
+; YAML:    Relocations:
+; YAML:      - VirtualAddress:  92
+; YAML:        SymbolName:      '?first@@3HA'
+; YAML:        Type:            IMAGE_REL_AMD64_SECREL
+; YAML:      - VirtualAddress:  96
+; YAML:        SymbolName:      '?first@@3HA'
+; YAML:        Type:            IMAGE_REL_AMD64_SECTION
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"

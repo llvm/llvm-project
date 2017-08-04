@@ -58,18 +58,19 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -404,7 +405,7 @@ void Lint::visitMemoryReference(Instruction &I,
   Assert(!isa<UndefValue>(UnderlyingObject),
          "Undefined behavior: Undef pointer dereference", &I);
   Assert(!isa<ConstantInt>(UnderlyingObject) ||
-             !cast<ConstantInt>(UnderlyingObject)->isAllOnesValue(),
+             !cast<ConstantInt>(UnderlyingObject)->isMinusOne(),
          "Unusual: All-ones pointer dereference", &I);
   Assert(!isa<ConstantInt>(UnderlyingObject) ||
              !cast<ConstantInt>(UnderlyingObject)->isOne(),
@@ -533,11 +534,8 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    unsigned BitWidth = V->getType()->getIntegerBitWidth();
-    APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(V, KnownZero, KnownOne, DL, 0, AC,
-                     dyn_cast<Instruction>(V), DT);
-    return KnownZero.isAllOnesValue();
+    KnownBits Known = computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    return Known.isZero();
   }
 
   // Per-component check doesn't work with zeroinitializer
@@ -550,15 +548,13 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   // For a vector, KnownZero will only be true if all values are zero, so check
   // this per component
-  unsigned BitWidth = VecTy->getElementType()->getIntegerBitWidth();
   for (unsigned I = 0, N = VecTy->getNumElements(); I != N; ++I) {
     Constant *Elem = C->getAggregateElement(I);
     if (isa<UndefValue>(Elem))
       return true;
 
-    APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(Elem, KnownZero, KnownOne, DL);
-    if (KnownZero.isAllOnesValue())
+    KnownBits Known = computeKnownBits(Elem, DL);
+    if (Known.isZero())
       return true;
   }
 
@@ -699,7 +695,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
   // As a last resort, try SimplifyInstruction or constant folding.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-    if (Value *W = SimplifyInstruction(Inst, *DL, TLI, DT, AC))
+    if (Value *W = SimplifyInstruction(Inst, {*DL, TLI, DT, AC}))
       return findValueImpl(W, OffsetOk, Visited);
   } else if (auto *C = dyn_cast<Constant>(V)) {
     if (Value *W = ConstantFoldConstant(C, *DL, TLI))

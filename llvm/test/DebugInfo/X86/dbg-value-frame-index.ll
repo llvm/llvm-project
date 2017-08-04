@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 define i1 @test() !dbg !4 {
 entry:
@@ -6,7 +8,7 @@ entry:
   br label %while.cond
 
 while.cond:
-  call void @llvm.dbg.value(metadata i64* %end, i64 0, metadata !5, metadata !6), !dbg !7
+  call void @llvm.dbg.value(metadata i64* %end, metadata !5, metadata !6), !dbg !7
   %call = call i1 @fn(i64* %end, i64* %end, i64* null, i8* null, i64 0, i64* null, i32* null, i8* null), !dbg !7
   br label %while.body
 
@@ -18,10 +20,12 @@ while.end:
 }
 
 ; CHECK-LABEL: test
-; CHECK:       #DEBUG_VALUE: test:w <- [%RSP+8]
+; CHECK:       #DEBUG_VALUE: test:w <- [DW_OP_plus_uconst 8] [%RSP+0]
+; DWARF:       Location description: 77 08
+;                                    DW_OP_breg7 +8
 
 declare i1 @fn(i64*, i64*, i64*, i8*, i64, i64*, i32*, i8*)
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2,!3}

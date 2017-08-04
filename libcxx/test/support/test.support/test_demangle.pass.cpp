@@ -20,7 +20,7 @@ int main() {
     const char* raw;
     const char* expect;
   } TestCases[] = {
-      {typeid(int).name(), "i"}, // FIXME
+      {typeid(int).name(), "int"},
       {typeid(MyType).name(), "MyType"},
       {typeid(ArgumentListID<int, MyType>).name(), "ArgumentListID<int, MyType>"}
   };

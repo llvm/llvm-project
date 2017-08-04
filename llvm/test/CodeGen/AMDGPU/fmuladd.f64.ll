@@ -1,13 +1,13 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICTSI %s
-; RUN: llc -march=amdgcn -mcpu=verde  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,SI %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
-; RUN: llc -march=amdgcn -mcpu=verde  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICTSI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI %s
 
 ; GCN-LABEL: {{^}}fmuladd_f64:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define void @fmuladd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @fmuladd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                          double addrspace(1)* %in2, double addrspace(1)* %in3) #0 {
   %r0 = load double, double addrspace(1)* %in1
   %r1 = load double, double addrspace(1)* %in2
@@ -22,7 +22,7 @@ define void @fmuladd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 
 ; GCN-STRICT: v_mul_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 ; GCN-STRICT: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define void @fmul_fadd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @fmul_fadd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                            double addrspace(1)* %in2, double addrspace(1)* %in3) #0 {
   %r0 = load double, double addrspace(1)* %in1
   %r1 = load double, double addrspace(1)* %in2
@@ -44,7 +44,7 @@ define void @fmul_fadd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 
 ; SI: buffer_store_dwordx2 [[RESULT]]
 ; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @fadd_a_a_b_f64(double addrspace(1)* %out,
+define amdgpu_kernel void @fadd_a_a_b_f64(double addrspace(1)* %out,
                             double addrspace(1)* %in1,
                             double addrspace(1)* %in2) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -72,7 +72,7 @@ define void @fadd_a_a_b_f64(double addrspace(1)* %out,
 
 ; SI: buffer_store_dwordx2 [[RESULT]]
 ; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-define void @fadd_b_a_a_f64(double addrspace(1)* %out,
+define amdgpu_kernel void @fadd_b_a_a_f64(double addrspace(1)* %out,
                             double addrspace(1)* %in1,
                             double addrspace(1)* %in2) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -94,7 +94,7 @@ define void @fadd_b_a_a_f64(double addrspace(1)* %out,
 ; GCN-STRICT: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, -v{{\[[0-9]+:[0-9]+\]}}
 
 ; GCN-CONTRACT: v_fma_f64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, -v{{\[[0-9]+:[0-9]+\]}}
-define void @mad_sub_f64(double addrspace(1)* noalias nocapture %out, double addrspace(1)* noalias nocapture readonly %ptr) #1 {
+define amdgpu_kernel void @mad_sub_f64(double addrspace(1)* noalias nocapture %out, double addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr double, double addrspace(1)* %ptr, i64 %tid.ext
@@ -117,7 +117,7 @@ define void @mad_sub_f64(double addrspace(1)* noalias nocapture %out, double add
 ; GCN-STRICT: v_add_f64
 
 ; GCN-CONTRACT: v_fma_f64
-define void @fadd_a_a_b_f64_fast_add0(double addrspace(1)* %out,
+define amdgpu_kernel void @fadd_a_a_b_f64_fast_add0(double addrspace(1)* %out,
                                       double addrspace(1)* %in1,
                                       double addrspace(1)* %in2) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -139,7 +139,7 @@ define void @fadd_a_a_b_f64_fast_add0(double addrspace(1)* %out,
 ; GCN-STRICT: v_add_f64
 
 ; GCN-CONTRACT: v_fma_f64
-define void @fadd_a_a_b_f64_fast_add1(double addrspace(1)* %out,
+define amdgpu_kernel void @fadd_a_a_b_f64_fast_add1(double addrspace(1)* %out,
                                       double addrspace(1)* %in1,
                                       double addrspace(1)* %in2) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -158,7 +158,7 @@ define void @fadd_a_a_b_f64_fast_add1(double addrspace(1)* %out,
 
 ; GCN-LABEL: {{^}}fadd_a_a_b_f64_fast:
 ; GCN: v_fma_f64
-define void @fadd_a_a_b_f64_fast(double addrspace(1)* %out,
+define amdgpu_kernel void @fadd_a_a_b_f64_fast(double addrspace(1)* %out,
                                  double addrspace(1)* %in1,
                                 double addrspace(1)* %in2) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

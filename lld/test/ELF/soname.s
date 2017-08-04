@@ -4,7 +4,7 @@
 // RUN: ld.lld %t.o %t.so %t2.so -o %t
 // RUN: llvm-readobj --dynamic-table %t | FileCheck %s
 
-// CHECK:  0x0000000000000001 NEEDED               SharedLibrary (bar)
+// CHECK:  0x0000000000000001 NEEDED               Shared library: [bar]
 // CHECK-NOT: NEEDED
 
 .global _start

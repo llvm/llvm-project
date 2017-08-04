@@ -25,13 +25,13 @@
 
 #if TEST_STD_VER > 14
 constexpr bool check_front( double val )
-{ 
+{
     std::array<double, 3> arr = {1, 2, 3.5};
 	return arr.front() == val;
 }
 
 constexpr bool check_back( double val )
-{ 
+{
     std::array<double, 3> arr = {1, 2, 3.5};
 	return arr.back() == val;
 }

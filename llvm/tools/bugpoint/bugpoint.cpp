@@ -26,6 +26,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Valgrind.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -138,6 +139,13 @@ int main(int argc, char **argv) {
   polly::initializePollyPasses(Registry);
 #endif
 
+  if (std::getenv("bar") == (char*) -1) {
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+    InitializeAllAsmPrinters();
+    InitializeAllAsmParsers();
+  }
+
   cl::ParseCommandLineOptions(argc, argv,
                               "LLVM automatic testcase reducer. See\nhttp://"
                               "llvm.org/cmds/bugpoint.html"
@@ -181,7 +189,8 @@ int main(int argc, char **argv) {
     if (OptLevelO1)
       Builder.Inliner = createAlwaysInlinerLegacyPass();
     else if (OptLevelOs || OptLevelO2)
-      Builder.Inliner = createFunctionInliningPass(2, OptLevelOs ? 1 : 0);
+      Builder.Inliner = createFunctionInliningPass(
+          2, OptLevelOs ? 1 : 0, false);
     else
       Builder.Inliner = createFunctionInliningPass(275);
     Builder.populateFunctionPassManager(PM);

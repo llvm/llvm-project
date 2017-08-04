@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <iterator>
 
 // back_insert_iterator
@@ -16,8 +18,6 @@
 //   operator=(Cont::value_type&& value);
 
 #include <iterator>
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 #include <vector>
 #include <memory>
@@ -32,11 +32,7 @@ test(C c)
     assert(c.back() == typename C::value_type());
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     test(std::vector<std::unique_ptr<int> >());
-#endif
 }

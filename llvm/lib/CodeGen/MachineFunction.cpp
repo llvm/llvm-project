@@ -20,7 +20,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionInitializer.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -51,8 +50,6 @@ static cl::opt<unsigned>
     AlignAllFunctions("align-all-functions",
                       cl::desc("Force the alignment of all functions."),
                       cl::init(0), cl::Hidden);
-
-void MachineFunctionInitializer::anchor() {}
 
 static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   typedef MachineFunctionProperties::Property P;
@@ -308,11 +305,11 @@ MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
     unsigned base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
-    SynchronizationScope SynchScope, AtomicOrdering Ordering,
+    SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {
   return new (Allocator)
       MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges,
-                        SynchScope, Ordering, FailureOrdering);
+                        SSID, Ordering, FailureOrdering);
 }
 
 MachineMemOperand *
@@ -323,13 +320,27 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                MachineMemOperand(MachinePointerInfo(MMO->getValue(),
                                                     MMO->getOffset()+Offset),
                                  MMO->getFlags(), Size, MMO->getBaseAlignment(),
-                                 AAMDNodes(), nullptr, MMO->getSynchScope(),
+                                 AAMDNodes(), nullptr, MMO->getSyncScopeID(),
                                  MMO->getOrdering(), MMO->getFailureOrdering());
   return new (Allocator)
              MachineMemOperand(MachinePointerInfo(MMO->getPseudoValue(),
                                                   MMO->getOffset()+Offset),
                                MMO->getFlags(), Size, MMO->getBaseAlignment(),
-                               AAMDNodes(), nullptr, MMO->getSynchScope(),
+                               AAMDNodes(), nullptr, MMO->getSyncScopeID(),
+                               MMO->getOrdering(), MMO->getFailureOrdering());
+}
+
+MachineMemOperand *
+MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
+                                      const AAMDNodes &AAInfo) {
+  MachinePointerInfo MPI = MMO->getValue() ?
+             MachinePointerInfo(MMO->getValue(), MMO->getOffset()) :
+             MachinePointerInfo(MMO->getPseudoValue(), MMO->getOffset());
+
+  return new (Allocator)
+             MachineMemOperand(MPI, MMO->getFlags(), MMO->getSize(),
+                               MMO->getBaseAlignment(), AAInfo,
+                               MMO->getRanges(), MMO->getSyncScopeID(),
                                MMO->getOrdering(), MMO->getFailureOrdering());
 }
 
@@ -362,7 +373,7 @@ MachineFunction::extractLoadMemRefs(MachineInstr::mmo_iterator Begin,
                                (*I)->getFlags() & ~MachineMemOperand::MOStore,
                                (*I)->getSize(), (*I)->getBaseAlignment(),
                                (*I)->getAAInfo(), nullptr,
-                               (*I)->getSynchScope(), (*I)->getOrdering(),
+                               (*I)->getSyncScopeID(), (*I)->getOrdering(),
                                (*I)->getFailureOrdering());
         Result[Index] = JustLoad;
       }
@@ -396,7 +407,7 @@ MachineFunction::extractStoreMemRefs(MachineInstr::mmo_iterator Begin,
                                (*I)->getFlags() & ~MachineMemOperand::MOLoad,
                                (*I)->getSize(), (*I)->getBaseAlignment(),
                                (*I)->getAAInfo(), nullptr,
-                               (*I)->getSynchScope(), (*I)->getOrdering(),
+                               (*I)->getSyncScopeID(), (*I)->getOrdering(),
                                (*I)->getFailureOrdering());
         Result[Index] = JustStore;
       }

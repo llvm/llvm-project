@@ -132,13 +132,13 @@ unsigned getNumRedundantPathComponents(ArrayRef<std::string> Paths) {
          enumerate(make_range(sys::path::begin(Path), sys::path::end(Path)))) {
       // Do not increase the number of redundant components: that would remove
       // useful parts of already-visited paths.
-      if (Component.Index >= NumRedundant)
+      if (Component.index() >= NumRedundant)
         break;
 
       // Lower the number of redundant components when there's a mismatch
       // between the first path, and the path under consideration.
-      if (FirstPathComponents[Component.Index] != Component.Value) {
-        NumRedundant = Component.Index;
+      if (FirstPathComponents[Component.index()] != Component.value()) {
+        NumRedundant = Component.index();
         break;
       }
     }

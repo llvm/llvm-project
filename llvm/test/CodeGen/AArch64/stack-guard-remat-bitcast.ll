@@ -13,8 +13,8 @@
 ; CHECK: ldur [[R3:x[0-9]+]], {{\[}}x29, [[SLOT0]]{{\]}}
 ; CHECK: ldr  [[GUARD_ADDR:x[0-9]+]], {{\[}}[[GUARD_PAGE]], ___stack_chk_guard@GOTPAGEOFF{{\]}}
 ; CHECK: ldr  [[GUARD:x[0-9]+]], {{\[}}[[GUARD_ADDR]]{{\]}}
-; CHECK: sub  [[R4:x[0-9]+]], [[GUARD]], [[R3]]
-; CHECK: cbnz [[R4]], LBB
+; CHECK: cmp  [[GUARD]], [[R3]]
+; CHECK: b.ne LBB
 
 define i32 @test_stack_guard_remat2() {
 entry:

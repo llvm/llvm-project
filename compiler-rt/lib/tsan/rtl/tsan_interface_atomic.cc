@@ -220,8 +220,7 @@ static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
 #endif
 
 template<typename T>
-static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a,
-    morder mo) {
+static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
   CHECK(IsLoadOrder(mo));
   // This fast-path is critical for performance.
   // Assume the access is atomic.
@@ -229,10 +228,17 @@ static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a,
     MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
     return NoTsanAtomicLoad(a, mo);
   }
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, false);
-  AcquireImpl(thr, pc, &s->clock);
+  // Don't create sync object if it does not exist yet. For example, an atomic
+  // pointer is initialized to nullptr and then periodically acquire-loaded.
   T v = NoTsanAtomicLoad(a, mo);
-  s->mtx.ReadUnlock();
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock((uptr)a, false);
+  if (s) {
+    AcquireImpl(thr, pc, &s->clock);
+    // Re-read under sync mutex because we need a consistent snapshot
+    // of the value and the clock we acquire.
+    v = NoTsanAtomicLoad(a, mo);
+    s->mtx.ReadUnlock();
+  }
   MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
   return v;
 }
@@ -450,13 +456,32 @@ static void AtomicFence(ThreadState *thr, uptr pc, morder mo) {
 
 // C/C++
 
+static morder convert_morder(morder mo) {
+  if (flags()->force_seq_cst_atomics)
+    return (morder)mo_seq_cst;
+
+  // Filter out additional memory order flags:
+  // MEMMODEL_SYNC        = 1 << 15
+  // __ATOMIC_HLE_ACQUIRE = 1 << 16
+  // __ATOMIC_HLE_RELEASE = 1 << 17
+  //
+  // HLE is an optimization, and we pretend that elision always fails.
+  // MEMMODEL_SYNC is used when lowering __sync_ atomics,
+  // since we use __sync_ atomics for actual atomic operations,
+  // we can safely ignore it as well. It also subtly affects semantics,
+  // but we don't model the difference.
+  return (morder)(mo & 0x7fff);
+}
+
 #define SCOPED_ATOMIC(func, ...) \
+    ThreadState *const thr = cur_thread(); \
+    if (thr->ignore_sync || thr->ignore_interceptors) { \
+      ProcessPendingSignals(thr); \
+      return NoTsanAtomic##func(__VA_ARGS__); \
+    } \
     const uptr callpc = (uptr)__builtin_return_address(0); \
     uptr pc = StackTrace::GetCurrentPc(); \
-    mo = flags()->force_seq_cst_atomics ? (morder)mo_seq_cst : mo; \
-    ThreadState *const thr = cur_thread(); \
-    if (thr->ignore_interceptors) \
-      return NoTsanAtomic##func(__VA_ARGS__); \
+    mo = convert_morder(mo); \
     AtomicStatInc(thr, sizeof(*a), mo, StatAtomic##func); \
     ScopedAtomic sa(thr, callpc, a, mo, __func__); \
     return Atomic##func(thr, pc, __VA_ARGS__); \

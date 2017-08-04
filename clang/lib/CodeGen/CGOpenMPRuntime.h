@@ -96,13 +96,104 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> FirstprivateInits;
   SmallVector<const Expr *, 4> LastprivateVars;
   SmallVector<const Expr *, 4> LastprivateCopies;
+  SmallVector<const Expr *, 4> ReductionVars;
+  SmallVector<const Expr *, 4> ReductionCopies;
+  SmallVector<const Expr *, 4> ReductionOps;
   SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4> Dependences;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Final;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Schedule;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Priority;
+  llvm::Value *Reductions = nullptr;
   unsigned NumberOfParts = 0;
   bool Tied = true;
   bool Nogroup = false;
+};
+
+/// Class intended to support codegen of all kind of the reduction clauses.
+class ReductionCodeGen {
+private:
+  /// Data required for codegen of reduction clauses.
+  struct ReductionData {
+    /// Reference to the original shared item.
+    const Expr *Ref = nullptr;
+    /// Helper expression for generation of private copy.
+    const Expr *Private = nullptr;
+    /// Helper expression for generation reduction operation.
+    const Expr *ReductionOp = nullptr;
+    ReductionData(const Expr *Ref, const Expr *Private, const Expr *ReductionOp)
+        : Ref(Ref), Private(Private), ReductionOp(ReductionOp) {}
+  };
+  /// List of reduction-based clauses.
+  SmallVector<ReductionData, 4> ClausesData;
+
+  /// List of addresses of original shared variables/expressions.
+  SmallVector<std::pair<LValue, LValue>, 4> SharedAddresses;
+  /// Sizes of the reduction items in chars.
+  SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4> Sizes;
+  /// Base declarations for the reduction items.
+  SmallVector<const VarDecl *, 4> BaseDecls;
+
+  /// Emits lvalue for shared expresion.
+  LValue emitSharedLValue(CodeGenFunction &CGF, const Expr *E);
+  /// Emits upper bound for shared expression (if array section).
+  LValue emitSharedLValueUB(CodeGenFunction &CGF, const Expr *E);
+  /// Performs aggregate initialization.
+  /// \param N Number of reduction item in the common list.
+  /// \param PrivateAddr Address of the corresponding private item.
+  /// \param SharedLVal Address of the original shared variable.
+  /// \param DRD Declare reduction construct used for reduction item.
+  void emitAggregateInitialization(CodeGenFunction &CGF, unsigned N,
+                                   Address PrivateAddr, LValue SharedLVal,
+                                   const OMPDeclareReductionDecl *DRD);
+
+public:
+  ReductionCodeGen(ArrayRef<const Expr *> Shareds,
+                   ArrayRef<const Expr *> Privates,
+                   ArrayRef<const Expr *> ReductionOps);
+  /// Emits lvalue for a reduction item.
+  /// \param N Number of the reduction item.
+  void emitSharedLValue(CodeGenFunction &CGF, unsigned N);
+  /// Emits the code for the variable-modified type, if required.
+  /// \param N Number of the reduction item.
+  void emitAggregateType(CodeGenFunction &CGF, unsigned N);
+  /// Emits the code for the variable-modified type, if required.
+  /// \param N Number of the reduction item.
+  /// \param Size Size of the type in chars.
+  void emitAggregateType(CodeGenFunction &CGF, unsigned N, llvm::Value *Size);
+  /// Performs initialization of the private copy for the reduction item.
+  /// \param N Number of the reduction item.
+  /// \param PrivateAddr Address of the corresponding private item.
+  /// \param DefaultInit Default initialization sequence that should be
+  /// performed if no reduction specific initialization is found.
+  /// \param SharedLVal Address of the original shared variable.
+  void
+  emitInitialization(CodeGenFunction &CGF, unsigned N, Address PrivateAddr,
+                     LValue SharedLVal,
+                     llvm::function_ref<bool(CodeGenFunction &)> DefaultInit);
+  /// Returns true if the private copy requires cleanups.
+  bool needCleanups(unsigned N);
+  /// Emits cleanup code for the reduction item.
+  /// \param N Number of the reduction item.
+  /// \param PrivateAddr Address of the corresponding private item.
+  void emitCleanups(CodeGenFunction &CGF, unsigned N, Address PrivateAddr);
+  /// Adjusts \p PrivatedAddr for using instead of the original variable
+  /// address in normal operations.
+  /// \param N Number of the reduction item.
+  /// \param PrivateAddr Address of the corresponding private item.
+  Address adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
+                               Address PrivateAddr);
+  /// Returns LValue for the reduction item.
+  LValue getSharedLValue(unsigned N) const { return SharedAddresses[N].first; }
+  /// Returns the size of the reduction item (in chars and total number of
+  /// elements in the item), or nullptr, if the size is a constant.
+  std::pair<llvm::Value *, llvm::Value *> getSizes(unsigned N) const {
+    return Sizes[N];
+  }
+  /// Returns the base declaration of the reduction item.
+  const VarDecl *getBaseDecl(unsigned N) const { return BaseDecls[N]; }
+  /// Returns true if the initialization of the reduction item uses initializer
+  /// from declare reduction construct.
+  bool usesReductionInitializer(unsigned N) const;
 };
 
 class CGOpenMPRuntime {
@@ -121,7 +212,7 @@ protected:
   /// \param OutlinedFnID Outlined function ID value to be defined by this call.
   /// \param IsOffloadEntry True if the outlined function is an offload entry.
   /// \param CodeGen Lambda codegen specific to an accelerator device.
-  /// An oulined function may not be an entry if, e.g. the if clause always
+  /// An outlined function may not be an entry if, e.g. the if clause always
   /// evaluates to false.
   virtual void emitTargetOutlinedFunctionHelper(const OMPExecutableDirective &D,
                                                 StringRef ParentName,
@@ -527,6 +618,7 @@ public:
   /// Get combiner/initializer for the specified user-defined reduction, if any.
   virtual std::pair<llvm::Function *, llvm::Function *>
   getUserDefinedReduction(const OMPDeclareReductionDecl *D);
+
   /// \brief Emits outlined function for the specified OpenMP parallel directive
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
   /// kmp_int32 BoundID, struct context_vars*).
@@ -535,7 +627,19 @@ public:
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  virtual llvm::Value *emitParallelOrTeamsOutlinedFunction(
+  virtual llvm::Value *emitParallelOutlinedFunction(
+      const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+      OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
+
+  /// \brief Emits outlined function for the specified OpenMP teams directive
+  /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
+  /// kmp_int32 BoundID, struct context_vars*).
+  /// \param D OpenMP directive.
+  /// \param ThreadIDVar Variable for thread id in the current OpenMP region.
+  /// \param InnermostKind Kind of innermost directive (for simple directives it
+  /// is a directive itself, for combined - its innermost directive).
+  /// \param CodeGen Code generation sequence for the \a D directive.
+  virtual llvm::Value *emitTeamsOutlinedFunction(
       const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
       OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
 
@@ -659,16 +763,26 @@ public:
   ///
   virtual bool isDynamic(OpenMPScheduleClauseKind ScheduleKind) const;
 
-  virtual void emitForDispatchInit(CodeGenFunction &CGF, SourceLocation Loc,
-                                   const OpenMPScheduleTy &ScheduleKind,
-                                   unsigned IVSize, bool IVSigned, bool Ordered,
-                                   llvm::Value *UB,
-                                   llvm::Value *Chunk = nullptr);
+  /// struct with the values to be passed to the dispatch runtime function
+  struct DispatchRTInput {
+    /// Loop lower bound
+    llvm::Value *LB = nullptr;
+    /// Loop upper bound
+    llvm::Value *UB = nullptr;
+    /// Chunk size specified using 'schedule' clause (nullptr if chunk
+    /// was not specified)
+    llvm::Value *Chunk = nullptr;
+    DispatchRTInput() = default;
+    DispatchRTInput(llvm::Value *LB, llvm::Value *UB, llvm::Value *Chunk)
+        : LB(LB), UB(UB), Chunk(Chunk) {}
+  };
 
-  /// \brief Call the appropriate runtime routine to initialize it before start
+  /// Call the appropriate runtime routine to initialize it before start
   /// of loop.
-  ///
-  /// Depending on the loop schedule, it is nesessary to call some runtime
+
+  /// This is used for non static scheduled types and when the ordered
+  /// clause is present on the loop construct.
+  /// Depending on the loop schedule, it is necessary to call some runtime
   /// routine before start of the OpenMP loop to get the loop upper / lower
   /// bounds \a LB and \a UB and stride \a ST.
   ///
@@ -676,7 +790,31 @@ public:
   /// \param Loc Clang source location.
   /// \param ScheduleKind Schedule kind, specified by the 'schedule' clause.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
+  /// \param Ordered true if loop is ordered, false otherwise.
+  /// \param DispatchValues struct containing llvm values for lower bound, upper
+  /// bound, and chunk expression.
+  /// For the default (nullptr) value, the chunk 1 will be used.
+  ///
+  virtual void emitForDispatchInit(CodeGenFunction &CGF, SourceLocation Loc,
+                                   const OpenMPScheduleTy &ScheduleKind,
+                                   unsigned IVSize, bool IVSigned, bool Ordered,
+                                   const DispatchRTInput &DispatchValues);
+
+  /// \brief Call the appropriate runtime routine to initialize it before start
+  /// of loop.
+  ///
+  /// This is used only in case of static schedule, when the user did not
+  /// specify a ordered clause on the loop construct.
+  /// Depending on the loop schedule, it is necessary to call some runtime
+  /// routine before start of the OpenMP loop to get the loop upper / lower
+  /// bounds \a LB and \a UB and stride \a ST.
+  ///
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param Loc Clang source location.
+  /// \param ScheduleKind Schedule kind, specified by the 'schedule' clause.
+  /// \param IVSize Size of the iteration variable in bits.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param Ordered true if loop is ordered, false otherwise.
   /// \param IL Address of the output variable in which the flag of the
   /// last iteration is returned.
@@ -685,7 +823,7 @@ public:
   /// \param UB Address of the output variable in which the upper iteration
   /// number is returned.
   /// \param ST Address of the output variable in which the stride value is
-  /// returned nesessary to generated the static_chunked scheduled loop.
+  /// returned necessary to generated the static_chunked scheduled loop.
   /// \param Chunk Value of the chunk for the static_chunked scheduled loop.
   /// For the default (nullptr) value, the chunk 1 will be used.
   ///
@@ -700,7 +838,7 @@ public:
   /// \param Loc Clang source location.
   /// \param SchedKind Schedule kind, specified by the 'dist_schedule' clause.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param Ordered true if loop is ordered, false otherwise.
   /// \param IL Address of the output variable in which the flag of the
   /// last iteration is returned.
@@ -709,7 +847,7 @@ public:
   /// \param UB Address of the output variable in which the upper iteration
   /// number is returned.
   /// \param ST Address of the output variable in which the stride value is
-  /// returned nesessary to generated the static_chunked scheduled loop.
+  /// returned necessary to generated the static_chunked scheduled loop.
   /// \param Chunk Value of the chunk for the static_chunked scheduled loop.
   /// For the default (nullptr) value, the chunk 1 will be used.
   ///
@@ -726,7 +864,7 @@ public:
   /// \param CGF Reference to current CodeGenFunction.
   /// \param Loc Clang source location.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   ///
   virtual void emitForOrderedIterationEnd(CodeGenFunction &CGF,
                                           SourceLocation Loc, unsigned IVSize,
@@ -745,7 +883,7 @@ public:
   ///          kmp_int[32|64] *p_lower, kmp_int[32|64] *p_upper,
   ///          kmp_int[32|64] *p_stride);
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param IL Address of the output variable in which the flag of the
   /// last iteration is returned.
   /// \param LB Address of the output variable in which the lower iteration
@@ -796,6 +934,14 @@ public:
   emitThreadPrivateVarDefinition(const VarDecl *VD, Address VDAddr,
                                  SourceLocation Loc, bool PerformInit,
                                  CodeGenFunction *CGF = nullptr);
+
+  /// Creates artificial threadprivate variable with name \p Name and type \p
+  /// VarType.
+  /// \param VarType Type of the artificial threadprivate variable.
+  /// \param Name Name of the artificial threadprivate variable.
+  virtual Address getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
+                                                   QualType VarType,
+                                                   StringRef Name);
 
   /// \brief Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
@@ -880,6 +1026,32 @@ public:
                                     OpenMPDirectiveKind InnermostKind,
                                     const RegionCodeGenTy &CodeGen,
                                     bool HasCancel = false);
+
+  /// Emits reduction function.
+  /// \param ArgsType Array type containing pointers to reduction variables.
+  /// \param Privates List of private copies for original reduction arguments.
+  /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
+  /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
+  /// or 'operator binop(LHS, RHS)'.
+  llvm::Value *emitReductionFunction(CodeGenModule &CGM, llvm::Type *ArgsType,
+                                     ArrayRef<const Expr *> Privates,
+                                     ArrayRef<const Expr *> LHSExprs,
+                                     ArrayRef<const Expr *> RHSExprs,
+                                     ArrayRef<const Expr *> ReductionOps);
+
+  /// Emits single reduction combiner
+  void emitSingleReductionCombiner(CodeGenFunction &CGF,
+                                   const Expr *ReductionOp,
+                                   const Expr *PrivateRef,
+                                   const DeclRefExpr *LHS,
+                                   const DeclRefExpr *RHS);
+
+  struct ReductionOptionsTy {
+    bool WithNowait;
+    bool SimpleReduction;
+    OpenMPDirectiveKind ReductionKind;
+  };
   /// \brief Emit a code for reduction clause. Next code should be emitted for
   /// reduction:
   /// \code
@@ -916,14 +1088,63 @@ public:
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
-  /// \param WithNowait true if parent directive has also nowait clause, false
-  /// otherwise.
+  /// \param Options List of options for reduction codegen:
+  ///     WithNowait true if parent directive has also nowait clause, false
+  ///     otherwise.
+  ///     SimpleReduction Emit reduction operation only. Used for omp simd
+  ///     directive on the host.
+  ///     ReductionKind The kind of reduction to perform.
   virtual void emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                              ArrayRef<const Expr *> Privates,
                              ArrayRef<const Expr *> LHSExprs,
                              ArrayRef<const Expr *> RHSExprs,
                              ArrayRef<const Expr *> ReductionOps,
-                             bool WithNowait, bool SimpleReduction);
+                             ReductionOptionsTy Options);
+
+  /// Emit a code for initialization of task reduction clause. Next code
+  /// should be emitted for reduction:
+  /// \code
+  ///
+  /// _task_red_item_t red_data[n];
+  /// ...
+  /// red_data[i].shar = &origs[i];
+  /// red_data[i].size = sizeof(origs[i]);
+  /// red_data[i].f_init = (void*)RedInit<i>;
+  /// red_data[i].f_fini = (void*)RedDest<i>;
+  /// red_data[i].f_comb = (void*)RedOp<i>;
+  /// red_data[i].flags = <Flag_i>;
+  /// ...
+  /// void* tg1 = __kmpc_task_reduction_init(gtid, n, red_data);
+  /// \endcode
+  ///
+  /// \param LHSExprs List of LHS in \a Data.ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a Data.ReductionOps reduction operations.
+  /// \param Data Additional data for task generation like tiedness, final
+  /// state, list of privates, reductions etc.
+  virtual llvm::Value *emitTaskReductionInit(CodeGenFunction &CGF,
+                                             SourceLocation Loc,
+                                             ArrayRef<const Expr *> LHSExprs,
+                                             ArrayRef<const Expr *> RHSExprs,
+                                             const OMPTaskDataTy &Data);
+
+  /// Required to resolve existing problems in the runtime. Emits threadprivate
+  /// variables to store the size of the VLAs/array sections for
+  /// initializer/combiner/finalizer functions + emits threadprivate variable to
+  /// store the pointer to the original reduction item for the custom
+  /// initializer defined by declare reduction construct.
+  /// \param RCG Allows to reuse an existing data for the reductions.
+  /// \param N Reduction item for which fixups must be emitted.
+  virtual void emitTaskReductionFixups(CodeGenFunction &CGF, SourceLocation Loc,
+                                       ReductionCodeGen &RCG, unsigned N);
+
+  /// Get the address of `void *` type of the privatue copy of the reduction
+  /// item specified by the \p SharedLVal.
+  /// \param ReductionsPtr Pointer to the reduction data returned by the
+  /// emitTaskReductionInit function.
+  /// \param SharedLVal Address of the original reduction item.
+  virtual Address getTaskReductionItem(CodeGenFunction &CGF, SourceLocation Loc,
+                                       llvm::Value *ReductionsPtr,
+                                       LValue SharedLVal);
 
   /// \brief Emit code for 'taskwait' directive.
   virtual void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc);
@@ -952,7 +1173,7 @@ public:
   /// \param OutlinedFnID Outlined function ID value to be defined by this call.
   /// \param IsOffloadEntry True if the outlined function is an offload entry.
   /// \param CodeGen Code generation sequence for the \a D directive.
-  /// An oulined function may not be an entry if, e.g. the if clause always
+  /// An outlined function may not be an entry if, e.g. the if clause always
   /// evaluates to false.
   virtual void emitTargetOutlinedFunction(const OMPExecutableDirective &D,
                                           StringRef ParentName,
@@ -991,7 +1212,7 @@ public:
   virtual bool emitTargetGlobalVariable(GlobalDecl GD);
 
   /// \brief Emit the global \a GD if it is meaningful for the target. Returns
-  /// if it was emitted succesfully.
+  /// if it was emitted successfully.
   /// \param GD Global to scan.
   virtual bool emitTargetGlobal(GlobalDecl GD);
 

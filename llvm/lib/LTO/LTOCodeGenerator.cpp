@@ -35,6 +35,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/Linker/Linker.h"
@@ -140,6 +141,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeMemCpyOptLegacyPassPass(R);
   initializeDCELegacyPassPass(R);
   initializeCFGSimplifyPassPass(R);
+  initializeLateCFGSimplifyPassPass(R);
 }
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
@@ -493,36 +495,14 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
     return;
   HasVerifiedInput = true;
 
-  if (LTOStripInvalidDebugInfo) {
-    bool BrokenDebugInfo = false;
-    if (verifyModule(*MergedModule, &dbgs(), &BrokenDebugInfo))
-      report_fatal_error("Broken module found, compilation aborted!");
-    if (BrokenDebugInfo) {
-      emitWarning("Invalid debug info found, debug info will be stripped");
-      StripDebugInfo(*MergedModule);
-    }
-  }
-  if (verifyModule(*MergedModule, &dbgs()))
+  bool BrokenDebugInfo = false;
+  if (verifyModule(*MergedModule, &dbgs(),
+                   LTOStripInvalidDebugInfo ? &BrokenDebugInfo : nullptr))
     report_fatal_error("Broken module found, compilation aborted!");
-}
-
-bool LTOCodeGenerator::setupOptimizationRemarks() {
-  if (LTORemarksFilename != "") {
-    std::error_code EC;
-    DiagnosticOutputFile = llvm::make_unique<tool_output_file>(
-        LTORemarksFilename, EC, sys::fs::F_None);
-    if (EC) {
-      emitError(EC.message());
-      return false;
-    }
-    Context.setDiagnosticsOutputFile(
-        llvm::make_unique<yaml::Output>(DiagnosticOutputFile->os()));
+  if (BrokenDebugInfo) {
+    emitWarning("Invalid debug info found, debug info will be stripped");
+    StripDebugInfo(*MergedModule);
   }
-
-  if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticHotnessRequested(true);
-
-  return true;
 }
 
 void LTOCodeGenerator::finishOptimizationRemarks() {
@@ -540,8 +520,13 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   if (!this->determineTarget())
     return false;
 
-  if (!setupOptimizationRemarks())
-    return false;
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
+      Context, LTORemarksFilename, LTOPassRemarksWithHotness);
+  if (!DiagFileOrErr) {
+    errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
+    report_fatal_error("Can't get an output file for the remarks");
+  }
+  DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.
@@ -612,6 +597,7 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
   // If statistics were requested, print them out after codegen.
   if (llvm::AreStatisticsEnabled())
     llvm::PrintStatistics();
+  reportAndResetTimings();
 
   finishOptimizationRemarks();
 

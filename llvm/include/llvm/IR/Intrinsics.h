@@ -28,7 +28,7 @@ class FunctionType;
 class Function;
 class LLVMContext;
 class Module;
-class AttributeSet;
+class AttributeList;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -69,7 +69,7 @@ namespace Intrinsic {
   bool isLeaf(ID id);
 
   /// Return the attributes for an intrinsic.
-  AttributeSet getAttributes(LLVMContext &C, ID id);
+  AttributeList getAttributes(LLVMContext &C, ID id);
 
   /// Create or insert an LLVM Function declaration for an intrinsic, and return
   /// it.
@@ -100,7 +100,7 @@ namespace Intrinsic {
       Void, VarArg, MMX, Token, Metadata, Half, Float, Double,
       Integer, Vector, Pointer, Struct,
       Argument, ExtendArgument, TruncArgument, HalfVecArgument,
-      SameVecWidthArgument, PtrToArgument, PtrToElt, VecOfPtrsToElt
+      SameVecWidthArgument, PtrToArgument, PtrToElt, VecOfAnyPtrsToElt
     } Kind;
 
     union {
@@ -119,23 +119,41 @@ namespace Intrinsic {
       AK_AnyVector,
       AK_AnyPointer
     };
+
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
              Kind == SameVecWidthArgument || Kind == PtrToArgument ||
-             Kind == PtrToElt || Kind == VecOfPtrsToElt);
+             Kind == PtrToElt);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == PtrToArgument ||
-             Kind == VecOfPtrsToElt);
+             Kind == SameVecWidthArgument || Kind == PtrToArgument);
       return (ArgKind)(Argument_Info & 7);
+    }
+
+    // VecOfAnyPtrsToElt uses both an overloaded argument (for address space)
+    // and a reference argument (for matching vector width and element types)
+    unsigned getOverloadArgNumber() const {
+      assert(Kind == VecOfAnyPtrsToElt);
+      return Argument_Info >> 16;
+    }
+    unsigned getRefArgNumber() const {
+      assert(Kind == VecOfAnyPtrsToElt);
+      return Argument_Info & 0xFFFF;
     }
 
     static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
       IITDescriptor Result = { K, { Field } };
+      return Result;
+    }
+
+    static IITDescriptor get(IITDescriptorKind K, unsigned short Hi,
+                             unsigned short Lo) {
+      unsigned Field = Hi << 16 | Lo;
+      IITDescriptor Result = {K, {Field}};
       return Result;
     }
   };

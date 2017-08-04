@@ -109,7 +109,7 @@ _ZN7MessageD1Ev.exit:                             ; preds = %if.then.i.i.i.i, %i
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
 
 declare %class.StaticSocketDataProvider.6.231.281.1306.2331* @_ZN24StaticSocketDataProviderC1EP13MockReadWritejS1_j(%class.StaticSocketDataProvider.6.231.281.1306.2331* returned, %struct.MockReadWrite.7.232.282.1307.2332*, i32, %struct.MockReadWrite.7.232.282.1307.2332*, i32) unnamed_addr
 
@@ -130,7 +130,7 @@ declare %class.Message.13.238.288.1313.2338* @_ZN7MessageC1Ev(%class.Message.13.
 declare %class.AssertHelper.10.235.285.1310.2335* @_ZN12AssertHelperD1Ev(%class.AssertHelper.10.235.285.1310.2335* returned) unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
 
 declare void @_ZN18ClientSocketHandle5m_fn3IPiEEvRK25Trans_NS___1_basic_stringIciiE13scoped_refptr15RequestPriorityN16ClientSocketPool13RespectLimitsERiT_11BoundNetLog(%class.ClientSocketHandle.14.239.289.1314.2339*, %class.Trans_NS___1_basic_string.18.243.293.1318.2343* dereferenceable(12), %class.scoped_refptr.19.244.294.1319.2344*, i32, i32, i32* dereferenceable(4), i32*, %class.BoundNetLog.20.245.295.1320.2345*)
 

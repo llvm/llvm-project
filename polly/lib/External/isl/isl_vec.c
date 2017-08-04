@@ -30,7 +30,7 @@ uint32_t isl_vec_get_hash(__isl_keep isl_vec *vec)
 	return isl_seq_get_hash(vec->el, vec->size);
 }
 
-struct isl_vec *isl_vec_alloc(struct isl_ctx *ctx, unsigned size)
+__isl_give isl_vec *isl_vec_alloc(struct isl_ctx *ctx, unsigned size)
 {
 	struct isl_vec *vec;
 
@@ -94,7 +94,7 @@ __isl_give isl_vec *isl_vec_expand(__isl_take isl_vec *vec, int pos, int n,
 		return NULL;
 	if (expanded < n)
 		isl_die(isl_vec_get_ctx(vec), isl_error_invalid,
-			"not an expansion", isl_vec_free(vec));
+			"not an expansion", return isl_vec_free(vec));
 	if (expanded == n)
 		return vec;
 	if (pos < 0 || n < 0 || pos + n > vec->size)
@@ -328,6 +328,15 @@ int isl_vec_cmp_element(__isl_keep isl_vec *vec1, __isl_keep isl_vec *vec2,
 	return isl_int_cmp(vec1->el[pos], vec2->el[pos]);
 }
 
+/* Does "vec" contain only zero elements?
+ */
+isl_bool isl_vec_is_zero(__isl_keep isl_vec *vec)
+{
+	if (!vec)
+		return isl_bool_error;
+	return isl_seq_first_non_zero(vec->el, vec->size) < 0;
+}
+
 isl_bool isl_vec_is_equal(__isl_keep isl_vec *vec1, __isl_keep isl_vec *vec2)
 {
 	if (!vec1 || !vec2)
@@ -430,7 +439,7 @@ void isl_vec_lcm(struct isl_vec *vec, isl_int *lcm)
 /* Given a rational vector, with the denominator in the first element
  * of the vector, round up all coordinates.
  */
-struct isl_vec *isl_vec_ceil(struct isl_vec *vec)
+__isl_give isl_vec *isl_vec_ceil(__isl_take isl_vec *vec)
 {
 	vec = isl_vec_cow(vec);
 	if (!vec)

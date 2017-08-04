@@ -530,6 +530,12 @@ class Predicate<string cond> {
   /// PredicateName - User-level name to use for the predicate. Mainly for use
   /// in diagnostics such as missing feature errors in the asm matcher.
   string PredicateName = "";
+
+  /// Setting this to '1' indicates that the predicate must be recomputed on
+  /// every function change. Most predicates can leave this at '0'.
+  ///
+  /// Ignored by SelectionDAG, it always recomputes the predicate on every use.
+  bit RecomputePerFunction = 0;
 }
 
 /// NoHonorSignDependentRounding - This predicate is true if support for
@@ -674,6 +680,11 @@ class RegisterOperand<RegisterClass regclass, string pm = "printOperand">
   // this type. The method normally will just use an alt-name index to look
   // up the name to print. Default to the generic printOperand().
   string PrintMethod = pm;
+
+  // EncoderMethod - The target method name to call to encode this register
+  // operand.
+  string EncoderMethod = "";
+
   // ParserMatchClass - The "match class" that operands of this type fit
   // in. Match classes are used to define the order in which instructions are
   // match, to ensure that which instructions gets matched is deterministic.
@@ -948,11 +959,12 @@ def LOCAL_ESCAPE : Instruction {
   let hasSideEffects = 0;
   let hasCtrlDep = 1;
 }
-def FAULTING_LOAD_OP : Instruction {
+def FAULTING_OP : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let usesCustomInserter = 1;
   let mayLoad = 1;
+  let mayStore = 1;
   let isTerminator = 1;
   let isBranch = 1;
 }
@@ -994,6 +1006,25 @@ def PATCHABLE_TAIL_CALL : Instruction {
   let usesCustomInserter = 1;
   let hasSideEffects = 1;
   let isReturn = 1;
+}
+def PATCHABLE_EVENT_CALL : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptr_rc:$event, i8imm:$size);
+  let AsmString = "# XRay Custom Event Log.";
+  let usesCustomInserter = 1;
+  let isCall = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+}
+def FENTRY_CALL : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "# FEntry call";
+  let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
 }
 
 // Generic opcodes used in GlobalISel.

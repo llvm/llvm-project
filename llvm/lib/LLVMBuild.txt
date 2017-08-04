@@ -24,7 +24,6 @@ subdirectories =
  DebugInfo
  Demangle
  ExecutionEngine
- LibDriver
  LineEditor
  Linker
  IR
@@ -32,6 +31,7 @@ subdirectories =
  LTO
  MC
  Object
+ BinaryFormat
  ObjectYAML
  Option
  Passes
@@ -39,6 +39,8 @@ subdirectories =
  Support
  TableGen
  Target
+ Testing
+ ToolDrivers
  Transforms
 
 [component_0]

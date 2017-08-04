@@ -2,12 +2,13 @@
 
 # This tries to test defrange gap edge cases.
 
-# CHECK:         Local {
+# CHECK:         LocalSym {
 # CHECK:           Type: int (0x74)
 # CHECK:           VarName: p
 # CHECK:         }
-# CHECK-NOT:     Local {
-# CHECK:         DefRangeRegister {
+# CHECK-NOT:     LocalSym {
+# CHECK:         DefRangeRegisterSym {
+# CHECK-NEXT:      Kind: S_DEFRANGE_REGISTER (0x1141)
 # CHECK-NEXT:      Register: 23
 # CHECK-NEXT:      MayHaveNoName: 0
 # CHECK-NEXT:      LocalVariableAddrRange {
@@ -20,7 +21,8 @@
 # CHECK-NEXT:        Range: 0x1
 # CHECK-NEXT:      ]
 # CHECK-NEXT:    }
-# CHECK-NEXT:    DefRangeRegister {
+# CHECK-NEXT:    DefRangeRegisterSym {
+# CHECK-NEXT:      Kind: S_DEFRANGE_REGISTER (0x1141)
 # CHECK-NEXT:      Register: 23
 # CHECK-NEXT:      MayHaveNoName: 0
 # CHECK-NEXT:      LocalVariableAddrRange {
@@ -29,7 +31,8 @@
 # CHECK-NEXT:        Range: 0x6
 # CHECK-NEXT:      }
 # CHECK-NEXT:    }
-# CHECK-NEXT:    DefRangeRegister {
+# CHECK-NEXT:    DefRangeRegisterSym {
+# CHECK-NEXT:      Kind: S_DEFRANGE_REGISTER (0x1141)
 # CHECK-NEXT:      Register: 23
 # CHECK-NEXT:      MayHaveNoName: 0
 # CHECK-NEXT:      LocalVariableAddrRange {
@@ -38,7 +41,8 @@
 # CHECK-NEXT:        Range: 0x1
 # CHECK-NEXT:      }
 # CHECK-NEXT:    }
-# CHECK-NEXT:    DefRangeRegister {
+# CHECK-NEXT:    DefRangeRegisterSym {
+# CHECK-NEXT:      Kind: S_DEFRANGE_REGISTER (0x1141)
 # CHECK-NEXT:      Register: 23
 # CHECK-NEXT:      MayHaveNoName: 0
 # CHECK-NEXT:      LocalVariableAddrRange {

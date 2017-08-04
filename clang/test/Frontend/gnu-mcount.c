@@ -1,16 +1,16 @@
 // REQUIRES: arm-registered-target,aarch64-registered-target
 
-// RUN: %clang -target armv7-unknown-none-eabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI
-// RUN: %clang -target armv7-unknown-none-eabi -pg -meabi gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
-// RUN: %clang -target aarch64-unknown-none-eabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI
-// RUN: %clang -target aarch64-unknown-none-eabi -pg -meabi gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-MEABI-GNU
+// RUN: %clang -target armv7-unknown-none-eabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-BAREMETAL-EABI
+// RUN: %clang -target armv7-unknown-none-eabi -pg -meabi gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-BAREMETAL-EABI-MEABI-GNU
+// RUN: %clang -target aarch64-unknown-none-eabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-BAREMETAL-EABI
+// RUN: %clang -target aarch64-unknown-none-eabi -pg -meabi gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-BAREMETAL-EABI-MEABI-GNU
 // RUN: %clang -target armv7-unknown-linux-gnueabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI
 // RUN: %clang -target armv7-unknown-linux-gnueabi -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
-// RUN: %clang -target aarch64-unknown-linux-gnueabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI
+// RUN: %clang -target aarch64-unknown-linux-gnueabi -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-LINUX
 // RUN: %clang -target aarch64-unknown-linux-gnueabi -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-MEABI-GNU
 // RUN: %clang -target armv7-unknown-linux-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI
 // RUN: %clang -target armv7-unknown-linux-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-MEABI-GNU
-// RUN: %clang -target aarch64-unknown-linux-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI
+// RUN: %clang -target aarch64-unknown-linux-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-LINUX
 // RUN: %clang -target aarch64-unknown-linux-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-MEABI-GNU
 // RUN: %clang -target armv7-unknown-freebsd-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-FREEBSD
 // RUN: %clang -target armv7-unknown-freebsd-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-FREEBSD
@@ -46,6 +46,11 @@ int f() {
 }
 
 // CHECK-LABEL: f
+// TODO: add profiling support for arm-baremetal
+// CHECK-ARM-BAREMETAL-EABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01mcount"{{.*}} }
+// CHECK-ARM-BAREMETAL-EABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-BAREMETAL-EABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM64-BAREMETAL-EABI-MEABI-GNU: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01_mcount"{{.*}} }
 // CHECK-ARM-IOS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="_mcount"{{.*}} }
 // CHECK-ARM-IOS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
 // CHECK-ARM-EABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01mcount"{{.*}} }
@@ -53,6 +58,7 @@ int f() {
 // CHECK-ARM64-EABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
 // CHECK-ARM64-EABI-MEABI-GNU: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01_mcount"{{.*}} }
 // CHECK-ARM64-EABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-EABI-LINUX: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01_mcount"{{.*}} }
 // CHECK-ARM-EABI-FREEBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="__mcount"{{.*}} }
 // CHECK-ARM-EABI-FREEBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
 // CHECK-ARM64-EABI-FREEBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"=".mcount"{{.*}} }

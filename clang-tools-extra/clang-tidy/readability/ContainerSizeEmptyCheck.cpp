@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ContainerSizeEmptyCheck.h"
+#include "../utils/ASTUtils.h"
 #include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -18,6 +19,8 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace readability {
+
+using utils::IsBinaryOrTernary;
 
 ContainerSizeEmptyCheck::ContainerSizeEmptyCheck(StringRef Name,
                                                  ClangTidyContext *Context)
@@ -56,30 +59,76 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMemberCallExpr(on(expr(anyOf(hasType(ValidContainer),
                                       hasType(pointsTo(ValidContainer)),
-                                      hasType(references(ValidContainer))))
-                               .bind("STLObject")),
+                                      hasType(references(ValidContainer))))),
                         callee(cxxMethodDecl(hasName("size"))), WrongUse,
                         unless(hasAncestor(cxxMethodDecl(
                             ofClass(equalsBoundNode("container"))))))
           .bind("SizeCallExpr"),
+      this);
+
+  // Empty constructor matcher.
+  const auto DefaultConstructor = cxxConstructExpr(
+          hasDeclaration(cxxConstructorDecl(isDefaultConstructor())));
+  // Comparison to empty string or empty constructor.
+  const auto WrongComparend = anyOf(
+      ignoringImpCasts(stringLiteral(hasSize(0))),
+      ignoringImpCasts(cxxBindTemporaryExpr(has(DefaultConstructor))),
+      ignoringImplicit(DefaultConstructor),
+      cxxConstructExpr(
+          hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
+          has(expr(ignoringImpCasts(DefaultConstructor)))),
+      cxxConstructExpr(
+          hasDeclaration(cxxConstructorDecl(isMoveConstructor())),
+          has(expr(ignoringImpCasts(DefaultConstructor)))));
+  // Match the object being compared.
+  const auto STLArg =
+      anyOf(unaryOperator(
+                hasOperatorName("*"),
+                hasUnaryOperand(
+                    expr(hasType(pointsTo(ValidContainer))).bind("Pointee"))),
+            expr(hasType(ValidContainer)).bind("STLObject"));
+  Finder->addMatcher(
+      cxxOperatorCallExpr(
+          anyOf(hasOverloadedOperatorName("=="),
+                hasOverloadedOperatorName("!=")),
+          anyOf(allOf(hasArgument(0, WrongComparend), hasArgument(1, STLArg)),
+                allOf(hasArgument(0, STLArg), hasArgument(1, WrongComparend))),
+          unless(hasAncestor(
+              cxxMethodDecl(ofClass(equalsBoundNode("container"))))))
+          .bind("BinCmp"),
       this);
 }
 
 void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MemberCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("SizeCallExpr");
+  const auto *BinCmp = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("BinCmp");
   const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("SizeBinaryOp");
-  const auto *E = Result.Nodes.getNodeAs<Expr>("STLObject");
+  const auto *Pointee = Result.Nodes.getNodeAs<Expr>("Pointee");
+  const auto *E =
+      MemberCall
+          ? MemberCall->getImplicitObjectArgument()
+          : (Pointee ? Pointee : Result.Nodes.getNodeAs<Expr>("STLObject"));
   FixItHint Hint;
   std::string ReplacementText =
       Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()),
                            *Result.SourceManager, getLangOpts());
+  if (BinCmp && IsBinaryOrTernary(E)) {
+    // Not just a DeclRefExpr, so parenthesize to be on the safe side.
+    ReplacementText = "(" + ReplacementText + ")";
+  }
   if (E->getType()->isPointerType())
     ReplacementText += "->empty()";
   else
     ReplacementText += ".empty()";
 
-  if (BinaryOp) { // Determine the correct transformation.
+  if (BinCmp) {
+    if (BinCmp->getOperator() == OO_ExclaimEqual) {
+      ReplacementText = "!" + ReplacementText;
+    }
+    Hint =
+        FixItHint::CreateReplacement(BinCmp->getSourceRange(), ReplacementText);
+  } else if (BinaryOp) {  // Determine the correct transformation.
     bool Negation = false;
     const bool ContainerIsLHS =
         !llvm::isa<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts());
@@ -149,9 +198,17 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                                           "!" + ReplacementText);
   }
 
-  diag(MemberCall->getLocStart(), "the 'empty' method should be used to check "
-                                  "for emptiness instead of 'size'")
-      << Hint;
+  if (MemberCall) {
+    diag(MemberCall->getLocStart(),
+         "the 'empty' method should be used to check "
+         "for emptiness instead of 'size'")
+        << Hint;
+  } else {
+    diag(BinCmp->getLocStart(),
+         "the 'empty' method should be used to check "
+         "for emptiness instead of comparing to an empty object")
+        << Hint;
+  }
 
   const auto *Container = Result.Nodes.getNodeAs<NamedDecl>("container");
   const auto *Empty = Result.Nodes.getNodeAs<FunctionDecl>("empty");

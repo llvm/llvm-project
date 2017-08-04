@@ -131,9 +131,6 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
 
 void ThrowByValueCatchByReferenceCheck::diagnoseCatchLocations(
     const CXXCatchStmt *catchStmt, ASTContext &context) {
-  const char *diagMsgCatchReference = "catch handler catches a pointer value; "
-                                      "should throw a non-pointer value and "
-                                      "catch by reference instead";
   if (!catchStmt)
     return;
   auto caughtType = catchStmt->getCaughtType();
@@ -141,12 +138,17 @@ void ThrowByValueCatchByReferenceCheck::diagnoseCatchLocations(
     return;
   auto *varDecl = catchStmt->getExceptionDecl();
   if (const auto *PT = caughtType.getCanonicalType()->getAs<PointerType>()) {
+    const char *diagMsgCatchReference = "catch handler catches a pointer value; "
+                                        "should throw a non-pointer value and "
+                                        "catch by reference instead";
     // We do not diagnose when catching pointer to strings since we also allow
     // throwing string literals.
     if (!PT->getPointeeType()->isAnyCharacterType())
       diag(varDecl->getLocStart(), diagMsgCatchReference);
   } else if (!caughtType->isReferenceType()) {
-    // If it's not a pointer and not a reference then it must be thrown "by
+    const char *diagMsgCatchReference = "catch handler catches by value; "
+                                        "should catch by reference instead";
+    // If it's not a pointer and not a reference then it must be caught "by
     // value". In this case we should emit a diagnosis message unless the type
     // is trivial.
     if (!caughtType.isTrivialType(context))

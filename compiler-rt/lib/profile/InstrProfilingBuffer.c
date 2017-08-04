@@ -45,15 +45,24 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
          (CountersEnd - CountersBegin) * sizeof(uint64_t) + NamesSize + Padding;
 }
 
+COMPILER_RT_VISIBILITY
+void initBufferWriter(ProfDataWriter *BufferWriter, char *Buffer) {
+  BufferWriter->Write = lprofBufferWriter;
+  BufferWriter->WriterCtx = Buffer;
+}
+
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {
-  return lprofWriteData(lprofBufferWriter, Buffer, 0);
+  ProfDataWriter BufferWriter;
+  initBufferWriter(&BufferWriter, Buffer);
+  return lprofWriteData(&BufferWriter, 0, 0);
 }
 
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
     char *Buffer, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const uint64_t *CountersBegin,
     const uint64_t *CountersEnd, const char *NamesBegin, const char *NamesEnd) {
-  return lprofWriteDataImpl(lprofBufferWriter, Buffer, DataBegin, DataEnd,
-                            CountersBegin, CountersEnd, 0, NamesBegin,
-                            NamesEnd);
+  ProfDataWriter BufferWriter;
+  initBufferWriter(&BufferWriter, Buffer);
+  return lprofWriteDataImpl(&BufferWriter, DataBegin, DataEnd, CountersBegin,
+                            CountersEnd, 0, NamesBegin, NamesEnd, 0);
 }

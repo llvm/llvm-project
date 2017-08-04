@@ -281,8 +281,8 @@ static __isl_give isl_basic_set *farkas(__isl_take isl_space *space,
 	}
 
 	dual = isl_basic_set_remove_divs(dual);
-	isl_basic_set_simplify(dual);
-	isl_basic_set_finalize(dual);
+	dual = isl_basic_set_simplify(dual);
+	dual = isl_basic_set_finalize(dual);
 
 	isl_basic_set_free(bset);
 	return dual;
@@ -369,6 +369,24 @@ __isl_give isl_basic_set *isl_set_coefficients(__isl_take isl_set *set)
 
 	isl_set_free(set);
 	return coeff;
+}
+
+/* Wrapper around isl_basic_set_coefficients for use
+ * as a isl_basic_set_list_map callback.
+ */
+static __isl_give isl_basic_set *coefficients_wrap(
+	__isl_take isl_basic_set *bset, void *user)
+{
+	return isl_basic_set_coefficients(bset);
+}
+
+/* Replace the elements of "list" by the result of applying
+ * isl_basic_set_coefficients to them.
+ */
+__isl_give isl_basic_set_list *isl_basic_set_list_coefficients(
+	__isl_take isl_basic_set_list *list)
+{
+	return isl_basic_set_list_map(list, &coefficients_wrap, NULL);
 }
 
 /* Construct a basic set containing the elements that satisfy all

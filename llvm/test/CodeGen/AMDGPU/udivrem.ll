@@ -51,7 +51,7 @@
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
 ; SI: s_endpgm
-define void @test_udivrem(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %x, i32 %y) {
+define amdgpu_kernel void @test_udivrem(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %x, i32 %y) {
   %result0 = udiv i32 %x, %y
   store i32 %result0, i32 addrspace(1)* %out0
   %result1 = urem i32 %x, %y
@@ -158,7 +158,7 @@ define void @test_udivrem(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
 ; SI: s_endpgm
-define void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i32> %x, <2 x i32> %y) {
   %result0 = udiv <2 x i32> %x, %y
   store <2 x i32> %result0, <2 x i32> addrspace(1)* %out
   %result1 = urem <2 x i32> %x, %y
@@ -340,7 +340,7 @@ define void @test_udivrem_v2(<2 x i32> addrspace(1)* %out, <2 x i32> %x, <2 x i3
 ; SI-DAG: v_subrev_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI: s_endpgm
-define void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @test_udivrem_v4(<4 x i32> addrspace(1)* %out, <4 x i32> %x, <4 x i32> %y) {
   %result0 = udiv <4 x i32> %x, %y
   store <4 x i32> %result0, <4 x i32> addrspace(1)* %out
   %result1 = urem <4 x i32> %x, %y

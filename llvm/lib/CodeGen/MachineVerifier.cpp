@@ -23,7 +23,6 @@
 // the verifier errors.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetOperations.h"
@@ -36,6 +35,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -87,7 +88,6 @@ namespace {
     RegSet regsLive;
     RegVector regsDefined, regsDead, regsKilled;
     RegMaskVector regMasks;
-    RegSet regsLiveInButUnused;
 
     SlotIndex lastIndex;
 
@@ -188,8 +188,9 @@ namespace {
       return Reg < regsReserved.size() && regsReserved.test(Reg);
     }
 
-    bool isAllocatable(unsigned Reg) {
-      return Reg < TRI->getNumRegs() && MRI->isAllocatable(Reg);
+    bool isAllocatable(unsigned Reg) const {
+      return Reg < TRI->getNumRegs() && TRI->isInAllocatableClass(Reg) &&
+        !regsReserved.test(Reg);
     }
 
     // Analysis information if available
@@ -260,8 +261,8 @@ namespace {
     static char ID; // Pass ID, replacement for typeid
     const std::string Banner;
 
-    MachineVerifierPass(const std::string &banner = nullptr)
-      : MachineFunctionPass(ID), Banner(banner) {
+    MachineVerifierPass(std::string banner = std::string())
+      : MachineFunctionPass(ID), Banner(std::move(banner)) {
         initializeMachineVerifierPassPass(*PassRegistry::getPassRegistry());
       }
 
@@ -418,7 +419,6 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
   regsDead.clear();
   regsKilled.clear();
   regMasks.clear();
-  regsLiveInButUnused.clear();
   MBBInfoMap.clear();
 
   return foundErrors;
@@ -526,9 +526,11 @@ void MachineVerifier::markReachable(const MachineBasicBlock *MBB) {
 
 void MachineVerifier::visitMachineFunctionBefore() {
   lastIndex = SlotIndex();
-  regsReserved = MRI->getReservedRegs();
+  regsReserved = MRI->reservedRegsFrozen() ? MRI->getReservedRegs()
+                                           : TRI->getReservedRegs(*MF);
 
-  markReachable(&MF->front());
+  if (!MF->empty())
+    markReachable(&MF->front());
 
   // Build a set of the basic blocks in the function.
   FunctionBlocks.clear();
@@ -548,7 +550,8 @@ void MachineVerifier::visitMachineFunctionBefore() {
   // Check that the register use lists are sane.
   MRI->verifyUseLists();
 
-  verifyStackFrame();
+  if (!MF->empty())
+    verifyStackFrame();
 }
 
 // Does iterator point to a and b as the first two elements?
@@ -572,7 +575,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     for (const auto &LI : MBB->liveins()) {
       if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
           MBB->getIterator() != MBB->getParent()->begin()) {
-        report("MBB has allocable live-in, but isn't entry or landing-pad.", MBB);
+        report("MBB has allocatable live-in, but isn't entry or landing-pad.", MBB);
       }
     }
   }
@@ -752,11 +755,10 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         regsLive.insert(*SubRegs);
     }
   }
-  regsLiveInButUnused = regsLive;
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   BitVector PR = MFI.getPristineRegs(*MF);
-  for (int I = PR.find_first(); I>0; I = PR.find_next(I)) {
+  for (unsigned I : PR.set_bits()) {
     for (MCSubRegIterator SubRegs(I, TRI, /*IncludeSelf=*/true);
          SubRegs.isValid(); ++SubRegs)
       regsLive.insert(*SubRegs);
@@ -908,17 +910,42 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
   }
 
-  // Generic loads and stores must have a single MachineMemOperand
-  // describing that access.
-  if ((MI->getOpcode() == TargetOpcode::G_LOAD ||
-       MI->getOpcode() == TargetOpcode::G_STORE) &&
-      !MI->hasOneMemOperand())
-    report("Generic instruction accessing memory must have one mem operand",
-           MI);
-
   StringRef ErrorInfo;
   if (!TII->verifyInstruction(*MI, ErrorInfo))
     report(ErrorInfo.data(), MI);
+
+  // Verify properties of various specific instruction types
+  switch(MI->getOpcode()) {
+  default:
+    break;
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE:
+    // Generic loads and stores must have a single MachineMemOperand
+    // describing that access.
+    if (!MI->hasOneMemOperand())
+      report("Generic instruction accessing memory must have one mem operand",
+             MI);
+    break;
+  case TargetOpcode::STATEPOINT:
+    if (!MI->getOperand(StatepointOpers::IDPos).isImm() ||
+        !MI->getOperand(StatepointOpers::NBytesPos).isImm() ||
+        !MI->getOperand(StatepointOpers::NCallArgsPos).isImm())
+      report("meta operands to STATEPOINT not constant!", MI);
+    break;
+
+    auto VerifyStackMapConstant = [&](unsigned Offset) {
+      if (!MI->getOperand(Offset).isImm() ||
+          MI->getOperand(Offset).getImm() != StackMaps::ConstantOp || 
+          !MI->getOperand(Offset + 1).isImm()) 
+        report("stack map constant to STATEPOINT not well formed!", MI);
+    };
+    const unsigned VarStart = StatepointOpers(MI).getVarIdx();
+    VerifyStackMapConstant(VarStart + StatepointOpers::CCOffset);
+    VerifyStackMapConstant(VarStart + StatepointOpers::FlagsOffset);
+    VerifyStackMapConstant(VarStart + StatepointOpers::NumDeoptOperandsOffset);
+
+    // TODO: verify we have properly encoded deopt arguments
+  };
 }
 
 void
@@ -958,6 +985,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Operand should be tied", MO, MONum);
       else if (unsigned(TiedTo) != MI->findTiedOperandIdx(MONum))
         report("Tied def doesn't match MCInstrDesc", MO, MONum);
+      else if (TargetRegisterInfo::isPhysicalRegister(MO->getReg())) {
+        const MachineOperand &MOTied = MI->getOperand(TiedTo);
+        if (!MOTied.isReg())
+          report("Tied counterpart must be a register", &MOTied, TiedTo);
+        else if (TargetRegisterInfo::isPhysicalRegister(MOTied.getReg()) &&
+                 MO->getReg() != MOTied.getReg())
+          report("Tied physical registers must match.", &MOTied, TiedTo);
+      }
     } else if (MO->isReg() && MO->isTied())
       report("Explicit operand should not be tied", MO, MONum);
   } else {
@@ -1264,8 +1299,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
   // Both use and def operands can read a register.
   if (MO->readsReg()) {
-    regsLiveInButUnused.erase(Reg);
-
     if (MO->isKill())
       addRegWithSubRegs(regsKilled, Reg);
 
@@ -1921,9 +1954,11 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       SlotIndex PEnd = LiveInts->getMBBEndIdx(*PI);
       const VNInfo *PVNI = LR.getVNInfoBefore(PEnd);
 
-      // All predecessors must have a live-out value if this is not a
-      // subregister liverange.
-      if (!PVNI && LaneMask.none()) {
+      // All predecessors must have a live-out value. However for a phi
+      // instruction with subregister intervals
+      // only one of the subregisters (not necessarily the current one) needs to
+      // be defined.
+      if (!PVNI && (LaneMask.none() || !IsPHI) ) {
         report("Register not marked live out of predecessor", *PI);
         report_context(LR, Reg, LaneMask);
         report_context(*VNI);
@@ -2028,6 +2063,8 @@ namespace {
 void MachineVerifier::verifyStackFrame() {
   unsigned FrameSetupOpcode   = TII->getCallFrameSetupOpcode();
   unsigned FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
+  if (FrameSetupOpcode == ~0u && FrameDestroyOpcode == ~0u)
+    return;
 
   SmallVector<StackStateOfBB, 8> SPState;
   SPState.resize(MF->getNumBlockIDs());
@@ -2055,23 +2092,14 @@ void MachineVerifier::verifyStackFrame() {
     // Update stack state by checking contents of MBB.
     for (const auto &I : *MBB) {
       if (I.getOpcode() == FrameSetupOpcode) {
-        // The first operand of a FrameOpcode should be i32.
-        int Size = I.getOperand(0).getImm();
-        assert(Size >= 0 &&
-          "Value should be non-negative in FrameSetup and FrameDestroy.\n");
-
         if (BBState.ExitIsSetup)
           report("FrameSetup is after another FrameSetup", &I);
-        BBState.ExitValue -= Size;
+        BBState.ExitValue -= TII->getFrameTotalSize(I);
         BBState.ExitIsSetup = true;
       }
 
       if (I.getOpcode() == FrameDestroyOpcode) {
-        // The first operand of a FrameOpcode should be i32.
-        int Size = I.getOperand(0).getImm();
-        assert(Size >= 0 &&
-          "Value should be non-negative in FrameSetup and FrameDestroy.\n");
-
+        int Size = TII->getFrameTotalSize(I);
         if (!BBState.ExitIsSetup)
           report("FrameDestroy is not after a FrameSetup", &I);
         int AbsSPAdj = BBState.ExitValue < 0 ? -BBState.ExitValue :

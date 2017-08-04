@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=ppc64 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BE
-; RUN: llc < %s -march=ppc64le -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LE
-; RUN: llc < %s -march=ppc64 -mcpu=pwr7 | FileCheck %s
-; RUN: llc < %s -march=ppc64 -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-P8U
+; RUN: llc < %s -ppc-asm-full-reg-names -march=ppc64 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BE
+; RUN: llc < %s -ppc-asm-full-reg-names -march=ppc64le -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LE
+; RUN: llc < %s -ppc-asm-full-reg-names -march=ppc64 -mcpu=pwr7 | FileCheck %s
+; RUN: llc < %s -ppc-asm-full-reg-names -march=ppc64 -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-P8U
 
 define i64 @exchange_and_add(i64* %mem, i64 %val) nounwind {
 ; CHECK-LABEL: exchange_and_add:
@@ -108,8 +108,10 @@ entry:
 ; CHECK: @atomic_load
   %tmp = load atomic i64, i64* %mem acquire, align 64
 ; CHECK-NOT: ldarx
-; CHECK: ld
-; CHECK: lwsync
+; CHECK: ld [[VAL:r[0-9]+]]
+; CHECK: cmpd [[CR:cr[0-9]+]], [[VAL]], [[VAL]]
+; CHECK: bne- [[CR]], .+4
+; CHECK: isync
   ret i64 %tmp
 }
 

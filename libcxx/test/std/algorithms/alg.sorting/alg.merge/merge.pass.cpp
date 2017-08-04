@@ -19,9 +19,12 @@
 //   merge(InIter1 first1, InIter1 last1, InIter2 first2, InIter2 last2, OutIter result);
 
 #include <algorithm>
+#include <random>
 #include <cassert>
 
 #include "test_iterators.h"
+
+std::mt19937 randomness;
 
 template <class InIter1, class InIter2, class OutIter>
 void
@@ -53,7 +56,7 @@ test()
     int* ic = new int[2*N];
     for (unsigned i = 0; i < 2*N; ++i)
         ic[i] = i;
-    std::random_shuffle(ic, ic+2*N);
+    std::shuffle(ic, ic+2*N, randomness);
     std::copy(ic, ic+N, ia);
     std::copy(ic+N, ic+2*N, ib);
     std::sort(ia, ia+N);

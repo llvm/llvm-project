@@ -1,4 +1,5 @@
 ; RUN: opt -ipsccp -S %s | FileCheck %s
+; RUN: opt -ipconstprop -S %s | FileCheck %s
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc19.0.24215"
@@ -24,5 +25,5 @@ bb:
   ret void
 }
 
-attributes #0 = { naked noinline optnone }
+attributes #0 = { naked }
 attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }

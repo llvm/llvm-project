@@ -54,11 +54,17 @@ MCObjectWriter *createAMDGPUELFObjectWriter(bool Is64Bit,
 
 #define GET_REGINFO_ENUM
 #include "AMDGPUGenRegisterInfo.inc"
+#undef GET_REGINFO_ENUM
 
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "AMDGPUGenInstrInfo.inc"
+#undef GET_INSTRINFO_OPERAND_ENUM
+#undef GET_INSTRINFO_ENUM
+
 
 #define GET_SUBTARGETINFO_ENUM
 #include "AMDGPUGenSubtargetInfo.inc"
+#undef GET_SUBTARGETINFO_ENUM
 
 #endif

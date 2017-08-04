@@ -2,6 +2,8 @@ RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-nm -a -S - \
 RUN:         | FileCheck %s -check-prefix COFF32
 RUN: yaml2obj %p/Inputs/COFF/x86-64.yaml | llvm-nm -a -S - \
 RUN:         | FileCheck %s -check-prefix COFF64
+RUN: llvm-nm %p/Inputs/trivial-object-test.wasm \
+RUN:         | FileCheck %s -check-prefix WASM
 RUN: llvm-nm %p/Inputs/trivial-object-test.elf-i386 \
 RUN:         | FileCheck %s -check-prefix ELF
 RUN: llvm-nm %p/Inputs/trivial-object-test.elf-i386 -S \
@@ -56,6 +58,11 @@ COFF32-NEXT: 00000000 d L_.str
 COFF32-NEXT:          U _SomeOtherFunction
 COFF32-NEXT: 00000000 T _main
 COFF32-NEXT:          U _puts
+
+WASM:               U SomeOtherFunction
+WASM-NEXT: 00000002 T main
+WASM-NEXT:          U puts
+WASM-NEXT: 00000001 D var
 
 COFF64: 00000000 d .data
 COFF64-NEXT: 00000000 t .text

@@ -90,6 +90,7 @@ LANGOPT(CPlusPlus         , 1, 0, "C++")
 LANGOPT(CPlusPlus11       , 1, 0, "C++11")
 LANGOPT(CPlusPlus14       , 1, 0, "C++14")
 LANGOPT(CPlusPlus1z       , 1, 0, "C++1z")
+LANGOPT(CPlusPlus2a       , 1, 0, "C++2a")
 LANGOPT(ObjC1             , 1, 0, "Objective-C 1")
 LANGOPT(ObjC2             , 1, 0, "Objective-C 2")
 BENIGN_LANGOPT(ObjCDefaultSynthProperties , 1, 0,
@@ -107,7 +108,7 @@ LANGOPT(WChar             , 1, CPlusPlus, "wchar_t keyword")
 LANGOPT(DeclSpecKeyword   , 1, 0, "__declspec keyword")
 BENIGN_LANGOPT(DollarIdents   , 1, 1, "'$' in identifiers")
 BENIGN_LANGOPT(AsmPreprocessor, 1, 0, "preprocessor in asm mode")
-BENIGN_LANGOPT(GNUMode        , 1, 1, "GNU extensions")
+LANGOPT(GNUMode           , 1, 1, "GNU extensions")
 LANGOPT(GNUKeywords       , 1, 1, "GNU keywords")
 BENIGN_LANGOPT(ImplicitInt, 1, !C99 && !CPlusPlus, "C89 implicit 'int'")
 LANGOPT(Digraphs          , 1, 0, "digraphs")
@@ -200,8 +201,11 @@ LANGOPT(CUDADeviceApproxTranscendentals, 1, 0, "using approximate transcendental
 
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")
+LANGOPT(AlignedAllocationUnavailable, 1, 0, "aligned allocation functions are unavailable")
 LANGOPT(NewAlignOverride  , 32, 0, "maximum alignment guaranteed by '::operator new(size_t)'")
 LANGOPT(ConceptsTS , 1, 0, "enable C++ Extensions for Concepts")
+BENIGN_LANGOPT(ModulesCodegen , 1, 0, "Modules code generation")
+BENIGN_LANGOPT(ModulesDebugInfo , 1, 0, "Modules debug info")
 BENIGN_LANGOPT(ElideConstructors , 1, 1, "C++ copy constructor elision")
 BENIGN_LANGOPT(DumpRecordLayouts , 1, 0, "dumping the layout of IRgen'd records")
 BENIGN_LANGOPT(DumpRecordLayoutsSimple , 1, 0, "dumping the layout of IRgen'd records in a simple form")
@@ -264,6 +268,8 @@ LANGOPT(APINotesModules, 1, 0, "use external API notes")
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "
                                            "aggressive, 2: more aggressive)")
+
+LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
 
 BENIGN_LANGOPT(AllowEditorPlaceholders, 1, 0,
                "allow editor placeholders in source")

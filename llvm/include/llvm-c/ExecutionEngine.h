@@ -19,9 +19,9 @@
 #ifndef LLVM_C_EXECUTIONENGINE_H
 #define LLVM_C_EXECUTIONENGINE_H
 
-#include "llvm-c/Types.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
+#include "llvm-c/Types.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "asan_test_utils.h"
 
+#include <errno.h>
+
 NOINLINE void *malloc_fff(size_t size) {
   void *res = malloc/**/(size); break_optimization(0); return res;}
 NOINLINE void *malloc_eee(size_t size) {
@@ -74,9 +76,11 @@ TEST(AddressSanitizer, VariousMallocsTest) {
   delete c;
 
 #if SANITIZER_TEST_HAS_POSIX_MEMALIGN
-  int *pm;
-  int pm_res = posix_memalign((void**)&pm, kPageSize, kPageSize);
+  void *pm = 0;
+  // Valid allocation.
+  int pm_res = posix_memalign(&pm, kPageSize, kPageSize);
   EXPECT_EQ(0, pm_res);
+  EXPECT_NE(nullptr, pm);
   free(pm);
 #endif  // SANITIZER_TEST_HAS_POSIX_MEMALIGN
 
@@ -251,7 +255,8 @@ TEST(AddressSanitizer, BitFieldNegativeTest) {
 namespace {
 
 const char kSEGVCrash[] = "AddressSanitizer: SEGV on unknown address";
-const char kOverriddenHandler[] = "ASan signal handler has been overridden\n";
+const char kOverriddenSigactionHandler[] = "Test sigaction handler\n";
+const char kOverriddenSignalHandler[] = "Test signal handler\n";
 
 TEST(AddressSanitizer, WildAddressTest) {
   char *c = (char*)0x123;
@@ -259,12 +264,12 @@ TEST(AddressSanitizer, WildAddressTest) {
 }
 
 void my_sigaction_sighandler(int, siginfo_t*, void*) {
-  fprintf(stderr, kOverriddenHandler);
+  fprintf(stderr, kOverriddenSigactionHandler);
   exit(1);
 }
 
 void my_signal_sighandler(int signum) {
-  fprintf(stderr, kOverriddenHandler);
+  fprintf(stderr, kOverriddenSignalHandler);
   exit(1);
 }
 
@@ -273,16 +278,20 @@ TEST(AddressSanitizer, SignalTest) {
   memset(&sigact, 0, sizeof(sigact));
   sigact.sa_sigaction = my_sigaction_sighandler;
   sigact.sa_flags = SA_SIGINFO;
-  // ASan should silently ignore sigaction()...
+  char *c = (char *)0x123;
+
+  EXPECT_DEATH(*c = 0, kSEGVCrash);
+
+  // ASan should allow to set sigaction()...
   EXPECT_EQ(0, sigaction(SIGSEGV, &sigact, 0));
 #ifdef __APPLE__
   EXPECT_EQ(0, sigaction(SIGBUS, &sigact, 0));
 #endif
-  char *c = (char*)0x123;
-  EXPECT_DEATH(*c = 0, kSEGVCrash);
+  EXPECT_DEATH(*c = 0, kOverriddenSigactionHandler);
+
   // ... and signal().
-  EXPECT_EQ(0, signal(SIGSEGV, my_signal_sighandler));
-  EXPECT_DEATH(*c = 0, kSEGVCrash);
+  EXPECT_NE(SIG_ERR, signal(SIGSEGV, my_signal_sighandler));
+  EXPECT_DEATH(*c = 0, kOverriddenSignalHandler);
 }
 }  // namespace
 #endif
@@ -337,8 +346,9 @@ void *ManyThreadsWorker(void *a) {
   return 0;
 }
 
-#if !defined(__aarch64__)
+#if !defined(__aarch64__) && !defined(__powerpc64__)
 // FIXME: Infinite loop in AArch64 (PR24389).
+// FIXME: Also occasional hang on powerpc.  Maybe same problem as on AArch64?
 TEST(AddressSanitizer, ManyThreadsTest) {
   const size_t kNumThreads =
       (SANITIZER_WORDSIZE == 32 || ASAN_AVOID_EXPENSIVE_TESTS) ? 30 : 1000;
@@ -684,6 +694,7 @@ void *ThreadStackReuseFunc2(void *unused) {
   return 0;
 }
 
+#if !defined(__thumb__)
 TEST(AddressSanitizer, ThreadStackReuseTest) {
   pthread_t t;
   PTHREAD_CREATE(&t, 0, ThreadStackReuseFunc1, 0);
@@ -691,6 +702,7 @@ TEST(AddressSanitizer, ThreadStackReuseTest) {
   PTHREAD_CREATE(&t, 0, ThreadStackReuseFunc2, 0);
   PTHREAD_JOIN(t, 0);
 }
+#endif
 
 #if defined(__SSE2__)
 #include <emmintrin.h>
@@ -945,7 +957,7 @@ TEST(AddressSanitizer, ShadowGapTest) {
   char *addr = (char*)0x0000100000080000;
 # endif
 #endif
-  EXPECT_DEATH(*addr = 1, "AddressSanitizer: SEGV on unknown");
+  EXPECT_DEATH(*addr = 1, "AddressSanitizer: (SEGV|BUS) on unknown");
 }
 #endif  // ASAN_NEEDS_SEGV
 
@@ -1090,6 +1102,11 @@ TEST(AddressSanitizer, ThreadedStressStackReuseTest) {
   }
 }
 
+// pthread_exit tries to perform unwinding stuff that leads to dlopen'ing
+// libgcc_s.so. dlopen in its turn calls malloc to store "libgcc_s.so" string
+// that confuses LSan on Thumb because it fails to understand that this
+// allocation happens in dynamic linker and should be ignored.
+#if !defined(__thumb__)
 static void *PthreadExit(void *a) {
   pthread_exit(0);
   return 0;
@@ -1102,6 +1119,7 @@ TEST(AddressSanitizer, PthreadExitTest) {
     PTHREAD_JOIN(t, 0);
   }
 }
+#endif
 
 // FIXME: Why does clang-cl define __EXCEPTIONS?
 #if defined(__EXCEPTIONS) && !defined(_WIN32)

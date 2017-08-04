@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -259,7 +259,7 @@ MachineBasicBlock *BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
 
   // Need to fix live-in lists if we track liveness.
   if (TRI->trackLivenessAfterRegAlloc(*MF))
-    computeLiveIns(LiveRegs, *TRI, *NewBB);
+    computeLiveIns(LiveRegs, MF->getRegInfo(), *NewBB);
 
   ++NumSplit;
 
@@ -345,6 +345,10 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
     // Do it here since if there's no split, no update is needed.
     MBB->replaceSuccessor(FBB, &NewBB);
     NewBB.addSuccessor(FBB);
+
+    // Need to fix live-in lists if we track liveness.
+    if (TRI->trackLivenessAfterRegAlloc(*MF))
+      computeLiveIns(LiveRegs, MF->getRegInfo(), NewBB);
   }
 
   // We now have an appropriate fall-through block in place (either naturally or

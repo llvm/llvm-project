@@ -12,7 +12,7 @@
 ; CHECK: buffer_store_byte
 ; ModuleID = 'radeon'
 
-define void @test_8_min_char(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture readonly %in0, i8 addrspace(1)* nocapture readonly %in1) #0 {
+define amdgpu_kernel void @test_8_min_char(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture readonly %in0, i8 addrspace(1)* nocapture readonly %in1) #0 {
 entry:
   %0 = load i8, i8 addrspace(1)* %in0, align 1
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0

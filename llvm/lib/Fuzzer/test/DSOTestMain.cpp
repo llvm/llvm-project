@@ -4,9 +4,9 @@
 // Source code for a simple DSO.
 
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
 extern int DSO1(int a);
 extern int DSO2(int a);
 extern int DSOTestExtra(int a);

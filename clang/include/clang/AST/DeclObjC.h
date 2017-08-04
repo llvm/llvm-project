@@ -381,15 +381,17 @@ public:
                        ArrayRef<SourceLocation> SelLocs = llvm::None);
 
   // Iterator access to parameter types.
-  typedef std::const_mem_fun_t<QualType, ParmVarDecl> deref_fun;
-  typedef llvm::mapped_iterator<param_const_iterator, deref_fun>
-  param_type_iterator;
+  struct GetTypeFn {
+    QualType operator()(const ParmVarDecl *PD) const { return PD->getType(); }
+  };
+  typedef llvm::mapped_iterator<param_const_iterator, GetTypeFn>
+      param_type_iterator;
 
   param_type_iterator param_type_begin() const {
-    return llvm::map_iterator(param_begin(), deref_fun(&ParmVarDecl::getType));
+    return llvm::map_iterator(param_begin(), GetTypeFn());
   }
   param_type_iterator param_type_end() const {
-    return llvm::map_iterator(param_end(), deref_fun(&ParmVarDecl::getType));
+    return llvm::map_iterator(param_end(), GetTypeFn());
   }
 
   /// createImplicitParams - Used to lazily create the self and cmd
@@ -856,11 +858,21 @@ public:
     return Assign;
   }
 
+  /// Return true if this property has an explicitly specified getter name.
+  bool hasExplicitGetterName() const {
+    return (PropertyAttributes & OBJC_PR_getter);
+  }
+
   Selector getGetterName() const { return GetterName; }
   SourceLocation getGetterNameLoc() const { return GetterNameLoc; }
   void setGetterName(Selector Sel, SourceLocation Loc = SourceLocation()) {
     GetterName = Sel;
     GetterNameLoc = Loc;
+  }
+
+  /// Return true if this property has an explicitly specified setter name.
+  bool hasExplicitSetterName() const {
+    return (PropertyAttributes & OBJC_PR_setter);
   }
 
   Selector getSetterName() const { return SetterName; }
@@ -1037,10 +1049,9 @@ public:
   typedef llvm::DenseMap<std::pair<IdentifierInfo*,
                                    unsigned/*isClassProperty*/>,
                          ObjCPropertyDecl*> PropertyMap;
-  
-  typedef llvm::DenseMap<const ObjCProtocolDecl *, ObjCPropertyDecl*>
-            ProtocolPropertyMap;
-  
+
+  typedef llvm::SmallDenseSet<const ObjCProtocolDecl *, 8> ProtocolPropertySet;
+
   typedef llvm::SmallVector<ObjCPropertyDecl*, 8> PropertyDeclOrder;
   
   /// This routine collects list of properties to be implemented in the class.
@@ -2157,7 +2168,8 @@ public:
                                     PropertyDeclOrder &PO) const override;
 
   void collectInheritedProtocolProperties(const ObjCPropertyDecl *Property,
-                                          ProtocolPropertyMap &PM) const;
+                                          ProtocolPropertySet &PS,
+                                          PropertyDeclOrder &PO) const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCProtocol; }
@@ -2615,14 +2627,23 @@ class ObjCCompatibleAliasDecl : public NamedDecl {
   void anchor() override;
   /// Class that this is an alias of.
   ObjCInterfaceDecl *AliasedClass;
+  /// The location of the name of the referenced class.
+  SourceLocation AliasedClassLoc;
+  /// The location of the '@'.
+  SourceLocation AtLoc;
 
-  ObjCCompatibleAliasDecl(DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
-                          ObjCInterfaceDecl* aliasedClass)
-    : NamedDecl(ObjCCompatibleAlias, DC, L, Id), AliasedClass(aliasedClass) {}
+  ObjCCompatibleAliasDecl(DeclContext *DC, SourceLocation NameLoc,
+                          IdentifierInfo *Id, ObjCInterfaceDecl *AliasedClass,
+                          SourceLocation AliasedClassLoc, SourceLocation AtLoc)
+      : NamedDecl(ObjCCompatibleAlias, DC, NameLoc, Id),
+        AliasedClass(AliasedClass), AliasedClassLoc(AliasedClassLoc),
+        AtLoc(AtLoc) {}
+
 public:
-  static ObjCCompatibleAliasDecl *Create(ASTContext &C, DeclContext *DC,
-                                         SourceLocation L, IdentifierInfo *Id,
-                                         ObjCInterfaceDecl* aliasedClass);
+  static ObjCCompatibleAliasDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation NameLoc,
+         IdentifierInfo *Id, ObjCInterfaceDecl *AliasedClass,
+         SourceLocation AliasedClassLoc, SourceLocation AtLoc);
 
   static ObjCCompatibleAliasDecl *CreateDeserialized(ASTContext &C, 
                                                      unsigned ID);
@@ -2630,6 +2651,17 @@ public:
   const ObjCInterfaceDecl *getClassInterface() const { return AliasedClass; }
   ObjCInterfaceDecl *getClassInterface() { return AliasedClass; }
   void setClassInterface(ObjCInterfaceDecl *D) { AliasedClass = D; }
+
+  SourceLocation getClassInterfaceLoc() const { return AliasedClassLoc; }
+
+  void setClassInterfaceLoc(SourceLocation Loc) { AliasedClassLoc = Loc; }
+
+  SourceLocation getAtLoc() const { return AtLoc; }
+  void setAtLoc(SourceLocation Loc) { AtLoc = Loc; }
+
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    return SourceRange(AtLoc, AtLoc);
+  }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCCompatibleAlias; }

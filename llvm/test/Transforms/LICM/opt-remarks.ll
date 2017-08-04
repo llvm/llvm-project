@@ -10,7 +10,7 @@ Loop:
   %j = phi i32 [ 0, %Entry ], [ %Next, %Loop ]
   %addr = getelementptr i32, i32* %array, i32 %j
   %a = load i32, i32* %addr
-; CHECK: remark: /tmp/kk.c:2:20: hosting load
+; CHECK: remark: /tmp/kk.c:2:20: hoisting load
   %b = load i32, i32* %p, !dbg !8
   %a2 = add i32 %a, %b
   store i32 %a2, i32* %addr

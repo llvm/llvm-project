@@ -20,11 +20,25 @@
 #include <memory>
 #include <cassert>
 
+#if TEST_STD_VER >= 11
+#include "poisoned_hash_helper.hpp"
+
+struct A {};
+#endif
+
 int main()
 {
+  {
     int* ptr = new int;
     std::shared_ptr<int> p(ptr);
     std::hash<std::shared_ptr<int> > f;
     std::size_t h = f(p);
     assert(h == std::hash<int*>()(ptr));
+  }
+#if TEST_STD_VER >= 11
+  {
+    test_hash_enabled_for_type<std::shared_ptr<int>>();
+    test_hash_enabled_for_type<std::shared_ptr<A>>();
+  }
+#endif
 }

@@ -151,7 +151,7 @@ int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_get_report_thread(void *report, uptr idx, int *tid, uptr *os_id,
+int __tsan_get_report_thread(void *report, uptr idx, int *tid, tid_t *os_id,
                              int *running, const char **name, int *parent_tid,
                              void **trace, uptr trace_size) {
   const ReportDesc *rep = (ReportDesc *)report;
@@ -228,7 +228,7 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_alloc_stack(uptr addr, uptr *trace, uptr size, int *thread_id,
-                           uptr *os_id) {
+                           tid_t *os_id) {
   MBlock *b = 0;
   Allocator *a = allocator();
   if (a->PointerIsMine((void *)addr)) {

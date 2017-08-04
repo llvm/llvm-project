@@ -10,9 +10,12 @@
 #ifndef LLVM_ADT_ITERATOR_H
 #define LLVM_ADT_ITERATOR_H
 
+#include "llvm/ADT/iterator_range.h"
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -91,6 +94,8 @@ protected:
 
 public:
   DerivedT operator+(DifferenceTypeT n) const {
+    static_assert(std::is_base_of<iterator_facade_base, DerivedT>::value,
+                  "Must pass the derived type to this template!");
     static_assert(
         IsRandomAccess,
         "The '+' operator is only defined for random access iterators.");
@@ -114,6 +119,8 @@ public:
   }
 
   DerivedT &operator++() {
+    static_assert(std::is_base_of<iterator_facade_base, DerivedT>::value,
+                  "Must pass the derived type to this template!");
     return static_cast<DerivedT *>(this)->operator+=(1);
   }
   DerivedT operator++(int) {
@@ -160,8 +167,14 @@ public:
     return !static_cast<const DerivedT *>(this)->operator<(RHS);
   }
 
+  PointerT operator->() { return &static_cast<DerivedT *>(this)->operator*(); }
   PointerT operator->() const {
     return &static_cast<const DerivedT *>(this)->operator*();
+  }
+  ReferenceProxy operator[](DifferenceTypeT n) {
+    static_assert(IsRandomAccess,
+                  "Subscripting is only defined for random access iterators.");
+    return ReferenceProxy(static_cast<DerivedT *>(this)->operator+(n));
   }
   ReferenceProxy operator[](DifferenceTypeT n) const {
     static_assert(IsRandomAccess,
@@ -195,19 +208,22 @@ template <
 class iterator_adaptor_base
     : public iterator_facade_base<DerivedT, IteratorCategoryT, T,
                                   DifferenceTypeT, PointerT, ReferenceT> {
-  typedef typename iterator_adaptor_base::iterator_facade_base BaseT;
+  using BaseT = typename iterator_adaptor_base::iterator_facade_base;
 
 protected:
   WrappedIteratorT I;
 
   iterator_adaptor_base() = default;
 
-  explicit iterator_adaptor_base(WrappedIteratorT u) : I(std::move(u)) {}
+  explicit iterator_adaptor_base(WrappedIteratorT u) : I(std::move(u)) {
+    static_assert(std::is_base_of<iterator_adaptor_base, DerivedT>::value,
+                  "Must pass the derived type to this template!");
+  }
 
   const WrappedIteratorT &wrapped() const { return I; }
 
 public:
-  typedef DifferenceTypeT difference_type;
+  using difference_type = DifferenceTypeT;
 
   DerivedT &operator+=(difference_type n) {
     static_assert(
@@ -265,7 +281,7 @@ public:
 /// which is implemented with some iterator over T*s:
 ///
 /// \code
-///   typedef pointee_iterator<SmallVectorImpl<T *>::iterator> iterator;
+///   using iterator = pointee_iterator<SmallVectorImpl<T *>::iterator>;
 /// \endcode
 template <typename WrappedIteratorT,
           typename T = typename std::remove_reference<
@@ -283,6 +299,15 @@ struct pointee_iterator
   T &operator*() const { return **this->I; }
 };
 
+template <typename RangeT, typename WrappedIteratorT =
+                               decltype(std::begin(std::declval<RangeT>()))>
+iterator_range<pointee_iterator<WrappedIteratorT>>
+make_pointee_range(RangeT &&Range) {
+  using PointeeIteratorT = pointee_iterator<WrappedIteratorT>;
+  return make_range(PointeeIteratorT(std::begin(std::forward<RangeT>(Range))),
+                    PointeeIteratorT(std::end(std::forward<RangeT>(Range))));
+}
+
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
 class pointer_iterator
@@ -299,6 +324,15 @@ public:
   T &operator*() { return Ptr = &*this->I; }
   const T &operator*() const { return Ptr = &*this->I; }
 };
+
+template <typename RangeT, typename WrappedIteratorT =
+                               decltype(std::begin(std::declval<RangeT>()))>
+iterator_range<pointer_iterator<WrappedIteratorT>>
+make_pointer_range(RangeT &&Range) {
+  using PointerIteratorT = pointer_iterator<WrappedIteratorT>;
+  return make_range(PointerIteratorT(std::begin(std::forward<RangeT>(Range))),
+                    PointerIteratorT(std::end(std::forward<RangeT>(Range))));
+}
 
 } // end namespace llvm
 

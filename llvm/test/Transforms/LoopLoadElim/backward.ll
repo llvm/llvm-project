@@ -1,4 +1,5 @@
 ; RUN: opt -loop-load-elim -S < %s | FileCheck %s
+; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
 
 ; Simple st->ld forwarding derived from a lexical backward dep.
 ;

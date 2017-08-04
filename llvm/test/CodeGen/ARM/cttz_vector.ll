@@ -168,17 +168,17 @@ define void @test_v4i32(<4 x i32>* %p) {
 
 define void @test_v1i64(<1 x i64>* %p) {
 ; CHECK-LABEL: test_v1i64:
-; CHECK: vldr		[[D1:d[0-9]+]], [r0]
 ; CHECK: vmov.i32	[[D2:d[0-9]+]], #0x0
+; CHECK: vldr		[[D1:d[0-9]+]], [r0]
 ; CHECK: vmov.i64	[[D3:d[0-9]+]], #0xffffffffffffffff
 ; CHECK: vsub.i64	[[D2]], [[D2]], [[D1]]
-; CHECK: vand		[[D1]], [[D1]], [[D2]]
-; CHECK: vadd.i64	[[D1]], [[D1]], [[D3]]
-; CHECK: vcnt.8		[[D1]], [[D1]]
-; CHECK: vpaddl.u8	[[D1]], [[D1]]
-; CHECK: vpaddl.u16	[[D1]], [[D1]]
-; CHECK: vpaddl.u32	[[D1]], [[D1]]
-; CHECK: vstr		[[D1]], [r0]
+; CHECK: vand		[[D2]], [[D1]], [[D2]]
+; CHECK: vadd.i64	[[D2]], [[D2]], [[D3]]
+; CHECK: vcnt.8		[[D2]], [[D2]]
+; CHECK: vpaddl.u8	[[D2]], [[D2]]
+; CHECK: vpaddl.u16	[[D2]], [[D2]]
+; CHECK: vpaddl.u32	[[D2]], [[D2]]
+; CHECK: vstr		[[D2]], [r0]
   %a = load <1 x i64>, <1 x i64>* %p
   %tmp = call <1 x i64> @llvm.cttz.v1i64(<1 x i64> %a, i1 false)
   store <1 x i64> %tmp, <1 x i64>* %p
@@ -187,17 +187,17 @@ define void @test_v1i64(<1 x i64>* %p) {
 
 define void @test_v2i64(<2 x i64>* %p) {
 ; CHECK-LABEL: test_v2i64:
-; CHECK: vld1.64	{[[D1:d[0-9]+]], [[D2:d[0-9]+]]}, [r0]
 ; CHECK: vmov.i32	[[Q2:q[0-9]+]], #0x0
+; CHECK: vld1.64	{[[D1:d[0-9]+]], [[D2:d[0-9]+]]}, [r0]
 ; CHECK: vmov.i64	[[Q3:q[0-9]+]], #0xffffffffffffffff
 ; CHECK: vsub.i64	[[Q2]], [[Q2]], [[Q1:q[0-9]+]]
-; CHECK: vand		[[Q1]], [[Q1]], [[Q2]]
-; CHECK: vadd.i64	[[Q1]], [[Q1]], [[Q3]]
-; CHECK: vcnt.8		[[Q1]], [[Q1]]
-; CHECK: vpaddl.u8	[[Q1]], [[Q1]]
-; CHECK: vpaddl.u16	[[Q1]], [[Q1]]
-; CHECK: vpaddl.u32	[[Q1]], [[Q1]]
-; CHECK: vst1.64	{[[D1]], [[D2]]}, [r0]
+; CHECK: vand		[[Q2]], [[Q1]], [[Q2]]
+; CHECK: vadd.i64	[[Q2]], [[Q2]], [[Q3]]
+; CHECK: vcnt.8		[[Q2]], [[Q2]]
+; CHECK: vpaddl.u8	[[Q2]], [[Q2]]
+; CHECK: vpaddl.u16	[[Q2]], [[Q2]]
+; CHECK: vpaddl.u32	[[Q2]], [[Q2]]
+; CHECK: vst1.64	{d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
   %a = load <2 x i64>, <2 x i64>* %p
   %tmp = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %a, i1 false)
   store <2 x i64> %tmp, <2 x i64>* %p
@@ -346,17 +346,17 @@ define void @test_v4i32_zero_undef(<4 x i32>* %p) {
 
 define void @test_v1i64_zero_undef(<1 x i64>* %p) {
 ; CHECK-LABEL: test_v1i64_zero_undef:
-; CHECK: vldr		[[D1:d[0-9]+]], [r0]
 ; CHECK: vmov.i32	[[D2:d[0-9]+]], #0x0
+; CHECK: vldr		[[D1:d[0-9]+]], [r0]
 ; CHECK: vmov.i64	[[D3:d[0-9]+]], #0xffffffffffffffff
 ; CHECK: vsub.i64	[[D2]], [[D2]], [[D1]]
-; CHECK: vand		[[D1]], [[D1]], [[D2]]
-; CHECK: vadd.i64	[[D1]], [[D1]], [[D3]]
-; CHECK: vcnt.8		[[D1]], [[D1]]
-; CHECK: vpaddl.u8	[[D1]], [[D1]]
-; CHECK: vpaddl.u16	[[D1]], [[D1]]
-; CHECK: vpaddl.u32	[[D1]], [[D1]]
-; CHECK: vstr		[[D1]], [r0]
+; CHECK: vand		[[D2]], [[D1]], [[D2]]
+; CHECK: vadd.i64	[[D2]], [[D2]], [[D3]]
+; CHECK: vcnt.8		[[D2]], [[D2]]
+; CHECK: vpaddl.u8	[[D2]], [[D2]]
+; CHECK: vpaddl.u16	[[D2]], [[D2]]
+; CHECK: vpaddl.u32	[[D2]], [[D2]]
+; CHECK: vstr		[[D2]], [r0]
   %a = load <1 x i64>, <1 x i64>* %p
   %tmp = call <1 x i64> @llvm.cttz.v1i64(<1 x i64> %a, i1 true)
   store <1 x i64> %tmp, <1 x i64>* %p
@@ -365,17 +365,17 @@ define void @test_v1i64_zero_undef(<1 x i64>* %p) {
 
 define void @test_v2i64_zero_undef(<2 x i64>* %p) {
 ; CHECK-LABEL: test_v2i64_zero_undef:
-; CHECK: vld1.64	{[[D1:d[0-9]+]], [[D2:d[0-9]+]]}, [r0]
 ; CHECK: vmov.i32	[[Q2:q[0-9]+]], #0x0
+; CHECK: vld1.64	{[[D1:d[0-9]+]], [[D2:d[0-9]+]]}, [r0]
 ; CHECK: vmov.i64	[[Q3:q[0-9]+]], #0xffffffffffffffff
 ; CHECK: vsub.i64	[[Q2]], [[Q2]], [[Q1:q[0-9]+]]
-; CHECK: vand		[[Q1]], [[Q1]], [[Q2]]
-; CHECK: vadd.i64	[[Q1]], [[Q1]], [[Q3]]
-; CHECK: vcnt.8		[[Q1]], [[Q1]]
-; CHECK: vpaddl.u8	[[Q1]], [[Q1]]
-; CHECK: vpaddl.u16	[[Q1]], [[Q1]]
-; CHECK: vpaddl.u32	[[Q1]], [[Q1]]
-; CHECK: vst1.64	{[[D1]], [[D2]]}, [r0]
+; CHECK: vand		[[Q2]], [[Q1]], [[Q2]]
+; CHECK: vadd.i64	[[Q2]], [[Q2]], [[Q3]]
+; CHECK: vcnt.8		[[Q2]], [[Q2]]
+; CHECK: vpaddl.u8	[[Q2]], [[Q2]]
+; CHECK: vpaddl.u16	[[Q2]], [[Q2]]
+; CHECK: vpaddl.u32	[[Q2]], [[Q2]]
+; CHECK: vst1.64	{d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
   %a = load <2 x i64>, <2 x i64>* %p
   %tmp = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %a, i1 true)
   store <2 x i64> %tmp, <2 x i64>* %p

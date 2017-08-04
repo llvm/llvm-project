@@ -109,8 +109,7 @@ CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
   std::string FilePath = getIncludePath(SM, Loc, Collector);
   if (FilePath.empty()) return llvm::None;
 
-  return SymbolInfo(ND->getNameAsString(), Type, FilePath,
-                    SM.getExpansionLineNumber(Loc), GetContexts(ND));
+  return SymbolInfo(ND->getNameAsString(), Type, FilePath, GetContexts(ND));
 }
 
 } // namespace
@@ -154,64 +153,84 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
   // The float parameter of the function pointer has an empty name, and its
   // declaration context is an anonymous namespace; therefore, it won't be
   // filtered out by our matchers above.
-  MatchFinder->addMatcher(varDecl(CommonFilter,
-                                  anyOf(ExternCMatcher, CCMatcher),
-                                  unless(parmVarDecl()))
-                              .bind("decl"),
-                          this);
+  auto Vars = varDecl(CommonFilter, anyOf(ExternCMatcher, CCMatcher),
+                      unless(parmVarDecl()));
 
   // Matchers for C-style record declarations in extern "C" {...}.
-  MatchFinder->addMatcher(
-      recordDecl(CommonFilter, ExternCMatcher, isDefinition()).bind("decl"),
-      this);
-
+  auto CRecords = recordDecl(CommonFilter, ExternCMatcher, isDefinition());
   // Matchers for C++ record declarations.
-  auto CxxRecordDecl =
-      cxxRecordDecl(CommonFilter, CCMatcher, isDefinition());
-  MatchFinder->addMatcher(CxxRecordDecl.bind("decl"), this);
+  auto CXXRecords = cxxRecordDecl(CommonFilter, CCMatcher, isDefinition());
 
   // Matchers for function declarations.
   // We want to exclude friend declaration, but the `DeclContext` of a friend
   // function declaration is not the class in which it is declared, so we need
   // to explicitly check if the parent is a `friendDecl`.
-  MatchFinder->addMatcher(functionDecl(CommonFilter,
-                                       unless(hasParent(friendDecl())),
-                                       anyOf(ExternCMatcher, CCMatcher))
-                              .bind("decl"),
-                          this);
+  auto Functions = functionDecl(CommonFilter, unless(hasParent(friendDecl())),
+                                anyOf(ExternCMatcher, CCMatcher));
 
   // Matcher for typedef and type alias declarations.
   //
-  // typedef and type alias can come from C-style headers and C++ heaeders.
-  // For C-style header, `DeclContxet` can be either `TranslationUnitDecl`
+  // typedef and type alias can come from C-style headers and C++ headers.
+  // For C-style headers, `DeclContxet` can be either `TranslationUnitDecl`
   // or `LinkageSpecDecl`.
-  // For C++ header, `DeclContext ` can be one of `TranslationUnitDecl`,
-  // `NamespaceDecl`.
+  // For C++ headers, `DeclContext ` can be either `TranslationUnitDecl`
+  // or `NamespaceDecl`.
   // With the following context matcher, we can match `typedefNameDecl` from
-  // both C-style header and C++ header (except for those in classes).
+  // both C-style headers and C++ headers (except for those in classes).
   // "cc_matchers" are not included since template-related matchers are not
   // applicable on `TypedefNameDecl`.
-  MatchFinder->addMatcher(
+  auto Typedefs =
       typedefNameDecl(CommonFilter, anyOf(HasNSOrTUCtxMatcher,
-                                          hasDeclContext(linkageSpecDecl())))
-          .bind("decl"),
-      this);
+                                          hasDeclContext(linkageSpecDecl())));
 
   // Matchers for enum declarations.
-  MatchFinder->addMatcher(enumDecl(CommonFilter, isDefinition(),
-                                   anyOf(HasNSOrTUCtxMatcher, ExternCMatcher))
-                              .bind("decl"),
-                          this);
+  auto Enums = enumDecl(CommonFilter, isDefinition(),
+                        anyOf(HasNSOrTUCtxMatcher, ExternCMatcher));
 
   // Matchers for enum constant declarations.
   // We only match the enum constants in non-scoped enum declarations which are
   // inside toplevel translation unit or a namespace.
+  auto EnumConstants = enumConstantDecl(
+      CommonFilter, unless(isInScopedEnum()),
+      anyOf(hasDeclContext(enumDecl(HasNSOrTUCtxMatcher)), ExternCMatcher));
+
+  // Most of the time we care about all matchable decls, or all types.
+  auto Types = namedDecl(anyOf(CRecords, CXXRecords, Enums));
+  auto Decls = namedDecl(anyOf(CRecords, CXXRecords, Enums, Typedefs, Vars,
+                               EnumConstants, Functions));
+
+  // We want eligible decls bound to "decl"...
+  MatchFinder->addMatcher(Decls.bind("decl"), this);
+
+  // ... and all uses of them bound to "use". These have many cases:
+  // Uses of values/functions: these generate a declRefExpr.
   MatchFinder->addMatcher(
-      enumConstantDecl(
-          CommonFilter,
-          unless(isInScopedEnum()),
-          anyOf(hasDeclContext(enumDecl(HasNSOrTUCtxMatcher)), ExternCMatcher))
-          .bind("decl"),
+      declRefExpr(isExpansionInMainFile(), to(Decls.bind("use"))), this);
+  // Uses of function templates:
+  MatchFinder->addMatcher(
+      declRefExpr(isExpansionInMainFile(),
+                  to(functionDecl(hasParent(
+                      functionTemplateDecl(has(Functions.bind("use"))))))),
+      this);
+
+  // Uses of most types: just look at what the typeLoc refers to.
+  MatchFinder->addMatcher(
+      typeLoc(isExpansionInMainFile(),
+              loc(qualType(hasDeclaration(Types.bind("use"))))),
+      this);
+  // Uses of typedefs: these are often transparent to hasDeclaration, so we need
+  // to handle them explicitly.
+  MatchFinder->addMatcher(
+      typeLoc(isExpansionInMainFile(),
+              loc(typedefType(hasDeclaration(Typedefs.bind("use"))))),
+      this);
+  // Uses of class templates:
+  // The typeLoc names the templateSpecializationType. Its declaration is the
+  // ClassTemplateDecl, which contains the CXXRecordDecl we want.
+  MatchFinder->addMatcher(
+      typeLoc(isExpansionInMainFile(),
+              loc(templateSpecializationType(hasDeclaration(
+                  classTemplateDecl(has(CXXRecords.bind("use"))))))),
       this);
 }
 
@@ -221,15 +240,28 @@ void FindAllSymbols::run(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("decl");
-  assert(ND && "Matched declaration must be a NamedDecl!");
-  const SourceManager *SM = Result.SourceManager;
+  SymbolInfo::Signals Signals;
+  const NamedDecl *ND;
+  if ((ND = Result.Nodes.getNodeAs<NamedDecl>("use")))
+    Signals.Used = 1;
+  else if ((ND = Result.Nodes.getNodeAs<NamedDecl>("decl")))
+    Signals.Seen = 1;
+  else
+    assert(false && "Must match a NamedDecl!");
 
-  llvm::Optional<SymbolInfo> Symbol =
-      CreateSymbolInfo(ND, *SM, Collector);
-  if (Symbol)
-    Reporter->reportSymbol(
-        SM->getFileEntryForID(SM->getMainFileID())->getName(), *Symbol);
+  const SourceManager *SM = Result.SourceManager;
+  if (auto Symbol = CreateSymbolInfo(ND, *SM, Collector)) {
+    Filename = SM->getFileEntryForID(SM->getMainFileID())->getName();
+    FileSymbols[*Symbol] += Signals;
+  }
+}
+
+void FindAllSymbols::onEndOfTranslationUnit() {
+  if (Filename != "") {
+    Reporter->reportSymbols(Filename, FileSymbols);
+    FileSymbols.clear();
+    Filename = "";
+  }
 }
 
 } // namespace find_all_symbols

@@ -18,14 +18,27 @@
 #ifndef POLLY_DELICM_H
 #define POLLY_DELICM_H
 
+#include "polly/Support/GICHelper.h"
+
 namespace llvm {
 class PassRegistry;
 class Pass;
-} // anonymous namespace
+} // namespace llvm
 
 namespace polly {
 /// Create a new DeLICM pass instance.
 llvm::Pass *createDeLICMPass();
+
+/// Determine whether two lifetimes are conflicting.
+///
+/// Used by unittesting.
+bool isConflicting(isl::union_set ExistingOccupied,
+                   isl::union_set ExistingUnused, isl::union_map ExistingKnown,
+                   isl::union_map ExistingWrites,
+                   isl::union_set ProposedOccupied,
+                   isl::union_set ProposedUnused, isl::union_map ProposedKnown,
+                   isl::union_map ProposedWrites,
+                   llvm::raw_ostream *OS = nullptr, unsigned Indent = 0);
 } // namespace polly
 
 namespace llvm {

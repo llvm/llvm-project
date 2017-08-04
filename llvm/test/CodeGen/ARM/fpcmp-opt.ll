@@ -10,7 +10,7 @@ entry:
 ; CHECK-LABEL: t1:
 ; CHECK: vldr [[S0:s[0-9]+]],
 ; CHECK: vldr [[S1:s[0-9]+]],
-; CHECK: vcmpe.f32 [[S1]], [[S0]]
+; CHECK: vcmp.f32 [[S1]], [[S0]]
 ; CHECK: vmrs APSR_nzcv, fpscr
 ; CHECK: beq
   %0 = load float, float* %a
@@ -35,10 +35,10 @@ entry:
 ; CHECK-NOT: vldr
 ; CHECK: ldrd [[REG1:(r[0-9]+)]], [[REG2:(r[0-9]+)]], [r0]
 ; CHECK-NOT: b LBB
-; CHECK: bfc [[REG2]], #31, #1
+; CHECK: bic [[REG2]], [[REG2]], #-2147483648
 ; CHECK: cmp [[REG1]], #0
 ; CHECK: cmpeq [[REG2]], #0
-; CHECK-NOT: vcmpe.f32
+; CHECK-NOT: vcmp.f32
 ; CHECK-NOT: vmrs
 ; CHECK: bne
   %0 = load double, double* %a
@@ -61,7 +61,7 @@ entry:
 ; CHECK: ldr [[REG3:(r[0-9]+)]], [r0]
 ; CHECK: mvn [[REG4:(r[0-9]+)]], #-2147483648
 ; CHECK: tst [[REG3]], [[REG4]]
-; CHECK-NOT: vcmpe.f32
+; CHECK-NOT: vcmp.f32
 ; CHECK-NOT: vmrs
 ; CHECK: bne
   %0 = load float, float* %a

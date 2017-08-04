@@ -90,6 +90,29 @@ define i32 @max_of_nots(i32 %x, i32 %y) {
   ret i32 %smax96
 }
 
+ ; negative test case (i.e. can not simplify) : ABS(MIN(NOT x,y))
+define i32 @abs_of_min_of_not(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_of_min_of_not(
+; CHECK-NEXT:    [[XORD:%.*]] = xor i32 %x, -1
+; CHECK-NEXT:    [[YADD:%.*]] = add i32 %y, 2
+; CHECK-NEXT:    [[COND_I:%.*]] = icmp slt i32 [[YADD]], [[XORD]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[COND_I]], i32 [[YADD]], i32 [[XORD]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[MIN]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[MIN]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP2]], i32 [[MIN]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+
+  %xord = xor i32 %x, -1
+  %yadd = add i32 %y, 2
+  %cond.i = icmp sge i32 %yadd, %xord
+  %min = select i1 %cond.i, i32 %xord, i32 %yadd
+  %cmp2 = icmp sgt i32 %min, -1
+  %sub = sub i32 0, %min
+  %abs = select i1 %cmp2, i32 %min, i32 %sub
+  ret i32  %abs
+}
+
 define <2 x i32> @max_of_nots_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @max_of_nots_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> %y, zeroinitializer

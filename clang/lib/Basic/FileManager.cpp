@@ -50,14 +50,14 @@ using namespace clang;
 
 FileManager::FileManager(const FileSystemOptions &FSO,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-  : FS(FS), FileSystemOpts(FSO),
-    SeenDirEntries(64), SeenFileEntries(64), NextFileUID(0) {
+    : FS(std::move(FS)), FileSystemOpts(FSO), SeenDirEntries(64),
+      SeenFileEntries(64), NextFileUID(0) {
   NumDirLookups = NumFileLookups = 0;
   NumDirCacheMisses = NumFileCacheMisses = 0;
 
   // If the caller doesn't provide a virtual file system, just grab the real
   // file system.
-  if (!FS)
+  if (!this->FS)
     this->FS = vfs::getRealFileSystem();
 }
 
@@ -386,6 +386,7 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
   UFE->ModTime = ModificationTime;
   UFE->Dir     = DirInfo;
   UFE->UID     = NextFileUID++;
+  UFE->IsValid = true;
   UFE->File.reset();
   return UFE;
 }

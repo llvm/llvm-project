@@ -3,9 +3,9 @@
 
 // The test spams to stderr and stdout.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstddef>
 #include <iostream>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {

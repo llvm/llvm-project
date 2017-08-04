@@ -11,7 +11,7 @@
 ; CM: MULADD_INT24
 ; SI-NOT: and
 ; SI: v_mad_i32_i24
-define void @i32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @i32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = shl i32 %a, 8
   %a_24 = ashr i32 %0, 8

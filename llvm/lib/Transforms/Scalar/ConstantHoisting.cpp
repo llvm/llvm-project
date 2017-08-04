@@ -38,11 +38,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <tuple>
 
 using namespace llvm;
@@ -52,6 +54,12 @@ using namespace consthoist;
 
 STATISTIC(NumConstantsHoisted, "Number of constants hoisted");
 STATISTIC(NumConstantsRebased, "Number of constants rebased");
+
+static cl::opt<bool> ConstHoistWithBlockFrequency(
+    "consthoist-with-block-frequency", cl::init(true), cl::Hidden,
+    cl::desc("Enable the use of the block frequency analysis to reduce the "
+             "chance to execute const materialization more frequently than "
+             "without hoisting."));
 
 namespace {
 /// \brief The constant hoisting pass.
@@ -68,6 +76,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    if (ConstHoistWithBlockFrequency)
+      AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
@@ -82,6 +92,7 @@ private:
 char ConstantHoistingLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ConstantHoistingLegacyPass, "consthoist",
                       "Constant Hoisting", false, false)
+INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ConstantHoistingLegacyPass, "consthoist",
@@ -99,9 +110,13 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
   DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
 
-  bool MadeChange = Impl.runImpl(
-      Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
-      getAnalysis<DominatorTreeWrapperPass>().getDomTree(), Fn.getEntryBlock());
+  bool MadeChange =
+      Impl.runImpl(Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
+                   getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
+                   ConstHoistWithBlockFrequency
+                       ? &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI()
+                       : nullptr,
+                   Fn.getEntryBlock());
 
   if (MadeChange) {
     DEBUG(dbgs() << "********** Function after Constant Hoisting: "
@@ -148,33 +163,151 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
   return IDom->getBlock()->getTerminator();
 }
 
+/// \brief Given \p BBs as input, find another set of BBs which collectively
+/// dominates \p BBs and have the minimal sum of frequencies. Return the BB
+/// set found in \p BBs.
+static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
+                                 BasicBlock *Entry,
+                                 SmallPtrSet<BasicBlock *, 8> &BBs) {
+  assert(!BBs.count(Entry) && "Assume Entry is not in BBs");
+  // Nodes on the current path to the root.
+  SmallPtrSet<BasicBlock *, 8> Path;
+  // Candidates includes any block 'BB' in set 'BBs' that is not strictly
+  // dominated by any other blocks in set 'BBs', and all nodes in the path
+  // in the dominator tree from Entry to 'BB'.
+  SmallPtrSet<BasicBlock *, 16> Candidates;
+  for (auto BB : BBs) {
+    Path.clear();
+    // Walk up the dominator tree until Entry or another BB in BBs
+    // is reached. Insert the nodes on the way to the Path.
+    BasicBlock *Node = BB;
+    // The "Path" is a candidate path to be added into Candidates set.
+    bool isCandidate = false;
+    do {
+      Path.insert(Node);
+      if (Node == Entry || Candidates.count(Node)) {
+        isCandidate = true;
+        break;
+      }
+      assert(DT.getNode(Node)->getIDom() &&
+             "Entry doens't dominate current Node");
+      Node = DT.getNode(Node)->getIDom()->getBlock();
+    } while (!BBs.count(Node));
+
+    // If isCandidate is false, Node is another Block in BBs dominating
+    // current 'BB'. Drop the nodes on the Path.
+    if (!isCandidate)
+      continue;
+
+    // Add nodes on the Path into Candidates.
+    Candidates.insert(Path.begin(), Path.end());
+  }
+
+  // Sort the nodes in Candidates in top-down order and save the nodes
+  // in Orders.
+  unsigned Idx = 0;
+  SmallVector<BasicBlock *, 16> Orders;
+  Orders.push_back(Entry);
+  while (Idx != Orders.size()) {
+    BasicBlock *Node = Orders[Idx++];
+    for (auto ChildDomNode : DT.getNode(Node)->getChildren()) {
+      if (Candidates.count(ChildDomNode->getBlock()))
+        Orders.push_back(ChildDomNode->getBlock());
+    }
+  }
+
+  // Visit Orders in bottom-up order.
+  typedef std::pair<SmallPtrSet<BasicBlock *, 16>, BlockFrequency>
+      InsertPtsCostPair;
+  // InsertPtsMap is a map from a BB to the best insertion points for the
+  // subtree of BB (subtree not including the BB itself).
+  DenseMap<BasicBlock *, InsertPtsCostPair> InsertPtsMap;
+  InsertPtsMap.reserve(Orders.size() + 1);
+  for (auto RIt = Orders.rbegin(); RIt != Orders.rend(); RIt++) {
+    BasicBlock *Node = *RIt;
+    bool NodeInBBs = BBs.count(Node);
+    SmallPtrSet<BasicBlock *, 16> &InsertPts = InsertPtsMap[Node].first;
+    BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
+
+    // Return the optimal insert points in BBs.
+    if (Node == Entry) {
+      BBs.clear();
+      if (InsertPtsFreq > BFI.getBlockFreq(Node) ||
+          (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1))
+        BBs.insert(Entry);
+      else
+        BBs.insert(InsertPts.begin(), InsertPts.end());
+      break;
+    }
+
+    BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
+    // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
+    // will update its parent's ParentInsertPts and ParentPtsFreq.
+    SmallPtrSet<BasicBlock *, 16> &ParentInsertPts = InsertPtsMap[Parent].first;
+    BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
+    // Choose to insert in Node or in subtree of Node.
+    // Don't hoist to EHPad because we may not find a proper place to insert
+    // in EHPad.
+    // If the total frequency of InsertPts is the same as the frequency of the
+    // target Node, and InsertPts contains more than one nodes, choose hoisting
+    // to reduce code size.
+    if (NodeInBBs ||
+        (!Node->isEHPad() &&
+         (InsertPtsFreq > BFI.getBlockFreq(Node) ||
+          (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1)))) {
+      ParentInsertPts.insert(Node);
+      ParentPtsFreq += BFI.getBlockFreq(Node);
+    } else {
+      ParentInsertPts.insert(InsertPts.begin(), InsertPts.end());
+      ParentPtsFreq += InsertPtsFreq;
+    }
+  }
+}
+
 /// \brief Find an insertion point that dominates all uses.
-Instruction *ConstantHoistingPass::findConstantInsertionPoint(
+SmallPtrSet<Instruction *, 8> ConstantHoistingPass::findConstantInsertionPoint(
     const ConstantInfo &ConstInfo) const {
   assert(!ConstInfo.RebasedConstants.empty() && "Invalid constant info entry.");
   // Collect all basic blocks.
   SmallPtrSet<BasicBlock *, 8> BBs;
+  SmallPtrSet<Instruction *, 8> InsertPts;
   for (auto const &RCI : ConstInfo.RebasedConstants)
     for (auto const &U : RCI.Uses)
       BBs.insert(findMatInsertPt(U.Inst, U.OpndIdx)->getParent());
 
-  if (BBs.count(Entry))
-    return &Entry->front();
+  if (BBs.count(Entry)) {
+    InsertPts.insert(&Entry->front());
+    return InsertPts;
+  }
+
+  if (BFI) {
+    findBestInsertionSet(*DT, *BFI, Entry, BBs);
+    for (auto BB : BBs) {
+      BasicBlock::iterator InsertPt = BB->begin();
+      for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
+        ;
+      InsertPts.insert(&*InsertPt);
+    }
+    return InsertPts;
+  }
 
   while (BBs.size() >= 2) {
     BasicBlock *BB, *BB1, *BB2;
     BB1 = *BBs.begin();
     BB2 = *std::next(BBs.begin());
     BB = DT->findNearestCommonDominator(BB1, BB2);
-    if (BB == Entry)
-      return &Entry->front();
+    if (BB == Entry) {
+      InsertPts.insert(&Entry->front());
+      return InsertPts;
+    }
     BBs.erase(BB1);
     BBs.erase(BB2);
     BBs.insert(BB);
   }
   assert((BBs.size() == 1) && "Expected only one element.");
   Instruction &FirstInst = (*BBs.begin())->front();
-  return findMatInsertPt(&FirstInst);
+  InsertPts.insert(findMatInsertPt(&FirstInst));
+  return InsertPts;
 }
 
 
@@ -218,6 +351,49 @@ void ConstantHoistingPass::collectConstantCandidates(
   }
 }
 
+
+/// \brief Check the operand for instruction Inst at index Idx.
+void ConstantHoistingPass::collectConstantCandidates(
+    ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx) {
+  Value *Opnd = Inst->getOperand(Idx);
+
+  // Visit constant integers.
+  if (auto ConstInt = dyn_cast<ConstantInt>(Opnd)) {
+    collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
+    return;
+  }
+
+  // Visit cast instructions that have constant integers.
+  if (auto CastInst = dyn_cast<Instruction>(Opnd)) {
+    // Only visit cast instructions, which have been skipped. All other
+    // instructions should have already been visited.
+    if (!CastInst->isCast())
+      return;
+
+    if (auto *ConstInt = dyn_cast<ConstantInt>(CastInst->getOperand(0))) {
+      // Pretend the constant is directly used by the instruction and ignore
+      // the cast instruction.
+      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
+      return;
+    }
+  }
+
+  // Visit constant expressions that have constant integers.
+  if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
+    // Only visit constant cast expressions.
+    if (!ConstExpr->isCast())
+      return;
+
+    if (auto ConstInt = dyn_cast<ConstantInt>(ConstExpr->getOperand(0))) {
+      // Pretend the constant is directly used by the instruction and ignore
+      // the constant expression.
+      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
+      return;
+    }
+  }
+}
+
+
 /// \brief Scan the instruction for expensive integer constants and record them
 /// in the constant candidate vector.
 void ConstantHoistingPass::collectConstantCandidates(
@@ -226,60 +402,14 @@ void ConstantHoistingPass::collectConstantCandidates(
   if (Inst->isCast())
     return;
 
-  // Can't handle inline asm. Skip it.
-  if (auto Call = dyn_cast<CallInst>(Inst))
-    if (isa<InlineAsm>(Call->getCalledValue()))
-      return;
-
-  // Switch cases must remain constant, and if the value being tested is
-  // constant the entire thing should disappear.
-  if (isa<SwitchInst>(Inst))
-    return;
-
-  // Static allocas (constant size in the entry block) are handled by
-  // prologue/epilogue insertion so they're free anyway. We definitely don't
-  // want to make them non-constant.
-  auto AI = dyn_cast<AllocaInst>(Inst);
-  if (AI && AI->isStaticAlloca())
-    return;
-
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
-    Value *Opnd = Inst->getOperand(Idx);
-
-    // Visit constant integers.
-    if (auto ConstInt = dyn_cast<ConstantInt>(Opnd)) {
-      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
-      continue;
-    }
-
-    // Visit cast instructions that have constant integers.
-    if (auto CastInst = dyn_cast<Instruction>(Opnd)) {
-      // Only visit cast instructions, which have been skipped. All other
-      // instructions should have already been visited.
-      if (!CastInst->isCast())
-        continue;
-
-      if (auto *ConstInt = dyn_cast<ConstantInt>(CastInst->getOperand(0))) {
-        // Pretend the constant is directly used by the instruction and ignore
-        // the cast instruction.
-        collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
-        continue;
-      }
-    }
-
-    // Visit constant expressions that have constant integers.
-    if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
-      // Only visit constant cast expressions.
-      if (!ConstExpr->isCast())
-        continue;
-
-      if (auto ConstInt = dyn_cast<ConstantInt>(ConstExpr->getOperand(0))) {
-        // Pretend the constant is directly used by the instruction and ignore
-        // the constant expression.
-        collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
-        continue;
-      }
+    // The cost of materializing the constants (defined in
+    // `TargetTransformInfo::getIntImmCost`) for instructions which only take
+    // constant variables is lower than `TargetTransformInfo::TCC_Basic`. So
+    // it's safe for us to collect constant candidates from all IntrinsicInsts.
+    if (canReplaceOperandWithVariable(Inst, Idx) || isa<IntrinsicInst>(Inst)) {
+      collectConstantCandidates(ConstCandMap, Inst, Idx);
     }
   } // end of for all operands
 }
@@ -557,29 +687,54 @@ bool ConstantHoistingPass::emitBaseConstants() {
   bool MadeChange = false;
   for (auto const &ConstInfo : ConstantVec) {
     // Hoist and hide the base constant behind a bitcast.
-    Instruction *IP = findConstantInsertionPoint(ConstInfo);
-    IntegerType *Ty = ConstInfo.BaseConstant->getType();
-    Instruction *Base =
-      new BitCastInst(ConstInfo.BaseConstant, Ty, "const", IP);
-    DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseConstant << ") to BB "
-                 << IP->getParent()->getName() << '\n' << *Base << '\n');
+    SmallPtrSet<Instruction *, 8> IPSet = findConstantInsertionPoint(ConstInfo);
+    assert(!IPSet.empty() && "IPSet is empty");
+
+    unsigned UsesNum = 0;
+    unsigned ReBasesNum = 0;
+    for (Instruction *IP : IPSet) {
+      IntegerType *Ty = ConstInfo.BaseConstant->getType();
+      Instruction *Base =
+          new BitCastInst(ConstInfo.BaseConstant, Ty, "const", IP);
+      DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseConstant
+                   << ") to BB " << IP->getParent()->getName() << '\n'
+                   << *Base << '\n');
+
+      // Emit materialization code for all rebased constants.
+      unsigned Uses = 0;
+      for (auto const &RCI : ConstInfo.RebasedConstants) {
+        for (auto const &U : RCI.Uses) {
+          Uses++;
+          BasicBlock *OrigMatInsertBB =
+              findMatInsertPt(U.Inst, U.OpndIdx)->getParent();
+          // If Base constant is to be inserted in multiple places,
+          // generate rebase for U using the Base dominating U.
+          if (IPSet.size() == 1 ||
+              DT->dominates(Base->getParent(), OrigMatInsertBB)) {
+            emitBaseConstants(Base, RCI.Offset, U);
+            ReBasesNum++;
+          }
+        }
+      }
+      UsesNum = Uses;
+
+      // Use the same debug location as the last user of the constant.
+      assert(!Base->use_empty() && "The use list is empty!?");
+      assert(isa<Instruction>(Base->user_back()) &&
+             "All uses should be instructions.");
+      Base->setDebugLoc(cast<Instruction>(Base->user_back())->getDebugLoc());
+    }
+    (void)UsesNum;
+    (void)ReBasesNum;
+    // Expect all uses are rebased after rebase is done.
+    assert(UsesNum == ReBasesNum && "Not all uses are rebased");
+
     NumConstantsHoisted++;
 
-    // Emit materialization code for all rebased constants.
-    for (auto const &RCI : ConstInfo.RebasedConstants) {
-      NumConstantsRebased++;
-      for (auto const &U : RCI.Uses)
-        emitBaseConstants(Base, RCI.Offset, U);
-    }
+    // Base constant is also included in ConstInfo.RebasedConstants, so
+    // deduct 1 from ConstInfo.RebasedConstants.size().
+    NumConstantsRebased = ConstInfo.RebasedConstants.size() - 1;
 
-    // Use the same debug location as the last user of the constant.
-    assert(!Base->use_empty() && "The use list is empty!?");
-    assert(isa<Instruction>(Base->user_back()) &&
-           "All uses should be instructions.");
-    Base->setDebugLoc(cast<Instruction>(Base->user_back())->getDebugLoc());
-
-    // Correct for base constant, which we counted above too.
-    NumConstantsRebased--;
     MadeChange = true;
   }
   return MadeChange;
@@ -595,9 +750,11 @@ void ConstantHoistingPass::deleteDeadCastInst() const {
 
 /// \brief Optimize expensive integer constants in the given function.
 bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
-                                   DominatorTree &DT, BasicBlock &Entry) {
+                                   DominatorTree &DT, BlockFrequencyInfo *BFI,
+                                   BasicBlock &Entry) {
   this->TTI = &TTI;
   this->DT = &DT;
+  this->BFI = BFI;
   this->Entry = &Entry;  
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
@@ -628,9 +785,13 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  if (!runImpl(F, TTI, DT, F.getEntryBlock()))
+  auto BFI = ConstHoistWithBlockFrequency
+                 ? &AM.getResult<BlockFrequencyAnalysis>(F)
+                 : nullptr;
+  if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock()))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

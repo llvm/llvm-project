@@ -1,0 +1,195 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK
+
+--- |
+  define i8 @const_i8() {
+    ret i8 2
+  }
+
+  define i16 @const_i16() {
+    ret i16 3
+  }
+
+  define i32 @const_i32() {
+    ret i32 4
+  }
+
+  define i32 @const_i32_0() {
+    ret i32 0
+  }
+
+  define i64 @const_i64() {
+    ret i64 68719476720
+  }
+
+  define i64 @const_i64_u32() {
+    ret i64 1879048192
+  }
+
+  define i64 @const_i64_i32() {
+    ret i64 -1
+  }
+
+  define void @main(i32** %data) {
+    store i32* null, i32** %data, align 8
+    ret void
+  }
+
+...
+---
+name:            const_i8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i8
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr8, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV8ri 2
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s8) = G_CONSTANT i8 2
+    %al = COPY %0(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            const_i16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i16
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr16, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV16ri 3
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s16) = G_CONSTANT i16 3
+    %ax = COPY %0(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            const_i32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i32
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV32ri 4
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 4
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            const_i32_0
+# CHECK-LABEL: name:  const_i32_0
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:          %0 = MOV32r0 implicit-def %eflags
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 0
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            const_i64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i64
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV64ri 68719476720
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = G_CONSTANT i64 68719476720
+    %rax = COPY %0(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            const_i64_u32
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i64_u32
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV64ri32 1879048192
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = G_CONSTANT i64 1879048192
+    %rax = COPY %0(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            const_i64_i32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name:            const_i64_i32
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV64ri32 -1
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = G_CONSTANT i64 -1
+    %rax = COPY %0(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            main
+# CHECK-LABEL: name:  main
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr64, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:          %0 = COPY %rdi
+# CHECK-NEXT:     %1 = MOV64ri32 0
+# CHECK-NEXT:     MOV64mr %0, 1, _, 0, _, %1 :: (store 8 into %ir.data)
+# CHECK-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(p0) = G_CONSTANT i64 0
+    G_STORE %1(p0), %0(p0) :: (store 8 into %ir.data)
+    RET 0
+
+...

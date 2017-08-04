@@ -247,6 +247,9 @@
 // On OpenBSD, -nopie needs to be passed through to the linker.
 // RUN: %clang %s -target i386-pc-openbsd -nopie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOPIE-LD
+// Try with the alias
+// RUN: %clang %s -target i386-pc-openbsd -no-pie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NOPIE-LD
 //
 // On Android PIC is enabled by default
 // RUN: %clang -c %s -target i686-linux-android -### 2>&1 \

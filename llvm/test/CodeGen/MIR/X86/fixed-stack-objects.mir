@@ -20,7 +20,7 @@ frameInfo:
   stackSize:       4
   maxAlignment:    4
 # CHECK: fixedStack:
-# CHECK-NEXT: - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+# CHECK-NEXT: - { id: 0, type: default, offset: 0, size: 4, alignment: 4, isImmutable: true,
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
 stack:

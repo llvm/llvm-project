@@ -89,7 +89,7 @@
 int main()
 {
     std::FILE* fp = 0;
-    std::fpos_t fpos = {};
+    std::fpos_t fpos = std::fpos_t();
     std::size_t s = 0;
     char* cp = 0;
     std::va_list va;

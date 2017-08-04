@@ -7,15 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This test uses new symbols that were not defined in the libc++ shipped on
-// darwin11 and darwin12:
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin11
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin12
 // UNSUPPORTED: libcpp-has-no-monotonic-clock
 
 // Due to C++17 inline variables ASAN flags this test as containing an ODR
 // violation because Clock::is_steady is defined in both the dylib and this TU.
 // UNSUPPORTED: asan
+
+// Starting with C++17, Clock::is_steady is inlined (but not before LLVM-3.9!),
+// but before C++17 it requires the symbol to be present in the dylib.
+// XFAIL: availability=macosx10.7 && (c++98 || c++03 || c++11 || c++14 || apple-clang-7 || apple-clang-8.0)
+// XFAIL: availability=macosx10.8 && (c++98 || c++03 || c++11 || c++14 || apple-clang-7 || apple-clang-8.0)
 
 // <chrono>
 

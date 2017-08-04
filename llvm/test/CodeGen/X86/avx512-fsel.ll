@@ -10,26 +10,11 @@ define i32 @test(float %a, float %b)  {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    vucomiss %xmm1, %xmm0
-; CHECK-NEXT:    setp %cl
-; CHECK-NEXT:    setne %dl
-; CHECK-NEXT:    setnp %sil
-; CHECK-NEXT:    sete %dil
-; CHECK-NEXT:    andb %sil, %dil
-; CHECK-NEXT:    ## implicit-def: %R8D
-; CHECK-NEXT:    movb %dil, %r8b
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    kmovw %r8d, %k0
-; CHECK-NEXT:    orb %cl, %dl
-; CHECK-NEXT:    ## implicit-def: %R8D
-; CHECK-NEXT:    movb %dl, %r8b
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    kmovw %r8d, %k1
-; CHECK-NEXT:    kmovw %k1, %ecx
+; CHECK-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    movb %al, %cl
+; CHECK-NEXT:    xorb $-1, %cl
 ; CHECK-NEXT:    testb $1, %cl
-; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp) ## 1-byte Spill
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; CHECK-NEXT:    jne LBB0_1
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:  LBB0_1: ## %L_0

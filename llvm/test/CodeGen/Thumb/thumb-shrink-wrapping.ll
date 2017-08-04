@@ -1,11 +1,12 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumb-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumb-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE --check-prefix=ENABLE-V4T
-; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumbv5-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumbv5-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE --check-prefix=ENABLE-V5T
-; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumb-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumb-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE --check-prefix=DISABLE-V4T
-; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumbv5-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumbv5-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE --check-prefix=DISABLE-V5T
+
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
 ; This allows to have a better control on what the allocation will do.
@@ -15,6 +16,8 @@
 ; edges.
 ; Also disable the late if-converter as it makes harder to reason on
 ; the diffs.
+; Disable tail-duplication during placement, as v4t vs v5t get different
+; results due to branches not being analyzable under v5
 
 ; Initial motivating example: Simple diamond with a call just on one side.
 ; CHECK-LABEL: foo:
@@ -502,14 +505,9 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]]]
 ; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]], #4]
 ; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]], #8]
-; Thumb has quite a strange way for moving stuff
-; in around. Oh well, match the current sequence.
-; CHECK: push {r1}
-; CHECK-NEXT: pop {r0}
-; CHECK: push {r1}
-; CHECK-NEXT: pop {r2}
-; CHECK: push {r1}
-; CHECK-NEXT: pop {r3}
+; CHECK:      movs r0, r1
+; CHECK-NEXT: movs r2, r1
+; CHECK-NEXT: movs r3, r1
 ; CHECK-NEXT: bl
 ; CHECK-NEXT: lsls r0, r0, #3
 ;

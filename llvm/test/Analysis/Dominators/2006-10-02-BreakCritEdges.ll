@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='require<domtree>,break-crit-edges,print<domtree>' -disable-output 2>&1| FileCheck %s
 ; PR932
 
-; CHECK: [3] %brtrue {1,2}
+; CHECK: [3] %brtrue {{{[0-9]+}},{{[0-9]+}}}
 
 declare void @use1(i32)
 

@@ -4,14 +4,23 @@ include(CMakeParseArguments)
 # set the default Xcode to use. This function finds the SDKs that are present in
 # the current Xcode.
 function(find_darwin_sdk_dir var sdk_name)
-  # Let's first try the internal SDK, otherwise use the public SDK.
-  execute_process(
-    COMMAND xcodebuild -version -sdk ${sdk_name}.internal Path
-    RESULT_VARIABLE result_process
-    OUTPUT_VARIABLE var_internal
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_FILE /dev/null
-  )
+  set(DARWIN_${sdk_name}_CACHED_SYSROOT "" CACHE STRING "Darwin SDK path for SDK ${sdk_name}.")
+  set(DARWIN_PREFER_PUBLIC_SDK OFF CACHE BOOL "Prefer Darwin public SDK, even when an internal SDK is present.")
+
+  if(DARWIN_${sdk_name}_CACHED_SYSROOT)
+    set(${var} ${DARWIN_${sdk_name}_CACHED_SYSROOT} PARENT_SCOPE)
+    return()
+  endif()
+  if(NOT DARWIN_PREFER_PUBLIC_SDK)
+    # Let's first try the internal SDK, otherwise use the public SDK.
+    execute_process(
+      COMMAND xcodebuild -version -sdk ${sdk_name}.internal Path
+      RESULT_VARIABLE result_process
+      OUTPUT_VARIABLE var_internal
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_FILE /dev/null
+    )
+  endif()
   if((NOT result_process EQUAL 0) OR "" STREQUAL "${var_internal}")
     execute_process(
       COMMAND xcodebuild -version -sdk ${sdk_name} Path
@@ -26,6 +35,7 @@ function(find_darwin_sdk_dir var sdk_name)
   if(result_process EQUAL 0)
     set(${var} ${var_internal} PARENT_SCOPE)
   endif()
+  set(DARWIN_${sdk_name}_CACHED_SYSROOT ${var_internal} CACHE STRING "Darwin SDK path for SDK ${sdk_name}." FORCE)
 endfunction()
 
 # There isn't a clear mapping of what architectures are supported with a given
@@ -85,10 +95,12 @@ function(darwin_test_archs os valid_archs)
     if(TEST_COMPILE_ONLY)
       try_compile_only(CAN_TARGET_${os}_${arch} -v -arch ${arch} ${DARWIN_${os}_CFLAGS})
     else()
+      set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${arch_linker_flags}")
       try_compile(CAN_TARGET_${os}_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_C}
                   COMPILE_DEFINITIONS "-v -arch ${arch}" ${DARWIN_${os}_CFLAGS}
-                  CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${arch_linker_flags}"
                   OUTPUT_VARIABLE TEST_OUTPUT)
+      set(CMAKE_EXE_LINKER_FLAGS ${SAVED_CMAKE_EXE_LINKER_FLAGS})
     endif()
     if(${CAN_TARGET_${os}_${arch}})
       list(APPEND working_archs ${arch})

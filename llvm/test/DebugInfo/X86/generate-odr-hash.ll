@@ -4,7 +4,7 @@
 ; RUN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=SINGLE %s
 ; RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=OBJ_SINGLE %s
 
-; RUN: llc < %s -split-dwarf=Enable -o %t -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc < %s -split-dwarf-file=foo.dwo -o %t -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu
 ; RUN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=FISSION %s
 ; RUN: llvm-readobj -s -t %t | FileCheck --check-prefix=OBJ_FISSION %s
 

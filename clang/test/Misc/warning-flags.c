@@ -6,8 +6,8 @@ This test serves two purposes:
 (1) It documents all existing warnings that currently have no associated -W flag,
     and ensures that the list never grows.
 
-    If take an existing warning and add a flag, this test will fail.  To
-    fix this test, simply remove that warning from the list below.
+    If you take an existing warning and add a flag, this test will fail.
+    To fix this test, simply remove that warning from the list below.
 
 (2) It prevents us adding new warnings to Clang that have no -W flag.  All
     new warnings should have -W flags.

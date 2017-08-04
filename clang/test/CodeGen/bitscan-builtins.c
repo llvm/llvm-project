@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -ffreestanding -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
+// PR33722
+// RUN: %clang_cc1 -ffreestanding -triple x86_64-unknown-unknown -D_MSC_VER -emit-llvm -o - %s | FileCheck %s
+
 #include <immintrin.h>
 
 int test_bit_scan_forward(int a) {

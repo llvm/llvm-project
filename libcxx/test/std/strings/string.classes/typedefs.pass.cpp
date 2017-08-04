@@ -18,13 +18,14 @@
 // typedef basic_string<wchar_t> wstring;
 
 #include <string>
+#include <type_traits>
 
 int main()
 {
-    typedef std::string test1;
-    typedef std::wstring test2;
+    static_assert((std::is_same<std::string, std::basic_string<char> >::value), "");
+    static_assert((std::is_same<std::wstring, std::basic_string<wchar_t> >::value), "");
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-    typedef std::u16string test3;
-    typedef std::u32string test4;
+    static_assert((std::is_same<std::u16string, std::basic_string<char16_t> >::value), "");
+    static_assert((std::is_same<std::u32string, std::basic_string<char32_t> >::value), "");
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
 }

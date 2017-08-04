@@ -16,22 +16,7 @@
 
 #include "llvm/Support/thread.h"
 
-#ifdef _MSC_VER
-// concrt.h depends on eh.h for __uncaught_exception declaration
-// even if we disable exceptions.
-#include <eh.h>
-
-// Disable warnings from ppltasks.h transitively included by <future>.
-#pragma warning(push)
-#pragma warning(disable:4530)
-#pragma warning(disable:4062)
-#endif
-
 #include <future>
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #include <atomic>
 #include <condition_variable>
@@ -50,17 +35,8 @@ namespace llvm {
 /// for some work to become available.
 class ThreadPool {
 public:
-#ifndef _MSC_VER
-  using VoidTy = void;
   using TaskTy = std::function<void()>;
   using PackagedTaskTy = std::packaged_task<void()>;
-#else
-  // MSVC 2013 has a bug and can't use std::packaged_task<void()>;
-  // We force it to use bool(bool) instead.
-  using VoidTy = bool;
-  using TaskTy = std::function<bool(bool)>;
-  using PackagedTaskTy = std::packaged_task<bool(bool)>;
-#endif
 
   /// Construct a pool with the number of core available on the system (or
   /// whatever the value returned by std::thread::hardware_concurrency() is).
@@ -75,30 +51,17 @@ public:
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
   template <typename Function, typename... Args>
-  inline std::shared_future<VoidTy> async(Function &&F, Args &&... ArgList) {
+  inline std::shared_future<void> async(Function &&F, Args &&... ArgList) {
     auto Task =
         std::bind(std::forward<Function>(F), std::forward<Args>(ArgList)...);
-#ifndef _MSC_VER
     return asyncImpl(std::move(Task));
-#else
-    // This lambda has to be marked mutable because MSVC 2013's std::bind call
-    // operator isn't const qualified.
-    return asyncImpl([Task](VoidTy) mutable -> VoidTy {
-      Task();
-      return VoidTy();
-    });
-#endif
   }
 
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
   template <typename Function>
-  inline std::shared_future<VoidTy> async(Function &&F) {
-#ifndef _MSC_VER
+  inline std::shared_future<void> async(Function &&F) {
     return asyncImpl(std::forward<Function>(F));
-#else
-    return asyncImpl([F] (VoidTy) -> VoidTy { F(); return VoidTy(); });
-#endif
   }
 
   /// Blocking wait for all the threads to complete and the queue to be empty.
@@ -108,7 +71,7 @@ public:
 private:
   /// Asynchronous submission of a task to the pool. The returned future can be
   /// used to wait for the task to finish and is *non-blocking* on destruction.
-  std::shared_future<VoidTy> asyncImpl(TaskTy F);
+  std::shared_future<void> asyncImpl(TaskTy F);
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;

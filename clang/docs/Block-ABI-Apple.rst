@@ -856,15 +856,15 @@ mentioned above, call:
 
 .. code-block:: c
 
-     _Block_object_assign(&dst->target, src->target, BLOCK_FIELD_<appropo>);
+     _Block_object_assign(&dst->target, src->target, BLOCK_FIELD_<apropos>);
 
 in the copy helper and:
 
 .. code-block:: c
 
-    _Block_object_dispose(->target, BLOCK_FIELD_<appropo>);
+    _Block_object_dispose(->target, BLOCK_FIELD_<apropos>);
 
-in the dispose helper where ``<appropo>`` is:
+in the dispose helper where ``<apropos>`` is:
 
 .. code-block:: c
 
@@ -888,7 +888,7 @@ and functions are generated in the same manner.
 Under ObjC we allow ``__weak`` as an attribute on ``__block`` variables, and
 this causes the addition of ``BLOCK_FIELD_IS_WEAK`` orred onto the
 ``BLOCK_FIELD_IS_BYREF`` flag when copying the ``block_byref`` structure in the
-``Block`` copy helper, and onto the ``BLOCK_FIELD_<appropo>`` field within the
+``Block`` copy helper, and onto the ``BLOCK_FIELD_<apropos>`` field within the
 ``block_byref`` copy/dispose helper calls.
 
 The prototypes, and summary, of the helper functions are:

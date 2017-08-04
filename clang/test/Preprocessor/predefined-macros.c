@@ -185,3 +185,9 @@
 // CHECK-CL20-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-FRM: #define __FAST_RELAXED_MATH__ 1
 
+// RUN: %clang_cc1 -triple aarch64-windows %s -E -dM -o - -x cl \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-WIN
+
+// CHECK-ARM64-WIN: #define _M_ARM64 1
+// CHECK-ARM64-WIN: #define _WIN32 1
+// CHECK-ARM64-WIN: #define _WIN64 1

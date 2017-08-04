@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "AArch64.h"
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "InstPrinter/AArch64InstPrinter.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -35,11 +35,11 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
+#include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/MC/MCSectionELF.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
@@ -320,6 +320,9 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     switch (ExtraCode[0]) {
     default:
       return true; // Unknown modifier.
+    case 'a':      // Print 'a' modifier
+      PrintAsmMemoryOperand(MI, OpNum, AsmVariant, ExtraCode, O);
+      return false;
     case 'w':      // Print W register
     case 'x':      // Print X register
       if (MO.isReg())
@@ -388,7 +391,7 @@ bool AArch64AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned AsmVariant,
                                               const char *ExtraCode,
                                               raw_ostream &O) {
-  if (ExtraCode && ExtraCode[0])
+  if (ExtraCode && ExtraCode[0] && ExtraCode[0] != 'a')
     return true; // Unknown modifier.
 
   const MachineOperand &MO = MI->getOperand(OpNum);
@@ -580,8 +583,7 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO_Sym = MI->getOperand(0);
     MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
     MCOperand Sym, SymTLSDescLo12, SymTLSDesc;
-    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF |
-                                   AArch64II::MO_NC);
+    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
     MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
     MCInstLowering.lowerOperand(MO_Sym, Sym);
     MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);

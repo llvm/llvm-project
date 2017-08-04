@@ -22,11 +22,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 

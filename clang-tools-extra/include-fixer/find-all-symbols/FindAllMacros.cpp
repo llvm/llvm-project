@@ -13,24 +13,57 @@
 #include "SymbolInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
 namespace find_all_symbols {
 
+llvm::Optional<SymbolInfo>
+FindAllMacros::CreateMacroSymbol(const Token &MacroNameTok,
+                                 const MacroInfo *info) {
+  std::string FilePath =
+      getIncludePath(*SM, info->getDefinitionLoc(), Collector);
+  if (FilePath.empty())
+    return llvm::None;
+  return SymbolInfo(MacroNameTok.getIdentifierInfo()->getName(),
+                    SymbolInfo::SymbolKind::Macro, FilePath, {});
+}
+
 void FindAllMacros::MacroDefined(const Token &MacroNameTok,
                                  const MacroDirective *MD) {
-  SourceLocation Loc = SM->getExpansionLoc(MacroNameTok.getLocation());
-  std::string FilePath = getIncludePath(*SM, Loc, Collector);
-  if (FilePath.empty()) return;
+  if (auto Symbol = CreateMacroSymbol(MacroNameTok, MD->getMacroInfo()))
+    ++FileSymbols[*Symbol].Seen;
+}
 
-  SymbolInfo Symbol(MacroNameTok.getIdentifierInfo()->getName(),
-                    SymbolInfo::SymbolKind::Macro, FilePath,
-                    SM->getSpellingLineNumber(Loc), {});
+void FindAllMacros::MacroUsed(const Token &Name, const MacroDefinition &MD) {
+  if (!MD || !SM->isInMainFile(SM->getExpansionLoc(Name.getLocation())))
+    return;
+  if (auto Symbol = CreateMacroSymbol(Name, MD.getMacroInfo()))
+    ++FileSymbols[*Symbol].Used;
+}
 
-  Reporter->reportSymbol(SM->getFileEntryForID(SM->getMainFileID())->getName(),
-                         Symbol);
+void FindAllMacros::MacroExpands(const Token &MacroNameTok,
+                                 const MacroDefinition &MD, SourceRange Range,
+                                 const MacroArgs *Args) {
+  MacroUsed(MacroNameTok, MD);
+}
+
+void FindAllMacros::Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+                          const MacroDefinition &MD) {
+  MacroUsed(MacroNameTok, MD);
+}
+
+void FindAllMacros::Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+                           const MacroDefinition &MD) {
+  MacroUsed(MacroNameTok, MD);
+}
+
+void FindAllMacros::EndOfMainFile() {
+  Reporter->reportSymbols(SM->getFileEntryForID(SM->getMainFileID())->getName(),
+                          FileSymbols);
+  FileSymbols.clear();
 }
 
 } // namespace find_all_symbols

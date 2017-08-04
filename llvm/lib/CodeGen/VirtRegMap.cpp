@@ -72,9 +72,21 @@ void VirtRegMap::grow() {
   Virt2SplitMap.resize(NumRegs);
 }
 
+void VirtRegMap::assignVirt2Phys(unsigned virtReg, MCPhysReg physReg) {
+  assert(TargetRegisterInfo::isVirtualRegister(virtReg) &&
+         TargetRegisterInfo::isPhysicalRegister(physReg));
+  assert(Virt2PhysMap[virtReg] == NO_PHYS_REG &&
+         "attempt to assign physical register to already mapped "
+         "virtual register");
+  assert(!getRegInfo().isReserved(physReg) &&
+         "Attempt to map virtReg to a reserved physReg");
+  Virt2PhysMap[virtReg] = physReg;
+}
+
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
-  int SS = MF->getFrameInfo().CreateSpillStackObject(RC->getSize(),
-                                                     RC->getAlignment());
+  unsigned Size = TRI->getSpillSize(*RC);
+  unsigned Align = TRI->getSpillAlignment(*RC);
+  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Align);
   ++NumSpillSlots;
   return SS;
 }
@@ -167,6 +179,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   bool readsUndefSubreg(const MachineOperand &MO) const;
   void addLiveInsForSubRanges(const LiveInterval &LI, unsigned PhysReg) const;
   void handleIdentityCopy(MachineInstr &MI) const;
+  void expandCopyBundle(MachineInstr &MI) const;
 
 public:
   static char ID;
@@ -367,9 +380,39 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   }
 
   if (Indexes)
-    Indexes->removeMachineInstrFromMaps(MI);
-  MI.eraseFromParent();
+    Indexes->removeSingleMachineInstrFromMaps(MI);
+  MI.eraseFromBundle();
   DEBUG(dbgs() << "  deleted.\n");
+}
+
+/// The liverange splitting logic sometimes produces bundles of copies when
+/// subregisters are involved. Expand these into a sequence of copy instructions
+/// after processing the last in the bundle. Does not update LiveIntervals
+/// which we shouldn't need for this instruction anymore.
+void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
+  if (!MI.isCopy())
+    return;
+
+  if (MI.isBundledWithPred() && !MI.isBundledWithSucc()) {
+    // Only do this when the complete bundle is made out of COPYs.
+    MachineBasicBlock &MBB = *MI.getParent();
+    for (MachineBasicBlock::reverse_instr_iterator I =
+         std::next(MI.getReverseIterator()), E = MBB.instr_rend();
+         I != E && I->isBundledWithSucc(); ++I) {
+      if (!I->isCopy())
+        return;
+    }
+
+    for (MachineBasicBlock::reverse_instr_iterator I = MI.getReverseIterator();
+         I->isBundledWithPred(); ) {
+      MachineInstr &MI = *I;
+      ++I;
+
+      MI.unbundleFromPred();
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(MI);
+    }
+  }
 }
 
 void VirtRegRewriter::rewrite() {
@@ -431,12 +474,14 @@ void VirtRegRewriter::rewrite() {
             }
           }
 
-          // The <def,undef> flag only makes sense for sub-register defs, and
-          // we are substituting a full physreg.  An <imp-use,kill> operand
-          // from the SuperKills list will represent the partial read of the
-          // super-register.
-          if (MO.isDef())
+          // The <def,undef> and <def,internal> flags only make sense for
+          // sub-register defs, and we are substituting a full physreg.  An
+          // <imp-use,kill> operand from the SuperKills list will represent the
+          // partial read of the super-register.
+          if (MO.isDef()) {
             MO.setIsUndef(false);
+            MO.setIsInternalRead(false);
+          }
 
           // PhysReg operands cannot have subregister indexes.
           PhysReg = TRI->getSubReg(PhysReg, SubReg);
@@ -460,6 +505,8 @@ void VirtRegRewriter::rewrite() {
         MI->addRegisterDefined(SuperDefs.pop_back_val(), TRI);
 
       DEBUG(dbgs() << "> " << *MI);
+
+      expandCopyBundle(*MI);
 
       // We can remove identity copies right now.
       handleIdentityCopy(*MI);

@@ -4,25 +4,22 @@
 ; If spilling to smem, additional registers are used for the resource
 ; descriptor.
 
-; ALL-LABEL: {{^}}max_12_sgprs:
+; ALL-LABEL: {{^}}max_9_sgprs:
 
-; FIXME: Should be ablo to skip this copying of the private segment
-; buffer because all the SGPR spills are to VGPRs.
-
-; ALL: s_mov_b64 s[10:11], s[2:3]
-; ALL: s_mov_b64 s[8:9], s[0:1]
 ; ALL: SGPRBlocks: 1
-; ALL: NumSGPRsForWavesPerEU: 14
-define void @max_12_sgprs(i32 addrspace(1)* %out1,
+; ALL: NumSGPRsForWavesPerEU: 9
+define amdgpu_kernel void @max_9_sgprs(i32 addrspace(1)* %out1,
 
                           i32 addrspace(1)* %out2,
                           i32 addrspace(1)* %out3,
                           i32 addrspace(1)* %out4,
-                          i32 %one, i32 %two, i32 %three, i32 %four) #0 {
+                          i32 addrspace(1)* %out5,
+                          i32 %one, i32 %two, i32 %three, i32 %four, i32 %five) #0 {
   store i32 %one, i32 addrspace(1)* %out1
   store i32 %two, i32 addrspace(1)* %out2
   store i32 %three, i32 addrspace(1)* %out3
   store i32 %four, i32 addrspace(1)* %out4
+  store i32 %five, i32 addrspace(1)* %out5
   ret void
 }
 
@@ -42,41 +39,49 @@ define void @max_12_sgprs(i32 addrspace(1)* %out1,
 ; features when the number of registers is frozen), this ends up using
 ; more than expected.
 
-; ALL-LABEL: {{^}}max_12_sgprs_14_input_sgprs:
-; TOSGPR: SGPRBlocks: 1
-; TOSGPR: NumSGPRsForWavesPerEU: 16
+; XALL-LABEL: {{^}}max_12_sgprs_14_input_sgprs:
+; XTOSGPR: SGPRBlocks: 1
+; XTOSGPR: NumSGPRsForWavesPerEU: 16
 
-; TOSMEM: s_mov_b64 s[10:11], s[2:3]
-; TOSMEM: s_mov_b64 s[8:9], s[0:1]
-; TOSMEM: s_mov_b32 s7, s13
+; XTOSMEM: s_mov_b64 s[10:11], s[2:3]
+; XTOSMEM: s_mov_b64 s[8:9], s[0:1]
+; XTOSMEM: s_mov_b32 s7, s13
 
-; TOSMEM: SGPRBlocks: 1
-; TOSMEM: NumSGPRsForWavesPerEU: 16
-define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
-                                        i32 addrspace(1)* %out2,
-                                        i32 addrspace(1)* %out3,
-                                        i32 addrspace(1)* %out4,
-                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
-  store volatile i32 0, i32* undef
-  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
-  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
-  %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
-  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
-  store volatile i64 %x.3, i64 addrspace(1)* undef
-  %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
-  %x.5 = call i8 addrspace(2)* @llvm.amdgcn.queue.ptr()
-  store volatile i8 addrspace(2)* %x.5, i8 addrspace(2)* addrspace(1)* undef
-
-  store i32 %one, i32 addrspace(1)* %out1
-  store i32 %two, i32 addrspace(1)* %out2
-  store i32 %three, i32 addrspace(1)* %out3
-  store i32 %four, i32 addrspace(1)* %out4
-  ret void
-}
+; XTOSMEM: SGPRBlocks: 1
+; XTOSMEM: NumSGPRsForWavesPerEU: 16
+;
+; This test case is disabled: When calculating the spillslot addresses AMDGPU
+; creates an extra vreg to save/restore m0 which in a point of maximum register
+; pressure would trigger an endless loop; the compiler aborts earlier with
+; "Incomplete scavenging after 2nd pass" in practice.
+;define amdgpu_kernel void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
+;                                        i32 addrspace(1)* %out2,
+;                                        i32 addrspace(1)* %out3,
+;                                        i32 addrspace(1)* %out4,
+;                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
+;  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
+;  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
+;  %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
+;  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
+;  %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+;  %x.5 = call i8 addrspace(2)* @llvm.amdgcn.queue.ptr()
+;  store volatile i32 0, i32* undef
+;  br label %stores
+;
+;stores:
+;  store volatile i32 %x.0, i32 addrspace(1)* undef
+;  store volatile i32 %x.0, i32 addrspace(1)* undef
+;  store volatile i32 %x.0, i32 addrspace(1)* undef
+;  store volatile i64 %x.3, i64 addrspace(1)* undef
+;  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
+;  store volatile i8 addrspace(2)* %x.5, i8 addrspace(2)* addrspace(1)* undef
+;
+;  store i32 %one, i32 addrspace(1)* %out1
+;  store i32 %two, i32 addrspace(1)* %out2
+;  store i32 %three, i32 addrspace(1)* %out3
+;  store i32 %four, i32 addrspace(1)* %out4
+;  ret void
+;}
 
 ; The following test is commented out for now; http://llvm.org/PR31230
 ; XALL-LABEL: max_12_sgprs_12_input_sgprs{{$}}
@@ -90,7 +95,7 @@ define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
 
 ; XALL: SGPRBlocks: 2
 ; XALL: NumSGPRsForWavesPerEU: 18
-;define void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
+;define amdgpu_kernel void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
 ;                                        i32 addrspace(1)* %out2,
 ;                                        i32 addrspace(1)* %out3,
 ;                                        i32 addrspace(1)* %out4,

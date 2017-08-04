@@ -4,7 +4,7 @@ declare float @llvm.r600.recipsqrt.ieee.f32(float) nounwind readnone
 
 ; EG-LABEL: {{^}}recipsqrt.ieee_f32:
 ; EG: RECIPSQRT_IEEE
-define void @recipsqrt.ieee_f32(float addrspace(1)* %out, float %src) nounwind {
+define amdgpu_kernel void @recipsqrt.ieee_f32(float addrspace(1)* %out, float %src) nounwind {
   %recipsqrt.ieee = call float @llvm.r600.recipsqrt.ieee.f32(float %src) nounwind readnone
   store float %recipsqrt.ieee, float addrspace(1)* %out, align 4
   ret void
@@ -13,7 +13,7 @@ define void @recipsqrt.ieee_f32(float addrspace(1)* %out, float %src) nounwind {
 ; TODO: Really these should be constant folded
 ; EG-LABEL: {{^}}recipsqrt.ieee_f32_constant_4.0
 ; EG: RECIPSQRT_IEEE
-define void @recipsqrt.ieee_f32_constant_4.0(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @recipsqrt.ieee_f32_constant_4.0(float addrspace(1)* %out) nounwind {
   %recipsqrt.ieee = call float @llvm.r600.recipsqrt.ieee.f32(float 4.0) nounwind readnone
   store float %recipsqrt.ieee, float addrspace(1)* %out, align 4
   ret void
@@ -21,7 +21,7 @@ define void @recipsqrt.ieee_f32_constant_4.0(float addrspace(1)* %out) nounwind 
 
 ; EG-LABEL: {{^}}recipsqrt.ieee_f32_constant_100.0
 ; EG: RECIPSQRT_IEEE
-define void @recipsqrt.ieee_f32_constant_100.0(float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @recipsqrt.ieee_f32_constant_100.0(float addrspace(1)* %out) nounwind {
   %recipsqrt.ieee = call float @llvm.r600.recipsqrt.ieee.f32(float 100.0) nounwind readnone
   store float %recipsqrt.ieee, float addrspace(1)* %out, align 4
   ret void

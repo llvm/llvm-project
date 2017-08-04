@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
 
 ; FIXME: This currently doesn't do a great job of clustering the
 ; loads, which end up with extra moves between them. Right now, it
@@ -10,7 +10,7 @@
 ; SI-DAG: buffer_load_dword [[REG1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
 ; SI: buffer_store_dword [[REG0]]
 ; SI: buffer_store_dword [[REG1]]
-define void @cluster_global_arg_loads(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @cluster_global_arg_loads(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr) #0 {
   %load0 = load i32, i32 addrspace(1)* %ptr, align 4
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 2
   %load1 = load i32, i32 addrspace(1)* %gep, align 4
@@ -24,7 +24,7 @@ define void @cluster_global_arg_loads(i32 addrspace(1)* %out0, i32 addrspace(1)*
 ; FUNC-LABEL: {{^}}same_base_ptr_crash:
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
-define void @same_base_ptr_crash(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %offset) {
+define amdgpu_kernel void @same_base_ptr_crash(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %offset) {
 entry:
   %out1 = getelementptr i32, i32 addrspace(1)* %out, i32 %offset
   %tmp0 = load i32, i32 addrspace(1)* %out

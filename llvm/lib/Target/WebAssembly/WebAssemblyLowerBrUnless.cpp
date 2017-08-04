@@ -15,8 +15,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -118,7 +118,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // delete the br_unless.
       assert(Inverted);
       BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::BR_IF))
-          .addOperand(MI->getOperand(0))
+          .add(MI->getOperand(0))
           .addReg(Cond);
       MBB.erase(MI);
     }

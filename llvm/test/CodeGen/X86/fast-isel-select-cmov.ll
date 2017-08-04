@@ -6,21 +6,12 @@
 ; conditon input (argument or cmp). Currently i8 is not supported.
 
 define zeroext i16 @select_cmov_i16(i1 zeroext %cond, i16 zeroext %a, i16 zeroext %b) {
-; NOAVX512-LABEL: select_cmov_i16:
-; NOAVX512:       ## BB#0:
-; NOAVX512-NEXT:    testb $1, %dil
-; NOAVX512-NEXT:    cmovew %dx, %si
-; NOAVX512-NEXT:    movzwl %si, %eax
-; NOAVX512-NEXT:    retq
-;
-; AVX512-LABEL: select_cmov_i16:
-; AVX512:       ## BB#0:
-; AVX512-NEXT:    kmovw %edi, %k0
-; AVX512-NEXT:    kmovw %k0, %eax
-; AVX512-NEXT:    testb $1, %al
-; AVX512-NEXT:    cmovew %dx, %si
-; AVX512-NEXT:    movzwl %si, %eax
-; AVX512-NEXT:    retq
+; CHECK-LABEL: select_cmov_i16:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovew %dx, %si
+; CHECK-NEXT:    movzwl %si, %eax
+; CHECK-NEXT:    retq
   %1 = select i1 %cond, i16 %a, i16 %b
   ret i16 %1
 }
@@ -38,21 +29,12 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 }
 
 define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
-; NOAVX512-LABEL: select_cmov_i32:
-; NOAVX512:       ## BB#0:
-; NOAVX512-NEXT:    testb $1, %dil
-; NOAVX512-NEXT:    cmovel %edx, %esi
-; NOAVX512-NEXT:    movl %esi, %eax
-; NOAVX512-NEXT:    retq
-;
-; AVX512-LABEL: select_cmov_i32:
-; AVX512:       ## BB#0:
-; AVX512-NEXT:    kmovw %edi, %k0
-; AVX512-NEXT:    kmovw %k0, %eax
-; AVX512-NEXT:    testb $1, %al
-; AVX512-NEXT:    cmovel %edx, %esi
-; AVX512-NEXT:    movl %esi, %eax
-; AVX512-NEXT:    retq
+; CHECK-LABEL: select_cmov_i32:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovel %edx, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
   %1 = select i1 %cond, i32 %a, i32 %b
   ret i32 %1
 }
@@ -70,21 +52,12 @@ define i32 @select_cmp_cmov_i32(i32 %a, i32 %b) {
 }
 
 define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
-; NOAVX512-LABEL: select_cmov_i64:
-; NOAVX512:       ## BB#0:
-; NOAVX512-NEXT:    testb $1, %dil
-; NOAVX512-NEXT:    cmoveq %rdx, %rsi
-; NOAVX512-NEXT:    movq %rsi, %rax
-; NOAVX512-NEXT:    retq
-;
-; AVX512-LABEL: select_cmov_i64:
-; AVX512:       ## BB#0:
-; AVX512-NEXT:    kmovw %edi, %k0
-; AVX512-NEXT:    kmovw %k0, %eax
-; AVX512-NEXT:    testb $1, %al
-; AVX512-NEXT:    cmoveq %rdx, %rsi
-; AVX512-NEXT:    movq %rsi, %rax
-; AVX512-NEXT:    retq
+; CHECK-LABEL: select_cmov_i64:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmoveq %rdx, %rsi
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    retq
   %1 = select i1 %cond, i64 %a, i64 %b
   ret i64 %1
 }

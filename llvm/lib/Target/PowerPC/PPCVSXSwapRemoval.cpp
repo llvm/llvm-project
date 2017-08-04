@@ -42,9 +42,9 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "PPCInstrInfo.h"
 #include "PPC.h"
 #include "PPCInstrBuilder.h"
+#include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -195,8 +195,10 @@ public:
       return false;
 
     // If we don't have VSX on the subtarget, don't do anything.
+    // Also, on Power 9 the load and store ops preserve element order and so
+    // the swaps are not required.
     const PPCSubtarget &STI = MF.getSubtarget<PPCSubtarget>();
-    if (!STI.hasVSX())
+    if (!STI.hasVSX() || !STI.needsSwapsForVSXMemOps())
       return false;
 
     bool Changed = false;
@@ -936,9 +938,9 @@ bool PPCVSXSwapRemoval::removeSwaps() {
       Changed = true;
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
       MachineBasicBlock *MBB = MI->getParent();
-      BuildMI(*MBB, MI, MI->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), MI->getOperand(0).getReg())
-        .addOperand(MI->getOperand(1));
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(TargetOpcode::COPY),
+              MI->getOperand(0).getReg())
+          .add(MI->getOperand(1));
 
       DEBUG(dbgs() << format("Replaced %d with copy: ",
                              SwapVector[EntryIdx].VSEId));

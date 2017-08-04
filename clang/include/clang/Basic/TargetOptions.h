@@ -18,14 +18,14 @@
 #include <string>
 #include <vector>
 #include "clang/Basic/OpenCLOptions.h"
+#include "llvm/Target/TargetOptions.h"
 
 namespace clang {
 
 /// \brief Options for controlling the target.
 class TargetOptions {
 public:
-  /// If given, the name of the target triple to compile for. If not given the
-  /// target will be selected to match the host.
+  /// The name of the target triple to compile for.
   std::string Triple;
 
   /// When compiling for the device side, contains the triple used to compile
@@ -42,7 +42,7 @@ public:
   std::string ABI;
 
   /// The EABI version to use
-  std::string EABIVersion;
+  llvm::EABI EABIVersion;
 
   /// If given, the version string of the linker in use.
   std::string LinkerVersion;

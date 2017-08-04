@@ -1,4 +1,4 @@
-//===-- llvm/lib/CodeGen/AsmPrinter/CodeViewDebug.h ----*- C++ -*--===//
+//===- llvm/lib/CodeGen/AsmPrinter/CodeViewDebug.h --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,29 +14,44 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 
+#include "DbgValueHistoryCalculator.h"
 #include "DebugHandlerBase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/MC/MCStreamer.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
+#include <cstdint>
+#include <map>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
-class StringRef;
-class LexicalScope;
 struct ClassInfo;
+class StringRef;
+class AsmPrinter;
+class Function;
+class GlobalVariable;
+class MCSectionCOFF;
+class MCStreamer;
+class MCSymbol;
+class MachineFunction;
 
 /// \brief Collects and handles line tables information in a CodeView format.
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
-  llvm::BumpPtrAllocator Allocator;
+  BumpPtrAllocator Allocator;
   codeview::TypeTableBuilder TypeTable;
 
   /// Represents the most general definition range.
@@ -103,14 +118,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
     SmallVector<LocalVariable, 1> Locals;
 
-    DebugLoc LastLoc;
     const MCSymbol *Begin = nullptr;
     const MCSymbol *End = nullptr;
     unsigned FuncId = 0;
     unsigned LastFileId = 0;
     bool HaveLineInfo = false;
   };
-  FunctionInfo *CurFn;
+  FunctionInfo *CurFn = nullptr;
 
   /// The set of comdat .debug$S sections that we've seen so far. Each section
   /// must start with a magic version number that must only be emitted once.
@@ -176,8 +190,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   std::vector<std::pair<std::string, codeview::TypeIndex>> LocalUDTs,
       GlobalUDTs;
 
-  typedef std::map<const DIFile *, std::string> FileToFilepathMapTy;
+  using FileToFilepathMapTy = std::map<const DIFile *, std::string>;
   FileToFilepathMapTy FileToFilepathMap;
+
   StringRef getFullFilepath(const DIFile *S);
 
   unsigned maybeRecordFile(const DIFile *F);
@@ -216,14 +231,14 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Opens a subsection of the given kind in a .debug$S codeview section.
   /// Returns an end label for use with endCVSubsection when the subsection is
   /// finished.
-  MCSymbol *beginCVSubsection(codeview::ModuleSubstreamKind Kind);
+  MCSymbol *beginCVSubsection(codeview::DebugSubsectionKind Kind);
 
   void endCVSubsection(MCSymbol *EndLabel);
 
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);
 
-  typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
+  using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
 
   void collectVariableInfo(const DISubprogram *SP);
 
@@ -299,23 +314,25 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   unsigned getPointerSizeInBytes();
 
+protected:
+  /// \brief Gather pre-function debug information.
+  void beginFunctionImpl(const MachineFunction *MF) override;
+
+  /// \brief Gather post-function debug information.
+  void endFunctionImpl(const MachineFunction *) override;
+
 public:
   CodeViewDebug(AsmPrinter *Asm);
 
-  void setSymbolSize(const llvm::MCSymbol *, uint64_t) override {}
+  void setSymbolSize(const MCSymbol *, uint64_t) override {}
 
   /// \brief Emit the COFF section that holds the line table information.
   void endModule() override;
 
-  /// \brief Gather pre-function debug information.
-  void beginFunction(const MachineFunction *MF) override;
-
-  /// \brief Gather post-function debug information.
-  void endFunction(const MachineFunction *) override;
-
   /// \brief Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
 };
-} // End of namespace llvm
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H

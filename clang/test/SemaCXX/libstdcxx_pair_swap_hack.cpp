@@ -88,7 +88,7 @@ namespace sad {
 
   CLASS<int, int> pi;
 
-  static_assert(!noexcept(pi.swap(pi)), ""); // expected-note {{in instantiation of}}
+  static_assert(!noexcept(pi.swap(pi)), ""); // expected-note 2{{in instantiation of exception specification for 'swap'}}
 }
 
 #endif

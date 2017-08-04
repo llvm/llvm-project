@@ -1125,3 +1125,15 @@ namespace test57 {
   // CHECK-LABEL: @_ZN6test571fILi0EEEvDTplcldtL_ZNS_1xEE1fIXLi0EEEET_E
   template void f<0>(int);
 }
+
+namespace test58 {
+  struct State {
+   bool m_fn1();
+  } a;
+  template <class T> struct identity { typedef T type; };
+  struct A {
+   template <typename T> A(T, bool (identity<T>::type::*)());
+  };
+  // CHECK-LABEL: @_ZN6test581AC1INS_5StateEEET_MNS_8identityIS3_E4typeEFbvE
+  void fn1() { A(a, &State::m_fn1); }
+}

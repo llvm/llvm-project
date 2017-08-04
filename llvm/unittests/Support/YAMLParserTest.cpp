@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/YAMLParser.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/YAMLParser.h"
 #include "gtest/gtest.h"
 
 namespace llvm {

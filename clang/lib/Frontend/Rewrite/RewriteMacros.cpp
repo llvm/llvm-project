@@ -76,7 +76,7 @@ static void LexRawTokensFromMainFile(Preprocessor &PP,
     RawLex.LexFromRawLexer(RawTok);
 
     // If we have an identifier with no identifier info for our raw token, look
-    // up the indentifier info.  This is important for equality comparison of
+    // up the identifier info.  This is important for equality comparison of
     // identifier tokens.
     if (RawTok.is(tok::raw_identifier))
       PP.LookUpIdentifierInfo(RawTok);

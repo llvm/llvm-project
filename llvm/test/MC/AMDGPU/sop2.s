@@ -160,6 +160,14 @@ s_cbranch_g_fork s[4:5], s[6:7]
 // SICI: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x95]
 // VI:   s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x94]
 
+s_cbranch_g_fork 1, s[6:7]
+// SICI: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x95]
+// VI:   s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x94]
+
+s_cbranch_g_fork s[6:7], 2
+// SICI: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x95]
+// VI:   s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x94]
+
 s_absdiff_i32 s2, s4, s6
 // SICI: s_absdiff_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x96]
 // VI:   s_absdiff_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x95]

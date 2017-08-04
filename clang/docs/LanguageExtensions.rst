@@ -356,7 +356,7 @@ is:
 
 Query for this feature with ``__has_extension(attribute_ext_vector_type)``.
 
-Giving ``-faltivec`` option to clang enables support for AltiVec vector syntax
+Giving ``-maltivec`` option to clang enables support for AltiVec vector syntax
 and functions.  For example:
 
 .. code-block:: c++
@@ -780,14 +780,14 @@ Use ``__has_feature(cxx_variadic_templates)`` or
 ``__has_extension(cxx_variadic_templates)`` to determine if support for
 variadic templates is enabled.
 
-C++1y
+C++14
 -----
 
-The features listed below are part of the committee draft for the C++1y
-standard.  As a result, all these features are enabled with the ``-std=c++1y``
-or ``-std=gnu++1y`` option when compiling C++ code.
+The features listed below are part of the C++14 standard.  As a result, all
+these features are enabled with the ``-std=C++14`` or ``-std=gnu++14`` option
+when compiling C++ code.
 
-C++1y binary literals
+C++14 binary literals
 ^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_binary_literals)`` or
@@ -795,37 +795,37 @@ Use ``__has_feature(cxx_binary_literals)`` or
 binary literals (for instance, ``0b10010``) are recognized. Clang supports this
 feature as an extension in all language modes.
 
-C++1y contextual conversions
+C++14 contextual conversions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_contextual_conversions)`` or
-``__has_extension(cxx_contextual_conversions)`` to determine if the C++1y rules
+``__has_extension(cxx_contextual_conversions)`` to determine if the C++14 rules
 are used when performing an implicit conversion for an array bound in a
 *new-expression*, the operand of a *delete-expression*, an integral constant
 expression, or a condition in a ``switch`` statement.
 
-C++1y decltype(auto)
+C++14 decltype(auto)
 ^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_decltype_auto)`` or
 ``__has_extension(cxx_decltype_auto)`` to determine if support
 for the ``decltype(auto)`` placeholder type is enabled.
 
-C++1y default initializers for aggregates
+C++14 default initializers for aggregates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_aggregate_nsdmi)`` or
 ``__has_extension(cxx_aggregate_nsdmi)`` to determine if support
 for default initializers in aggregate members is enabled.
 
-C++1y digit separators
+C++14 digit separators
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
 is no corresponding ``__has_feature`` name
 
-C++1y generalized lambda capture
+C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_init_captures)`` or
@@ -833,7 +833,7 @@ Use ``__has_feature(cxx_init_captures)`` or
 lambda captures with explicit initializers is enabled
 (for instance, ``[n(0)] { return ++n; }``).
 
-C++1y generic lambdas
+C++14 generic lambdas
 ^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_generic_lambdas)`` or
@@ -841,7 +841,7 @@ Use ``__has_feature(cxx_generic_lambdas)`` or
 (polymorphic) lambdas is enabled
 (for instance, ``[] (auto x) { return x + 1; }``).
 
-C++1y relaxed constexpr
+C++14 relaxed constexpr
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_relaxed_constexpr)`` or
@@ -849,7 +849,7 @@ Use ``__has_feature(cxx_relaxed_constexpr)`` or
 declarations, local variable modification, and control flow constructs
 are permitted in ``constexpr`` functions.
 
-C++1y return type deduction
+C++14 return type deduction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_return_type_deduction)`` or
@@ -857,7 +857,7 @@ Use ``__has_feature(cxx_return_type_deduction)`` or
 for return type deduction for functions (using ``auto`` as a return type)
 is enabled.
 
-C++1y runtime-sized arrays
+C++14 runtime-sized arrays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_runtime_array)`` or
@@ -866,7 +866,7 @@ for arrays of runtime bound (a restricted form of variable-length arrays)
 is enabled.
 Clang's implementation of this feature is incomplete.
 
-C++1y variable templates
+C++14 variable templates
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``__has_feature(cxx_variable_templates)`` or
@@ -993,6 +993,7 @@ The following type trait primitives are supported by Clang:
 * ``__has_trivial_destructor`` (GNU, Microsoft)
 * ``__has_virtual_destructor`` (GNU, Microsoft)
 * ``__is_abstract`` (GNU, Microsoft)
+* ``__is_aggregate`` (GNU, Microsoft)
 * ``__is_base_of`` (GNU, Microsoft)
 * ``__is_class`` (GNU, Microsoft)
 * ``__is_convertible_to`` (Microsoft)
@@ -1270,6 +1271,87 @@ Further examples of these attributes are available in the static analyzer's `lis
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
 
+Objective-C @available
+----------------------
+
+It is possible to use the newest SDK but still build a program that can run on
+older versions of macOS and iOS by passing ``-mmacosx-version-min=`` /
+``-miphoneos-version-min=``.
+
+Before LLVM 5.0, when calling a function that exists only in the OS that's
+newer than the target OS (as determined by the minimum deployment version),
+programmers had to carefully check if the function exists at runtime, using
+null checks for weakly-linked C functions, ``+class`` for Objective-C classes,
+and ``-respondsToSelector:`` or ``+instancesRespondToSelector:`` for
+Objective-C methods.  If such a check was missed, the program would compile
+fine, run fine on newer systems, but crash on older systems.
+
+As of LLVM 5.0, ``-Wunguarded-availability`` uses the `availability attributes
+<http://clang.llvm.org/docs/AttributeReference.html#availability>`_ together
+with the new ``@available()`` keyword to assist with this issue.
+When a method that's introduced in the OS newer than the target OS is called, a
+-Wunguarded-availability warning is emitted if that call is not guarded:
+
+.. code-block:: objc
+
+  void my_fun(NSSomeClass* var) {
+    // If fancyNewMethod was added in e.g. macOS 10.12, but the code is
+    // built with -mmacosx-version-min=10.11, then this unconditional call
+    // will emit a -Wunguarded-availability warning:
+    [var fancyNewMethod];
+  }
+
+To fix the warning and to avoid the crash on macOS 10.11, wrap it in
+``if(@available())``:
+
+.. code-block:: objc
+
+  void my_fun(NSSomeClass* var) {
+    if (@available(macOS 10.12, *)) {
+      [var fancyNewMethod];
+    } else {
+      // Put fallback behavior for old macOS versions (and for non-mac
+      // platforms) here.
+    }
+  }
+
+The ``*`` is required and means that platforms not explicitly listed will take
+the true branch, and the compiler will emit ``-Wunguarded-availability``
+warnings for unlisted platforms based on those platform's deployment target.
+More than one platform can be listed in ``@available()``:
+
+.. code-block:: objc
+
+  void my_fun(NSSomeClass* var) {
+    if (@available(macOS 10.12, iOS 10, *)) {
+      [var fancyNewMethod];
+    }
+  }
+
+If the caller of ``my_fun()`` already checks that ``my_fun()`` is only called
+on 10.12, then add an `availability attribute
+<http://clang.llvm.org/docs/AttributeReference.html#availability>`_ to it,
+which will also suppress the warning and require that calls to my_fun() are
+checked:
+
+.. code-block:: objc
+
+  API_AVAILABLE(macos(10.12)) void my_fun(NSSomeClass* var) {
+    [var fancyNewMethod];  // Now ok.
+  }
+
+``@available()`` is only available in Objective-C code.  To use the feature
+in C and C++ code, use the ``__builtin_available()`` spelling instead.
+
+If existing code uses null checks or ``-respondsToSelector:``, it should
+be changed to use ``@available()`` (or ``__builtin_available``) instead.
+
+``-Wunguarded-availability`` is disabled by default, but
+``-Wunguarded-availability-new``, which only emits this warning for APIs
+that have been introduced in macOS >= 10.13, iOS >= 11, watchOS >= 4 and
+tvOS >= 11, is enabled by default.
+
+.. _langext-overloading:
 
 Objective-C++ ABI: protocol-qualifier mangling of parameters
 ------------------------------------------------------------
@@ -1285,8 +1367,6 @@ parameters of protocol-qualified type.
 
 Query the presence of this new mangling with
 ``__has_feature(objc_protocol_qualifier_mangling)``.
-
-.. _langext-overloading:
 
 Initializer lists for complex numbers in C
 ==========================================
@@ -1780,7 +1860,7 @@ String builtins
 ---------------
 
 Clang provides constant expression evaluation support for builtins forms of
-the following functions from the C standard library ``<strings.h>`` header:
+the following functions from the C standard library ``<string.h>`` header:
 
 * ``memchr``
 * ``memcmp``
@@ -2520,3 +2600,45 @@ whether or not an attribute is supported by the pragma by referring to the
 The attributes are applied to all matching declarations individually, even when
 the attribute is semantically incorrect. The attributes that aren't applied to
 any declaration are not verified semantically.
+
+Specifying section names for global objects (#pragma clang section)
+===================================================================
+
+The ``#pragma clang section`` directive provides a means to assign section-names
+to global variables, functions and static variables.
+
+The section names can be specified as:
+
+.. code-block:: c++
+
+  #pragma clang section bss="myBSS" data="myData" rodata="myRodata" text="myText"
+
+The section names can be reverted back to default name by supplying an empty
+string to the section kind, for example:
+
+.. code-block:: c++
+
+  #pragma clang section bss="" data="" text="" rodata=""
+
+The ``#pragma clang section`` directive obeys the following rules:
+
+* The pragma applies to all global variable, statics and function declarations
+  from the pragma to the end of the translation unit.
+
+* The pragma clang section is enabled automatically, without need of any flags.
+
+* This feature is only defined to work sensibly for ELF targets.
+
+* If section name is specified through _attribute_((section("myname"))), then
+  the attribute name gains precedence.
+
+* Global variables that are initialized to zero will be placed in the named
+  bss section, if one is present.
+
+* The ``#pragma clang section`` directive does not does try to infer section-kind
+  from the name. For example, naming a section "``.bss.mySec``" does NOT mean
+  it will be a bss section name.
+
+* The decision about which section-kind applies to each global is taken in the back-end.
+  Once the section-kind is known, appropriate section name, as specified by the user using
+  ``#pragma clang section`` directive, is applied to that global.

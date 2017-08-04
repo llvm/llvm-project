@@ -36,7 +36,7 @@
 ///
 /// A) A previous pass has created a compact branch directly.
 /// B) Transforming a delay slot branch into compact branch. This case can be
-///    difficult to process as lookahead for hazards is insufficent, as
+///    difficult to process as lookahead for hazards is insufficient, as
 ///    backwards delay slot fillling can also produce hazards in previously
 ///    processed instuctions.
 ///
@@ -103,23 +103,24 @@ static Iter getNextMachineInstrInBB(Iter Position) {
 
 // Find the next real instruction from the current position, looking through
 // basic block boundaries.
-static Iter getNextMachineInstr(Iter Position, MachineBasicBlock *Parent) {
+static std::pair<Iter, bool> getNextMachineInstr(Iter Position, MachineBasicBlock * Parent) {
   if (Position == Parent->end()) {
-    MachineBasicBlock *Succ = Parent->getNextNode();
-    if (Succ != nullptr && Parent->isSuccessor(Succ)) {
-      Position = Succ->begin();
-      Parent = Succ;
-    } else {
-      llvm_unreachable(
-          "Should have identified the end of the function earlier!");
-    }
+    do {
+      MachineBasicBlock *Succ = Parent->getNextNode();
+      if (Succ != nullptr && Parent->isSuccessor(Succ)) {
+        Position = Succ->begin();
+        Parent = Succ;
+      } else {
+        return std::make_pair(Position, true);
+      }
+    } while (Parent->empty());
   }
 
   Iter Instr = getNextMachineInstrInBB(Position);
   if (Instr == Parent->end()) {
     return getNextMachineInstr(Instr, Parent);
   }
-  return Instr;
+  return std::make_pair(Instr, false);
 }
 
 bool MipsHazardSchedule::runOnMachineFunction(MachineFunction &MF) {
@@ -145,7 +146,9 @@ bool MipsHazardSchedule::runOnMachineFunction(MachineFunction &MF) {
       bool LastInstInFunction =
           std::next(I) == FI->end() && std::next(FI) == MF.end();
       if (!LastInstInFunction) {
-        Inst = getNextMachineInstr(std::next(I), &*FI);
+        std::pair<Iter, bool> Res = getNextMachineInstr(std::next(I), &*FI);
+        LastInstInFunction |= Res.second;
+        Inst = Res.first;
       }
 
       if (LastInstInFunction || !TII->SafeInForbiddenSlot(*Inst)) {

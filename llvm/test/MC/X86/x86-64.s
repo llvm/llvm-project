@@ -1119,6 +1119,12 @@ movq	%mm5, %rbx // CHECK: movd %mm5, %rbx # encoding: [0x48,0x0f,0x7e,0xeb]
 rex64 // CHECK: rex64 # encoding: [0x48]
 data16 // CHECK: data16 # encoding: [0x66]
 
+// CHECK: data16
+// CHECK: encoding: [0x66]
+// CHECK: lgdtq 4(%rax)
+// CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+data16 lgdt 4(%rax)
+
 // PR8855
 movq 18446744073709551615,%rbx   // CHECK: movq	-1, %rbx
 
@@ -1291,17 +1297,13 @@ xsetbv // CHECK: xsetbv # encoding: [0x0f,0x01,0xd1]
 // CHECK: encoding: [0x48,0x0f,0x00,0xc8]
 	str %rax
 
-// CHECK: movd %rdi, %xmm0
+// CHECK: movq %rdi, %xmm0
 // CHECK: encoding: [0x66,0x48,0x0f,0x6e,0xc7]
 	movq %rdi,%xmm0
 
-// CHECK: movd %rdi, %xmm0
-// CHECK: encoding: [0x66,0x48,0x0f,0x6e,0xc7]
-	movd %rdi,%xmm0
-
-// CHECK: movd  %xmm0, %rax
+// CHECK: movq  %xmm0, %rax
 // CHECK: encoding: [0x66,0x48,0x0f,0x7e,0xc0]
-        movd  %xmm0, %rax
+    movq  %xmm0, %rax
 
 // CHECK: movntil %eax, (%rdi)
 // CHECK: encoding: [0x0f,0xc3,0x07]
@@ -1464,13 +1466,13 @@ fdiv %st(1)
 fdivr %st(1)
 
 // CHECK: movd %xmm0, %eax
-// CHECK: movd %xmm0, %rax
-// CHECK: movd %xmm0, %rax
+// CHECK: movq %xmm0, %rax
+// CHECK: movq %xmm0, %rax
 // CHECK: vmovd %xmm0, %eax
 // CHECK: vmovq %xmm0, %rax
 // CHECK: vmovq %xmm0, %rax
 movd %xmm0, %eax
-movd %xmm0, %rax
+movq %xmm0, %rax
 movq %xmm0, %rax
 vmovd %xmm0, %eax
 vmovd %xmm0, %rax
@@ -1495,6 +1497,14 @@ vmovq %xmm0, %rax
 // CHECK: 	mwaitx
 // CHECK:  encoding: [0x0f,0x01,0xfb]
         	mwaitx %rax, %rcx, %rbx
+
+// CHECK:       clzero
+// CHECK:  encoding: [0x0f,0x01,0xfc]
+                clzero
+
+// CHECK:       clzero
+// CHECK:  encoding: [0x0f,0x01,0xfc]
+                clzero %rax
 
 // CHECK: 	movl %r15d, (%r15,%r15)
 // CHECK:  encoding: [0x47,0x89,0x3c,0x3f]

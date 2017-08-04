@@ -14,6 +14,7 @@
 #include "AArch64MCTargetDesc.h"
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
+#include "AArch64WinCOFFStreamer.h"
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -59,8 +60,10 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
     MAI = new AArch64MCAsmInfoDarwin();
+  else if (TheTriple.isOSBinFormatCOFF())
+    MAI = new AArch64MCAsmInfoCOFF();
   else {
-    assert(TheTriple.isOSBinFormatELF() && "Only expect Darwin or ELF");
+    assert(TheTriple.isOSBinFormatELF() && "Invalid target");
     MAI = new AArch64MCAsmInfoELF(TheTriple);
   }
 
@@ -74,8 +77,8 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
 
 static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
                               CodeModel::Model &CM) {
-  assert((TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()) &&
-         "Only expect Darwin and ELF targets");
+  assert((TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
+          TT.isOSBinFormatCOFF()) && "Invalid target");
 
   if (CM == CodeModel::Default)
     CM = CodeModel::Small;
@@ -84,9 +87,14 @@ static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
   // no matter how far away they are.
   else if (CM == CodeModel::JITDefault)
     CM = CodeModel::Large;
-  else if (CM != CodeModel::Small && CM != CodeModel::Large)
-    report_fatal_error(
-        "Only small and large code models are allowed on AArch64");
+  else if (CM != CodeModel::Small && CM != CodeModel::Large) {
+    if (!TT.isOSFuchsia())
+      report_fatal_error(
+          "Only small and large code models are allowed on AArch64");
+    else if (CM != CodeModel::Kernel)
+      report_fatal_error(
+          "Only small, kernel, and large code models are allowed on AArch64");
+  }
 }
 
 static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
@@ -115,6 +123,14 @@ static MCStreamer *createMachOStreamer(MCContext &Ctx, MCAsmBackend &TAB,
   return createMachOStreamer(Ctx, TAB, OS, Emitter, RelaxAll,
                              DWARFMustBeAtTheEnd,
                              /*LabelSections*/ true);
+}
+
+static MCStreamer *createWinCOFFStreamer(MCContext &Ctx, MCAsmBackend &TAB,
+                                         raw_pwrite_stream &OS,
+                                         MCCodeEmitter *Emitter, bool RelaxAll,
+                                         bool IncrementalLinkerCompatible) {
+  return createAArch64WinCOFFStreamer(Ctx, TAB, OS, Emitter, RelaxAll,
+                                      IncrementalLinkerCompatible);
 }
 
 static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
@@ -149,6 +165,7 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
     // Register the obj streamers.
     TargetRegistry::RegisterELFStreamer(*T, createELFStreamer);
     TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
+    TargetRegistry::RegisterCOFFStreamer(*T, createWinCOFFStreamer);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(

@@ -17,28 +17,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace
-{
-
-// NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
-// should be sufficient for thread safety.
-// See https://llvm.org/bugs/show_bug.cgi?id=22803
-template <class T>
-inline T
-increment(T& t) _NOEXCEPT
-{
-    return __libcpp_atomic_add(&t, 1, _AO_Relaxed);
-}
-
-template <class T>
-inline T
-decrement(T& t) _NOEXCEPT
-{
-    return __libcpp_atomic_add(&t, -1, _AO_Acq_Rel);
-}
-
-}  // namespace
-
 const allocator_arg_t allocator_arg = allocator_arg_t();
 
 bad_weak_ptr::~bad_weak_ptr() _NOEXCEPT {}
@@ -53,25 +31,26 @@ __shared_count::~__shared_count()
 {
 }
 
+__shared_weak_count::~__shared_weak_count()
+{
+}
+
+#if defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
 void
 __shared_count::__add_shared() _NOEXCEPT
 {
-    increment(__shared_owners_);
+    __libcpp_atomic_refcount_increment(__shared_owners_);
 }
 
 bool
 __shared_count::__release_shared() _NOEXCEPT
 {
-    if (decrement(__shared_owners_) == -1)
+    if (__libcpp_atomic_refcount_decrement(__shared_owners_) == -1)
     {
         __on_zero_shared();
         return true;
     }
     return false;
-}
-
-__shared_weak_count::~__shared_weak_count()
-{
 }
 
 void
@@ -83,7 +62,7 @@ __shared_weak_count::__add_shared() _NOEXCEPT
 void
 __shared_weak_count::__add_weak() _NOEXCEPT
 {
-    increment(__shared_weak_owners_);
+    __libcpp_atomic_refcount_increment(__shared_weak_owners_);
 }
 
 void
@@ -92,6 +71,8 @@ __shared_weak_count::__release_shared() _NOEXCEPT
     if (__shared_count::__release_shared())
         __release_weak();
 }
+
+#endif // _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
 
 void
 __shared_weak_count::__release_weak() _NOEXCEPT
@@ -124,7 +105,7 @@ __shared_weak_count::__release_weak() _NOEXCEPT
         //__libcpp_atomic_store(&__shared_weak_owners_, -1, _AO_Release);
         __on_zero_shared_weak();
     }
-    else if (decrement(__shared_weak_owners_) == -1)
+    else if (__libcpp_atomic_refcount_decrement(__shared_weak_owners_) == -1)
         __on_zero_shared_weak();
 }
 
@@ -139,7 +120,7 @@ __shared_weak_count::lock() _NOEXCEPT
                                              object_owners+1))
             return this;
     }
-    return 0;
+    return nullptr;
 }
 
 #if !defined(_LIBCPP_NO_RTTI) || !defined(_LIBCPP_BUILD_STATIC)
@@ -147,7 +128,7 @@ __shared_weak_count::lock() _NOEXCEPT
 const void*
 __shared_weak_count::__get_deleter(const type_info&) const _NOEXCEPT
 {
-    return 0;
+    return nullptr;
 }
 
 #endif  // _LIBCPP_NO_RTTI
@@ -173,7 +154,7 @@ __sp_mut::lock() _NOEXCEPT
 {
     auto m = static_cast<__libcpp_mutex_t*>(__lx);
     unsigned count = 0;
-    while (__libcpp_mutex_trylock(m) != 0)
+    while (!__libcpp_mutex_trylock(m))
     {
         if (++count > 16)
         {

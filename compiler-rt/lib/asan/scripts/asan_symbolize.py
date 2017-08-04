@@ -89,10 +89,12 @@ class LLVMSymbolizer(Symbolizer):
       for hint in self.dsym_hints:
         cmd.append('--dsym-hint=%s' % hint)
     if DEBUG:
-      print ' '.join(cmd)
+      print(' '.join(cmd))
     try:
       result = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE)
+                                stdout=subprocess.PIPE,
+                                bufsize=0,
+                                universal_newlines=True)
     except OSError:
       result = None
     return result
@@ -105,8 +107,8 @@ class LLVMSymbolizer(Symbolizer):
     try:
       symbolizer_input = '"%s" %s' % (binary, offset)
       if DEBUG:
-        print symbolizer_input
-      print >> self.pipe.stdin, symbolizer_input
+        print(symbolizer_input)
+      self.pipe.stdin.write("%s\n" % symbolizer_input)
       while True:
         function_name = self.pipe.stdout.readline().rstrip()
         if not function_name:
@@ -151,9 +153,11 @@ class Addr2LineSymbolizer(Symbolizer):
       cmd += ['--demangle']
     cmd += ['-e', self.binary]
     if DEBUG:
-      print ' '.join(cmd)
+      print(' '.join(cmd))
     return subprocess.Popen(cmd,
-                            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            bufsize=0,
+                            universal_newlines=True)
 
   def symbolize(self, addr, binary, offset):
     """Overrides Symbolizer.symbolize."""
@@ -161,8 +165,8 @@ class Addr2LineSymbolizer(Symbolizer):
       return None
     lines = []
     try:
-      print >> self.pipe.stdin, offset
-      print >> self.pipe.stdin, self.output_terminator
+      self.pipe.stdin.write("%s\n" % offset)
+      self.pipe.stdin.write("%s\n" % self.output_terminator)
       is_first_frame = True
       while True:
         function_name = self.pipe.stdout.readline().rstrip()
@@ -219,7 +223,7 @@ class DarwinSymbolizer(Symbolizer):
 
   def open_atos(self):
     if DEBUG:
-      print 'atos -o %s -arch %s' % (self.binary, self.arch)
+      print('atos -o %s -arch %s' % (self.binary, self.arch))
     cmdline = ['atos', '-o', self.binary, '-arch', self.arch]
     self.atos = UnbufferedLineConverter(cmdline, close_stderr=True)
 
@@ -234,7 +238,7 @@ class DarwinSymbolizer(Symbolizer):
     #   foo(type1, type2) (in object.name) (filename.cc:80)
     match = re.match('^(.*) \(in (.*)\) \((.*:\d*)\)$', atos_line)
     if DEBUG:
-      print 'atos_line: ', atos_line
+      print('atos_line: ', atos_line)
     if match:
       function_name = match.group(1)
       function_name = re.sub('\(.*?\)', '', function_name)
@@ -348,7 +352,7 @@ class BreakpadSymbolizer(Symbolizer):
       function_name, file_name, line_no = res
       result = ['%s in %s %s:%d' % (
           addr, function_name, file_name, line_no)]
-      print result
+      print(result)
       return result
     else:
       return None
@@ -434,7 +438,7 @@ class SymbolizationLoop(object):
     self.frame_no = 0
     for line in logfile:
       processed = self.process_line(line)
-      print '\n'.join(processed)
+      print('\n'.join(processed))
 
   def process_line_echo(self, line):
     return [line.rstrip()]
@@ -448,7 +452,7 @@ class SymbolizationLoop(object):
     if not match:
       return [self.current_line]
     if DEBUG:
-      print line
+      print(line)
     _, frameno_str, addr, binary, offset = match.groups()
     arch = ""
     # Arch can be embedded in the filename, e.g.: "libabc.dylib:x86_64h"

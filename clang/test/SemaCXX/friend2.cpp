@@ -170,3 +170,40 @@ struct Test {
 template class Test<int>;
 
 }
+
+namespace pr14785 {
+template<typename T>
+struct Somewhat {
+  void internal() const { }
+  friend void operator+(int const &, Somewhat<T> const &) {}  // expected-error{{redefinition of 'operator+'}}
+};
+
+void operator+(int const &, Somewhat<char> const &x) {  // expected-note {{previous definition is here}}
+  x.internal();  // expected-note{{in instantiation of template class 'pr14785::Somewhat<char>' requested here}}
+}
+}
+
+namespace D30375 {
+template <typename K> struct B {
+  template <typename A> bool insert(A &);
+};
+
+template <typename K>
+template <typename A> bool B<K>::insert(A &x) { return x < x; }
+
+template <typename K> class D {
+  B<K> t;
+
+public:
+  K x;
+  bool insert() { return t.insert(x); }
+  template <typename K1> friend bool operator<(const D<K1> &, const D<K1> &);
+};
+
+template <typename K> bool operator<(const D<K> &, const D<K> &);
+
+void func() {
+  D<D<int>> cache;
+  cache.insert();
+}
+}

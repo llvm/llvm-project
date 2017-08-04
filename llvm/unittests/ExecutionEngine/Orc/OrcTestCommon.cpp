@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-bool OrcExecutionTest::NativeTargetInitialized = false;
+bool OrcNativeTarget::NativeTargetInitialized = false;
 
 ModuleBuilder::ModuleBuilder(LLVMContext &Context, StringRef Triple,
                              StringRef Name)

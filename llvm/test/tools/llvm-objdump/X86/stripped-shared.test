@@ -1,0 +1,10 @@
+// This test checks that dynamic symbols are used when disassembling elf files.
+// RUN: llvm-objdump -d %p/Inputs/stripped-elf.so | FileCheck %s
+
+# CHECK: .init
+# CHECK: .plt
+# CHECK: .text
+# CHECK: func0
+# CHECK: func1
+# CHECK: func2
+# CHECK: .fini

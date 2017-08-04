@@ -1,4 +1,4 @@
-//===-- Support/UniqueLock.h - Acquire/Release Mutex In Scope ---*- C++ -*-===//
+//===- Support/UniqueLock.h - Acquire/Release Mutex In Scope ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,9 +15,10 @@
 #ifndef LLVM_SUPPORT_UNIQUE_LOCK_H
 #define LLVM_SUPPORT_UNIQUE_LOCK_H
 
-#include "llvm/Support/Mutex.h"
+#include <cassert>
 
 namespace llvm {
+
   /// A pared-down imitation of std::unique_lock from C++11. Contrary to the
   /// name, it's really more of a wrapper for a lock. It may or may not have
   /// an associated mutex, which is guaranteed to be locked upon creation
@@ -26,14 +27,14 @@ namespace llvm {
   /// @brief Guard a section of code with a mutex.
   template<typename MutexT>
   class unique_lock {
-    MutexT *M;
-    bool locked;
+    MutexT *M = nullptr;
+    bool locked = false;
 
-    unique_lock(const unique_lock &) = delete;
-    void operator=(const unique_lock &) = delete;
   public:
-    unique_lock() : M(nullptr), locked(false) {}
+    unique_lock() = default;
     explicit unique_lock(MutexT &m) : M(&m), locked(true) { M->lock(); }
+    unique_lock(const unique_lock &) = delete;
+     unique_lock &operator=(const unique_lock &) = delete;
 
     void operator=(unique_lock &&o) {
       if (owns_lock())
@@ -62,6 +63,7 @@ namespace llvm {
 
     bool owns_lock() { return locked; }
   };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_SUPPORT_UNIQUE_LOCK_H

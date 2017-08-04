@@ -9,6 +9,7 @@
 
 // expected-no-diagnostics
 
+// FIXME using `defined` in a macro has undefined behavior.
 #if __cplusplus < 201103L
 #define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx98 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx98
 #elif __cplusplus < 201402L
@@ -49,7 +50,7 @@
 #error "wrong value for __cpp_capture_star_this"
 #endif
 
-// FIXME: bump __cpp_constexpr to 201603 for constexpr lambda support
+// constexpr checked below
 
 #if check(if_constexpr, 0, 0, 0, 201606) // FIXME: provisional name
 #error "wrong value for __cpp_if_constexpr"
@@ -89,6 +90,14 @@
 
 #if check(nontype_template_args, 0, 0, 0, 201411)
 #error "wrong value for __cpp_nontype_template_args"
+#endif
+
+#if check(template_template_args, 0, 0, 0, 0) // FIXME: should be 201611 when feature is enabled
+#error "wrong value for __cpp_template_template_args"
+#endif
+
+#if check(deduction_guides, 0, 0, 0, 201611) // FIXME: provisional name
+#error "wrong value for __cpp_deduction_guides"
 #endif
 
 // --- C++14 features ---
@@ -158,7 +167,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201304)
+#if check(constexpr, 0, 200704, 201304, 201603)
 #error "wrong value for __cpp_constexpr"
 #endif
 
@@ -226,6 +235,6 @@
 #error "wrong value for __cpp_experimental_concepts"
 #endif
 
-#if (COROUTINES && !__cpp_coroutines) || (!COROUTINES && __cpp_coroutines)
+#if defined(COROUTINES) ? check(coroutines, 201703L, 201703L, 201703L, 201703L) : check(coroutines, 0, 0, 0, 0)
 #error "wrong value for __cpp_coroutines"
 #endif

@@ -8,14 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
-#include "Tools.h"
+#include "ToolChains/CommonArgs.h"
+#include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Clang.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -74,6 +78,10 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     if (!isThreadModelSupported(A->getValue()))
       D.Diag(diag::err_drv_invalid_thread_model_for_target)
           << A->getValue() << A->getAsString(Args);
+
+  std::string CandidateLibPath = getArchSpecificLibPath();
+  if (getVFS().exists(CandidateLibPath))
+    getFilePaths().push_back(CandidateLibPath);
 }
 
 ToolChain::~ToolChain() {
@@ -91,6 +99,12 @@ const SanitizerArgs& ToolChain::getSanitizerArgs() const {
   if (!SanitizerArguments.get())
     SanitizerArguments.reset(new SanitizerArgs(*this, Args));
   return *SanitizerArguments.get();
+}
+
+const XRayArgs& ToolChain::getXRayArgs() const {
+  if (!XRayArguments.get())
+    XRayArguments.reset(new XRayArgs(*this, Args));
+  return *XRayArguments.get();
 }
 
 namespace {
@@ -320,6 +334,14 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
   return Args.MakeArgString(getCompilerRT(Args, Component, Shared));
 }
 
+std::string ToolChain::getArchSpecificLibPath() const {
+  SmallString<128> Path(getDriver().ResourceDir);
+  StringRef OSLibName = getTriple().isOSFreeBSD() ? "freebsd" : getOS();
+  llvm::sys::path::append(Path, "lib", OSLibName,
+                          llvm::Triple::getArchTypeName(getArch()));
+  return Path.str();
+}
+
 bool ToolChain::needsProfileRT(const ArgList &Args) {
   if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
                    false) ||
@@ -522,9 +544,9 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // Each toolchain should provide the appropriate include flags.
 }
 
-void ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                      ArgStringList &CC1Args) const {
-}
+void ToolChain::addClangTargetOptions(
+    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {}
 
 void ToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {}
 

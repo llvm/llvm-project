@@ -81,15 +81,15 @@ public:
   // default implementation to sort the table before we print...
   void printOptionInfo(const cl::Option &O, size_t GlobalWidth) const override {
     PassNameParser *PNP = const_cast<PassNameParser*>(this);
-    array_pod_sort(PNP->Values.begin(), PNP->Values.end(), ValLessThan);
+    array_pod_sort(PNP->Values.begin(), PNP->Values.end(), ValCompare);
     cl::parser<const PassInfo*>::printOptionInfo(O, GlobalWidth);
   }
 
 private:
-  // ValLessThan - Provide a sorting comparator for Values elements...
-  static int ValLessThan(const PassNameParser::OptionInfo *VT1,
-                         const PassNameParser::OptionInfo *VT2) {
-    return VT1->Name < VT2->Name;
+  // ValCompare - Provide a sorting comparator for Values elements...
+  static int ValCompare(const PassNameParser::OptionInfo *VT1,
+                        const PassNameParser::OptionInfo *VT2) {
+    return VT1->Name.compare(VT2->Name);
   }
 };
 

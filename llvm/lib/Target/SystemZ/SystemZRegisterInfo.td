@@ -260,10 +260,10 @@ defm VF128 : SystemZRegClass<"VF128",
 
 // All vector registers.
 defm VR128 : SystemZRegClass<"VR128",
-                             [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 128,
-                             (add (sequence "V%u", 0, 7),
-                                  (sequence "V%u", 16, 31),
-                                  (sequence "V%u", 8, 15))>;
+                             [f128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+                             128, (add (sequence "V%u", 0, 7),
+                                       (sequence "V%u", 16, 31),
+                                       (sequence "V%u", 8, 15))>;
 
 // Attaches a ValueType to a register operand, to make the instruction
 // definitions easier.
@@ -272,7 +272,8 @@ class TypedReg<ValueType vtin, RegisterOperand opin> {
   RegisterOperand op = opin;
 }
 
-def v32eb   : TypedReg<f32,     VR32>;
+def v32f    : TypedReg<i32,     VR32>;
+def v32sb   : TypedReg<f32,     VR32>;
 def v64g    : TypedReg<i64,     VR64>;
 def v64db   : TypedReg<f64,     VR64>;
 def v128b   : TypedReg<v16i8,   VR128>;
@@ -280,8 +281,9 @@ def v128h   : TypedReg<v8i16,   VR128>;
 def v128f   : TypedReg<v4i32,   VR128>;
 def v128g   : TypedReg<v2i64,   VR128>;
 def v128q   : TypedReg<v16i8,   VR128>;
-def v128eb  : TypedReg<v4f32,   VR128>;
+def v128sb  : TypedReg<v4f32,   VR128>;
 def v128db  : TypedReg<v2f64,   VR128>;
+def v128xb  : TypedReg<f128,    VR128>;
 def v128any : TypedReg<untyped, VR128>;
 
 //===----------------------------------------------------------------------===//
@@ -303,4 +305,14 @@ foreach I = 0-15 in {
 }
 defm AR32 : SystemZRegClass<"AR32", [i32], 32,
                             (add (sequence "A%u", 0, 15)), 0>;
+
+// Control registers.
+class CREG64<bits<16> num, string n> : SystemZReg<n> {
+  let HWEncoding = num;
+}
+foreach I = 0-15 in {
+  def C#I : CREG64<I, "c"#I>, DwarfRegNum<[!add(I, 32)]>;
+}
+defm CR64 : SystemZRegClass<"CR64", [i64], 64,
+                            (add (sequence "C%u", 0, 15)), 0>;
 

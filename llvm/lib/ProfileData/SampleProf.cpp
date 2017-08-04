@@ -13,18 +13,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
+#include <system_error>
 
-using namespace llvm::sampleprof;
 using namespace llvm;
+using namespace sampleprof;
 
 namespace {
+
 // FIXME: This class is only here to support the transition to llvm::Error. It
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
 class SampleProfErrorCategoryType : public std::error_category {
   const char *name() const noexcept override { return "llvm.sampleprof"; }
+
   std::string message(int IE) const override {
     sampleprof_error E = static_cast<sampleprof_error>(IE);
     switch (E) {
@@ -54,7 +61,8 @@ class SampleProfErrorCategoryType : public std::error_category {
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
 };
-}
+
+} // end anonymous namespace
 
 static ManagedStatic<SampleProfErrorCategoryType> ErrorCategory;
 
@@ -105,7 +113,7 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
      << " sampled lines\n";
 
   OS.indent(Indent);
-  if (BodySamples.size() > 0) {
+  if (!BodySamples.empty()) {
     OS << "Samples collected in the function's body {\n";
     SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
     for (const auto &SI : SortedBodySamples.get()) {
@@ -119,14 +127,16 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   }
 
   OS.indent(Indent);
-  if (CallsiteSamples.size() > 0) {
+  if (!CallsiteSamples.empty()) {
     OS << "Samples collected in inlined callsites {\n";
-    SampleSorter<LineLocation, FunctionSamples> SortedCallsiteSamples(
+    SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      OS.indent(Indent + 2);
-      OS << CS->first << ": inlined callee: " << CS->second.getName() << ": ";
-      CS->second.print(OS, Indent + 4);
+      for (const auto &FS : CS->second) {
+        OS.indent(Indent + 2);
+        OS << CS->first << ": inlined callee: " << FS.second.getName() << ": ";
+        FS.second.print(OS, Indent + 4);
+      }
     }
     OS << "}\n";
   } else {
@@ -141,5 +151,5 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void FunctionSamples::dump(void) const { print(dbgs(), 0); }
+LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 #endif

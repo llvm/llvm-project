@@ -14,7 +14,7 @@
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW
 ; EG-DAG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW
-define void @select (i32 addrspace(1)* %i32out, float addrspace(1)* %f32out,
+define amdgpu_kernel void @select (i32 addrspace(1)* %i32out, float addrspace(1)* %f32out,
                      <2 x i32> addrspace(1)* %v2i32out, <2 x float> addrspace(1)* %v2f32out,
                      <4 x i32> addrspace(1)* %v4i32out, <4 x float> addrspace(1)* %v4f32out,
                      i32 %cond) {

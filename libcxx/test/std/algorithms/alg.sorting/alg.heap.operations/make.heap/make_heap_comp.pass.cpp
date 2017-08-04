@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <random>
 #include <cassert>
 
 #include "test_macros.h"
@@ -29,6 +30,7 @@ struct indirect_less
         {return *x < *y;}
 };
 
+std::mt19937 randomness;
 
 void test(int N)
 {
@@ -36,7 +38,7 @@ void test(int N)
     {
     for (int i = 0; i < N; ++i)
         ia[i] = i;
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     std::make_heap(ia, ia+N, std::greater<int>());
     assert(std::is_heap(ia, ia+N, std::greater<int>()));
     }
@@ -64,7 +66,7 @@ void test(int N)
 //  Random
     {
     binary_counting_predicate<std::greater<int>, int, int> pred ((std::greater<int>()));
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     std::make_heap(ia, ia+N, std::ref(pred));
     assert(pred.count() <= 3u*N);
     assert(std::is_heap(ia, ia+N, pred));
@@ -90,7 +92,7 @@ int main()
     std::unique_ptr<int>* ia = new std::unique_ptr<int> [N];
     for (int i = 0; i < N; ++i)
         ia[i].reset(new int(i));
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     std::make_heap(ia, ia+N, indirect_less());
     assert(std::is_heap(ia, ia+N, indirect_less()));
     delete [] ia;

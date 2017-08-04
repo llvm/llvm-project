@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetSchedule.cpp - Sched Machine Model ----*- C++ -*-===//
+//===- llvm/Target/TargetSchedule.cpp - Sched Machine Model ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,11 +13,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -37,13 +47,14 @@ bool TargetSchedModel::hasInstrItineraries() const {
 
 static unsigned gcd(unsigned Dividend, unsigned Divisor) {
   // Dividend and Divisor will be naturally swapped as needed.
-  while(Divisor) {
+  while (Divisor) {
     unsigned Rem = Dividend % Divisor;
     Dividend = Divisor;
     Divisor = Rem;
   };
   return Dividend;
 }
+
 static unsigned lcm(unsigned A, unsigned B) {
   unsigned LCM = (uint64_t(A) * B) / gcd(A, B);
   assert((LCM >= A && LCM >= B) && "LCM overflow");
@@ -73,6 +84,29 @@ void TargetSchedModel::init(const MCSchedModel &sm,
   }
 }
 
+/// Returns true only if instruction is specified as single issue.
+bool TargetSchedModel::mustBeginGroup(const MachineInstr *MI,
+                                     const MCSchedClassDesc *SC) const {
+  if (hasInstrSchedModel()) {
+    if (!SC)
+      SC = resolveSchedClass(MI);
+    if (SC->isValid())
+      return SC->BeginGroup;
+  }
+  return false;
+}
+
+bool TargetSchedModel::mustEndGroup(const MachineInstr *MI,
+                                     const MCSchedClassDesc *SC) const {
+  if (hasInstrSchedModel()) {
+    if (!SC)
+      SC = resolveSchedClass(MI);
+    if (SC->isValid())
+      return SC->EndGroup;
+  }
+  return false;
+}
+
 unsigned TargetSchedModel::getNumMicroOps(const MachineInstr *MI,
                                           const MCSchedClassDesc *SC) const {
   if (hasInstrItineraries()) {
@@ -100,7 +134,6 @@ static unsigned capLatency(int Cycles) {
 /// evaluation of predicates that depend on instruction operands or flags.
 const MCSchedClassDesc *TargetSchedModel::
 resolveSchedClass(const MachineInstr *MI) const {
-
   // Get the definition's scheduling class descriptor from this machine model.
   unsigned SchedClass = MI->getDesc().getSchedClass();
   const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SchedClass);
@@ -244,7 +277,11 @@ unsigned TargetSchedModel::computeInstrLatency(unsigned Opcode) const {
   if (SCDesc->isValid() && !SCDesc->isVariant())
     return computeInstrLatency(*SCDesc);
 
-  llvm_unreachable("No MI sched latency");
+  if (SCDesc->isValid()) {
+    assert (!SCDesc->isVariant() && "No MI sched latency: SCDesc->isVariant()");
+    return computeInstrLatency(*SCDesc);
+  }
+  return 0;
 }
 
 unsigned
@@ -297,4 +334,69 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
     }
   }
   return 0;
+}
+
+static Optional<double>
+getRThroughputFromItineraries(unsigned schedClass,
+                              const InstrItineraryData *IID){
+  double Unknown = std::numeric_limits<double>::infinity();
+  double Throughput = Unknown;
+
+  for (const InstrStage *IS = IID->beginStage(schedClass),
+                        *E = IID->endStage(schedClass);
+       IS != E; ++IS) {
+    unsigned Cycles = IS->getCycles();
+    if (!Cycles)
+      continue;
+    Throughput =
+        std::min(Throughput, countPopulation(IS->getUnits()) * 1.0 / Cycles);
+  }
+  // We need reciprocal throughput that's why we return such value.
+  return 1 / Throughput;
+}
+
+static Optional<double>
+getRThroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
+                                  const TargetSubtargetInfo *STI,
+                                  const MCSchedModel &SchedModel) {
+  double Unknown = std::numeric_limits<double>::infinity();
+  double Throughput = Unknown;
+
+  for (const MCWriteProcResEntry *WPR = STI->getWriteProcResBegin(SCDesc),
+                                 *WEnd = STI->getWriteProcResEnd(SCDesc);
+       WPR != WEnd; ++WPR) {
+    unsigned Cycles = WPR->Cycles;
+    if (!Cycles)
+      return Optional<double>();
+
+    unsigned NumUnits =
+        SchedModel.getProcResource(WPR->ProcResourceIdx)->NumUnits;
+    Throughput = std::min(Throughput, NumUnits * 1.0 / Cycles);
+  }
+  // We need reciprocal throughput that's why we return such value.
+  return 1 / Throughput;
+}
+
+Optional<double>
+TargetSchedModel::computeInstrRThroughput(const MachineInstr *MI) const {
+  if (hasInstrItineraries())
+    return getRThroughputFromItineraries(MI->getDesc().getSchedClass(),
+                                         getInstrItineraries());
+  if (hasInstrSchedModel())
+    return getRThroughputFromInstrSchedModel(resolveSchedClass(MI), STI,
+                                             SchedModel);
+  return Optional<double>();
+}
+
+Optional<double>
+TargetSchedModel::computeInstrRThroughput(unsigned Opcode) const {
+  unsigned SchedClass = TII->get(Opcode).getSchedClass();
+  if (hasInstrItineraries())
+    return getRThroughputFromItineraries(SchedClass, getInstrItineraries());
+  if (hasInstrSchedModel()) {
+    const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SchedClass);
+    if (SCDesc->isValid() && !SCDesc->isVariant())
+      return getRThroughputFromInstrSchedModel(SCDesc, STI, SchedModel);
+  }
+  return Optional<double>();
 }

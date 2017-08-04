@@ -1,5 +1,4 @@
-; RUN: llc -march=amdgcn < %s | FileCheck %s
-; REQUIRES: asserts
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 ;
 ; This test used to crash with the following assertion:
 ; llc: include/llvm/ADT/IntervalMap.h:632: unsigned int llvm::IntervalMapImpl::LeafNode<llvm::SlotIndex, llvm::LiveInterval *, 8, llvm::IntervalMapInfo<llvm::SlotIndex> >::insertFrom(unsigned int &, unsigned int, KeyT, KeyT, ValT) [KeyT = llvm::SlotIndex, ValT = llvm::LiveInterval *, N = 8, Traits = llvm::IntervalMapInfo<llvm::SlotIndex>]: Assertion `(i == Size || Traits::stopLess(b, start(i))) && "Overlapping insert"' failed.
@@ -10,31 +9,33 @@
 ;
 ; Check for a valid output.
 ; CHECK: image_sample_c
-
-target triple = "amdgcn--"
-
-@ddxy_lds = external addrspace(3) global [64 x i32]
-
 define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([17 x <16 x i8>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg, [16 x <16 x i8>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg1, [32 x <8 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg2, [16 x <8 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg3, [16 x <4 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) #0 {
 main_body:
-  %tmp = call float @llvm.SI.fs.interp(i32 3, i32 4, i32 %arg6, <2 x i32> %arg8)
-  %tmp23 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %i.i = extractelement <2 x i32> %arg8, i32 0
+  %j.i = extractelement <2 x i32> %arg8, i32 1
+  %i.f.i = bitcast i32 %i.i to float
+  %j.f.i = bitcast i32 %j.i to float
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 3, i32 4, i32 %arg6) #2
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 3, i32 4, i32 %arg6) #2
+  %tmp23 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+
   %tmp24 = extractelement <4 x float> %tmp23, i32 3
   %tmp25 = fmul float %tmp24, undef
-  %tmp26 = fmul float undef, %tmp
+  %tmp26 = fmul float undef, %p2.i
   %tmp27 = fadd float %tmp26, undef
   %tmp28 = bitcast float %tmp27 to i32
   %tmp29 = insertelement <4 x i32> undef, i32 %tmp28, i32 0
   %tmp30 = insertelement <4 x i32> %tmp29, i32 0, i32 1
   %tmp31 = insertelement <4 x i32> %tmp30, i32 undef, i32 2
-  %tmp32 = call <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32> %tmp31, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp31.cast = bitcast <4 x i32> %tmp31 to <4 x float>
+  %tmp32 = call <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float> %tmp31.cast, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp33 = extractelement <4 x float> %tmp32, i32 0
   %tmp34 = fadd float undef, %tmp33
   %tmp35 = fadd float %tmp34, undef
   %tmp36 = fadd float %tmp35, undef
   %tmp37 = fadd float %tmp36, undef
   %tmp38 = fadd float %tmp37, undef
-  %tmp39 = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp39 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp40 = extractelement <4 x float> %tmp39, i32 0
   %tmp41 = extractelement <4 x float> %tmp39, i32 1
   %tmp42 = extractelement <4 x float> %tmp39, i32 2
@@ -51,7 +52,8 @@ main_body:
   %tmp53 = insertelement <4 x i32> undef, i32 %tmp50, i32 0
   %tmp54 = insertelement <4 x i32> %tmp53, i32 %tmp51, i32 1
   %tmp55 = insertelement <4 x i32> %tmp54, i32 %tmp52, i32 2
-  %tmp56 = call <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32> %tmp55, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp55.cast = bitcast <4 x i32> %tmp55 to <4 x float>
+  %tmp56 = call <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float> %tmp55.cast, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp57 = extractelement <4 x float> %tmp56, i32 0
   %tmp58 = fadd float %tmp38, %tmp57
   %tmp59 = fadd float undef, %tmp46
@@ -60,7 +62,8 @@ main_body:
   %tmp62 = bitcast float %tmp60 to i32
   %tmp63 = insertelement <4 x i32> undef, i32 %tmp61, i32 1
   %tmp64 = insertelement <4 x i32> %tmp63, i32 %tmp62, i32 2
-  %tmp65 = call <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32> %tmp64, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp64.cast = bitcast <4 x i32> %tmp64 to <4 x float>
+  %tmp65 = call <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float> %tmp64.cast, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp66 = extractelement <4 x float> %tmp65, i32 0
   %tmp67 = fadd float %tmp58, %tmp66
   %tmp68 = fmul float %tmp67, 1.250000e-01
@@ -76,8 +79,9 @@ IF26:                                             ; preds = %main_body
 ENDIF25:                                          ; preds = %IF29, %main_body
   %.4 = phi float [ %tmp84, %IF29 ], [ %tmp68, %main_body ]
   %tmp73 = fadd float %.4, undef
-  %tmp74 = call float @llvm.AMDGPU.clamp.(float %tmp73, float 0.000000e+00, float 1.000000e+00)
-  %tmp75 = fmul float undef, %tmp74
+  %max.0.i = call float @llvm.maxnum.f32(float %tmp73, float 0.000000e+00)
+  %clamp.i = call float @llvm.minnum.f32(float %max.0.i, float 1.000000e+00)
+  %tmp75 = fmul float undef, %clamp.i
   %tmp76 = fmul float %tmp75, undef
   %tmp77 = fadd float %tmp76, undef
   %tmp78 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef, float %tmp77, 11
@@ -99,17 +103,22 @@ IF29:                                             ; preds = %LOOP
 ENDIF28:                                          ; preds = %LOOP
   %tmp85 = insertelement <4 x i32> %tmp72, i32 undef, i32 1
   %tmp86 = insertelement <4 x i32> %tmp85, i32 undef, i32 2
-  %tmp87 = call <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32> %tmp86, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp86.cast = bitcast <4 x i32> %tmp86 to <4 x float>
+  %tmp87 = call <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float> %tmp86.cast, <8 x i32> undef, <4 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
   %tmp88 = extractelement <4 x float> %tmp87, i32 0
   %tmp89 = fadd float undef, %tmp88
   br label %LOOP
 }
 
-declare float @llvm.AMDGPU.clamp.(float, float, float) #1
-declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
-declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
-declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
-declare <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare float @llvm.minnum.f32(float, float) #1
+declare float @llvm.maxnum.f32(float, float) #1
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.image.sample.c.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
 
-attributes #0 = { "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
+attributes #0 = { nounwind "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }
+attributes #3 = { nounwind }

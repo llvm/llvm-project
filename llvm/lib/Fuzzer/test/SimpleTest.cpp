@@ -3,9 +3,9 @@
 
 // Simple test for a fuzzer. The fuzzer must find the string "Hi!".
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <iostream>
 
 static volatile int Sink;

@@ -52,6 +52,18 @@ public:
     return 0;
   }
 
+  virtual unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+    return 0;
+  }
+
+  virtual unsigned getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+    return 0;
+  }
+
 protected:
   uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
   void verifyInstructionPredicates(const MCInst &MI,

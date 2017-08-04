@@ -25,7 +25,7 @@ IRTransformLayer, to add IR optimization support to KaleidoscopeJIT.
 Optimizing Modules using the IRTransformLayer
 =============================================
 
-In `Chapter 4 <LangImpl4.html>`_ of the "Implementing a language with LLVM"
+In `Chapter 4 <LangImpl04.html>`_ of the "Implementing a language with LLVM"
 tutorial series the llvm *FunctionPassManager* is introduced as a means for
 optimizing LLVM IR. Interested readers may read that chapter for details, but
 in short: to optimize a Module we create an llvm::FunctionPassManager
@@ -148,7 +148,7 @@ At the bottom of our JIT we add a private method to do the actual optimization:
 *optimizeModule*. This function sets up a FunctionPassManager, adds some passes
 to it, runs it over every function in the module, and then returns the mutated
 module. The specific optimizations are the same ones used in
-`Chapter 4 <LangImpl4.html>`_ of the "Implementing a language with LLVM"
+`Chapter 4 <LangImpl04.html>`_ of the "Implementing a language with LLVM"
 tutorial series. Readers may visit that chapter for a more in-depth
 discussion of these, and of IR optimization in general.
 

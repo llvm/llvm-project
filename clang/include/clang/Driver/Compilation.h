@@ -105,10 +105,13 @@ class Compilation {
   /// Whether we're compiling for diagnostic purposes.
   bool ForDiagnostics;
 
+  /// Whether an error during the parsing of the input args.
+  bool ContainsError;
+
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
               llvm::opt::InputArgList *Args,
-              llvm::opt::DerivedArgList *TranslatedArgs);
+              llvm::opt::DerivedArgList *TranslatedArgs, bool ContainsError);
   ~Compilation();
 
   const Driver &getDriver() const { return TheDriver; }
@@ -274,6 +277,9 @@ public:
 
   /// Return true if we're compiling for diagnostics.
   bool isForDiagnostics() const { return ForDiagnostics; }
+
+  /// Return whether an error during the parsing of the input args.
+  bool containsError() const { return ContainsError; }
 
   /// Redirect - Redirect output of this compilation. Can only be done once.
   ///

@@ -15,14 +15,17 @@
 //   sort_heap(Iter first, Iter last);
 
 #include <algorithm>
+#include <random>
 #include <cassert>
+
+std::mt19937 randomness;
 
 void test(int N)
 {
     int* ia = new int [N];
     for (int i = 0; i < N; ++i)
         ia[i] = i;
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     std::make_heap(ia, ia+N);
     std::sort_heap(ia, ia+N);
     assert(std::is_sorted(ia, ia+N));

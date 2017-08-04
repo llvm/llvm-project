@@ -44,7 +44,8 @@ def note_constexpr_non_global : Note<
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_array_index : Note<"cannot refer to element %0 of "
-  "%select{array of %2 elements|non-array object}1 in a constant expression">;
+  "%select{array of %2 element%plural{1:|:s}2|non-array object}1 "
+  "in a constant expression">;
 def note_constexpr_float_arithmetic : Note<
   "floating point arithmetic produces %select{an infinity|a NaN}0">;
 def note_constexpr_pointer_subtraction_not_same_array : Note<
@@ -199,12 +200,17 @@ def note_odr_defined_here : Note<"also defined here">;
 def err_odr_function_type_inconsistent : Error<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;
-def warn_odr_tag_type_inconsistent : Warning<
-  "type %0 has incompatible definitions in different translation units">,
-  InGroup<DiagGroup<"odr">>;
+def warn_odr_tag_type_inconsistent
+    : Warning<"type %0 has incompatible definitions in different translation "
+              "units">,
+      InGroup<DiagGroup<"odr">>;
+def err_odr_tag_type_inconsistent
+    : Error<"type %0 has incompatible definitions in different translation "
+            "units">;
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
+def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
 def note_odr_bit_field : Note<"bit-field %0 with type %1 and length %2 here">;
 def note_odr_not_bit_field : Note<"field %0 is not a bit-field">;

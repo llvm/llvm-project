@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <string>
 
 // basic_string& replace(const_iterator i1, const_iterator i2, initializer_list<charT> il);
@@ -18,19 +20,15 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         std::string s("123def456");
         s.replace(s.cbegin() + 3, s.cbegin() + 6, {'a', 'b', 'c'});
         assert(s == "123abc456");
     }
-#if TEST_STD_VER >= 11
     {
         typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
         S s("123def456");
         s.replace(s.cbegin() + 3, s.cbegin() + 6, {'a', 'b', 'c'});
         assert(s == "123abc456");
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

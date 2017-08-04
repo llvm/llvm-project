@@ -103,9 +103,27 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   DEBUG(dbgs() << "Clobbered Registers: ");
 
-  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
-    if (MRI->isPhysRegModified(PReg, true))
-      RegMask[PReg / 32] &= ~(1u << PReg % 32);
+  const BitVector &UsedPhysRegsMask = MRI->getUsedPhysRegsMask();
+  auto SetRegAsDefined = [&RegMask] (unsigned Reg) {
+    RegMask[Reg / 32] &= ~(1u << Reg % 32);
+  };
+  // Scan all the physical registers. When a register is defined in the current
+  // function set it and all the aliasing registers as defined in the regmask.
+  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+    // If a register is in the UsedPhysRegsMask set then mark it as defined.
+    // All it's aliases will also be in the set, so we can skip setting
+    // as defined all the aliases here.
+    if (UsedPhysRegsMask.test(PReg)) {
+      SetRegAsDefined(PReg);
+      continue;
+    }
+    // If a register is defined by an instruction mark it as defined together
+    // with all it's aliases.
+    if (!MRI->def_empty(PReg)) {
+      for (MCRegAliasIterator AI(PReg, TRI, true); AI.isValid(); ++AI)
+        SetRegAsDefined(*AI);
+    }
+  }
 
   if (!TargetFrameLowering::isSafeForNoCSROpt(F)) {
     const uint32_t *CallPreservedMask =

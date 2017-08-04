@@ -46,10 +46,11 @@ namespace noexcept_conversion {
   template <class T> int h(T *, T *); // expected-note {{deduced conflicting types for parameter 'T' ('void () noexcept' vs. 'void ()')}}
   int x = h(g1, g2); // expected-error {{no matching function}}
 
-  // FIXME: It seems like a defect that B is not deducible here.
-  template<bool B> int i(void () noexcept(B)); // expected-note 2{{couldn't infer template argument 'B'}}
-  int i1 = i(g1); // expected-error {{no matching function}}
-  int i2 = i(g2); // expected-error {{no matching function}}
+  // We consider it a defect that deduction does not support the following.
+  // FIXME: Check that the defect is resolved as we expect.
+  template<bool B> int i(void () noexcept(B));
+  int i1 = i(g1);
+  int i2 = i(g2);
 }
 #else
 // expected-no-diagnostics

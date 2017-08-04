@@ -2,7 +2,7 @@
 
 ; CHECK: CodeViewDebugInfo [
 ; CHECK:   Subsection [
-; CHECK:     Local {
+; CHECK:     LocalSym {
 ; CHECK:       Type: wchar_t (0x71)
 ; CHECK:       Flags [ (0x0)
 ; CHECK:       ]
@@ -10,7 +10,7 @@
 ; CHECK:     }
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
-; CHECK:     UDT {
+; CHECK:     UDTSym {
 ; CHECK:       Type: wchar_t (0x71)
 ; CHECK:       UDTName: XYZ
 ; CHECK:     }
@@ -31,7 +31,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, emissionKind: FullDebug)
 !1 = !DIFile(filename: "-", directory: "/usr/local/google/home/majnemer/llvm/src")
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}

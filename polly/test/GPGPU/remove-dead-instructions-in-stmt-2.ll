@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; KERNEL-IR: store i32 0, i32* %polly.access.MemRef_sum_c, align 4
+; KERNEL-IR: store i32 0, i32 addrspace(1)* %polly.access.MemRef_sum_c, align 4
 ; KERNEL-IR-NEXT: br label %polly.merge
 
 define void @kernel_dynprog([50 x [50 x i32]]* %sum_c) {
@@ -35,5 +35,5 @@ for.end:                                          ; preds = %for.body3
   br label %for.cond1.loopexit
 
 for.inc55:                                        ; preds = %for.cond1.loopexit
-  unreachable
+  ret void
 }

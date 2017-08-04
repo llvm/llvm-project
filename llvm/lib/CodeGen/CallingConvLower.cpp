@@ -30,8 +30,7 @@ using namespace llvm;
 CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
                  SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
     : CallingConv(CC), IsVarArg(isVarArg), MF(mf),
-      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(locs), Context(C),
-      CallOrPrologue(Unknown) {
+      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(locs), Context(C) {
   // No stack is used.
   StackOffset = 0;
   MaxStackArgAlign = 1;

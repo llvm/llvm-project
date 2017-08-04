@@ -7,7 +7,7 @@
 // RUN: ld.lld -O0 %t.o -o %t.so -shared
 // RUN: llvm-readobj -s -section-data -t %t.so | FileCheck --check-prefix=NOMERGE %s
 
-        .section	.rodata.str1.1,"aMS",@progbits,1
+        .section	.rodata1,"aMS",@progbits,1
 	.asciz	"abc"
 foo:
 	.ascii	"a"
@@ -15,13 +15,13 @@ bar:
         .asciz  "bc"
         .asciz  "bc"
 
-        .section        .rodata.str2.2,"aMS",@progbits,2
+        .section        .rodata2,"aMS",@progbits,2
         .align  2
 zed:
         .short  20
         .short  0
 
-// CHECK:      Name:    .rodata
+// CHECK:      Name:    .rodata1
 // CHECK-NEXT: Type:    SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
@@ -34,12 +34,12 @@ zed:
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
 // CHECK-NEXT: AddressAlignment: 1
-// CHECK-NEXT: EntrySize: 1
+// CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
 // CHECK-NEXT:   0000: 61626300                             |abc.|
 // CHECK-NEXT: )
 
-// NOTAIL:      Name:    .rodata
+// NOTAIL:      Name:    .rodata1
 // NOTAIL-NEXT: Type:    SHT_PROGBITS
 // NOTAIL-NEXT: Flags [
 // NOTAIL-NEXT:   SHF_ALLOC
@@ -52,28 +52,30 @@ zed:
 // NOTAIL-NEXT: Link: 0
 // NOTAIL-NEXT: Info: 0
 // NOTAIL-NEXT: AddressAlignment: 1
-// NOTAIL-NEXT: EntrySize: 1
+// NOTAIL-NEXT: EntrySize: 0
 // NOTAIL-NEXT: SectionData (
 // NOTAIL-NEXT:   0000: 61626300 626300                     |abc.bc.|
 // NOTAIL-NEXT: )
 
-// NOMERGE:      Name:    .rodata
+// NOMERGE:      Name:    .rodata1
 // NOMERGE-NEXT: Type:    SHT_PROGBITS
 // NOMERGE-NEXT: Flags [
 // NOMERGE-NEXT:   SHF_ALLOC
+// NOMERGE-NEXT:   SHF_MERGE
+// NOMERGE-NEXT:   SHF_STRINGS
 // NOMERGE-NEXT: ]
 // NOMERGE-NEXT: Address:         0x1C8
 // NOMERGE-NEXT: Offset:  0x1C8
-// NOMERGE-NEXT: Size:    16
+// NOMERGE-NEXT: Size:    11
 // NOMERGE-NEXT: Link: 0
 // NOMERGE-NEXT: Info: 0
-// NOMERGE-NEXT: AddressAlignment: 2
-// NOMERGE-NEXT: EntrySize: 0
+// NOMERGE-NEXT: AddressAlignment: 1
+// NOMERGE-NEXT: EntrySize: 1
 // NOMERGE-NEXT: SectionData (
-// NOMERGE-NEXT:   0000: 61626300 61626300 62630000 14000000  |abc.abc.bc......|
+// NOMERGE-NEXT:   0000: 61626300 61626300 626300 |abc.abc.bc.|
 // NOMERGE-NEXT: )
 
-// CHECK:      Name: .rodata
+// CHECK:      Name: .rodata2
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
@@ -86,7 +88,7 @@ zed:
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
 // CHECK-NEXT: AddressAlignment: 2
-// CHECK-NEXT: EntrySize: 2
+// CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
 // CHECK-NEXT:   0000: 14000000                             |....|
 // CHECK-NEXT: )

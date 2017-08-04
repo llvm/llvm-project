@@ -59,15 +59,19 @@ public:
   // Linkage, Type, Parent and AddressSpace taken from the Aliasee.
   static GlobalAlias *create(const Twine &Name, GlobalValue *Aliasee);
 
+  void copyAttributesFrom(const GlobalValue *Src) {
+    GlobalValue::copyAttributesFrom(Src);
+  }
+
   /// removeFromParent - This method unlinks 'this' from the containing module,
   /// but does not delete it.
   ///
-  void removeFromParent() override;
+  void removeFromParent();
 
   /// eraseFromParent - This method unlinks 'this' from the containing module
   /// and deletes it.
   ///
-  void eraseFromParent() override;
+  void eraseFromParent();
 
   /// These methods retrieve and set alias target.
   void setAliasee(Constant *Aliasee);
@@ -84,7 +88,7 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalAliasVal;
   }
 };

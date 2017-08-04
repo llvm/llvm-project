@@ -14,9 +14,9 @@
 #ifndef LLVM_SUPPORT_RAW_SHA1_OSTREAM_H
 #define LLVM_SUPPORT_RAW_SHA1_OSTREAM_H
 
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 

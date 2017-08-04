@@ -95,11 +95,25 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
     }
   }
 
+  NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
+  if (CfiFunctionsMD) {
+    for (auto Func : CfiFunctionsMD->operands()) {
+      assert(Func->getNumOperands() >= 2);
+      for (unsigned I = 2; I < Func->getNumOperands(); ++I)
+        if (ConstantInt *TypeId =
+                extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
+          TypeIds.insert(TypeId->getZExtValue());
+    }
+  }
+
   LLVMContext &Ctx = M.getContext();
   Constant *C = M.getOrInsertFunction(
       "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),
-      Type::getInt8PtrTy(Ctx), Type::getInt8PtrTy(Ctx), nullptr);
+      Type::getInt8PtrTy(Ctx), Type::getInt8PtrTy(Ctx));
   Function *F = dyn_cast<Function>(C);
+  // Take over the existing function. The frontend emits a weak stub so that the
+  // linker knows about the symbol; this pass replaces the function body.
+  F->deleteBody();
   F->setAlignment(4096);
   auto args = F->arg_begin();
   Value &CallSiteTypeId = *(args++);
@@ -117,7 +131,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   IRBuilder<> IRBFail(TrapBB);
   Constant *CFICheckFailFn = M.getOrInsertFunction(
       "__cfi_check_fail", Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx),
-      Type::getInt8PtrTy(Ctx), nullptr);
+      Type::getInt8PtrTy(Ctx));
   IRBFail.CreateCall(CFICheckFailFn, {&CFICheckFailData, &Addr});
   IRBFail.CreateBr(ExitBB);
 

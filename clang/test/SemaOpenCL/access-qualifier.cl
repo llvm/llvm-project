@@ -74,3 +74,7 @@ kernel void k14(read_only pipe int p) {
   myPipeWrite(p); // expected-error {{passing 'read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}
 }
 #endif
+
+#if __OPENCL_C_VERSION__ < 200
+kernel void test_image3d_wo(write_only image3d_t img) {} // expected-error {{use of type '__write_only image3d_t' requires cl_khr_3d_image_writes extension to be enabled}}
+#endif

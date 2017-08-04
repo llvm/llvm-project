@@ -72,7 +72,7 @@ INLINE uptr GetPageSizeCached() {
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 // Threads
-uptr GetTid();
+tid_t GetTid();
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
@@ -85,21 +85,30 @@ INLINE void *MmapOrDieQuietly(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type, /*raw_report*/ true);
 }
 void UnmapOrDie(void *addr, uptr size);
+// Behaves just like MmapOrDie, but tolerates out of memory condition, in that
+// case returns nullptr.
+void *MmapOrDieOnFatalError(uptr size, const char *mem_type);
 void *MmapFixedNoReserve(uptr fixed_addr, uptr size,
                          const char *name = nullptr);
 void *MmapNoReserveOrDie(uptr size, const char *mem_type);
 void *MmapFixedOrDie(uptr fixed_addr, uptr size);
+// Behaves just like MmapFixedOrDie, but tolerates out of memory condition, in
+// that case returns nullptr.
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size);
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name = nullptr);
 void *MmapNoAccess(uptr size);
 // Map aligned chunk of address space; size and alignment are powers of two.
-void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type);
+// Dies on all but out of memory errors, in the latter case returns nullptr.
+void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
+                                   const char *mem_type);
 // Disallow access to a memory range.  Use MmapFixedNoAccess to allocate an
 // unaccessible memory.
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
 
 // Find an available address space.
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding);
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
+                              uptr *largest_gap_found);
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
@@ -317,15 +326,9 @@ bool AddressSpaceIsUnlimited();
 void SetAddressSpaceUnlimited();
 void AdjustStackSize(void *attr);
 void PrepareForSandboxing(__sanitizer_sandbox_arguments *args);
-void CovPrepareForSandboxing(__sanitizer_sandbox_arguments *args);
 void SetSandboxingCallback(void (*f)());
 
-void CoverageUpdateMapping();
-void CovBeforeFork();
-void CovAfterFork(int child_pid);
-
 void InitializeCoverage(bool enabled, const char *coverage_dir);
-void ReInitializeCoverage(bool enabled, const char *coverage_dir);
 
 void InitTlsSize();
 uptr GetTlsSize();
@@ -380,8 +383,9 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
 
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
-bool IsHandledDeadlySignal(int signum);
+HandleSignalMode GetHandleSignalMode(int signum);
 void InstallDeadlySignalHandlers(SignalHandlerType handler);
+const char *DescribeSignalOrException(int signo);
 // Alternative signal stack (POSIX-only).
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
@@ -716,7 +720,7 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
   void clear();
-  void addAddressRange(uptr beg, uptr end, bool executable);
+  void addAddressRange(uptr beg, uptr end, bool executable, bool writable);
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
@@ -731,9 +735,14 @@ class LoadedModule {
     uptr beg;
     uptr end;
     bool executable;
+    bool writable;
 
-    AddressRange(uptr beg, uptr end, bool executable)
-        : next(nullptr), beg(beg), end(end), executable(executable) {}
+    AddressRange(uptr beg, uptr end, bool executable, bool writable)
+        : next(nullptr),
+          beg(beg),
+          end(end),
+          executable(executable),
+          writable(writable) {}
   };
 
   const IntrusiveList<AddressRange> &ranges() const { return ranges_; }
@@ -805,8 +814,11 @@ INLINE void LogMessageOnPrintf(const char *str) {}
 #if SANITIZER_LINUX
 // Initialize Android logging. Any writes before this are silently lost.
 void AndroidLogInit();
+void SetAbortMessage(const char *);
 #else
 INLINE void AndroidLogInit() {}
+// FIXME: MacOS implementation could use CRSetCrashLogMessage.
+INLINE void SetAbortMessage(const char *) {}
 #endif
 
 #if SANITIZER_ANDROID
@@ -913,6 +925,12 @@ struct StackDepotStats {
 // The default value for allocator_release_to_os_interval_ms common flag to
 // indicate that sanitizer allocator should not attempt to release memory to OS.
 const s32 kReleaseToOSIntervalNever = -1;
+
+void CheckNoDeepBind(const char *filename, int flag);
+
+// Returns the requested amount of random data (up to 256 bytes) that can then
+// be used to seed a PRNG.
+bool GetRandom(void *buffer, uptr length);
 
 }  // namespace __sanitizer
 

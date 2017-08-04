@@ -140,6 +140,7 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
 
   // Populate each CodeGenProcModel's WriteResDefs, ReadAdvanceDefs, and
   // ProcResourceDefs.
+  DEBUG(dbgs() << "\n+++ RESOURCE DEFINITIONS (collectProcResources) +++\n");
   collectProcResources();
 
   checkCompleteness();
@@ -160,6 +161,7 @@ void CodeGenSchedModels::collectProcModels() {
   ProcModelMap[NoModelDef] = 0;
 
   // For each processor, find a unique machine model.
+  DEBUG(dbgs() << "+++ PROCESSOR MODELs (addProcModel) +++\n");
   for (unsigned i = 0, N = ProcRecords.size(); i < N; ++i)
     addProcModel(ProcRecords[i]);
 }
@@ -315,6 +317,7 @@ void CodeGenSchedModels::collectSchedRW() {
     RW.Aliases.push_back(*AI);
   }
   DEBUG(
+    dbgs() << "\n+++ SCHED READS and WRITES (collectSchedRW) +++\n";
     for (unsigned WIdx = 0, WEnd = SchedWrites.size(); WIdx != WEnd; ++WIdx) {
       dbgs() << WIdx << ": ";
       SchedWrites[WIdx].dump();
@@ -531,6 +534,7 @@ void CodeGenSchedModels::collectSchedClasses() {
   // Create classes for InstRW defs.
   RecVec InstRWDefs = Records.getAllDerivedDefinitions("InstRW");
   std::sort(InstRWDefs.begin(), InstRWDefs.end(), LessRecord());
+  DEBUG(dbgs() << "\n+++ SCHED CLASSES (createInstRWClass) +++\n");
   for (RecIter OI = InstRWDefs.begin(), OE = InstRWDefs.end(); OI != OE; ++OI)
     createInstRWClass(*OI);
 
@@ -541,8 +545,9 @@ void CodeGenSchedModels::collectSchedClasses() {
   if (!EnableDump)
     return;
 
+  dbgs() << "\n+++ ITINERARIES and/or MACHINE MODELS (collectSchedClasses) +++\n";
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    std::string InstName = Inst->TheDef->getName();
+    StringRef InstName = Inst->TheDef->getName();
     unsigned SCIdx = InstrClassMap.lookup(Inst->TheDef);
     if (!SCIdx) {
       if (!Inst->hasNoSchedulingInfo)
@@ -790,6 +795,7 @@ bool CodeGenSchedModels::hasItineraries() const {
 
 // Gather the processor itineraries.
 void CodeGenSchedModels::collectProcItins() {
+  DEBUG(dbgs() << "\n+++ PROBLEM ITINERARIES (collectProcItins) +++\n");
   for (CodeGenProcModel &ProcModel : ProcModels) {
     if (!ProcModel.hasItineraries())
       continue;
@@ -860,6 +866,7 @@ void CodeGenSchedModels::collectProcUnsupportedFeatures() {
 /// Infer new classes from existing classes. In the process, this may create new
 /// SchedWrites from sequences of existing SchedWrites.
 void CodeGenSchedModels::inferSchedClasses() {
+  DEBUG(dbgs() << "\n+++ INFERRING SCHED CLASSES (inferSchedClasses) +++\n");
   DEBUG(dbgs() << NumInstrSchedClasses << " instr sched classes.\n");
 
   // Visit all existing classes and newly created classes.

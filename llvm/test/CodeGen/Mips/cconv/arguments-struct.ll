@@ -28,7 +28,7 @@ entry:
 ; SYM32-DAG:   lui   [[PTR_HI:\$[0-9]+]], %hi(bytes)
 ; SYM32-DAG:   addiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(bytes)
 
-; SYM64-DAG:   ld    [[PTR:\$[0-9]+]], %got_disp(bytes)(
+; SYM64-DAG:   addiu [[PTR:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
 
 ; O32-BE-DAG:  srl [[ARG:\$[0-9]+]], $4, 24
 ; O32-BE-DAG:  sb  [[ARG]], 1([[PTR]])

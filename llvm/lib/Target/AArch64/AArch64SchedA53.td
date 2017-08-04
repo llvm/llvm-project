@@ -13,7 +13,7 @@
 
 // ===---------------------------------------------------------------------===//
 // The following definitions describe the simpler per-operand machine model.
-// This works with MachineScheduler. See MCSchedModel.h for details.
+// This works with MachineScheduler. See MCSchedule.h for details.
 
 // Cortex-A53 machine model for scheduling and other instruction cost heuristics.
 def CortexA53Model : SchedMachineModel {

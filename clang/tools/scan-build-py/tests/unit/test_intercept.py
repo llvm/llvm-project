@@ -65,11 +65,10 @@ class InterceptUtilTest(unittest.TestCase):
         DISABLED = 'disabled'
 
         OSX = 'darwin'
-        LINUX = 'linux'
 
         with libear.TemporaryDirectory() as tmpdir:
+            saved = os.environ['PATH']
             try:
-                saved = os.environ['PATH']
                 os.environ['PATH'] = tmpdir + ':' + saved
 
                 create_csrutil(tmpdir, ENABLED)
@@ -77,21 +76,14 @@ class InterceptUtilTest(unittest.TestCase):
 
                 create_csrutil(tmpdir, DISABLED)
                 self.assertFalse(sut.is_preload_disabled(OSX))
-
-                create_sestatus(tmpdir, ENABLED)
-                self.assertTrue(sut.is_preload_disabled(LINUX))
-
-                create_sestatus(tmpdir, DISABLED)
-                self.assertFalse(sut.is_preload_disabled(LINUX))
             finally:
                 os.environ['PATH'] = saved
 
+        saved = os.environ['PATH']
         try:
-            saved = os.environ['PATH']
             os.environ['PATH'] = ''
             # shall be false when it's not in the path
             self.assertFalse(sut.is_preload_disabled(OSX))
-            self.assertFalse(sut.is_preload_disabled(LINUX))
 
             self.assertFalse(sut.is_preload_disabled('unix'))
         finally:

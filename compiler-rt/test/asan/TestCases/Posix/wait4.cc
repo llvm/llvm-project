@@ -5,6 +5,7 @@
 // RUN: %clangxx_asan -DWAIT4_RUSAGE -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // XFAIL: android
+// UNSUPPORTED: darwin
 
 #include <assert.h>
 #include <sys/wait.h>

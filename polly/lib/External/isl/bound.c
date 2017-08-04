@@ -61,7 +61,6 @@ struct verify_point_bound {
 static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 {
 	int i;
-	unsigned nvar;
 	unsigned nparam;
 	struct verify_point_bound *vpb = (struct verify_point_bound *) user;
 	isl_int t;
@@ -72,7 +71,7 @@ static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 	isl_set *dom = NULL;
 	isl_printer *p;
 	const char *minmax;
-	int bounded;
+	isl_bool bounded;
 	int sign;
 	int ok;
 	FILE *out = vpb->options->print_all ? stdout : stderr;
@@ -119,7 +118,6 @@ static isl_stat verify_point(__isl_take isl_point *pnt, void *user)
 	else
 		opt = isl_pw_qpolynomial_fold_min(isl_pw_qpolynomial_fold_copy(pwf));
 
-	nvar = isl_set_dim(dom, isl_dim_set);
 	if (vpb->exact && bounded)
 		ok = isl_val_eq(opt, bound);
 	else if (sign > 0)

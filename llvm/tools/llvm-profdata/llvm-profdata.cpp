@@ -159,14 +159,20 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
 
   for (auto &I : *Reader) {
     const StringRef FuncName = I.Name;
-    if (Error E = WC->Writer.addRecord(std::move(I), Input.Weight)) {
+    bool Reported = false;
+    WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
+      if (Reported) {
+        consumeError(std::move(E));
+        return;
+      }
+      Reported = true;
       // Only show hint the first time an error occurs.
       instrprof_error IPE = InstrProfError::take(std::move(E));
       std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
       bool firstTime = WC->WriterErrorCodes.insert(IPE).second;
       handleMergeWriterError(make_error<InstrProfError>(IPE), Input.Filename,
                              FuncName, firstTime);
-    }
+    });
   }
   if (Reader->hasError())
     WC->Err = Reader->getError();
@@ -174,8 +180,15 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
 
 /// Merge the \p Src writer context into \p Dst.
 static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
-  if (Error E = Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer)))
+  bool Reported = false;
+  Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
+    if (Reported) {
+      consumeError(std::move(E));
+      return;
+    }
+    Reported = true;
     Dst->Err = std::move(E);
+  });
 }
 
 static void mergeInstrProfile(const WeightedFileVector &Inputs,
@@ -246,10 +259,12 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       exitWithError(std::move(WC->Err), WC->ErrWhence);
 
   InstrProfWriter &Writer = Contexts[0]->Writer;
-  if (OutputFormat == PF_Text)
-    Writer.writeText(Output);
-  else
+  if (OutputFormat == PF_Text) {
+    if (Error E = Writer.writeText(Output))
+      exitWithError(std::move(E));
+  } else {
     Writer.write(Output);
+  }
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
@@ -446,9 +461,59 @@ static int merge_main(int argc, const char *argv[]) {
   return 0;
 }
 
+typedef struct ValueSitesStats {
+  ValueSitesStats()
+      : TotalNumValueSites(0), TotalNumValueSitesWithValueProfile(0),
+        TotalNumValues(0) {}
+  uint64_t TotalNumValueSites;
+  uint64_t TotalNumValueSitesWithValueProfile;
+  uint64_t TotalNumValues;
+  std::vector<unsigned> ValueSitesHistogram;
+} ValueSitesStats;
+
+static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
+                                  ValueSitesStats &Stats, raw_fd_ostream &OS,
+                                  InstrProfSymtab *Symtab) {
+  uint32_t NS = Func.getNumValueSites(VK);
+  Stats.TotalNumValueSites += NS;
+  for (size_t I = 0; I < NS; ++I) {
+    uint32_t NV = Func.getNumValueDataForSite(VK, I);
+    std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, I);
+    Stats.TotalNumValues += NV;
+    if (NV) {
+      Stats.TotalNumValueSitesWithValueProfile++;
+      if (NV > Stats.ValueSitesHistogram.size())
+        Stats.ValueSitesHistogram.resize(NV, 0);
+      Stats.ValueSitesHistogram[NV - 1]++;
+    }
+    for (uint32_t V = 0; V < NV; V++) {
+      OS << "\t[ " << I << ", ";
+      if (Symtab == nullptr)
+        OS << VD[V].Value;
+      else
+        OS << Symtab->getFuncName(VD[V].Value);
+      OS << ", " << VD[V].Count << " ]\n";
+    }
+  }
+}
+
+static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
+                                ValueSitesStats &Stats) {
+  OS << "  Total number of sites: " << Stats.TotalNumValueSites << "\n";
+  OS << "  Total number of sites with values: "
+     << Stats.TotalNumValueSitesWithValueProfile << "\n";
+  OS << "  Total number of profiled values: " << Stats.TotalNumValues << "\n";
+
+  OS << "  Value sites histogram:\n\tNumTargets, SiteCount\n";
+  for (unsigned I = 0; I < Stats.ValueSitesHistogram.size(); I++) {
+    if (Stats.ValueSitesHistogram[I] > 0)
+      OS << "\t" << I + 1 << ", " << Stats.ValueSitesHistogram[I] << "\n";
+  }
+}
+
 static int showInstrProfile(const std::string &Filename, bool ShowCounts,
-                            bool ShowIndirectCallTargets,
-                            bool ShowDetailedSummary,
+                            uint32_t TopN, bool ShowIndirectCallTargets,
+                            bool ShowMemOPSizes, bool ShowDetailedSummary,
                             std::vector<uint32_t> DetailedSummaryCutoffs,
                             bool ShowAllFunctions,
                             const std::string &ShowFunction, bool TextFormat,
@@ -465,10 +530,19 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRInstr = Reader->isIRLevelProfile();
   size_t ShownFunctions = 0;
-  uint64_t TotalNumValueSites = 0;
-  uint64_t TotalNumValueSitesWithValueProfile = 0;
-  uint64_t TotalNumValues = 0;
-  std::vector<unsigned> ICHistogram;
+  int NumVPKind = IPVK_Last - IPVK_First + 1;
+  std::vector<ValueSitesStats> VPStats(NumVPKind);
+
+  auto MinCmp = [](const std::pair<std::string, uint64_t> &v1,
+                   const std::pair<std::string, uint64_t> &v2) {
+    return v1.second > v2.second;
+  };
+
+  std::priority_queue<std::pair<std::string, uint64_t>,
+                      std::vector<std::pair<std::string, uint64_t>>,
+                      decltype(MinCmp)>
+      HottestFuncs(MinCmp);
+
   for (const auto &Func : *Reader) {
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
@@ -478,12 +552,27 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
     if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
-      InstrProfWriter::writeRecordInText(Func, Symtab, OS);
+      InstrProfWriter::writeRecordInText(Func.Name, Func.Hash, Func, Symtab,
+                                         OS);
       continue;
     }
 
     assert(Func.Counts.size() > 0 && "function missing entry counter");
     Builder.addRecord(Func);
+
+    if (TopN) {
+      uint64_t FuncMax = 0;
+      for (size_t I = 0, E = Func.Counts.size(); I < E; ++I)
+        FuncMax = std::max(FuncMax, Func.Counts[I]);
+
+      if (HottestFuncs.size() == TopN) {
+        if (HottestFuncs.top().second < FuncMax) {
+          HottestFuncs.pop();
+          HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
+        }
+      } else
+        HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
+    }
 
     if (Show) {
 
@@ -502,6 +591,11 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
 
+      uint32_t NumMemOPCalls = Func.getNumValueSites(IPVK_MemOPSize);
+      if (ShowMemOPSizes && NumMemOPCalls > 0)
+        OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
+           << "\n";
+
       if (ShowCounts) {
         OS << "    Block counts: [";
         size_t Start = (IsIRInstr ? 0 : 1);
@@ -512,27 +606,16 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
       }
 
       if (ShowIndirectCallTargets) {
-        InstrProfSymtab &Symtab = Reader->getSymtab();
-        uint32_t NS = Func.getNumValueSites(IPVK_IndirectCallTarget);
-        OS << "    Indirect Target Results: \n";
-        TotalNumValueSites += NS;
-        for (size_t I = 0; I < NS; ++I) {
-          uint32_t NV = Func.getNumValueDataForSite(IPVK_IndirectCallTarget, I);
-          std::unique_ptr<InstrProfValueData[]> VD =
-              Func.getValueForSite(IPVK_IndirectCallTarget, I);
-          TotalNumValues += NV;
-          if (NV) {
-            TotalNumValueSitesWithValueProfile++;
-            if (NV > ICHistogram.size())
-              ICHistogram.resize(NV, 0);
-            ICHistogram[NV - 1]++;
-          }
-          for (uint32_t V = 0; V < NV; V++) {
-            OS << "\t[ " << I << ", ";
-            OS << Symtab.getFuncName(VD[V].Value) << ", " << VD[V].Count
-               << " ]\n";
-          }
-        }
+        OS << "    Indirect Target Results:\n";
+        traverseAllValueSites(Func, IPVK_IndirectCallTarget,
+                              VPStats[IPVK_IndirectCallTarget], OS,
+                              &(Reader->getSymtab()));
+      }
+
+      if (ShowMemOPSizes && NumMemOPCalls > 0) {
+        OS << "    Memory Intrinsic Size Results:\n";
+        traverseAllValueSites(Func, IPVK_MemOPSize, VPStats[IPVK_MemOPSize], OS,
+                              nullptr);
       }
     }
   }
@@ -547,17 +630,28 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   OS << "Total functions: " << PS->getNumFunctions() << "\n";
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
-  if (ShownFunctions && ShowIndirectCallTargets) {
-    OS << "Total Number of Indirect Call Sites : " << TotalNumValueSites
-       << "\n";
-    OS << "Total Number of Sites With Values : "
-       << TotalNumValueSitesWithValueProfile << "\n";
-    OS << "Total Number of Profiled Values : " << TotalNumValues << "\n";
 
-    OS << "IC Value histogram : \n\tNumTargets, SiteCount\n";
-    for (unsigned I = 0; I < ICHistogram.size(); I++) {
-      OS << "\t" << I + 1 << ", " << ICHistogram[I] << "\n";
+  if (TopN) {
+    std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
+    while (!HottestFuncs.empty()) {
+      SortedHottestFuncs.emplace_back(HottestFuncs.top());
+      HottestFuncs.pop();
     }
+    OS << "Top " << TopN
+       << " functions with the largest internal block counts: \n";
+    for (auto &hotfunc : llvm::reverse(SortedHottestFuncs))
+      OS << "  " << hotfunc.first << ", max count = " << hotfunc.second << "\n";
+  }
+
+  if (ShownFunctions && ShowIndirectCallTargets) {
+    OS << "Statistics for indirect call sites profile:\n";
+    showValueSitesStats(OS, IPVK_IndirectCallTarget,
+                        VPStats[IPVK_IndirectCallTarget]);
+  }
+
+  if (ShownFunctions && ShowMemOPSizes) {
+    OS << "Statistics for memory intrinsic calls sizes profile:\n";
+    showValueSitesStats(OS, IPVK_MemOPSize, VPStats[IPVK_MemOPSize]);
   }
 
   if (ShowDetailedSummary) {
@@ -608,6 +702,10 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<bool> ShowIndirectCallTargets(
       "ic-targets", cl::init(false),
       cl::desc("Show indirect call site target values for shown functions"));
+  cl::opt<bool> ShowMemOPSizes(
+      "memop-sizes", cl::init(false),
+      cl::desc("Show the profiled sizes of the memory intrinsic calls "
+               "for shown functions"));
   cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
                                     cl::desc("Show detailed profile summary"));
   cl::list<uint32_t> DetailedSummaryCutoffs(
@@ -628,6 +726,9 @@ static int show_main(int argc, const char *argv[]) {
       cl::desc("Profile kind:"), cl::init(instr),
       cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
                  clEnumVal(sample, "Sample profile")));
+  cl::opt<uint32_t> TopNFunctions(
+      "topn", cl::init(0),
+      cl::desc("Show the list of functions with the largest internal counts"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
@@ -645,7 +746,8 @@ static int show_main(int argc, const char *argv[]) {
   std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs.begin(),
                                 DetailedSummaryCutoffs.end());
   if (ProfileKind == instr)
-    return showInstrProfile(Filename, ShowCounts, ShowIndirectCallTargets,
+    return showInstrProfile(Filename, ShowCounts, TopNFunctions,
+                            ShowIndirectCallTargets, ShowMemOPSizes,
                             ShowDetailedSummary, DetailedSummaryCutoffs,
                             ShowAllFunctions, ShowFunction, TextFormat, OS);
   else

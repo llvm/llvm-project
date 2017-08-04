@@ -1,20 +1,15 @@
-; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
-; RUN: llc -mtriple=armv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6
-; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7
-; RUN: llc -mtriple=thumb-eabi %s -o - | FileCheck %s -check-prefix=CHECK-THUMB
-; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK-THUMB
-; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK-THUMBV6T2
-; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-THUMBV7
+; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V4
+; RUN: llc -mtriple=armv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6
+; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6
+; RUN: llc -mtriple=thumb-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMB
+; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6
+; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
+; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 
 define i32 @Test0(i32 %a, i32 %b, i32 %c) nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: Test0
 ; CHECK-NOT: smmls
-; CHECK-V6-NOT: smmls
-; CHECK-V7-NOT: smmls
-; CHECK_THUMB-NOT: smmls
-; CHECK-THUMBV6T2-NOT: smmls
-; CHECK-THUMBV7-NOT: smmls
   %conv4 = zext i32 %a to i64
   %conv1 = sext i32 %b to i64
   %conv2 = sext i32 %c to i64
@@ -27,12 +22,11 @@ entry:
 
 define i32 @Test1(i32 %a, i32 %b, i32 %c) {
 ;CHECK-LABEL: Test1
-;CHECK-NOT: smmls
+;CHECK-V4-NOT: smmls
 ;CHECK-THUMB-NOT: smmls
+;CHECK-THUMBV6-NOT: smmls
 ;CHECK-V6: smmls r0, [[Rn:r[1-2]]], [[Rm:r[1-2]]], r0
-;CHECK-V7: smmls r0, [[Rn:r[1-2]]], [[Rm:r[1-2]]], r0
 ;CHECK-THUMBV6T2: smmls r0, [[Rn:r[1-2]]], [[Rm:r[1-2]]], r0
-;CHECK-THUMBV7: smmls r0, [[Rn:r[1-2]]], [[Rm:r[1-2]]], r0
 entry:
   %conv = sext i32 %b to i64
   %conv1 = sext i32 %c to i64
@@ -47,10 +41,21 @@ entry:
 
 declare void @opaque(i32)
 define void @test_used_flags(i32 %in1, i32 %in2) {
-; CHECK-V7-LABEL: test_used_flags:
-; CHECK-V7: smull [[PROD_LO:r[0-9]+]], [[PROD_HI:r[0-9]+]], r0, r1
-; CHECK-V7: rsbs {{.*}}, [[PROD_LO]], #0
-; CHECK-V7: rscs {{.*}}, [[PROD_HI]], #0
+; CHECK-LABEL: test_used_flags:
+; CHECK-THUMB: cmp  r1, #0
+; CHECK-THUMB: push {r2}
+; CHECK-THUMB: pop  {r3}
+; CHECK-THUMB: ble
+; CHECK-THUMBV6: cmp r1, #0
+; CHECK-THUMBV6: mov r3, r2
+; CHECK-THUMBV6: ble
+; CHECK-V6: smull [[PROD_LO:r[0-9]+]], [[PROD_HI:r[0-9]+]], r0, r1
+; CHECK-V6: rsbs {{.*}}, [[PROD_LO]], #0
+; CHECK-V6: rscs {{.*}}, [[PROD_HI]], #0
+; CHECK-THUMBV6T2: smull [[PROD_LO:r[0-9]+]], [[PROD_HI:r[0-9]+]], r0, r1
+; CHECK-THUMBV6T2: movs	[[ZERO:r[0-9]+]], #0
+; CHECK-THUMBV6T2: rsbs	{{.*}}, [[PROD_LO]], #0
+; CHECK-THUMBV6T2: sbcs.w {{.*}}, [[ZERO]], [[PROD_HI]]
   %in1.64 = sext i32 %in1 to i64
   %in2.64 = sext i32 %in2 to i64
   %mul = mul nsw i64 %in1.64, %in2.64

@@ -28,7 +28,7 @@ target triple = "mips--linux-gnu"
 ; Function Attrs: nounwind
 define i32 @foo(i32 %x) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !12, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.value(metadata i32 %x, metadata !12, metadata !DIExpression()), !dbg !13
   %tobool = icmp ne i32 %x, 0, !dbg !14
   br i1 %tobool, label %if.then, label %if.end, !dbg !14
 
@@ -47,7 +47,7 @@ return:                                           ; preds = %if.end, %if.then
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

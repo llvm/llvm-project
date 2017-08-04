@@ -75,7 +75,7 @@ class ScopArrayInfo;
 /// in the wild. Signed computations are needed, as loop bounds may become
 /// negative.
 ///
-/// It is possible to track overflows that occured in the generated IR. See the
+/// It is possible to track overflows that occurred in the generated IR. See the
 /// description of @see OverflowState for more information.
 ///
 /// FIXME: Hardcoding sizes can cause issues:

@@ -1040,6 +1040,20 @@ LLVMBool LLVMIsOpaqueStruct(LLVMTypeRef StructTy);
 LLVMTypeRef LLVMGetElementType(LLVMTypeRef Ty);
 
 /**
+ * Returns type's subtypes
+ *
+ * @see llvm::Type::subtypes()
+ */
+void LLVMGetSubtypes(LLVMTypeRef Tp, LLVMTypeRef *Arr);
+
+/**
+ *  Return the number of types in the derived type.
+ *
+ * @see llvm::Type::getNumContainedTypes()
+ */
+unsigned LLVMGetNumContainedTypes(LLVMTypeRef Tp);
+
+/**
  * Create a fixed size array type that refers to a specific type.
  *
  * The created type will exist in the context that its element type
@@ -2129,6 +2143,16 @@ LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C, LLVMValueRef *Vals,
  * Obtain a MDNode value from the global context.
  */
 LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
+
+/**
+ * Obtain a Metadata as a Value.
+ */
+LLVMValueRef LLVMMetadataAsValue(LLVMContextRef C, LLVMMetadataRef MD);
+
+/**
+ * Obtain a Value as a Metadata.
+ */
+LLVMMetadataRef LLVMValueAsMetadata(LLVMValueRef Val);
 
 /**
  * Obtain the underlying string from a MDString value.

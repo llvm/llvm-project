@@ -3,9 +3,9 @@
 
 // Simple test for a fuzzer: find the interesting argument for div.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <cstddef>
 #include <iostream>
 
 static volatile int Sink;

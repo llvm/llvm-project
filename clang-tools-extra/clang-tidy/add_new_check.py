@@ -189,6 +189,37 @@ def adapt_module(module_path, module, check_name, check_name_camel):
       f.write(line)
 
 
+# Adds a release notes entry.
+def add_release_notes(module_path, module, check_name):
+  check_name_dashes = module + '-' + check_name
+  filename = os.path.normpath(os.path.join(module_path,
+                                           '../../docs/ReleaseNotes.rst'))
+  with open(filename, 'r') as f:
+    lines = f.readlines()
+
+  print('Updating %s...' % filename)
+  with open(filename, 'wb') as f:
+    note_added = False
+    header_found = False
+
+    for line in lines:
+      if not note_added:
+        match = re.search('Improvements to clang-tidy', line)
+        if match:
+          header_found = True
+        elif header_found:
+          if not line.startswith('----'):
+            f.write("""
+- New `%s
+  <http://clang.llvm.org/extra/clang-tidy/checks/%s.html>`_ check
+
+  FIXME: add release notes.
+""" % (check_name_dashes, check_name_dashes))
+            note_added = True
+
+      f.write(line)
+
+
 # Adds a test for the check.
 def write_test(module_path, module, check_name):
   check_name_dashes = module + '-' + check_name
@@ -300,6 +331,7 @@ documentation files."""
   write_header(module_path, module, check_name, check_name_camel)
   write_implementation(module_path, module, check_name_camel)
   adapt_module(module_path, module, check_name, check_name_camel)
+  add_release_notes(module_path, module, check_name)
   write_test(module_path, module, check_name)
   write_docs(module_path, module, check_name)
   update_checks_list(clang_tidy_path)

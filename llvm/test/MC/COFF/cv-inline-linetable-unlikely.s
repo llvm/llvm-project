@@ -19,13 +19,13 @@
 # calls to __asan_report*, for which it is very important to have an accurate
 # stack trace.
 
-# CHECK:    ProcStart {
+# CHECK:    GlobalProcIdSym {
 # CHECK:      FunctionType: g (0x1003)
 # CHECK:      CodeOffset: g+0x0
 # CHECK:      DisplayName: g
 # CHECK:      LinkageName: g
 # CHECK:    }
-# CHECK:    InlineSite {
+# CHECK:    InlineSiteSym {
 # CHECK:      Inlinee: f (0x1002)
 # CHECK:      BinaryAnnotations [
 # CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xE, LineOffset: 1}

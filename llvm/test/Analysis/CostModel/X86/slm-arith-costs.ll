@@ -3,6 +3,20 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+define <2 x i64> @slm-costs_64_vector_add(<2 x i64> %a, <2 x i64> %b) {
+entry:
+; SLM:  cost of 4 {{.*}} add <2 x i64>
+  %res = add <2 x i64> %a, %b
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @slm-costs_64_vector_sub(<2 x i64> %a, <2 x i64> %b) {
+entry:
+; SLM:  cost of 4 {{.*}} sub <2 x i64>
+  %res = sub <2 x i64> %a, %b
+  ret <2 x i64> %res
+}
+
 ; 8bit mul
 define i8 @slm-costs_8_scalar_mul(i8 %a, i8 %b)  {
 entry:
@@ -13,7 +27,7 @@ entry:
 
 define <2 x i8> @slm-costs_8_v2_mul(<2 x i8> %a, <2 x i8> %b)  {
 entry:
-; SLM:  cost of 11 {{.*}} mul nsw <2 x i8>
+; SLM:  cost of 17 {{.*}} mul nsw <2 x i8>
   %res = mul nsw <2 x i8> %a, %b
   ret <2 x i8> %res
 }
@@ -97,7 +111,7 @@ entry:
 
 define <2 x i16> @slm-costs_16_v2_mul(<2 x i16> %a, <2 x i16> %b)  {
 entry:
-; SLM:  cost of 11 {{.*}} mul nsw <2 x i16>
+; SLM:  cost of 17 {{.*}} mul nsw <2 x i16>
   %res = mul nsw <2 x i16> %a, %b
   ret <2 x i16> %res
 }
@@ -181,7 +195,7 @@ entry:
 
 define <2 x i32> @slm-costs_32_v2_mul(<2 x i32> %a, <2 x i32> %b)  {
 entry:
-; SLM:  cost of 11 {{.*}} mul nsw <2 x i32>
+; SLM:  cost of 17 {{.*}} mul nsw <2 x i32>
   %res = mul nsw <2 x i32> %a, %b
   ret <2 x i32> %res
 }
@@ -217,28 +231,28 @@ entry:
 
 define <2 x i64> @slm-costs_64_v2_mul(<2 x i64> %a, <2 x i64> %b)  {
 entry:
-; SLM:  cost of 11 {{.*}} mul nsw <2 x i64>
+; SLM:  cost of 17 {{.*}} mul nsw <2 x i64>
   %res = mul nsw <2 x i64> %a, %b
   ret <2 x i64> %res
 }
 
 define <4 x i64> @slm-costs_64_v4_mul(<4 x i64> %a, <4 x i64> %b)  {
 entry:
-; SLM:  cost of 22 {{.*}} mul nsw <4 x i64>
+; SLM:  cost of 34 {{.*}} mul nsw <4 x i64>
   %res = mul nsw <4 x i64> %a, %b
   ret <4 x i64> %res
 }
 
 define <8 x i64> @slm-costs_64_v8_mul(<8 x i64> %a, <8 x i64> %b)  {
 entry:
-; SLM:  cost of 44 {{.*}} mul nsw <8 x i64>
+; SLM:  cost of 68 {{.*}} mul nsw <8 x i64>
   %res = mul nsw <8 x i64> %a, %b
   ret <8 x i64> %res
 }
 
 define <16 x i64> @slm-costs_64_v16_mul(<16 x i64> %a, <16 x i64> %b)  {
 entry:
-; SLM:  cost of 88 {{.*}} mul nsw <16 x i64>
+; SLM:  cost of 136 {{.*}} mul nsw <16 x i64>
   %res = mul nsw <16 x i64> %a, %b
   ret <16 x i64> %res
 }

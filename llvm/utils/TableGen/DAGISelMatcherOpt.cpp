@@ -181,15 +181,21 @@ static Matcher *FindNodeWithKind(Matcher *M, Matcher::KindTy Kind) {
 ///       ABC
 ///       XYZ
 ///
-static void FactorNodes(std::unique_ptr<Matcher> &MatcherPtr) {
-  // If we reached the end of the chain, we're done.
-  Matcher *N = MatcherPtr.get();
-  if (!N) return;
-  
-  // If this is not a push node, just scan for one.
-  ScopeMatcher *Scope = dyn_cast<ScopeMatcher>(N);
-  if (!Scope)
-    return FactorNodes(N->getNextPtr());
+static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
+  // Look for a push node. Iterates instead of recurses to reduce stack usage.
+  ScopeMatcher *Scope = nullptr;
+  std::unique_ptr<Matcher> *RebindableMatcherPtr = &InputMatcherPtr;
+  while (!Scope) {
+    // If we reached the end of the chain, we're done.
+    Matcher *N = RebindableMatcherPtr->get();
+    if (!N) return;
+
+    // If this is not a push node, just scan for one.
+    Scope = dyn_cast<ScopeMatcher>(N);
+    if (!Scope)
+      RebindableMatcherPtr = &(N->getNextPtr());
+  }
+  std::unique_ptr<Matcher> &MatcherPtr = *RebindableMatcherPtr;
   
   // Okay, pull together the children of the scope node into a vector so we can
   // inspect it more easily.

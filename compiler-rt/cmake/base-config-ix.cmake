@@ -63,7 +63,9 @@ else()
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
 endif()
 
-string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
+if(NOT DEFINED COMPILER_RT_OS_DIR)
+  string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
+endif()
 set(COMPILER_RT_LIBRARY_OUTPUT_DIR
   ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
 set(COMPILER_RT_LIBRARY_INSTALL_DIR
@@ -172,6 +174,7 @@ macro(test_targets)
       else()
         test_target_arch(arm "" "-march=armv7-a" "-mfloat-abi=soft")
         test_target_arch(armhf "" "-march=armv7-a" "-mfloat-abi=hard")
+        test_target_arch(armv6m "" "-march=armv6m" "-mfloat-abi=soft")
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch32")
       test_target_arch(aarch32 "" "-march=armv8-a")

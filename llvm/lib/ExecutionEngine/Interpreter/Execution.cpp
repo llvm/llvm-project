@@ -899,10 +899,10 @@ void Interpreter::visitSwitchInst(SwitchInst &I) {
 
   // Check to see if any of the cases match...
   BasicBlock *Dest = nullptr;
-  for (SwitchInst::CaseIt i = I.case_begin(), e = I.case_end(); i != e; ++i) {
-    GenericValue CaseVal = getOperandValue(i.getCaseValue(), SF);
+  for (auto Case : I.cases()) {
+    GenericValue CaseVal = getOperandValue(Case.getCaseValue(), SF);
     if (executeICMP_EQ(CondVal, CaseVal, ElTy).IntVal != 0) {
-      Dest = cast<BasicBlock>(i.getCaseSuccessor());
+      Dest = cast<BasicBlock>(Case.getCaseSuccessor());
       break;
     }
   }
@@ -1565,7 +1565,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
           Tmp = Tmp.zext(SrcBitSize);
           Tmp = TempSrc.AggregateVal[SrcElt++].IntVal;
           Tmp = Tmp.zext(DstBitSize);
-          Tmp = Tmp.shl(ShiftAmt);
+          Tmp <<= ShiftAmt;
           ShiftAmt += isLittleEndian ? SrcBitSize : -SrcBitSize;
           Elt.IntVal |= Tmp;
         }
@@ -1580,7 +1580,7 @@ GenericValue Interpreter::executeBitCastInst(Value *SrcVal, Type *DstTy,
           GenericValue Elt;
           Elt.IntVal = Elt.IntVal.zext(SrcBitSize);
           Elt.IntVal = TempSrc.AggregateVal[i].IntVal;
-          Elt.IntVal = Elt.IntVal.lshr(ShiftAmt);
+          Elt.IntVal.lshrInPlace(ShiftAmt);
           // it could be DstBitSize == SrcBitSize, so check it
           if (DstBitSize < SrcBitSize)
             Elt.IntVal = Elt.IntVal.trunc(DstBitSize);

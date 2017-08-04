@@ -9,13 +9,6 @@
 ; Since %inc54 is the IV of the outer loop, and %0 equivalent to it,
 ; we get the situation described above.
 
-; This test uses the new PM, because with the old PM, running loop-vectorize
-; would explicitly run loop-simplify. Even though this loop is already in
-; simplified form, loop-simplify would still clean up the phi.
-; The reason this matters is that in a real optimizer pipeline, LICM can create
-; such PHIs, and since it preserves loop simplified form, the cleanup has
-; no chance to run.
-
 ; Code that leads to this situation can look something like:
 ;
 ; int a, b[1], c;
@@ -28,11 +21,14 @@
 ;
 ; The PHI is an artifact of the register promotion of c.
 
+; Note that we can no longer get the vectorizer to actually see such PHIs,
+; because LV now simplifies the loop internally, but the test is still
+; useful as a regression test, and in case loop-simplify behavior changes.
+
 @c = external global i32, align 4
 @a = external global i32, align 4
 @b = external global [1 x i32], align 4
 
-; CHECK: LV: PHI is a recurrence with respect to an outer loop.
 ; CHECK: LV: Not vectorizing: Cannot prove legality.
 ; CHECK-LABEL: @test
 define void @test() {

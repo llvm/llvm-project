@@ -1,3 +1,6 @@
+// REQUIRES: native-run
+// UNSUPPORTED: arm, aarch64
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- clear_cache_test.c - Test clear_cache -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -13,12 +16,6 @@
 #include <stdint.h>
 #if defined(_WIN32)
 #include <windows.h>
-void __clear_cache(void* start, void* end)
-{
-    if (!FlushInstructionCache(GetCurrentProcess(), start, end-start))
-        exit(1);
-}
-
 static uintptr_t get_page_size() {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
@@ -27,27 +24,20 @@ static uintptr_t get_page_size() {
 #else
 #include <unistd.h>
 #include <sys/mman.h>
-extern void __clear_cache(void* start, void* end);
 
 static uintptr_t get_page_size() {
     return sysconf(_SC_PAGE_SIZE);
 }
 #endif
 
-
+extern void __clear_cache(void* start, void* end);
 
 
 typedef int (*pfunc)(void);
 
-int func1() 
-{
-    return 1;
-}
-
-int func2() 
-{
-    return 2;
-}
+// Make these static to avoid ILT jumps for incremental linking on Windows.
+static int func1() { return 1; }
+static int func2() { return 2; }
 
 void *__attribute__((noinline))
 memcpy_f(void *dst, const void *src, size_t n) {

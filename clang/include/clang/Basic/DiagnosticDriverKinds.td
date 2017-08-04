@@ -85,6 +85,8 @@ def err_drv_clang_unsupported : Error<
   "the clang compiler does not support '%0'">;
 def err_drv_clang_unsupported_opt_cxx_darwin_i386 : Error<
   "the clang compiler does not support '%0' for C++ on Darwin/i386">;
+def err_drv_clang_unsupported_opt_faltivec : Error<
+  "the clang compiler does not support '%0', %1">;
 def err_drv_command_failed : Error<
   "%0 command failed with exit code %1 (use -v to see invocation)">;
 def err_drv_compilationdatabase : Error<
@@ -133,8 +135,12 @@ def err_drv_invalid_gcc_output_type : Error<
     "invalid output type '%0' for use with gcc tool">;
 def err_drv_cc_print_options_failure : Error<
     "unable to open CC_PRINT_OPTIONS file: %0">;
+def err_drv_lto_without_lld : Error<"LTO requires -fuse-ld=lld">;
 def err_drv_preamble_format : Error<
     "incorrect format for -preamble-bytes=N,END">;
+def err_invalid_ios_deployment_target : Error<
+  "invalid iOS deployment version '%0', iOS 10 is the maximum deployment "
+  "target for 32-bit targets">;
 def err_drv_conflicting_deployment_targets : Error<
   "conflicting deployment targets, both '%0' and '%1' are present in environment">;
 def err_arc_unsupported_on_runtime : Error<
@@ -172,6 +178,8 @@ def warn_drv_optimization_value : Warning<"optimization level '%0' is not suppor
   InGroup<InvalidCommandLineArgument>;
 def warn_ignored_gcc_optimization : Warning<"optimization flag '%0' is not supported">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and will be ignored">,
+  InGroup<UnusedCommandLineArgument>;
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
@@ -192,8 +200,8 @@ def warn_drv_unused_argument : Warning<
 def warn_drv_empty_joined_argument : Warning<
   "joined argument expects additional value: '%0'">,
   InGroup<UnusedCommandLineArgument>;
-def warn_drv_fdiagnostics_show_hotness_requires_pgo : Warning<
-  "argument '-fdiagnostics-show-hotness' requires profile-guided optimization information">,
+def warn_drv_diagnostics_hotness_requires_pgo : Warning<
+  "argument '%0' requires profile-guided optimization information">,
   InGroup<UnusedCommandLineArgument>;
 def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;
@@ -222,7 +230,13 @@ def warn_drv_enabling_rtti_with_exceptions : Warning<
   InGroup<DiagGroup<"rtti-for-exceptions">>;
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
-  InGroup<DiagGroup<"auto-disable-vptr-sanitizer">>;
+  InGroup<AutoDisableVptrSanitizer>;
+def warn_drv_disabling_vptr_no_null_check : Warning<
+  "implicitly disabling vptr sanitizer because null checking wasn't enabled">,
+  InGroup<AutoDisableVptrSanitizer>;
+def warn_drv_object_size_disabled_O0 : Warning<
+  "the object size sanitizer has no effect at -O0, but is explicitly enabled: %0">,
+  InGroup<InvalidCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -230,6 +244,9 @@ def note_drv_t_option_is_global : Note<
   "The last /TC or /TP option takes precedence over earlier instances">;
 def note_drv_address_sanitizer_debug_runtime : Note<
   "AddressSanitizer doesn't support linking with debug runtime libraries yet">;
+def note_drv_use_standard : Note<"use '%0'"
+  "%select{| or '%3'|, '%3', or '%4'|, '%3', '%4', or '%5'}2 "
+  "for '%1' standard">;
 
 def err_analyzer_config_no_value : Error<
   "analyzer-config option '%0' has a key but no value">;
@@ -246,6 +263,10 @@ def err_test_module_file_extension_format : Error<
 
 def warn_drv_invoking_fallback : Warning<"falling back to %0">,
   InGroup<Fallback>;
+
+def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
+  InGroup<DiagGroup<"slash-u-filename">>;
+def note_use_dashdash : Note<"Use '--' to treat subsequent arguments as filenames">;
 
 def err_drv_ropi_rwpi_incompatible_with_pic : Error<
   "embedded and GOT-based position independence are incompatible">;
@@ -277,4 +298,8 @@ def warn_drv_ps4_sdk_dir : Warning<
 def err_drv_unsupported_linker : Error<"unsupported value '%0' for -linker option">;
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
 def err_drv_defsym_invalid_symval : Error<"Value is not an integer: %0">;
+def warn_drv_msvc_not_found : Warning<
+  "unable to find a Visual Studio installation; "
+  "try running Clang from a developer command prompt">,
+  InGroup<DiagGroup<"msvc-not-found">>;
 }

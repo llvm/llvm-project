@@ -88,12 +88,13 @@ struct AssemblerInvocation {
   unsigned NoInitialTextSection : 1;
   unsigned SaveTemporaryLabels : 1;
   unsigned GenDwarfForAssembly : 1;
-  unsigned CompressDebugSections : 1;
   unsigned RelaxELFRelocations : 1;
   unsigned DwarfVersion;
   std::string DwarfDebugFlags;
   std::string DwarfDebugProducer;
   std::string DebugCompilationDir;
+  llvm::DebugCompressionType CompressDebugSections =
+      llvm::DebugCompressionType::None;
   std::string MainFileName;
 
   /// @}
@@ -201,7 +202,22 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.SaveTemporaryLabels = Args.hasArg(OPT_msave_temp_labels);
   // Any DebugInfoKind implies GenDwarfForAssembly.
   Opts.GenDwarfForAssembly = Args.hasArg(OPT_debug_info_kind_EQ);
-  Opts.CompressDebugSections = Args.hasArg(OPT_compress_debug_sections);
+
+  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
+                                     OPT_compress_debug_sections_EQ)) {
+    if (A->getOption().getID() == OPT_compress_debug_sections) {
+      // TODO: be more clever about the compression type auto-detection
+      Opts.CompressDebugSections = llvm::DebugCompressionType::GNU;
+    } else {
+      Opts.CompressDebugSections =
+          llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
+              .Case("none", llvm::DebugCompressionType::None)
+              .Case("zlib", llvm::DebugCompressionType::Z)
+              .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
+              .Default(llvm::DebugCompressionType::None);
+    }
+  }
+
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
   Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);
@@ -212,13 +228,11 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Frontend Options
   if (Args.hasArg(OPT_INPUT)) {
     bool First = true;
-    for (arg_iterator it = Args.filtered_begin(OPT_INPUT),
-                      ie = Args.filtered_end();
-         it != ie; ++it, First = false) {
-      const Arg *A = it;
-      if (First)
+    for (const Arg *A : Args.filtered(OPT_INPUT)) {
+      if (First) {
         Opts.InputFile = A->getValue();
-      else {
+        First = false;
+      } else {
         Diags.Report(diag::err_drv_unknown_argument) << A->getAsString(Args);
         Success = false;
       }
@@ -316,8 +330,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
   // may be created with a combination of default and explicit settings.
-  if (Opts.CompressDebugSections)
-    MAI->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
+  MAI->setCompressDebugSections(Opts.CompressDebugSections);
 
   MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
 
@@ -508,12 +521,12 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // FIXME: Remove this, one day.
   if (!Asm.LLVMArgs.empty()) {
     unsigned NumArgs = Asm.LLVMArgs.size();
-    const char **Args = new const char*[NumArgs + 2];
+    auto Args = llvm::make_unique<const char*[]>(NumArgs + 2);
     Args[0] = "clang (LLVM option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args);
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
   // Execute the invocation, unless there were parsing errors.

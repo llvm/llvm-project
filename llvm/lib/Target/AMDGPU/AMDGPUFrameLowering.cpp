@@ -12,11 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUFrameLowering.h"
-#include "AMDGPURegisterInfo.h"
-#include "AMDGPUSubtarget.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 AMDGPUFrameLowering::AMDGPUFrameLowering(StackDirection D, unsigned StackAl,
@@ -68,35 +63,4 @@ unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
   // T1.Z = stack[1].z
   // T1.W = stack[1].w
   return 1;
-}
-
-/// \returns The number of registers allocated for \p FI.
-int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                                int FI,
-                                                unsigned &FrameReg) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const AMDGPURegisterInfo *RI
-    = MF.getSubtarget<AMDGPUSubtarget>().getRegisterInfo();
-
-  // Fill in FrameReg output argument.
-  FrameReg = RI->getFrameRegister(MF);
-
-  // Start the offset at 2 so we don't overwrite work group information.
-  // XXX: We should only do this when the shader actually uses this
-  // information.
-  unsigned OffsetBytes = 2 * (getStackWidth(MF) * 4);
-  int UpperBound = FI == -1 ? MFI.getNumObjects() : FI;
-
-  for (int i = MFI.getObjectIndexBegin(); i < UpperBound; ++i) {
-    OffsetBytes = alignTo(OffsetBytes, MFI.getObjectAlignment(i));
-    OffsetBytes += MFI.getObjectSize(i);
-    // Each register holds 4 bytes, so we must always align the offset to at
-    // least 4 bytes, so that 2 frame objects won't share the same register.
-    OffsetBytes = alignTo(OffsetBytes, 4);
-  }
-
-  if (FI != -1)
-    OffsetBytes = alignTo(OffsetBytes, MFI.getObjectAlignment(FI));
-
-  return OffsetBytes / (getStackWidth(MF) * 4);
 }

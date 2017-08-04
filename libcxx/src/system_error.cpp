@@ -17,9 +17,9 @@
 #include "cstring"
 #include "cstdio"
 #include "cstdlib"
-#include "cassert"
 #include "string"
 #include "string.h"
+#include "__debug"
 
 #if defined(__ANDROID__)
 #include <android/api-level.h>
@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // class error_category
 
-#if defined(_LIBCPP_DEPRECATED_ABI_EXTERNAL_ERROR_CATEGORY_CONSTRUCTOR)
+#if defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
 error_category::error_category() _NOEXCEPT
 {
 }
@@ -65,7 +65,7 @@ constexpr size_t strerror_buff_size = 1024;
 
 string do_strerror_r(int ev);
 
-#if defined(_LIBCPP_MSVCRT)
+#if defined(_LIBCPP_MSVCRT_LIKE)
 string do_strerror_r(int ev) {
   char buffer[strerror_buff_size];
   if (::strerror_s(buffer, strerror_buff_size, ev) == 0)
@@ -96,7 +96,7 @@ string do_strerror_r(int ev) {
             std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);
             return string(buffer);
         } else {
-            assert(new_errno == ERANGE);
+            _LIBCPP_ASSERT(new_errno == ERANGE, "unexpected error from ::strerr_r");
             // FIXME maybe? 'strerror_buff_size' is likely to exceed the
             // maximum error size so ERANGE shouldn't be returned.
             std::abort();

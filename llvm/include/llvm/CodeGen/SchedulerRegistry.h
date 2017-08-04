@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/SchedulerRegistry.h ------------------------*- C++ -*-===//
+//===- llvm/CodeGen/SchedulerRegistry.h -------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,7 +16,7 @@
 #define LLVM_CODEGEN_SCHEDULERREGISTRY_H
 
 #include "llvm/CodeGen/MachinePassRegistry.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
@@ -26,15 +26,13 @@ namespace llvm {
 ///
 //===----------------------------------------------------------------------===//
 
-class SelectionDAGISel;
 class ScheduleDAGSDNodes;
-class SelectionDAG;
-class MachineBasicBlock;
+class SelectionDAGISel;
 
 class RegisterScheduler : public MachinePassRegistryNode {
 public:
-  typedef ScheduleDAGSDNodes *(*FunctionPassCtor)(SelectionDAGISel*,
-                                                  CodeGenOpt::Level);
+  using FunctionPassCtor = ScheduleDAGSDNodes *(*)(SelectionDAGISel*,
+                                                   CodeGenOpt::Level);
 
   static MachinePassRegistry Registry;
 
@@ -45,13 +43,14 @@ public:
 
 
   // Accessors.
-  //
   RegisterScheduler *getNext() const {
     return (RegisterScheduler *)MachinePassRegistryNode::getNext();
   }
+
   static RegisterScheduler *getList() {
     return (RegisterScheduler *)Registry.getList();
   }
+
   static void setListener(MachinePassRegistryListener *L) {
     Registry.setListener(L);
   }
@@ -103,4 +102,4 @@ ScheduleDAGSDNodes *createDAGLinearizer(SelectionDAGISel *IS,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SCHEDULERREGISTRY_H

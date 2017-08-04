@@ -1,19 +1,20 @@
-; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ;
 ; Verify that only the outer dimension needs privatization
 ;
 ; CHECK:    #pragma known-parallel reduction
 ; CHECK:    for (int c1 = 0; c1 <= 1023; c1 += 1) {
-; CHECK:      if (c1 % 2 == 0) {
-; CHECK-NOT:    #pragma simd reduction
-; CHECK:        #pragma simd
-; CHECK:        for (int c3 = 0; c3 < 2 * n; c3 += 1)
-; CHECK:          Stmt_for_body3(c3, c1);
-; CHECK:      } else
+; CHECK:      if ((c1 + 1) % 2 == 0) {
 ; CHECK-NOT:    #pragma simd reduction
 ; CHECK:        #pragma simd
 ; CHECK:        for (int c3 = -2 * n + 1; c3 <= 0; c3 += 1)
 ; CHECK:          Stmt_for_body3(-c3, c1);
+; CHECK:      } else {
+; CHECK-NOT:    #pragma simd reduction
+; CHECK:        #pragma simd
+; CHECK:        for (int c3 = 0; c3 < 2 * n; c3 += 1)
+; CHECK:          Stmt_for_body3(c3, c1);
+; CHECK:      }
 ; CHECK:    }
 ;
 ;    void rmsmd5(int *A, long n) {

@@ -17,10 +17,10 @@ target triple = "powerpc64le--linux-gnu"
 @.str.11.98 = external hidden unnamed_addr constant [3 x i8], align 1
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
 
 ; Function Attrs: nounwind
 declare i8* @halide_string_to_string(i8*, i8*, i8*) #1
@@ -36,7 +36,7 @@ entry:
   %buf = alloca [512 x i8], align 1
   store double %arg, double* %arg.addr, align 8, !tbaa !4
   %0 = bitcast i64* %bits to i8*
-  call void @llvm.lifetime.start(i64 8, i8* %0) #0
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0) #0
   store i64 0, i64* %bits, align 8, !tbaa !8
   %1 = bitcast double* %arg.addr to i8*
   %call = call i8* @memcpy(i8* %0, i8* %1, i64 8) #2
@@ -245,7 +245,7 @@ if.end.105:                                       ; preds = %if.end.84, %if.end.
   %integer_exponent.0 = phi i32 [ 0, %if.end.84 ], [ %sub70, %if.end.66 ]
   %fractional_part.2 = phi i64 [ %.fractional_part.0, %if.end.84 ], [ 0, %if.end.66 ]
   %7 = bitcast [512 x i8]* %buf to i8*
-  call void @llvm.lifetime.start(i64 512, i8* %7) #0
+  call void @llvm.lifetime.start.p0i8(i64 512, i8* %7) #0
   %add.ptr = getelementptr inbounds [512 x i8], [512 x i8]* %buf, i64 0, i64 512
   %add.ptr106 = getelementptr inbounds [512 x i8], [512 x i8]* %buf, i64 0, i64 480
   %call109 = call i8* @halide_int64_to_string(i8* %add.ptr106, i8* %add.ptr, i64 %integer_part.2, i32 1) #3
@@ -272,7 +272,7 @@ for.cond.cleanup:                                 ; preds = %if.end.138, %if.end
   %call142 = call i8* @halide_string_to_string(i8* %dst.addr.0, i8* %end, i8* %int_part_ptr.0.lcssa) #3
   %call143 = call i8* @halide_string_to_string(i8* %call142, i8* %end, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9.96, i64 0, i64 0)) #3
   %call144 = call i8* @halide_int64_to_string(i8* %call143, i8* %end, i64 %fractional_part.2, i32 6) #3
-  call void @llvm.lifetime.end(i64 512, i8* %9) #0
+  call void @llvm.lifetime.end.p0i8(i64 512, i8* %9) #0
   br label %cleanup.148
 
 for.cond.cleanup.115:                             ; preds = %for.body.116
@@ -315,7 +315,7 @@ if.end.138:                                       ; preds = %if.then.136, %for.c
 cleanup.148:                                      ; preds = %for.cond.cleanup, %if.then.64, %if.end.59, %if.else.30, %if.then.28, %if.else.24, %if.then.22, %if.else.13, %if.then.11, %if.else, %if.then.6
   %retval.1 = phi i8* [ %call7, %if.then.6 ], [ %call8, %if.else ], [ %call12, %if.then.11 ], [ %call14, %if.else.13 ], [ %call23, %if.then.22 ], [ %call25, %if.else.24 ], [ %call29, %if.then.28 ], [ %call31, %if.else.30 ], [ %call65, %if.then.64 ], [ %call61, %if.end.59 ], [ %call144, %for.cond.cleanup ]
   %13 = bitcast i64* %bits to i8*
-  call void @llvm.lifetime.end(i64 8, i8* %13) #0
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* %13) #0
   ret i8* %retval.1
 }
 

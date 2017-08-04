@@ -1,16 +1,10 @@
-; RUN: llc < %s -mtriple=i386-pc-win32       -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=X32 %s
-; RUN: llc < %s -mtriple=x86_64-win32        -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=WIN64 %s
+; RUN: llc < %s -mtriple=i386-pc-win32       -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=ALL --check-prefix=X32 %s
+; RUN: llc < %s -mtriple=x86_64-win32        -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=ALL --check-prefix=WIN64 %s
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu    -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=LINUXOSX64 %s 
 
-; X32-LABEL:  test_argReti1:
-; X32:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; X32:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; X32:        ret{{.*}}
-
-; WIN64-LABEL:  test_argReti1:
-; WIN64:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; WIN64:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; WIN64:        ret{{.*}}
+; ALL-LABEL:  test_argReti1:
+; ALL:        incb %al
+; ALL:        ret{{.*}}
 
 ; Test regcall when receiving/returning i1
 define x86_regcallcc i1 @test_argReti1(i1 %a)  {
@@ -18,17 +12,11 @@ define x86_regcallcc i1 @test_argReti1(i1 %a)  {
   ret i1 %add
 }
 
-; X32-LABEL:  test_CallargReti1:
-; X32:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; X32:        call{{.*}}   {{.*}}test_argReti1
-; X32:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; X32:        ret{{.*}}
-
-; WIN64-LABEL:  test_CallargReti1:
-; WIN64:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; WIN64:        call{{.*}}   {{.*}}test_argReti1
-; WIN64:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; WIN64:        ret{{.*}}
+; ALL-LABEL:  test_CallargReti1:
+; ALL:        movzbl      %al, %eax
+; ALL:        call{{.*}}test_argReti1
+; ALL:        incb        %al
+; ALL:        ret{{.*}}
 
 ; Test regcall when passing/retrieving i1
 define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
@@ -325,13 +313,11 @@ define x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
 }
 
 ; X32-LABEL:  test_argRet128Vector:
-; X32:        vmovdqa{{.*}}  %xmm0, %xmm1
-; X32:        vmovdqa{{.*}}  %xmm1, %xmm0
+; X32:        vpblend{{.*}}  %xmm0, %xmm1, %xmm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_argRet128Vector:
-; WIN64:        vmovdqa{{.*}}  %xmm0, %xmm1
-; WIN64:        vmovdqa{{.*}}  %xmm1, %xmm0
+; WIN64:        vpblend{{.*}}  %xmm0, %xmm1, %xmm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when receiving/returning 128 bit vector
@@ -360,13 +346,11 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 }
 
 ; X32-LABEL:  test_argRet256Vector:
-; X32:        vmovdqa{{.*}}  %ymm0, %ymm1
-; X32:        vmovdqa{{.*}}  %ymm1, %ymm0
+; X32:        vpblend{{.*}}  %ymm0, %ymm1, %ymm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_argRet256Vector:
-; WIN64:        vmovdqa{{.*}}  %ymm0, %ymm1
-; WIN64:        vmovdqa{{.*}}  %ymm1, %ymm0
+; WIN64:        vpblend{{.*}}  %ymm0, %ymm1, %ymm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when receiving/returning 256 bit vector
@@ -395,13 +379,11 @@ define x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i32> %a)  {
 }
 
 ; X32-LABEL:  test_argRet512Vector:
-; X32:        vmovdqa{{.*}}  %zmm0, %zmm1
-; X32:        vmovdqa{{.*}}  %zmm1, %zmm0
+; X32:        vpblend{{.*}}  %zmm0, %zmm1, %zmm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_argRet512Vector:
-; WIN64:        vmovdqa{{.*}}  %zmm0, %zmm1
-; WIN64:        vmovdqa{{.*}}  %zmm1, %zmm0
+; WIN64:        vpblend{{.*}}  %zmm0, %zmm1, %zmm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when receiving/returning 512 bit vector
@@ -475,30 +457,25 @@ define x86_regcallcc <32 x float> @testf32_inp(<32 x float> %a, <32 x float> %b,
   ret <32 x float> %x4
 }
 
-; X32-LABEL: pushl {{%e(si|di|bx|bp)}}
-; X32: pushl {{%e(si|di|bx|bp)}}
-; X32: pushl {{%e(si|di|bx|bp)}}
-; X32: pushl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
+; X32-LABEL: testi32_inp
+; X32: pushl {{%e(bx|bp)}}
+; X32: pushl {{%e(bx|bp)}}
+; X32: popl {{%e(bx|bp)}}
+; X32: popl {{%e(bx|bp)}}
 ; X32: retl
 
-; WIN64-LABEL: pushq	{{%r(bp|bx|1[0-5])}}
+; WIN64-LABEL: testi32_inp
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
-; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: retq
 
-; LINUXOSX64-LABEL: pushq	{{%r(bp|bx|1[2-5])}}
+; LINUXOSX64-LABEL: testi32_inp
 ; LINUXOSX64: pushq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: pushq	{{%r(bp|bx|1[2-5])}}
-; LINUXOSX64: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: retq

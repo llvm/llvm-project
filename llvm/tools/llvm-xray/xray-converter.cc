@@ -12,13 +12,14 @@
 //===----------------------------------------------------------------------===//
 #include "xray-converter.h"
 
-#include "xray-extract.h"
 #include "xray-registry.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
 #include "llvm/XRay/YAMLXRayRecord.h"
 
@@ -72,18 +73,7 @@ static cl::opt<bool> ConvertSortInput(
 static cl::alias ConvertSortInput2("s", cl::aliasopt(ConvertSortInput),
                                    cl::desc("Alias for -sort"),
                                    cl::sub(Convert));
-static cl::opt<InstrumentationMapExtractor::InputFormats> InstrMapFormat(
-    "instr-map-format", cl::desc("format of instrumentation map"),
-    cl::values(clEnumValN(InstrumentationMapExtractor::InputFormats::ELF, "elf",
-                          "instrumentation map in an ELF header"),
-               clEnumValN(InstrumentationMapExtractor::InputFormats::YAML,
-                          "yaml", "instrumentation map in YAML")),
-    cl::sub(Convert), cl::init(InstrumentationMapExtractor::InputFormats::ELF));
-static cl::alias InstrMapFormat2("t", cl::aliasopt(InstrMapFormat),
-                                 cl::desc("Alias for -instr-map-format"),
-                                 cl::sub(Convert));
 
-using llvm::yaml::IO;
 using llvm::yaml::Output;
 
 void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
@@ -95,7 +85,7 @@ void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
   for (const auto &R : Records) {
     Trace.Records.push_back({R.RecordType, R.CPU, R.Type, R.FuncId,
                              Symbolize ? FuncIdHelper.SymbolOrNumber(R.FuncId)
-                                       : std::to_string(R.FuncId),
+                                       : llvm::to_string(R.FuncId),
                              R.TSC, R.TId});
   }
   Output Out(OS, nullptr, 0);
@@ -128,7 +118,9 @@ void TraceConverter::exportAsRAWv1(const Trace &Records, raw_ostream &OS) {
   // format.
   for (const auto &R : Records) {
     Writer.write(R.RecordType);
-    Writer.write(R.CPU);
+    // The on disk naive raw format uses 8 bit CPUs, but the record has 16.
+    // There's no choice but truncation.
+    Writer.write(static_cast<uint8_t>(R.CPU));
     switch (R.Type) {
     case RecordTypes::ENTER:
       Writer.write(uint8_t{0});
@@ -151,25 +143,26 @@ namespace xray {
 
 static CommandRegistration Unused(&Convert, []() -> Error {
   // FIXME: Support conversion to BINARY when upgrading XRay trace versions.
-  int Fd;
-  auto EC = sys::fs::openFileForRead(ConvertInput, Fd);
-  if (EC)
-    return make_error<StringError>(
-        Twine("Cannot open file '") + ConvertInput + "'", EC);
+  InstrumentationMap Map;
+  if (!ConvertInstrMap.empty()) {
+    auto InstrumentationMapOrError = loadInstrumentationMap(ConvertInstrMap);
+    if (!InstrumentationMapOrError)
+      return joinErrors(make_error<StringError>(
+                            Twine("Cannot open instrumentation map '") +
+                                ConvertInstrMap + "'",
+                            std::make_error_code(std::errc::invalid_argument)),
+                        InstrumentationMapOrError.takeError());
+    Map = std::move(*InstrumentationMapOrError);
+  }
 
-  Error Err = Error::success();
-  xray::InstrumentationMapExtractor Extractor(ConvertInstrMap, InstrMapFormat,
-                                              Err);
-  handleAllErrors(std::move(Err),
-                  [&](const ErrorInfoBase &E) { E.log(errs()); });
-
-  const auto &FunctionAddresses = Extractor.getFunctionAddresses();
+  const auto &FunctionAddresses = Map.getFunctionAddresses();
   symbolize::LLVMSymbolizer::Options Opts(
       symbolize::FunctionNameKind::LinkageName, true, true, false, "");
   symbolize::LLVMSymbolizer Symbolizer(Opts);
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,
                                                   FunctionAddresses);
   llvm::xray::TraceConverter TC(FuncIdHelper, ConvertSymbolize);
+  std::error_code EC;
   raw_fd_ostream OS(ConvertOutput, EC,
                     ConvertOutputFormat == ConvertFormats::BINARY
                         ? sys::fs::OpenFlags::F_None
@@ -178,22 +171,22 @@ static CommandRegistration Unused(&Convert, []() -> Error {
     return make_error<StringError>(
         Twine("Cannot open file '") + ConvertOutput + "' for writing.", EC);
 
-  if (auto TraceOrErr = loadTraceFile(ConvertInput, ConvertSortInput)) {
-    auto &T = *TraceOrErr;
-    switch (ConvertOutputFormat) {
-    case ConvertFormats::YAML:
-      TC.exportAsYAML(T, OS);
-      break;
-    case ConvertFormats::BINARY:
-      TC.exportAsRAWv1(T, OS);
-      break;
-    }
-  } else {
+  auto TraceOrErr = loadTraceFile(ConvertInput, ConvertSortInput);
+  if (!TraceOrErr)
     return joinErrors(
         make_error<StringError>(
             Twine("Failed loading input file '") + ConvertInput + "'.",
             std::make_error_code(std::errc::executable_format_error)),
         TraceOrErr.takeError());
+
+  auto &T = *TraceOrErr;
+  switch (ConvertOutputFormat) {
+  case ConvertFormats::YAML:
+    TC.exportAsYAML(T, OS);
+    break;
+  case ConvertFormats::BINARY:
+    TC.exportAsRAWv1(T, OS);
+    break;
   }
   return Error::success();
 });

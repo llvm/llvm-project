@@ -39,6 +39,7 @@ namespace clang {
   class Expr;
   class IdentifierInfo;
   class LabelDecl;
+  class ODRHash;
   class ParmVarDecl;
   class PrinterHelper;
   struct PrintingPolicy;
@@ -126,13 +127,13 @@ protected:
     unsigned : NumStmtBits;
 
     unsigned ValueKind : 2;
-    unsigned ObjectKind : 2;
+    unsigned ObjectKind : 3;
     unsigned TypeDependent : 1;
     unsigned ValueDependent : 1;
     unsigned InstantiationDependent : 1;
     unsigned ContainsUnexpandedParameterPack : 1;
   };
-  enum { NumExprBits = 16 };
+  enum { NumExprBits = 17 };
 
   class CharacterLiteralBitfields {
     friend class CharacterLiteral;
@@ -252,6 +253,14 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class CoawaitExprBitfields {
+    friend class CoawaitExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned IsImplicit : 1;
+  };
+
   union {
     StmtBitfields StmtBits;
     CompoundStmtBitfields CompoundStmtBits;
@@ -268,6 +277,7 @@ protected:
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
     InitListExprBitfields InitListExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    CoawaitExprBitfields CoawaitBits;
   };
 
   friend class ASTStmtReader;
@@ -340,6 +350,8 @@ protected:
 
 public:
   Stmt(StmtClass SC) {
+    static_assert(sizeof(*this) == sizeof(void *),
+                  "changing bitfields changed sizeof(Stmt)");
     static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
     StmtBits.sClass = SC;
@@ -436,6 +448,15 @@ public:
   /// written in the source.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                bool Canonical) const;
+
+  /// \brief Calculate a unique representation for a statement that is
+  /// stable across compiler invocations.
+  ///
+  /// \param ID profile information will be stored in ID.
+  ///
+  /// \param Hash an ODRHash object which will be called where pointers would
+  /// have been used in the Profile function.
+  void ProcessODRHash(llvm::FoldingSetNodeID &ID, ODRHash& Hash) const;
 };
 
 /// DeclStmt - Adaptor class for mixing declarations with statements and

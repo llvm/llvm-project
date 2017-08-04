@@ -3,7 +3,7 @@ Debug Mode
 ==========
 
 .. contents::
-   :local
+   :local:
 
 .. _using-debug-mode:
 

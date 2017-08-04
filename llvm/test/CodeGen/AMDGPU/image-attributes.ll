@@ -7,7 +7,7 @@
 ; FUNC-LABEL: {{^}}width_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[2].Z
-define void @width_2d (%opencl.image2d_t addrspace(1)* %in,
+define amdgpu_kernel void @width_2d (%opencl.image2d_t addrspace(1)* %in,
                        i32 addrspace(1)* %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.2d(
@@ -20,7 +20,7 @@ entry:
 ; FUNC-LABEL: {{^}}width_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[2].Z
-define void @width_3d (%opencl.image3d_t addrspace(1)* %in,
+define amdgpu_kernel void @width_3d (%opencl.image3d_t addrspace(1)* %in,
                        i32 addrspace(1)* %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.3d(
@@ -37,7 +37,7 @@ entry:
 ; FUNC-LABEL: {{^}}height_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[2].W
-define void @height_2d (%opencl.image2d_t addrspace(1)* %in,
+define amdgpu_kernel void @height_2d (%opencl.image2d_t addrspace(1)* %in,
                         i32 addrspace(1)* %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.2d(
@@ -50,7 +50,7 @@ entry:
 ; FUNC-LABEL: {{^}}height_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[2].W
-define void @height_3d (%opencl.image3d_t addrspace(1)* %in,
+define amdgpu_kernel void @height_3d (%opencl.image3d_t addrspace(1)* %in,
                         i32 addrspace(1)* %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.3d(
@@ -67,7 +67,7 @@ entry:
 ; FUNC-LABEL: {{^}}depth_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[3].X
-define void @depth_3d (%opencl.image3d_t addrspace(1)* %in,
+define amdgpu_kernel void @depth_3d (%opencl.image3d_t addrspace(1)* %in,
                        i32 addrspace(1)* %out) {
 entry:
   %0 = call [3 x i32] @llvm.OpenCL.image.get.size.3d(
@@ -84,7 +84,7 @@ entry:
 ; FUNC-LABEL: {{^}}data_type_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[3].Y
-define void @data_type_2d (%opencl.image2d_t addrspace(1)* %in,
+define amdgpu_kernel void @data_type_2d (%opencl.image2d_t addrspace(1)* %in,
                            i32 addrspace(1)* %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.2d(
@@ -97,7 +97,7 @@ entry:
 ; FUNC-LABEL: {{^}}data_type_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[3].Y
-define void @data_type_3d (%opencl.image3d_t addrspace(1)* %in,
+define amdgpu_kernel void @data_type_3d (%opencl.image3d_t addrspace(1)* %in,
                                      i32 addrspace(1)* %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.3d(
@@ -114,7 +114,7 @@ entry:
 ; FUNC-LABEL: {{^}}channel_order_2d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[3].Z
-define void @channel_order_2d (%opencl.image2d_t addrspace(1)* %in,
+define amdgpu_kernel void @channel_order_2d (%opencl.image2d_t addrspace(1)* %in,
                                i32 addrspace(1)* %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.2d(
@@ -127,7 +127,7 @@ entry:
 ; FUNC-LABEL: {{^}}channel_order_3d:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[3].Z
-define void @channel_order_3d (%opencl.image3d_t addrspace(1)* %in,
+define amdgpu_kernel void @channel_order_3d (%opencl.image3d_t addrspace(1)* %in,
                                          i32 addrspace(1)* %out) {
 entry:
   %0 = call [2 x i32] @llvm.OpenCL.image.get.format.3d(
@@ -146,7 +146,7 @@ entry:
 ; FUNC-LABEL: {{^}}image_arg_2nd:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[4].Z
-define void @image_arg_2nd (%opencl.image3d_t addrspace(1)* %in1,
+define amdgpu_kernel void @image_arg_2nd (%opencl.image3d_t addrspace(1)* %in1,
                             i32 %x,
                             %opencl.image2d_t addrspace(1)* %in2,
                             i32 addrspace(1)* %out) {

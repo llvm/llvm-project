@@ -14,6 +14,7 @@
 ; ELF: Flags [ (0x6)
 ; ELF: SHF_ALLOC (0x2)
 ; ELF: SHF_EXECINSTR (0x4)
+; ELF: AddressAlignment: 4
 ; ELF: }
 
 ; ELF: SHT_NOTE
@@ -26,7 +27,7 @@
 
 ; ELF: Symbol {
 ; ELF: Name: simple
-; ELF: Size: 288
+; ELF: Size: 48
 ; ELF: Type: Function (0x2)
 ; ELF: }
 
@@ -36,25 +37,36 @@
 ; HSA-VI: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
+; HSA: .globl simple
+; HSA: .p2align 2
 ; HSA: {{^}}simple:
-; HSA: .amd_kernel_code_t
-; HSA: enable_sgpr_private_segment_buffer = 1
-; HSA: enable_sgpr_kernarg_segment_ptr = 1
-; HSA: .end_amd_kernel_code_t
-; HSA: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x0
+; HSA-NOT: amd_kernel_code_t
+; HSA-NOT: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x0
 
 ; Make sure we are setting the ATC bit:
-; HSA-CI: s_mov_b32 s[[HI:[0-9]]], 0x100f000
+; HSA-CI: s_mov_b32 s[[HI:[0-9]+]], 0x100f000
 ; On VI+ we also need to set MTYPE = 2
-; HSA-VI: s_mov_b32 s[[HI:[0-9]]], 0x1100f000
+; HSA-VI: s_mov_b32 s[[HI:[0-9]+]], 0x1100f000
 ; Make sure we generate flat store for HSA
 ; HSA: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple
-
-define void @simple(i32 addrspace(1)* %out) {
+; HSA: ; Function info:
+; HSA-NOT: COMPUTE_PGM_RSRC2
+define void @simple(i32 addrspace(1)* addrspace(2)* %ptr.out) {
 entry:
+  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %ptr.out
+  store i32 0, i32 addrspace(1)* %out
+  ret void
+}
+
+; Ignore explicit alignment that is too low.
+; HSA: .globl simple_align2
+; HSA: .p2align 2
+define void @simple_align2(i32 addrspace(1)* addrspace(2)* %ptr.out) align 2 {
+entry:
+  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %ptr.out
   store i32 0, i32 addrspace(1)* %out
   ret void
 }

@@ -4,7 +4,7 @@
 // RUN: not llvm-mc -triple=thumbv8m.main -show-encoding < %s 2>%t \
 // RUN:   | FileCheck --check-prefix=CHECK-MAINLINE --check-prefix=CHECK %s
 // RUN:     FileCheck --check-prefix=UNDEF-MAINLINE --check-prefix=UNDEF < %t %s
-// RUN: not llvm-mc -triple=thumbv8m.main -mattr=+dsp,+t2xtpk -show-encoding < %s 2>%t \
+// RUN: not llvm-mc -triple=thumbv8m.main -mattr=+dsp -show-encoding < %s 2>%t \
 // RUN:   | FileCheck --check-prefix=CHECK-MAINLINE_DSP --check-prefix=CHECK %s
 // RUN:     FileCheck --check-prefix=UNDEF-MAINLINE_DSP --check-prefix=UNDEF < %t %s
 
@@ -18,7 +18,7 @@ mov.w r0, r0
 // UNDEF: target does not support ARM mode
 .arm
 
-// And only +dsp,+t2xtpk has DSP and t2xtpk instructions
+// And only +dsp has DSP and instructions
 // UNDEF-BASELINE: error: instruction requires: arm-mode
 // UNDEF-MAINLINE: error: instruction requires: arm-mode
 // UNDEF-MAINLINE_DSP-NOT: error: instruction requires:

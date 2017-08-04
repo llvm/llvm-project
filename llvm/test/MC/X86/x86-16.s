@@ -959,3 +959,13 @@ lretw
 // CHECK: lretl
 // CHECK: encoding: [0x66,0xcb]
 lretl
+
+// CHECK: data32
+// CHECK: encoding: [0x66]
+data32
+
+// CHECK: data32
+// CHECK: encoding: [0x66]
+// CHECK: lgdtw 4(%eax)
+// CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
+data32 lgdt 4(%eax)

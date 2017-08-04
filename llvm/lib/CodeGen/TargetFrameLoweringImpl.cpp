@@ -1,4 +1,4 @@
-//===----- TargetFrameLoweringImpl.cpp - Implement target frame interface --==//
+//===- TargetFrameLoweringImpl.cpp - Implement target frame interface ------==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,19 +14,21 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <cstdlib>
+
 using namespace llvm;
 
-TargetFrameLowering::~TargetFrameLowering() {
-}
+TargetFrameLowering::~TargetFrameLowering() = default;
 
 /// The default implementation just looks at attribute "no-frame-pointer-elim".
 bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
@@ -73,7 +75,7 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
     return;
 
   // Get the callee saved register list...
-  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)

@@ -432,53 +432,6 @@ ResultBuilder::ShadowMapEntry::end() const {
   return iterator(DeclOrVector.get<DeclIndexPairVector *>()->end());
 }
 
-/// \brief Compute the qualification required to get from the current context
-/// (\p CurContext) to the target context (\p TargetContext).
-///
-/// \param Context the AST context in which the qualification will be used.
-///
-/// \param CurContext the context where an entity is being named, which is
-/// typically based on the current scope.
-///
-/// \param TargetContext the context in which the named entity actually 
-/// resides.
-///
-/// \returns a nested name specifier that refers into the target context, or
-/// NULL if no qualification is needed.
-static NestedNameSpecifier *
-getRequiredQualification(ASTContext &Context,
-                         const DeclContext *CurContext,
-                         const DeclContext *TargetContext) {
-  SmallVector<const DeclContext *, 4> TargetParents;
-  
-  for (const DeclContext *CommonAncestor = TargetContext;
-       CommonAncestor && !CommonAncestor->Encloses(CurContext);
-       CommonAncestor = CommonAncestor->getLookupParent()) {
-    if (CommonAncestor->isTransparentContext() ||
-        CommonAncestor->isFunctionOrMethod())
-      continue;
-    
-    TargetParents.push_back(CommonAncestor);
-  }
-
-  NestedNameSpecifier *Result = nullptr;
-  while (!TargetParents.empty()) {
-    const DeclContext *Parent = TargetParents.pop_back_val();
-
-    if (const NamespaceDecl *Namespace = dyn_cast<NamespaceDecl>(Parent)) {
-      if (!Namespace->getIdentifier())
-        continue;
-
-      Result = NestedNameSpecifier::Create(Context, Result, Namespace);
-    }
-    else if (const TagDecl *TD = dyn_cast<TagDecl>(Parent))
-      Result = NestedNameSpecifier::Create(Context, Result,
-                                           false,
-                                     Context.getTypeDeclType(TD).getTypePtr());
-  }  
-  return Result;
-}
-
 /// Determine whether \p Id is a name reserved for the implementation (C99
 /// 7.1.3, C++ [lib.global.names]).
 static bool isReservedName(const IdentifierInfo *Id,
@@ -590,9 +543,8 @@ bool ResultBuilder::CheckHiddenResult(Result &R, DeclContext *CurContext,
   R.QualifierIsInformative = false;
   
   if (!R.Qualifier)
-    R.Qualifier = getRequiredQualification(SemaRef.Context, 
-                                           CurContext, 
-                                           R.Declaration->getDeclContext());
+    R.Qualifier = NestedNameSpecifier::getRequiredQualification(
+        SemaRef.Context, CurContext, R.Declaration->getDeclContext());
   return false;
 }
 
@@ -1860,12 +1812,14 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
 
     AddStaticAssertResult(Builder, Results, SemaRef.getLangOpts());
   }
+  LLVM_FALLTHROUGH;
 
   // Fall through (for statement expressions).
   case Sema::PCC_ForInit:
   case Sema::PCC_Condition:
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);
     // Fall through: conditions and statements can have expressions.
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_ParenthesizedExpression:
     if (SemaRef.getLangOpts().ObjCAutoRefCount &&
@@ -1895,6 +1849,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       Results.AddResult(Result(Builder.TakeString()));      
     }
     // Fall through
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_Expression: {
     if (SemaRef.getLangOpts().CPlusPlus) {
@@ -2395,6 +2350,37 @@ formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
   return Result;
 }
 
+static std::string GetDefaultValueString(const ParmVarDecl *Param,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  const Expr *defaultArg = Param->getDefaultArg();
+  if (!defaultArg)
+    return "";
+  const SourceRange SrcRange = defaultArg->getSourceRange();
+  CharSourceRange CharSrcRange = CharSourceRange::getTokenRange(SrcRange);
+  bool Invalid = CharSrcRange.isInvalid();
+  if (Invalid)
+    return "";
+  StringRef srcText = Lexer::getSourceText(CharSrcRange, SM, LangOpts, &Invalid);
+  if (Invalid)
+    return "";
+
+  if (srcText.empty() || srcText == "=") {
+    // Lexer can't determine the value.
+    // This happens if the code is incorrect (for example class is forward declared).
+    return "";
+  }
+  std::string DefValue(srcText.str());
+  // FIXME: remove this check if the Lexer::getSourceText value is fixed and
+  // this value always has (or always does not have) '=' in front of it
+  if (DefValue.at(0) != '=') {
+    // If we don't have '=' in front of value.
+    // Lexer returns built-in types values without '=' and user-defined types values with it.
+    return " = " + DefValue;
+  }
+  return " " + DefValue;
+}
+
 /// \brief Add function parameter chunks to the given code completion string.
 static void AddFunctionParameterChunks(Preprocessor &PP,
                                        const PrintingPolicy &Policy,
@@ -2428,6 +2414,8 @@ static void AddFunctionParameterChunks(Preprocessor &PP,
     
     // Format the placeholder string.
     std::string PlaceholderStr = FormatFunctionParameter(Policy, Param);
+    if (Param->hasDefaultArg())
+      PlaceholderStr += GetDefaultValueString(Param, PP.getSourceManager(), PP.getLangOpts());
 
     if (Function->isVariadic() && P == N - 1)
       PlaceholderStr += ", ...";
@@ -2629,6 +2617,7 @@ static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
                       Result.getAllocator().CopyString(ND->getNameAsString()));
     break;
       
+  case DeclarationName::CXXDeductionGuideName:
   case DeclarationName::CXXUsingDirective:
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:
@@ -2734,7 +2723,7 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
     
     // Format a function-like macro with placeholders for the arguments.
     Result.AddChunk(CodeCompletionString::CK_LeftParen);
-    MacroInfo::arg_iterator A = MI->arg_begin(), AEnd = MI->arg_end();
+    MacroInfo::param_iterator A = MI->param_begin(), AEnd = MI->param_end();
     
     // C99 variadic macros add __VA_ARGS__ at the end. Skip it.
     if (MI->isC99Varargs()) {
@@ -2745,8 +2734,8 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
       }
     }
     
-    for (MacroInfo::arg_iterator A = MI->arg_begin(); A != AEnd; ++A) {
-      if (A != MI->arg_begin())
+    for (MacroInfo::param_iterator A = MI->param_begin(); A != AEnd; ++A) {
+      if (A != MI->param_begin())
         Result.AddChunk(CodeCompletionString::CK_Comma);
 
       if (MI->isVariadic() && (A+1) == AEnd) {
@@ -3008,10 +2997,14 @@ static void AddOverloadParameterChunks(ASTContext &Context,
 
     // Format the placeholder string.
     std::string Placeholder;
-    if (Function)
-      Placeholder = FormatFunctionParameter(Policy, Function->getParamDecl(P));
-    else
+    if (Function) {
+      const ParmVarDecl *Param = Function->getParamDecl(P);
+      Placeholder = FormatFunctionParameter(Policy, Param);
+      if (Param->hasDefaultArg())
+        Placeholder += GetDefaultValueString(Param, Context.getSourceManager(), Context.getLangOpts());
+    } else {
       Placeholder = Prototype->getParamType(P).getAsString(Policy);
+    }
 
     if (P == CurrentArg)
       Result.AddCurrentParameterChunk(
@@ -3328,9 +3321,8 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
         
     // If we need a nested-name-specifier, add one now.
     if (!InContext) {
-      NestedNameSpecifier *NNS
-        = getRequiredQualification(S.Context, CurContext,
-                                   Overridden->getDeclContext());
+      NestedNameSpecifier *NNS = NestedNameSpecifier::getRequiredQualification(
+          S.Context, CurContext, Overridden->getDeclContext());
       if (NNS) {
         std::string Str;
         llvm::raw_string_ostream OS(Str);
@@ -4192,7 +4184,8 @@ void Sema::CodeCompleteCase(Scope *S) {
     // If there are no prior enumerators in C++, check whether we have to 
     // qualify the names of the enumerators that we suggest, because they
     // may not be visible in this scope.
-    Qualifier = getRequiredQualification(Context, CurContext, Enum);
+    Qualifier = NestedNameSpecifier::getRequiredQualification(Context,
+                                                              CurContext, Enum);
   }
   
   // Add any enumerators that have not yet been mentioned.
@@ -4538,8 +4531,10 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
                                    bool EnteringContext) {
   if (!SS.getScopeRep() || !CodeCompleter)
     return;
-  
-  DeclContext *Ctx = computeDeclContext(SS, EnteringContext);
+
+  // Always pretend to enter a context to ensure that a dependent type
+  // resolves to a dependent record.
+  DeclContext *Ctx = computeDeclContext(SS, /*EnteringContext=*/true);
   if (!Ctx)
     return;
 
@@ -4569,7 +4564,9 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   Results.ExitScope();  
   
   CodeCompletionDeclConsumer Consumer(Results, CurContext);
-  LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer);
+  LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer,
+                     /*IncludeGlobalScope=*/true,
+                     /*IncludeDependentBases=*/true);
 
   HandleCodeCompleteResults(this, CodeCompleter, 
                             Results.getCompletionContext(),

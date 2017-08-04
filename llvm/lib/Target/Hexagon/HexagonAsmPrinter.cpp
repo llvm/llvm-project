@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonAsmPrinter.h"
+#include "Hexagon.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
@@ -23,6 +23,7 @@
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -43,7 +44,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -261,10 +261,34 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
   return Sym;
 }
 
+static MCInst ScaleVectorOffset(MCInst &Inst, unsigned OpNo,
+                                unsigned VectorSize, MCContext &Ctx) {
+  MCInst T;
+  T.setOpcode(Inst.getOpcode());
+  for (unsigned i = 0, n = Inst.getNumOperands(); i != n; ++i) {
+    if (i != OpNo) {
+      T.addOperand(Inst.getOperand(i));
+      continue;
+    }
+    MCOperand &ImmOp = Inst.getOperand(i);
+    const auto *HE = static_cast<const HexagonMCExpr*>(ImmOp.getExpr());
+    int32_t V = cast<MCConstantExpr>(HE->getExpr())->getValue();
+    auto *NewCE = MCConstantExpr::create(V / int32_t(VectorSize), Ctx);
+    auto *NewHE = HexagonMCExpr::create(NewCE, Ctx);
+    T.addOperand(MCOperand::createExpr(NewHE));
+  }
+  return T;
+}
+
 void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
                                                   const MachineInstr &MI) {
   MCInst &MappedInst = static_cast <MCInst &>(Inst);
   const MCRegisterInfo *RI = OutStreamer->getContext().getRegisterInfo();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const auto &VecRC = HST.useHVXSglOps() ? Hexagon::VectorRegsRegClass
+                                         : Hexagon::VectorRegs128BRegClass;
+  unsigned VectorSize = HST.getRegisterInfo()->getSpillSize(VecRC);
 
   switch (Inst.getOpcode()) {
   default: return;
@@ -274,11 +298,41 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MCOperand Reg = Inst.getOperand(0);
     MCOperand S16 = Inst.getOperand(1);
     HexagonMCInstrInfo::setMustNotExtend(*S16.getExpr());
-    HexagonMCInstrInfo::setS23_2_reloc(*S16.getExpr());
+    HexagonMCInstrInfo::setS27_2_reloc(*S16.getExpr());
     Inst.clear();
     Inst.addOperand(Reg);
     Inst.addOperand(MCOperand::createReg(Hexagon::R0));
     Inst.addOperand(S16);
+    break;
+  }
+
+  case Hexagon::A2_tfrf: {
+    Inst.setOpcode(Hexagon::A2_paddif);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_tfrt: {
+    Inst.setOpcode(Hexagon::A2_paddit);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_tfrfnew: {
+    Inst.setOpcode(Hexagon::A2_paddifnew);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_tfrtnew: {
+    Inst.setOpcode(Hexagon::A2_padditnew);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_zxtb: {
+    Inst.setOpcode(Hexagon::A2_andir);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(255, OutContext)));
     break;
   }
 
@@ -376,6 +430,9 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Rs.setReg(getHexagonRegisterPair(Rs.getReg(), RI));
     return;
   }
+  case Hexagon::PS_call_nr:
+    Inst.setOpcode(Hexagon::J2_call);
+    break;
   case Hexagon::S5_asrhub_rnd_sat_goodsyntax: {
     MCOperand &MO = MappedInst.getOperand(2);
     int64_t Imm;
@@ -564,6 +621,181 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     return;
   }
 
+  case Hexagon::V6_vL32Ub_pi:
+  case Hexagon::V6_vL32b_cur_pi:
+  case Hexagon::V6_vL32b_nt_cur_pi:
+  case Hexagon::V6_vL32b_pi:
+  case Hexagon::V6_vL32b_nt_pi:
+  case Hexagon::V6_vL32b_nt_tmp_pi:
+  case Hexagon::V6_vL32b_tmp_pi:
+  case Hexagon::V6_vL32Ub_pi_128B:
+  case Hexagon::V6_vL32b_cur_pi_128B:
+  case Hexagon::V6_vL32b_nt_cur_pi_128B:
+  case Hexagon::V6_vL32b_pi_128B:
+  case Hexagon::V6_vL32b_nt_pi_128B:
+  case Hexagon::V6_vL32b_nt_tmp_pi_128B:
+  case Hexagon::V6_vL32b_tmp_pi_128B:
+    MappedInst = ScaleVectorOffset(Inst, 3, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vL32Ub_ai:
+  case Hexagon::V6_vL32b_ai:
+  case Hexagon::V6_vL32b_cur_ai:
+  case Hexagon::V6_vL32b_nt_ai:
+  case Hexagon::V6_vL32b_nt_cur_ai:
+  case Hexagon::V6_vL32b_nt_tmp_ai:
+  case Hexagon::V6_vL32b_tmp_ai:
+  case Hexagon::V6_vL32Ub_ai_128B:
+  case Hexagon::V6_vL32b_ai_128B:
+  case Hexagon::V6_vL32b_cur_ai_128B:
+  case Hexagon::V6_vL32b_nt_ai_128B:
+  case Hexagon::V6_vL32b_nt_cur_ai_128B:
+  case Hexagon::V6_vL32b_nt_tmp_ai_128B:
+  case Hexagon::V6_vL32b_tmp_ai_128B:
+    MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vS32Ub_pi:
+  case Hexagon::V6_vS32b_new_pi:
+  case Hexagon::V6_vS32b_nt_new_pi:
+  case Hexagon::V6_vS32b_nt_pi:
+  case Hexagon::V6_vS32b_pi:
+  case Hexagon::V6_vS32Ub_pi_128B:
+  case Hexagon::V6_vS32b_new_pi_128B:
+  case Hexagon::V6_vS32b_nt_new_pi_128B:
+  case Hexagon::V6_vS32b_nt_pi_128B:
+  case Hexagon::V6_vS32b_pi_128B:
+    MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vS32Ub_ai:
+  case Hexagon::V6_vS32b_ai:
+  case Hexagon::V6_vS32b_new_ai:
+  case Hexagon::V6_vS32b_nt_ai:
+  case Hexagon::V6_vS32b_nt_new_ai:
+  case Hexagon::V6_vS32Ub_ai_128B:
+  case Hexagon::V6_vS32b_ai_128B:
+  case Hexagon::V6_vS32b_new_ai_128B:
+  case Hexagon::V6_vS32b_nt_ai_128B:
+  case Hexagon::V6_vS32b_nt_new_ai_128B:
+    MappedInst = ScaleVectorOffset(Inst, 1, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vL32b_cur_npred_pi:
+  case Hexagon::V6_vL32b_cur_pred_pi:
+  case Hexagon::V6_vL32b_npred_pi:
+  case Hexagon::V6_vL32b_nt_cur_npred_pi:
+  case Hexagon::V6_vL32b_nt_cur_pred_pi:
+  case Hexagon::V6_vL32b_nt_npred_pi:
+  case Hexagon::V6_vL32b_nt_pred_pi:
+  case Hexagon::V6_vL32b_nt_tmp_npred_pi:
+  case Hexagon::V6_vL32b_nt_tmp_pred_pi:
+  case Hexagon::V6_vL32b_pred_pi:
+  case Hexagon::V6_vL32b_tmp_npred_pi:
+  case Hexagon::V6_vL32b_tmp_pred_pi:
+  case Hexagon::V6_vL32b_cur_npred_pi_128B:
+  case Hexagon::V6_vL32b_cur_pred_pi_128B:
+  case Hexagon::V6_vL32b_npred_pi_128B:
+  case Hexagon::V6_vL32b_nt_cur_npred_pi_128B:
+  case Hexagon::V6_vL32b_nt_cur_pred_pi_128B:
+  case Hexagon::V6_vL32b_nt_npred_pi_128B:
+  case Hexagon::V6_vL32b_nt_pred_pi_128B:
+  case Hexagon::V6_vL32b_nt_tmp_npred_pi_128B:
+  case Hexagon::V6_vL32b_nt_tmp_pred_pi_128B:
+  case Hexagon::V6_vL32b_pred_pi_128B:
+  case Hexagon::V6_vL32b_tmp_npred_pi_128B:
+  case Hexagon::V6_vL32b_tmp_pred_pi_128B:
+    MappedInst = ScaleVectorOffset(Inst, 4, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vL32b_cur_npred_ai:
+  case Hexagon::V6_vL32b_cur_pred_ai:
+  case Hexagon::V6_vL32b_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_pred_ai:
+  case Hexagon::V6_vL32b_nt_npred_ai:
+  case Hexagon::V6_vL32b_nt_pred_ai:
+  case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vL32b_nt_tmp_pred_ai:
+  case Hexagon::V6_vL32b_pred_ai:
+  case Hexagon::V6_vL32b_tmp_npred_ai:
+  case Hexagon::V6_vL32b_tmp_pred_ai:
+  case Hexagon::V6_vL32b_cur_npred_ai_128B:
+  case Hexagon::V6_vL32b_cur_pred_ai_128B:
+  case Hexagon::V6_vL32b_npred_ai_128B:
+  case Hexagon::V6_vL32b_nt_cur_npred_ai_128B:
+  case Hexagon::V6_vL32b_nt_cur_pred_ai_128B:
+  case Hexagon::V6_vL32b_nt_npred_ai_128B:
+  case Hexagon::V6_vL32b_nt_pred_ai_128B:
+  case Hexagon::V6_vL32b_nt_tmp_npred_ai_128B:
+  case Hexagon::V6_vL32b_nt_tmp_pred_ai_128B:
+  case Hexagon::V6_vL32b_pred_ai_128B:
+  case Hexagon::V6_vL32b_tmp_npred_ai_128B:
+  case Hexagon::V6_vL32b_tmp_pred_ai_128B:
+    MappedInst = ScaleVectorOffset(Inst, 3, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vS32Ub_npred_pi:
+  case Hexagon::V6_vS32Ub_pred_pi:
+  case Hexagon::V6_vS32b_new_npred_pi:
+  case Hexagon::V6_vS32b_new_pred_pi:
+  case Hexagon::V6_vS32b_npred_pi:
+  case Hexagon::V6_vS32b_nqpred_pi:
+  case Hexagon::V6_vS32b_nt_new_npred_pi:
+  case Hexagon::V6_vS32b_nt_new_pred_pi:
+  case Hexagon::V6_vS32b_nt_npred_pi:
+  case Hexagon::V6_vS32b_nt_nqpred_pi:
+  case Hexagon::V6_vS32b_nt_pred_pi:
+  case Hexagon::V6_vS32b_nt_qpred_pi:
+  case Hexagon::V6_vS32b_pred_pi:
+  case Hexagon::V6_vS32b_qpred_pi:
+  case Hexagon::V6_vS32Ub_npred_pi_128B:
+  case Hexagon::V6_vS32Ub_pred_pi_128B:
+  case Hexagon::V6_vS32b_new_npred_pi_128B:
+  case Hexagon::V6_vS32b_new_pred_pi_128B:
+  case Hexagon::V6_vS32b_npred_pi_128B:
+  case Hexagon::V6_vS32b_nqpred_pi_128B:
+  case Hexagon::V6_vS32b_nt_new_npred_pi_128B:
+  case Hexagon::V6_vS32b_nt_new_pred_pi_128B:
+  case Hexagon::V6_vS32b_nt_npred_pi_128B:
+  case Hexagon::V6_vS32b_nt_nqpred_pi_128B:
+  case Hexagon::V6_vS32b_nt_pred_pi_128B:
+  case Hexagon::V6_vS32b_nt_qpred_pi_128B:
+  case Hexagon::V6_vS32b_pred_pi_128B:
+  case Hexagon::V6_vS32b_qpred_pi_128B:
+    MappedInst = ScaleVectorOffset(Inst, 3, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vS32Ub_npred_ai:
+  case Hexagon::V6_vS32Ub_pred_ai:
+  case Hexagon::V6_vS32b_new_npred_ai:
+  case Hexagon::V6_vS32b_new_pred_ai:
+  case Hexagon::V6_vS32b_npred_ai:
+  case Hexagon::V6_vS32b_nqpred_ai:
+  case Hexagon::V6_vS32b_nt_new_npred_ai:
+  case Hexagon::V6_vS32b_nt_new_pred_ai:
+  case Hexagon::V6_vS32b_nt_npred_ai:
+  case Hexagon::V6_vS32b_nt_nqpred_ai:
+  case Hexagon::V6_vS32b_nt_pred_ai:
+  case Hexagon::V6_vS32b_nt_qpred_ai:
+  case Hexagon::V6_vS32b_pred_ai:
+  case Hexagon::V6_vS32b_qpred_ai:
+  case Hexagon::V6_vS32Ub_npred_ai_128B:
+  case Hexagon::V6_vS32Ub_pred_ai_128B:
+  case Hexagon::V6_vS32b_new_npred_ai_128B:
+  case Hexagon::V6_vS32b_new_pred_ai_128B:
+  case Hexagon::V6_vS32b_npred_ai_128B:
+  case Hexagon::V6_vS32b_nqpred_ai_128B:
+  case Hexagon::V6_vS32b_nt_new_npred_ai_128B:
+  case Hexagon::V6_vS32b_nt_new_pred_ai_128B:
+  case Hexagon::V6_vS32b_nt_npred_ai_128B:
+  case Hexagon::V6_vS32b_nt_nqpred_ai_128B:
+  case Hexagon::V6_vS32b_nt_pred_ai_128B:
+  case Hexagon::V6_vS32b_nt_qpred_ai_128B:
+  case Hexagon::V6_vS32b_pred_ai_128B:
+  case Hexagon::V6_vS32b_qpred_ai_128B:
+    MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
+    return;
   }
 }
 
@@ -578,13 +810,9 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   if (MI->isBundle()) {
     const MachineBasicBlock* MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
-    unsigned IgnoreCount = 0;
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (MII->getOpcode() == TargetOpcode::DBG_VALUE ||
-          MII->getOpcode() == TargetOpcode::IMPLICIT_DEF)
-        ++IgnoreCount;
-      else
+      if (!MII->isDebugValue() && !MII->isImplicitDef())
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
   }
   else

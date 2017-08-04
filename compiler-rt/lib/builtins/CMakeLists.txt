@@ -42,7 +42,8 @@ set(GENERIC_SOURCES
   ashlti3.c
   ashrdi3.c
   ashrti3.c
-  clear_cache.c
+  bswapdi2.c
+  bswapsi2.c
   clzdi2.c
   clzsi2.c
   clzti2.c
@@ -66,11 +67,10 @@ set(GENERIC_SOURCES
   divti3.c
   divtf3.c
   divxc3.c
-  enable_execute_stack.c
-  eprintf.c
   extendsfdf2.c
   extendhfsf2.c
   ffsdi2.c
+  ffssi2.c
   ffsti2.c
   fixdfdi.c
   fixdfsi.c
@@ -165,24 +165,43 @@ set(GENERIC_SOURCES
   umodsi3.c
   umodti3.c)
 
+set(GENERIC_TF_SOURCES
+  comparetf2.c
+  extenddftf2.c
+  extendsftf2.c
+  fixtfdi.c
+  fixtfsi.c
+  fixtfti.c
+  fixunstfdi.c
+  fixunstfsi.c
+  fixunstfti.c
+  floatditf.c
+  floatsitf.c
+  floattitf.c
+  floatunditf.c
+  floatunsitf.c
+  floatuntitf.c
+  multc3.c
+  trunctfdf2.c
+  trunctfsf2.c)
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (this may be needed if system headers are unavailable)"
   Off)
+
+if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD)
+  set(GENERIC_SOURCES
+    ${GENERIC_SOURCES}
+    emutls.c 
+    enable_execute_stack.c
+    eprintf.c)
+endif()
 
 if(COMPILER_RT_HAS_ATOMIC_KEYWORD AND NOT COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN)
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
     atomic.c)
 endif()
-
-set(MSVC_SOURCES
- divsc3.c
- divdc3.c
- divxc3.c
- mulsc3.c
- muldc3.c
- mulxc3.c)
-
 
 if(APPLE)
   set(GENERIC_SOURCES
@@ -195,17 +214,17 @@ if(APPLE)
     atomic_thread_fence.c)
 endif()
 
-if(NOT WIN32 OR MINGW)
-  set(GENERIC_SOURCES
-      ${GENERIC_SOURCES}
-      emutls.c)
-endif()
-
 if (HAVE_UNWIND_H)
   set(GENERIC_SOURCES
       ${GENERIC_SOURCES}
       gcc_personality_v0.c)
 endif ()
+
+if (NOT FUCHSIA)
+  set(GENERIC_SOURCES
+    ${GENERIC_SOURCES}
+    clear_cache.c)
+endif()
 
 if (NOT MSVC)
   set(x86_64_SOURCES
@@ -263,9 +282,9 @@ else () # MSVC
       x86_64/floatdidf.c
       x86_64/floatdisf.c
       x86_64/floatdixf.c
-      ${MSVC_SOURCES})
+      ${GENERIC_SOURCES})
   set(x86_64h_SOURCES ${x86_64_SOURCES})
-  set(i386_SOURCES ${MSVC_SOURCES})
+  set(i386_SOURCES ${GENERIC_SOURCES})
   set(i686_SOURCES ${i386_SOURCES})
 endif () # if (NOT MSVC)
 
@@ -303,6 +322,13 @@ set(arm_SOURCES
   arm/umodsi3.S
   ${GENERIC_SOURCES})
 
+set(thumb1_SOURCES
+  arm/divsi3.S
+  arm/udivsi3.S
+  arm/comparesf2.S
+  arm/addsf3.S
+  ${GENERIC_SOURCES})
+
 set(arm_EABI_SOURCES
   arm/aeabi_cdcmp.S
   arm/aeabi_cdcmpeq_check_nan.c
@@ -321,6 +347,7 @@ set(arm_EABI_SOURCES
   arm/aeabi_memset.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S)
+
 set(arm_Thumb1_JT_SOURCES
   arm/switch16.S
   arm/switch32.S
@@ -395,34 +422,22 @@ if(MINGW)
       udivmoddi4.c
       udivmodsi4.c
       udivsi3.c
-      umoddi3.c)
+      umoddi3.c
+      emutls.c)
 elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_SOURCES}
     ${arm_EABI_SOURCES}
     ${arm_Thumb1_SOURCES})
+
+  set(thumb1_SOURCES
+    ${thumb1_SOURCES}
+    ${arm_EABI_SOURCES})
 endif()
 
 set(aarch64_SOURCES
-  comparetf2.c
-  extenddftf2.c
-  extendsftf2.c
-  fixtfdi.c
-  fixtfsi.c
-  fixtfti.c
-  fixunstfdi.c
-  fixunstfsi.c
-  fixunstfti.c
-  floatditf.c
-  floatsitf.c
-  floattitf.c
-  floatunditf.c
-  floatunsitf.c
-  floatuntitf.c
-  multc3.c
-  trunctfdf2.c
-  trunctfsf2.c
+  ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
 
 set(armhf_SOURCES ${arm_SOURCES})
@@ -432,14 +447,16 @@ set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
-set(armv6m_SOURCES ${GENERIC_SOURCES})
+set(armv6m_SOURCES ${thumb1_SOURCES})
 set(armv7m_SOURCES ${arm_SOURCES})
 set(armv7em_SOURCES ${arm_SOURCES})
 
 set(mips_SOURCES ${GENERIC_SOURCES})
 set(mipsel_SOURCES ${mips_SOURCES})
-set(mips64_SOURCES ${mips_SOURCES})
-set(mips64el_SOURCES ${mips_SOURCES})
+set(mips64_SOURCES ${GENERIC_TF_SOURCES}
+                   ${mips_SOURCES})
+set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
+                     ${mips_SOURCES})
 
 set(wasm32_SOURCES ${GENERIC_SOURCES})
 set(wasm64_SOURCES ${GENERIC_SOURCES})
@@ -473,11 +490,18 @@ else ()
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
+      # NOTE: some architectures (e.g. i386) have multiple names.  Ensure that
+      # we catch them all.
+      set(_arch ${arch})
+      if("${arch}" STREQUAL "i686")
+        set(_arch "i386|i686")
+      endif()
+
       # Filter out generic versions of routines that are re-implemented in
       # architecture specific manner.  This prevents multiple definitions of the
       # same symbols, making the symbol selection non-deterministic.
       foreach (_file ${${arch}_SOURCES})
-        if (${_file} MATCHES ${arch}/*)
+        if (${_file} MATCHES ${_arch}/*)
           get_filename_component(_name ${_file} NAME)
           string(REPLACE ".S" ".c" _cname "${_name}")
           list(REMOVE_ITEM ${arch}_SOURCES ${_cname})
@@ -487,7 +511,7 @@ else ()
       # Needed for clear_cache on debug mode, due to r7's usage in inline asm.
       # Release mode already sets it via -O2/3, Debug mode doesn't.
       if (${arch} STREQUAL "armhf")
-        list(APPEND BUILTIN_CFLAGS -fomit-frame-pointer)
+        list(APPEND BUILTIN_CFLAGS -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
       add_compiler_rt_runtime(clang_rt.builtins
