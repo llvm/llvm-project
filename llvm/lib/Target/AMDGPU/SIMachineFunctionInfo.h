@@ -16,6 +16,7 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "AMDGPUArgumentUsageInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -96,33 +97,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // Top of the stack SGPR offset derived from the ScratchWaveOffsetReg.
   unsigned StackPtrOffsetReg;
 
-  // Input registers for non-HSA ABI
-  unsigned ImplicitBufferPtrUserSGPR;
-
-  // Input registers setup for the HSA ABI.
-  // User SGPRs in allocation order.
-  unsigned PrivateSegmentBufferUserSGPR;
-  unsigned DispatchPtrUserSGPR;
-  unsigned QueuePtrUserSGPR;
-  unsigned KernargSegmentPtrUserSGPR;
-  unsigned DispatchIDUserSGPR;
-  unsigned FlatScratchInitUserSGPR;
-  unsigned PrivateSegmentSizeUserSGPR;
-  unsigned GridWorkGroupCountXUserSGPR;
-  unsigned GridWorkGroupCountYUserSGPR;
-  unsigned GridWorkGroupCountZUserSGPR;
-
-  // System SGPRs in allocation order.
-  unsigned WorkGroupIDXSystemSGPR;
-  unsigned WorkGroupIDYSystemSGPR;
-  unsigned WorkGroupIDZSystemSGPR;
-  unsigned WorkGroupInfoSystemSGPR;
-  unsigned PrivateSegmentWaveByteOffsetSystemSGPR;
-
-  // VGPR inputs. These are always v0, v1 and v2 for entry functions.
-  unsigned WorkItemIDXVGPR;
-  unsigned WorkItemIDYVGPR;
-  unsigned WorkItemIDZVGPR;
+  AMDGPUFunctionArgInfo ArgInfo;
 
   // Graphics info.
   unsigned PSInputAddr;
@@ -235,7 +210,6 @@ private:
   SmallVector<SGPRSpillVGPRCSR, 2> SpillVGPRs;
 
 public:
-
   SIMachineFunctionInfo(const MachineFunction &MF);
 
   ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {
@@ -266,37 +240,52 @@ public:
 
   // Add system SGPRs.
   unsigned addWorkGroupIDX() {
-    WorkGroupIDXSystemSGPR = getNextSystemSGPR();
+    ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(getNextSystemSGPR());
     NumSystemSGPRs += 1;
-    return WorkGroupIDXSystemSGPR;
+    return ArgInfo.WorkGroupIDX.getRegister();
   }
 
   unsigned addWorkGroupIDY() {
-    WorkGroupIDYSystemSGPR = getNextSystemSGPR();
+    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(getNextSystemSGPR());
     NumSystemSGPRs += 1;
-    return WorkGroupIDYSystemSGPR;
+    return ArgInfo.WorkGroupIDY.getRegister();
   }
 
   unsigned addWorkGroupIDZ() {
-    WorkGroupIDZSystemSGPR = getNextSystemSGPR();
+    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(getNextSystemSGPR());
     NumSystemSGPRs += 1;
-    return WorkGroupIDZSystemSGPR;
+    return ArgInfo.WorkGroupIDZ.getRegister();
   }
 
   unsigned addWorkGroupInfo() {
-    WorkGroupInfoSystemSGPR = getNextSystemSGPR();
+    ArgInfo.WorkGroupInfo = ArgDescriptor::createRegister(getNextSystemSGPR());
     NumSystemSGPRs += 1;
-    return WorkGroupInfoSystemSGPR;
+    return ArgInfo.WorkGroupInfo.getRegister();
   }
 
+  // Add special VGPR inputs
+  void setWorkItemIDX(ArgDescriptor Arg) {
+    ArgInfo.WorkItemIDX = Arg;
+  }
+
+  void setWorkItemIDY(ArgDescriptor Arg) {
+    ArgInfo.WorkItemIDY = Arg;
+  }
+
+  void setWorkItemIDZ(ArgDescriptor Arg) {
+    ArgInfo.WorkItemIDZ = Arg;
+  }
+
+
   unsigned addPrivateSegmentWaveByteOffset() {
-    PrivateSegmentWaveByteOffsetSystemSGPR = getNextSystemSGPR();
+    ArgInfo.PrivateSegmentWaveByteOffset
+      = ArgDescriptor::createRegister(getNextSystemSGPR());
     NumSystemSGPRs += 1;
-    return PrivateSegmentWaveByteOffsetSystemSGPR;
+    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
   }
 
   void setPrivateSegmentWaveByteOffset(unsigned Reg) {
-    PrivateSegmentWaveByteOffsetSystemSGPR = Reg;
+    ArgInfo.PrivateSegmentWaveByteOffset = ArgDescriptor::createRegister(Reg);
   }
 
   bool hasPrivateSegmentBuffer() const {
@@ -375,6 +364,23 @@ public:
     return ImplicitBufferPtr;
   }
 
+  AMDGPUFunctionArgInfo &getArgInfo() {
+    return ArgInfo;
+  }
+
+  const AMDGPUFunctionArgInfo &getArgInfo() const {
+    return ArgInfo;
+  }
+
+  std::pair<const ArgDescriptor *, const TargetRegisterClass *>
+  getPreloadedValue(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
+    return ArgInfo.getPreloadedValue(Value);
+  }
+
+  unsigned getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
+    return ArgInfo.getPreloadedValue(Value).first->getRegister();
+  }
+
   unsigned getNumUserSGPRs() const {
     return NumUserSGPRs;
   }
@@ -384,7 +390,7 @@ public:
   }
 
   unsigned getPrivateSegmentWaveByteOffsetSystemSGPR() const {
-    return PrivateSegmentWaveByteOffsetSystemSGPR;
+    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
   }
 
   /// \brief Returns the physical register reserved for use as the resource
@@ -426,11 +432,11 @@ public:
   }
 
   unsigned getQueuePtrUserSGPR() const {
-    return QueuePtrUserSGPR;
+    return ArgInfo.QueuePtr.getRegister();
   }
 
   unsigned getImplicitBufferPtrUserSGPR() const {
-    return ImplicitBufferPtrUserSGPR;
+    return ArgInfo.ImplicitBufferPtr.getRegister();
   }
 
   bool hasSpilledSGPRs() const {
@@ -562,13 +568,13 @@ public:
     switch (Dim) {
     case 0:
       assert(hasWorkGroupIDX());
-      return WorkGroupIDXSystemSGPR;
+      return ArgInfo.WorkGroupIDX.getRegister();
     case 1:
       assert(hasWorkGroupIDY());
-      return WorkGroupIDYSystemSGPR;
+      return ArgInfo.WorkGroupIDY.getRegister();
     case 2:
       assert(hasWorkGroupIDZ());
-      return WorkGroupIDZSystemSGPR;
+      return ArgInfo.WorkGroupIDZ.getRegister();
     }
     llvm_unreachable("unexpected dimension");
   }

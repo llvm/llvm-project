@@ -344,6 +344,20 @@ public:
 } // namespace
 
 template <typename CallbackT>
+static void iterateOneModule(PDBFile &File, LinePrinter &P,
+                             const DbiModuleDescriptor &Descriptor,
+                             uint32_t Modi, uint32_t IndentLevel,
+                             uint32_t Digits, CallbackT Callback) {
+  P.formatLine(
+      "Mod {0:4} | `{1}`: ", fmt_align(Modi, AlignStyle::Right, Digits),
+      Descriptor.getModuleName());
+
+  StringsAndChecksumsPrinter Strings(File, Modi);
+  AutoIndent Indent2(P, IndentLevel);
+  Callback(Modi, Strings);
+}
+
+template <typename CallbackT>
 static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
                            CallbackT Callback) {
   AutoIndent Indent(P);
@@ -357,16 +371,21 @@ static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
   auto &Stream = Err(File.getPDBDbiStream());
 
   const DbiModuleList &Modules = Stream.modules();
+
+  if (opts::dump::DumpModi.getNumOccurrences() > 0) {
+    assert(opts::dump::DumpModi.getNumOccurrences() == 1);
+    uint32_t Modi = opts::dump::DumpModi;
+    auto Descriptor = Modules.getModuleDescriptor(Modi);
+    iterateOneModule(File, P, Descriptor, Modi, IndentLevel, NumDigits(Modi),
+                     Callback);
+    return;
+  }
+
   uint32_t Count = Modules.getModuleCount();
   uint32_t Digits = NumDigits(Count);
   for (uint32_t I = 0; I < Count; ++I) {
-    auto Modi = Modules.getModuleDescriptor(I);
-    P.formatLine("Mod {0:4} | `{1}`: ", fmt_align(I, AlignStyle::Right, Digits),
-                 Modi.getModuleName());
-
-    StringsAndChecksumsPrinter Strings(File, I);
-    AutoIndent Indent2(P, IndentLevel);
-    Callback(I, Strings);
+    auto Descriptor = Modules.getModuleDescriptor(I);
+    iterateOneModule(File, P, Descriptor, I, IndentLevel, Digits, Callback);
   }
 }
 
@@ -813,47 +832,34 @@ Error DumpOutputStyle::dumpModuleSyms() {
 
   ExitOnError Err("Unexpected error processing symbols: ");
 
-  auto &Stream = Err(File.getPDBDbiStream());
-
   auto &Types = Err(initializeTypes(StreamTPI));
 
-  const DbiModuleList &Modules = Stream.modules();
-  uint32_t Count = Modules.getModuleCount();
-  uint32_t Digits = NumDigits(Count);
-  for (uint32_t I = 0; I < Count; ++I) {
-    auto Modi = Modules.getModuleDescriptor(I);
-    P.formatLine("Mod {0:4} | `{1}`: ", fmt_align(I, AlignStyle::Right, Digits),
-                 Modi.getModuleName());
-    uint16_t ModiStream = Modi.getModuleStreamIndex();
-    if (ModiStream == kInvalidStreamIndex) {
-      P.formatLine("           <symbols not present>");
-      continue;
-    }
-    auto ModStreamData = MappedBlockStream::createIndexedStream(
-        File.getMsfLayout(), File.getMsfBuffer(), ModiStream,
-        File.getAllocator());
+  iterateModules(
+      File, P, 2, [&](uint32_t I, StringsAndChecksumsPrinter &Strings) {
+        auto ExpectedModS = getModuleDebugStream(File, I);
+        if (!ExpectedModS) {
+          P.formatLine("Error loading module stream {0}.  {1}", I,
+                       toString(ExpectedModS.takeError()));
+          return;
+        }
 
-    ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
-    if (auto EC = ModS.reload()) {
-      P.formatLine("Error loading module stream {0}.  {1}", I,
-                   toString(std::move(EC)));
-      continue;
-    }
+        ModuleDebugStreamRef &ModS = *ExpectedModS;
 
-    SymbolVisitorCallbackPipeline Pipeline;
-    SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-    MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Types);
+        SymbolVisitorCallbackPipeline Pipeline;
+        SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Types);
 
-    Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(Dumper);
-    CVSymbolVisitor Visitor(Pipeline);
-    auto SS = ModS.getSymbolsSubstream();
-    if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
-      P.formatLine("Error while processing symbol records.  {0}",
-                   toString(std::move(EC)));
-      continue;
-    }
-  }
+        Pipeline.addCallbackToPipeline(Deserializer);
+        Pipeline.addCallbackToPipeline(Dumper);
+        CVSymbolVisitor Visitor(Pipeline);
+        auto SS = ModS.getSymbolsSubstream();
+        if (auto EC =
+                Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
+          P.formatLine("Error while processing symbol records.  {0}",
+                       toString(std::move(EC)));
+          return;
+        }
+      });
   return Error::success();
 }
 

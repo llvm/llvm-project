@@ -21,10 +21,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   using namespace TargetOpcode;
 

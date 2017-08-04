@@ -535,10 +535,9 @@ define void @merge_vec_stores_from_loads(<4 x float>* %v, <4 x float>* %ptr) {
   ret void
 
 ; CHECK-LABEL: merge_vec_stores_from_loads
-; CHECK:      vmovaps
-; CHECK-NEXT: vmovaps
-; CHECK-NEXT: vmovaps
-; CHECK-NEXT: vmovaps
+; CHECK:      vmovups (%rdi), %ymm0
+; CHECK-NEXT: vmovups %ymm0, (%rsi)
+; CHECK-NEXT: vzeroupper
 ; CHECK-NEXT: retq
 }
 

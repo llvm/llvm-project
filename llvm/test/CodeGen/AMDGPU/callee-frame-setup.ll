@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-function-calls -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -amdgpu-function-calls -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}callee_no_stack:
 ; GCN: ; BB#0:

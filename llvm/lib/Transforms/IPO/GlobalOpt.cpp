@@ -27,7 +27,9 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -419,6 +421,23 @@ static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
   return true;
 }
 
+/// Copy over the debug info for a variable to its SRA replacements.
+static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
+                                 uint64_t FragmentOffsetInBits,
+                                 uint64_t FragmentSizeInBits) {
+  DIBuilder DIB(*GV->getParent(), /*AllowUnresolved*/ false);
+  SmallVector<DIGlobalVariableExpression *, 1> GVs;
+  GV->getDebugInfo(GVs);
+  for (auto *GVE : GVs) {
+    DIVariable *Var = GVE->getVariable();
+    DIExpression *Expr = GVE->getExpression();
+    DIExpression *NExpr = DIB.createFragmentExpression(
+        FragmentOffsetInBits, FragmentSizeInBits, Expr);
+    auto *NGVE = DIGlobalVariableExpression::get(GVE->getContext(), Var, NExpr);
+    NGV->addDebugInfo(NGVE);
+  }
+}
+
 
 /// Perform scalar replacement of aggregates on the specified global variable.
 /// This opens the door for other optimizations by exposing the behavior of the
@@ -443,6 +462,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     StartAlignment = DL.getABITypeAlignment(GV->getType());
 
   if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    uint64_t FragmentOffset = 0;
     NewGlobals.reserve(STy->getNumElements());
     const StructLayout &Layout = *DL.getStructLayout(STy);
     for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
@@ -465,15 +485,22 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       unsigned NewAlign = (unsigned)MinAlign(StartAlignment, FieldOffset);
       if (NewAlign > DL.getABITypeAlignment(STy->getElementType(i)))
         NGV->setAlignment(NewAlign);
+
+      // Copy over the debug info for the variable.
+      FragmentOffset = alignTo(FragmentOffset, NewAlign);
+      uint64_t Size = DL.getTypeSizeInBits(NGV->getValueType());
+      transferSRADebugInfo(GV, NGV, FragmentOffset, Size);
+      FragmentOffset += Size;
     }
   } else if (SequentialType *STy = dyn_cast<SequentialType>(Ty)) {
     unsigned NumElements = STy->getNumElements();
     if (NumElements > 16 && GV->hasNUsesOrMore(16))
       return nullptr; // It's not worth it.
     NewGlobals.reserve(NumElements);
-
-    uint64_t EltSize = DL.getTypeAllocSize(STy->getElementType());
-    unsigned EltAlign = DL.getABITypeAlignment(STy->getElementType());
+    auto ElTy = STy->getElementType();
+    uint64_t EltSize = DL.getTypeAllocSize(ElTy);
+    unsigned EltAlign = DL.getABITypeAlignment(ElTy);
+    uint64_t FragmentSizeInBits = DL.getTypeSizeInBits(ElTy);
     for (unsigned i = 0, e = NumElements; i != e; ++i) {
       Constant *In = Init->getAggregateElement(i);
       assert(In && "Couldn't get element of initializer?");
@@ -494,6 +521,8 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       unsigned NewAlign = (unsigned)MinAlign(StartAlignment, EltSize*i);
       if (NewAlign > EltAlign)
         NGV->setAlignment(NewAlign);
+
+      transferSRADebugInfo(GV, NGV, FragmentSizeInBits * i, FragmentSizeInBits);
     }
   }
 

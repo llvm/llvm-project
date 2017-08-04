@@ -43,11 +43,14 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Optional<Reloc::Model> RM, CodeModel::Model CM,
-                                   CodeGenOpt::Level OL)
+                                   Optional<Reloc::Model> RM,
+                                   Optional<CodeModel::Model> CM,
+                                   CodeGenOpt::Level OL,
+                                   bool JIT)
     : LLVMTargetMachine(
           T, AVRDataLayout, TT,
-          getCPU(CPU), FS, Options, getEffectiveRelocModel(RM), CM, OL),
+          getCPU(CPU), FS, Options, getEffectiveRelocModel(RM),
+          CM, OL),
       SubTarget(TT, getCPU(CPU), FS, *this) {
   this->TLOF = make_unique<AVRTargetObjectFile>();
   initAsmInfo();

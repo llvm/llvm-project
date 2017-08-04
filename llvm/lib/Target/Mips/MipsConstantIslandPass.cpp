@@ -1,4 +1,4 @@
-//===-- MipsConstantIslandPass.cpp - Emit Pc Relative loads----------------===//
+//===- MipsConstantIslandPass.cpp - Emit Pc Relative loads ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -53,7 +53,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <new>
 #include <vector>
 
 using namespace llvm;
@@ -72,17 +71,14 @@ AlignConstantIslands("mips-align-constant-islands", cl::Hidden, cl::init(true),
 
 // Rather than do make check tests with huge amounts of code, we force
 // the test to use this amount.
-//
 static cl::opt<int> ConstantIslandsSmallOffset(
   "mips-constant-islands-small-offset",
   cl::init(0),
   cl::desc("Make small offsets be this amount for testing purposes"),
   cl::Hidden);
 
-//
 // For testing purposes we tell it to not use relaxed load forms so that it
 // will split blocks.
-//
 static cl::opt<bool> NoLoadRelaxation(
   "mips-constant-islands-no-load-relaxation",
   cl::init(false),
@@ -131,12 +127,10 @@ static unsigned int longformBranchOpcode(unsigned int Opcode) {
   llvm_unreachable("Unknown branch type");
 }
 
-//
 // FIXME: need to go through this whole constant islands port and check the math
 // for branch ranges and clean this up and make some functions to calculate things
 // that are done many times identically.
 // Need to refactor some of the code to call this routine.
-//
 static unsigned int branchMaxOffsets(unsigned int Opcode) {
   unsigned Bits, Scale;
   switch (Opcode) {
@@ -189,8 +183,8 @@ static unsigned int branchMaxOffsets(unsigned int Opcode) {
 
 namespace {
 
-  typedef MachineBasicBlock::iterator Iter;
-  typedef MachineBasicBlock::reverse_iterator ReverseIter;
+  using Iter = MachineBasicBlock::iterator;
+  using ReverseIter = MachineBasicBlock::reverse_iterator;
 
   /// MipsConstantIslands - Due to limited PC-relative displacements, Mips
   /// requires constant pool entries to be scattered among the instructions
@@ -247,7 +241,7 @@ namespace {
     /// previous iteration by inserting unconditional branches.
     SmallSet<MachineBasicBlock*, 4> NewWaterList;
 
-    typedef std::vector<MachineBasicBlock*>::iterator water_iterator;
+    using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
     /// CPUser - One user of a constant pool, keeping the machine instruction
     /// pointer, the constant pool being referenced, and the max displacement
@@ -420,9 +414,9 @@ namespace {
     void prescanForConstants();
   };
 
-  char MipsConstantIslands::ID = 0;
-
 } // end anonymous namespace
+
+char MipsConstantIslands::ID = 0;
 
 bool MipsConstantIslands::isOffsetInRange
   (unsigned UserOffset, unsigned TrialOffset,
@@ -748,7 +742,6 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
       // Scan the instructions for constant pool operands.
       for (unsigned op = 0, e = MI.getNumOperands(); op != e; ++op)
         if (MI.getOperand(op).isCPI()) {
-
           // We found one.  The addressing mode tells us the max displacement
           // from the PC that this instruction permits.
 
@@ -1038,7 +1031,6 @@ void MipsConstantIslands::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
 /// and instruction CPEMI, and decrement its refcount.  If the refcount
 /// becomes 0 remove the entry and instruction.  Returns true if we removed
 /// the entry, false if we didn't.
-
 bool MipsConstantIslands::decrementCPEReferenceCount(unsigned CPI,
                                                     MachineInstr *CPEMI) {
   // Find the old entry. Eliminate it if it is no longer used.

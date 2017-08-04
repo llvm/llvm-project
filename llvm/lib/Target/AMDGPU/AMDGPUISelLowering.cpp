@@ -1001,8 +1001,9 @@ CCAssignFn *AMDGPUTargetLowering::CCAssignFnForReturn(CallingConv::ID CC,
   return AMDGPUCallLowering::CCAssignFnForReturn(CC, IsVarArg);
 }
 
-SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
-                                        SmallVectorImpl<SDValue> &InVals) const {
+SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
+                                                 SmallVectorImpl<SDValue> &InVals,
+                                                 StringRef Reason) const {
   SDValue Callee = CLI.Callee;
   SelectionDAG &DAG = CLI.DAG;
 
@@ -1016,7 +1017,7 @@ SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
     FuncName = G->getGlobal()->getName();
 
   DiagnosticInfoUnsupported NoCalls(
-      Fn, "unsupported call to function " + FuncName, CLI.DL.getDebugLoc());
+    Fn, Reason + FuncName, CLI.DL.getDebugLoc());
   DAG.getContext()->diagnose(NoCalls);
 
   if (!CLI.IsTailCall) {
@@ -1025,6 +1026,11 @@ SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   return DAG.getEntryNode();
+}
+
+SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                        SmallVectorImpl<SDValue> &InVals) const {
+  return lowerUnhandledCall(CLI, InVals, "unsupported call to function ");
 }
 
 SDValue AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
@@ -3580,6 +3586,49 @@ SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
     return DAG.getRegister(VReg, VT);
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), SL, VReg, VT);
+}
+
+SDValue AMDGPUTargetLowering::loadStackInputValue(SelectionDAG &DAG,
+                                                  EVT VT,
+                                                  const SDLoc &SL,
+                                                  int64_t Offset) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  int FI = MFI.CreateFixedObject(VT.getStoreSize(), Offset, true);
+  auto SrcPtrInfo = MachinePointerInfo::getStack(MF, Offset);
+  SDValue Ptr = DAG.getFrameIndex(FI, MVT::i32);
+
+  return DAG.getLoad(VT, SL, DAG.getEntryNode(), Ptr, SrcPtrInfo, 4,
+                     MachineMemOperand::MODereferenceable |
+                     MachineMemOperand::MOInvariant);
+}
+
+SDValue AMDGPUTargetLowering::storeStackInputValue(SelectionDAG &DAG,
+                                                   const SDLoc &SL,
+                                                   SDValue Chain,
+                                                   SDValue StackPtr,
+                                                   SDValue ArgVal,
+                                                   int64_t Offset) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachinePointerInfo DstInfo = MachinePointerInfo::getStack(MF, Offset);
+  SDValue PtrOffset = DAG.getConstant(Offset, SL, MVT::i32);
+  SDValue Ptr = DAG.getNode(ISD::ADD, SL, MVT::i32, StackPtr, PtrOffset);
+
+  SDValue Store = DAG.getStore(Chain, SL, ArgVal, Ptr, DstInfo, 4,
+                               MachineMemOperand::MODereferenceable);
+  return Store;
+}
+
+SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
+                                             const TargetRegisterClass *RC,
+                                             EVT VT, const SDLoc &SL,
+                                             const ArgDescriptor &Arg) const {
+  assert(Arg && "Attempting to load missing argument");
+
+  if (Arg.isRegister())
+    return CreateLiveInRegister(DAG, RC, Arg.getRegister(), VT, SL);
+  return loadStackInputValue(DAG, VT, SL, Arg.getStackOffset());
 }
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(

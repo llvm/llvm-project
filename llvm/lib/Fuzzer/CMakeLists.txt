@@ -63,6 +63,14 @@ if ( LLVM_USE_SANITIZE_COVERAGE OR CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux" )
   target_link_libraries(LLVMFuzzer ${LLVM_PTHREAD_LIB})
 endif()
 
-if( LLVM_USE_SANITIZE_COVERAGE AND LLVM_INCLUDE_TESTS )
-  add_subdirectory(test)
+if (MSVC)
+
+  # Until bots are reconfigured, check-fuzzer on Windows is a no-OP.
+  add_custom_target(check-fuzzer)
+  add_custom_command(TARGET check-fuzzer
+    COMMAND cmake -E echo "check-fuzzer is disalbed on Windows")
+else()
+  if( LLVM_USE_SANITIZE_COVERAGE AND LLVM_INCLUDE_TESTS )
+    add_subdirectory(test)
+  endif()
 endif()

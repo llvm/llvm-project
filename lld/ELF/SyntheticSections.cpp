@@ -990,6 +990,7 @@ unsigned StringTableSection::addString(StringRef S, bool HashIt) {
 void StringTableSection::writeTo(uint8_t *Buf) {
   for (StringRef S : Strings) {
     memcpy(Buf, S.data(), S.size());
+    Buf[S.size()] = '\0';
     Buf += S.size() + 1;
   }
 }

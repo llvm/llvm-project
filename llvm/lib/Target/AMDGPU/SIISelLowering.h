@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
 #include "AMDGPUISelLowering.h"
+#include "AMDGPUArgumentUsageInfo.h"
 #include "SIInstrInfo.h"
 
 namespace llvm {
@@ -32,6 +33,10 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
+  SDValue getPreloadedValue(SelectionDAG &DAG,
+                            const SIMachineFunctionInfo &MFI,
+                            EVT VT,
+                            AMDGPUFunctionArgInfo::PreloadedValue) const;
 
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
@@ -204,6 +209,14 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+
+  void passSpecialInputs(
+    CallLoweringInfo &CLI,
+    const SIMachineFunctionInfo &Info,
+    SmallVectorImpl<std::pair<unsigned, SDValue>> &RegsToPass,
+    SmallVectorImpl<SDValue> &MemOpChains,
+    SDValue Chain,
+    SDValue StackPtr) const;
 
   SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
                           CallingConv::ID CallConv, bool isVarArg,

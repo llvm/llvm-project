@@ -892,8 +892,10 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
 }
 
 void SelectionDAG::init(MachineFunction &NewMF,
-                        OptimizationRemarkEmitter &NewORE) {
+                        OptimizationRemarkEmitter &NewORE,
+                        Pass *PassPtr) {
   MF = &NewMF;
+  SDAGISelPass = PassPtr;
   ORE = &NewORE;
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();

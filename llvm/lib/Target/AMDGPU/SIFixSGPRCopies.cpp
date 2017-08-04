@@ -604,7 +604,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         // We don't need to fix the PHI if the common dominator of the
         // two incoming blocks terminates with a uniform branch.
-        if (MI.getNumExplicitOperands() == 5) {
+        bool HasVGPROperand = phiHasVGPROperands(MI, MRI, TRI, TII);
+        if (MI.getNumExplicitOperands() == 5 && !HasVGPROperand) {
           MachineBasicBlock *MBB0 = MI.getOperand(2).getMBB();
           MachineBasicBlock *MBB1 = MI.getOperand(4).getMBB();
 
@@ -649,8 +650,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         // is no chance for values to be over-written.
 
         SmallSet<unsigned, 8> Visited;
-        if (phiHasVGPROperands(MI, MRI, TRI, TII) ||
-            !phiHasBreakDef(MI, MRI, Visited)) {
+        if (HasVGPROperand || !phiHasBreakDef(MI, MRI, Visited)) {
           DEBUG(dbgs() << "Fixing PHI: " << MI);
           TII->moveToVALU(MI);
         }

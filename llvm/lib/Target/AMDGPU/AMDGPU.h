@@ -54,6 +54,8 @@ FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 
+void initializeAMDGPUDAGToDAGISelPass(PassRegistry&);
+
 void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
 extern char &AMDGPUMachineCFGStructurizerID;
 
@@ -124,8 +126,9 @@ void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
 
 Pass *createAMDGPUStructurizeCFGPass();
-FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+FunctionPass *createAMDGPUISelDag(
+  TargetMachine *TM = nullptr,
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Default);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 ModulePass *createAMDGPUOpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
@@ -166,6 +169,8 @@ extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
 void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
+
+void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
 Target &getTheAMDGPUTarget();
 Target &getTheGCNTarget();
