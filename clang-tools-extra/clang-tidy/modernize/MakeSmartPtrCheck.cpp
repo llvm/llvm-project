@@ -42,7 +42,8 @@ const char MakeSmartPtrCheck::ConstructorCall[] = "constructorCall";
 const char MakeSmartPtrCheck::ResetCall[] = "resetCall";
 const char MakeSmartPtrCheck::NewExpression[] = "newExpression";
 
-MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
+MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name,
+                                     ClangTidyContext* Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
@@ -50,12 +51,14 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
       MakeSmartPtrFunctionHeader(
           Options.get("MakeSmartPtrFunctionHeader", StdMemoryHeader)),
       MakeSmartPtrFunctionName(
-          Options.get("MakeSmartPtrFunction", MakeSmartPtrFunctionName)) {}
+          Options.get("MakeSmartPtrFunction", MakeSmartPtrFunctionName)),
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeStyle);
   Options.store(Opts, "MakeSmartPtrFunctionHeader", MakeSmartPtrFunctionHeader);
   Options.store(Opts, "MakeSmartPtrFunction", MakeSmartPtrFunctionName);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void MakeSmartPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
@@ -122,6 +125,11 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
                                        const QualType *Type,
                                        const CXXNewExpr *New) {
   SourceLocation ConstructCallStart = Construct->getExprLoc();
+  bool InMacro = ConstructCallStart.isMacroID();
+
+  if (InMacro && IgnoreMacros) {
+    return;
+  }
 
   bool Invalid = false;
   StringRef ExprStr = Lexer::getSourceText(
@@ -133,6 +141,11 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
 
   auto Diag = diag(ConstructCallStart, "use %0 instead")
               << MakeSmartPtrFunctionName;
+
+  // Disable the fix in macros.
+  if (InMacro) {
+    return;
+  }
 
   // Find the location of the template's left angle.
   size_t LAngle = ExprStr.find("<");
@@ -180,8 +193,19 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
   SourceLocation ExprEnd =
       Lexer::getLocForEndOfToken(Expr->getLocEnd(), 0, SM, getLangOpts());
 
+  bool InMacro = ExprStart.isMacroID();
+
+  if (InMacro && IgnoreMacros) {
+    return;
+  }
+
   auto Diag = diag(ResetCallStart, "use %0 instead")
               << MakeSmartPtrFunctionName;
+
+  // Disable the fix in macros.
+  if (InMacro) {
+    return;
+  }
 
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
