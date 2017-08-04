@@ -64,10 +64,12 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("-s");
 
-  if (Args.hasArg(options::OPT_r))
+  if (Args.hasArg(options::OPT_r)) {
     CmdArgs.push_back("-r");
-  else
+  } else {
     CmdArgs.push_back("--build-id");
+    CmdArgs.push_back("--hash-style=gnu");
+  }
 
   CmdArgs.push_back("--eh-frame-hdr");
 
