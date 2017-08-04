@@ -404,3 +404,14 @@ void reset() {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead
   // CHECK-FIXES: *Q = std::make_unique<int>();
 }
+
+#define DEFINE(...) __VA_ARGS__
+template<typename T>
+void g2(std::unique_ptr<Foo> *t) {
+  DEFINE(auto p = std::unique_ptr<Foo>(new Foo); t->reset(new Foo););
+}
+void macro() {
+  std::unique_ptr<Foo> *t;
+  g2<bar::Bar>(t);
+}
+#undef DEFINE
