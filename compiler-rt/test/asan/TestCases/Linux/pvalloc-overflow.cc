@@ -4,7 +4,7 @@
 // RUN: ASAN_OPTIONS=allocator_may_return_null=0 not %run %t psm1 2>&1 | FileCheck %s
 // RUN: ASAN_OPTIONS=allocator_may_return_null=1     %run %t psm1 2>&1
 
-// UNSUPPORTED: freebsd
+// UNSUPPORTED: freebsd, android
 
 // Checks that pvalloc overflows are caught. If the allocator is allowed to
 // return null, the errno should be set to ENOMEM.

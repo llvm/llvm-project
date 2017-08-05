@@ -925,9 +925,10 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   if (Flags & F_RW)
     Access |= GENERIC_READ;
 
-  HANDLE H = ::CreateFileW(PathUTF16.begin(), Access,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                           CreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+  HANDLE H =
+      ::CreateFileW(PathUTF16.begin(), Access,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    NULL, CreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
 
   if (H == INVALID_HANDLE_VALUE) {
     DWORD LastError = ::GetLastError();

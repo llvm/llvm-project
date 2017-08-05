@@ -329,7 +329,7 @@ public:
     bool operator!=(const Node &N) const { return !operator==(N); }
 
     /// Tests whether the node has been populated with edges.
-    operator bool() const { return Edges.hasValue(); }
+    bool isPopulated() const { return Edges.hasValue(); }
 
     // We allow accessing the edges by dereferencing or using the arrow
     // operator, essentially wrapping the internal optional.

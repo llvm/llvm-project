@@ -79,8 +79,8 @@ static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   // as variables in linker scripts. Doing so allows us to write expressions
   // like this: `alignment = 16; . = ALIGN(., alignment)`
   uint64_t SymValue = Value.isAbsolute() ? Value.getValue() : 0;
-  replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
-                              STT_NOTYPE, SymValue, 0, Sec, nullptr);
+  replaceBody<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
+                              Visibility, STT_NOTYPE, SymValue, 0, Sec);
   return Sym->body();
 }
 

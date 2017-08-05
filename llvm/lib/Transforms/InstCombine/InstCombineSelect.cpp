@@ -640,16 +640,16 @@ static Value *foldSelectICmpAnd(const SelectInst &SI, const ICmpInst *IC,
   unsigned AndZeros = AndRHS->getValue().logBase2();
 
   // If types don't match we can still convert the select by introducing a zext
-  // or a trunc of the 'and'. The trunc case requires that all of the truncated
-  // bits are zero, we can figure that out by looking at the 'and' mask.
-  if (AndZeros >= ValC.getBitWidth())
-    return nullptr;
-
-  Value *V = Builder.CreateZExtOrTrunc(LHS, SI.getType());
-  if (ValZeros > AndZeros)
+  // or a trunc of the 'and'.
+  Value *V = LHS;
+  if (ValZeros > AndZeros) {
+    V = Builder.CreateZExtOrTrunc(V, SI.getType());
     V = Builder.CreateShl(V, ValZeros - AndZeros);
-  else if (ValZeros < AndZeros)
+  } else if (ValZeros < AndZeros) {
     V = Builder.CreateLShr(V, AndZeros - ValZeros);
+    V = Builder.CreateZExtOrTrunc(V, SI.getType());
+  } else
+    V = Builder.CreateZExtOrTrunc(V, SI.getType());
 
   // Okay, now we know that everything is set up, we just don't know whether we
   // have a icmp_ne or icmp_eq and whether the true or false val is the zero.

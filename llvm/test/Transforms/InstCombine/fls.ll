@@ -31,8 +31,8 @@ define i32 @myflsll() {
 define i32 @flsnotconst(i64 %z) {
 ; CHECK-LABEL: @flsnotconst(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i64 @llvm.ctlz.i64(i64 %z, i1 false), !range !0
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i64 64, [[CTLZ]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[CTLZ]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 64, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %goo = call i32 @flsl(i64 %z)

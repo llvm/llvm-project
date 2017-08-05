@@ -1,0 +1,8 @@
+# Temporary use -mllvm -use-unknown-locations=Disable so that
+# all instructions have debug info (file line numbers) attached.
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest -mllvm -use-unknown-locations=Disable
+RUN: %cpp_compiler %S/ShrinkControlFlowTest.cpp -o %t-ShrinkControlFlowTest
+
+RUN: %t-SimpleTest  -exit_on_src_pos=SimpleTest.cpp:18                 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
+RUN: %t-ShrinkControlFlowTest  -exit_on_src_pos=Foo 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
+EXIT_ON_SRC_POS: INFO: found line matching '{{.*}}', exiting.

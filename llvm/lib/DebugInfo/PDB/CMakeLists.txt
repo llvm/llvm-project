@@ -44,6 +44,8 @@ add_pdb_impl_folder(Native
   Native/NativeBuiltinSymbol.cpp
   Native/NativeCompilandSymbol.cpp
   Native/NativeEnumModules.cpp
+  Native/NativeEnumSymbol.cpp
+  Native/NativeEnumTypes.cpp
   Native/NativeExeSymbol.cpp
   Native/NativeRawSymbol.cpp
   Native/NamedStreamMap.cpp

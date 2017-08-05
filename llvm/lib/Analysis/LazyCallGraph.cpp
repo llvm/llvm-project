@@ -212,7 +212,7 @@ void LazyCallGraph::SCC::verify() {
     assert(N->LowLink == -1 &&
            "Must set low link to -1 when adding a node to an SCC!");
     for (Edge &E : **N)
-      assert(E.getNode() && "Can't have an unpopulated node!");
+      assert(E.getNode().isPopulated() && "Can't have an unpopulated node!");
   }
 }
 #endif
@@ -957,22 +957,20 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
   // RefSCCs (and their edges) are visited here.
   auto ComputeSourceConnectedSet = [&](SmallPtrSetImpl<RefSCC *> &Set) {
     Set.insert(&SourceC);
-    SmallVector<RefSCC *, 4> Worklist;
-    Worklist.push_back(&SourceC);
-    do {
-      RefSCC &RC = *Worklist.pop_back_val();
-      for (RefSCC &ParentRC : RC.parents()) {
-        // Skip any RefSCCs outside the range of source to target in the
-        // postorder sequence.
-        int ParentIdx = G->getRefSCCIndex(ParentRC);
-        assert(ParentIdx > SourceIdx && "Parent cannot precede source in postorder!");
-        if (ParentIdx > TargetIdx)
-          continue;
-        if (Set.insert(&ParentRC).second)
-          // First edge connecting to this parent, add it to our worklist.
-          Worklist.push_back(&ParentRC);
-      }
-    } while (!Worklist.empty());
+    auto IsConnected = [&](RefSCC &RC) {
+      for (SCC &C : RC)
+        for (Node &N : C)
+          for (Edge &E : *N)
+            if (Set.count(G->lookupRefSCC(E.getNode())))
+              return true;
+
+      return false;
+    };
+
+    for (RefSCC *C : make_range(G->PostOrderRefSCCs.begin() + SourceIdx + 1,
+                                G->PostOrderRefSCCs.begin() + TargetIdx + 1))
+      if (IsConnected(*C))
+        Set.insert(C);
   };
 
   // Use a normal worklist to find which SCCs the target connects to. We still
@@ -1651,7 +1649,7 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   for (RefSCC &ParentRC : RC.parents())
     for (SCC &ParentC : ParentRC)
       for (Node &ParentN : ParentC)
-        if (ParentN)
+        if (ParentN.isPopulated())
           ParentN->removeEdgeInternal(N);
 
   // Now remove this RefSCC from any parents sets and the leaf list.
@@ -1674,8 +1672,10 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   // Finally clear out all the data structures from the node down through the
   // components.
   N.clear();
+  N.G = nullptr;
   C.clear();
   RC.clear();
+  RC.G = nullptr;
 
   // Nothing to delete as all the objects are allocated in stable bump pointer
   // allocators.
@@ -1686,32 +1686,13 @@ LazyCallGraph::Node &LazyCallGraph::insertInto(Function &F, Node *&MappedN) {
 }
 
 void LazyCallGraph::updateGraphPtrs() {
-  // Process all nodes updating the graph pointers.
-  {
-    SmallVector<Node *, 16> Worklist;
-    for (Edge &E : EntryEdges)
-      Worklist.push_back(&E.getNode());
+  // Walk the node map to update their graph pointers. While this iterates in
+  // an unstable order, the order has no effect so it remains correct.
+  for (auto &FunctionNodePair : NodeMap)
+    FunctionNodePair.second->G = this;
 
-    while (!Worklist.empty()) {
-      Node &N = *Worklist.pop_back_val();
-      N.G = this;
-      if (N)
-        for (Edge &E : *N)
-          Worklist.push_back(&E.getNode());
-    }
-  }
-
-  // Process all SCCs updating the graph pointers.
-  {
-    SmallVector<RefSCC *, 16> Worklist(LeafRefSCCs.begin(), LeafRefSCCs.end());
-
-    while (!Worklist.empty()) {
-      RefSCC &C = *Worklist.pop_back_val();
-      C.G = this;
-      for (RefSCC &ParentC : C.parents())
-        Worklist.push_back(&ParentC);
-    }
-  }
+  for (auto *RC : PostOrderRefSCCs)
+    RC->G = this;
 }
 
 template <typename RootsT, typename GetBeginT, typename GetEndT,

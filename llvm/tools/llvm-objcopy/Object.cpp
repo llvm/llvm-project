@@ -354,7 +354,10 @@ template <class ELFT> size_t BinaryObject<ELFT>::totalSize() const {
 template <class ELFT>
 void BinaryObject<ELFT>::write(FileOutputBuffer &Out) const {
   for (auto &Segment : this->Segments) {
-    if (Segment->Type == llvm::ELF::PT_LOAD) {
+    // GNU objcopy does not output segments that do not cover a section. Such
+    // segments can sometimes be produced by LLD due to how LLD handles PT_PHDR.
+    if (Segment->Type == llvm::ELF::PT_LOAD &&
+        Segment->firstSection() != nullptr) {
       Segment->writeSegment(Out);
     }
   }
@@ -373,7 +376,8 @@ template <class ELFT> void BinaryObject<ELFT>::finalize() {
 
   uint64_t Offset = 0;
   for (auto &Segment : this->Segments) {
-    if (Segment->Type == llvm::ELF::PT_LOAD) {
+    if (Segment->Type == llvm::ELF::PT_LOAD &&
+        Segment->firstSection() != nullptr) {
       Offset = alignTo(Offset, Segment->Align);
       Segment->Offset = Offset;
       Offset += Segment->FileSize;

@@ -73,7 +73,7 @@ template <class ELFT>
 static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
                                uint64_t Off) {
   std::string Msg =
-      "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
+      "\n>>> defined in " + toString(Sym.getFile()) + "\n>>> referenced by ";
   std::string Src = S.getSrcMsg<ELFT>(Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
@@ -434,7 +434,7 @@ template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
   uint64_t Value = SS->getValue<ELFT>();
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
-  auto *File = cast<SharedFile<ELFT>>(SS->File);
+  const SharedFile<ELFT> *File = SS->getFile<ELFT>();
   for (const Elf_Phdr &Phdr : check(File->getObj().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
         !(Phdr.p_flags & ELF::PF_W) && Value >= Phdr.p_vaddr &&
@@ -452,7 +452,7 @@ template <class ELFT>
 static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
-  auto *File = cast<SharedFile<ELFT>>(SS->File);
+  SharedFile<ELFT> *File = SS->getFile<ELFT>();
   uint64_t Shndx = SS->getShndx<ELFT>();
   uint64_t Value = SS->getValue<ELFT>();
 
@@ -616,7 +616,7 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   }
 
   errorOrWarn("symbol '" + toString(Body) + "' defined in " +
-              toString(Body.File) + " has no type");
+              toString(Body.getFile()) + " has no type");
   return Expr;
 }
 

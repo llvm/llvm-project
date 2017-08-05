@@ -1126,12 +1126,12 @@ define %s @test78(%s *%p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
 
 define %s @test79(%s *%p, i64 %i, i32 %j) {
 ; CHECK-LABEL: @test79(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i64 %i, 36
-; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %i to i32
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[TMP1]], 36
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[B]], %j
 ; CHECK-NEXT:    [[Q:%.*]] = bitcast %s* %p to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[C]] to i64
-; CHECK-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[C]] to i64
+; CHECK-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8* [[PP]] to %s*
 ; CHECK-NEXT:    [[L:%.*]] = load %s, %s* [[R]], align 4
 ; CHECK-NEXT:    ret %s [[L]]
@@ -1239,8 +1239,8 @@ define i64 @test82(i64 %A) nounwind {
 define i64 @test83(i16 %a, i64 %k) {
 ; CHECK-LABEL: @test83(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 %a to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 %k, 4294967295
-; CHECK-NEXT:    [[SH_PROM:%.*]] = trunc i64 [[SUB]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %k to i32
+; CHECK-NEXT:    [[SH_PROM:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[SH_PROM]]
 ; CHECK-NEXT:    [[SH_PROM1:%.*]] = zext i32 [[SHL]] to i64
 ; CHECK-NEXT:    ret i64 [[SH_PROM1]]

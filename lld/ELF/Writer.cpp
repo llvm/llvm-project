@@ -502,7 +502,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 
     auto *Sym =
         make<DefinedRegular>("", /*IsLocal=*/true, /*StOther=*/0, STT_SECTION,
-                             /*Value=*/0, /*Size=*/0, IS, nullptr);
+                             /*Value=*/0, /*Size=*/0, IS);
     InX::SymTab->addSymbol(Sym);
   }
 }
@@ -1204,7 +1204,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (InX::DynSymTab && S->includeInDynsym()) {
       InX::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol>(Body))
-        if (cast<SharedFile<ELFT>>(SS->File)->isNeeded())
+        if (cast<SharedFile<ELFT>>(S->File)->isNeeded())
           In<ELFT>::VerNeed->addSymbol(SS);
     }
   }

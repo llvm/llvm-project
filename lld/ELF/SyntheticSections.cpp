@@ -297,7 +297,7 @@ InputSection *elf::createInterpSection() {
 SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                                    uint64_t Size, InputSectionBase *Section) {
   auto *S = make<DefinedRegular>(Name, /*IsLocal*/ true, STV_DEFAULT, Type,
-                                 Value, Size, Section, nullptr);
+                                 Value, Size, Section);
   if (InX::SymTab)
     InX::SymTab->addSymbol(S);
   return S;
@@ -2082,7 +2082,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
     return;
   }
 
-  auto *File = cast<SharedFile<ELFT>>(SS->File);
+  SharedFile<ELFT> *File = SS->getFile<ELFT>();
 
   // If we don't already know that we need an Elf_Verneed for this DSO, prepare
   // to create one by adding it to our needed list and creating a dynstr entry

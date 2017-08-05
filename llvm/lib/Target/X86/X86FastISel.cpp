@@ -1077,10 +1077,6 @@ bool X86FastISel::X86SelectCallAddress(const Value *V, X86AddressMode &AM) {
         (AM.Base.Reg != 0 || AM.IndexReg != 0))
       return false;
 
-    // Can't handle DLL Import.
-    if (GV->hasDLLImportStorageClass())
-      return false;
-
     // Can't handle TLS.
     if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
       if (GVar->isThreadLocal())
@@ -1089,8 +1085,9 @@ bool X86FastISel::X86SelectCallAddress(const Value *V, X86AddressMode &AM) {
     // Okay, we've committed to selecting this global. Set up the basic address.
     AM.GV = GV;
 
-    // No ABI requires an extra load for anything other than DLLImport, which
-    // we rejected above. Return a direct reference to the global.
+    // Return a direct reference to the global. Fastisel can handle calls to
+    // functions that require loads, such as dllimport and nonlazybind
+    // functions.
     if (Subtarget->isPICStyleRIPRel()) {
       // Use rip-relative addressing if we can.  Above we verified that the
       // base and index registers are unused.
@@ -3455,19 +3452,28 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   } else {
     // Direct call.
     assert(GV && "Not a direct call");
-    unsigned CallOpc = Is64Bit ? X86::CALL64pcrel32 : X86::CALLpcrel32;
-
     // See if we need any target-specific flags on the GV operand.
     unsigned char OpFlags = Subtarget->classifyGlobalFunctionReference(GV);
     // Ignore NonLazyBind attribute in FastISel
     if (OpFlags == X86II::MO_GOTPCREL)
       OpFlags = 0;
 
+    // This will be a direct call, or an indirect call through memory for
+    // NonLazyBind calls or dllimport calls.
+    bool NeedLoad = OpFlags == X86II::MO_DLLIMPORT;
+    unsigned CallOpc = NeedLoad
+                           ? (Is64Bit ? X86::CALL64m : X86::CALL32m)
+                           : (Is64Bit ? X86::CALL64pcrel32 : X86::CALLpcrel32);
+
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(CallOpc));
+    if (NeedLoad)
+      MIB.addReg(Is64Bit ? X86::RIP : 0).addImm(1).addReg(0);
     if (Symbol)
       MIB.addSym(Symbol, OpFlags);
     else
       MIB.addGlobalAddress(GV, 0, OpFlags);
+    if (NeedLoad)
+      MIB.addReg(0);
   }
 
   // Add a register mask operand representing the call-preserved registers.

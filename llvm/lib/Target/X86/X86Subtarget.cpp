@@ -147,7 +147,12 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
   if (TM.shouldAssumeDSOLocal(M, GV))
     return X86II::MO_NO_FLAG;
 
-  assert(!isTargetCOFF());
+  if (isTargetCOFF()) {
+    assert(GV->hasDLLImportStorageClass() &&
+           "shouldAssumeDSOLocal gave inconsistent answer");
+    return X86II::MO_DLLIMPORT;
+  }
+
   const Function *F = dyn_cast_or_null<Function>(GV);
 
   if (isTargetELF()) {
