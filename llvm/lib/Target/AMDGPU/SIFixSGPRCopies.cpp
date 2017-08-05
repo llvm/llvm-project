@@ -338,6 +338,9 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
                                     unsigned &SMovOp,
                                     int64_t &Imm) {
 
+  if (Copy->getOpcode() != AMDGPU::COPY)
+    return false;
+
   if (!MoveImm->isMoveImmediate())
     return false;
 
@@ -564,7 +567,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default:
         continue;
-      case AMDGPU::COPY: {
+      case AMDGPU::COPY:
+      case AMDGPU::WQM:
+      case AMDGPU::WWM: {
         // If the destination register is a physical register there isn't really
         // much we can do to fix this.
         if (!TargetRegisterInfo::isVirtualRegister(MI.getOperand(0).getReg()))

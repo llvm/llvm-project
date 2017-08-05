@@ -26,6 +26,7 @@ class TargetRegisterInfo;
 struct ArgDescriptor {
 private:
   friend struct AMDGPUFunctionArgInfo;
+  friend class AMDGPUArgumentUsageInfo;
 
   union {
     unsigned Register;

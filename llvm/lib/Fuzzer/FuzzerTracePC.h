@@ -82,6 +82,7 @@ class TracePC {
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
+  void UpdateObservedPCs();
   template <class Callback> void CollectFeatures(Callback CB) const;
 
   void ResetMaps() {
@@ -110,8 +111,6 @@ class TracePC {
   TableOfRecentCompares<Word, 32> TORCW;
   MemMemTable<1024> MMT;
 
-  void PrintNewPCs();
-  void InitializePrintNewPCs();
   size_t GetNumPCs() const {
     return NumGuards == 0 ? (1 << kTracePcBits) : Min(kNumPCs, NumGuards + 1);
   }
@@ -133,6 +132,13 @@ class TracePC {
     return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
   }
   uintptr_t GetMaxStackOffset() const { return InitialStack - LowestStack; }
+
+  template<class CallBack>
+  void ForEachObservedPC(CallBack CB) {
+    if (ObservedPCs)
+      for (auto PC : *ObservedPCs)
+        CB(PC);
+  }
 
 private:
   bool UseCounters = false;
@@ -158,7 +164,7 @@ private:
   uint8_t *Counters() const;
   uintptr_t *PCs() const;
 
-  std::set<uintptr_t> *PrintedPCs;
+  std::set<uintptr_t> *ObservedPCs;
 
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack, LowestStack;  // Assume stack grows down.

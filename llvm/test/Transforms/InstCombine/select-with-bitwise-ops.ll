@@ -256,11 +256,11 @@ define i32 @select_icmp_x_and_2147483648_ne_0_or_2147483648(i32 %x) {
 
 define i32 @test65(i64 %x) {
 ; CHECK-LABEL: @test65(
-; CHECK-NEXT:    [[X_TR:%.*]] = trunc i64 %x to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X_TR]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 42
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], 42
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %1 = and i64 %x, 16
   %2 = icmp ne i64 %1, 0
@@ -270,10 +270,11 @@ define i32 @test65(i64 %x) {
 
 define i32 @test66(i64 %x) {
 ; CHECK-LABEL: @test66(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 %x, 4294967296
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 42, i32 40
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 31
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], 42
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %1 = and i64 %x, 4294967296
   %2 = icmp ne i64 %1, 0
@@ -283,10 +284,10 @@ define i32 @test66(i64 %x) {
 
 define i32 @test67(i16 %x) {
 ; CHECK-LABEL: @test67(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 %x, 4
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 %x, 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i16 [[TMP2]], 42
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %1 = and i16 %x, 4

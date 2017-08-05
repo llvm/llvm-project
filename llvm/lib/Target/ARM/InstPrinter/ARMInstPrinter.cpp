@@ -873,51 +873,13 @@ void ARMInstPrinter::printBankedRegOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   uint32_t Banked = MI->getOperand(OpNum).getImm();
-  uint32_t R = (Banked & 0x20) >> 5;
-  uint32_t SysM = Banked & 0x1f;
+  auto TheReg = ARMBankedReg::lookupBankedRegByEncoding(Banked);
+  assert(TheReg && "invalid banked register operand");
+  std::string Name = TheReg->Name;
 
-  // Nothing much we can do about this, the encodings are specified in B9.2.3 of
-  // the ARM ARM v7C, and are all over the shop.
-  if (R) {
-    O << "SPSR_";
-
-    switch (SysM) {
-    case 0x0e:
-      O << "fiq";
-      return;
-    case 0x10:
-      O << "irq";
-      return;
-    case 0x12:
-      O << "svc";
-      return;
-    case 0x14:
-      O << "abt";
-      return;
-    case 0x16:
-      O << "und";
-      return;
-    case 0x1c:
-      O << "mon";
-      return;
-    case 0x1e:
-      O << "hyp";
-      return;
-    default:
-      llvm_unreachable("Invalid banked SPSR register");
-    }
-  }
-
-  assert(!R && "should have dealt with SPSR regs");
-  const char *RegNames[] = {
-      "r8_usr", "r9_usr", "r10_usr", "r11_usr", "r12_usr", "sp_usr",  "lr_usr",
-      "",       "r8_fiq", "r9_fiq",  "r10_fiq", "r11_fiq", "r12_fiq", "sp_fiq",
-      "lr_fiq", "",       "lr_irq",  "sp_irq",  "lr_svc",  "sp_svc",  "lr_abt",
-      "sp_abt", "lr_und", "sp_und",  "",        "",        "",        "",
-      "lr_mon", "sp_mon", "elr_hyp", "sp_hyp"};
-  const char *Name = RegNames[SysM];
-  assert(Name[0] && "invalid banked register operand");
-
+  uint32_t isSPSR = (Banked & 0x20) >> 5;
+  if (isSPSR)
+    Name.replace(0, 4, "SPSR"); // convert 'spsr_' to 'SPSR_'
   O << Name;
 }
 

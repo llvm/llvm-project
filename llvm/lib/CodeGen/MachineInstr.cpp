@@ -213,6 +213,19 @@ void MachineOperand::ChangeToFrameIndex(int Idx) {
   setIndex(Idx);
 }
 
+void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
+                                         unsigned char TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a FrameIndex");
+
+  removeRegFromUses();
+
+  OpKind = MO_TargetIndex;
+  setIndex(Idx);
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 /// ChangeToRegister - Replace this operand with a new register operand of
 /// the specified value.  If an operand is known to be an register already,
 /// the setReg method should be used.

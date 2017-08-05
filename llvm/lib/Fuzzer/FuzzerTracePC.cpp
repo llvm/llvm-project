@@ -48,6 +48,8 @@ uintptr_t *TracePC::PCs() const {
 }
 
 size_t TracePC::GetTotalPCCoverage() {
+  if (ObservedPCs)
+    return ObservedPCs->size();
   size_t Res = 0;
   for (size_t i = 1, N = GetNumPCs(); i < N; i++)
     if (PCs()[i])
@@ -136,21 +138,40 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   ValueProfileMap.AddValueModPrime(Idx);
 }
 
-void TracePC::InitializePrintNewPCs() {
-  if (!DoPrintNewPCs) return;
-  assert(!PrintedPCs);
-  PrintedPCs = new std::set<uintptr_t>;
-  for (size_t i = 1; i < GetNumPCs(); i++)
-    if (PCs()[i])
-      PrintedPCs->insert(PCs()[i]);
-}
+void TracePC::UpdateObservedPCs() {
+  if (NumPCsInPCTables) {
+    auto Observe = [&](uintptr_t PC) {
+      bool Inserted = ObservedPCs->insert(PC).second;
+      if (Inserted && DoPrintNewPCs)
+        PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
+    };
 
-void TracePC::PrintNewPCs() {
-  if (!DoPrintNewPCs) return;
-  assert(PrintedPCs);
-  for (size_t i = 1; i < GetNumPCs(); i++)
-    if (PCs()[i] && PrintedPCs->insert(PCs()[i]).second)
-      PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PCs()[i]);
+    if (!ObservedPCs)
+      ObservedPCs = new std::set<uintptr_t>;
+
+    if (NumInline8bitCounters == NumPCsInPCTables) {
+      for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
+        uint8_t *Beg = ModuleCounters[i].Start;
+        size_t Size = ModuleCounters[i].Stop - Beg;
+        assert(Size ==
+               (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
+        for (size_t j = 0; j < Size; j++)
+          if (Beg[j])
+            Observe(ModulePCTable[i].Start[j]);
+      }
+    } else if (NumGuards == NumPCsInPCTables) {
+      size_t GuardIdx = 1;
+      for (size_t i = 0; i < NumModules; i++) {
+        uint32_t *Beg = Modules[i].Start;
+        size_t Size = Modules[i].Stop - Beg;
+        assert(Size ==
+               (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
+        for (size_t j = 0; j < Size; j++, GuardIdx++)
+          if (Counters()[GuardIdx])
+            Observe(ModulePCTable[i].Start[j]);
+      }
+    }
+  }
 }
 
 void TracePC::PrintCoverage() {

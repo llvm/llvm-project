@@ -91,9 +91,9 @@ define i32 @test6(i64 %A) {
 
 define i92 @test7(i64 %A) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[B:%.*]] = zext i64 %A to i92
-; CHECK-NEXT:    [[C:%.*]] = lshr i92 [[B]], 32
-; CHECK-NEXT:    ret i92 [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 %A, 32
+; CHECK-NEXT:    [[D:%.*]] = zext i64 [[TMP1]] to i92
+; CHECK-NEXT:    ret i92 [[D]]
 ;
   %B = zext i64 %A to i128
   %C = lshr i128 %B, 32
@@ -531,5 +531,38 @@ define <8 x i8> @wide_lengthening_splat(<4 x i16> %v) {
   %shuf = shufflevector <4 x i16> %v, <4 x i16> %v, <8 x i32> zeroinitializer
   %tr = trunc <8 x i16> %shuf to <8 x i8>
   ret <8 x i8> %tr
+}
+
+define <2 x i8> @narrow_add_vec_constant(<2 x i32> %x) {
+; CHECK-LABEL: @narrow_add_vec_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i8>
+; CHECK-NEXT:    [[TR:%.*]] = add <2 x i8> [[TMP1]], <i8 0, i8 127>
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %add = add <2 x i32> %x, <i32 256, i32 -129>
+  %tr = trunc <2 x i32> %add to <2 x i8>
+  ret <2 x i8> %tr
+}
+
+define <2 x i8> @narrow_mul_vec_constant(<2 x i32> %x) {
+; CHECK-LABEL: @narrow_mul_vec_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i8>
+; CHECK-NEXT:    [[TR:%.*]] = mul <2 x i8> [[TMP1]], <i8 0, i8 127>
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %add = mul <2 x i32> %x, <i32 256, i32 -129>
+  %tr = trunc <2 x i32> %add to <2 x i8>
+  ret <2 x i8> %tr
+}
+
+define <2 x i8> @narrow_sub_vec_constant(<2 x i32> %x) {
+; CHECK-LABEL: @narrow_sub_vec_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i8>
+; CHECK-NEXT:    [[TR:%.*]] = sub <2 x i8> <i8 0, i8 127>, [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[TR]]
+;
+  %sub = sub <2 x i32> <i32 256, i32 -129>, %x
+  %tr = trunc <2 x i32> %sub to <2 x i8>
+  ret <2 x i8> %tr
 }
 

@@ -1,0 +1,73 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-fix-wwm-liveness -o -  %s | FileCheck %s
+#CHECK: %exec = EXIT_WWM killed %19, implicit %21
+
+---
+name:            test_wwm_liveness
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: sreg_64, preferred-register: '' }
+  - { id: 1, class: sgpr_32, preferred-register: '' }
+  - { id: 2, class: sgpr_32, preferred-register: '' }
+  - { id: 3, class: vgpr_32, preferred-register: '' }
+  - { id: 4, class: vgpr_32, preferred-register: '' }
+  - { id: 5, class: vgpr_32, preferred-register: '' }
+  - { id: 6, class: vgpr_32, preferred-register: '' }
+  - { id: 7, class: vgpr_32, preferred-register: '' }
+  - { id: 8, class: sreg_64, preferred-register: '%vcc' }
+  - { id: 9, class: sreg_64, preferred-register: '' }
+  - { id: 10, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 11, class: sreg_64, preferred-register: '' }
+  - { id: 12, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 13, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 14, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 15, class: sreg_128, preferred-register: '' }
+  - { id: 16, class: vgpr_32, preferred-register: '' }
+  - { id: 17, class: vgpr_32, preferred-register: '' }
+  - { id: 18, class: vgpr_32, preferred-register: '' }
+  - { id: 19, class: sreg_64, preferred-register: '' }
+  - { id: 20, class: sreg_64, preferred-register: '' }
+  - { id: 21, class: vgpr_32, preferred-register: '' }
+  - { id: 22, class: sreg_64, preferred-register: '' }
+  - { id: 23, class: sreg_64, preferred-register: '' }
+liveins:         
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  
+    %21 = V_MOV_B32_e32 0, implicit %exec
+    %5 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit %exec
+    %6 = V_MBCNT_HI_U32_B32_e32 -1, killed %5, implicit %exec
+    %8 = V_CMP_GT_U32_e64 32, killed %6, implicit %exec
+    %22 = COPY %exec, implicit-def %exec
+    %23 = S_AND_B64 %22, %8, implicit-def dead %scc
+    %0 = S_XOR_B64 %23, %22, implicit-def dead %scc
+    %exec = S_MOV_B64_term killed %23
+    SI_MASK_BRANCH %bb.2, implicit %exec
+    S_BRANCH %bb.1
+  
+  bb.1:
+    successors: %bb.2(0x80000000)
+  
+    %13 = S_MOV_B32 61440
+    %14 = S_MOV_B32 -1
+    %15 = REG_SEQUENCE undef %12, 1, undef %10, 2, killed %14, 3, killed %13, 4
+    %19 = COPY %exec
+    %exec = S_MOV_B64 -1
+    %16 = BUFFER_LOAD_DWORD_OFFSET %15, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4)
+    %17 = V_ADD_F32_e32 1065353216, killed %16, implicit %exec
+    %exec = EXIT_WWM killed %19
+    %21 = V_MOV_B32_e32 1, implicit %exec
+    early-clobber %18 = WWM killed %17, implicit %exec
+    BUFFER_STORE_DWORD_OFFSET killed %18, killed %15, 0, 0, 0, 0, 0, implicit %exec :: (store 4)
+  
+  bb.2:
+    %exec = S_OR_B64 %exec, killed %0, implicit-def %scc
+    %vgpr0 = COPY killed %21
+    SI_RETURN_TO_EPILOG killed %vgpr0
+
+...

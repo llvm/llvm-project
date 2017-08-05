@@ -256,11 +256,16 @@ public:
     Edge &operator[](int i) { return Edges[i]; }
     Edge &operator[](Node &N) {
       assert(EdgeIndexMap.find(&N) != EdgeIndexMap.end() && "No such edge!");
-      return Edges[EdgeIndexMap.find(&N)->second];
+      auto &E = Edges[EdgeIndexMap.find(&N)->second];
+      assert(E && "Dead or null edge!");
+      return E;
     }
     Edge *lookup(Node &N) {
       auto EI = EdgeIndexMap.find(&N);
-      return EI != EdgeIndexMap.end() ? &Edges[EI->second] : nullptr;
+      if (EI == EdgeIndexMap.end())
+        return nullptr;
+      auto &E = Edges[EI->second];
+      return E ? &E : nullptr;
     }
 
     call_iterator call_begin() {
@@ -329,7 +334,18 @@ public:
     bool operator!=(const Node &N) const { return !operator==(N); }
 
     /// Tests whether the node has been populated with edges.
-    operator bool() const { return Edges.hasValue(); }
+    bool isPopulated() const { return Edges.hasValue(); }
+
+    /// Tests whether this is actually a dead node and no longer valid.
+    ///
+    /// Users rarely interact with nodes in this state and other methods are
+    /// invalid. This is used to model a node in an edge list where the
+    /// function has been completely removed.
+    bool isDead() const {
+      assert(!G == !F &&
+             "Both graph and function pointers should be null or non-null.");
+      return !G;
+    }
 
     // We allow accessing the edges by dereferencing or using the arrow
     // operator, essentially wrapping the internal optional.
@@ -528,7 +544,6 @@ public:
     friend class LazyCallGraph::Node;
 
     LazyCallGraph *G;
-    SmallPtrSet<RefSCC *, 1> Parents;
 
     /// A postorder list of the inner SCCs.
     SmallVector<SCC *, 4> SCCs;
@@ -541,7 +556,6 @@ public:
     RefSCC(LazyCallGraph &G);
 
     void clear() {
-      Parents.clear();
       SCCs.clear();
       SCCIndices.clear();
     }
@@ -608,26 +622,33 @@ public:
       return SCCs.begin() + SCCIndices.find(&C)->second;
     }
 
-    parent_iterator parent_begin() const { return Parents.begin(); }
-    parent_iterator parent_end() const { return Parents.end(); }
+    /// Test if this RefSCC is a parent of \a RC.
+    ///
+    /// CAUTION: This method walks every edge in the \c RefSCC, it can be very
+    /// expensive.
+    bool isParentOf(const RefSCC &RC) const;
 
-    iterator_range<parent_iterator> parents() const {
-      return make_range(parent_begin(), parent_end());
+    /// Test if this RefSCC is an ancestor of \a RC.
+    ///
+    /// CAUTION: This method walks the directed graph of edges as far as
+    /// necessary to find a possible path to the argument. In the worst case
+    /// this may walk the entire graph and can be extremely expensive.
+    bool isAncestorOf(const RefSCC &RC) const;
+
+    /// Test if this RefSCC is a child of \a RC.
+    ///
+    /// CAUTION: This method walks every edge in the argument \c RefSCC, it can
+    /// be very expensive.
+    bool isChildOf(const RefSCC &RC) const { return RC.isParentOf(*this); }
+
+    /// Test if this RefSCC is a descendant of \a RC.
+    ///
+    /// CAUTION: This method walks the directed graph of edges as far as
+    /// necessary to find a possible path from the argument. In the worst case
+    /// this may walk the entire graph and can be extremely expensive.
+    bool isDescendantOf(const RefSCC &RC) const {
+      return RC.isAncestorOf(*this);
     }
-
-    /// Test if this RefSCC is a parent of \a C.
-    bool isParentOf(const RefSCC &C) const { return C.isChildOf(*this); }
-
-    /// Test if this RefSCC is an ancestor of \a C.
-    bool isAncestorOf(const RefSCC &C) const { return C.isDescendantOf(*this); }
-
-    /// Test if this RefSCC is a child of \a C.
-    bool isChildOf(const RefSCC &C) const {
-      return Parents.count(const_cast<RefSCC *>(&C));
-    }
-
-    /// Test if this RefSCC is a descendant of \a C.
-    bool isDescendantOf(const RefSCC &C) const;
 
     /// Provide a short name by printing this RefSCC to a std::string.
     ///
@@ -1112,11 +1133,6 @@ private:
   /// RefSCCs.
   DenseMap<RefSCC *, int> RefSCCIndices;
 
-  /// The leaf RefSCCs of the graph.
-  ///
-  /// These are all of the RefSCCs which have no children.
-  SmallVector<RefSCC *, 4> LeafRefSCCs;
-
   /// Defined functions that are also known library functions which the
   /// optimizer can reason about and therefore might introduce calls to out of
   /// thin air.
@@ -1163,12 +1179,6 @@ private:
   /// Build the SCCs for a RefSCC out of a list of nodes.
   void buildSCCs(RefSCC &RC, node_stack_range Nodes);
 
-  /// Connect a RefSCC into the larger graph.
-  ///
-  /// This walks the edges to connect the RefSCC to its children's parent set,
-  /// and updates the root leaf list.
-  void connectRefSCC(RefSCC &RC);
-
   /// Get the index of a RefSCC within the postorder traversal.
   ///
   /// Requires that this RefSCC is a valid one in the (perhaps partial)
@@ -1185,7 +1195,9 @@ private:
 inline LazyCallGraph::Edge::Edge() : Value() {}
 inline LazyCallGraph::Edge::Edge(Node &N, Kind K) : Value(&N, K) {}
 
-inline LazyCallGraph::Edge::operator bool() const { return Value.getPointer(); }
+inline LazyCallGraph::Edge::operator bool() const {
+  return Value.getPointer() && !Value.getPointer()->isDead();
+}
 
 inline LazyCallGraph::Edge::Kind LazyCallGraph::Edge::getKind() const {
   assert(*this && "Queried a null edge!");

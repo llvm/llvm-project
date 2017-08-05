@@ -53,13 +53,23 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, llvm::Error E) {
 cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input>"));
 cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
                                     cl::init("-"));
+cl::opt<std::string>
+    OutputFormat("O", cl::desc("set output format to one of the following:"
+                               "\n\tbinary"));
 
 void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   std::unique_ptr<FileOutputBuffer> Buffer;
-  Object<ELF64LE> Obj{ObjFile};
-  Obj.finalize();
+  std::unique_ptr<Object<ELF64LE>> Obj;
+  if (!OutputFormat.empty() && OutputFormat != "binary")
+    error("invalid output format '" + OutputFormat + "'");
+
+  if (!OutputFormat.empty() && OutputFormat == "binary")
+    Obj = llvm::make_unique<BinaryObject<ELF64LE>>(ObjFile);
+  else
+    Obj = llvm::make_unique<ELFObject<ELF64LE>>(ObjFile);
+  Obj->finalize();
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(OutputFilename, Obj.totalSize(),
+      FileOutputBuffer::create(OutputFilename, Obj->totalSize(),
                                FileOutputBuffer::F_executable);
   if (BufferOrErr.getError())
     error("failed to open " + OutputFilename);
@@ -68,7 +78,7 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   std::error_code EC;
   if (EC)
     report_fatal_error(EC.message());
-  Obj.write(*Buffer);
+  Obj->write(*Buffer);
   if (auto EC = Buffer->commit())
     reportError(OutputFilename, EC);
 }
