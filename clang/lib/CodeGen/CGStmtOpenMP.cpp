@@ -328,7 +328,7 @@ static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
                              FO.FunctionName, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
-    F->addFnAttr(llvm::Attribute::NoUnwind);
+    F->setDoesNotThrow();
 
   // Generate the function.
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, CD->getLocation(),
@@ -482,7 +482,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     }
     CallArgs.emplace_back(CallArg);
   }
-  WrapperCGF.Builder.CreateCall(F, CallArgs);
+  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, F, CallArgs);
   WrapperCGF.FinishFunction();
   return WrapperF;
 }
@@ -3151,7 +3151,8 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
       llvm::SmallVector<llvm::Value *, 16> CapturedVars;
       CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
       auto *OutlinedFn = emitOutlinedOrderedFunction(CGM, CS);
-      CGF.EmitNounwindRuntimeCall(OutlinedFn, CapturedVars);
+      CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, OutlinedFn,
+                                                      CapturedVars);
     } else {
       Action.Enter(CGF);
       CGF.EmitStmt(

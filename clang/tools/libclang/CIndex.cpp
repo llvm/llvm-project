@@ -7303,7 +7303,8 @@ static void getCursorPlatformAvailabilityForDecl(
 
   std::sort(AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
             [](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
-              return LHS->getPlatform() > RHS->getPlatform();
+              return LHS->getPlatform()->getName() <
+                     RHS->getPlatform()->getName();
             });
   ASTContext &Ctx = D->getASTContext();
   auto It = std::unique(

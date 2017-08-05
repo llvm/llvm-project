@@ -216,7 +216,7 @@ float f[10];
 // CHECK-LABEL: foo_simd
 void foo_simd(int low, int up) {
   // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}, !llvm.mem.parallel_loop_access !
-  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}) #{{[0-9]+}}, !llvm.mem.parallel_loop_access !
+  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}), !llvm.mem.parallel_loop_access !
 #pragma omp simd
   for (int i = low; i < up; ++i) {
     f[i] = 0.0;
@@ -224,7 +224,7 @@ void foo_simd(int low, int up) {
     f[i] = 1.0;
   }
   // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}
-  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}) #{{[0-9]+}}
+  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}})
 #pragma omp for simd ordered
   for (int i = low; i < up; ++i) {
     f[i] = 0.0;

@@ -517,6 +517,18 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     else
       ArchName = "arm";
 
+    // Check if ARM ISA was explicitly selected (using -mno-thumb or -marm) for
+    // M-Class CPUs/architecture variants, which is not supported.
+    bool ARMModeRequested = !Args.hasFlag(options::OPT_mthumb,
+                                          options::OPT_mno_thumb, ThumbDefault);
+    if (IsMProfile && ARMModeRequested) {
+      if (!MCPU.empty())
+        getDriver().Diag(diag::err_cpu_unsupported_isa) << CPU << "ARM";
+       else
+        getDriver().Diag(diag::err_arch_unsupported_isa)
+          << tools::arm::getARMArch(MArch, getTriple()) << "ARM";
+    }
+
     // Assembly files should start in ARM mode, unless arch is M-profile.
     // Windows is always thumb.
     if ((InputType != types::TY_PP_Asm && Args.hasFlag(options::OPT_mthumb,

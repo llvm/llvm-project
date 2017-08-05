@@ -527,16 +527,15 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   // FIXME - Eliminate TheCU.
+  auto &CGOpts = CGM.getCodeGenOpts();
   TheCU = DBuilder.createCompileUnit(
       LangTag,
       DBuilder.createFile(remapDIPath(MainFileName),
                           remapDIPath(getCurrentDirname()), CSKind, Checksum),
-      Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
-      CGM.getCodeGenOpts().EnableSplitDwarf
-          ? ""
-          : CGM.getCodeGenOpts().SplitDwarfFile,
-      EmissionKind, 0 /* DWOid */, CGM.getCodeGenOpts().SplitDwarfInlining,
-      CGM.getCodeGenOpts().DebugInfoForProfiling);
+      Producer, LO.Optimize || CGOpts.PrepareForLTO || CGOpts.EmitSummaryIndex,
+      CGOpts.DwarfDebugFlags, RuntimeVers,
+      CGOpts.EnableSplitDwarf ? "" : CGOpts.SplitDwarfFile, EmissionKind,
+      0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {

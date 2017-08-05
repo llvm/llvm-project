@@ -4840,16 +4840,6 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS-MSA %s
 // MIPS-MSA:#define __mips_msa 1
 //
-// RUN: %clang_cc1 -target-feature +nomadd4 \
-// RUN:   -E -dM -triple=mips-none-none < /dev/null \
-// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-NOMADD4 %s
-// MIPS-NOMADD4:#define __mips_no_madd4 1
-//
-// RUN: %clang_cc1 \
-// RUN:   -E -dM -triple=mips-none-none < /dev/null \
-// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-MADD4 %s
-// MIPS-MADD4-NOT:#define __mips_no_madd4 1
-//
 // RUN: %clang_cc1 -target-cpu mips32r3 -target-feature +nan2008 \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS-NAN2008 %s
@@ -9178,6 +9168,11 @@
 // WEBASSEMBLY32-NOT:#define __LP64__
 // WEBASSEMBLY32-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY32-NEXT:#define __OBJC_BOOL_IS_BOOL 0
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_DEVICE 2
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+// WEBASSEMBLY32-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
 // WEBASSEMBLY32-NEXT:#define __ORDER_BIG_ENDIAN__ 4321
 // WEBASSEMBLY32-NEXT:#define __ORDER_LITTLE_ENDIAN__ 1234
 // WEBASSEMBLY32-NEXT:#define __ORDER_PDP_ENDIAN__ 3412
@@ -9504,6 +9499,11 @@
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
 // WEBASSEMBLY64-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY64-NEXT:#define __OBJC_BOOL_IS_BOOL 0
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_DEVICE 2
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+// WEBASSEMBLY64-NEXT:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
 // WEBASSEMBLY64-NEXT:#define __ORDER_BIG_ENDIAN__ 4321
 // WEBASSEMBLY64-NEXT:#define __ORDER_LITTLE_ENDIAN__ 1234
 // WEBASSEMBLY64-NEXT:#define __ORDER_PDP_ENDIAN__ 3412

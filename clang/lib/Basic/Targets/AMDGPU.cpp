@@ -328,6 +328,8 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
   }
+
+  MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
 }
 
 void AMDGPUTargetInfo::adjust(LangOptions &Opts) {
