@@ -308,23 +308,7 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
   return Set.add_constraint(ExtConstr);
 }
 
-/// Build the desired set of partial tile prefixes.
-///
-/// We build a set of partial tile prefixes, which are prefixes of the vector
-/// loop that have exactly VectorWidth iterations.
-///
-/// 1. Get all prefixes of the vector loop.
-/// 2. Extend it to a set, which has exactly VectorWidth iterations for
-///    any prefix from the set that was built on the previous step.
-/// 3. Subtract loop domain from it, project out the vector loop dimension and
-///    get a set of prefixes, which don't have exactly VectorWidth iterations.
-/// 4. Subtract it from all prefixes of the vector loop and get the desired
-///    set.
-///
-/// @param ScheduleRange A range of a map, which describes a prefix schedule
-///                      relation.
-static isl::set getPartialTilePrefixes(isl::set ScheduleRange,
-                                       int VectorWidth) {
+isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth) {
   unsigned Dims = ScheduleRange.dim(isl::dim::set);
   isl::set LoopPrefixes = ScheduleRange.project_out(isl::dim::set, Dims - 1, 1);
   isl::set ExtentPrefixes = LoopPrefixes.add_dims(isl::dim::set, 1);
