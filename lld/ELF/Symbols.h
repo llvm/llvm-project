@@ -69,6 +69,7 @@ public:
     return !isUndefined() && !isShared() && !isLazy();
   }
   bool isLocal() const { return IsLocal; }
+  InputFile *getFile() const;
   bool isPreemptible() const;
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
@@ -87,9 +88,6 @@ public:
   uint64_t getPltVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
   OutputSection *getOutputSection() const;
-
-  // The file from which this symbol was created.
-  InputFile *File = nullptr;
 
   uint32_t DynsymIndex = 0;
   uint32_t GotIndex = -1;
@@ -155,7 +153,7 @@ public:
 class DefinedCommon : public Defined {
 public:
   DefinedCommon(StringRef N, uint64_t Size, uint32_t Alignment, uint8_t StOther,
-                uint8_t Type, InputFile *File);
+                uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedCommonKind;
@@ -175,12 +173,9 @@ public:
 class DefinedRegular : public Defined {
 public:
   DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
-                 uint64_t Value, uint64_t Size, SectionBase *Section,
-                 InputFile *File)
+                 uint64_t Value, uint64_t Size, SectionBase *Section)
       : Defined(SymbolBody::DefinedRegularKind, Name, IsLocal, StOther, Type),
-        Value(Value), Size(Size), Section(Section) {
-    this->File = File;
-  }
+        Value(Value), Size(Size), Section(Section) {}
 
   // Return true if the symbol is a PIC function.
   template <class ELFT> bool isMipsPIC() const;
@@ -196,8 +191,7 @@ public:
 
 class Undefined : public SymbolBody {
 public:
-  Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
-            InputFile *F);
+  Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
@@ -210,14 +204,17 @@ public:
     return S->kind() == SymbolBody::SharedKind;
   }
 
-  SharedSymbol(InputFile *File, StringRef Name, uint8_t StOther, uint8_t Type,
+  SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type,
                const void *ElfSym, const void *Verdef)
       : Defined(SymbolBody::SharedKind, Name, /*IsLocal=*/false, StOther, Type),
         Verdef(Verdef), ElfSym(ElfSym) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
       this->Type = llvm::ELF::STT_FUNC;
-    this->File = File;
+  }
+
+  template <class ELFT> SharedFile<ELFT> *getFile() const {
+    return cast<SharedFile<ELFT>>(SymbolBody::getFile());
   }
 
   template <class ELFT> uint64_t getShndx() const {
@@ -270,14 +267,13 @@ protected:
 // LazyArchive symbols represents symbols in archive files.
 class LazyArchive : public Lazy {
 public:
-  LazyArchive(ArchiveFile &File, const llvm::object::Archive::Symbol S,
-              uint8_t Type);
+  LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyArchiveKind;
   }
 
-  ArchiveFile *file() { return (ArchiveFile *)this->File; }
+  ArchiveFile *getFile();
   InputFile *fetch();
 
 private:
@@ -288,13 +284,13 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(StringRef Name, LazyObjFile &File, uint8_t Type);
+  LazyObject(StringRef Name, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyObjectKind;
   }
 
-  LazyObjFile *file() { return (LazyObjFile *)this->File; }
+  LazyObjFile *getFile();
   InputFile *fetch();
 };
 
@@ -364,6 +360,9 @@ struct Symbol {
   // This symbol version was found in a version script.
   unsigned InVersionScript : 1;
 
+  // The file from which this symbol was created.
+  InputFile *File = nullptr;
+
   bool includeInDynsym() const;
   uint8_t computeBinding() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
@@ -382,13 +381,13 @@ struct Symbol {
 void printTraceSymbol(Symbol *Sym);
 
 template <typename T, typename... ArgT>
-void replaceBody(Symbol *S, ArgT &&... Arg) {
+void replaceBody(Symbol *S, InputFile *File, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(S->Body), "Body too small");
   static_assert(alignof(T) <= alignof(decltype(S->Body)),
                 "Body not aligned enough");
   assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a SymbolBody");
-
+  S->File = File;
   new (S->Body.buffer) T(std::forward<ArgT>(Arg)...);
 
   // Print out a log message if --trace-symbol was specified.

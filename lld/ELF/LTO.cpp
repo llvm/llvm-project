@@ -120,8 +120,8 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
 BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
-                         STV_DEFAULT, S->body()->Type, nullptr);
+  replaceBody<Undefined>(S, nullptr, S->body()->getName(), /*IsLocal=*/false,
+                         STV_DEFAULT, S->body()->Type);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
@@ -142,7 +142,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing = !ObjSym.isUndefined() && B->File == &F;
+    R.Prevailing = !ObjSym.isUndefined() && B->getFile() == &F;
 
     R.VisibleToRegularObj = Sym->IsUsedInRegularObj ||
                             (R.Prevailing && Sym->includeInDynsym()) ||

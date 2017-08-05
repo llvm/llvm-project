@@ -565,10 +565,10 @@ SymbolBody *ObjFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
     StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return make<Undefined>(Name, /*IsLocal=*/true, StOther, Type, this);
+      return make<Undefined>(Name, /*IsLocal=*/true, StOther, Type);
 
     return make<DefinedRegular>(Name, /*IsLocal=*/true, StOther, Type, Value,
-                                Size, Sec, this);
+                                Size, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable), toString(this));
