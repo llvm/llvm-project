@@ -25,6 +25,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/Analyses/FormatString.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
@@ -2787,15 +2788,18 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
   auto OrderingCABI = (llvm::AtomicOrderingCABI)Ordering;
   switch (Op) {
   case AtomicExpr::AO__c11_atomic_init:
+  case AtomicExpr::AO__opencl_atomic_init:
     llvm_unreachable("There is no ordering argument for an init");
 
   case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
     return OrderingCABI != llvm::AtomicOrderingCABI::release &&
            OrderingCABI != llvm::AtomicOrderingCABI::acq_rel;
 
   case AtomicExpr::AO__c11_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
     return OrderingCABI != llvm::AtomicOrderingCABI::consume &&
@@ -2812,7 +2816,9 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
   DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
 
-  // All these operations take one of the following forms:
+  // All the non-OpenCL operations take one of the following forms.
+  // The OpenCL operations take the __c11 forms with one extra argument for
+  // synchronization scope.
   enum {
     // C    __c11_atomic_init(A *, C)
     Init,
@@ -2833,6 +2839,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     // bool __atomic_compare_exchange(A *, C *, CP, bool, int, int)
     GNUCmpXchg
   } Form = Init;
+  const unsigned NumForm = GNUCmpXchg + 1;
   const unsigned NumArgs[] = { 2, 2, 3, 3, 3, 3, 4, 5, 6 };
   const unsigned NumVals[] = { 1, 0, 1, 1, 1, 1, 2, 2, 3 };
   // where:
@@ -2842,12 +2849,18 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   //   M is C if C is an integer, and ptrdiff_t if C is a pointer, and
   //   the int parameters are for orderings.
 
+  static_assert(sizeof(NumArgs)/sizeof(NumArgs[0]) == NumForm
+      && sizeof(NumVals)/sizeof(NumVals[0]) == NumForm,
+      "need to update code for modified forms");
   static_assert(AtomicExpr::AO__c11_atomic_init == 0 &&
                     AtomicExpr::AO__c11_atomic_fetch_xor + 1 ==
                         AtomicExpr::AO__atomic_load,
                 "need to update code for modified C11 atomics");
-  bool IsC11 = Op >= AtomicExpr::AO__c11_atomic_init &&
-               Op <= AtomicExpr::AO__c11_atomic_fetch_xor;
+  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_init &&
+                  Op <= AtomicExpr::AO__opencl_atomic_fetch_max;
+  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_init &&
+               Op <= AtomicExpr::AO__c11_atomic_fetch_xor) ||
+               IsOpenCL;
   bool IsN = Op == AtomicExpr::AO__atomic_load_n ||
              Op == AtomicExpr::AO__atomic_store_n ||
              Op == AtomicExpr::AO__atomic_exchange_n ||
@@ -2856,10 +2869,12 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
   switch (Op) {
   case AtomicExpr::AO__c11_atomic_init:
+  case AtomicExpr::AO__opencl_atomic_init:
     Form = Init;
     break;
 
   case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
     Form = Load;
     break;
@@ -2869,6 +2884,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     break;
 
   case AtomicExpr::AO__c11_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_store:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
     Form = Copy;
@@ -2876,6 +2892,10 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__c11_atomic_fetch_sub:
+  case AtomicExpr::AO__opencl_atomic_fetch_add:
+  case AtomicExpr::AO__opencl_atomic_fetch_sub:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
@@ -2885,6 +2905,9 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__opencl_atomic_fetch_and:
+  case AtomicExpr::AO__opencl_atomic_fetch_or:
+  case AtomicExpr::AO__opencl_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_xor:
@@ -2897,6 +2920,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     break;
 
   case AtomicExpr::AO__c11_atomic_exchange:
+  case AtomicExpr::AO__opencl_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
     Form = Xchg;
     break;
@@ -2907,6 +2931,8 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
     Form = C11CmpXchg;
     break;
 
@@ -2916,16 +2942,19 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     break;
   }
 
+  unsigned AdjustedNumArgs = NumArgs[Form];
+  if (IsOpenCL && Op != AtomicExpr::AO__opencl_atomic_init)
+    ++AdjustedNumArgs;
   // Check we have the right number of arguments.
-  if (TheCall->getNumArgs() < NumArgs[Form]) {
+  if (TheCall->getNumArgs() < AdjustedNumArgs) {
     Diag(TheCall->getLocEnd(), diag::err_typecheck_call_too_few_args)
-      << 0 << NumArgs[Form] << TheCall->getNumArgs()
+      << 0 << AdjustedNumArgs << TheCall->getNumArgs()
       << TheCall->getCallee()->getSourceRange();
     return ExprError();
-  } else if (TheCall->getNumArgs() > NumArgs[Form]) {
-    Diag(TheCall->getArg(NumArgs[Form])->getLocStart(),
+  } else if (TheCall->getNumArgs() > AdjustedNumArgs) {
+    Diag(TheCall->getArg(AdjustedNumArgs)->getLocStart(),
          diag::err_typecheck_call_too_many_args)
-      << 0 << NumArgs[Form] << TheCall->getNumArgs()
+      << 0 << AdjustedNumArgs << TheCall->getNumArgs()
       << TheCall->getCallee()->getSourceRange();
     return ExprError();
   }
@@ -2953,9 +2982,11 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
-    if (AtomTy.isConstQualified()) {
+    if (AtomTy.isConstQualified() ||
+        AtomTy.getAddressSpace() == LangAS::opencl_constant) {
       Diag(DRE->getLocStart(), diag::err_atomic_op_needs_non_const_atomic)
-        << Ptr->getType() << Ptr->getSourceRange();
+          << (AtomTy.isConstQualified() ? 0 : 1) << Ptr->getType()
+          << Ptr->getSourceRange();
       return ExprError();
     }
     ValType = AtomTy->getAs<AtomicType>()->getValueType();
@@ -3024,7 +3055,8 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   ValType.removeLocalVolatile();
   ValType.removeLocalConst();
   QualType ResultType = ValType;
-  if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init)
+  if (Form == Copy || Form == LoadCopy || Form == GNUXchg ||
+      Form == Init)
     ResultType = Context.VoidTy;
   else if (Form == C11CmpXchg || Form == GNUCmpXchg)
     ResultType = Context.BoolTy;
@@ -3038,7 +3070,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   // The first argument --- the pointer --- has a fixed type; we
   // deduce the types of the rest of the arguments accordingly.  Walk
   // the remaining arguments, converting them to the deduced value type.
-  for (unsigned i = 1; i != NumArgs[Form]; ++i) {
+  for (unsigned i = 1; i != TheCall->getNumArgs(); ++i) {
     QualType Ty;
     if (i < NumVals[Form] + 1) {
       switch (i) {
@@ -3080,7 +3112,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         break;
       }
     } else {
-      // The order(s) are always converted to int.
+      // The order(s) and scope are always converted to int.
       Ty = Context.IntTy;
     }
 
@@ -3093,6 +3125,27 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     TheCall->setArg(i, Arg.get());
   }
 
+  Expr *Scope;
+  if (Form != Init) {
+    if (IsOpenCL) {
+      Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+      llvm::APSInt Result(32);
+      if (!Scope->isIntegerConstantExpr(Result, Context))
+        Diag(Scope->getLocStart(),
+             diag::err_atomic_op_has_non_constant_synch_scope)
+            << Scope->getSourceRange();
+      else if (!isValidSyncScopeValue(Result.getZExtValue()))
+        Diag(Scope->getLocStart(), diag::err_atomic_op_has_invalid_synch_scope)
+            << Scope->getSourceRange();
+    } else {
+      Scope = IntegerLiteral::Create(
+          Context,
+          llvm::APInt(Context.getTypeSize(Context.IntTy),
+                      static_cast<unsigned>(SyncScope::OpenCLAllSVMDevices)),
+          Context.IntTy, SourceLocation());
+    }
+  }
+
   // Permute the arguments into a 'consistent' order.
   SmallVector<Expr*, 5> SubExprs;
   SubExprs.push_back(Ptr);
@@ -3103,28 +3156,33 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     break;
   case Load:
     SubExprs.push_back(TheCall->getArg(1)); // Order
+    SubExprs.push_back(Scope);              // Scope
     break;
   case LoadCopy:
   case Copy:
   case Arithmetic:
   case Xchg:
     SubExprs.push_back(TheCall->getArg(2)); // Order
+    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     break;
   case GNUXchg:
     // Note, AtomicExpr::getVal2() has a special case for this atomic.
     SubExprs.push_back(TheCall->getArg(3)); // Order
+    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     SubExprs.push_back(TheCall->getArg(2)); // Val2
     break;
   case C11CmpXchg:
     SubExprs.push_back(TheCall->getArg(3)); // Order
+    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     SubExprs.push_back(TheCall->getArg(4)); // OrderFail
     SubExprs.push_back(TheCall->getArg(2)); // Val2
     break;
   case GNUCmpXchg:
     SubExprs.push_back(TheCall->getArg(4)); // Order
+    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     SubExprs.push_back(TheCall->getArg(5)); // OrderFail
     SubExprs.push_back(TheCall->getArg(2)); // Val2
@@ -3146,10 +3204,14 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
                                             TheCall->getRParenLoc());
   
   if ((Op == AtomicExpr::AO__c11_atomic_load ||
-       (Op == AtomicExpr::AO__c11_atomic_store)) &&
+       Op == AtomicExpr::AO__c11_atomic_store ||
+       Op == AtomicExpr::AO__opencl_atomic_load ||
+       Op == AtomicExpr::AO__opencl_atomic_store ) &&
       Context.AtomicUsesUnsupportedLibcall(AE))
-    Diag(AE->getLocStart(), diag::err_atomic_load_store_uses_lib) <<
-    ((Op == AtomicExpr::AO__c11_atomic_load) ? 0 : 1);
+    Diag(AE->getLocStart(), diag::err_atomic_load_store_uses_lib)
+        << ((Op == AtomicExpr::AO__c11_atomic_load ||
+            Op == AtomicExpr::AO__opencl_atomic_load)
+                ? 0 : 1);
 
   return AE;
 }

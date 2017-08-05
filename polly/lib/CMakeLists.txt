@@ -60,6 +60,7 @@ add_library(PollyCore OBJECT
   Transform/FlattenAlgo.cpp
   Transform/ForwardOpTree.cpp
   Transform/DeLICM.cpp
+  Transform/ZoneAlgo.cpp
   Transform/Simplify.cpp
   ${POLLY_HEADER_FILES}
   )

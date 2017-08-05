@@ -1184,6 +1184,10 @@ TEST(TypeMatching, MatchesAutoTypes) {
   EXPECT_TRUE(matches("int v[] = { 2, 3 }; void f() { for (int i : v) {} }",
                       autoType()));
 
+  EXPECT_TRUE(matches("auto i = 2;", varDecl(hasType(isInteger()))));
+  EXPECT_TRUE(matches("struct X{}; auto x = X{};",
+                      varDecl(hasType(recordDecl(hasName("X"))))));
+
   // FIXME: Matching against the type-as-written can't work here, because the
   //        type as written was not deduced.
   //EXPECT_TRUE(matches("auto a = 1;",

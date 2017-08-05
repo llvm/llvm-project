@@ -13,7 +13,7 @@
 
 //  Hashing a struct w/o a defined hash should *not* fail, but it should
 // create a type that is not constructible and not callable.
-// See also: http://cplusplus.github.io/LWG/lwg-active.html#2543
+// See also: https://cplusplus.github.io/LWG/lwg-defects.html#2543
 
 #include <functional>
 #include <cassert>

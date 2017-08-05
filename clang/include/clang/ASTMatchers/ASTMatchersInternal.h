@@ -741,24 +741,34 @@ private:
   /// matcher matches on it.
   bool matchesSpecialized(const Type &Node, ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const {
+
+    // DeducedType does not have declarations of its own, so
+    // match the deduced type instead.
+    const Type *EffectiveType = &Node;
+    if (const auto *S = dyn_cast<DeducedType>(&Node)) {
+      EffectiveType = S->getDeducedType().getTypePtrOrNull();
+      if (!EffectiveType)
+        return false;
+    }
+
     // First, for any types that have a declaration, extract the declaration and
     // match on it.
-    if (const auto *S = dyn_cast<TagType>(&Node)) {
+    if (const auto *S = dyn_cast<TagType>(EffectiveType)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<InjectedClassNameType>(&Node)) {
+    if (const auto *S = dyn_cast<InjectedClassNameType>(EffectiveType)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
+    if (const auto *S = dyn_cast<TemplateTypeParmType>(EffectiveType)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<TypedefType>(&Node)) {
+    if (const auto *S = dyn_cast<TypedefType>(EffectiveType)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<UnresolvedUsingType>(&Node)) {
+    if (const auto *S = dyn_cast<UnresolvedUsingType>(EffectiveType)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
-    if (const auto *S = dyn_cast<ObjCObjectType>(&Node)) {
+    if (const auto *S = dyn_cast<ObjCObjectType>(EffectiveType)) {
       return matchesDecl(S->getInterface(), Finder, Builder);
     }
 
@@ -770,14 +780,14 @@ private:
     //   template<typename T> struct X { T t; } class A {}; X<A> a;
     // The following matcher will match, which otherwise would not:
     //   fieldDecl(hasType(pointerType())).
-    if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(&Node)) {
+    if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(EffectiveType)) {
       return matchesSpecialized(S->getReplacementType(), Finder, Builder);
     }
 
     // For template specialization types, we want to match the template
     // declaration, as long as the type is still dependent, and otherwise the
     // declaration of the instantiated tag type.
-    if (const auto *S = dyn_cast<TemplateSpecializationType>(&Node)) {
+    if (const auto *S = dyn_cast<TemplateSpecializationType>(EffectiveType)) {
       if (!S->isTypeAlias() && S->isSugared()) {
         // If the template is non-dependent, we want to match the instantiated
         // tag type.
@@ -796,7 +806,7 @@ private:
     // FIXME: We desugar elaborated types. This makes the assumption that users
     // do never want to match on whether a type is elaborated - there are
     // arguments for both sides; for now, continue desugaring.
-    if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
+    if (const auto *S = dyn_cast<ElaboratedType>(EffectiveType)) {
       return matchesSpecialized(S->desugar(), Finder, Builder);
     }
     return false;

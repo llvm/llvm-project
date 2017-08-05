@@ -288,7 +288,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
       // Enable coverage if the fuzzing flag is set.
       if (Add & Fuzzer)
-        CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall | CoverageTraceCmp;
+        CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall |
+                            CoverageTraceCmp | CoveragePCTable;
 
       Kinds |= Add;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_EQ)) {

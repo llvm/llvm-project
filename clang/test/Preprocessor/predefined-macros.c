@@ -185,6 +185,14 @@
 // CHECK-CL20-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-FRM: #define __FAST_RELAXED_MATH__ 1
 
+// RUN: %clang_cc1 %s -E -dM -o - -x cl \
+// RUN:   | FileCheck %s --check-prefix=MSCOPE
+// MSCOPE:#define __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+// MSCOPE:#define __OPENCL_MEMORY_SCOPE_DEVICE 2
+// MSCOPE:#define __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+// MSCOPE:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+// MSCOPE:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
+
 // RUN: %clang_cc1 -triple aarch64-windows %s -E -dM -o - -x cl \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-WIN
 
