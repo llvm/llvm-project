@@ -558,6 +558,33 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     return new ICmpInst(ICmpInst::ICMP_NE, Src, Zero);
   }
 
+  if ((!isa<IntegerType>(SrcTy) || shouldChangeType(SrcTy, DestTy)) &&
+      Src->hasOneUse()) {
+    // Add/sub/mul can always be narrowed if we're killing the high bits.
+    // If one operand is a constant, then we're not generating more
+    // instructions to perform the narrower math op.
+    Value *X;
+    Constant *C;
+    if (match(Src, m_Add(m_Value(X), m_Constant(C)))) {
+      // trunc(add X, C) --> add(trunc X, C')
+      Value *TruncX = Builder.CreateTrunc(X, DestTy);
+      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+      return BinaryOperator::CreateAdd(TruncX, NarrowC);
+    }
+    if (match(Src, m_Mul(m_Value(X), m_Constant(C)))) {
+      // trunc(mul X, C) --> mul(trunc X, C')
+      Value *TruncX = Builder.CreateTrunc(X, DestTy);
+      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+      return BinaryOperator::CreateMul(TruncX, NarrowC);
+    }
+    if (match(Src, m_Sub(m_Constant(C), m_Value(X)))) {
+      // trunc(sub C, X) --> sub(C', trunc X)
+      Value *TruncX = Builder.CreateTrunc(X, DestTy);
+      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+      return BinaryOperator::CreateSub(NarrowC, TruncX);
+    }
+  }
+
   // FIXME: Maybe combine the next two transforms to handle the no cast case
   // more efficiently. Support vector types. Cleanup code by using m_OneUse.
 

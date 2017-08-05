@@ -42,6 +42,13 @@ void Segment::finalize() {
   }
 }
 
+void Segment::writeSegment(FileOutputBuffer &Out) const {
+  uint8_t *Buf = Out.getBufferStart() + Offset;
+  // We want to maintain segments' interstitial data and contents exactly.
+  // This lets us just copy segments directly.
+  std::copy(std::begin(Contents), std::end(Contents), Buf);
+}
+
 void SectionBase::finalize() {}
 
 template <class ELFT>
@@ -99,7 +106,9 @@ template <class ELFT>
 void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
   uint32_t Index = 0;
   for (const auto &Phdr : unwrapOrError(ElfFile.program_headers())) {
-    Segments.emplace_back(llvm::make_unique<Segment>());
+    ArrayRef<uint8_t> Data{ElfFile.base() + Phdr.p_offset,
+                           (size_t)Phdr.p_filesz};
+    Segments.emplace_back(llvm::make_unique<Segment>(Data));
     Segment &Seg = *Segments.back();
     Seg.Type = Phdr.p_type;
     Seg.Flags = Phdr.p_flags;
@@ -135,7 +144,7 @@ Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
   default:
     Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
     return llvm::make_unique<Section>(Data);
-  };
+  }
 }
 
 template <class ELFT>
@@ -163,12 +172,6 @@ void Object<ELFT>::readSectionHeaders(const ELFFile<ELFT> &ElfFile) {
   }
 }
 
-template <class ELFT> size_t Object<ELFT>::totalSize() const {
-  // We already have the section header offset so we can calculate the total
-  // size by just adding up the size of each section header.
-  return SHOffset + Sections.size() * sizeof(Elf_Shdr) + sizeof(Elf_Shdr);
-}
-
 template <class ELFT> Object<ELFT>::Object(const ELFObjectFile<ELFT> &Obj) {
   const auto &ElfFile = *Obj.getELFFile();
   const auto &Ehdr = *ElfFile.getHeader();
@@ -185,94 +188,6 @@ template <class ELFT> Object<ELFT>::Object(const ELFObjectFile<ELFT> &Obj) {
 
   SectionNames =
       dyn_cast<StringTableSection>(Sections[Ehdr.e_shstrndx - 1].get());
-}
-
-template <class ELFT> void Object<ELFT>::sortSections() {
-  // Put all sections in offset order. Maintain the ordering as closely as
-  // possible while meeting that demand however.
-  auto CompareSections = [](const SecPtr &A, const SecPtr &B) {
-    return A->OriginalOffset < B->OriginalOffset;
-  };
-  std::stable_sort(std::begin(Sections), std::end(Sections), CompareSections);
-}
-
-template <class ELFT> void Object<ELFT>::assignOffsets() {
-  // Decide file offsets and indexes.
-  size_t PhdrSize = Segments.size() * sizeof(Elf_Phdr);
-  // We can put section data after the ELF header and the program headers.
-  uint64_t Offset = sizeof(Elf_Ehdr) + PhdrSize;
-  uint64_t Index = 1;
-  for (auto &Section : Sections) {
-    // The segment can have a different alignment than the section. In the case
-    // that there is a parent segment then as long as we satisfy the alignment
-    // of the segment it should follow that that the section is aligned.
-    if (Section->ParentSegment) {
-      auto FirstInSeg = Section->ParentSegment->firstSection();
-      if (FirstInSeg == Section.get()) {
-        Offset = alignTo(Offset, Section->ParentSegment->Align);
-        // There can be gaps at the start of a segment before the first section.
-        // So first we assign the alignment of the segment and then assign the
-        // location of the section from there
-        Section->Offset =
-            Offset + Section->OriginalOffset - Section->ParentSegment->Offset;
-      }
-      // We should respect interstitial gaps of allocated sections. We *must*
-      // maintain the memory image so that addresses are preserved. As, with the
-      // exception of SHT_NOBITS sections at the end of segments, the memory
-      // image is a copy of the file image, we preserve the file image as well.
-      // There's a strange case where a thread local SHT_NOBITS can cause the
-      // memory image and file image to not be the same. This occurs, on some
-      // systems, when a thread local SHT_NOBITS is between two SHT_PROGBITS
-      // and the thread local SHT_NOBITS section is at the end of a TLS segment.
-      // In this case to faithfully copy the segment file image we must use
-      // relative offsets. In any other case this would be the same as using the
-      // relative addresses so this should maintian the memory image as desired.
-      Offset = FirstInSeg->Offset + Section->OriginalOffset -
-               FirstInSeg->OriginalOffset;
-    }
-    // Alignment should have already been handled by the above if statement if
-    // this if this section is in a segment. Technically this shouldn't do
-    // anything bad if the alignments of the sections are all correct and the
-    // file image isn't corrupted. Still in sticking with the motto "maintain
-    // the file image" we should avoid messing up the file image if the
-    // alignment disagrees with the file image.
-    if (!Section->ParentSegment && Section->Align)
-      Offset = alignTo(Offset, Section->Align);
-    Section->Offset = Offset;
-    Section->Index = Index++;
-    if (Section->Type != SHT_NOBITS)
-      Offset += Section->Size;
-  }
-  // 'offset' should now be just after all the section data so we should set the
-  // section header table offset to be exactly here. This spot might not be
-  // aligned properly however so we should align it as needed. For 32-bit ELF
-  // this needs to be 4-byte aligned and on 64-bit it needs to be 8-byte aligned
-  // so the size of ELFT::Addr is used to ensure this.
-  Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
-  SHOffset = Offset;
-}
-
-template <class ELFT> void Object<ELFT>::finalize() {
-  for (auto &Section : Sections)
-    SectionNames->addString(Section->Name);
-
-  sortSections();
-  assignOffsets();
-
-  // Finalize SectionNames first so that we can assign name indexes.
-  SectionNames->finalize();
-  // Finally now that all offsets and indexes have been set we can finalize any
-  // remaining issues.
-  uint64_t Offset = SHOffset + sizeof(Elf_Shdr);
-  for (auto &Section : Sections) {
-    Section->HeaderOffset = Offset;
-    Offset += sizeof(Elf_Shdr);
-    Section->NameIndex = SectionNames->findIndex(Section->Name);
-    Section->finalize();
-  }
-
-  for (auto &Segment : Segments)
-    Segment->finalize();
 }
 
 template <class ELFT>
@@ -328,14 +243,160 @@ void Object<ELFT>::writeSectionData(FileOutputBuffer &Out) const {
     Section->writeSection(Out);
 }
 
-template <class ELFT> void Object<ELFT>::write(FileOutputBuffer &Out) {
-  writeHeader(Out);
-  writeProgramHeaders(Out);
-  writeSectionData(Out);
-  writeSectionHeaders(Out);
+template <class ELFT> void ELFObject<ELFT>::sortSections() {
+  // Put all sections in offset order. Maintain the ordering as closely as
+  // possible while meeting that demand however.
+  auto CompareSections = [](const SecPtr &A, const SecPtr &B) {
+    return A->OriginalOffset < B->OriginalOffset;
+  };
+  std::stable_sort(std::begin(this->Sections), std::end(this->Sections),
+                   CompareSections);
+}
+
+template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
+  // Decide file offsets and indexes.
+  size_t PhdrSize = this->Segments.size() * sizeof(Elf_Phdr);
+  // We can put section data after the ELF header and the program headers.
+  uint64_t Offset = sizeof(Elf_Ehdr) + PhdrSize;
+  uint64_t Index = 1;
+  for (auto &Section : this->Sections) {
+    // The segment can have a different alignment than the section. In the case
+    // that there is a parent segment then as long as we satisfy the alignment
+    // of the segment it should follow that that the section is aligned.
+    if (Section->ParentSegment) {
+      auto FirstInSeg = Section->ParentSegment->firstSection();
+      if (FirstInSeg == Section.get()) {
+        Offset = alignTo(Offset, Section->ParentSegment->Align);
+        // There can be gaps at the start of a segment before the first section.
+        // So first we assign the alignment of the segment and then assign the
+        // location of the section from there
+        Section->Offset =
+            Offset + Section->OriginalOffset - Section->ParentSegment->Offset;
+      }
+      // We should respect interstitial gaps of allocated sections. We *must*
+      // maintain the memory image so that addresses are preserved. As, with the
+      // exception of SHT_NOBITS sections at the end of segments, the memory
+      // image is a copy of the file image, we preserve the file image as well.
+      // There's a strange case where a thread local SHT_NOBITS can cause the
+      // memory image and file image to not be the same. This occurs, on some
+      // systems, when a thread local SHT_NOBITS is between two SHT_PROGBITS
+      // and the thread local SHT_NOBITS section is at the end of a TLS segment.
+      // In this case to faithfully copy the segment file image we must use
+      // relative offsets. In any other case this would be the same as using the
+      // relative addresses so this should maintian the memory image as desired.
+      Offset = FirstInSeg->Offset + Section->OriginalOffset -
+               FirstInSeg->OriginalOffset;
+    }
+    // Alignment should have already been handled by the above if statement if
+    // this if this section is in a segment. Technically this shouldn't do
+    // anything bad if the alignments of the sections are all correct and the
+    // file image isn't corrupted. Still in sticking with the motto "maintain
+    // the file image" we should avoid messing up the file image if the
+    // alignment disagrees with the file image.
+    if (!Section->ParentSegment && Section->Align)
+      Offset = alignTo(Offset, Section->Align);
+    Section->Offset = Offset;
+    Section->Index = Index++;
+    if (Section->Type != SHT_NOBITS)
+      Offset += Section->Size;
+  }
+  // 'offset' should now be just after all the section data so we should set the
+  // section header table offset to be exactly here. This spot might not be
+  // aligned properly however so we should align it as needed. For 32-bit ELF
+  // this needs to be 4-byte aligned and on 64-bit it needs to be 8-byte aligned
+  // so the size of ELFT::Addr is used to ensure this.
+  Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
+  this->SHOffset = Offset;
+}
+
+template <class ELFT> size_t ELFObject<ELFT>::totalSize() const {
+  // We already have the section header offset so we can calculate the total
+  // size by just adding up the size of each section header.
+  return this->SHOffset + this->Sections.size() * sizeof(Elf_Shdr) +
+         sizeof(Elf_Shdr);
+}
+
+template <class ELFT> void ELFObject<ELFT>::write(FileOutputBuffer &Out) const {
+  this->writeHeader(Out);
+  this->writeProgramHeaders(Out);
+  this->writeSectionData(Out);
+  this->writeSectionHeaders(Out);
+}
+
+template <class ELFT> void ELFObject<ELFT>::finalize() {
+  for (const auto &Section : this->Sections) {
+    this->SectionNames->addString(Section->Name);
+  }
+
+  sortSections();
+  assignOffsets();
+
+  // Finalize SectionNames first so that we can assign name indexes.
+  this->SectionNames->finalize();
+  // Finally now that all offsets and indexes have been set we can finalize any
+  // remaining issues.
+  uint64_t Offset = this->SHOffset + sizeof(Elf_Shdr);
+  for (auto &Section : this->Sections) {
+    Section->HeaderOffset = Offset;
+    Offset += sizeof(Elf_Shdr);
+    Section->NameIndex = this->SectionNames->findIndex(Section->Name);
+    Section->finalize();
+  }
+
+  for (auto &Segment : this->Segments)
+    Segment->finalize();
+}
+
+template <class ELFT> size_t BinaryObject<ELFT>::totalSize() const {
+  return TotalSize;
+}
+
+template <class ELFT>
+void BinaryObject<ELFT>::write(FileOutputBuffer &Out) const {
+  for (auto &Segment : this->Segments) {
+    // GNU objcopy does not output segments that do not cover a section. Such
+    // segments can sometimes be produced by LLD due to how LLD handles PT_PHDR.
+    if (Segment->Type == llvm::ELF::PT_LOAD &&
+        Segment->firstSection() != nullptr) {
+      Segment->writeSegment(Out);
+    }
+  }
+}
+
+template <class ELFT> void BinaryObject<ELFT>::finalize() {
+  for (auto &Segment : this->Segments)
+    Segment->finalize();
+
+  // Put all segments in offset order.
+  auto CompareSegments = [](const SegPtr &A, const SegPtr &B) {
+    return A->Offset < B->Offset;
+  };
+  std::sort(std::begin(this->Segments), std::end(this->Segments),
+            CompareSegments);
+
+  uint64_t Offset = 0;
+  for (auto &Segment : this->Segments) {
+    if (Segment->Type == llvm::ELF::PT_LOAD &&
+        Segment->firstSection() != nullptr) {
+      Offset = alignTo(Offset, Segment->Align);
+      Segment->Offset = Offset;
+      Offset += Segment->FileSize;
+    }
+  }
+  TotalSize = Offset;
 }
 
 template class Object<ELF64LE>;
 template class Object<ELF64BE>;
 template class Object<ELF32LE>;
 template class Object<ELF32BE>;
+
+template class ELFObject<ELF64LE>;
+template class ELFObject<ELF64BE>;
+template class ELFObject<ELF32LE>;
+template class ELFObject<ELF32BE>;
+
+template class BinaryObject<ELF64LE>;
+template class BinaryObject<ELF64BE>;
+template class BinaryObject<ELF32LE>;
+template class BinaryObject<ELF32BE>;

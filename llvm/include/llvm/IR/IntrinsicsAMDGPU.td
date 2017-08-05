@@ -740,6 +740,32 @@ def int_amdgcn_alignbyte : Intrinsic<[llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
+
+// Copies the source value to the destination value, with the guarantee that
+// the source value is computed as if the entire program were executed in WQM.
+def int_amdgcn_wqm : Intrinsic<[llvm_any_ty],
+  [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+>;
+
+// Copies the active channels of the source value to the destination value,
+// with the guarantee that the source value is computed as if the entire
+// program were executed in Whole Wavefront Mode, i.e. with all channels
+// enabled, with a few exceptions: - Phi nodes with require WWM return an
+// undefined value.
+def int_amdgcn_wwm : Intrinsic<[llvm_any_ty],
+  [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+>;
+
+// Given a value, copies it while setting all the inactive lanes to a given
+// value. Note that OpenGL helper lanes are considered active, so if the
+// program ever uses WQM, then the instruction and the first source will be
+// computed in WQM.
+def int_amdgcn_set_inactive :
+  Intrinsic<[llvm_anyint_ty],
+            [LLVMMatchType<0>, // value to be copied
+             LLVMMatchType<0>], // value for the inactive lanes to take
+            [IntrNoMem, IntrConvergent]>;
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//

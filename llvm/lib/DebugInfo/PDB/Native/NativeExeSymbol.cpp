@@ -13,7 +13,9 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
+#include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
 namespace llvm {
 namespace pdb {
@@ -38,6 +40,8 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
     consumeError(Dbi.takeError());
     break;
   }
+  case PDB_SymType::Enum:
+    return Session.createTypeEnumerator(codeview::LF_ENUM);
   default:
     break;
   }

@@ -680,6 +680,15 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
+    if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) &&
+        (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
+      assert(ShAmt < X->getType()->getScalarSizeInBits() &&
+             "Big shift not simplified to zero?");
+      // lshr (zext iM X to iN), C --> zext (lshr X, C) to iN
+      Value *NewLShr = Builder.CreateLShr(X, ShAmt);
+      return new ZExtInst(NewLShr, Ty);
+    }
+
     if (match(Op0, m_SExt(m_Value(X))) &&
         (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
       // Are we moving the sign bit to the low bit and widening with high zeros?

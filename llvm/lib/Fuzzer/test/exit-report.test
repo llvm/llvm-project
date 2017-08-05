@@ -1,4 +1,5 @@
-RUN: not LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
+RUN: not %t-SimpleTest 2>&1 | FileCheck %s
 
 CHECK: ERROR: libFuzzer: fuzz target exited
 CHECK: SUMMARY: libFuzzer: fuzz target exited

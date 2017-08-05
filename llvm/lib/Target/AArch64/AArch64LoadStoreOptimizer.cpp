@@ -388,6 +388,10 @@ static unsigned isMatchingStore(MachineInstr &LoadInst,
 }
 
 static unsigned getPreIndexedOpcode(unsigned Opc) {
+  // FIXME: We don't currently support creating pre-indexed loads/stores when
+  // the load or store is the unscaled version.  If we decide to perform such an
+  // optimization in the future the cases for the unscaled loads/stores will
+  // need to be added here.
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no pre-indexed equivalent!");
@@ -451,32 +455,42 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   default:
     llvm_unreachable("Opcode has no post-indexed wise equivalent!");
   case AArch64::STRSui:
+  case AArch64::STURSi:
     return AArch64::STRSpost;
   case AArch64::STRDui:
+  case AArch64::STURDi:
     return AArch64::STRDpost;
   case AArch64::STRQui:
+  case AArch64::STURQi:
     return AArch64::STRQpost;
   case AArch64::STRBBui:
     return AArch64::STRBBpost;
   case AArch64::STRHHui:
     return AArch64::STRHHpost;
   case AArch64::STRWui:
+  case AArch64::STURWi:
     return AArch64::STRWpost;
   case AArch64::STRXui:
+  case AArch64::STURXi:
     return AArch64::STRXpost;
   case AArch64::LDRSui:
+  case AArch64::LDURSi:
     return AArch64::LDRSpost;
   case AArch64::LDRDui:
+  case AArch64::LDURDi:
     return AArch64::LDRDpost;
   case AArch64::LDRQui:
+  case AArch64::LDURQi:
     return AArch64::LDRQpost;
   case AArch64::LDRBBui:
     return AArch64::LDRBBpost;
   case AArch64::LDRHHui:
     return AArch64::LDRHHpost;
   case AArch64::LDRWui:
+  case AArch64::LDURWi:
     return AArch64::LDRWpost;
   case AArch64::LDRXui:
+  case AArch64::LDURXi:
     return AArch64::LDRXpost;
   case AArch64::LDRSWui:
     return AArch64::LDRSWpost;
@@ -1694,8 +1708,9 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
         ++NumPostFolded;
         break;
       }
-      // Don't know how to handle pre/post-index versions, so move to the next
-      // instruction.
+
+      // Don't know how to handle unscaled pre/post-index versions below, so
+      // move to the next instruction.
       if (TII->isUnscaledLdSt(Opc)) {
         ++MBBI;
         break;

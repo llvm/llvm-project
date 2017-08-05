@@ -1188,31 +1188,6 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   return nullptr;
 }
 
-static Instruction *foldBoolSextMaskToSelect(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  // Canonicalize SExt or Not to the LHS
-  if (match(Op1, m_SExt(m_Value())) || match(Op1, m_Not(m_Value()))) {
-    std::swap(Op0, Op1);
-  }
-
-  // Fold (and (sext bool to A), B) --> (select bool, B, 0)
-  Value *X = nullptr;
-  if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
-    Value *Zero = Constant::getNullValue(Op1->getType());
-    return SelectInst::Create(X, Op1, Zero);
-  }
-
-  // Fold (and ~(sext bool to A), B) --> (select bool, 0, B)
-  if (match(Op0, m_Not(m_SExt(m_Value(X)))) &&
-      X->getType()->isIntOrIntVectorTy(1)) {
-    Value *Zero = Constant::getNullValue(Op0->getType());
-    return SelectInst::Create(X, Zero, Op1);
-  }
-
-  return nullptr;
-}
-
 static Instruction *foldAndToXor(BinaryOperator &I,
                                  InstCombiner::BuilderTy &Builder) {
   assert(I.getOpcode() == Instruction::And);
@@ -1480,8 +1455,14 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Instruction *CastedAnd = foldCastedBitwiseLogic(I))
     return CastedAnd;
 
-  if (Instruction *Select = foldBoolSextMaskToSelect(I))
-    return Select;
+  // and(sext(A), B) / and(B, sext(A)) --> A ? B : 0, where A is i1 or <N x i1>.
+  Value *A;
+  if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Op1, Constant::getNullValue(I.getType()));
+  if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Op0, Constant::getNullValue(I.getType()));
 
   return Changed ? &I : nullptr;
 }

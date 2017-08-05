@@ -56,7 +56,7 @@ ret:
 define void @nocopy(i64 %val, i32  %limit, i32 *%ptr) {
 ; CHECK-LABEL: @nocopy
 ; CHECK-NOT: phi i32
-; CHECK: phi <16 x i32> [ %1, %entry ], [ %inc, %loop ]
+; CHECK: phi <16 x i32> [ %3, %entry ], [ %inc, %loop ]
 entry:
   %tempvector = insertelement <16 x i64> undef, i64 %val, i32 0
   %vector = shufflevector <16 x i64> %tempvector, <16 x i64> undef, <16 x i32> zeroinitializer

@@ -518,35 +518,35 @@ ALL-NEXT:    488 | S_SECTION [size = 28] `.reloc`
 ALL-NEXT:          length = 8, alignment = 12, rva = 20480, section # = 4, characteristics = 1107296320
 ALL:                         Section Contributions
 ALL-NEXT: ============================================================
-ALL-NEXT:   SC  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0
-ALL-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
-ALL-NEXT:   SC  | mod = 0, 0001:0016, size = 10, data crc = 3617027124, reloc crc = 0
-ALL-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
-ALL-NEXT:         IMAGE_SCN_MEM_READ
-ALL-NEXT:   SC  | mod = 1, 0002:0000, size = 56, data crc = 0, reloc crc = 0
-ALL-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
-ALL-NEXT:   SC  | mod = 1, 0002:0324, size = 72, data crc = 0, reloc crc = 0
-ALL-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-ALL-NEXT:   SC  | mod = 1, 0002:0396, size = 20, data crc = 0, reloc crc = 0
-ALL-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
-ALL-NEXT:   SC  | mod = 0, 0003:0000, size = 4, data crc = 0, reloc crc = 0
-ALL-NEXT:         IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ |
-ALL-NEXT:         IMAGE_SCN_MEM_WRITE
+ALL-NEXT:   SC[.text]  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.text]  | mod = 0, 0001:0016, size = 10, data crc = 3617027124, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
+ALL-NEXT:                IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.rdata] | mod = 1, 0002:0000, size = 56, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.rdata] | mod = 1, 0002:0324, size = 72, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.rdata] | mod = 1, 0002:0396, size = 20, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.data]  | mod = 0, 0003:0000, size = 4, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ |
+ALL-NEXT:                IMAGE_SCN_MEM_WRITE
 ALL:                              Section Map
 ALL-NEXT: ============================================================
-ALL-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 0, name = 1
+ALL-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 1, name = 65535
 ALL-NEXT:                  class = 65535, offset = 0, size = 4122
 ALL-NEXT:                  flags = read | execute | 32 bit addr | selector
-ALL-NEXT:   Section 0001 | ovl = 1, group = 0, frame = 0, name = 2
+ALL-NEXT:   Section 0001 | ovl = 0, group = 0, frame = 2, name = 65535
 ALL-NEXT:                  class = 65535, offset = 0, size = 690
 ALL-NEXT:                  flags = read | 32 bit addr | selector
-ALL-NEXT:   Section 0002 | ovl = 2, group = 0, frame = 0, name = 3
+ALL-NEXT:   Section 0002 | ovl = 0, group = 0, frame = 3, name = 65535
 ALL-NEXT:                  class = 65535, offset = 0, size = 4
 ALL-NEXT:                  flags = read | write | 32 bit addr | selector
-ALL-NEXT:   Section 0003 | ovl = 3, group = 0, frame = 0, name = 4
+ALL-NEXT:   Section 0003 | ovl = 0, group = 0, frame = 4, name = 65535
 ALL-NEXT:                  class = 65535, offset = 0, size = 8
 ALL-NEXT:                  flags = read | 32 bit addr | selector
-ALL-NEXT:   Section 0004 | ovl = 4, group = 0, frame = 0, name = 0
+ALL-NEXT:   Section 0004 | ovl = 0, group = 0, frame = 0, name = 65535
 ALL-NEXT:                  class = 65535, offset = 0, size = 4294967295
 ALL-NEXT:                  flags = 32 bit addr | absolute addr
 

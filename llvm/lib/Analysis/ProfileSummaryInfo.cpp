@@ -30,7 +30,7 @@ using namespace llvm;
 // considered cold).
 
 static cl::opt<int> ProfileSummaryCutoffHot(
-    "profile-summary-cutoff-hot", cl::Hidden, cl::init(999000), cl::ZeroOrMore,
+    "profile-summary-cutoff-hot", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
     cl::desc("A count is hot if it exceeds the minimum count to"
              " reach this percentile of total counts."));
 

@@ -602,6 +602,10 @@ public:
   /// Replace this operand with a frame index.
   void ChangeToFrameIndex(int Idx);
 
+  /// Replace this operand with a target index.
+  void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
+                           unsigned char TargetFlags = 0);
+
   /// ChangeToRegister - Replace this operand with a new register operand of
   /// the specified value.  If an operand is known to be an register already,
   /// the setReg method should be used.

@@ -190,3 +190,16 @@ define <2 x i8> @fake_sext_splat(<2 x i3> %x) {
   ret <2 x i8> %sh
 }
 
+; Use a narrow shift: lshr (zext iM X to iN), C --> zext (lshr X, C) to iN
+
+define <2 x i32> @narrow_lshr_constant(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @narrow_lshr_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> %x, <i8 3, i8 3>
+; CHECK-NEXT:    [[SH:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[SH]]
+;
+  %zx = zext <2 x i8> %x to <2 x i32>
+  %sh = lshr <2 x i32> %zx, <i32 3, i32 3>
+  ret <2 x i32> %sh
+}
+

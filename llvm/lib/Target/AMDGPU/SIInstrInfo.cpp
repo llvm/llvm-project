@@ -1099,6 +1099,28 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
+  case AMDGPU::V_SET_INACTIVE_B32: {
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOT_B64), AMDGPU::EXEC)
+      .addReg(AMDGPU::EXEC);
+    BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), MI.getOperand(0).getReg())
+      .add(MI.getOperand(2));
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOT_B64), AMDGPU::EXEC)
+      .addReg(AMDGPU::EXEC);
+    MI.eraseFromParent();
+    break;
+  }
+  case AMDGPU::V_SET_INACTIVE_B64: {
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOT_B64), AMDGPU::EXEC)
+      .addReg(AMDGPU::EXEC);
+    MachineInstr *Copy = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_PSEUDO),
+                                 MI.getOperand(0).getReg())
+      .add(MI.getOperand(2));
+    expandPostRAPseudo(*Copy);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOT_B64), AMDGPU::EXEC)
+      .addReg(AMDGPU::EXEC);
+    MI.eraseFromParent();
+    break;
+  }
   case AMDGPU::V_MOVRELD_B32_V1:
   case AMDGPU::V_MOVRELD_B32_V2:
   case AMDGPU::V_MOVRELD_B32_V4:
@@ -1154,6 +1176,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     llvm::finalizeBundle(MBB, Bundler.begin());
 
     MI.eraseFromParent();
+    break;
+  }
+  case AMDGPU::EXIT_WWM: {
+    // This only gets its own opcode so that SIFixWWMLiveness can tell when WWM
+    // is exited.
+    MI.setDesc(get(AMDGPU::S_MOV_B64));
     break;
   }
   }
@@ -2666,6 +2694,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) {
   case AMDGPU::COPY: return AMDGPU::COPY;
   case AMDGPU::PHI: return AMDGPU::PHI;
   case AMDGPU::INSERT_SUBREG: return AMDGPU::INSERT_SUBREG;
+  case AMDGPU::WQM: return AMDGPU::WQM;
+  case AMDGPU::WWM: return AMDGPU::WWM;
   case AMDGPU::S_MOV_B32:
     return MI.getOperand(1).isReg() ?
            AMDGPU::COPY : AMDGPU::V_MOV_B32_e32;
@@ -3970,6 +4000,8 @@ const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(
   case AMDGPU::PHI:
   case AMDGPU::REG_SEQUENCE:
   case AMDGPU::INSERT_SUBREG:
+  case AMDGPU::WQM:
+  case AMDGPU::WWM:
     if (RI.hasVGPRs(NewDstRC))
       return nullptr;
 
