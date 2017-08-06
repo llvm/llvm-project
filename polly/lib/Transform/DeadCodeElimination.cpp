@@ -95,7 +95,7 @@ char DeadCodeElim::ID = 0;
 // no point in trying to remove them from the live-out set.
 isl::union_set DeadCodeElim::getLiveOut(Scop &S) {
   isl::union_map Schedule = isl::manage(S.getSchedule());
-  isl::union_map MustWrites = isl::manage(S.getMustWrites());
+  isl::union_map MustWrites = S.getMustWrites();
   isl::union_map WriteIterations = MustWrites.reverse();
   isl::union_map WriteTimes = WriteIterations.apply_range(Schedule);
 
@@ -104,7 +104,7 @@ isl::union_set DeadCodeElim::getLiveOut(Scop &S) {
       LastWriteTimes.apply_range(Schedule.reverse());
 
   isl::union_set Live = LastWriteIterations.range();
-  isl::union_map MayWrites = isl::manage(S.getMayWrites());
+  isl::union_map MayWrites = S.getMayWrites();
   Live = Live.unite(MayWrites.domain());
   return Live.coalesce();
 }

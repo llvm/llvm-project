@@ -133,7 +133,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 
   for (ScopStmt &Stmt : S) {
     for (MemoryAccess *MA : Stmt) {
-      isl_set *domcp = Stmt.getDomain();
+      isl_set *domcp = Stmt.getDomain().release();
       isl_map *accdom = MA->getAccessRelation().release();
 
       accdom = isl_map_intersect_domain(accdom, domcp);
@@ -156,7 +156,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
       } else {
         accdom = tag(accdom, MA, Level);
         if (Level > Dependences::AL_Statement) {
-          auto *StmtScheduleMap = Stmt.getSchedule();
+          isl_map *StmtScheduleMap = Stmt.getSchedule().release();
           assert(StmtScheduleMap &&
                  "Schedules that contain extension nodes require special "
                  "handling.");
@@ -174,7 +174,8 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
     }
 
     if (!ReductionArrays.empty() && Level == Dependences::AL_Statement)
-      StmtSchedule = isl_union_map_add_map(StmtSchedule, Stmt.getSchedule());
+      StmtSchedule =
+          isl_union_map_add_map(StmtSchedule, Stmt.getSchedule().release());
   }
 
   StmtSchedule =
@@ -743,7 +744,7 @@ bool Dependences::isValidSchedule(Scop &S,
     isl_map *StmtScat;
 
     if (NewSchedule->find(&Stmt) == NewSchedule->end())
-      StmtScat = Stmt.getSchedule();
+      StmtScat = Stmt.getSchedule().release();
     else
       StmtScat = isl_map_copy((*NewSchedule)[&Stmt]);
     assert(StmtScat &&

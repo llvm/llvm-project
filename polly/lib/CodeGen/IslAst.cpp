@@ -426,7 +426,7 @@ void IslAst::init(const Dependences &D) {
   AstBuildUserInfo BuildInfo;
 
   if (UseContext)
-    Build = isl_ast_build_from_context(S.getContext());
+    Build = isl_ast_build_from_context(S.getContext().release());
   else
     Build = isl_ast_build_from_context(isl_set_universe(S.getParamSpace()));
 

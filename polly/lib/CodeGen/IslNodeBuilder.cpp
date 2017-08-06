@@ -372,7 +372,7 @@ void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
   ScopStmt *Stmt = (ScopStmt *)isl_id_get_user(Id);
   std::vector<LoopToScevMapT> VLTS(IVS.size());
 
-  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain());
+  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain().release());
   Schedule = isl_union_map_intersect_domain(Schedule, Domain);
   isl_map *S = isl_map_from_union_map(Schedule);
 
@@ -702,7 +702,7 @@ static bool hasPartialAccesses(__isl_take isl_ast_node *Node) {
 
                ScopStmt *Stmt =
                    static_cast<ScopStmt *>(isl_id_get_user(Id.keep()));
-               isl::set StmtDom = give(Stmt->getDomain());
+               isl::set StmtDom = Stmt->getDomain();
                for (auto *MA : *Stmt) {
                  if (MA->isLatestPartialAccess())
                    return isl_bool_error;
@@ -786,7 +786,7 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
   auto *Build = IslAstInfo::getBuild(Node);
   assert(Build && "Could not obtain isl_ast_build from user node");
-  Stmt->setAstBuild(Build);
+  Stmt->setAstBuild(isl::manage(isl_ast_build_copy(Build)));
 
   for (auto *MA : *Stmt) {
     if (!MA->hasNewAccessRelation()) {
@@ -811,13 +811,13 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
 #ifndef NDEBUG
     if (MA->isRead()) {
-      auto Dom = Stmt->getDomain();
+      auto Dom = Stmt->getDomain().release();
       auto SchedDom = isl_set_from_union_set(
           isl_union_map_domain(isl_union_map_copy(Schedule)));
       auto AccDom = isl_map_domain(MA->getAccessRelation().release());
-      Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext());
+      Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext().release());
       SchedDom =
-          isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext());
+          isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext().release());
       assert(isl_set_is_subset(SchedDom, AccDom) &&
              "Access relation not defined on full schedule domain");
       assert(isl_set_is_subset(Dom, AccDom) &&
@@ -1057,7 +1057,7 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set) {
 
 bool IslNodeBuilder::materializeParameters() {
   for (const SCEV *Param : S.parameters()) {
-    isl_id *Id = S.getIdForParam(Param);
+    isl_id *Id = S.getIdForParam(Param).release();
     if (!materializeValue(Id))
       return false;
   }
@@ -1184,7 +1184,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
 
   isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
-  AccessRange = isl_set_gist_params(AccessRange, S.getContext());
+  AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
 
   if (!materializeParameters(AccessRange)) {
     isl_set_free(AccessRange);
@@ -1344,7 +1344,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   }
 
   if (SE.isSCEVable(AccInstTy)) {
-    isl_id *ParamId = S.getIdForParam(SE.getSCEV(AccInst));
+    isl_id *ParamId = S.getIdForParam(SE.getSCEV(AccInst)).release();
     if (ParamId)
       IDToValue[ParamId] = PreloadVal;
     isl_id_free(ParamId);

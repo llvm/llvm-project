@@ -172,7 +172,7 @@ private:
   /// removed) and the overwrite.
   void removeOverwrites() {
     for (auto &Stmt : *S) {
-      auto Domain = give(Stmt.getDomain());
+      isl::set Domain = Stmt.getDomain();
       isl::union_map WillBeOverwritten =
           isl::union_map::empty(give(S->getParamSpace()));
 
@@ -233,7 +233,7 @@ private:
   void coalesceWrites() {
     for (auto &Stmt : *S) {
       isl::set Domain =
-          give(Stmt.getDomain()).intersect_params(give(S->getContext()));
+          Stmt.getDomain().intersect_params(give(S->getContext()));
 
       // We let isl do the lookup for the same-value condition. For this, we
       // wrap llvm::Value into an isl::set such that isl can do the lookup in
@@ -427,7 +427,7 @@ private:
         return Result;
       };
 
-      isl::set Domain = give(Stmt.getDomain());
+      isl::set Domain = Stmt.getDomain();
       Domain = Domain.intersect_params(give(S->getContext()));
 
       // List of element reads that still have the same value while iterating
