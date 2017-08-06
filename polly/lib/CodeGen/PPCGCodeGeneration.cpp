@@ -420,11 +420,18 @@ private:
   ///
   /// @param Kernel The kernel to scan for llvm::Values
   ///
-  /// @returns A pair, whose first element contains the set of values
-  ///          referenced by the kernel, and whose second element contains the
-  ///          set of functions referenced by the kernel. All functions in the
-  ///          second set satisfy isValidFunctionInKernel.
-  std::pair<SetVector<Value *>, SetVector<Function *>>
+  /// @returns A tuple, whose:
+  ///          - First element contains the set of values referenced by the
+  ///            kernel
+  ///          - Second element contains the set of functions referenced by the
+  ///             kernel. All functions in the set satisfy
+  ///             `isValidFunctionInKernel`.
+  ///          - Third element contains loops that have induction variables
+  ///            which are used in the kernel, *and* these loops are *neither*
+  ///            in the scop, nor do they immediately surroung the Scop.
+  ///            See [Code generation of induction variables of loops outside
+  ///            Scops]
+  std::tuple<SetVector<Value *>, SetVector<Function *>, SetVector<const Loop *>>
   getReferencesInKernel(ppcg_kernel *Kernel);
 
   /// Compute the sizes of the execution grid for a given kernel.
@@ -1396,7 +1403,7 @@ getFunctionsFromRawSubtreeValues(SetVector<Value *> RawSubtreeValues,
   return SubtreeFunctions;
 }
 
-std::pair<SetVector<Value *>, SetVector<Function *>>
+std::tuple<SetVector<Value *>, SetVector<Function *>, SetVector<const Loop *>>
 GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
   SetVector<Value *> SubtreeValues;
   SetVector<const SCEV *> SCEVs;
@@ -1407,11 +1414,22 @@ GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
   for (const auto &I : IDToValue)
     SubtreeValues.insert(I.second);
 
+  // NOTE: this is populated in IslNodeBuilder::addParameters
+  // See [Code generation of induction variables of loops outside Scops].
+  for (const auto &I : OutsideLoopIterations)
+    SubtreeValues.insert(cast<SCEVUnknown>(I.second)->getValue());
+
   isl_ast_node_foreach_descendant_top_down(
       Kernel->tree, collectReferencesInGPUStmt, &References);
 
-  for (const SCEV *Expr : SCEVs)
+  for (const SCEV *Expr : SCEVs) {
     findValues(Expr, SE, SubtreeValues);
+    findLoops(Expr, Loops);
+  }
+
+  Loops.remove_if([this](const Loop *L) {
+    return S.contains(L) || L->contains(S.getEntry());
+  });
 
   for (auto &SAI : S.arrays())
     SubtreeValues.remove(SAI->getBasePtr());
@@ -1458,7 +1476,7 @@ GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
     else
       ReplacedValues.insert(It->second);
   }
-  return std::make_pair(ReplacedValues, ValidSubtreeFunctions);
+  return std::make_tuple(ReplacedValues, ValidSubtreeFunctions, Loops);
 }
 
 void GPUNodeBuilder::clearDominators(Function *F) {
@@ -1702,7 +1720,9 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 
   SetVector<Value *> SubtreeValues;
   SetVector<Function *> SubtreeFunctions;
-  std::tie(SubtreeValues, SubtreeFunctions) = getReferencesInKernel(Kernel);
+  SetVector<const Loop *> Loops;
+  std::tie(SubtreeValues, SubtreeFunctions, Loops) =
+      getReferencesInKernel(Kernel);
 
   assert(Kernel->tree && "Device AST of kernel node is empty");
 
@@ -1711,8 +1731,6 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   ValueMapT HostValueMap = ValueMap;
   BlockGenerator::AllocaMapTy HostScalarMap = ScalarMap;
   ScalarMap.clear();
-
-  SetVector<const Loop *> Loops;
 
   // Create for all loops we depend on values that contain the current loop
   // iteration. These values are necessary to generate code for SCEVs that
@@ -2280,6 +2298,7 @@ std::string GPUNodeBuilder::createKernelASM() {
 }
 
 bool GPUNodeBuilder::requiresCUDALibDevice() {
+  bool RequiresLibDevice = false;
   for (Function &F : GPUModule->functions()) {
     if (!F.isDeclaration())
       continue;
@@ -2287,11 +2306,11 @@ bool GPUNodeBuilder::requiresCUDALibDevice() {
     std::string CUDALibDeviceFunc = getCUDALibDeviceFuntion(&F);
     if (CUDALibDeviceFunc.length() != 0) {
       F.setName(CUDALibDeviceFunc);
-      return true;
+      RequiresLibDevice = true;
     }
   }
 
-  return false;
+  return RequiresLibDevice;
 }
 
 void GPUNodeBuilder::addCUDALibDevice() {

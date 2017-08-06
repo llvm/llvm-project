@@ -19,6 +19,7 @@
 
 ; Check that the intrinsic call is present in the kernel IR.
 ; KERNEL-IR:   %p_expf = tail call float @__nv_expf(float %A.arr.i.val_p_scalar_)
+; KERNEL-IR:   %p_cosf = tail call float @__nv_cosf(float %p_expf)
 
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
@@ -29,6 +30,7 @@
 ;   for(int i = 0; i < N; i++) {
 ;       float tmp0 = A[i];
 ;       float tmp1 = expf(tmp1);
+;       tmp1 = cosf(tmp1);
 ;       B[i] = tmp1;
 ;   }
 ; }
@@ -52,6 +54,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %A.arr.i.val = load float, float* %A.arr.i, align 4
   ; Call to intrinsics that should be part of the kernel.
   %expf = tail call float @expf(float %A.arr.i.val)
+  %cosf = tail call float @cosf(float %expf)
   %B.arr.i = getelementptr inbounds float, float* %B, i64 %indvars.iv
   store float %expf, float* %B.arr.i, align 4
 
@@ -69,6 +72,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 ; Function Attrs: nounwind readnone
 declare float @expf(float) #0
+declare float @cosf(float) #0
 
 attributes #0 = { nounwind readnone }
 

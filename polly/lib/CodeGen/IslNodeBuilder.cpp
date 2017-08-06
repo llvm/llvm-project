@@ -296,6 +296,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   for (const auto &I : IDToValue)
     Values.insert(I.second);
 
+  // NOTE: this is populated in IslNodeBuilder::addParameters
   for (const auto &I : OutsideLoopIterations)
     Values.insert(cast<SCEVUnknown>(I.second)->getValue());
 
@@ -309,9 +310,17 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
 
   Values.remove_if([](const Value *V) { return isa<GlobalValue>(V); });
 
+  /// Note: Code generation of induction variables of loops outside Scops
+  ///
   /// Remove loops that contain the scop or that are part of the scop, as they
   /// are considered local. This leaves only loops that are before the scop, but
   /// do not contain the scop itself.
+  /// We ignore loops perfectly contained in the Scop because these are already
+  /// generated at `IslNodeBuilder::addParameters`. These `Loops` are loops
+  /// whose induction variables are referred to by the Scop, but the Scop is not
+  /// fully contained in these Loops. Since there can be many of these,
+  /// we choose to codegen these on-demand.
+  /// @see IslNodeBuilder::materializeNonScopLoopInductionVariable.
   Loops.remove_if([this](const Loop *L) {
     return S.contains(L) || L->contains(S.getEntry());
   });
@@ -627,13 +636,10 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // Create for all loops we depend on values that contain the current loop
   // iteration. These values are necessary to generate code for SCEVs that
   // depend on such loops. As a result we need to pass them to the subfunction.
+  // See [Code generation of induction variables of loops outside Scops]
   for (const Loop *L : Loops) {
-    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
-                                            SE.getUnknown(Builder.getInt64(1)),
-                                            L, SCEV::FlagAnyWrap);
-    Value *V = generateSCEV(OuterLIV);
-    OutsideLoopIterations[L] = SE.getUnknown(V);
-    SubtreeValues.insert(V);
+    Value *LoopInductionVar = materializeNonScopLoopInductionVariable(L);
+    SubtreeValues.insert(LoopInductionVar);
   }
 
   ValueMapT NewValues;
@@ -894,6 +900,17 @@ void IslNodeBuilder::generateCopyStmt(
       isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId().release());
   auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
   Builder.CreateStore(LoadValue, StoreAddr);
+}
+
+Value *IslNodeBuilder::materializeNonScopLoopInductionVariable(const Loop *L) {
+  assert(OutsideLoopIterations.find(L) == OutsideLoopIterations.end() &&
+         "trying to materialize loop induction variable twice");
+  const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                                          SE.getUnknown(Builder.getInt64(1)), L,
+                                          SCEV::FlagAnyWrap);
+  Value *V = generateSCEV(OuterLIV);
+  OutsideLoopIterations[L] = SE.getUnknown(V);
+  return V;
 }
 
 void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
@@ -1484,11 +1501,7 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
     L = L->getParentLoop();
 
   while (L != nullptr) {
-    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
-                                            SE.getUnknown(Builder.getInt64(1)),
-                                            L, SCEV::FlagAnyWrap);
-    Value *V = generateSCEV(OuterLIV);
-    OutsideLoopIterations[L] = SE.getUnknown(V);
+    materializeNonScopLoopInductionVariable(L);
     L = L->getParentLoop();
   }
 

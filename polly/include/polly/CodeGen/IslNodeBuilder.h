@@ -412,6 +412,16 @@ private:
   ///                    ids to new access expressions.
   void generateCopyStmt(ScopStmt *Stmt,
                         __isl_keep isl_id_to_ast_expr *NewAccesses);
+
+  /// Materialize a canonical loop induction variable for `L`, which is a loop
+  /// that is *not* present in the Scop.
+  ///
+  /// Note that this is materialized at the point where the `Builder` is
+  /// currently pointing.
+  /// We also populate the `OutsideLoopIterations` map with `L`s SCEV to keep
+  /// track of the induction variable.
+  /// See [Code generation of induction variables of loops outside Scops]
+  Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
 
 #endif // POLLY_ISL_NODE_BUILDER_H

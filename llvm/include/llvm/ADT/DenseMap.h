@@ -107,17 +107,23 @@ public:
     }
 
     const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
-    unsigned NumEntries = getNumEntries();
-    for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
-      if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey)) {
-        if (!KeyInfoT::isEqual(P->getFirst(), TombstoneKey)) {
-          P->getSecond().~ValueT();
-          --NumEntries;
-        }
+    if (isPodLike<KeyT>::value && isPodLike<ValueT>::value) {
+      // Use a simpler loop when these are trivial types.
+      for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
         P->getFirst() = EmptyKey;
+    } else {
+      unsigned NumEntries = getNumEntries();
+      for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
+        if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey)) {
+          if (!KeyInfoT::isEqual(P->getFirst(), TombstoneKey)) {
+            P->getSecond().~ValueT();
+            --NumEntries;
+          }
+          P->getFirst() = EmptyKey;
+        }
       }
+      assert(NumEntries == 0 && "Node count imbalance!");
     }
-    assert(NumEntries == 0 && "Node count imbalance!");
     setNumEntries(0);
     setNumTombstones(0);
   }
