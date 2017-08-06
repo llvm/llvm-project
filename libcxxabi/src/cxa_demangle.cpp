@@ -2896,7 +2896,7 @@ parse_new_expr(const char* first, const char* last, Db& db)
                     return first;
                 init_list = db.popTrailingNodeArray(init_list_begin);
             }
-            if (*t != 'E')
+            if (*t != 'E' || db.names.empty())
                 return first;
             auto type = db.names.back();
             db.names.pop_back();

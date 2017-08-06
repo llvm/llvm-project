@@ -966,11 +966,10 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   // Initialize the invalid domain.
   for (ScopStmt &Stmt : scop->Stmts)
     if (Stmt.isBlockStmt())
-      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()].copy());
+      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()]);
     else
-      Stmt.setInvalidDomain(
-          InvalidDomainMap[getRegionNodeBasicBlock(Stmt.getRegion()->getNode())]
-              .copy());
+      Stmt.setInvalidDomain(InvalidDomainMap[getRegionNodeBasicBlock(
+          Stmt.getRegion()->getNode())]);
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.

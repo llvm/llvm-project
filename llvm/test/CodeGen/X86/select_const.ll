@@ -211,10 +211,9 @@ define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 define i32 @select_lea_2(i1 zeroext %cond) {
 ; CHECK-LABEL: select_lea_2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $-1, %ecx
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    leal -1(%rax,%rax), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 1
   ret i32 %sel
@@ -223,10 +222,9 @@ define i32 @select_lea_2(i1 zeroext %cond) {
 define i64 @select_lea_3(i1 zeroext %cond) {
 ; CHECK-LABEL: select_lea_3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    movq $-2, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    leaq -2(%rax,%rax,2), %rax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i64 -2, i64 1
   ret i64 %sel
@@ -235,10 +233,9 @@ define i64 @select_lea_3(i1 zeroext %cond) {
 define i32 @select_lea_5(i1 zeroext %cond) {
 ; CHECK-LABEL: select_lea_5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $-2, %ecx
-; CHECK-NEXT:    movl $3, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    leal -2(%rax,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -2, i32 3
   ret i32 %sel
@@ -247,10 +244,9 @@ define i32 @select_lea_5(i1 zeroext %cond) {
 define i64 @select_lea_9(i1 zeroext %cond) {
 ; CHECK-LABEL: select_lea_9:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $2, %ecx
-; CHECK-NEXT:    movq $-7, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    leaq -7(%rax,%rax,8), %rax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i64 -7, i64 2
   ret i64 %sel
@@ -263,12 +259,9 @@ define i64 @select_lea_9(i1 zeroext %cond) {
 define i8 @select_pow2_diff(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movb $19, %al
-; CHECK-NEXT:    jne .LBB22_2
-; CHECK-NEXT:  # BB#1:
-; CHECK-NEXT:    movb $3, %al
-; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:    shlb $4, %dil
+; CHECK-NEXT:    orb $3, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i8 19, i8 3
   ret i8 %sel
@@ -277,10 +270,11 @@ define i8 @select_pow2_diff(i1 zeroext %cond) {
 define i16 @select_pow2_diff_invert(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff_invert:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movw $7, %cx
-; CHECK-NEXT:    movw $71, %ax
-; CHECK-NEXT:    cmovnew %cx, %ax
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    shll $6, %eax
+; CHECK-NEXT:    orl $7, %eax
+; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i16 7, i16 71
   ret i16 %sel
@@ -289,10 +283,9 @@ define i16 @select_pow2_diff_invert(i1 zeroext %cond) {
 define i32 @select_pow2_diff_neg(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff_neg:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $-9, %ecx
-; CHECK-NEXT:    movl $-25, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    shlb $4, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    orl $-25, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -9, i32 -25
   ret i32 %sel
@@ -301,10 +294,10 @@ define i32 @select_pow2_diff_neg(i1 zeroext %cond) {
 define i64 @select_pow2_diff_neg_invert(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff_neg_invert:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $29, %ecx
-; CHECK-NEXT:    movq $-99, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    shlq $7, %rax
+; CHECK-NEXT:    addq $-99, %rax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i64 -99, i64 29
   ret i64 %sel

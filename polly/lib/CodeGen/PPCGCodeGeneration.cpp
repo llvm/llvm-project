@@ -183,7 +183,7 @@ static bool isScalarUsesContainedInScop(const Scop &S,
 /// @returns live range reordering information that can be used to setup
 /// PPCG.
 static MustKillsInfo computeMustKillsInfo(const Scop &S) {
-  const isl::space ParamSpace(isl::manage(S.getParamSpace()));
+  const isl::space ParamSpace = S.getParamSpace();
   MustKillsInfo Info;
 
   // 1. Collect all ScopArrayInfo that satisfy *any* of the criteria:
@@ -287,7 +287,7 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
 
   for (MemoryAccess *Acc : *Stmt) {
     isl::map AddrFunc = Acc->getAddressFunction();
-    AddrFunc = AddrFunc.intersect_domain(isl::manage(Stmt->getDomain()));
+    AddrFunc = AddrFunc.intersect_domain(Stmt->getDomain());
 
     isl::id RefId = Acc->getId();
     isl::pw_multi_aff PMA = isl::pw_multi_aff::from_map(AddrFunc);
@@ -762,7 +762,7 @@ void GPUNodeBuilder::finalize() {
 void GPUNodeBuilder::allocateDeviceArrays() {
   assert(!ManagedMemory && "Managed memory will directly send host pointers "
                            "to the kernel. There is no need for device arrays");
-  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+  isl_ast_build *Build = isl_ast_build_from_context(S.getContext().release());
 
   for (int i = 0; i < Prog->n_array; ++i) {
     gpu_array_info *Array = &Prog->array[i];
@@ -1070,8 +1070,7 @@ static bool isPrefix(std::string String, std::string Prefix) {
 }
 
 Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
-  isl::ast_build Build =
-      isl::ast_build::from_context(isl::manage(S.getContext()));
+  isl::ast_build Build = isl::ast_build::from_context(S.getContext());
   Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
 
   if (!gpu_array_is_scalar(Array)) {
@@ -1099,8 +1098,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
   if (gpu_array_is_scalar(Array))
     return nullptr;
 
-  isl::ast_build Build =
-      isl::ast_build::from_context(isl::manage(S.getContext()));
+  isl::ast_build Build = isl::ast_build::from_context(S.getContext());
 
   isl::set Min = isl::manage(isl_set_copy(Array->extent)).lexmin();
 
@@ -1443,7 +1441,7 @@ GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
   for (auto &SAI : S.arrays())
     SubtreeValues.remove(SAI->getBasePtr());
 
-  isl_space *Space = S.getParamSpace();
+  isl_space *Space = S.getParamSpace().release();
   for (long i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
     isl_id *Id = isl_space_get_dim_id(Space, isl_dim_param, i);
     assert(IDToValue.count(Id));
@@ -1517,8 +1515,7 @@ void GPUNodeBuilder::clearLoops(Function *F) {
 
 std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
   std::vector<Value *> Sizes;
-  isl::ast_build Context =
-      isl::ast_build::from_context(isl::manage(S.getContext()));
+  isl::ast_build Context = isl::ast_build::from_context(S.getContext());
 
   isl::multi_pw_aff GridSizePwAffs =
       isl::manage(isl_multi_pw_aff_copy(Kernel->grid_size));
@@ -2536,13 +2533,14 @@ public:
   ///
   /// @return The relation describing all tagged memory accesses.
   isl_union_map *getTaggedAccesses(enum MemoryAccess::AccessType AccessTy) {
-    isl_union_map *Accesses = isl_union_map_empty(S->getParamSpace());
+    isl_union_map *Accesses = isl_union_map_empty(S->getParamSpace().release());
 
     for (auto &Stmt : *S)
       for (auto &Acc : Stmt)
         if (Acc->getType() == AccessTy) {
           isl_map *Relation = Acc->getAccessRelation().release();
-          Relation = isl_map_intersect_domain(Relation, Stmt.getDomain());
+          Relation =
+              isl_map_intersect_domain(Relation, Stmt.getDomain().release());
 
           isl_space *Space = isl_map_get_space(Relation);
           Space = isl_space_range(Space);
@@ -2596,7 +2594,7 @@ public:
     auto *Zero = isl_ast_expr_from_val(isl_val_zero(S->getIslCtx()));
 
     for (const SCEV *P : S->parameters()) {
-      isl_id *Id = S->getIdForParam(P);
+      isl_id *Id = S->getIdForParam(P).release();
       Names = isl_id_to_ast_expr_set(Names, Id, isl_ast_expr_copy(Zero));
     }
 
@@ -2630,17 +2628,17 @@ public:
     PPCGScop->start = 0;
     PPCGScop->end = 0;
 
-    PPCGScop->context = S->getContext();
+    PPCGScop->context = S->getContext().release();
     PPCGScop->domain = S->getDomains();
     // TODO: investigate this further. PPCG calls collect_call_domains.
-    PPCGScop->call = isl_union_set_from_set(S->getContext());
+    PPCGScop->call = isl_union_set_from_set(S->getContext().release());
     PPCGScop->tagged_reads = getTaggedReads();
-    PPCGScop->reads = S->getReads();
+    PPCGScop->reads = S->getReads().release();
     PPCGScop->live_in = nullptr;
     PPCGScop->tagged_may_writes = getTaggedMayWrites();
-    PPCGScop->may_writes = S->getWrites();
+    PPCGScop->may_writes = S->getWrites().release();
     PPCGScop->tagged_must_writes = getTaggedMustWrites();
-    PPCGScop->must_writes = S->getMustWrites();
+    PPCGScop->must_writes = S->getMustWrites().release();
     PPCGScop->live_out = nullptr;
     PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
     PPCGScop->must_kills = KillsInfo.MustKills.take();
@@ -2717,7 +2715,7 @@ public:
     for (auto &Stmt : *S) {
       gpu_stmt *GPUStmt = &Stmts[i];
 
-      GPUStmt->id = Stmt.getDomainId();
+      GPUStmt->id = Stmt.getDomainId().release();
 
       // We use the pet stmt pointer to keep track of the Polly statements.
       GPUStmt->stmt = (pet_stmt *)&Stmt;
@@ -2741,7 +2739,7 @@ public:
   /// @returns An isl_set describing the extent of the array.
   __isl_give isl_set *getExtent(ScopArrayInfo *Array) {
     unsigned NumDims = Array->getNumberOfDimensions();
-    isl_union_map *Accesses = S->getAccesses();
+    isl_union_map *Accesses = S->getAccesses().release();
     Accesses = isl_union_map_intersect_domain(Accesses, S->getDomains());
     Accesses = isl_union_map_detect_equalities(Accesses);
     isl_union_set *AccessUSet = isl_union_map_range(Accesses);
@@ -2844,7 +2842,7 @@ public:
         isl_aff *One = isl_aff_zero_on_domain(LS);
         One = isl_aff_add_constant_si(One, 1);
         Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
-        Bound = isl_pw_aff_gist(Bound, S->getContext());
+        Bound = isl_pw_aff_gist(Bound, S->getContext().release());
         Bounds.push_back(Bound);
       }
     }
@@ -2864,7 +2862,7 @@ public:
     /// `-polly-ignore-parameter-bounds` enabled, the Scop::Context does not
     /// contain all parameter dimensions.
     /// So, use the helper `alignPwAffs` to align all the `isl_pw_aff` together.
-    isl_space *SeedAlignSpace = S->getParamSpace();
+    isl_space *SeedAlignSpace = S->getParamSpace().release();
     SeedAlignSpace = isl_space_add_dims(SeedAlignSpace, isl_dim_set, 1);
 
     isl_space *AlignSpace = nullptr;
@@ -2935,7 +2933,7 @@ public:
   ///
   /// @returns An identity map between the arrays in the scop.
   isl_union_map *getArrayIdentity() {
-    isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
+    isl_union_map *Maps = isl_union_map_empty(S->getParamSpace().release());
 
     for (auto &Array : S->arrays()) {
       isl_space *Space = Array->getSpace().release();
@@ -3239,7 +3237,7 @@ public:
   ///          by @p Stmt.
   __isl_give isl_ast_expr *approxDynamicInst(ScopStmt &Stmt,
                                              __isl_keep isl_ast_build *Build) {
-    auto Iterations = approxPointsInSet(Stmt.getDomain(), Build);
+    auto Iterations = approxPointsInSet(Stmt.getDomain().release(), Build);
 
     long InstCount = 0;
 
@@ -3374,7 +3372,7 @@ public:
     // TODO: Handle LICM
     auto SplitBlock = StartBlock->getSinglePredecessor();
     Builder.SetInsertPoint(SplitBlock->getTerminator());
-    NodeBuilder.addParameters(S->getContext());
+    NodeBuilder.addParameters(S->getContext().release());
 
     isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
     isl_ast_expr *Condition = IslAst::buildRunCondition(*S, Build);
