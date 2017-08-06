@@ -701,7 +701,7 @@ std::string MemoryAccess::getNewAccessRelationStr() const {
 }
 
 std::string MemoryAccess::getAccessRelationStr() const {
-  return isl::manage(getAccessRelation().get()).to_str();
+  return getAccessRelation().to_str();
 }
 
 isl::basic_map MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
