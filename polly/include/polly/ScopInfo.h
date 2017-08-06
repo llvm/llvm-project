@@ -128,7 +128,7 @@ enum class MemoryKind {
   ///
   /// Memory objects of type MemoryKind::Value are used to model the data flow
   /// induced by llvm::Values. For each llvm::Value that is used across
-  /// BasicBocks one ScopArrayInfo object is created. A single memory WRITE
+  /// BasicBlocks, one ScopArrayInfo object is created. A single memory WRITE
   /// stores the llvm::Value at its definition into the memory object and at
   /// each use of the llvm::Value (ignoring trivial intra-block uses) a
   /// corresponding READ is added. For instance, the use/def chain of a

@@ -353,6 +353,16 @@ define i32 @test28(i32 %indvar) {
   ret i32 %t214
 }
 
+define i32 @test28_sub(i32 %indvar) {
+; CHECK-LABEL: @test28_sub(
+; CHECK-NEXT:    [[T214:%.*]] = sub i32 1, [[INDVAR:%.*]]
+; CHECK-NEXT:    ret i32 [[T214]]
+;
+  %t7 = sub i32 -2147483647, %indvar
+  %t214 = xor i32 %t7, -2147483648
+  ret i32 %t214
+}
+
 define i32 @test29(i1 %C) {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], i32 915, i32 113

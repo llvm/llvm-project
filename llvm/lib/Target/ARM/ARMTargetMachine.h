@@ -62,10 +62,6 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
 };
 
 /// ARM/Thumb little endian target machine.
