@@ -91,7 +91,7 @@ for.cond:
   %input_1.addr.1 = phi <3 x i32> [ undef, %entry ], [ %dec43, %for.body ]
   br i1 undef, label %for.end, label %for.body
 
-; CHECK: extractelement <3 x i32> %{{.*}}, i32 0
+; CHECK-NOT: extractelement <3 x i32> %{{.*}}, i32 0
 for.body:
   %dec43 = add <3 x i32> %input_1.addr.1, <i32 -1, i32 -1, i32 -1>
   %sub44 = sub <3 x i32> <i32 -1, i32 -1, i32 -1>, %dec43

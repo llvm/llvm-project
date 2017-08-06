@@ -470,7 +470,8 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
 
       // If the operand is a bitwise operator with a constant RHS, and the
       // shift is the only use, we can pull it out of the shift.
-      if (ConstantInt *Op0C = dyn_cast<ConstantInt>(Op0BO->getOperand(1))) {
+      const APInt *Op0C;
+      if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
         bool isValid = true;     // Valid only for And, Or, Xor
         bool highBitSet = false; // Transform if high bit of constant set?
 
@@ -495,10 +496,11 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
         // operation.
         //
         if (isValid && I.getOpcode() == Instruction::AShr)
-          isValid = Op0C->getValue()[TypeBits-1] == highBitSet;
+          isValid = Op0C->isNegative() == highBitSet;
 
         if (isValid) {
-          Constant *NewRHS = ConstantExpr::get(I.getOpcode(), Op0C, Op1);
+          Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
+                                     cast<Constant>(Op0BO->getOperand(1)), Op1);
 
           Value *NewShift =
             Builder.CreateBinOp(I.getOpcode(), Op0BO->getOperand(0), Op1);

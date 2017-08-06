@@ -2419,28 +2419,44 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     return replaceInstUsesWith(I, Op0);
   }
 
+  {
+    const APInt *RHSC;
+    if (match(Op1, m_APInt(RHSC))) {
+      Value *V;
+      const APInt *C;
+      if (match(Op0, m_Sub(m_APInt(C), m_Value(V)))) {
+        // ~(c-X) == X-c-1 == X+(-c-1)
+        if (RHSC->isAllOnesValue()) {
+          Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
+          return BinaryOperator::CreateAdd(V, NewC);
+        }
+      } else if (match(Op0, m_Add(m_Value(V), m_APInt(C)))) {
+        // ~(X-c) --> (-c-1)-X
+        if (RHSC->isAllOnesValue()) {
+          Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
+          return BinaryOperator::CreateSub(NewC, V);
+        }
+      }
+    }
+  }
+
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
-      // ~(c-X) == X-c-1 == X+(-c-1)
-      if (Op0I->getOpcode() == Instruction::Sub && RHSC->isMinusOne())
-        if (Constant *Op0I0C = dyn_cast<Constant>(Op0I->getOperand(0))) {
-          Constant *NegOp0I0C = ConstantExpr::getNeg(Op0I0C);
-          return BinaryOperator::CreateAdd(Op0I->getOperand(1),
-                                           SubOne(NegOp0I0C));
+      if (Op0I->getOpcode() == Instruction::Sub)
+        if (ConstantInt *Op0I0C = dyn_cast<ConstantInt>(Op0I->getOperand(0))) {
+          // (C - X) ^ signmask -> (C + signmask - X)
+          if (RHSC->getValue().isSignMask()) {
+            Constant *C = Builder.getInt(RHSC->getValue() + Op0I0C->getValue());
+            return BinaryOperator::CreateSub(C, Op0I->getOperand(1));
+          }
         }
 
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
         if (Op0I->getOpcode() == Instruction::Add) {
-          // ~(X-c) --> (-c-1)-X
-          if (RHSC->isMinusOne()) {
-            Constant *NegOp0CI = ConstantExpr::getNeg(Op0CI);
-            return BinaryOperator::CreateSub(SubOne(NegOp0CI),
-                                             Op0I->getOperand(0));
-          } else if (RHSC->getValue().isSignMask()) {
-            // (X + C) ^ signmask -> (X + C + signmask)
+          // (X + C) ^ signmask -> (X + C + signmask)
+          if (RHSC->getValue().isSignMask()) {
             Constant *C = Builder.getInt(RHSC->getValue() + Op0CI->getValue());
             return BinaryOperator::CreateAdd(Op0I->getOperand(0), C);
-
           }
         } else if (Op0I->getOpcode() == Instruction::Or) {
           // (X|C1)^C2 -> X^(C1|C2) iff X&~C1 == 0

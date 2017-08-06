@@ -293,6 +293,26 @@ static bool isOdd(unsigned Value) {
   return Value & 1;
 }
 
+static bool sameOpcodeOrAlt(unsigned Opcode, unsigned AltOpcode,
+                            unsigned CheckedOpcode) {
+  return Opcode == CheckedOpcode || AltOpcode == CheckedOpcode;
+}
+
+/// Chooses the correct key for scheduling data. If \p Op has the same (or
+/// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is \p
+/// OpValue.
+static Value *isOneOf(Value *OpValue, Value *Op) {
+  auto *I = dyn_cast<Instruction>(Op);
+  if (!I)
+    return OpValue;
+  auto *OpInst = cast<Instruction>(OpValue);
+  unsigned OpInstOpcode = OpInst->getOpcode();
+  unsigned IOpcode = I->getOpcode();
+  if (sameOpcodeOrAlt(OpInstOpcode, getAltOpcode(OpInstOpcode), IOpcode))
+    return Op;
+  return OpValue;
+}
+
 ///\returns bool representing if Opcode \p Op can be part
 /// of an alternate sequence which can later be merged as
 /// a ShuffleVector instruction.
@@ -565,7 +585,7 @@ private:
 
   /// \brief Set the Builder insert point to one after the last instruction in
   /// the bundle
-  void setInsertPointAfterBundle(ArrayRef<Value *> VL);
+  void setInsertPointAfterBundle(ArrayRef<Value *> VL, Value *OpValue);
 
   /// \returns a vector from a collection of scalars in \p VL.
   Value *Gather(ArrayRef<Value *> VL, VectorType *Ty);
@@ -751,9 +771,10 @@ private:
         : Inst(nullptr), FirstInBundle(nullptr), NextInBundle(nullptr),
           NextLoadStore(nullptr), SchedulingRegionID(0), SchedulingPriority(0),
           Dependencies(InvalidDeps), UnscheduledDeps(InvalidDeps),
-          UnscheduledDepsInBundle(InvalidDeps), IsScheduled(false) {}
+          UnscheduledDepsInBundle(InvalidDeps), IsScheduled(false),
+          OpValue(nullptr) {}
 
-    void init(int BlockSchedulingRegionID) {
+    void init(int BlockSchedulingRegionID, Value *OpVal) {
       FirstInBundle = this;
       NextInBundle = nullptr;
       NextLoadStore = nullptr;
@@ -761,6 +782,7 @@ private:
       SchedulingRegionID = BlockSchedulingRegionID;
       UnscheduledDepsInBundle = UnscheduledDeps;
       clearDependencies();
+      OpValue = OpVal;
     }
 
     /// Returns true if the dependency information has been calculated.
@@ -865,6 +887,9 @@ private:
     /// True if this instruction is scheduled (or considered as scheduled in the
     /// dry-run).
     bool IsScheduled;
+
+    /// Opcode of the current instruction in the schedule data.
+    Value *OpValue;
   };
 
 #ifndef NDEBUG
@@ -2478,14 +2503,18 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
   }
 }
 
-void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL) {
+void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL, Value *OpValue) {
 
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block.
-  auto *Front = cast<Instruction>(VL.front());
+  auto *Front = cast<Instruction>(OpValue);
   auto *BB = Front->getParent();
-  assert(all_of(make_range(VL.begin(), VL.end()), [&](Value *V) -> bool {
-    return cast<Instruction>(V)->getParent() == BB;
+  const unsigned Opcode = cast<Instruction>(OpValue)->getOpcode();
+  const unsigned AltOpcode = getAltOpcode(Opcode);
+  assert(all_of(make_range(VL.begin(), VL.end()), [=](Value *V) -> bool {
+    return !sameOpcodeOrAlt(Opcode, AltOpcode,
+                            cast<Instruction>(V)->getOpcode()) ||
+           cast<Instruction>(V)->getParent() == BB;
   }));
 
   // The last instruction in the bundle in program order.
@@ -2496,10 +2525,12 @@ void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL) {
   // VL.back() and iterate over schedule data until we reach the end of the
   // bundle. The end of the bundle is marked by null ScheduleData.
   if (BlocksSchedules.count(BB)) {
-    auto *Bundle = BlocksSchedules[BB]->getScheduleData(VL.back());
+    auto *Bundle =
+        BlocksSchedules[BB]->getScheduleData(isOneOf(OpValue, VL.back()));
     if (Bundle && Bundle->isPartOfBundle())
       for (; Bundle; Bundle = Bundle->NextInBundle)
-        LastInst = Bundle->Inst;
+        if (Bundle->OpValue == Bundle->Inst)
+          LastInst = Bundle->Inst;
   }
 
   // LastInst can still be null at this point if there's either not an entry
@@ -2523,7 +2554,7 @@ void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL) {
   if (!LastInst) {
     SmallPtrSet<Value *, 16> Bundle(VL.begin(), VL.end());
     for (auto &I : make_range(BasicBlock::iterator(Front), BB->end())) {
-      if (Bundle.erase(&I))
+      if (Bundle.erase(&I) && sameOpcodeOrAlt(Opcode, AltOpcode, I.getOpcode()))
         LastInst = &I;
       if (Bundle.empty())
         break;
@@ -2601,7 +2632,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   VectorType *VecTy = VectorType::get(ScalarTy, E->Scalars.size());
 
   if (E->NeedToGather) {
-    setInsertPointAfterBundle(E->Scalars);
+    setInsertPointAfterBundle(E->Scalars, VL0);
     auto *V = Gather(E->Scalars, VecTy);
     E->VectorizedValue = V;
     return V;
@@ -2651,7 +2682,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         E->VectorizedValue = V;
         return V;
       }
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
       auto *V = Gather(E->Scalars, VecTy);
       E->VectorizedValue = V;
       return V;
@@ -2666,7 +2697,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         E->VectorizedValue = V;
         return propagateMetadata(V, E->Scalars);
       }
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
       auto *V = Gather(E->Scalars, VecTy);
       E->VectorizedValue = V;
       return V;
@@ -2687,7 +2718,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       for (Value *V : E->Scalars)
         INVL.push_back(cast<Instruction>(V)->getOperand(0));
 
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *InVec = vectorizeTree(INVL);
 
@@ -2708,7 +2739,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         RHSV.push_back(cast<Instruction>(V)->getOperand(1));
       }
 
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *L = vectorizeTree(LHSV);
       Value *R = vectorizeTree(RHSV);
@@ -2736,7 +2767,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         FalseVec.push_back(cast<Instruction>(V)->getOperand(2));
       }
 
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *Cond = vectorizeTree(CondVec);
       Value *True = vectorizeTree(TrueVec);
@@ -2777,7 +2808,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           RHSVL.push_back(cast<Instruction>(V)->getOperand(1));
         }
 
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *LHS = vectorizeTree(LHSVL);
       Value *RHS = vectorizeTree(RHSVL);
@@ -2799,7 +2830,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::Load: {
       // Loads are inserted at the head of the tree because we don't want to
       // sink them all the way down past store instructions.
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       LoadInst *LI = cast<LoadInst>(VL0);
       Type *ScalarLoadTy = LI->getType();
@@ -2834,7 +2865,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       for (Value *V : E->Scalars)
         ValueOp.push_back(cast<StoreInst>(V)->getValueOperand());
 
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *VecValue = vectorizeTree(ValueOp);
       Value *VecPtr = Builder.CreateBitCast(SI->getPointerOperand(),
@@ -2857,7 +2888,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return propagateMetadata(S, E->Scalars);
     }
     case Instruction::GetElementPtr: {
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       ValueList Op0VL;
       for (Value *V : E->Scalars)
@@ -2888,7 +2919,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::Call: {
       CallInst *CI = cast<CallInst>(VL0);
-      setInsertPointAfterBundle(VL0);
+      setInsertPointAfterBundle(E->Scalars, VL0);
       Function *FI;
       Intrinsic::ID IID  = Intrinsic::not_intrinsic;
       Value *ScalarArg = nullptr;
@@ -2939,7 +2970,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       ValueList LHSVL, RHSVL;
       assert(isa<BinaryOperator>(VL0) && "Invalid Shuffle Vector Operand");
       reorderAltShuffleOperands(E->Scalars, LHSVL, RHSVL);
-      setInsertPointAfterBundle(E->Scalars);
+      setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *LHS = vectorizeTree(LHSVL);
       Value *RHS = vectorizeTree(RHSVL);
@@ -3421,7 +3452,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     }
     assert(!isInSchedulingRegion(SD) &&
            "new ScheduleData already in scheduling region");
-    SD->init(SchedulingRegionID);
+    SD->init(SchedulingRegionID, I);
 
     if (I->mayReadOrWriteMemory()) {
       // Update the linked list of memory accessing instructions.

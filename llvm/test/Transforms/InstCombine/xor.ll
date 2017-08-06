@@ -188,6 +188,16 @@ define i32 @test15(i32 %A) {
   ret i32 %C
 }
 
+define <2 x i32> @test15vec(<2 x i32> %A) {
+; CHECK-LABEL: @test15vec(
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> zeroinitializer, [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %B = add <2 x i32> %A, <i32 -1, i32 -1>
+  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
+  ret <2 x i32> %C
+}
+
 define i32 @test16(i32 %A) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[C:%.*]] = sub i32 -124, %A
@@ -198,6 +208,16 @@ define i32 @test16(i32 %A) {
   ret i32 %C
 }
 
+define <2 x i32> @test16vec(<2 x i32> %A) {
+; CHECK-LABEL: @test16vec(
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> <i32 -124, i32 -124>, [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %B = add <2 x i32> %A, <i32 123, i32 123>
+  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
+  ret <2 x i32> %C
+}
+
 define i32 @test17(i32 %A) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[C:%.*]] = add i32 %A, -124
@@ -206,6 +226,16 @@ define i32 @test17(i32 %A) {
   %B = sub i32 123, %A
   %C = xor i32 %B, -1
   ret i32 %C
+}
+
+define <2 x i32> @test17vec(<2 x i32> %A) {
+; CHECK-LABEL: @test17vec(
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[A:%.*]], <i32 -124, i32 -124>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %B = sub <2 x i32> <i32 123, i32 123>, %A
+  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
+  ret <2 x i32> %C
 }
 
 define i32 @test18(i32 %A) {
@@ -349,6 +379,16 @@ define i32 @test28(i32 %indvar) {
 ; CHECK-NEXT:    ret i32 [[T214]]
 ;
   %t7 = add i32 %indvar, -2147483647
+  %t214 = xor i32 %t7, -2147483648
+  ret i32 %t214
+}
+
+define i32 @test28_sub(i32 %indvar) {
+; CHECK-LABEL: @test28_sub(
+; CHECK-NEXT:    [[T214:%.*]] = sub i32 1, [[INDVAR:%.*]]
+; CHECK-NEXT:    ret i32 [[T214]]
+;
+  %t7 = sub i32 -2147483647, %indvar
   %t214 = xor i32 %t7, -2147483648
   ret i32 %t214
 }
