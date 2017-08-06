@@ -193,7 +193,7 @@
 // MSCOPE:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
 // MSCOPE:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
 
-// RUN: %clang_cc1 -triple aarch64-windows %s -E -dM -o - -x cl \
+// RUN: %clang_cc1 -triple aarch64-windows %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-WIN
 
 // CHECK-ARM64-WIN: #define _M_ARM64 1
