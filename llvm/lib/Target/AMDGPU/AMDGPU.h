@@ -141,9 +141,6 @@ ModulePass* createAMDGPUUnifyMetadataPass();
 void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
 extern char &AMDGPUUnifyMetadataID;
 
-void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
-extern char &SIFixControlFlowLiveIntervalsID;
-
 void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
 extern char &SIOptimizeExecMaskingPreRAID;
 

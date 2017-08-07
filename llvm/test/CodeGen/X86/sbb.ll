@@ -130,8 +130,10 @@ define i32 @ult_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 define i32 @ugt_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ugt_select_neg1_or_0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovbel %ecx, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ugt i32 %y, %x
   %ext = sext i1 %cmp to i32

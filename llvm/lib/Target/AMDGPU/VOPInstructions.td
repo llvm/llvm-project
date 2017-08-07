@@ -510,6 +510,8 @@ class VOP_DPP <string OpName, VOPProfile P> :
   let AssemblerPredicate = !if(P.HasExt, HasDPP, DisableInst);
   let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.DPP,
                                      AMDGPUAsmVariants.Disable);
+  let Constraints = !if(P.NumSrcArgs, "$old = $vdst", "");
+  let DisableEncoding = !if(P.NumSrcArgs, "$old", "");
   let DecoderNamespace = "DPP";
 }
 

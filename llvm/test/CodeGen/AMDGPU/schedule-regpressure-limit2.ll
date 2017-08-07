@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck -check-prefix=VI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck -check-prefix=VI %s
 

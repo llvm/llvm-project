@@ -425,7 +425,7 @@ public:
 
   unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *,
                                      const SCEV *) {
-    return 0; 
+    return 0;
   }
 
   unsigned getArithmeticReductionCost(unsigned, Type *, bool) { return 1; }
@@ -589,7 +589,7 @@ protected:
     APInt StrideVal = Step->getAPInt();
     if (StrideVal.getBitWidth() > 64)
       return false;
-    // FIXME: need to take absolute value for negtive stride case  
+    // FIXME: Need to take absolute value for negative stride case.
     return StrideVal.getSExtValue() < MergeDistance;
   }
 };

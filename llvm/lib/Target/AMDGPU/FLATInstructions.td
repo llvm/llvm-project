@@ -25,8 +25,6 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 
-  let SubtargetPredicate = isCIVI;
-
   let FLAT = 1;
 
   let UseNamedOperandTable = 1;
@@ -54,6 +52,9 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   bits<1> has_data = 1;
   bits<1> has_glc  = 1;
   bits<1> glcValue = 0;
+
+  let SubtargetPredicate = !if(is_flat_global, HasFlatGlobalInsts,
+    !if(is_flat_scratch, HasFlatScratchInsts, HasFlatAddressSpace));
 
   // TODO: M0 if it could possibly access LDS (before gfx9? only)?
   let Uses = !if(is_flat_global, [EXEC], [EXEC, FLAT_SCR]);
@@ -667,7 +668,7 @@ class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType v
   (inst $vaddr, $data, $offset, $slc)
 >;
 
-let Predicates = [isCIVI] in {
+let Predicates = [HasFlatAddressSpace] in {
 
 def : FlatLoadPat <FLAT_LOAD_UBYTE, flat_az_extloadi8, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, flat_sextloadi8, i32>;
@@ -719,13 +720,9 @@ def : FlatAtomicPat <FLAT_ATOMIC_SWAP_X2_RTN, atomic_swap_global, i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_X2_RTN, AMDGPUatomic_cmp_swap_global, i64, v2i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 
-} // End Predicates = [isCIVI]
-
-let Predicates = [isVI] in {
-  def : FlatStorePat <FLAT_STORE_BYTE, flat_truncstorei8, i16>;
-  def : FlatStorePat <FLAT_STORE_SHORT, flat_store, i16>;
-}
-
+def : FlatStorePat <FLAT_STORE_BYTE, flat_truncstorei8, i16>;
+def : FlatStorePat <FLAT_STORE_SHORT, flat_store, i16>;
+} // End Predicates = [HasFlatAddressSpace]
 
 let Predicates = [HasFlatGlobalInsts], AddedComplexity = 10 in {
 

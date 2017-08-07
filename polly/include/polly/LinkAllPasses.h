@@ -55,6 +55,7 @@ llvm::Pass *createPPCGCodeGenerationPass(GPUArch Arch = GPUArch::NVPTX64,
 llvm::Pass *createIslScheduleOptimizerPass();
 llvm::Pass *createFlattenSchedulePass();
 llvm::Pass *createDeLICMPass();
+llvm::Pass *createMaximalStaticExpansionPass();
 
 extern char &CodePreparationID;
 } // namespace polly
@@ -88,6 +89,7 @@ struct PollyForcePassLinking {
     polly::createPPCGCodeGenerationPass();
 #endif
     polly::createIslScheduleOptimizerPass();
+    polly::createMaximalStaticExpansionPass();
     polly::createFlattenSchedulePass();
     polly::createDeLICMPass();
     polly::createDumpModulePass("", true);
@@ -109,6 +111,7 @@ void initializeCodeGenerationPass(llvm::PassRegistry &);
 void initializePPCGCodeGenerationPass(llvm::PassRegistry &);
 #endif
 void initializeIslScheduleOptimizerPass(llvm::PassRegistry &);
+void initializeMaximalStaticExpanderPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
 void initializeFlattenSchedulePass(llvm::PassRegistry &);
 void initializeDeLICMPass(llvm::PassRegistry &);

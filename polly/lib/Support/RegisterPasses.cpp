@@ -149,6 +149,11 @@ static cl::opt<bool> ImportJScop(
     cl::desc("Import the polyhedral description of the detected Scops"),
     cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> FullyIndexedStaticExpansion(
+    "polly-enable-mse",
+    cl::desc("Fully expand the memory accesses of the detected Scops"),
+    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 static cl::opt<bool> ExportJScop(
     "polly-export",
     cl::desc("Export the polyhedral description of the detected Scops"),
@@ -251,6 +256,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeDependenceInfoWrapperPassPass(Registry);
   initializeJSONExporterPass(Registry);
   initializeJSONImporterPass(Registry);
+  initializeMaximalStaticExpanderPass(Registry);
   initializeIslAstInfoWrapperPassPass(Registry);
   initializeIslScheduleOptimizerPass(Registry);
   initializePollyCanonicalizePass(Registry);
@@ -329,6 +335,9 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
 
   if (DeadCodeElim)
     PM.add(polly::createDeadCodeElimPass());
+
+  if (FullyIndexedStaticExpansion)
+    PM.add(polly::createMaximalStaticExpansionPass());
 
   if (EnablePruneUnprofitable)
     PM.add(polly::createPruneUnprofitablePass());

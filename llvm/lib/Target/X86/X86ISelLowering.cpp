@@ -30060,45 +30060,78 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // Don't do this for crazy integer types.
-  EVT VT = N->getValueType(0);
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS.getValueType()))
     return SDValue();
 
-  // We're going to use the condition bit in math or logic ops. We could allow
-  // this with a wider condition value (post-legalization it becomes an i8),
-  // but if nothing is creating selects that late, it doesn't matter.
-  if (Cond.getValueType() != MVT::i1)
-    return SDValue();
+  // If this is efficiently invertible, canonicalize the LHSC/RHSC values
+  // so that TrueC (the true value) is larger than FalseC.
+  bool NeedsCondInvert = false;
+  if (TrueC->getAPIntValue().ult(FalseC->getAPIntValue()) &&
+      // Efficiently invertible.
+      (Cond.getOpcode() == ISD::SETCC || // setcc -> invertible.
+       (Cond.getOpcode() == ISD::XOR &&  // xor(X, C) -> invertible.
+        isa<ConstantSDNode>(Cond.getOperand(1))))) {
+    NeedsCondInvert = true;
+    std::swap(TrueC, FalseC);
+  }
 
-  // A power-of-2 multiply is just a shift. LEA also cheaply handles multiply by
-  // 3, 5, or 9 with i32/i64, so those get transformed too.
-  // TODO: For constants that do not differ by power-of-2 or small multiplier,
-  // convert to 'and' + 'add'.
-  APInt AbsDiff = (TrueC->getAPIntValue() - FalseC->getAPIntValue()).abs();
-  if (AbsDiff.isPowerOf2() ||
-      ((VT == MVT::i32 || VT == MVT::i64) &&
-       (AbsDiff == 3 || AbsDiff == 5 || AbsDiff == 9))) {
+  // Optimize C ? 8 : 0 -> zext(C) << 3.  Likewise for any pow2/0.
+  if (FalseC->getAPIntValue() == 0 && TrueC->getAPIntValue().isPowerOf2()) {
+    if (NeedsCondInvert) // Invert the condition if needed.
+      Cond = DAG.getNode(ISD::XOR, DL, Cond.getValueType(), Cond,
+                         DAG.getConstant(1, DL, Cond.getValueType()));
 
-    // We need a positive multiplier constant for shift/LEA codegen. The 'not'
-    // of the condition can usually be folded into a compare predicate, but even
-    // without that, the sequence should be cheaper than a CMOV alternative.
-    if (TrueC->getAPIntValue().slt(FalseC->getAPIntValue())) {
-      Cond = DAG.getNOT(DL, Cond, MVT::i1);
-      std::swap(TrueC, FalseC);
+    // Zero extend the condition if needed.
+    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, LHS.getValueType(), Cond);
+
+    unsigned ShAmt = TrueC->getAPIntValue().logBase2();
+    return DAG.getNode(ISD::SHL, DL, LHS.getValueType(), Cond,
+                       DAG.getConstant(ShAmt, DL, MVT::i8));
+  }
+
+  // Optimize cases that will turn into an LEA instruction.  This requires
+  // an i32 or i64 and an efficient multiplier (1, 2, 3, 4, 5, 8, 9).
+  if (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64) {
+    uint64_t Diff = TrueC->getZExtValue() - FalseC->getZExtValue();
+    if (N->getValueType(0) == MVT::i32)
+      Diff = (unsigned)Diff;
+
+    bool IsFastMultiplier = false;
+    if (Diff < 10) {
+      switch ((unsigned char)Diff) {
+      default:
+        break;
+      case 1: // result = add base, cond
+      case 2: // result = lea base(    , cond*2)
+      case 3: // result = lea base(cond, cond*2)
+      case 4: // result = lea base(    , cond*4)
+      case 5: // result = lea base(cond, cond*4)
+      case 8: // result = lea base(    , cond*8)
+      case 9: // result = lea base(cond, cond*8)
+        IsFastMultiplier = true;
+        break;
+      }
     }
 
-    // select Cond, TC, FC --> (zext(Cond) * (TC - FC)) + FC
-    SDValue R = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
+    if (IsFastMultiplier) {
+      APInt Diff = TrueC->getAPIntValue() - FalseC->getAPIntValue();
+      if (NeedsCondInvert) // Invert the condition if needed.
+        Cond = DAG.getNode(ISD::XOR, DL, Cond.getValueType(), Cond,
+                           DAG.getConstant(1, DL, Cond.getValueType()));
 
-    // Multiply condition by the difference if non-one.
-    if (!AbsDiff.isOneValue())
-      R = DAG.getNode(ISD::MUL, DL, VT, R, DAG.getConstant(AbsDiff, DL, VT));
+      // Zero extend the condition if needed.
+      Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, FalseC->getValueType(0), Cond);
+      // Scale the condition by the difference.
+      if (Diff != 1)
+        Cond = DAG.getNode(ISD::MUL, DL, Cond.getValueType(), Cond,
+                           DAG.getConstant(Diff, DL, Cond.getValueType()));
 
-    // Add the base if non-zero.
-    if (!FalseC->isNullValue())
-      R = DAG.getNode(ISD::ADD, DL, VT, R, SDValue(FalseC, 0));
-
-    return R;
+      // Add the base if non-zero.
+      if (FalseC->getAPIntValue() != 0)
+        Cond = DAG.getNode(ISD::ADD, DL, Cond.getValueType(), Cond,
+                           SDValue(FalseC, 0));
+      return Cond;
+    }
   }
 
   return SDValue();

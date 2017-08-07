@@ -1,4 +1,4 @@
-; RUN: not llc -march=amdgcn -mcpu=SI < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
 ; RUN: not llc -march=amdgcn -mcpu=tonga < %s 2>&1 | FileCheck %s
 
 ; CHECK: in function load_zeroinit_lds_global{{.*}}: unsupported initializer for address space

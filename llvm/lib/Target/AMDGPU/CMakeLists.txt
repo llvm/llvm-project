@@ -66,7 +66,6 @@ add_llvm_target(AMDGPUCodeGen
   R600RegisterInfo.cpp
   SIAnnotateControlFlow.cpp
   SIDebuggerInsertNops.cpp
-  SIFixControlFlowLiveIntervals.cpp
   SIFixSGPRCopies.cpp
   SIFixVGPRCopies.cpp
   SIFixWWMLiveness.cpp

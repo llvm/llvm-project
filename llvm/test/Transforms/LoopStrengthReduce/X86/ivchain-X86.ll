@@ -163,7 +163,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; X64: movzbl -3(
 ;
 ; X32: foldedidx:
-; X32: movzbl -3(
+; X32: movzbl 400(
 define void @foldedidx(i8* nocapture %a, i8* nocapture %b, i8* nocapture %c) nounwind ssp {
 entry:
   br label %for.body
@@ -275,7 +275,7 @@ exit:
 ;
 ; X32: @testCmpZero
 ; X32: %for.body82.us
-; X32: dec
+; X32: cmp
 ; X32: jne
 define void @testCmpZero(i8* %src, i8* %dst, i32 %srcidx, i32 %dstidx, i32 %len) nounwind ssp {
 entry:

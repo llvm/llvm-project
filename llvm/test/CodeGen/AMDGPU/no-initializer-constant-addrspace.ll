@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=GCN
+; RUN: llc -march=amdgcn -mcpu=tahiti -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=GCN
 ; RUN: llc -march=amdgcn -mcpu=tonga -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=GCN
 ; RUN: llc -march=r600 -mcpu=cypress -filetype=obj < %s | llvm-readobj -relocations -symbols | FileCheck %s -check-prefix=EG
 

@@ -31,10 +31,8 @@ define void @PR28330(i32 %n) {
 ;
 ; GATHER-LABEL: @PR28330(
 ; GATHER-NEXT:  entry:
-; GATHER-NEXT:    [[TMP0:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
-; GATHER-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; GATHER-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
-; GATHER-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 0
+; GATHER-NEXT:    [[TMP0:%.*]] = load <2 x i8>, <2 x i8>* bitcast (i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1) to <2 x i8>*), align 1
+; GATHER-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[TMP0]], zeroinitializer
 ; GATHER-NEXT:    [[TMP4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
 ; GATHER-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 ; GATHER-NEXT:    [[TMP6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
@@ -50,10 +48,11 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; GATHER:       for.body:
 ; GATHER-NEXT:    [[TMP17:%.*]] = phi i32 [ [[BIN_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; GATHER-NEXT:    [[TMP19:%.*]] = select i1 [[TMP1]], i32 -720, i32 -80
-; GATHER-NEXT:    [[TMP20:%.*]] = add i32 [[TMP17]], [[TMP19]]
-; GATHER-NEXT:    [[TMP21:%.*]] = select i1 [[TMP3]], i32 -720, i32 -80
-; GATHER-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], [[TMP21]]
+; GATHER-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -720, i32 -720>, <2 x i32> <i32 -80, i32 -80>
+; GATHER-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; GATHER-NEXT:    [[TMP20:%.*]] = add i32 [[TMP17]], [[TMP3]]
+; GATHER-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; GATHER-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], [[TMP4]]
 ; GATHER-NEXT:    [[TMP23:%.*]] = select i1 [[TMP5]], i32 -720, i32 -80
 ; GATHER-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
 ; GATHER-NEXT:    [[TMP25:%.*]] = select i1 [[TMP7]], i32 -720, i32 -80
@@ -65,16 +64,16 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[TMP31:%.*]] = select i1 [[TMP13]], i32 -720, i32 -80
 ; GATHER-NEXT:    [[TMP32:%.*]] = add i32 [[TMP30]], [[TMP31]]
 ; GATHER-NEXT:    [[TMP33:%.*]] = select i1 [[TMP15]], i32 -720, i32 -80
-; GATHER-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> undef, i32 [[TMP19]], i32 0
-; GATHER-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[TMP21]], i32 1
-; GATHER-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP23]], i32 2
-; GATHER-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP25]], i32 3
-; GATHER-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP27]], i32 4
-; GATHER-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP29]], i32 5
-; GATHER-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP31]], i32 6
-; GATHER-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP33]], i32 7
-; GATHER-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP7]])
-; GATHER-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP8]], [[TMP17]]
+; GATHER-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> undef, i32 [[TMP3]], i32 0
+; GATHER-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP4]], i32 1
+; GATHER-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP23]], i32 2
+; GATHER-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[TMP25]], i32 3
+; GATHER-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[TMP27]], i32 4
+; GATHER-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP9]], i32 [[TMP29]], i32 5
+; GATHER-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[TMP31]], i32 6
+; GATHER-NEXT:    [[TMP12:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[TMP33]], i32 7
+; GATHER-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP12]])
+; GATHER-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP13]], [[TMP17]]
 ; GATHER-NEXT:    [[TMP34:%.*]] = add i32 [[TMP32]], [[TMP33]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
 ;
@@ -180,10 +179,8 @@ define void @PR32038(i32 %n) {
 ;
 ; GATHER-LABEL: @PR32038(
 ; GATHER-NEXT:  entry:
-; GATHER-NEXT:    [[TMP0:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
-; GATHER-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; GATHER-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
-; GATHER-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 0
+; GATHER-NEXT:    [[TMP0:%.*]] = load <2 x i8>, <2 x i8>* bitcast (i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1) to <2 x i8>*), align 1
+; GATHER-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[TMP0]], zeroinitializer
 ; GATHER-NEXT:    [[TMP4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
 ; GATHER-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 ; GATHER-NEXT:    [[TMP6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
@@ -199,10 +196,11 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; GATHER:       for.body:
 ; GATHER-NEXT:    [[TMP17:%.*]] = phi i32 [ [[BIN_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; GATHER-NEXT:    [[TMP19:%.*]] = select i1 [[TMP1]], i32 -720, i32 -80
-; GATHER-NEXT:    [[TMP20:%.*]] = add i32 -5, [[TMP19]]
-; GATHER-NEXT:    [[TMP21:%.*]] = select i1 [[TMP3]], i32 -720, i32 -80
-; GATHER-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], [[TMP21]]
+; GATHER-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> <i32 -720, i32 -720>, <2 x i32> <i32 -80, i32 -80>
+; GATHER-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; GATHER-NEXT:    [[TMP20:%.*]] = add i32 -5, [[TMP3]]
+; GATHER-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; GATHER-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], [[TMP4]]
 ; GATHER-NEXT:    [[TMP23:%.*]] = select i1 [[TMP5]], i32 -720, i32 -80
 ; GATHER-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], [[TMP23]]
 ; GATHER-NEXT:    [[TMP25:%.*]] = select i1 [[TMP7]], i32 -720, i32 -80
@@ -214,29 +212,27 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[TMP31:%.*]] = select i1 [[TMP13]], i32 -720, i32 -80
 ; GATHER-NEXT:    [[TMP32:%.*]] = add i32 [[TMP30]], [[TMP31]]
 ; GATHER-NEXT:    [[TMP33:%.*]] = select i1 [[TMP15]], i32 -720, i32 -80
-; GATHER-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> undef, i32 [[TMP19]], i32 0
-; GATHER-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[TMP21]], i32 1
-; GATHER-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP23]], i32 2
-; GATHER-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP25]], i32 3
-; GATHER-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP27]], i32 4
-; GATHER-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP29]], i32 5
-; GATHER-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP31]], i32 6
-; GATHER-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP33]], i32 7
-; GATHER-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP7]])
-; GATHER-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP8]], -5
+; GATHER-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> undef, i32 [[TMP3]], i32 0
+; GATHER-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP4]], i32 1
+; GATHER-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP23]], i32 2
+; GATHER-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[TMP25]], i32 3
+; GATHER-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[TMP27]], i32 4
+; GATHER-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP9]], i32 [[TMP29]], i32 5
+; GATHER-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[TMP31]], i32 6
+; GATHER-NEXT:    [[TMP12:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[TMP33]], i32 7
+; GATHER-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v8i32(<8 x i32> [[TMP12]])
+; GATHER-NEXT:    [[BIN_EXTRA]] = add i32 [[TMP13]], -5
 ; GATHER-NEXT:    [[TMP34:%.*]] = add i32 [[TMP32]], [[TMP33]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
 ;
 ; MAX-COST-LABEL: @PR32038(
 ; MAX-COST-NEXT:  entry:
-; MAX-COST-NEXT:    [[TMP0:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1), align 1
-; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; MAX-COST-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 2), align 2
-; MAX-COST-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 0
+; MAX-COST-NEXT:    [[TMP0:%.*]] = load <2 x i8>, <2 x i8>* bitcast (i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 1) to <2 x i8>*), align 1
+; MAX-COST-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[TMP0]], zeroinitializer
 ; MAX-COST-NEXT:    [[TMP4:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 3), align 1
-; MAX-COST-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
+; MAX-COST-NEXT:    [[TMPP5:%.*]] = icmp eq i8 [[TMP4]], 0
 ; MAX-COST-NEXT:    [[TMP6:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 4), align 4
-; MAX-COST-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 0
+; MAX-COST-NEXT:    [[TMPP7:%.*]] = icmp eq i8 [[TMP6]], 0
 ; MAX-COST-NEXT:    [[TMP8:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 5), align 1
 ; MAX-COST-NEXT:    [[TMP9:%.*]] = icmp eq i8 [[TMP8]], 0
 ; MAX-COST-NEXT:    [[TMP10:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 6), align 2
@@ -245,14 +241,16 @@ define void @PR32038(i32 %n) {
 ; MAX-COST-NEXT:    [[TMP13:%.*]] = icmp eq i8 [[TMP12]], 0
 ; MAX-COST-NEXT:    [[TMP14:%.*]] = load i8, i8* getelementptr inbounds ([80 x i8], [80 x i8]* @a, i64 0, i64 8), align 8
 ; MAX-COST-NEXT:    [[TMP15:%.*]] = icmp eq i8 [[TMP14]], 0
-; MAX-COST-NEXT:    [[TMP0:%.*]] = insertelement <4 x i1> undef, i1 [[TMP1]], i32 0
-; MAX-COST-NEXT:    [[TMP1:%.*]] = insertelement <4 x i1> [[TMP0]], i1 [[TMP3]], i32 1
-; MAX-COST-NEXT:    [[TMP2:%.*]] = insertelement <4 x i1> [[TMP1]], i1 [[TMP5]], i32 2
-; MAX-COST-NEXT:    [[TMP3:%.*]] = insertelement <4 x i1> [[TMP2]], i1 [[TMP7]], i32 3
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
 ; MAX-COST-NEXT:    [[TMP17:%.*]] = phi i32 [ [[TMP34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-COST-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; MAX-COST-NEXT:    [[TMP3:%.*]] = insertelement <4 x i1> undef, i1 [[TMP2]], i32 0
+; MAX-COST-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; MAX-COST-NEXT:    [[TMP5:%.*]] = insertelement <4 x i1> [[TMP3]], i1 [[TMP4]], i32 1
+; MAX-COST-NEXT:    [[TMP6:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[TMPP5]], i32 2
+; MAX-COST-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> [[TMP6]], i1 [[TMPP7]], i32 3
+; MAX-COST-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
 ; MAX-COST-NEXT:    [[TMP20:%.*]] = add i32 -5, undef
 ; MAX-COST-NEXT:    [[TMP22:%.*]] = add i32 [[TMP20]], undef
 ; MAX-COST-NEXT:    [[TMP24:%.*]] = add i32 [[TMP22]], undef
@@ -260,10 +258,10 @@ define void @PR32038(i32 %n) {
 ; MAX-COST-NEXT:    [[TMP27:%.*]] = select i1 [[TMP9]], i32 -720, i32 -80
 ; MAX-COST-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 ; MAX-COST-NEXT:    [[TMP29:%.*]] = select i1 [[TMP11]], i32 -720, i32 -80
-; MAX-COST-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP4]])
-; MAX-COST-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP27]]
-; MAX-COST-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP29]]
-; MAX-COST-NEXT:    [[BIN_EXTRA:%.*]] = add i32 [[TMP7]], -5
+; MAX-COST-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.reduce.add.i32.v4i32(<4 x i32> [[TMP8]])
+; MAX-COST-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP27]]
+; MAX-COST-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[TMP29]]
+; MAX-COST-NEXT:    [[BIN_EXTRA:%.*]] = add i32 [[TMP11]], -5
 ; MAX-COST-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP29]]
 ; MAX-COST-NEXT:    [[TMP31:%.*]] = select i1 [[TMP13]], i32 -720, i32 -80
 ; MAX-COST-NEXT:    [[TMP32:%.*]] = add i32 [[BIN_EXTRA]], [[TMP31]]

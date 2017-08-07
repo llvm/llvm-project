@@ -50,7 +50,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   SmallString<256> FullFS("+promote-alloca,+fp64-fp16-denormals,+dx10-clamp,+load-store-opt,");
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
-    FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
+    FullFS += "+flat-address-space,+flat-for-global,+unaligned-buffer-access,+trap-handler,";
 
   FullFS += FS;
 
@@ -74,6 +74,18 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Set defaults if needed.
   if (MaxPrivateElementSize == 0)
     MaxPrivateElementSize = 4;
+
+  if (LDSBankCount == 0)
+    LDSBankCount = 32;
+
+  if (TT.getArch() == Triple::amdgcn) {
+    if (LocalMemorySize == 0)
+      LocalMemorySize = 32768;
+
+    // Do something sensible for unspecified target.
+    if (!HasMovrel && !HasVGPRIndexMode)
+      HasMovrel = true;
+  }
 
   return *this;
 }
@@ -117,7 +129,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     FP64(false),
     IsGCN(false),
-    GCN1Encoding(false),
     GCN3Encoding(false),
     CIInsts(false),
     GFX9Insts(false),

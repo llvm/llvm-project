@@ -237,6 +237,30 @@ static isl::map makeUnknownForDomain(isl::set Domain) {
   return give(isl_map_from_domain(Domain.take()));
 }
 
+/// Return whether @p Map maps to an unknown value.
+///
+/// @param { [] -> ValInst[] }
+static bool isMapToUnknown(const isl::map &Map) {
+  isl::space Space = Map.get_space().range();
+  return Space.has_tuple_id(isl::dim::set).is_false() &&
+         Space.is_wrapping().is_false() && Space.dim(isl::dim::set) == 0;
+}
+
+/// Return only the mappings that map to known values.
+///
+/// @param UMap { [] -> ValInst[] }
+///
+/// @return { [] -> ValInst[] }
+static isl::union_map filterKnownValInst(const isl::union_map &UMap) {
+  isl::union_map Result = isl::union_map::empty(UMap.get_space());
+  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+    if (!isMapToUnknown(Map))
+      Result = Result.add_map(Map);
+    return isl::stat::ok;
+  });
+  return Result;
+}
+
 static std::string printInstruction(Instruction *Instr,
                                     bool IsForDebug = false) {
   std::string Result;
@@ -330,10 +354,28 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
 void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
   assert(MA->isLatestArrayKind());
   assert(MA->isRead());
+  ScopStmt *Stmt = MA->getStatement();
 
   // { DomainRead[] -> Element[] }
   auto AccRel = getAccessRelationFor(MA);
   AllReads = give(isl_union_map_add_map(AllReads.take(), AccRel.copy()));
+
+  if (LoadInst *Load = dyn_cast_or_null<LoadInst>(MA->getAccessInstruction())) {
+    // { DomainRead[] -> ValInst[] }
+    isl::map LoadValInst = makeValInst(
+        Load, Stmt, LI->getLoopFor(Load->getParent()), Stmt->isBlockStmt());
+
+    // { DomainRead[] -> [Element[] -> DomainRead[]] }
+    isl::map IncludeElement =
+        give(isl_map_curry(isl_map_domain_map(AccRel.take())));
+
+    // { [Element[] -> DomainRead[]] -> ValInst[] }
+    isl::map EltLoadValInst =
+        give(isl_map_apply_domain(LoadValInst.take(), IncludeElement.take()));
+
+    AllReadValInst = give(
+        isl_union_map_add_map(AllReadValInst.take(), EltLoadValInst.take()));
+  }
 }
 
 void ZoneAlgorithm::addArrayWriteAccess(MemoryAccess *MA) {
@@ -578,6 +620,7 @@ void ZoneAlgorithm::computeCommon() {
   AllMayWrites = makeEmptyUnionMap();
   AllMustWrites = makeEmptyUnionMap();
   AllWriteValInst = makeEmptyUnionMap();
+  AllReadValInst = makeEmptyUnionMap();
 
   for (auto &Stmt : *S) {
     for (auto *MA : Stmt) {
@@ -593,7 +636,7 @@ void ZoneAlgorithm::computeCommon() {
   }
 
   // { DomainWrite[] -> Element[] }
-  auto AllWrites =
+  AllWrites =
       give(isl_union_map_union(AllMustWrites.copy(), AllMayWrites.copy()));
 
   // { [Element[] -> Zone[]] -> DomainWrite[] }
@@ -610,4 +653,77 @@ void ZoneAlgorithm::printAccesses(llvm::raw_ostream &OS, int Indent) const {
       MA->print(OS);
   }
   OS.indent(Indent) << "}\n";
+}
+
+isl::union_map ZoneAlgorithm::computeKnownFromMustWrites() const {
+  // { [Element[] -> Zone[]] -> [Element[] -> DomainWrite[]] }
+  isl::union_map EltReachdDef = distributeDomain(WriteReachDefZone.curry());
+
+  // { [Element[] -> DomainWrite[]] -> ValInst[] }
+  isl::union_map AllKnownWriteValInst = filterKnownValInst(AllWriteValInst);
+
+  // { [Element[] -> Zone[]] -> ValInst[] }
+  return EltReachdDef.apply_range(AllKnownWriteValInst);
+}
+
+isl::union_map ZoneAlgorithm::computeKnownFromLoad() const {
+  // { Element[] }
+  isl::union_set AllAccessedElts = AllReads.range().unite(AllWrites.range());
+
+  // { Element[] -> Scatter[] }
+  isl::union_map EltZoneUniverse = isl::union_map::from_domain_and_range(
+      AllAccessedElts, isl::set::universe(ScatterSpace));
+
+  // This assumes there are no "holes" in
+  // isl_union_map_domain(WriteReachDefZone); alternatively, compute the zone
+  // before the first write or that are not written at all.
+  // { Element[] -> Scatter[] }
+  isl::union_set NonReachDef =
+      EltZoneUniverse.wrap().subtract(WriteReachDefZone.domain());
+
+  // { [Element[] -> Zone[]] -> ReachDefId[] }
+  isl::union_map DefZone =
+      WriteReachDefZone.unite(isl::union_map::from_domain(NonReachDef));
+
+  // { [Element[] -> Scatter[]] -> Element[] }
+  isl::union_map EltZoneElt = EltZoneUniverse.domain_map();
+
+  // { [Element[] -> Zone[]] -> [Element[] -> ReachDefId[]] }
+  isl::union_map DefZoneEltDefId = EltZoneElt.range_product(DefZone);
+
+  // { Element[] -> [Zone[] -> ReachDefId[]] }
+  isl::union_map EltDefZone = DefZone.curry();
+
+  // { [Element[] -> Zone[] -> [Element[] -> ReachDefId[]] }
+  isl::union_map EltZoneEltDefid = distributeDomain(EltDefZone);
+
+  // { [Element[] -> Scatter[]] -> DomainRead[] }
+  isl::union_map Reads = AllReads.range_product(Schedule).reverse();
+
+  // { [Element[] -> Scatter[]] -> [Element[] -> DomainRead[]] }
+  isl::union_map ReadsElt = EltZoneElt.range_product(Reads);
+
+  // { [Element[] -> Scatter[]] -> ValInst[] }
+  isl::union_map ScatterKnown = ReadsElt.apply_range(AllReadValInst);
+
+  // { [Element[] -> ReachDefId[]] -> ValInst[] }
+  isl::union_map DefidKnown =
+      DefZoneEltDefId.apply_domain(ScatterKnown).reverse();
+
+  // { [Element[] -> Zone[]] -> ValInst[] }
+  return DefZoneEltDefId.apply_range(DefidKnown);
+}
+
+isl::union_map ZoneAlgorithm::computeKnown(bool FromWrite,
+                                           bool FromRead) const {
+  isl::union_map Result = makeEmptyUnionMap();
+
+  if (FromWrite)
+    Result = Result.unite(computeKnownFromMustWrites());
+
+  if (FromRead)
+    Result = Result.unite(computeKnownFromLoad());
+
+  simplify(Result);
+  return Result;
 }

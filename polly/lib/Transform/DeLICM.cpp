@@ -778,9 +778,15 @@ private:
         isl_map_wrap(isl_map_apply_domain(Lifetime.copy(), DefTarget.copy())));
     simplify(EltZone);
 
+    // When known knowledge is disabled, just return the unknown value. It will
+    // either get filtered out or conflict with itself.
     // { DomainDef[] -> ValInst[] }
-    auto ValInst = makeValInst(V, DefMA->getStatement(),
-                               LI->getLoopFor(DefInst->getParent()));
+    isl::map ValInst;
+    if (DelicmComputeKnown)
+      ValInst = makeValInst(V, DefMA->getStatement(),
+                            LI->getLoopFor(DefInst->getParent()));
+    else
+      ValInst = makeUnknownForDomain(DefMA->getStatement());
 
     // { DomainDef[] -> [Element[] -> Zone[]] }
     auto EltKnownTranslator =
@@ -1209,21 +1215,6 @@ private:
     return Result;
   }
 
-  /// Compute which value an array element stores at every instant.
-  ///
-  /// @return { [Element[] -> Zone[]] -> ValInst[] }
-  isl::union_map computeKnown() const {
-    // { [Element[] -> Zone[]] -> [Element[] -> DomainWrite[]] }
-    auto EltReachdDef =
-        distributeDomain(give(isl_union_map_curry(WriteReachDefZone.copy())));
-
-    // { [Element[] -> DomainWrite[]] -> ValInst[] }
-    auto AllKnownWriteValInst = filterKnownValInst(AllWriteValInst);
-
-    // { [Element[] -> Zone[]] -> ValInst[] }
-    return EltReachdDef.apply_range(AllKnownWriteValInst);
-  }
-
   /// Determine when an array element is written to, and which value instance is
   /// written.
   ///
@@ -1290,7 +1281,7 @@ public:
       computeCommon();
 
       EltUnused = computeLifetime();
-      EltKnown = computeKnown();
+      EltKnown = computeKnown(true, false);
       EltWritten = computeWritten();
     }
     DeLICMAnalyzed++;

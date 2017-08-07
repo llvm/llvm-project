@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -S -mtriple=amdgcn-- -mcpu=SI %s | FileCheck %s
+; RUN: opt -loop-unroll -S -mtriple=amdgcn-- -mcpu=tahiti %s | FileCheck %s
 
 ; This IR comes from this OpenCL C code:
 ;

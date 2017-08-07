@@ -4458,6 +4458,11 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
+  // All DPP instructions with at least one source operand have a fake "old"
+  // source at the beginning that's tied to the dst operand. Handle it here.
+  if (Desc.getNumOperands() >= 2)
+    Inst.addOperand(Inst.getOperand(0));
+
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
@@ -4480,16 +4485,6 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppRowMask, 0xf);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
-
-  // special case v_mac_{f16, f32}:
-  // it has src2 register operand that is tied to dst operand
-  if (Inst.getOpcode() == AMDGPU::V_MAC_F32_dpp ||
-      Inst.getOpcode() == AMDGPU::V_MAC_F16_dpp) {
-    auto it = Inst.begin();
-    std::advance(
-        it, AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::src2));
-    Inst.insert(it, Inst.getOperand(0)); // src2 = dst
-  }
 }
 
 //===----------------------------------------------------------------------===//

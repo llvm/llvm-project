@@ -99,8 +99,8 @@ TranslationUnitDecl::TranslationUnitDecl(ASTContext &ctx)
 // and 'matcher' is a type only matters when looking for attributes
 // and settings from the immediate context.
 
-const unsigned IgnoreExplicitVisibilityBit = 2;
-const unsigned IgnoreAllVisibilityBit = 4;
+const static unsigned IgnoreExplicitVisibilityBit = 2;
+const static unsigned IgnoreAllVisibilityBit = 4;
 
 /// Kinds of LV computation.  The linkage side of the computation is
 /// always the same, but different things can change how visibility is

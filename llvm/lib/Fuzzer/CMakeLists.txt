@@ -24,6 +24,11 @@ endif()
 set(LIBFUZZER_ENABLE ${LIBFUZZER_ENABLED_CHECK} CACHE BOOL "Build libFuzzer and its tests")
 set(LIBFUZZER_ENABLE_TESTS OFF CACHE BOOL "Build libFuzzer and its tests")
 
+if (LLVM_USE_SANITIZE_COVERAGE)
+  set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters -Werror")
+endif()
+
 if (LIBFUZZER_ENABLE)
   add_library(LLVMFuzzerNoMainObjects OBJECT
       FuzzerCrossOver.cpp

@@ -196,8 +196,8 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
       KillMemIds.push_back(isl::manage(SAI->getBasePtrId().release()));
   }
 
-  Info.TaggedMustKills = isl::union_map::empty(isl::space(ParamSpace));
-  Info.MustKills = isl::union_map::empty(isl::space(ParamSpace));
+  Info.TaggedMustKills = isl::union_map::empty(ParamSpace);
+  Info.MustKills = isl::union_map::empty(ParamSpace);
 
   // Initialising KillsSchedule to `isl_set_empty` creates an empty node in the
   // schedule:
@@ -225,7 +225,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
     //     [param] -> { [Stmt[] -> phantom_ref[]] -> scalar_to_kill[] }
 
     // 2a. [param] -> { Stmt[] -> scalar_to_kill[] }
-    isl::map StmtToScalar = isl::map::universe(isl::space(ParamSpace));
+    isl::map StmtToScalar = isl::map::universe(ParamSpace);
     StmtToScalar = StmtToScalar.set_tuple_id(isl::dim::in, isl::id(KillStmtId));
     StmtToScalar = StmtToScalar.set_tuple_id(isl::dim::out, isl::id(ToKillId));
 
@@ -234,7 +234,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
         nullptr);
 
     // 2b. [param] -> { phantom_ref[] -> scalar_to_kill[] }
-    isl::map PhantomRefToScalar = isl::map::universe(isl::space(ParamSpace));
+    isl::map PhantomRefToScalar = isl::map::universe(ParamSpace);
     PhantomRefToScalar =
         PhantomRefToScalar.set_tuple_id(isl::dim::in, PhantomRefId);
     PhantomRefToScalar =

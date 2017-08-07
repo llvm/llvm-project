@@ -1528,7 +1528,11 @@ public:
   }
 
   /// Add @p Access to this statement's list of accesses.
-  void addAccess(MemoryAccess *Access);
+  ///
+  /// @param Access  The access to add.
+  /// @param Prepend If true, will add @p Access before all other instructions
+  ///                (instead of appending it).
+  void addAccess(MemoryAccess *Access, bool Preprend = false);
 
   /// Remove a MemoryAccess from this statement.
   ///
