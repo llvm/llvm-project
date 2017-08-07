@@ -14,7 +14,7 @@
 
 // template <class ...Mutex> class scoped_lock;
 
-// scoped_lock(Mutex&..., adopt_lock_t);
+// scoped_lock(adopt_lock_t, Mutex&...);
 
 #include <mutex>
 #include <cassert>
@@ -43,7 +43,7 @@ int main()
         using LG = std::scoped_lock<TestMutex>;
         m1.lock();
         {
-            LG lg(m1, std::adopt_lock);
+            LG lg(std::adopt_lock, m1);
             assert(m1.locked);
         }
         assert(!m1.locked);
@@ -53,7 +53,7 @@ int main()
         using LG = std::scoped_lock<TestMutex, TestMutex>;
         m1.lock(); m2.lock();
         {
-            LG lg(m1, m2, std::adopt_lock);
+            LG lg(std::adopt_lock, m1, m2);
             assert(m1.locked && m2.locked);
         }
         assert(!m1.locked && !m2.locked);
@@ -63,7 +63,7 @@ int main()
         using LG = std::scoped_lock<TestMutex, TestMutex, TestMutex>;
         m1.lock(); m2.lock(); m3.lock();
         {
-            LG lg(m1, m2, m3, std::adopt_lock);
+            LG lg(std::adopt_lock, m1, m2, m3);
             assert(m1.locked && m2.locked && m3.locked);
         }
         assert(!m1.locked && !m2.locked && !m3.locked);
