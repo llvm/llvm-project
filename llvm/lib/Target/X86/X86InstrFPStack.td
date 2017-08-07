@@ -252,7 +252,7 @@ let SchedRW = [WriteFDivLd] in {
 defm DIV : FPBinary<fdiv, MRM6m, "div">;
 defm DIVR: FPBinary<fdiv, MRM7m, "divr", 0>;
 }
-}
+} // Defs = [FPSW]
 
 class FPST0rInst<Format fp, string asm>
   : FPI<0xD8, fp, (outs), (ins RST:$op), asm>;

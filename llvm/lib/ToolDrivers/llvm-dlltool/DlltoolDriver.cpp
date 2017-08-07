@@ -76,6 +76,7 @@ static MachineTypes getEmulation(StringRef S) {
       .Case("i386", IMAGE_FILE_MACHINE_I386)
       .Case("i386:x86-64", IMAGE_FILE_MACHINE_AMD64)
       .Case("arm", IMAGE_FILE_MACHINE_ARMNT)
+      .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 

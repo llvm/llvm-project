@@ -39,8 +39,8 @@ define i32 @flip_and_mask(i32 %x) {
 
 define <2 x i8> @flip_and_mask_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @flip_and_mask_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> %x, <i8 1, i8 1>
-; CHECK-NEXT:    [[INC:%.*]] = and <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> %x, <i8 1, i8 1>
+; CHECK-NEXT:    [[INC:%.*]] = xor <2 x i8> [[TMP1]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[INC]]
 ;
   %shl = shl <2 x i8> %x, <i8 7, i8 7>
