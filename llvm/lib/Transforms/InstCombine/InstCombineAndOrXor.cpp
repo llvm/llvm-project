@@ -126,14 +126,6 @@ Instruction *InstCombiner::OptAndOp(BinaryOperator *Op,
 
   switch (Op->getOpcode()) {
   default: break;
-  case Instruction::Xor:
-    if (Op->hasOneUse()) {
-      // (X ^ C1) & C2 --> (X & C2) ^ (C1&C2)
-      Value *And = Builder.CreateAnd(X, AndRHS);
-      And->takeName(Op);
-      return BinaryOperator::CreateXor(And, Together);
-    }
-    break;
   case Instruction::Or:
     if (Op->hasOneUse()){
       ConstantInt *TogetherCI = dyn_cast<ConstantInt>(Together);
@@ -179,64 +171,6 @@ Instruction *InstCombiner::OptAndOp(BinaryOperator *Op,
             return BinaryOperator::CreateXor(NewAnd, AndRHS);
           }
         }
-      }
-    }
-    break;
-
-  case Instruction::Shl: {
-    // We know that the AND will not produce any of the bits shifted in, so if
-    // the anded constant includes them, clear them now!
-    //
-    uint32_t BitWidth = AndRHS->getType()->getBitWidth();
-    uint32_t OpRHSVal = OpRHS->getLimitedValue(BitWidth);
-    APInt ShlMask(APInt::getHighBitsSet(BitWidth, BitWidth-OpRHSVal));
-    ConstantInt *CI = Builder.getInt(AndRHS->getValue() & ShlMask);
-
-    if (CI->getValue() == ShlMask)
-      // Masking out bits that the shift already masks.
-      return replaceInstUsesWith(TheAnd, Op);   // No need for the and.
-
-    if (CI != AndRHS) {                  // Reducing bits set in and.
-      TheAnd.setOperand(1, CI);
-      return &TheAnd;
-    }
-    break;
-  }
-  case Instruction::LShr: {
-    // We know that the AND will not produce any of the bits shifted in, so if
-    // the anded constant includes them, clear them now!  This only applies to
-    // unsigned shifts, because a signed shr may bring in set bits!
-    //
-    uint32_t BitWidth = AndRHS->getType()->getBitWidth();
-    uint32_t OpRHSVal = OpRHS->getLimitedValue(BitWidth);
-    APInt ShrMask(APInt::getLowBitsSet(BitWidth, BitWidth - OpRHSVal));
-    ConstantInt *CI = Builder.getInt(AndRHS->getValue() & ShrMask);
-
-    if (CI->getValue() == ShrMask)
-      // Masking out bits that the shift already masks.
-      return replaceInstUsesWith(TheAnd, Op);
-
-    if (CI != AndRHS) {
-      TheAnd.setOperand(1, CI);  // Reduce bits set in and cst.
-      return &TheAnd;
-    }
-    break;
-  }
-  case Instruction::AShr:
-    // Signed shr.
-    // See if this is shifting in some sign extension, then masking it out
-    // with an and.
-    if (Op->hasOneUse()) {
-      uint32_t BitWidth = AndRHS->getType()->getBitWidth();
-      uint32_t OpRHSVal = OpRHS->getLimitedValue(BitWidth);
-      APInt ShrMask(APInt::getLowBitsSet(BitWidth, BitWidth - OpRHSVal));
-      Constant *C = Builder.getInt(AndRHS->getValue() & ShrMask);
-      if (C == AndRHS) {          // Masking out bits shifted in.
-        // (Val ashr C1) & C2 -> (Val lshr C1) & C2
-        // Make the argument unsigned.
-        Value *ShVal = Op->getOperand(0);
-        ShVal = Builder.CreateLShr(ShVal, OpRHS, Op->getName());
-        return BinaryOperator::CreateAnd(ShVal, AndRHS, TheAnd.getName());
       }
     }
     break;
@@ -1280,6 +1214,15 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       return new ZExtInst(IsZero, I.getType());
     }
 
+    const APInt *XorC;
+    if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_APInt(XorC))))) {
+      // (X ^ C1) & C2 --> (X & C2) ^ (C1&C2)
+      Constant *NewC = ConstantInt::get(I.getType(), *C & *XorC);
+      Value *And = Builder.CreateAnd(X, Op1);
+      And->takeName(Op0);
+      return BinaryOperator::CreateXor(And, NewC);
+    }
+
     // If the mask is only needed on one incoming arm, push the 'and' op up.
     if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_Value(Y)))) ||
         match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
@@ -1298,6 +1241,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
         return BinaryOperator::Create(BinOp, NewLHS, Y);
       }
     }
+
   }
 
   if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(Op1)) {
@@ -2430,11 +2374,21 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
           Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
           return BinaryOperator::CreateAdd(V, NewC);
         }
+        if (RHSC->isSignMask()) {
+          // (C - X) ^ signmask -> (C + signmask - X)
+          Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
+          return BinaryOperator::CreateSub(NewC, V);
+        }
       } else if (match(Op0, m_Add(m_Value(V), m_APInt(C)))) {
         // ~(X-c) --> (-c-1)-X
         if (RHSC->isAllOnesValue()) {
           Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
           return BinaryOperator::CreateSub(NewC, V);
+        }
+        if (RHSC->isSignMask()) {
+          // (X + C) ^ signmask -> (X + C + signmask)
+          Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
+          return BinaryOperator::CreateAdd(V, NewC);
         }
       }
     }
@@ -2442,23 +2396,8 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
 
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
-      if (Op0I->getOpcode() == Instruction::Sub)
-        if (ConstantInt *Op0I0C = dyn_cast<ConstantInt>(Op0I->getOperand(0))) {
-          // (C - X) ^ signmask -> (C + signmask - X)
-          if (RHSC->getValue().isSignMask()) {
-            Constant *C = Builder.getInt(RHSC->getValue() + Op0I0C->getValue());
-            return BinaryOperator::CreateSub(C, Op0I->getOperand(1));
-          }
-        }
-
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
-        if (Op0I->getOpcode() == Instruction::Add) {
-          // (X + C) ^ signmask -> (X + C + signmask)
-          if (RHSC->getValue().isSignMask()) {
-            Constant *C = Builder.getInt(RHSC->getValue() + Op0CI->getValue());
-            return BinaryOperator::CreateAdd(Op0I->getOperand(0), C);
-          }
-        } else if (Op0I->getOpcode() == Instruction::Or) {
+        if (Op0I->getOpcode() == Instruction::Or) {
           // (X|C1)^C2 -> X^(C1|C2) iff X&~C1 == 0
           if (MaskedValueIsZero(Op0I->getOperand(0), Op0CI->getValue(),
                                 0, &I)) {

@@ -174,7 +174,7 @@ private:
     for (auto &Stmt : *S) {
       isl::set Domain = Stmt.getDomain();
       isl::union_map WillBeOverwritten =
-          isl::union_map::empty(give(S->getParamSpace()));
+          isl::union_map::empty(S->getParamSpace());
 
       SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
 
@@ -190,7 +190,7 @@ private:
 
         auto AccRel = MA->getAccessRelation();
         AccRel = AccRel.intersect_domain(Domain);
-        AccRel = AccRel.intersect_params(give(S->getContext()));
+        AccRel = AccRel.intersect_params(S->getContext());
 
         // If a value is read in-between, do not consider it as overwritten.
         if (MA->isRead()) {
@@ -232,8 +232,7 @@ private:
   /// In all cases, both writes must write the same values.
   void coalesceWrites() {
     for (auto &Stmt : *S) {
-      isl::set Domain =
-          Stmt.getDomain().intersect_params(give(S->getContext()));
+      isl::set Domain = Stmt.getDomain().intersect_params(S->getContext());
 
       // We let isl do the lookup for the same-value condition. For this, we
       // wrap llvm::Value into an isl::set such that isl can do the lookup in
@@ -258,8 +257,7 @@ private:
 
       // List of all eligible (for coalescing) writes of the future.
       // { [Domain[] -> Element[]] -> [Value[] -> MemoryAccess[]] }
-      isl::union_map FutureWrites =
-          isl::union_map::empty(give(S->getParamSpace()));
+      isl::union_map FutureWrites = isl::union_map::empty(S->getParamSpace());
 
       // Iterate over accesses from the last to the first.
       SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
@@ -428,12 +426,12 @@ private:
       };
 
       isl::set Domain = Stmt.getDomain();
-      Domain = Domain.intersect_params(give(S->getContext()));
+      Domain = Domain.intersect_params(S->getContext());
 
       // List of element reads that still have the same value while iterating
       // through the MemoryAccesses.
       // { [Domain[] -> Element[]] -> Val[] }
-      isl::union_map Known = isl::union_map::empty(give(S->getParamSpace()));
+      isl::union_map Known = isl::union_map::empty(S->getParamSpace());
 
       SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
       for (MemoryAccess *MA : Accesses) {

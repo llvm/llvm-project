@@ -121,7 +121,7 @@ const Scop *PolyhedralInfo::getScopContainingLoop(Loop *L) const {
 //    Stmt[i0, i1] -> [i0, i1]
 __isl_give isl_union_map *PolyhedralInfo::getScheduleForLoop(const Scop *S,
                                                              Loop *L) const {
-  isl_union_map *Schedule = isl_union_map_empty(S->getParamSpace());
+  isl_union_map *Schedule = isl_union_map_empty(S->getParamSpace().release());
   int CurrDim = S->getRelativeLoopDepth(L);
   DEBUG(dbgs() << "Relative loop depth:\t" << CurrDim << "\n");
   assert(CurrDim >= 0 && "Loop in region should have at least depth one");

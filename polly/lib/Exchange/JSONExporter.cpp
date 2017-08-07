@@ -391,7 +391,7 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
     return false;
   }
 
-  auto ScheduleMap = isl_union_map_empty(S.getParamSpace());
+  auto ScheduleMap = isl_union_map_empty(S.getParamSpace().release());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
       ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
@@ -562,8 +562,8 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
 
       NewAccessDomain =
           isl_set_intersect_params(NewAccessDomain, S.getContext().release());
-      CurrentAccessDomain =
-          isl_set_intersect_params(CurrentAccessDomain, S.getContext().release());
+      CurrentAccessDomain = isl_set_intersect_params(CurrentAccessDomain,
+                                                     S.getContext().release());
 
       if (MA->isRead() &&
           isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==

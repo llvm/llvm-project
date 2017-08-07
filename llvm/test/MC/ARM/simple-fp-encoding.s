@@ -132,18 +132,10 @@
         vmrs    APSR_nzcv, fpscr
         vmrs    apsr_nzcv, fpscr
         fmstat
-        vmrs    r2, fpsid
-        vmrs    r3, FPSID
-        vmrs    r4, mvfr0
-        vmrs    r5, MVFR1
 
 @ CHECK: vmrs APSR_nzcv, fpscr       @ encoding: [0x10,0xfa,0xf1,0xee]
 @ CHECK: vmrs APSR_nzcv, fpscr       @ encoding: [0x10,0xfa,0xf1,0xee]
 @ CHECK: vmrs APSR_nzcv, fpscr       @ encoding: [0x10,0xfa,0xf1,0xee]
-@ CHECK: vmrs r2, fpsid              @ encoding: [0x10,0x2a,0xf0,0xee]
-@ CHECK: vmrs r3, fpsid              @ encoding: [0x10,0x3a,0xf0,0xee]
-@ CHECK: vmrs r4, mvfr0              @ encoding: [0x10,0x4a,0xf7,0xee]
-@ CHECK: vmrs r5, mvfr1              @ encoding: [0x10,0x5a,0xf6,0xee]
 
 @ CHECK: vnegne.f64 d16, d16         @ encoding: [0x60,0x0b,0xf1,0x1e]
         vnegne.f64      d16, d16
@@ -165,10 +157,6 @@
 
 @ CHECK: vmrs r0, fpscr              @ encoding: [0x10,0x0a,0xf1,0xee]
         vmrs    r0, fpscr
-@ CHECK: vmrs  r0, fpexc             @ encoding: [0x10,0x0a,0xf8,0xee]
-        vmrs  r0, fpexc
-@ CHECK: vmrs  r0, fpsid             @ encoding: [0x10,0x0a,0xf0,0xee]
-        vmrs  r0, fpsid
 @ CHECK: vmrs	r1, fpinst           @ encoding: [0x10,0x1a,0xf9,0xee]
         vmrs r1, fpinst
 @ CHECK: vmrs	r8, fpinst2          @ encoding: [0x10,0x8a,0xfa,0xee]
@@ -176,10 +164,6 @@
 
 @ CHECK: vmsr fpscr, r0              @ encoding: [0x10,0x0a,0xe1,0xee]
         vmsr    fpscr, r0
-@ CHECK: vmsr  fpexc, r0             @ encoding: [0x10,0x0a,0xe8,0xee]
-        vmsr  fpexc, r0
-@ CHECK: vmsr  fpsid, r0             @ encoding: [0x10,0x0a,0xe0,0xee]
-        vmsr  fpsid, r0
 @ CHECK: vmsr	fpinst, r3           @ encoding: [0x10,0x3a,0xe9,0xee]
         vmsr fpinst, r3	
 @ CHECK: vmsr	fpinst2, r4          @ encoding: [0x10,0x4a,0xea,0xee]

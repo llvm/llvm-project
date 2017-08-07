@@ -16,8 +16,6 @@
 
 	.type fp,%function
 fp:
-	vmrs r0, mvfr2
-@ CHECK-V7: error: instruction requires: FPARMv8
 
 	vselgt.f32 s0, s0, s0
 @ CHECK-V7: error: instruction requires: FPARMv8
@@ -152,8 +150,6 @@ fp:
 
 	.type nofp,%function
 nofp:
-	vmrs r0, mvfr2
-@ CHECK: error: instruction requires: FPARMv8
 
 	vselgt.f32 s0, s0, s0
 @ CHECK: error: instruction requires: FPARMv8

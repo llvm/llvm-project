@@ -149,17 +149,18 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
 
 void ReassociatePass::BuildRankMap(Function &F,
                                    ReversePostOrderTraversal<Function*> &RPOT) {
-  unsigned i = 2;
+  unsigned Rank = 2;
 
   // Assign distinct ranks to function arguments.
-  for (Function::arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I) {
-    ValueRankMap[&*I] = ++i;
-    DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << i << "\n");
+  for (auto &Arg : F.args()) {
+    ValueRankMap[&Arg] = ++Rank;
+    DEBUG(dbgs() << "Calculated Rank[" << Arg.getName() << "] = " << Rank
+                 << "\n");
   }
 
   // Traverse basic blocks in ReversePostOrder
   for (BasicBlock *BB : RPOT) {
-    unsigned BBRank = RankMap[BB] = ++i << 16;
+    unsigned BBRank = RankMap[BB] = ++Rank << 16;
 
     // Walk the basic block, adding precomputed ranks for any instructions that
     // we cannot move.  This ensures that the ranks for these instructions are
@@ -207,13 +208,9 @@ void ReassociatePass::canonicalizeOperands(Instruction *I) {
 
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
-  unsigned LHSRank = getRank(LHS);
-  unsigned RHSRank = getRank(RHS);
-
-  if (isa<Constant>(RHS))
+  if (LHS == RHS || isa<Constant>(RHS))
     return;
-
-  if (isa<Constant>(LHS) || RHSRank < LHSRank)
+  if (isa<Constant>(LHS) || getRank(RHS) < getRank(LHS))
     cast<BinaryOperator>(I)->swapOperands();
 }
 
