@@ -22,7 +22,7 @@ template<typename T>
 struct NoDefaultAllocator : std::allocator<T>
 {
   template<typename U> struct rebind { using other = NoDefaultAllocator<U>; };
-  NoDefaultAllocator(int id) : id(id) { }
+  NoDefaultAllocator(int id_) : id(id_) { }
   template<typename U> NoDefaultAllocator(const NoDefaultAllocator<U>& a) : id(a.id) { }
   int id;
 };
