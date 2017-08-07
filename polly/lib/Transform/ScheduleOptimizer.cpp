@@ -1294,7 +1294,7 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(Scop &S,
   if (S.containsExtensionNode(NewSchedule.get()))
     return true;
   auto NewScheduleMap = NewSchedule.get_map();
-  auto OldSchedule = isl::manage(S.getSchedule());
+  auto OldSchedule = S.getSchedule();
   assert(OldSchedule && "Only IslScheduleOptimizer can insert extension nodes "
                         "that make Scop::getSchedule() return nullptr.");
   bool changed = !OldSchedule.is_equal(NewScheduleMap);
@@ -1370,7 +1370,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
         Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW;
   }
 
-  isl::union_set Domain = give(S.getDomains());
+  isl::union_set Domain = S.getDomains();
 
   if (!Domain)
     return false;

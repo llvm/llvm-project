@@ -1010,7 +1010,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
-            auto *Domain = S.getDomainConditions(Inst->getParent());
+            auto *Domain = S.getDomainConditions(Inst->getParent()).release();
             IsDead = isl_set_is_empty(Domain);
             isl_set_free(Domain);
           }

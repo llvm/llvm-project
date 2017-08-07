@@ -2629,7 +2629,7 @@ public:
     PPCGScop->end = 0;
 
     PPCGScop->context = S->getContext().release();
-    PPCGScop->domain = S->getDomains();
+    PPCGScop->domain = S->getDomains().release();
     // TODO: investigate this further. PPCG calls collect_call_domains.
     PPCGScop->call = isl_union_set_from_set(S->getContext().release());
     PPCGScop->tagged_reads = getTaggedReads();
@@ -2653,7 +2653,7 @@ public:
     PPCGScop->dep_order = nullptr;
     PPCGScop->tagged_dep_order = nullptr;
 
-    PPCGScop->schedule = S->getScheduleTree();
+    PPCGScop->schedule = S->getScheduleTree().release();
     // If we have something non-trivial to kill, add it to the schedule
     if (KillsInfo.KillsSchedule.get())
       PPCGScop->schedule = isl_schedule_sequence(
@@ -2740,7 +2740,8 @@ public:
   __isl_give isl_set *getExtent(ScopArrayInfo *Array) {
     unsigned NumDims = Array->getNumberOfDimensions();
     isl_union_map *Accesses = S->getAccesses().release();
-    Accesses = isl_union_map_intersect_domain(Accesses, S->getDomains());
+    Accesses =
+        isl_union_map_intersect_domain(Accesses, S->getDomains().release());
     Accesses = isl_union_map_detect_equalities(Accesses);
     isl_union_set *AccessUSet = isl_union_map_range(Accesses);
     AccessUSet = isl_union_set_coalesce(AccessUSet);

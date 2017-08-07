@@ -178,8 +178,8 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
           isl_union_map_add_map(StmtSchedule, Stmt.getSchedule().release());
   }
 
-  StmtSchedule =
-      isl_union_map_intersect_params(StmtSchedule, S.getAssumedContext());
+  StmtSchedule = isl_union_map_intersect_params(
+      StmtSchedule, S.getAssumedContext().release());
   TaggedStmtDomain = isl_union_map_domain(StmtSchedule);
 
   ReductionTagMap = isl_union_map_coalesce(ReductionTagMap);
@@ -420,7 +420,7 @@ void Dependences::calculateDependences(Scop &S) {
         dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
         dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
 
-  Schedule = S.getScheduleTree();
+  Schedule = S.getScheduleTree().release();
 
   if (!HasReductions) {
     isl_union_map_free(ReductionTagMap);
