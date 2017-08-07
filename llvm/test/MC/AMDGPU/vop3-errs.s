@@ -45,3 +45,35 @@ v_cmp_le_f64_e64 vcc, v0, v1 mul:4
 
 v_cvt_u32_f32_e64 v0, v1 div:2
 // GCN: error: invalid operand for instruction
+
+//
+// v_interp*
+//
+
+v_interp_mov_f32_e64 v5, p10, attr0.x high
+// GCN: error: invalid operand for instruction
+
+v_interp_mov_f32_e64 v5, p10, attr0.x v0
+// GCN: error: invalid operand for instruction
+
+v_interp_p1_f32_e64 v5, v2, attr0.x high
+// GCN: error: invalid operand for instruction
+
+v_interp_p1_f32_e64 v5, v2, attr0.x v0
+// GCN: error: invalid operand for instruction
+
+v_interp_p2_f32_e64 v255, v2, attr0.x high
+// GCN: error: invalid operand for instruction
+
+v_interp_p2_f32_e64 v255, v2, attr0.x v0
+// GCN: error: invalid operand for instruction
+
+v_interp_p1ll_f16 v5, p0, attr31.x
+// GCN: error: invalid operand for instruction
+
+v_interp_p1ll_f16 v5, v2, attr31.x v0
+// GCN: error: invalid operand for instruction
+
+v_interp_p2_f16 v5, v2, attr1.x, v3 mul:2
+// GFX67: error: not a valid operand
+// GFX89: error: invalid operand for instruction

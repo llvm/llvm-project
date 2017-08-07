@@ -981,6 +981,13 @@ void AMDGPUInstPrinter::printClamp(const MCInst *MI, unsigned OpNo,
   printIfSet(MI, OpNo, O, "_SAT");
 }
 
+void AMDGPUInstPrinter::printHigh(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  if (MI->getOperand(OpNo).getImm())
+    O << " high";
+}
+
 void AMDGPUInstPrinter::printClampSI(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {

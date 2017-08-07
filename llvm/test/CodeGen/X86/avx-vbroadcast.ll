@@ -831,6 +831,26 @@ define <4 x double> @splat_concat4(double* %p) {
   ret <4 x double> %6
 }
 
+; PR34041
+define <4 x double> @broadcast_shuffle_1000(double* %p) {
+; X32-LABEL: broadcast_shuffle_1000:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_shuffle_1000:
+; X64:       ## BB#0:
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %1 = load double, double* %p
+  %2 = insertelement <2 x double> undef, double %1, i32 0
+  %3 = shufflevector <2 x double> %2, <2 x double> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
+  ret <4 x double> %3
+}
+
 ;
 ; When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
 ;
