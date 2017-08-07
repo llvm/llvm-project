@@ -37,13 +37,13 @@
 
 ; CHECK:       %13 = call i8* @polly_initContextCUDA()
 ; CHECK-NEXT:  %14 = bitcast i32* %A to i8*
-; CHECK-NEXT:  %15 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; CHECK-NEXT:  %15 = bitcast i32* %R to i8*
+; CHECK-NEXT:  %16 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 0
 ; CHECK-NEXT:  store i8* %14, i8** %polly_launch_0_param_0
-; CHECK-NEXT:  %16 = bitcast i8** %polly_launch_0_param_0 to i8*
-; CHECK-NEXT:  store i8* %16, i8** %15
-; CHECK-NEXT:  %17 = bitcast i32* %R to i8*
+; CHECK-NEXT:  %17 = bitcast i8** %polly_launch_0_param_0 to i8*
+; CHECK-NEXT:  store i8* %17, i8** %16
 ; CHECK-NEXT:  %18 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 1
-; CHECK-NEXT:  store i8* %17, i8** %polly_launch_0_param_1
+; CHECK-NEXT:  store i8* %15, i8** %polly_launch_0_param_1
 ; CHECK-NEXT:  %19 = bitcast i8** %polly_launch_0_param_1 to i8*
 ; CHECK-NEXT:  store i8* %19, i8** %18
 ; CHECK-NEXT:  store i32 4, i32* %polly_launch_0_param_size_0

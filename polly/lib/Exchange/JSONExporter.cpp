@@ -273,7 +273,7 @@ void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
 typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
 
 bool JSONImporter::importContext(Scop &S, Json::Value &JScop) {
-  isl_set *OldContext = S.getContext();
+  isl_set *OldContext = S.getContext().release();
 
   // Check if key 'context' is present.
   if (!JScop.isMember("context")) {
@@ -367,7 +367,7 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
       return false;
     }
 
-    isl_space *Space = Stmt.getDomainSpace();
+    isl_space *Space = Stmt.getDomainSpace().release();
 
     // Copy the old tuple id. This is necessary to retain the user pointer,
     // that stores the reference to the ScopStmt this schedule belongs to.
@@ -391,12 +391,13 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
     return false;
   }
 
-  auto ScheduleMap = isl_union_map_empty(S.getParamSpace());
+  auto ScheduleMap = isl_union_map_empty(S.getParamSpace().release());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
       ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
     else
-      ScheduleMap = isl_union_map_add_map(ScheduleMap, Stmt.getSchedule());
+      ScheduleMap =
+          isl_union_map_add_map(ScheduleMap, Stmt.getSchedule().release());
   }
 
   S.setSchedule(ScheduleMap);
@@ -560,9 +561,9 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       }
 
       NewAccessDomain =
-          isl_set_intersect_params(NewAccessDomain, S.getContext());
-      CurrentAccessDomain =
-          isl_set_intersect_params(CurrentAccessDomain, S.getContext());
+          isl_set_intersect_params(NewAccessDomain, S.getContext().release());
+      CurrentAccessDomain = isl_set_intersect_params(CurrentAccessDomain,
+                                                     S.getContext().release());
 
       if (MA->isRead() &&
           isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==

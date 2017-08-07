@@ -296,6 +296,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   for (const auto &I : IDToValue)
     Values.insert(I.second);
 
+  // NOTE: this is populated in IslNodeBuilder::addParameters
   for (const auto &I : OutsideLoopIterations)
     Values.insert(cast<SCEVUnknown>(I.second)->getValue());
 
@@ -309,9 +310,17 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
 
   Values.remove_if([](const Value *V) { return isa<GlobalValue>(V); });
 
+  /// Note: Code generation of induction variables of loops outside Scops
+  ///
   /// Remove loops that contain the scop or that are part of the scop, as they
   /// are considered local. This leaves only loops that are before the scop, but
   /// do not contain the scop itself.
+  /// We ignore loops perfectly contained in the Scop because these are already
+  /// generated at `IslNodeBuilder::addParameters`. These `Loops` are loops
+  /// whose induction variables are referred to by the Scop, but the Scop is not
+  /// fully contained in these Loops. Since there can be many of these,
+  /// we choose to codegen these on-demand.
+  /// @see IslNodeBuilder::materializeNonScopLoopInductionVariable.
   Loops.remove_if([this](const Loop *L) {
     return S.contains(L) || L->contains(S.getEntry());
   });
@@ -363,7 +372,7 @@ void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
   ScopStmt *Stmt = (ScopStmt *)isl_id_get_user(Id);
   std::vector<LoopToScevMapT> VLTS(IVS.size());
 
-  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain());
+  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain().release());
   Schedule = isl_union_map_intersect_domain(Schedule, Domain);
   isl_map *S = isl_map_from_union_map(Schedule);
 
@@ -627,13 +636,10 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // Create for all loops we depend on values that contain the current loop
   // iteration. These values are necessary to generate code for SCEVs that
   // depend on such loops. As a result we need to pass them to the subfunction.
+  // See [Code generation of induction variables of loops outside Scops]
   for (const Loop *L : Loops) {
-    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
-                                            SE.getUnknown(Builder.getInt64(1)),
-                                            L, SCEV::FlagAnyWrap);
-    Value *V = generateSCEV(OuterLIV);
-    OutsideLoopIterations[L] = SE.getUnknown(V);
-    SubtreeValues.insert(V);
+    Value *LoopInductionVar = materializeNonScopLoopInductionVariable(L);
+    SubtreeValues.insert(LoopInductionVar);
   }
 
   ValueMapT NewValues;
@@ -696,7 +702,7 @@ static bool hasPartialAccesses(__isl_take isl_ast_node *Node) {
 
                ScopStmt *Stmt =
                    static_cast<ScopStmt *>(isl_id_get_user(Id.keep()));
-               isl::set StmtDom = give(Stmt->getDomain());
+               isl::set StmtDom = Stmt->getDomain();
                for (auto *MA : *Stmt) {
                  if (MA->isLatestPartialAccess())
                    return isl_bool_error;
@@ -780,7 +786,7 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
   auto *Build = IslAstInfo::getBuild(Node);
   assert(Build && "Could not obtain isl_ast_build from user node");
-  Stmt->setAstBuild(Build);
+  Stmt->setAstBuild(isl::manage(isl_ast_build_copy(Build)));
 
   for (auto *MA : *Stmt) {
     if (!MA->hasNewAccessRelation()) {
@@ -805,13 +811,14 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
 #ifndef NDEBUG
     if (MA->isRead()) {
-      auto Dom = Stmt->getDomain();
+      auto Dom = Stmt->getDomain().release();
       auto SchedDom = isl_set_from_union_set(
           isl_union_map_domain(isl_union_map_copy(Schedule)));
       auto AccDom = isl_map_domain(MA->getAccessRelation().release());
-      Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext());
-      SchedDom =
-          isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext());
+      Dom = isl_set_intersect_params(Dom,
+                                     Stmt->getParent()->getContext().release());
+      SchedDom = isl_set_intersect_params(
+          SchedDom, Stmt->getParent()->getContext().release());
       assert(isl_set_is_subset(SchedDom, AccDom) &&
              "Access relation not defined on full schedule domain");
       assert(isl_set_is_subset(Dom, AccDom) &&
@@ -894,6 +901,17 @@ void IslNodeBuilder::generateCopyStmt(
       isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId().release());
   auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
   Builder.CreateStore(LoadValue, StoreAddr);
+}
+
+Value *IslNodeBuilder::materializeNonScopLoopInductionVariable(const Loop *L) {
+  assert(OutsideLoopIterations.find(L) == OutsideLoopIterations.end() &&
+         "trying to materialize loop induction variable twice");
+  const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                                          SE.getUnknown(Builder.getInt64(1)), L,
+                                          SCEV::FlagAnyWrap);
+  Value *V = generateSCEV(OuterLIV);
+  OutsideLoopIterations[L] = SE.getUnknown(V);
+  return V;
 }
 
 void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
@@ -992,7 +1010,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
-            auto *Domain = S.getDomainConditions(Inst->getParent());
+            auto *Domain = S.getDomainConditions(Inst->getParent()).release();
             IsDead = isl_set_is_empty(Domain);
             isl_set_free(Domain);
           }
@@ -1040,7 +1058,7 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set) {
 
 bool IslNodeBuilder::materializeParameters() {
   for (const SCEV *Param : S.parameters()) {
-    isl_id *Id = S.getIdForParam(Param);
+    isl_id *Id = S.getIdForParam(Param).release();
     if (!materializeValue(Id))
       return false;
   }
@@ -1167,7 +1185,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
 
   isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
-  AccessRange = isl_set_gist_params(AccessRange, S.getContext());
+  AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
 
   if (!materializeParameters(AccessRange)) {
     isl_set_free(AccessRange);
@@ -1175,7 +1193,8 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
     return nullptr;
   }
 
-  auto *Build = isl_ast_build_from_context(isl_set_universe(S.getParamSpace()));
+  auto *Build =
+      isl_ast_build_from_context(isl_set_universe(S.getParamSpace().release()));
   isl_set *Universe = isl_set_universe(isl_set_get_space(Domain));
   bool AlwaysExecuted = isl_set_is_equal(Domain, Universe);
   isl_set_free(Universe);
@@ -1327,7 +1346,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   }
 
   if (SE.isSCEVable(AccInstTy)) {
-    isl_id *ParamId = S.getIdForParam(SE.getSCEV(AccInst));
+    isl_id *ParamId = S.getIdForParam(SE.getSCEV(AccInst)).release();
     if (ParamId)
       IDToValue[ParamId] = PreloadVal;
     isl_id_free(ParamId);
@@ -1484,11 +1503,7 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
     L = L->getParentLoop();
 
   while (L != nullptr) {
-    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
-                                            SE.getUnknown(Builder.getInt64(1)),
-                                            L, SCEV::FlagAnyWrap);
-    Value *V = generateSCEV(OuterLIV);
-    OutsideLoopIterations[L] = SE.getUnknown(V);
+    materializeNonScopLoopInductionVariable(L);
     L = L->getParentLoop();
   }
 

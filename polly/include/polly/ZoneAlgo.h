@@ -67,6 +67,10 @@ protected:
   /// { DomainRead[] -> Element[] }
   isl::union_map AllReads;
 
+  /// The loaded values (llvm::LoadInst) of all reads.
+  /// { [Element[] -> DomainRead[]] -> ValInst[] }
+  isl::union_map AllReadValInst;
+
   /// Combined access relations of all MemoryKind::Array, MAY_WRITE accesses.
   /// { DomainMayWrite[] -> Element[] }
   isl::union_map AllMayWrites;
@@ -74,6 +78,11 @@ protected:
   /// Combined access relations of all MemoryKind::Array, MUST_WRITE accesses.
   /// { DomainMustWrite[] -> Element[] }
   isl::union_map AllMustWrites;
+
+  /// Combined access relations of all MK_Array write accesses (union of
+  /// AllMayWrites and AllMustWrites).
+  /// { DomainWrite[] -> Element[] }
+  isl::union_map AllWrites;
 
   /// The value instances written to array elements of all write accesses.
   /// { [Element[] -> DomainWrite[]] -> ValInst[] }
@@ -220,6 +229,26 @@ protected:
 public:
   /// Return the SCoP this object is analyzing.
   Scop *getScop() const { return S; }
+
+  /// A reaching definition zone is known to have the definition's written value
+  /// if the definition is a MUST_WRITE.
+  ///
+  /// @return { [Element[] -> Zone[]] -> ValInst[] }
+  isl::union_map computeKnownFromMustWrites() const;
+
+  /// A reaching definition zone is known to be the same value as any load that
+  /// reads from that array element in that period.
+  ///
+  /// @return { [Element[] -> Zone[]] -> ValInst[] }
+  isl::union_map computeKnownFromLoad() const;
+
+  /// Compute which value an array element stores at every instant.
+  ///
+  /// @param FromWrite Use stores as source of information.
+  /// @param FromRead  Use loads as source of information.
+  ///
+  /// @return { [Element[] -> Zone[]] -> ValInst[] }
+  isl::union_map computeKnown(bool FromWrite, bool FromRead) const;
 };
 
 /// Create a domain-to-unknown value mapping.
