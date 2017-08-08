@@ -71,6 +71,12 @@ Improvements to clang-tidy
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
 
+- New `readability-static-accessed-through-instance
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check
+
+  Finds member expressions that access static members through instances and
+  replaces them with uses of the appropriate qualified-id.
+
 Improvements to include-fixer
 -----------------------------
 

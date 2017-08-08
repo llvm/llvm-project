@@ -32,6 +32,7 @@
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
 #include "SimplifyBooleanExprCheck.h"
+#include "StaticAccessedThroughInstanceCheck.h"
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 
@@ -70,6 +71,8 @@ public:
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<StaticAccessedThroughInstanceCheck>(
+        "readability-static-accessed-through-instance");
     CheckFactories.registerCheck<StaticDefinitionInAnonymousNamespaceCheck>(
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
