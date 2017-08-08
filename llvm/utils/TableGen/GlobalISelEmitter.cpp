@@ -1785,7 +1785,7 @@ bool OperandPredicateMatcher::isHigherPriorityThan(
   }
 
   return Kind < B.Kind;
-};
+}
 
 //===- GlobalISelEmitter class --------------------------------------------===//
 
