@@ -81,3 +81,32 @@ int main() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+35]]:2 = #0
   baz();
   return 0;
 }
+
+// FIXME: End location for "case 1" shouldn't point at the end of the switch.
+                         // CHECK: fallthrough
+int fallthrough(int i) { // CHECK-NEXT: File 0, [[@LINE]]:24 -> [[@LINE+12]]:2 = #0
+  switch(i) {
+  case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+8]]:10 = #2
+    i = 23;
+  case 2:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = (#2 + #3)
+    i = 11;
+    break;
+  case 3:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = #4
+  case 4:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = (#4 + #5)
+    i = 99;
+    break;
+  }
+}
+
+void abort(void) __attribute((noreturn));
+                   // CHECK: noret
+int noret(int x) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+9]]:2
+  switch (x) {
+  default:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:12
+    abort();
+  case 1:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:13
+    return 5;
+  case 2:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:14
+    return 10;
+  }
+}
