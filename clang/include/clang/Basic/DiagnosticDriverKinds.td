@@ -69,6 +69,10 @@ def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
 def err_drv_invalid_Xarch_argument_isdriver : Error<
   "invalid Xarch argument: '%0', cannot change driver behavior inside Xarch argument">;
+def err_drv_Xopenmp_target_missing_triple : Error<
+  "cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>">;
+def err_drv_invalid_Xopenmp_target_with_args : Error<
+  "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
 def err_drv_argument_not_allowed_with : Error<

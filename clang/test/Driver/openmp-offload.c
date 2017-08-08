@@ -597,3 +597,83 @@
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-IS-DEVICE %s
 
 // CHK-FOPENMP-IS-DEVICE: clang{{.*}} "-aux-triple" "powerpc64le--linux" {{.*}}.c" "-fopenmp-is-device" "-fopenmp-host-ir-file-path"
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target=powerpc64le-ibm-linux-gnu -march=pwr7 is passed when compiling for the device.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-EQ-TARGET %s
+
+// CHK-FOPENMP-EQ-TARGET: clang{{.*}} "-target-cpu" "pwr7"
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target -march=pwr7 is passed when compiling for the device.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr7 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET %s
+
+// CHK-FOPENMP-TARGET: clang{{.*}} "-target-cpu" "pwr7"
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target triggers error when multiple triples are used.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu,powerpc64le-unknown-linux-gnu -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-AMBIGUOUS-ERROR %s
+
+// CHK-FOPENMP-TARGET-AMBIGUOUS-ERROR: clang{{.*}} error: cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target triggers error when an option requiring arguments is passed to it.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -Xopenmp-target -mcpu=pwr8 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-NESTED-ERROR %s
+
+// CHK-FOPENMP-TARGET-NESTED-ERROR: clang{{.*}} error: invalid -Xopenmp-target argument: '-Xopenmp-target -Xopenmp-target', options requiring arguments are unsupported
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target uses one of the archs provided when several archs are used.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_35 -Xopenmp-target -march=sm_60 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-ARCHS %s
+
+// CHK-FOPENMP-TARGET-ARCHS: ptxas{{.*}}" "--gpu-name" "sm_60"
+// CHK-FOPENMP-TARGET-ARCHS: nvlink{{.*}}" "-arch" "sm_60"
+
+/// ###########################################################################
+
+/// Check -Xopenmp-target -march=sm_35 works as expected when two triples are present.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu,nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_35 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET-COMPILATION %s
+
+// CHK-FOPENMP-TARGET-COMPILATION: ptxas{{.*}}" "--gpu-name" "sm_35"
+// CHK-FOPENMP-TARGET-COMPILATION: nvlink{{.*}}" "-arch" "sm_35"
+
+/// ###########################################################################
+
+/// Check cubin file generation and usage by nvlink
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-CUBIN %s
+
+// CHK-CUBIN: clang{{.*}}" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda.s"
+// CHK-CUBIN-NEXT: ptxas{{.*}}" "--output-file" "{{.*}}-openmp-nvptx64-nvidia-cuda.cubin" "{{.*}}-openmp-nvptx64-nvidia-cuda.s"
+// CHK-CUBIN-NEXT: nvlink" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda" {{.*}} "openmp-offload-openmp-nvptx64-nvidia-cuda.cubin"
+
+/// ###########################################################################
+
+/// Check cubin file generation and usage by nvlink
+// RUN:   touch %t1.o
+// RUN:   touch %t2.o
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -save-temps -no-canonical-prefixes %t1.o %t2.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN %s
+
+// CHK-TWOCUBIN: clang-offload-bundler{{[^"]*}}" "-type=o" "{{.*}}inputs={{.*}}tmp1.o" "-outputs={{.*}}.o,{{.*}}tmp1-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
+// CHK-TWOCUBIN-NEXT: clang-offload-bundler{{[^"]*}}" "-type=o" "{{.*}}inputs={{.*}}tmp2.o" "-outputs={{.*}}.o,{{.*}}tmp2-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
+// CHK-TWOCUBIN-NEXT: nvlink" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda" {{.*}} "openmp-offload.c.tmp1-openmp-nvptx64-nvidia-cuda.cubin" "openmp-offload.c.tmp2-openmp-nvptx64-nvidia-cuda.cubin"
+
+/// ###########################################################################
+
+/// Check PTXAS is passed -c flag when offloading to an NVIDIA device using OpenMP.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-DEFAULT %s
+
+// CHK-PTXAS-DEFAULT: ptxas{{.*}}" "-c"
