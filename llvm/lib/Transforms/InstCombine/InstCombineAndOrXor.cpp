@@ -120,27 +120,9 @@ Instruction *InstCombiner::OptAndOp(BinaryOperator *Op,
                                     ConstantInt *AndRHS,
                                     BinaryOperator &TheAnd) {
   Value *X = Op->getOperand(0);
-  Constant *Together = nullptr;
-  if (!Op->isShift())
-    Together = ConstantExpr::getAnd(AndRHS, OpRHS);
 
   switch (Op->getOpcode()) {
   default: break;
-  case Instruction::Or:
-    if (Op->hasOneUse()){
-      ConstantInt *TogetherCI = dyn_cast<ConstantInt>(Together);
-      if (TogetherCI && !TogetherCI->isZero()){
-        // (X | C1) & C2 --> (X & (C2^(C1&C2))) | C1
-        // NOTE: This reduces the number of bits set in the & mask, which
-        // can expose opportunities for store narrowing.
-        Together = ConstantExpr::getXor(AndRHS, Together);
-        Value *And = Builder.CreateAnd(X, Together);
-        And->takeName(Op);
-        return BinaryOperator::CreateOr(And, OpRHS);
-      }
-    }
-
-    break;
   case Instruction::Add:
     if (Op->hasOneUse()) {
       // Adding a one to a single bit bit-field should be turned into an XOR
@@ -1221,6 +1203,22 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       Value *And = Builder.CreateAnd(X, Op1);
       And->takeName(Op0);
       return BinaryOperator::CreateXor(And, NewC);
+    }
+
+    const APInt *OrC;
+    if (match(Op0, m_OneUse(m_Or(m_Value(X), m_APInt(OrC))))) {
+      // (X | C1) & C2 --> (X & C2^(C1&C2)) | (C1&C2)
+      // NOTE: This reduces the number of bits set in the & mask, which
+      // can expose opportunities for store narrowing for scalars.
+      // NOTE: SimplifyDemandedBits should have already removed bits from C1
+      // that aren't set in C2. Meaning we can replace (C1&C2) with C1 in
+      // above, but this feels safer.
+      APInt Together = *C & *OrC;
+      Value *And = Builder.CreateAnd(X, ConstantInt::get(I.getType(),
+                                                         Together ^ *C));
+      And->takeName(Op0);
+      return BinaryOperator::CreateOr(And, ConstantInt::get(I.getType(),
+                                                            Together));
     }
 
     // If the mask is only needed on one incoming arm, push the 'and' op up.

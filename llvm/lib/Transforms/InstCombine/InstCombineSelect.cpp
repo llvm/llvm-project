@@ -80,7 +80,7 @@ static Value *generateMinMaxSelectPattern(InstCombiner::BuilderTy &Builder,
 /// a bitmask indicating which operands of this instruction are foldable if they
 /// equal the other incoming value of the select.
 ///
-static unsigned getSelectFoldableOperands(Instruction *I) {
+static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:
   case Instruction::Mul:
@@ -100,7 +100,7 @@ static unsigned getSelectFoldableOperands(Instruction *I) {
 
 /// For the same transformation as the previous function, return the identity
 /// constant that goes into the select.
-static Constant *getSelectFoldableConstant(Instruction *I) {
+static Constant *getSelectFoldableConstant(BinaryOperator *I) {
   switch (I->getOpcode()) {
   default: llvm_unreachable("This cannot happen!");
   case Instruction::Add:
@@ -237,9 +237,8 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
                                             Value *FalseVal) {
   // See the comment above GetSelectFoldableOperands for a description of the
   // transformation we are doing here.
-  if (Instruction *TVI = dyn_cast<Instruction>(TrueVal)) {
-    if (TVI->hasOneUse() && TVI->getNumOperands() == 2 &&
-        !isa<Constant>(FalseVal)) {
+  if (auto *TVI = dyn_cast<BinaryOperator>(TrueVal)) {
+    if (TVI->hasOneUse() && !isa<Constant>(FalseVal)) {
       if (unsigned SFO = getSelectFoldableOperands(TVI)) {
         unsigned OpToFold = 0;
         if ((SFO & 1) && FalseVal == TVI->getOperand(0)) {
@@ -256,10 +255,9 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           if (!isa<Constant>(OOp) || isSelect01(C, cast<Constant>(OOp))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), OOp, C);
             NewSel->takeName(TVI);
-            BinaryOperator *TVI_BO = cast<BinaryOperator>(TVI);
-            BinaryOperator *BO = BinaryOperator::Create(TVI_BO->getOpcode(),
+            BinaryOperator *BO = BinaryOperator::Create(TVI->getOpcode(),
                                                         FalseVal, NewSel);
-            BO->copyIRFlags(TVI_BO);
+            BO->copyIRFlags(TVI);
             return BO;
           }
         }
@@ -267,9 +265,8 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     }
   }
 
-  if (Instruction *FVI = dyn_cast<Instruction>(FalseVal)) {
-    if (FVI->hasOneUse() && FVI->getNumOperands() == 2 &&
-        !isa<Constant>(TrueVal)) {
+  if (auto *FVI = dyn_cast<BinaryOperator>(FalseVal)) {
+    if (FVI->hasOneUse() && !isa<Constant>(TrueVal)) {
       if (unsigned SFO = getSelectFoldableOperands(FVI)) {
         unsigned OpToFold = 0;
         if ((SFO & 1) && TrueVal == FVI->getOperand(0)) {
@@ -286,10 +283,9 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           if (!isa<Constant>(OOp) || isSelect01(C, cast<Constant>(OOp))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), C, OOp);
             NewSel->takeName(FVI);
-            BinaryOperator *FVI_BO = cast<BinaryOperator>(FVI);
-            BinaryOperator *BO = BinaryOperator::Create(FVI_BO->getOpcode(),
+            BinaryOperator *BO = BinaryOperator::Create(FVI->getOpcode(),
                                                         TrueVal, NewSel);
-            BO->copyIRFlags(FVI_BO);
+            BO->copyIRFlags(FVI);
             return BO;
           }
         }

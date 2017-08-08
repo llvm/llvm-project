@@ -1180,8 +1180,12 @@ Error DumpOutputStyle::dumpSectionContribs() {
     }
     void visit(const SectionContrib &SC) override {
       assert(SC.ISect > 0);
-      StringRef SectionName = Names[SC.ISect - 1];
-      std::string NameInsert = formatv("[{0}]", SectionName).str();
+      std::string NameInsert;
+      if (SC.ISect < Names.size()) {
+        StringRef SectionName = Names[SC.ISect - 1];
+        NameInsert = formatv("[{0}]", SectionName).str();
+      } else
+        NameInsert = "[???]";
       P.formatLine("SC{5}  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
                    "crc = {4}",
                    formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size),

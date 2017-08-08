@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=SI      %s | FileCheck %s --check-prefix=SI
+// RUN: llvm-mc -arch=amdgcn -mcpu=tahiti      %s | FileCheck %s --check-prefix=SI
 // RUN: llvm-mc -arch=amdgcn -mcpu=bonaire %s | FileCheck %s --check-prefix=BONAIRE
 // RUN: llvm-mc -arch=amdgcn -mcpu=hawaii %s | FileCheck %s --check-prefix=HAWAII
 // RUN: llvm-mc -arch=amdgcn -mcpu=kabini  %s | FileCheck %s --check-prefix=KABINI

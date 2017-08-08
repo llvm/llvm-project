@@ -205,16 +205,6 @@ unsigned NumberOfCpuCores() {
   return N;
 }
 
-bool ExecuteCommandAndReadOutput(const std::string &Command, std::string *Out) {
-  FILE *Pipe = OpenProcessPipe(Command.c_str(), "r");
-  if (!Pipe) return false;
-  char Buff[1024];
-  size_t N;
-  while ((N = fread(Buff, 1, sizeof(Buff), Pipe)) > 0)
-    Out->append(Buff, N);
-  return true;
-}
-
 size_t SimpleFastHash(const uint8_t *Data, size_t Size) {
   size_t Res = 0;
   for (size_t i = 0; i < Size; i++)

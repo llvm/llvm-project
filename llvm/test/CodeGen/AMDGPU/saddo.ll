@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs< %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress -verify-machineinstrs< %s
 
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
 declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone

@@ -534,3 +534,16 @@ unsigned AMDGPUTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Inde
 
   return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 }
+
+bool AMDGPUTTIImpl::areInlineCompatible(const Function *Caller,
+                                        const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+  const FeatureBitset &CallerBits =
+    TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+    TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
+  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
+  return ((RealCallerBits & RealCalleeBits) == RealCalleeBits);
+}

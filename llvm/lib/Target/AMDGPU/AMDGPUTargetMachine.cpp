@@ -147,7 +147,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIFoldOperandsPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
-  initializeSIFixControlFlowLiveIntervalsPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
@@ -256,9 +255,8 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   if (!GPU.empty())
     return GPU;
 
-  // HSA only supports CI+, so change the default GPU to a CI for HSA.
   if (TT.getArch() == Triple::amdgcn)
-    return (TT.getOS() == Triple::AMDHSA) ? "kaveri" : "tahiti";
+    return "generic";
 
   return "r600";
 }
@@ -490,6 +488,7 @@ public:
   }
 
   bool addPreISel() override;
+  bool addInstSelector() override;
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -662,6 +661,11 @@ bool R600PassConfig::addPreISel() {
   return false;
 }
 
+bool R600PassConfig::addInstSelector() {
+  addPass(createR600ISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
+  return false;
+}
+
 void R600PassConfig::addPreRegAlloc() {
   addPass(createR600VectorRegMerger());
 }
@@ -801,12 +805,7 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
-  if (getOptLevel() > CodeGenOpt::None)
-    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
-
-  // This needs to be run directly before register allocation because earlier
-  // passes might recompute live intervals.
-  insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);
+  insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of

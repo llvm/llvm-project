@@ -1,4 +1,4 @@
-//===-- SIPeepholeSDWA.cpp - Peephole optimization for SDWA instructions --===//
+//===- SIPeepholeSDWA.cpp - Peephole optimization for SDWA instructions ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,12 +24,31 @@
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <memory>
 #include <unordered_map>
-#include <unordered_set>
 
 using namespace llvm;
 
@@ -45,7 +64,7 @@ class SDWAOperand;
 
 class SIPeepholeSDWA : public MachineFunctionPass {
 public:
-  typedef SmallVector<SDWAOperand *, 4> SDWAOperandsVector;
+  using SDWAOperandsVector = SmallVector<SDWAOperand *, 4>;
 
 private:
   MachineRegisterInfo *MRI;
@@ -91,7 +110,7 @@ public:
     assert(Replaced->isReg());
   }
 
-  virtual ~SDWAOperand() {}
+  virtual ~SDWAOperand() = default;
 
   virtual MachineInstr *potentialToConvert(const SIInstrInfo *TII) = 0;
   virtual bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) = 0;
@@ -99,6 +118,7 @@ public:
   MachineOperand *getTargetOperand() const { return Target; }
   MachineOperand *getReplacedOperand() const { return Replaced; }
   MachineInstr *getParentInst() const { return Target->getParent(); }
+
   MachineRegisterInfo *getMRI() const {
     return &getParentInst()->getParent()->getParent()->getRegInfo();
   }
@@ -120,8 +140,8 @@ public:
       : SDWAOperand(TargetOp, ReplacedOp), SrcSel(SrcSel_), Abs(Abs_),
         Neg(Neg_), Sext(Sext_) {}
 
-  virtual MachineInstr *potentialToConvert(const SIInstrInfo *TII) override;
-  virtual bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
+  MachineInstr *potentialToConvert(const SIInstrInfo *TII) override;
+  bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
 
   SdwaSel getSrcSel() const { return SrcSel; }
   bool getAbs() const { return Abs; }
@@ -142,14 +162,14 @@ public:
                  SdwaSel DstSel_ = DWORD, DstUnused DstUn_ = UNUSED_PAD)
       : SDWAOperand(TargetOp, ReplacedOp), DstSel(DstSel_), DstUn(DstUn_) {}
 
-  virtual MachineInstr *potentialToConvert(const SIInstrInfo *TII) override;
-  virtual bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
+  MachineInstr *potentialToConvert(const SIInstrInfo *TII) override;
+  bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
 
   SdwaSel getDstSel() const { return DstSel; }
   DstUnused getDstUnused() const { return DstUn; }
 };
 
-} // End anonymous namespace.
+} // end anonymous namespace
 
 INITIALIZE_PASS(SIPeepholeSDWA, DEBUG_TYPE, "SI Peephole SDWA", false, false)
 
@@ -162,7 +182,6 @@ FunctionPass *llvm::createSIPeepholeSDWAPass() {
 }
 
 #ifndef NDEBUG
-
 static raw_ostream& operator<<(raw_ostream &OS, const SdwaSel &Sel) {
   switch(Sel) {
   case BYTE_0: OS << "BYTE_0"; break;
@@ -199,7 +218,6 @@ static raw_ostream& operator<<(raw_ostream &OS, const SDWADstOperand &Dst) {
      << " dst_unused:" << Dst.getDstUnused() << '\n';
   return OS;
 }
-
 #endif
 
 static void copyRegOperand(MachineOperand &To, const MachineOperand &From) {
@@ -564,7 +582,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineFunction &MF) {
 
         auto SDWASrc = make_unique<SDWASrcOperand>(
             Src0, Dst, SrcSel, false, false,
-            Opcode == AMDGPU::V_BFE_U32 ? false : true);
+            Opcode != AMDGPU::V_BFE_U32);
         DEBUG(dbgs() << "Match: " << MI << "To: " << *SDWASrc << '\n');
         SDWAOperands[&MI] = std::move(SDWASrc);
         ++NumSDWAPatternsFound;

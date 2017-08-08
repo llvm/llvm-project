@@ -1,4 +1,4 @@
-; RUN: llc -O0 -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s
+; RUN: llc -O0 -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s | FileCheck %s
 ; RUN: llc -O0 -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_loop:

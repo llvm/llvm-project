@@ -266,7 +266,8 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, VSrc_b32:$src0);
   let Ins64 = (ins Src0RC64:$vdst, VSrc_b32:$src0);
-  let InsDPP = (ins Src0RC32:$vdst, Src0RC32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+  let InsDPP = (ins DstRC:$vdst, DstRC:$old, Src0RC32:$src0,
+                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
 
   let InsSDWA = (ins Src0RC32:$vdst, Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
@@ -504,8 +505,6 @@ class VOP1_DPP <bits<8> op, VOP1_Pseudo ps, VOPProfile P = ps.Pfl> :
   let Uses = ps.Uses;
   let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
-  let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   bits<8> vdst;
   let Inst{8-0}   = 0xfa; // dpp
@@ -659,10 +658,10 @@ let Predicates = [isVI] in {
 def : Pat <
   (i32 (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
                       imm:$bound_ctrl)),
-  (V_MOV_B32_dpp $src, (as_i32imm $dpp_ctrl), (as_i32imm $row_mask),
-                       (as_i32imm $bank_mask), (as_i1imm $bound_ctrl))
+  (V_MOV_B32_dpp $src, $src, (as_i32imm $dpp_ctrl),
+                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
+                       (as_i1imm $bound_ctrl))
 >;
-
 
 def : Pat<
   (i32 (anyext i16:$src)),

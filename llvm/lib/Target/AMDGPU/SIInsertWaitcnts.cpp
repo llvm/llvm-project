@@ -1,4 +1,4 @@
-//===-- SIInsertWaitcnts.cpp - Insert Wait Instructions --------------------===/
+//===- SIInsertWaitcnts.cpp - Insert Wait Instructions --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,12 +21,34 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
@@ -42,7 +64,7 @@ namespace {
 
 enum InstCounterType { VM_CNT = 0, LGKM_CNT, EXP_CNT, NUM_INST_CNTS };
 
-typedef std::pair<signed, signed> RegInterval;
+using RegInterval = std::pair<signed, signed>;
 
 struct {
   int32_t VmcntMax;
@@ -101,6 +123,15 @@ enum RegisterMapping {
 // "s_waitcnt 0" before use.
 class BlockWaitcntBrackets {
 public:
+  BlockWaitcntBrackets() {
+    for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
+         T = (enum InstCounterType)(T + 1)) {
+      memset(VgprScores[T], 0, sizeof(VgprScores[T]));
+    }
+  }
+
+  ~BlockWaitcntBrackets() = default;
+
   static int32_t getWaitCountMax(InstCounterType T) {
     switch (T) {
     case VM_CNT:
@@ -113,14 +144,14 @@ public:
       break;
     }
     return 0;
-  };
+  }
 
   void setScoreLB(InstCounterType T, int32_t Val) {
     assert(T < NUM_INST_CNTS);
     if (T >= NUM_INST_CNTS)
       return;
     ScoreLBs[T] = Val;
-  };
+  }
 
   void setScoreUB(InstCounterType T, int32_t Val) {
     assert(T < NUM_INST_CNTS);
@@ -132,21 +163,21 @@ public:
       if (ScoreLBs[T] < UB)
         ScoreLBs[T] = UB;
     }
-  };
+  }
 
   int32_t getScoreLB(InstCounterType T) {
     assert(T < NUM_INST_CNTS);
     if (T >= NUM_INST_CNTS)
       return 0;
     return ScoreLBs[T];
-  };
+  }
 
   int32_t getScoreUB(InstCounterType T) {
     assert(T < NUM_INST_CNTS);
     if (T >= NUM_INST_CNTS)
       return 0;
     return ScoreUBs[T];
-  };
+  }
 
   // Mapping from event to counter.
   InstCounterType eventCounter(WaitEventType E) {
@@ -218,25 +249,17 @@ public:
   void setEventUB(enum WaitEventType W, int32_t Val) { EventUBs[W] = Val; }
   int32_t getMaxVGPR() const { return VgprUB; }
   int32_t getMaxSGPR() const { return SgprUB; }
+
   int32_t getEventUB(enum WaitEventType W) const {
     assert(W < NUM_WAIT_EVENTS);
     return EventUBs[W];
   }
+
   bool counterOutOfOrder(InstCounterType T);
   unsigned int updateByWait(InstCounterType T, int ScoreToWait);
   void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
                      const MachineRegisterInfo *MRI, WaitEventType E,
                      MachineInstr &MI);
-
-  BlockWaitcntBrackets()
-      : WaitAtBeginning(false), RevisitLoop(false), ValidLoop(false), MixedExpTypes(false),
-        LoopRegion(NULL), PostOrder(0), Waitcnt(NULL), VgprUB(0), SgprUB(0) {
-    for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
-         T = (enum InstCounterType)(T + 1)) {
-      memset(VgprScores[T], 0, sizeof(VgprScores[T]));
-    }
-  }
-  ~BlockWaitcntBrackets(){};
 
   bool hasPendingSMEM() const {
     return (EventUBs[SMEM_ACCESS] > ScoreLBs[LGKM_CNT] &&
@@ -266,7 +289,7 @@ public:
   int32_t getPostOrder() const { return PostOrder; }
 
   void setWaitcnt(MachineInstr *WaitcntIn) { Waitcnt = WaitcntIn; }
-  void clearWaitcnt() { Waitcnt = NULL; }
+  void clearWaitcnt() { Waitcnt = nullptr; }
   MachineInstr *getWaitcnt() const { return Waitcnt; }
 
   bool mixedExpTypes() const { return MixedExpTypes; }
@@ -278,13 +301,13 @@ public:
   void dump() { print(dbgs()); }
 
 private:
-  bool WaitAtBeginning;
-  bool RevisitLoop;
-  bool ValidLoop;
-  bool MixedExpTypes;
-  MachineLoop *LoopRegion;
-  int32_t PostOrder;
-  MachineInstr *Waitcnt;
+  bool WaitAtBeginning = false;
+  bool RevisitLoop = false;
+  bool ValidLoop = false;
+  bool MixedExpTypes = false;
+  MachineLoop *LoopRegion = nullptr;
+  int32_t PostOrder = 0;
+  MachineInstr *Waitcnt = nullptr;
   int32_t ScoreLBs[NUM_INST_CNTS] = {0};
   int32_t ScoreUBs[NUM_INST_CNTS] = {0};
   int32_t EventUBs[NUM_WAIT_EVENTS] = {0};
@@ -292,8 +315,8 @@ private:
   int32_t LastFlat[NUM_INST_CNTS] = {0};
   // wait_cnt scores for every vgpr.
   // Keep track of the VgprUB and SgprUB to make merge at join efficient.
-  int32_t VgprUB;
-  int32_t SgprUB;
+  int32_t VgprUB = 0;
+  int32_t SgprUB = 0;
   int32_t VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS];
   // Wait cnt scores for every sgpr, only lgkmcnt is relevant.
   int32_t SgprScores[SQ_MAX_PGM_SGPRS] = {0};
@@ -306,38 +329,36 @@ private:
 // at the end of the loop footer.
 class LoopWaitcntData {
 public:
+  LoopWaitcntData() = default;
+  ~LoopWaitcntData() = default;
+
   void incIterCnt() { IterCnt++; }
   void resetIterCnt() { IterCnt = 0; }
   int32_t getIterCnt() { return IterCnt; }
-
-  LoopWaitcntData() : LfWaitcnt(NULL), IterCnt(0) {}
-  ~LoopWaitcntData(){};
 
   void setWaitcnt(MachineInstr *WaitcntIn) { LfWaitcnt = WaitcntIn; }
   MachineInstr *getWaitcnt() const { return LfWaitcnt; }
 
   void print() {
     DEBUG(dbgs() << "  iteration " << IterCnt << '\n';);
-    return;
   }
 
 private:
   // s_waitcnt added at the end of loop footer to stablize wait scores
   // at the end of the loop footer.
-  MachineInstr *LfWaitcnt;
+  MachineInstr *LfWaitcnt = nullptr;
   // Number of iterations the loop has been visited, not including the initial
   // walk over.
-  int32_t IterCnt;
+  int32_t IterCnt = 0;
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
-
 private:
-  const SISubtarget *ST;
-  const SIInstrInfo *TII;
-  const SIRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
-  const MachineLoopInfo *MLI;
+  const SISubtarget *ST = nullptr;
+  const SIInstrInfo *TII = nullptr;
+  const SIRegisterInfo *TRI = nullptr;
+  const MachineRegisterInfo *MRI = nullptr;
+  const MachineLoopInfo *MLI = nullptr;
   AMDGPU::IsaInfo::IsaVersion IV;
   AMDGPUAS AMDGPUASI;
 
@@ -357,9 +378,7 @@ private:
 public:
   static char ID;
 
-  SIInsertWaitcnts()
-      : MachineFunctionPass(ID), ST(nullptr), TII(nullptr), TRI(nullptr),
-        MRI(nullptr), MLI(nullptr) {}
+  SIInsertWaitcnts() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -376,7 +395,8 @@ public:
   void addKillWaitBracket(BlockWaitcntBrackets *Bracket) {
     // The waitcnt information is copied because it changes as the block is
     // traversed.
-    KillWaitBrackets.push_back(make_unique<BlockWaitcntBrackets>(*Bracket));
+    KillWaitBrackets.push_back(
+        llvm::make_unique<BlockWaitcntBrackets>(*Bracket));
   }
 
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
@@ -390,7 +410,7 @@ public:
   void insertWaitcntBeforeCF(MachineBasicBlock &Block, MachineInstr *Inst);
 };
 
-} // End anonymous namespace.
+} // end anonymous namespace
 
 RegInterval BlockWaitcntBrackets::getRegInterval(const MachineInstr *MI,
                                                  const SIInstrInfo *TII,
@@ -643,7 +663,6 @@ void BlockWaitcntBrackets::print(raw_ostream &OS) {
     OS << '\n';
   }
   OS << '\n';
-  return;
 }
 
 unsigned int BlockWaitcntBrackets::updateByWait(InstCounterType T,
@@ -1098,7 +1117,8 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
               BlockWaitcntBracketsMap[TBB].get();
           if (!ScoreBracket) {
             assert(BlockVisitedSet.find(TBB) == BlockVisitedSet.end());
-            BlockWaitcntBracketsMap[TBB] = make_unique<BlockWaitcntBrackets>();
+            BlockWaitcntBracketsMap[TBB] =
+                llvm::make_unique<BlockWaitcntBrackets>();
             ScoreBracket = BlockWaitcntBracketsMap[TBB].get();
           }
           ScoreBracket->setRevisitLoop(true);
@@ -1145,8 +1165,6 @@ void SIInsertWaitcnts::insertWaitcntBeforeCF(MachineBasicBlock &MBB,
   } else {
     MBB.push_back(Waitcnt);
   }
-
-  return;
 }
 
 // This is a flat memory operation. Check to see if it has memory
@@ -1764,13 +1782,13 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
     BlockWaitcntBrackets *ScoreBrackets = BlockWaitcntBracketsMap[&MBB].get();
     if (!ScoreBrackets) {
-      BlockWaitcntBracketsMap[&MBB] = make_unique<BlockWaitcntBrackets>();
+      BlockWaitcntBracketsMap[&MBB] = llvm::make_unique<BlockWaitcntBrackets>();
       ScoreBrackets = BlockWaitcntBracketsMap[&MBB].get();
     }
     ScoreBrackets->setPostOrder(MBB.getNumber());
     MachineLoop *ContainingLoop = MLI->getLoopFor(&MBB);
     if (ContainingLoop && LoopWaitcntDataMap[ContainingLoop] == nullptr)
-      LoopWaitcntDataMap[ContainingLoop] = make_unique<LoopWaitcntData>();
+      LoopWaitcntDataMap[ContainingLoop] = llvm::make_unique<LoopWaitcntData>();
 
     // If we are walking into the block from before the loop, then guarantee
     // at least 1 re-walk over the loop to propagate the information, even if
@@ -1831,12 +1849,10 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
        ++BI) {
-
     MachineBasicBlock &MBB = *BI;
 
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
-
       if (!HaveScalarStores && TII->isScalarStore(*I))
         HaveScalarStores = true;
 
@@ -1859,7 +1875,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
       for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
            ++I) {
-
         if (I->getOpcode() == AMDGPU::S_DCACHE_WB)
           SeenDCacheWB = true;
         else if (TII->isScalarStore(*I))

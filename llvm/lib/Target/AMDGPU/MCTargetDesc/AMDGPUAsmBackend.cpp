@@ -43,6 +43,8 @@ public:
     llvm_unreachable("Not implemented");
   }
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+
+  unsigned getMinimumNopSize() const override;
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
@@ -131,6 +133,10 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
     return MCAsmBackend::getFixupKindInfo(Kind);
 
   return Infos[Kind - FirstTargetFixupKind];
+}
+
+unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
+  return 4;
 }
 
 bool AMDGPUAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
