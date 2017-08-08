@@ -369,6 +369,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Are we eliminating the loop control altogether?
   bool CompletelyUnroll = ULO.Count == ULO.TripCount;
+
+  // Disallow partial unrolling of Tapir loops.
+  if (getTaskIfTapirLoop(L, TI) && !CompletelyUnroll)
+    return LoopUnrollResult::Unmodified;
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
   std::vector<BasicBlock*> OriginalLoopBlocks = L->getBlocks();

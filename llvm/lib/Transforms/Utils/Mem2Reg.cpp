@@ -34,18 +34,33 @@ STATISTIC(NumPromoted, "Number of alloca's promoted");
 static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
                                     AssumptionCache &AC) {
   std::vector<AllocaInst *> Allocas;
-  BasicBlock &BB = F.getEntryBlock(); // Get the entry node for the function
   bool Changed = false;
+
+  // Scan the function to get its entry block and all entry blocks of detached
+  // CFG's.  We can perform this scan for entry blocks once for the function,
+  // because this pass preserves the CFG.
+  SmallVector<BasicBlock *, 4> EntryBlocks;
+  bool FunctionContainsDetach = false;
+  EntryBlocks.push_back(&F.getEntryBlock());
+  for (BasicBlock &BB : F)
+    if (BasicBlock *Pred = BB.getUniquePredecessor())
+      if (DetachInst *DI = dyn_cast<DetachInst>(Pred->getTerminator())) {
+        FunctionContainsDetach = true;
+        if (DI->getDetached() == &BB)
+          EntryBlocks.push_back(&BB);
+      }
 
   while (true) {
     Allocas.clear();
 
     // Find allocas that are safe to promote, by looking at all instructions in
     // the entry node
-    for (BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I)
-      if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) // Is it an alloca?
-        if (isAllocaPromotable(AI))
-          Allocas.push_back(AI);
+    for (BasicBlock *BB : EntryBlocks)
+      for (BasicBlock::iterator I = BB->begin(), E = --BB->end(); I != E; ++I)
+        if (AllocaInst *AI = dyn_cast<AllocaInst>(I))       // Is it an alloca?
+          if (isAllocaPromotable(AI) &&
+              (!FunctionContainsDetach || isAllocaParallelPromotable(AI, DT)))
+            Allocas.push_back(AI);
 
     if (Allocas.empty())
       break;

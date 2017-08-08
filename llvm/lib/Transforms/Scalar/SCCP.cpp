@@ -611,6 +611,14 @@ private:
 
   void visitReturnInst(ReturnInst &I);
   void visitTerminator(Instruction &TI);
+  void visitReattachInst(ReattachInst &I) {
+    markOverdefined(&I);
+    visitTerminator(I);
+  }
+  void visitSyncInst(SyncInst &I) {
+    markOverdefined(&I);
+    visitTerminator(I);
+  }
 
   void visitCastInst(CastInst &I);
   void visitSelectInst(SelectInst &I);
@@ -743,6 +751,12 @@ void SCCPSolver::getFeasibleSuccessors(Instruction &TI,
   // In case of callbr, we pessimistically assume that all successors are
   // feasible.
   if (isa<CallBrInst>(&TI)) {
+    Succs.assign(TI.getNumSuccessors(), true);
+    return;
+  }
+
+  // All destinations of a Tapir instruction are assumed to be feasible.
+  if (isa<DetachInst>(&TI) || isa<ReattachInst>(&TI) || isa<SyncInst>(&TI)) {
     Succs.assign(TI.getNumSuccessors(), true);
     return;
   }

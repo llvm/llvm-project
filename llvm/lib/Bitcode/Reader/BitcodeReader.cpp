@@ -4621,6 +4621,59 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       I = new UnreachableInst(Context);
       InstructionList.push_back(I);
       break;
+    case bitc::FUNC_CODE_INST_DETACH: { // DETACH: [bb#, bb#, val]
+      if (Record.size() != 3)
+        return error("Invalid record");
+      BasicBlock *Detached = getBasicBlock(Record[0]);
+      if (!Detached)
+        return error("Invalid record");
+
+      BasicBlock *Continue = getBasicBlock(Record[1]);
+      if (!Continue)
+        return error("Invalid record");
+
+      Value *SyncRegion =
+        getValue(Record, 2, NextValueNo, Type::getTokenTy(Context));
+      if (!SyncRegion)
+        return error("Invalid record");
+
+      I = DetachInst::Create(Detached, Continue, SyncRegion);
+      InstructionList.push_back(I);
+      break;
+    }
+      case bitc::FUNC_CODE_INST_REATTACH: { // REATTACH: [bb#, val]
+      if (Record.size() != 2)
+        return error("Invalid record");
+
+      BasicBlock *DetachContinue = getBasicBlock(Record[0]);
+      if (!DetachContinue)
+        return error("Invalid record");
+
+      Value *SyncRegion =
+        getValue(Record, 1, NextValueNo, Type::getTokenTy(Context));
+      if (!SyncRegion)
+        return error("Invalid record");
+
+      I = ReattachInst::Create(DetachContinue, SyncRegion);
+      InstructionList.push_back(I);
+      break;
+    }
+    case bitc::FUNC_CODE_INST_SYNC: { // Sync: [bb#, val]
+      if (Record.size() != 1)
+        return error("Invalid record");
+      BasicBlock *Continue = getBasicBlock(Record[0]);
+      if (!Continue)
+        return error("Invalid record");
+
+      Value *SyncRegion =
+        getValue(Record, 1, NextValueNo, Type::getTokenTy(Context));
+      if (!SyncRegion)
+        return error("Invalid record");
+
+      I = SyncInst::Create(Continue, SyncRegion);
+      InstructionList.push_back(I);
+      break;
+    }
     case bitc::FUNC_CODE_INST_PHI: { // PHI: [ty, val0,bb0, ...]
       if (Record.size() < 1 || ((Record.size()-1)&1))
         return error("Invalid record");

@@ -2867,6 +2867,31 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_UNREACHABLE;
     AbbrevToUse = FUNCTION_INST_UNREACHABLE_ABBREV;
     break;
+  case Instruction::Detach:
+    {
+      Code = bitc::FUNC_CODE_INST_DETACH;
+      const DetachInst &DI = cast<DetachInst>(I);
+      Vals.push_back(VE.getValueID(DI.getSuccessor(0)));
+      Vals.push_back(VE.getValueID(DI.getSuccessor(1)));
+      pushValue(DI.getSyncRegion(), InstID, Vals);
+    }
+    break;
+  case Instruction::Reattach:
+    {
+      Code = bitc::FUNC_CODE_INST_REATTACH;
+      const ReattachInst &RI = cast<ReattachInst>(I);
+      Vals.push_back(VE.getValueID(RI.getSuccessor(0)));
+      pushValue(RI.getSyncRegion(), InstID, Vals);
+    }
+    break;
+  case Instruction::Sync:
+    {
+      Code = bitc::FUNC_CODE_INST_SYNC;
+      const SyncInst &SI = cast<SyncInst>(I);
+      Vals.push_back(VE.getValueID(SI.getSuccessor(0)));
+      pushValue(SI.getSyncRegion(), InstID, Vals);
+    }
+    break;
 
   case Instruction::PHI: {
     const PHINode &PN = cast<PHINode>(I);

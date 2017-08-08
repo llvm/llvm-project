@@ -25,6 +25,7 @@ add_llvm_library(LLVMAnalysis
   Delinearization.cpp
   DemandedBits.cpp
   DependenceAnalysis.cpp
+  DetachSSA.cpp
   DivergenceAnalysis.cpp
   DomPrinter.cpp
   DomTreeUpdater.cpp

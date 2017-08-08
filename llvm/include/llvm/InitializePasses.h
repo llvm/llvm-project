@@ -60,6 +60,9 @@ void initializeGlobalISel(PassRegistry&);
 /// Initialize all passes linked into the CodeGen library.
 void initializeTarget(PassRegistry&);
 
+/// Initialize all passes linked into the TapirOpts library.
+void initializeTapirOpts(PassRegistry&);
+
 void initializeAAEvalLegacyPassPass(PassRegistry&);
 void initializeAAResultsWrapperPassPass(PassRegistry&);
 void initializeADCELegacyPassPass(PassRegistry&);
@@ -101,7 +104,9 @@ void initializeCallGraphViewerPass(PassRegistry&);
 void initializeCallGraphWrapperPassPass(PassRegistry&);
 void initializeCallSiteSplittingLegacyPassPass(PassRegistry&);
 void initializeCalledValuePropagationLegacyPassPass(PassRegistry &);
+void initializeCilkSanitizerPass(PassRegistry&);
 void initializeCodeGenPreparePass(PassRegistry&);
+void initializeComprehensiveStaticInstrumentationPass(PassRegistry&);
 void initializeConstantHoistingLegacyPassPass(PassRegistry&);
 void initializeConstantMergeLegacyPassPass(PassRegistry&);
 void initializeConstantPropagationPass(PassRegistry&);
@@ -120,6 +125,8 @@ void initializeDelinearizationPass(PassRegistry&);
 void initializeDemandedBitsWrapperPassPass(PassRegistry&);
 void initializeDependenceAnalysisPass(PassRegistry&);
 void initializeDependenceAnalysisWrapperPassPass(PassRegistry&);
+void initializeDetachSSAPrinterLegacyPassPass(PassRegistry&);
+void initializeDetachSSAWrapperPassPass(PassRegistry&);
 void initializeDetectDeadLanesPass(PassRegistry&);
 void initializeDivRemPairsLegacyPassPass(PassRegistry&);
 void initializeDomOnlyPrinterPass(PassRegistry&);
@@ -233,6 +240,7 @@ void initializeLoopRerollPass(PassRegistry&);
 void initializeLoopRotateLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyCFGLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyPass(PassRegistry&);
+void initializeLoopSpawningPass(PassRegistry&);
 void initializeLoopStrengthReducePass(PassRegistry&);
 void initializeLoopUnrollAndJamPass(PassRegistry&);
 void initializeLoopUnrollPass(PassRegistry&);
@@ -248,6 +256,7 @@ void initializeLowerWidenableConditionLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokeLegacyPassPass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);
+void initializeLowerTapirToCilkPass(PassRegistry&);
 void initializeLowerTypeTestsPass(PassRegistry&);
 void initializeMIRCanonicalizerPass(PassRegistry &);
 void initializeMIRPrintingPassPass(PassRegistry&);

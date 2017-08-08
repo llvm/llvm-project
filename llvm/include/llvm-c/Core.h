@@ -140,7 +140,12 @@ typedef enum {
   LLVMCatchRet       = 62,
   LLVMCatchPad       = 63,
   LLVMCleanupPad     = 64,
-  LLVMCatchSwitch    = 65
+  LLVMCatchSwitch    = 65,
+
+  /* Parallel operators */
+  LLVMDetach         = 66,
+  LLVMReattach       = 67,
+  LLVMSync           = 68
 } LLVMOpcode;
 
 typedef enum {
@@ -255,6 +260,10 @@ typedef enum {
   LLVMMemoryUseValueKind,
   LLVMMemoryDefValueKind,
   LLVMMemoryPhiValueKind,
+
+  LLVMDetachUseValueKind,
+  LLVMDetachDefValueKind,
+  LLVMDetachPhiValueKind,
 
   LLVMFunctionValueKind,
   LLVMGlobalAliasValueKind,
@@ -1571,6 +1580,9 @@ LLVMTypeRef LLVMX86MMXType(void);
       macro(ResumeInst)                     \
       macro(CleanupReturnInst)              \
       macro(CatchReturnInst)                \
+      macro(DetachInst)                     \
+      macro(ReattachInst)                   \
+      macro(SyncInst)                       \
       macro(FuncletPadInst)                 \
         macro(CatchPadInst)                 \
         macro(CleanupPadInst)               \
@@ -3606,6 +3618,12 @@ LLVMValueRef LLVMBuildCleanupPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
 LLVMValueRef LLVMBuildCatchSwitch(LLVMBuilderRef B, LLVMValueRef ParentPad,
                                   LLVMBasicBlockRef UnwindBB,
                                   unsigned NumHandlers, const char *Name);
+
+/* Tapir */
+LLVMValueRef LLVMBuildDetach(LLVMBuilderRef,
+                             LLVMBasicBlockRef Child, LLVMBasicBlockRef Parent);
+LLVMValueRef LLVMBuildReattach(LLVMBuilderRef);
+LLVMValueRef LLVMBuildSync(LLVMBuilderRef, LLVMBasicBlockRef Continue);
 
 /* Add a case to the switch instruction */
 void LLVMAddCase(LLVMValueRef Switch, LLVMValueRef OnVal,

@@ -67,6 +67,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -5742,6 +5743,14 @@ static bool TryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
   return false;
 }
 
+static bool BlockIsEntryOfDetachedCtx(const BasicBlock *BB) {
+  if (const BasicBlock *PredBB = BB->getSinglePredecessor())
+    if (const DetachInst *DI = dyn_cast<DetachInst>(PredBB->getTerminator()))
+      if (DI->getDetached() == BB)
+        return true;
+  return false;
+}
+
 bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
                                           IRBuilder<> &Builder) {
   BasicBlock *BB = BI->getParent();
@@ -5760,6 +5769,7 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
        (LoopHeaders->count(BB) || LoopHeaders->count(Succ)));
   BasicBlock::iterator I = BB->getFirstNonPHIOrDbg()->getIterator();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
+      !BlockIsEntryOfDetachedCtx(BB) &&
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB))
     return true;
 
@@ -5984,6 +5994,139 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB) {
   return false;
 }
 
+/// If BB immediately syncs and BB's predecessor detaches, serialize
+/// the sync and detach.  This will allow normal serial
+/// optimization passes to remove the blocks appropriately.  Return
+/// false if BB does not terminate with a reattach.
+static bool serializeDetachToImmediateSync(BasicBlock *BB) {
+  Instruction *I = BB->getFirstNonPHIOrDbgOrLifetime();
+  if (isa<SyncInst>(I)) {
+    // This block is empty
+    bool Changed = false;
+    // Collect the detach and reattach predecessors.
+    SmallSet<DetachInst *, 4> DetachPreds;
+    SmallVector<Instruction *, 4> ReattachPreds;
+    for (BasicBlock *PredBB : predecessors(BB)) {
+      if (DetachInst *DI = dyn_cast<DetachInst>(PredBB->getTerminator()))
+        DetachPreds.insert(DI);
+
+      if (ReattachInst *RI = dyn_cast<ReattachInst>(PredBB->getTerminator()))
+        ReattachPreds.push_back(RI);
+    }
+    Value *SyncRegion = cast<SyncInst>(I)->getSyncRegion();
+    for (DetachInst *DI : DetachPreds) {
+      BasicBlock *Detached = DI->getDetached();
+
+      // Replace the detach with a branch to the detached block.
+      BB->removePredecessor(DI->getParent());
+      ReplaceInstWithInst(DI, BranchInst::Create(Detached));
+
+      // Move static alloca instructions in the detached block to the
+      // appropriate entry block.
+      MoveStaticAllocasInBlock(cast<Instruction>(SyncRegion)->getParent(),
+                               Detached, ReattachPreds);
+      // We should not need to add new llvm.stacksave/llvm.stackrestore
+      // intrinsics, because we're not introducing new alloca's into a loop.
+      Changed = true;
+    }
+    for (Instruction *RI : ReattachPreds) {
+      // Replace the reattach with an unconditional branch.
+      ReplaceInstWithInst(RI, BranchInst::Create(BB));
+      Changed = true;
+    }
+    return Changed;
+  }
+  return false;
+}
+
+/// If BB immediately reattaches and BB's predecessor detaches,
+/// serialize the reattach and detach.  This will allow normal serial
+/// optimization passes to remove the blocks appropriately.  Return
+/// false if BB does not terminate with a reattach or predecessor does
+/// terminate with detach.
+static bool serializeTrivialDetachedBlock(BasicBlock *BB) {
+  Instruction *I = BB->getFirstNonPHI();
+  if (ReattachInst *RI = dyn_cast<ReattachInst>(I)) {
+    // This detached block is empty
+    // Scan predecessors to verify that all of them detach BB.
+    for (BasicBlock *PredBB : predecessors(BB)) {
+      if (!isa<DetachInst>(PredBB->getTerminator()))
+	return false;
+    }
+    // All predecessors detach BB, so we can serialize
+    for (BasicBlock *PredBB : predecessors(BB)) {
+      DetachInst *DI = dyn_cast<DetachInst>(PredBB->getTerminator());
+      BasicBlock *Detached = DI->getDetached();
+      BasicBlock *Continue = DI->getContinue();
+      assert(RI->getSuccessor(0) == Continue &&
+             "Reattach destination does not match continue block of associated detach.");
+      // Remove the predecessor through the detach from the continue
+      // block.
+      Continue->removePredecessor(PredBB);
+      // Serialize the detach: replace it with an unconditional branch.
+      ReplaceInstWithInst(DI, BranchInst::Create(Detached));
+    }
+    // Serialize the reattach: replace it with an unconditional branch.
+    ReplaceInstWithInst(RI, BranchInst::Create(RI->getSuccessor(0)));
+    return true;
+  }
+  return false;
+}
+
+/// If BB detaches an CFG that cannot reach the continuation, serialize the
+/// detach.  Assuming the CFG is valid, this scenario arises when the detached
+/// CFG is terminated by unreachable instructions.
+static bool serializeDetachOfUnreachable(BasicBlock *BB) {
+  // This method assumes that the detached CFG is valid.
+  Instruction *I = BB->getTerminator();
+  if (DetachInst *DI = dyn_cast<DetachInst>(I)) {
+    // Check if continuation of the detach is not reached by reattach
+    // instructions.  If the detached CFG is valid, then the detached CFG must
+    // be terminated by unreachable instructions.
+    BasicBlock *Continue = DI->getContinue();
+    for (BasicBlock *PredBB : predecessors(Continue))
+      if (isa<ReattachInst>(PredBB->getTerminator()))
+        return false;
+    // TODO: Add stronger checks to make sure the detached CFG is valid.
+    // Remove the predecessor through the detach from the continue
+    // block.
+    Continue->removePredecessor(BB);
+    // Replace the detach with a branch to the detached block.
+    ReplaceInstWithInst(DI, BranchInst::Create(DI->getDetached()));
+    return true;
+  }
+  return false;
+}
+
+// Remove any syncs whose sync region is empty, meaning that the region contains
+// no detach instructions.  These sync instructions don't synchronize anything,
+// so they can be removed.
+static bool removeEmptySyncs(BasicBlock *BB) {
+  if (SyncInst *SI = dyn_cast<SyncInst>(BB->getTerminator())) {
+    // Get the sync region containing this sync
+    Value *SyncRegion = SI->getSyncRegion();
+    bool SyncRegionIsEmpty = true;
+    SmallVector<SyncInst *, 4> Syncs;
+    // Scan the Tapir instructions in this sync region.
+    for (User *U : SyncRegion->users()) {
+      // If the sync region contains a detach or a reattach, then it's not
+      // empty.
+      if (isa<DetachInst>(U) || isa<ReattachInst>(U))
+        SyncRegionIsEmpty = false;
+      // Collect the syncs in this region.
+      else if (isa<SyncInst>(U))
+        Syncs.push_back(cast<SyncInst>(U));
+    }
+    // If the sync region is empty, then remove all sync instructions in it.
+    if (SyncRegionIsEmpty) {
+      for (SyncInst *Sync : Syncs)
+        ReplaceInstWithInst(Sync, BranchInst::Create(Sync->getSuccessor(0)));
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   bool Changed = false;
 
@@ -6008,6 +6151,14 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
 
   // Check for and remove branches that will always cause undefined behavior.
   Changed |= removeUndefIntroducingPredecessor(BB);
+
+  // Check for and remove trivial detached blocks.
+  Changed |= serializeTrivialDetachedBlock(BB);
+  Changed |= serializeDetachToImmediateSync(BB);
+  Changed |= serializeDetachOfUnreachable(BB);
+
+  // Check for and remove sync instructions in empty sync regions.
+  Changed |= removeEmptySyncs(BB);
 
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and

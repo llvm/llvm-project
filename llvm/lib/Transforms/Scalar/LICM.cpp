@@ -72,6 +72,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 #include <algorithm>
 #include <utility>
 using namespace llvm;
@@ -1903,6 +1904,18 @@ bool llvm::promoteLoopAccessesToScalars(
   bool DereferenceableInPH = false;
   bool SafeToInsertStore = false;
 
+  // We cannot speculate loads to values that are stored in a detached
+  // context within the loop.  Precompute whether or not there is a
+  // detach within this loop.
+  bool DetachWithinLoop =
+    isa<DetachInst>(CurLoop->getHeader()->getTerminator());
+  if (!DetachWithinLoop)
+    for (BasicBlock *BB : CurLoop->getBlocks())
+      if (isa<DetachInst>(BB->getTerminator())) {
+        DetachWithinLoop = true;
+        break;
+      }
+
   SmallVector<Instruction *, 64> LoopUses;
 
   // We start with an alignment of one and try to find instructions that allow
@@ -1977,6 +1990,23 @@ bool llvm::promoteLoopAccessesToScalars(
           continue;
         if (!Store->isUnordered())
           return false;
+
+	// We conservatively avoid promoting stores that are detached
+	// within the loop.  Technically it can be legal to move these
+	// stores -- the program already contains a determinacy race
+	// -- but to preserve the serial execution, we have to avoid
+	// moving stores that are loaded.  For now, we simply avoid
+	// moving these stores.
+	//
+	// TODO: The call to GetDetachedCtx can potentially be
+	// expensive.  Optimize this analysis in the future.
+	if (DetachWithinLoop &&
+	    CurLoop->contains(GetDetachedCtx(Store->getParent())))
+	  return false;
+
+        // Note that we only check GuaranteedToExecute inside the store case
+        // so that we do not introduce stores where they did not exist before
+        // (which would break the LLVM concurrency model).
 
         SawUnorderedAtomic |= Store->isAtomic();
         SawNotAtomic |= !Store->isAtomic();

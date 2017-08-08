@@ -3718,6 +3718,29 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     writeOperand(BI.getSuccessor(0), true);
     Out << ", ";
     writeOperand(BI.getSuccessor(1), true);
+  } else if (isa<DetachInst>(I)) {
+    // Special case detach instruction to get formatting nice and correct
+    const DetachInst &DI(cast<DetachInst>(I));
+    Out << " within ";
+    writeOperand(DI.getSyncRegion(), /*PrintType=*/false);
+    Out << ", ";
+    writeOperand(DI.getDetached(), true);
+    Out << ", ";
+    writeOperand(DI.getContinue(), true);
+  } else if (isa<ReattachInst>(I)) {
+    // Special case reattach instruction to get formatting nice and correct
+    const ReattachInst &RI(cast<ReattachInst>(I));
+    Out << " within ";
+    writeOperand(RI.getSyncRegion(), /*PrintType=*/false);
+    Out << ", ";
+    writeOperand(RI.getSuccessor(0), true);
+  } else if (isa<SyncInst>(I)) {
+    // Special case sync instruction to get formatting nice and correct
+    const SyncInst &SI(cast<SyncInst>(I));
+    Out << " within ";
+    writeOperand(SI.getSyncRegion(), /*PrintType=*/false);
+    Out << ", ";
+    writeOperand(SI.getSuccessor(0), true);
 
   } else if (isa<SwitchInst>(I)) {
     const SwitchInst& SI(cast<SwitchInst>(I));

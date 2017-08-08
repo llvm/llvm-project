@@ -113,6 +113,10 @@ public:
     /// function simplification passes run by CGPassManager.
     EP_CGSCCOptimizerLate,
 
+    /// EP_TapirLate - This extension point allows adding passes just before
+    /// Tapir instructions are lowered to calls into a parallel runtime system.
+    EP_TapirLate,
+
     /// EP_FullLinkTimeOptimizationEarly - This extensions point allow adding
     /// passes that
     /// run at Link Time, before Full Link Time Optimization.
@@ -131,6 +135,10 @@ public:
   /// SizeLevel - How much we're optimizing for size.
   ///    0 = none, 1 = -Os, 2 = -Oz
   unsigned SizeLevel;
+
+  /// The Pre-lowering to parallel runtime calls optimization level
+  ///    0 = -P0 = leave with detach instructions, 1 = no optimizations before conversion, 2 = optimize before conversion
+  unsigned ParallelLevel;
 
   /// LibraryInfo - Specifies information about the runtime library for the
   /// optimizer.  If this is non-null, it is added to both the function and
@@ -205,6 +213,7 @@ private:
   void addPGOInstrPasses(legacy::PassManagerBase &MPM, bool IsCS);
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
   void addInstructionCombiningPass(legacy::PassManagerBase &MPM) const;
+  void prepopulateModulePassManager(legacy::PassManagerBase &MPM);
 
 public:
   /// populateFunctionPassManager - This fills in the function pass manager,

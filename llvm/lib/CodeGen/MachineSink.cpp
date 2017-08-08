@@ -554,6 +554,28 @@ bool MachineSinking::isProfitableToSinkTo(unsigned Reg, MachineInstr &MI,
   return false;
 }
 
+static inline bool hasSetJmpPred( MachineBasicBlock *bl0 ) {
+
+//    llvm::errs() << "<considering block>\n";
+//    bl0->dump();
+//    llvm::errs() << "</considering block>\n";
+
+    for( auto bl : bl0->predecessors() ) {    
+//      llvm::errs() << "  <foo>\n";
+    auto term = bl->getFirstTerminator();
+    while( term != bl->end() ) {
+      auto mc = (*term).getDesc();
+//      if (mc.Opcode != 777) continue;
+       if (mc.Opcode == 777) { return true; }
+//      llvm::errs() << "    flags:" << mc.Flags << " opc:" << mc.Opcode << "\n";
+//      term->dump();
+      term++;
+    }
+//      llvm::errs() << "  </foo>\n";
+    }
+    return false;
+}
+
 /// Get the sorted sequence of successors for this MachineBasicBlock, possibly
 /// computing it if it was not already cached.
 SmallVector<MachineBasicBlock *, 4> &
@@ -564,7 +586,7 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
   if (Succs != AllSuccessors.end())
     return Succs->second;
 
-  SmallVector<MachineBasicBlock *, 4> AllSuccs(MBB->succ_begin(),
+  SmallPtrSet<MachineBasicBlock *, 4> AllSuccs0(MBB->succ_begin(),
                                                MBB->succ_end());
 
   // Handle cases where sinking can happen but where the sink point isn't a
@@ -581,7 +603,43 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
     if (DTChild->getIDom()->getBlock() == MI.getParent() &&
         // Skip MBBs already added to the AllSuccs vector above.
         !MBB->isSuccessor(DTChild->getBlock()))
-      AllSuccs.push_back(DTChild->getBlock());
+      AllSuccs0.insert(DTChild->getBlock());
+
+  ///*
+  bool unstable = true;
+  while(unstable) {
+    unstable = false;
+    SmallPtrSet<MachineBasicBlock*, 10> toRemove;
+    for( auto bl0 : AllSuccs0 ) {
+      //if (hasSetJmpPred(bl0)) assert(bl0->hasAddressTaken());
+      if (toRemove.count(bl0) == 0 && (hasSetJmpPred(bl0) || bl0->hasAddressTaken()) ) {   
+        SmallVector<MachineBasicBlock *, 10> Q;
+        Q.push_back(bl0);
+        toRemove.insert(bl0);
+        while( Q.size() > 0 ) {
+          auto f = Q.back();
+          Q.pop_back();
+          //llvm::errs() << "saw and removing: " << f->getFullName() << "$BB#" << f->getNumber() << "\n";
+          for( auto a : f->successors() ) {
+            if ( toRemove.count(a) > 0 || AllSuccs0.count(a) == 0 ) continue;
+            toRemove.insert(a);
+            Q.push_back(a);
+          }
+        }
+        unstable = true;
+      }
+    }
+    for (auto b : toRemove) {
+      AllSuccs0.erase(b);
+    }
+  } // */
+
+  //MBB->dump();
+  //llvm::errs() << "CHECK CHILDREN FOR " << MBB->getFullName() << "$BB#" << MBB->getNumber() << ": " << "|{";
+  //for( auto a : AllSuccs0 ) llvm::errs() << a->getFullName() << "$BB#" << a->getNumber() << ",";
+  //llvm::errs() << "}\n";
+  SmallVector<MachineBasicBlock *, 4> AllSuccs(AllSuccs0.begin(),
+                                               AllSuccs0.end());
 
   // Sort Successors according to their loop depth or block frequency info.
   llvm::stable_sort(

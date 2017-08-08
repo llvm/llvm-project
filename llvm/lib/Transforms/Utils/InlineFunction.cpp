@@ -61,6 +61,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1662,6 +1664,18 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
         !isa<ConstantTokenNone>(CallSiteUnwindDestToken);
   }
 
+  // Get the entry block of the detached context into which we're inlining.  If
+  // we move allocas from the inlined code, we must move them to this block.
+  BasicBlock *DetachedCtxEntryBlock;
+  {
+    BasicBlock *CallingBlock = TheCall->getParent();
+    DetachedCtxEntryBlock = GetDetachedCtx(CallingBlock);
+    assert(((&(CallingBlock->getParent()->getEntryBlock()) ==
+             DetachedCtxEntryBlock) ||
+            DetachedCtxEntryBlock->getSinglePredecessor()) &&
+           "Entry block of detached context has multiple predecessors.");
+  }
+
   // Get an iterator to the last basic block in the function, which will have
   // the new function inlined after it.
   Function::iterator LastBlock = --Caller->end();
@@ -1820,7 +1834,8 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // calculate which instruction they should be inserted before.  We insert the
   // instructions at the end of the current alloca list.
   {
-    BasicBlock::iterator InsertPoint = Caller->begin()->begin();
+    // BasicBlock::iterator InsertPoint = Caller->begin()->begin();
+    BasicBlock::iterator InsertPoint = DetachedCtxEntryBlock->begin();
     for (BasicBlock::iterator I = FirstNewBlock->begin(),
          E = FirstNewBlock->end(); I != E; ) {
       AllocaInst *AI = dyn_cast<AllocaInst>(I++);
@@ -1850,13 +1865,32 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       // Transfer all of the allocas over in a block.  Using splice means
       // that the instructions aren't removed from the symbol table, then
       // reinserted.
-      Caller->getEntryBlock().getInstList().splice(
+      // Caller->getEntryBlock().getInstList().splice(
+      //     InsertPoint, FirstNewBlock->getInstList(), AI->getIterator(), I);
+      DetachedCtxEntryBlock->getInstList().splice(
           InsertPoint, FirstNewBlock->getInstList(), AI->getIterator(), I);
     }
     // Move any dbg.declares describing the allocas into the entry basic block.
     DIBuilder DIB(*Caller->getParent());
     for (auto &AI : IFI.StaticAllocas)
       replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::ApplyOffset, 0);
+
+    // Move any syncregion_start's into the entry basic block.
+    for (BasicBlock::iterator I = FirstNewBlock->begin(),
+         E = FirstNewBlock->end(); I != E; ) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(I++);
+      if (!II) continue;
+      if (Intrinsic::syncregion_start != II->getIntrinsicID())
+        continue;
+
+      while (isa<IntrinsicInst>(I) &&
+             Intrinsic::syncregion_start ==
+             cast<IntrinsicInst>(I)->getIntrinsicID())
+        ++I;
+
+      DetachedCtxEntryBlock->getInstList().splice(
+          InsertPoint, FirstNewBlock->getInstList(), II->getIterator(), I);
+    }
   }
 
   SmallVector<Value*,4> VarArgsToForward;
@@ -2262,6 +2296,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // this is an invoke instruction or a call instruction.
   BasicBlock *AfterCallBB;
   BranchInst *CreatedBranchToNormalDest = nullptr;
+
   if (InvokeInst *II = dyn_cast<InvokeInst>(TheCall)) {
 
     // Add an unconditional branch to make this look like the CallInst case...

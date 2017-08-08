@@ -277,6 +277,10 @@ public:
   /// Create an empty structure type.
   static StructType *get(LLVMContext &Context, bool isPacked = false);
 
+  /// Try to lookup a structure type by name, and create one if one does not
+  /// exist.
+  static StructType *getOrCreate(LLVMContext &Context, StringRef Name);
+
   /// This static method is a convenience method for creating structure types by
   /// specifying the elements as arguments. Note that this method always returns
   /// a non-packed struct, and requires at least one element type.

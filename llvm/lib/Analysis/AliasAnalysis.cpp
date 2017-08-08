@@ -23,6 +23,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
@@ -160,6 +162,42 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
   } else if (I->isFenceLike()) {
     // If this is a fence, just return ModRef.
     return ModRefInfo::ModRef;
+  } else if (auto D = dyn_cast<DetachInst>(I)) {
+    ModRefInfo Result = ModRefInfo::NoModRef;
+    SmallPtrSet<BasicBlock *, 32> Visited;
+    SmallVector<BasicBlock *, 32> WorkList;
+    WorkList.push_back(D->getDetached());
+    while (!WorkList.empty()) {
+      BasicBlock *BB = WorkList.pop_back_val();
+      if (!Visited.insert(BB).second)
+        continue;
+
+      // for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
+      for (Instruction &DI : *BB) {
+        // Fail fast if we encounter an invalid CFG.
+        assert(!(D == &DI) &&
+               "Detached CFG reaches its own Detach instruction.");
+
+        // Ignore sync instructions in this analysis
+        if (isa<SyncInst>(DI) || isa<DetachInst>(DI))
+          continue;
+
+        if (isa<LoadInst>(DI) || isa<StoreInst>(DI) ||
+            isa<AtomicCmpXchgInst>(DI) || isa<AtomicRMWInst>(DI) ||
+            DI.isFenceLike() || ImmutableCallSite(&DI))
+          Result = ModRefInfo(Result | getModRefInfo(&DI, Call));
+        if (&DI == Call.getInstruction())
+          return ModRefInfo::NoModRef;
+      }
+
+      // Add successors
+      const TerminatorInst *T = BB->getTerminator();
+      if (!isa<ReattachInst>(T) ||
+          T->getSuccessor(0) != D->getContinue())
+        for (unsigned idx = 0, max = T->getNumSuccessors(); idx < max; ++idx)
+          WorkList.push_back(T->getSuccessor(idx));
+    }
+    return Result;
   } else {
     // Otherwise, check if the call modifies or references the
     // location this memory access defines.  The best we can say
@@ -626,6 +664,89 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
   }
 
   return ModRefInfo::ModRef;
+}
+
+ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
+                                    const MemoryLocation &Loc) {
+  ModRefInfo Result = MRI_NoModRef;
+  SmallPtrSet<const BasicBlock *, 32> Visited;
+  SmallVector<const BasicBlock *, 32> WorkList;
+  WorkList.push_back(D->getSuccessor(0));
+  while (!WorkList.empty()) {
+    const BasicBlock *BB = WorkList.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+
+    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
+      // Ignore sync instructions in this analysis
+      if (isa<SyncInst>(I))
+	continue;
+
+      // Fail fast if we encounter an invalid CFG.
+      assert(!(D == &*I) &&
+             "Invalid CFG found: Detached CFG reaches its own Detach instruction.");
+
+      if (!Loc.Ptr)
+        Result = ModRefInfo(Result | getModRefInfo(&*I));
+      else
+        Result = ModRefInfo(Result | getModRefInfo(&*I, Loc));
+
+      // Early-exit the moment we reach the top of the lattice.
+      if (Result == MRI_ModRef)
+	return Result;
+    }
+
+    // Add successors
+    const TerminatorInst *T = BB->getTerminator();
+    if (!isa<ReattachInst>(T) ||
+	T->getSuccessor(0) != D->getSuccessor(1))
+      for (unsigned idx = 0, max = T->getNumSuccessors(); idx < max; ++idx)
+	WorkList.push_back(T->getSuccessor(idx));
+  }
+
+  return Result;
+}
+
+ModRefInfo AAResults::getModRefInfo(const SyncInst *S,
+                                    const MemoryLocation &Loc) {
+  ModRefInfo Result = MRI_NoModRef;
+  SmallPtrSet<const BasicBlock *, 32> Visited;
+  SmallVector<const BasicBlock *, 32> WorkList;
+  WorkList.push_back(S->getParent());
+  while(!WorkList.empty()) {
+    const BasicBlock *BB = WorkList.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+
+    const TerminatorInst *T = BB->getTerminator();
+    if (isa<DetachInst>(T)) {
+      Result = ModRefInfo(Result | getModRefInfo(T, Loc));
+
+      // Early-exit the moment we reach the top of the lattice.
+      if (Result == MRI_ModRef)
+	return Result;
+    }
+
+    // Add predecessors
+    for (const_pred_iterator PI = pred_begin(BB), E = pred_end(BB);
+	 PI != E; ++PI) {
+      const BasicBlock *Pred = *PI;
+      const TerminatorInst *PT = Pred->getTerminator();
+      // Ignore reattached predecessors and predecessors that end in
+      // syncs, because this sync does not wait on those predecessors.
+      if (isa<ReattachInst>(PT) || isa<SyncInst>(PT))
+	continue;
+      // If this block is detached, ignore the predecessor that
+      // detaches it.
+      if (const DetachInst *Det = dyn_cast<DetachInst>(PT))
+        if (Det->getDetached() == BB)
+          continue;
+
+      WorkList.push_back(Pred);
+    }
+  }
+
+  return Result;
 }
 
 /// Return information about whether a particular call site modifies

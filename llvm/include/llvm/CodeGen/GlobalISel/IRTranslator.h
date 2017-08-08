@@ -326,6 +326,12 @@ private:
 
   bool translateIndirectBr(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateDetach(const User &U, MachineIRBuilder &MIRBuilder);
+
+  bool translateReattach(const User &U, MachineIRBuilder &MIRBuilder);
+
+  bool translateSync(const User &U, MachineIRBuilder &MIRBuilder);
+
   bool translateExtractValue(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertValue(const User &U, MachineIRBuilder &MIRBuilder);

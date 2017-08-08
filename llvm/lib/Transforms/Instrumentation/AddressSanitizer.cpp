@@ -1308,6 +1308,11 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   if (PreviouslySeenAllocaInfo != ProcessedAllocas.end())
     return PreviouslySeenAllocaInfo->getSecond();
 
+  bool FunctionContainsDetach = false;
+  {
+    for (const BasicBlock &BB : *(AI.getParent()->getParent()))
+      FunctionContainsDetach |= isa<DetachInst>(BB.getTerminator());
+  }
   bool IsInteresting =
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
@@ -1315,6 +1320,8 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
+       (!ClSkipPromotableAllocas ||
+        (!FunctionContainsDetach || !isAllocaParallelPromotable(&AI, *DT))) &&
        // inalloca allocas are not treated as static, and we don't want
        // dynamic alloca instrumentation for them as well.
        !AI.isUsedWithInAlloca() &&

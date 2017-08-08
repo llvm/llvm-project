@@ -3137,6 +3137,11 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
   if (I->mayReadFromMemory()) {
+    // We can't generally move an instruction that reads from memory past a
+    // detach or reattach.
+    if (isa<DetachInst>(I->getParent()->getTerminator()) ||
+        isa<ReattachInst>(I->getParent()->getTerminator()))
+      return false;
     for (BasicBlock::iterator Scan = I->getIterator(),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
@@ -3259,8 +3264,10 @@ bool InstCombiner::run() {
 
         // If the user is one of our immediate successors, and if that successor
         // only has us as a predecessors (we'd have to split the critical edge
-        // otherwise), we can keep going.
-        if (UserIsSuccessor && UserParent->getUniquePredecessor()) {
+        // otherwise), we can keep going.  Don't do this if the successor
+        // follows through a sync instruction, because that's a pessimization.
+        if (UserIsSuccessor && UserParent->getUniquePredecessor() &&
+            !isa<SyncInst>(BB->getTerminator())) {
           // Okay, the CFG is simple enough, try to sink this instruction.
           if (TryToSinkInstruction(I, UserParent)) {
             LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');

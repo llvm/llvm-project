@@ -3930,6 +3930,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       // a direct store) as needing to be resplit because it is no longer
       // promotable.
       if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(StoreBasePtr)) {
+        assert((!FunctionContainsDetach ||
+                isAllocaParallelPromotable(OtherAI, *DT)) &&
+               "Alloca must be promotable");
         ResplitPromotableAllocas.insert(OtherAI);
         Worklist.insert(OtherAI);
       } else if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(
@@ -4047,6 +4050,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     if (!SplitLoads) {
       if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(LoadBasePtr)) {
         assert(OtherAI != &AI && "We can't re-split our own alloca!");
+        assert((!FunctionContainsDetach ||
+                isAllocaParallelPromotable(OtherAI, *DT)) &&
+               "Alloca must be promotable");
         ResplitPromotableAllocas.insert(OtherAI);
         Worklist.insert(OtherAI);
       } else if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(
@@ -4216,9 +4222,16 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       break;
     }
 
+  // Check if any detaches block promotion.
+  Promotable &= (!FunctionContainsDetach ||
+                 isAllocaParallelPromotable(NewAI, *DT));
+
   if (Promotable) {
     if (PHIUsers.empty() && SelectUsers.empty()) {
       // Promote the alloca.
+        assert((!FunctionContainsDetach ||
+              isAllocaParallelPromotable(NewAI, *DT)) &&
+             "Alloca must be promotable");
       PromotableAllocas.push_back(NewAI);
     } else {
       // If we have either PHIs or Selects to speculate, add them to those
@@ -4560,11 +4573,28 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
   DT = &RunDT;
   AC = &RunAC;
 
-  BasicBlock &EntryBB = F.getEntryBlock();
-  for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
-       I != E; ++I) {
-    if (AllocaInst *AI = dyn_cast<AllocaInst>(I))
-      Worklist.insert(AI);
+  // BasicBlock &EntryBB = F.getEntryBlock();
+  // Scan the function to get its entry block and all entry blocks of detached
+  // CFG's.  We can perform this scan for entry blocks once for the function,
+  // because this pass preserves the CFG.
+  SmallVector<BasicBlock *, 4> EntryBlocks;
+  FunctionContainsDetach = false;
+  EntryBlocks.push_back(&F.getEntryBlock());
+  for (BasicBlock &BB : F)
+    if (BasicBlock *Pred = BB.getUniquePredecessor())
+      if (DetachInst *DI = dyn_cast<DetachInst>(Pred->getTerminator())) {
+        FunctionContainsDetach = true;
+        if (DI->getDetached() == &BB)
+          EntryBlocks.push_back(&BB);
+      }
+
+  for (BasicBlock *BB : EntryBlocks) {
+    BasicBlock &EntryBB = *BB;
+    for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
+         I != E; ++I) {
+      if (AllocaInst *AI = dyn_cast<AllocaInst>(I))
+        Worklist.insert(AI);
+    }
   }
 
   bool Changed = false;

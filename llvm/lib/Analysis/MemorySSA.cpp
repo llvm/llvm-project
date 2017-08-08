@@ -141,7 +141,7 @@ public:
       IsCall = false;
       // There is no such thing as a memorylocation for a fence inst, and it is
       // unique in that regard.
-      if (!isa<FenceInst>(Inst))
+      if (!isa<FenceInst>(Inst) && !isa<SyncInst>(Inst))
         Loc = MemoryLocation::get(Inst);
     }
   }

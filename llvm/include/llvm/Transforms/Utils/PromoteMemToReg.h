@@ -29,6 +29,7 @@ class AssumptionCache;
 /// ever one layer of bitcasts or GEPs between the alloca and the lifetime
 /// markers.
 bool isAllocaPromotable(const AllocaInst *AI);
+bool isAllocaParallelPromotable(const AllocaInst *AI, DominatorTree &DT);
 
 /// Promote the specified list of alloca instructions into scalar
 /// registers, inserting PHI nodes as appropriate.

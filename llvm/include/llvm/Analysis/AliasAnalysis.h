@@ -529,6 +529,16 @@ public:
     return getModRefInfo(Call, MemoryLocation(P, Size));
   }
 
+  /// getModRefInfo (for detaches) - Return information about whether
+  /// a particular detach modifies or reads the specified memory location.
+  ModRefInfo getModRefInfo(const DetachInst *D, const MemoryLocation &Loc);
+
+  /// getModRefInfo (for detaches) - A convenience wrapper.
+  ModRefInfo getModRefInfo(const DetachInst *D, const Value *P,
+                           uint64_t Size) {
+    return getModRefInfo(D, MemoryLocation(P, Size));
+  }
+
   /// getModRefInfo (for loads) - Return information about whether
   /// a particular load modifies or reads the specified memory location.
   ModRefInfo getModRefInfo(const LoadInst *L, const MemoryLocation &Loc);
@@ -556,6 +566,15 @@ public:
   /// getModRefInfo (for fences) - A convenience wrapper.
   ModRefInfo getModRefInfo(const FenceInst *S, const Value *P,
                            LocationSize Size) {
+    return getModRefInfo(S, MemoryLocation(P, Size));
+  }
+
+  /// getModRefInfo (for syncs) - Return information about whether
+  /// a particular store modifies or reads the specified memory location.
+  ModRefInfo getModRefInfo(const SyncInst *S, const MemoryLocation &Loc);
+
+  /// getModRefInfo (for syncs) - A convenience wrapper.
+  ModRefInfo getModRefInfo(const SyncInst *S, const Value *P, uint64_t Size) {
     return getModRefInfo(S, MemoryLocation(P, Size));
   }
 
@@ -748,6 +767,10 @@ private:
       return getModRefInfo((const CatchPadInst *)I, Loc, AAQIP);
     case Instruction::CatchRet:
       return getModRefInfo((const CatchReturnInst *)I, Loc, AAQIP);
+    case Instruction::Detach:
+      return getModRefInfo((const DetachInst *)I, Loc, AAQIP);
+    case Instruction::Sync:
+      return getModRefInfo((const SyncInst *)I, Loc, AAQIP);
     default:
       return ModRefInfo::NoModRef;
     }
