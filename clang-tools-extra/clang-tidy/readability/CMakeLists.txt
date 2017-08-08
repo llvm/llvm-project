@@ -9,7 +9,7 @@ add_clang_library(clangTidyReadabilityModule
   ElseAfterReturnCheck.cpp
   FunctionSizeCheck.cpp
   IdentifierNamingCheck.cpp
-  ImplicitBoolCastCheck.cpp
+  ImplicitBoolConversionCheck.cpp
   InconsistentDeclarationParameterNameCheck.cpp
   MisleadingIndentationCheck.cpp
   MisplacedArrayIndexCheck.cpp

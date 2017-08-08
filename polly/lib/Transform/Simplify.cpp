@@ -98,39 +98,6 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
   return UResult;
 }
 
-/// Return a vector that contains MemoryAccesses in the order in
-/// which they are executed.
-///
-/// The order is:
-/// - Implicit reads (BlockGenerator::generateScalarLoads)
-/// - Explicit reads and writes (BlockGenerator::generateArrayLoad,
-///   BlockGenerator::generateArrayStore)
-///   - In block statements, the accesses are in order in which their
-///     instructions are executed.
-///   - In region statements, that order of execution is not predictable at
-///     compile-time.
-/// - Implicit writes (BlockGenerator::generateScalarStores)
-///   The order in which implicit writes are executed relative to each other is
-///   undefined.
-static SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
-
-  SmallVector<MemoryAccess *, 32> Accesses;
-
-  for (MemoryAccess *MemAcc : Stmt)
-    if (isImplicitRead(MemAcc))
-      Accesses.push_back(MemAcc);
-
-  for (MemoryAccess *MemAcc : Stmt)
-    if (isExplicitAccess(MemAcc))
-      Accesses.push_back(MemAcc);
-
-  for (MemoryAccess *MemAcc : Stmt)
-    if (isImplicitWrite(MemAcc))
-      Accesses.push_back(MemAcc);
-
-  return Accesses;
-}
-
 class Simplify : public ScopPass {
 private:
   /// The last/current SCoP that is/has been processed.
@@ -699,6 +666,27 @@ public:
 
 char Simplify::ID;
 } // anonymous namespace
+
+namespace polly {
+SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
+
+  SmallVector<MemoryAccess *, 32> Accesses;
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitRead(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isExplicitAccess(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitWrite(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  return Accesses;
+}
+} // namespace polly
 
 Pass *polly::createSimplifyPass() { return new Simplify(); }
 

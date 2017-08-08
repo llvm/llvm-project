@@ -44,6 +44,7 @@
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
@@ -690,12 +691,17 @@ void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
   if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
     SC.Characteristics = SecChunk->Header->Characteristics;
     SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
+    ArrayRef<uint8_t> Contents = SecChunk->getContents();
+    JamCRC CRC(0);
+    ArrayRef<char> CharContents = makeArrayRef(
+        reinterpret_cast<const char *>(Contents.data()), Contents.size());
+    CRC.update(CharContents);
+    SC.DataCrc = CRC.getCRC();
   } else {
     SC.Characteristics = OS->getCharacteristics();
     // FIXME: When we start creating DBI for import libraries, use those here.
     SC.Imod = LinkerModule.getModuleIndex();
   }
-  SC.DataCrc = 0;  // FIXME
   SC.RelocCrc = 0; // FIXME
   Builder.getDbiBuilder().addSectionContrib(SC);
 }

@@ -150,7 +150,7 @@ Clang-Tidy Checks
    mpi-type-mismatch
    performance-faster-string-find
    performance-for-range-copy
-   performance-implicit-cast-in-loop
+   performance-implicit-conversion-in-loop
    performance-inefficient-string-concatenation
    performance-inefficient-vector-operation
    performance-type-promotion-in-math-fn
@@ -164,7 +164,7 @@ Clang-Tidy Checks
    readability-else-after-return
    readability-function-size
    readability-identifier-naming
-   readability-implicit-bool-cast
+   readability-implicit-bool-conversion
    readability-inconsistent-declaration-parameter-name
    readability-misleading-indentation
    readability-misplaced-array-index

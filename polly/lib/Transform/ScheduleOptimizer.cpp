@@ -52,6 +52,7 @@
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
+#include "polly/Simplify.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -670,7 +671,9 @@ static bool containsOnlyMatrMultAcc(isl::map PartialSchedule,
       permuteDimensions(PartialSchedule, isl::dim::out, MMI.j, OutDimNum - 1);
   auto MapK =
       permuteDimensions(PartialSchedule, isl::dim::out, MMI.k, OutDimNum - 1);
-  for (auto *MemA = Stmt->begin(); MemA != Stmt->end() - 1; MemA++) {
+
+  auto Accesses = getAccessesInOrder(*Stmt);
+  for (auto *MemA = Accesses.begin(); MemA != Accesses.end() - 1; MemA++) {
     auto *MemAccessPtr = *MemA;
     if (MemAccessPtr->isLatestArrayKind() && MemAccessPtr != MMI.WriteToC &&
         !isMatMulNonScalarReadAccess(MemAccessPtr, MMI) &&
@@ -745,7 +748,9 @@ static bool containsMatrMult(isl::map PartialSchedule, const Dependences *D,
   auto *Stmt = static_cast<ScopStmt *>(InputDimsId.get_user());
   if (Stmt->size() <= 1)
     return false;
-  for (auto *MemA = Stmt->end() - 1; MemA != Stmt->begin(); MemA--) {
+
+  auto Accesses = getAccessesInOrder(*Stmt);
+  for (auto *MemA = Accesses.end() - 1; MemA != Accesses.begin(); MemA--) {
     auto *MemAccessPtr = *MemA;
     if (!MemAccessPtr->isLatestArrayKind())
       continue;

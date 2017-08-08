@@ -1,4 +1,4 @@
-//===--- ImplicitCastInLoopCheck.h - clang-tidy------------------*- C++ -*-===//
+//===--- ImplicitConversionInLoopCheck.h - clang-tidy------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CAST_IN_LOOP_CHECK_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CAST_IN_LOOP_CHECK_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CONVERSION_IN_LOOP_CHECK_H_
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CONVERSION_IN_LOOP_CHECK_H_
 
 #include "../ClangTidy.h"
 
@@ -19,9 +19,9 @@ namespace performance {
 // Checks that in a for range loop, if the provided type is a reference, then
 // the underlying type is the one returned by the iterator (i.e. that there
 // isn't any implicit conversion).
-class ImplicitCastInLoopCheck : public ClangTidyCheck {
+class ImplicitConversionInLoopCheck : public ClangTidyCheck {
 public:
-  ImplicitCastInLoopCheck(StringRef Name, ClangTidyContext *Context)
+  ImplicitConversionInLoopCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -35,4 +35,4 @@ private:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CAST_IN_LOOP_CHECK_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CONVERSION_IN_LOOP_CHECK_H_

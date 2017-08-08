@@ -1,4 +1,4 @@
-//===--- ImplicitCastInLoopCheck.cpp - clang-tidy--------------------------===//
+//===--- ImplicitConversionInLoopCheck.cpp - clang-tidy--------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ImplicitCastInLoopCheck.h"
+#include "ImplicitConversionInLoopCheck.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -21,30 +21,30 @@ namespace clang {
 namespace tidy {
 namespace performance {
 
-namespace {
 // Checks if the stmt is a ImplicitCastExpr with a CastKind that is not a NoOp.
 // The subtelty is that in some cases (user defined conversions), we can
 // get to ImplicitCastExpr inside each other, with the outer one a NoOp. In this
 // case we skip the first cast expr.
-bool IsNonTrivialImplicitCast(const Stmt *ST) {
+static bool IsNonTrivialImplicitCast(const Stmt *ST) {
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(ST)) {
     return (ICE->getCastKind() != CK_NoOp) ||
            IsNonTrivialImplicitCast(ICE->getSubExpr());
   }
   return false;
 }
-} // namespace
 
-void ImplicitCastInLoopCheck::registerMatchers(MatchFinder *Finder) {
+void ImplicitConversionInLoopCheck::registerMatchers(MatchFinder *Finder) {
   // We look for const ref loop variables that (optionally inside an
-  // ExprWithCleanup) materialize a temporary, and contain a implicit cast. The
-  // check on the implicit cast is done in check() because we can't access
-  // implicit cast subnode via matchers: has() skips casts and materialize!
-  // We also bind on the call to operator* to get the proper type in the
-  // diagnostic message.
-  // Note that when the implicit cast is done through a user defined cast
-  // operator, the node is a CXXMemberCallExpr, not a CXXOperatorCallExpr, so
-  // it should not get caught by the cxxOperatorCallExpr() matcher.
+  // ExprWithCleanup) materialize a temporary, and contain a implicit
+  // conversion. The check on the implicit conversion is done in check() because
+  // we can't access implicit conversion subnode via matchers: has() skips casts
+  // and materialize! We also bind on the call to operator* to get the proper
+  // type in the diagnostic message.
+  //
+  // Note that when the implicit conversion is done through a user defined
+  // conversion operator, the node is a CXXMemberCallExpr, not a
+  // CXXOperatorCallExpr, so it should not get caught by the
+  // cxxOperatorCallExpr() matcher.
   Finder->addMatcher(
       cxxForRangeStmt(hasLoopVariable(
           varDecl(hasType(qualType(references(qualType(isConstQualified())))),
@@ -55,7 +55,8 @@ void ImplicitCastInLoopCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ImplicitCastInLoopCheck::check(const MatchFinder::MatchResult &Result) {
+void ImplicitConversionInLoopCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("faulty-var");
   const auto *Init = Result.Nodes.getNodeAs<Expr>("init");
   const auto *OperatorCall =
@@ -76,7 +77,7 @@ void ImplicitCastInLoopCheck::check(const MatchFinder::MatchResult &Result) {
     ReportAndFix(Result.Context, VD, OperatorCall);
 }
 
-void ImplicitCastInLoopCheck::ReportAndFix(
+void ImplicitConversionInLoopCheck::ReportAndFix(
     const ASTContext *Context, const VarDecl *VD,
     const CXXOperatorCallExpr *OperatorCall) {
   // We only match on const ref, so we should print a const ref version of the
@@ -85,8 +86,8 @@ void ImplicitCastInLoopCheck::ReportAndFix(
   QualType ConstRefType = Context->getLValueReferenceType(ConstType);
   const char Message[] =
       "the type of the loop variable %0 is different from the one returned "
-      "by the iterator and generates an implicit cast; you can either "
-      "change the type to the correct one (%1 but 'const auto&' is always a "
+      "by the iterator and generates an implicit conversion; you can either "
+      "change the type to the matching one (%1 but 'const auto&' is always a "
       "valid option) or remove the reference to make it explicit that you are "
       "creating a new value";
   diag(VD->getLocStart(), Message) << VD << ConstRefType;
