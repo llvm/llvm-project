@@ -24,7 +24,7 @@ namespace {
 class X86 final : public TargetInfo {
 public:
   X86();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
@@ -64,7 +64,7 @@ X86::X86() {
 }
 
 RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
-                        const uint8_t *Loc) const {
+                        const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
   case R_386_16:
@@ -101,7 +101,7 @@ RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
     if ((Loc[-1] & 0xc7) != 0x5)
       return R_GOT_FROM_END;
     if (Config->Pic)
-      error(toString(S.File) + ": relocation " + toString(Type) + " against '" +
+      error(toString(&File) + ": relocation " + toString(Type) + " against '" +
             S.getName() +
             "' without base register can not be used when PIC enabled");
     return R_GOT;
@@ -116,7 +116,7 @@ RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_386_NONE:
     return R_NONE;
   default:
-    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
+    error(toString(&File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }

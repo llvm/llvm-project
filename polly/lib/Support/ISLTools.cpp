@@ -431,6 +431,21 @@ isl::union_map polly::convertZoneToTimepoints(isl::union_map Zone, isl::dim Dim,
   return give(isl_union_map_union(Zone.take(), ShiftedZone.take()));
 }
 
+isl::map polly::convertZoneToTimepoints(isl::map Zone, isl::dim Dim,
+                                        bool InclStart, bool InclEnd) {
+  if (!InclStart && InclEnd)
+    return Zone;
+
+  auto ShiftedZone = shiftDim(Zone, Dim, -1, -1);
+  if (InclStart && !InclEnd)
+    return ShiftedZone;
+  else if (!InclStart && !InclEnd)
+    return give(isl_map_intersect(Zone.take(), ShiftedZone.take()));
+
+  assert(InclStart && InclEnd);
+  return give(isl_map_union(Zone.take(), ShiftedZone.take()));
+}
+
 isl::map polly::distributeDomain(isl::map Map) {
   // Note that we cannot take Map apart into { Domain[] -> Range1[] } and {
   // Domain[] -> Range2[] } and combine again. We would loose any relation

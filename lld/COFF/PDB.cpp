@@ -44,6 +44,7 @@
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
@@ -98,7 +99,11 @@ public:
                                             TypeServer2Record &TS);
 
   /// Add the section map and section contributions to the PDB.
-  void addSections(ArrayRef<uint8_t> SectionTable);
+  void addSections(ArrayRef<OutputSection *> OutputSections,
+                   ArrayRef<uint8_t> SectionTable);
+
+  void addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
+                         OutputSection *OS, Chunk *C);
 
   /// Write the PDB to disk.
   void commit();
@@ -127,14 +132,6 @@ private:
   /// Type index mappings of type server PDBs that we've loaded so far.
   std::map<GUID, CVIndexMap> TypeServerIndexMappings;
 };
-}
-
-// Returns a list of all SectionChunks.
-static void addSectionContribs(SymbolTable *Symtab,
-                               pdb::DbiStreamBuilder &DbiBuilder) {
-  for (Chunk *C : Symtab->getChunks())
-    if (auto *SC = dyn_cast<SectionChunk>(C))
-      DbiBuilder.addSectionContrib(SC->File->ModuleDBI, SC->Header);
 }
 
 static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
@@ -648,12 +645,14 @@ static void addLinkerModuleSymbols(StringRef Path,
 }
 
 // Creates a PDB file.
-void coff::createPDB(SymbolTable *Symtab, ArrayRef<uint8_t> SectionTable,
+void coff::createPDB(SymbolTable *Symtab,
+                     ArrayRef<OutputSection *> OutputSections,
+                     ArrayRef<uint8_t> SectionTable,
                      const llvm::codeview::DebugInfo *DI) {
   PDBLinker PDB(Symtab);
   PDB.initialize(DI);
   PDB.addObjectsToPDB();
-  PDB.addSections(SectionTable);
+  PDB.addSections(OutputSections, SectionTable);
   PDB.commit();
 }
 
@@ -682,19 +681,35 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo *DI) {
   ExitOnErr(DbiBuilder.addDbgStream(pdb::DbgHeaderType::NewFPO, {}));
 }
 
-void PDBLinker::addSections(ArrayRef<uint8_t> SectionTable) {
-  // Add Section Contributions.
-  pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  addSectionContribs(Symtab, DbiBuilder);
+void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
+                                  OutputSection *OS, Chunk *C) {
+  pdb::SectionContrib SC;
+  memset(&SC, 0, sizeof(SC));
+  SC.ISect = OS->SectionIndex;
+  SC.Off = C->getRVA() - OS->getRVA();
+  SC.Size = C->getSize();
+  if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
+    SC.Characteristics = SecChunk->Header->Characteristics;
+    SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
+    ArrayRef<uint8_t> Contents = SecChunk->getContents();
+    JamCRC CRC(0);
+    ArrayRef<char> CharContents = makeArrayRef(
+        reinterpret_cast<const char *>(Contents.data()), Contents.size());
+    CRC.update(CharContents);
+    SC.DataCrc = CRC.getCRC();
+  } else {
+    SC.Characteristics = OS->getCharacteristics();
+    // FIXME: When we start creating DBI for import libraries, use those here.
+    SC.Imod = LinkerModule.getModuleIndex();
+  }
+  SC.RelocCrc = 0; // FIXME
+  Builder.getDbiBuilder().addSectionContrib(SC);
+}
 
-  // Add Section Map stream.
-  ArrayRef<object::coff_section> Sections = {
-      (const object::coff_section *)SectionTable.data(),
-      SectionTable.size() / sizeof(object::coff_section)};
-  SectionMap = pdb::DbiStreamBuilder::createSectionMap(Sections);
-  DbiBuilder.setSectionMap(SectionMap);
-
+void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
+                            ArrayRef<uint8_t> SectionTable) {
   // It's not entirely clear what this is, but the * Linker * module uses it.
+  pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   NativePath = Config->PDBPath;
   sys::fs::make_absolute(NativePath);
   sys::path::native(NativePath, sys::path::Style::windows);
@@ -702,6 +717,18 @@ void PDBLinker::addSections(ArrayRef<uint8_t> SectionTable) {
   auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
   LinkerModule.setPdbFilePathNI(PdbFilePathNI);
   addLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
+
+  // Add section contributions. They must be ordered by ascending RVA.
+  for (OutputSection *OS : OutputSections)
+    for (Chunk *C : OS->getChunks())
+      addSectionContrib(LinkerModule, OS, C);
+
+  // Add Section Map stream.
+  ArrayRef<object::coff_section> Sections = {
+      (const object::coff_section *)SectionTable.data(),
+      SectionTable.size() / sizeof(object::coff_section)};
+  SectionMap = pdb::DbiStreamBuilder::createSectionMap(Sections);
+  DbiBuilder.setSectionMap(SectionMap);
 
   // Add COFF section header stream.
   ExitOnErr(

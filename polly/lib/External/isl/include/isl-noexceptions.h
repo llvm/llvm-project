@@ -21,6 +21,7 @@
 #include <isl/union_map.h>
 #include <isl/union_set.h>
 #include <isl/val.h>
+#include <isl/polynomial.h>
 
 #include <functional>
 #include <string>
@@ -139,12 +140,15 @@ class point;
 class pw_aff;
 class pw_aff_list;
 class pw_multi_aff;
+class pw_qpolynomial;
+class qpolynomial;
 class schedule;
 class schedule_constraints;
 class schedule_node;
 class set;
 class set_list;
 class space;
+class term;
 class union_access_info;
 class union_flow;
 class union_map;
@@ -153,6 +157,7 @@ class union_pw_aff;
 class union_pw_aff_list;
 class union_pw_multi_aff;
 class union_pw_multi_aff_list;
+class union_pw_qpolynomial;
 class union_set;
 class union_set_list;
 class val;
@@ -212,6 +217,9 @@ public:
   inline isl::set ge_set(isl::aff aff2) const;
   inline isl::val get_coefficient_val(isl::dim type, int pos) const;
   inline isl::val get_constant_val() const;
+  inline isl::val get_denominator_val() const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
+  inline isl::aff get_div(int pos) const;
   inline isl::local_space get_domain_local_space() const;
   inline isl::space get_domain_space() const;
   inline uint32_t get_hash() const;
@@ -220,6 +228,7 @@ public:
   inline isl::aff gist(isl::set context) const;
   inline isl::aff gist_params(isl::set context) const;
   inline isl::basic_set gt_basic_set(isl::aff aff2) const;
+  inline isl::set gt_set(isl::aff aff2) const;
   inline isl::aff insert_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::boolean is_cst() const;
@@ -228,10 +237,11 @@ public:
   inline isl::set le_set(isl::aff aff2) const;
   inline isl::basic_set lt_basic_set(isl::aff aff2) const;
   inline isl::set lt_set(isl::aff aff2) const;
-  inline isl::aff mod_val(isl::val mod) const;
+  inline isl::aff mod(isl::val mod) const;
   inline isl::aff move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const;
   inline isl::aff mul(isl::aff aff2) const;
   static inline isl::aff nan_on_domain(isl::local_space ls);
+  inline isl::set ne_set(isl::aff aff2) const;
   inline isl::aff neg() const;
   inline isl::basic_set neg_basic_set() const;
   inline isl::boolean plain_is_equal(const isl::aff &aff2) const;
@@ -239,9 +249,9 @@ public:
   inline isl::aff project_domain_on_params() const;
   inline isl::aff pullback(isl::multi_aff ma) const;
   inline isl::aff pullback_aff(isl::aff aff2) const;
+  inline isl::aff scale(isl::val v) const;
+  inline isl::aff scale_down(isl::val v) const;
   inline isl::aff scale_down_ui(unsigned int f) const;
-  inline isl::aff scale_down_val(isl::val v) const;
-  inline isl::aff scale_val(isl::val v) const;
   inline isl::aff set_coefficient_si(isl::dim type, int pos, int v) const;
   inline isl::aff set_coefficient_val(isl::dim type, int pos, isl::val v) const;
   inline isl::aff set_constant_si(int v) const;
@@ -596,8 +606,11 @@ public:
   static inline isl::basic_map from_domain(isl::basic_set bset);
   static inline isl::basic_map from_domain_and_range(isl::basic_set domain, isl::basic_set range);
   static inline isl::basic_map from_multi_aff(isl::multi_aff maff);
+  static inline isl::basic_map from_qpolynomial(isl::qpolynomial qp);
   static inline isl::basic_map from_range(isl::basic_set bset);
   inline isl::constraint_list get_constraint_list() const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
+  inline isl::aff get_div(int pos) const;
   inline isl::local_space get_local_space() const;
   inline isl::space get_space() const;
   inline std::string get_tuple_name(isl::dim type) const;
@@ -740,6 +753,9 @@ public:
   static inline isl::basic_set from_constraint(isl::constraint constraint);
   inline isl::basic_set from_params() const;
   inline isl::constraint_list get_constraint_list() const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
+  inline isl::aff get_div(int pos) const;
   inline isl::local_space get_local_space() const;
   inline isl::space get_space() const;
   inline std::string get_tuple_name() const;
@@ -758,6 +774,7 @@ public:
   inline isl::boolean is_wrapping() const;
   inline isl::set lexmax() const;
   inline isl::set lexmin() const;
+  inline isl::basic_set lower_bound_val(isl::dim type, unsigned int pos, isl::val value) const;
   inline isl::val max_val(const isl::aff &obj) const;
   inline isl::basic_set move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const;
   static inline isl::basic_set nat_universe(isl::space dim);
@@ -782,6 +799,7 @@ public:
   inline isl::set unite(isl::basic_set bset2) const;
   static inline isl::basic_set universe(isl::space dim);
   inline isl::basic_map unwrap() const;
+  inline isl::basic_set upper_bound_val(isl::dim type, unsigned int pos, isl::val value) const;
 };
 
 // declarations for isl::basic_set_list
@@ -851,6 +869,8 @@ public:
   inline isl::aff get_bound(isl::dim type, int pos) const;
   inline isl::val get_coefficient_val(isl::dim type, int pos) const;
   inline isl::val get_constant_val() const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
+  inline isl::aff get_div(int pos) const;
   inline isl::local_space get_local_space() const;
   inline isl::space get_space() const;
   inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
@@ -1037,6 +1057,9 @@ public:
   inline isl::local_space flatten_domain() const;
   inline isl::local_space flatten_range() const;
   inline isl::local_space from_domain() const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
+  inline isl::aff get_div(int pos) const;
   inline isl::space get_space() const;
   inline isl::boolean has_dim_id(isl::dim type, unsigned int pos) const;
   inline isl::boolean has_dim_name(isl::dim type, unsigned int pos) const;
@@ -1138,6 +1161,8 @@ public:
   static inline isl::map from_pw_multi_aff(isl::pw_multi_aff pma);
   static inline isl::map from_range(isl::set set);
   static inline isl::map from_union_map(isl::union_map umap);
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline uint32_t get_hash() const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id(isl::dim type) const;
@@ -1156,8 +1181,10 @@ public:
   inline isl::map insert_dims(isl::dim type, unsigned int pos, unsigned int n) const;
   inline isl::map intersect(isl::map map2) const;
   inline isl::map intersect_domain(isl::set set) const;
+  inline isl::map intersect_domain_factor_range(isl::map factor) const;
   inline isl::map intersect_params(isl::set params) const;
   inline isl::map intersect_range(isl::set set) const;
+  inline isl::map intersect_range_factor_range(isl::map factor) const;
   inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::boolean is_bijective() const;
   inline isl::boolean is_disjoint(const isl::map &map2) const;
@@ -1292,8 +1319,8 @@ public:
   inline /* implicit */ multi_aff();
   inline /* implicit */ multi_aff(const isl::multi_aff &obj);
   inline /* implicit */ multi_aff(std::nullptr_t);
-  inline /* implicit */ multi_aff(isl::aff aff);
   inline explicit multi_aff(isl::ctx ctx, const std::string &str);
+  inline /* implicit */ multi_aff(isl::aff aff);
   inline isl::multi_aff &operator=(isl::multi_aff obj);
   inline ~multi_aff();
   inline __isl_give isl_multi_aff *copy() const &;
@@ -1324,6 +1351,7 @@ public:
   static inline isl::multi_aff from_aff_list(isl::space space, isl::aff_list list);
   inline isl::multi_aff from_range() const;
   inline isl::aff get_aff(int pos) const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id(isl::dim type) const;
@@ -1418,6 +1446,7 @@ public:
   inline isl::multi_pw_aff flatten_range() const;
   static inline isl::multi_pw_aff from_pw_aff_list(isl::space space, isl::pw_aff_list list);
   inline isl::multi_pw_aff from_range() const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline uint32_t get_hash() const;
   inline isl::pw_aff get_pw_aff(int pos) const;
@@ -1502,6 +1531,7 @@ public:
   inline isl::multi_union_pw_aff add(isl::multi_union_pw_aff multi2) const;
   inline isl::multi_union_pw_aff align_params(isl::space model) const;
   inline isl::union_pw_aff apply_aff(isl::aff aff) const;
+  inline isl::union_pw_aff apply_pw_aff(isl::pw_aff pa) const;
   inline isl::multi_union_pw_aff apply_pw_multi_aff(isl::pw_multi_aff pma) const;
   inline isl::multi_union_pw_aff coalesce() const;
   inline unsigned int dim(isl::dim type) const;
@@ -1518,6 +1548,7 @@ public:
   inline isl::multi_union_pw_aff from_range() const;
   static inline isl::multi_union_pw_aff from_union_map(isl::union_map umap);
   static inline isl::multi_union_pw_aff from_union_pw_aff_list(isl::space space, isl::union_pw_aff_list list);
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id(isl::dim type) const;
@@ -1601,6 +1632,7 @@ public:
   inline isl::multi_val flatten_range() const;
   inline isl::multi_val from_range() const;
   static inline isl::multi_val from_val_list(isl::space space, isl::val_list list);
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id(isl::dim type) const;
@@ -1726,6 +1758,8 @@ public:
   inline isl::stat foreach_piece(const std::function<isl::stat(isl::set, isl::aff)> &fn) const;
   inline isl::pw_aff from_range() const;
   inline isl::set ge_set(isl::pw_aff pwaff2) const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline uint32_t get_hash() const;
   inline isl::space get_space() const;
@@ -1749,7 +1783,7 @@ public:
   inline isl::set lt_set(isl::pw_aff pwaff2) const;
   inline isl::pw_aff max(isl::pw_aff pwaff2) const;
   inline isl::pw_aff min(isl::pw_aff pwaff2) const;
-  inline isl::pw_aff mod_val(isl::val mod) const;
+  inline isl::pw_aff mod(isl::val mod) const;
   inline isl::pw_aff move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const;
   inline isl::pw_aff mul(isl::pw_aff pwaff2) const;
   static inline isl::pw_aff nan_on_domain(isl::local_space ls);
@@ -1767,8 +1801,8 @@ public:
   inline isl::pw_aff pullback(isl::multi_pw_aff mpa) const;
   inline isl::pw_aff reset_tuple_id(isl::dim type) const;
   inline isl::pw_aff reset_user() const;
-  inline isl::pw_aff scale_down_val(isl::val f) const;
-  inline isl::pw_aff scale_val(isl::val v) const;
+  inline isl::pw_aff scale(isl::val v) const;
+  inline isl::pw_aff scale_down(isl::val f) const;
   inline isl::pw_aff set_dim_id(isl::dim type, unsigned int pos, isl::id id) const;
   inline isl::pw_aff set_tuple_id(isl::dim type, isl::id id) const;
   inline isl::pw_aff sub(isl::pw_aff pwaff2) const;
@@ -1829,9 +1863,9 @@ public:
   inline /* implicit */ pw_multi_aff();
   inline /* implicit */ pw_multi_aff(const isl::pw_multi_aff &obj);
   inline /* implicit */ pw_multi_aff(std::nullptr_t);
-  inline explicit pw_multi_aff(isl::ctx ctx, const std::string &str);
   inline /* implicit */ pw_multi_aff(isl::multi_aff ma);
   inline /* implicit */ pw_multi_aff(isl::pw_aff pa);
+  inline explicit pw_multi_aff(isl::ctx ctx, const std::string &str);
   inline isl::pw_multi_aff &operator=(isl::pw_multi_aff obj);
   inline ~pw_multi_aff();
   inline __isl_give isl_pw_multi_aff *copy() const &;
@@ -1862,6 +1896,8 @@ public:
   static inline isl::pw_multi_aff from_map(isl::map map);
   static inline isl::pw_multi_aff from_multi_pw_aff(isl::multi_pw_aff mpa);
   static inline isl::pw_multi_aff from_set(isl::set set);
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline isl::pw_aff get_pw_aff(int pos) const;
   inline isl::space get_space() const;
@@ -1900,6 +1936,153 @@ public:
   inline isl::pw_multi_aff union_lexmax(isl::pw_multi_aff pma2) const;
   inline isl::pw_multi_aff union_lexmin(isl::pw_multi_aff pma2) const;
   static inline isl::pw_multi_aff zero(isl::space space);
+};
+
+// declarations for isl::pw_qpolynomial
+inline isl::pw_qpolynomial manage(__isl_take isl_pw_qpolynomial *ptr);
+inline isl::pw_qpolynomial give(__isl_take isl_pw_qpolynomial *ptr);
+
+
+class pw_qpolynomial {
+  friend inline isl::pw_qpolynomial manage(__isl_take isl_pw_qpolynomial *ptr);
+
+  isl_pw_qpolynomial *ptr = nullptr;
+
+  inline explicit pw_qpolynomial(__isl_take isl_pw_qpolynomial *ptr);
+
+public:
+  inline /* implicit */ pw_qpolynomial();
+  inline /* implicit */ pw_qpolynomial(const isl::pw_qpolynomial &obj);
+  inline /* implicit */ pw_qpolynomial(std::nullptr_t);
+  inline explicit pw_qpolynomial(isl::ctx ctx, const std::string &str);
+  inline isl::pw_qpolynomial &operator=(isl::pw_qpolynomial obj);
+  inline ~pw_qpolynomial();
+  inline __isl_give isl_pw_qpolynomial *copy() const &;
+  inline __isl_give isl_pw_qpolynomial *copy() && = delete;
+  inline __isl_keep isl_pw_qpolynomial *get() const;
+  inline __isl_give isl_pw_qpolynomial *release();
+  inline bool is_null() const;
+  inline __isl_keep isl_pw_qpolynomial *keep() const;
+  inline __isl_give isl_pw_qpolynomial *take();
+  inline explicit operator bool() const;
+  inline isl::ctx get_ctx() const;
+  inline std::string to_str() const;
+  inline void dump() const;
+
+  inline isl::pw_qpolynomial add(isl::pw_qpolynomial pwqp2) const;
+  inline isl::pw_qpolynomial add_dims(isl::dim type, unsigned int n) const;
+  static inline isl::pw_qpolynomial alloc(isl::set set, isl::qpolynomial qp);
+  inline isl::pw_qpolynomial coalesce() const;
+  inline unsigned int dim(isl::dim type) const;
+  inline isl::set domain() const;
+  inline isl::pw_qpolynomial drop_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::val eval(isl::point pnt) const;
+  inline int find_dim_by_name(isl::dim type, const std::string &name) const;
+  inline isl::pw_qpolynomial fix_val(isl::dim type, unsigned int n, isl::val v) const;
+  inline isl::stat foreach_piece(const std::function<isl::stat(isl::set, isl::qpolynomial)> &fn) const;
+  static inline isl::pw_qpolynomial from_pw_aff(isl::pw_aff pwaff);
+  static inline isl::pw_qpolynomial from_qpolynomial(isl::qpolynomial qp);
+  inline isl::pw_qpolynomial from_range() const;
+  inline isl::space get_domain_space() const;
+  inline isl::space get_space() const;
+  inline isl::pw_qpolynomial gist(isl::set context) const;
+  inline isl::pw_qpolynomial gist_params(isl::set context) const;
+  inline isl::boolean has_equal_space(const isl::pw_qpolynomial &pwqp2) const;
+  inline isl::pw_qpolynomial insert_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::pw_qpolynomial intersect_domain(isl::set set) const;
+  inline isl::pw_qpolynomial intersect_params(isl::set set) const;
+  inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::boolean involves_nan() const;
+  inline isl::boolean is_zero() const;
+  inline isl::val max() const;
+  inline isl::val min() const;
+  inline isl::pw_qpolynomial move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const;
+  inline isl::pw_qpolynomial mul(isl::pw_qpolynomial pwqp2) const;
+  inline isl::pw_qpolynomial neg() const;
+  inline isl::boolean plain_is_equal(const isl::pw_qpolynomial &pwqp2) const;
+  inline isl::pw_qpolynomial pow(unsigned int exponent) const;
+  inline isl::pw_qpolynomial project_domain_on_params() const;
+  inline isl::pw_qpolynomial reset_domain_space(isl::space dim) const;
+  inline isl::pw_qpolynomial reset_user() const;
+  inline isl::pw_qpolynomial scale_down_val(isl::val v) const;
+  inline isl::pw_qpolynomial scale_val(isl::val v) const;
+  inline isl::pw_qpolynomial split_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::pw_qpolynomial split_periods(int max_periods) const;
+  inline isl::pw_qpolynomial sub(isl::pw_qpolynomial pwqp2) const;
+  inline isl::pw_qpolynomial subtract_domain(isl::set set) const;
+  inline isl::pw_qpolynomial to_polynomial(int sign) const;
+  static inline isl::pw_qpolynomial zero(isl::space dim);
+};
+
+// declarations for isl::qpolynomial
+inline isl::qpolynomial manage(__isl_take isl_qpolynomial *ptr);
+inline isl::qpolynomial give(__isl_take isl_qpolynomial *ptr);
+
+
+class qpolynomial {
+  friend inline isl::qpolynomial manage(__isl_take isl_qpolynomial *ptr);
+
+  isl_qpolynomial *ptr = nullptr;
+
+  inline explicit qpolynomial(__isl_take isl_qpolynomial *ptr);
+
+public:
+  inline /* implicit */ qpolynomial();
+  inline /* implicit */ qpolynomial(const isl::qpolynomial &obj);
+  inline /* implicit */ qpolynomial(std::nullptr_t);
+  inline isl::qpolynomial &operator=(isl::qpolynomial obj);
+  inline ~qpolynomial();
+  inline __isl_give isl_qpolynomial *copy() const &;
+  inline __isl_give isl_qpolynomial *copy() && = delete;
+  inline __isl_keep isl_qpolynomial *get() const;
+  inline __isl_give isl_qpolynomial *release();
+  inline bool is_null() const;
+  inline __isl_keep isl_qpolynomial *keep() const;
+  inline __isl_give isl_qpolynomial *take();
+  inline explicit operator bool() const;
+  inline isl::ctx get_ctx() const;
+  inline void dump() const;
+
+  inline isl::qpolynomial add(isl::qpolynomial qp2) const;
+  inline isl::qpolynomial add_dims(isl::dim type, unsigned int n) const;
+  inline isl::qpolynomial align_params(isl::space model) const;
+  inline isl::stat as_polynomial_on_domain(const isl::basic_set &bset, const std::function<isl::stat(isl::basic_set, isl::qpolynomial)> &fn) const;
+  inline unsigned int dim(isl::dim type) const;
+  inline isl::qpolynomial drop_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::val eval(isl::point pnt) const;
+  inline isl::stat foreach_term(const std::function<isl::stat(isl::term)> &fn) const;
+  static inline isl::qpolynomial from_aff(isl::aff aff);
+  static inline isl::qpolynomial from_constraint(isl::constraint c, isl::dim type, unsigned int pos);
+  static inline isl::qpolynomial from_term(isl::term term);
+  inline isl::val get_constant_val() const;
+  inline isl::space get_domain_space() const;
+  inline isl::space get_space() const;
+  inline isl::qpolynomial gist(isl::set context) const;
+  inline isl::qpolynomial gist_params(isl::set context) const;
+  inline isl::qpolynomial homogenize() const;
+  static inline isl::qpolynomial infty_on_domain(isl::space dim);
+  inline isl::qpolynomial insert_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::boolean is_infty() const;
+  inline isl::boolean is_nan() const;
+  inline isl::boolean is_neginfty() const;
+  inline isl::boolean is_zero() const;
+  inline isl::qpolynomial move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const;
+  inline isl::qpolynomial mul(isl::qpolynomial qp2) const;
+  static inline isl::qpolynomial nan_on_domain(isl::space dim);
+  inline isl::qpolynomial neg() const;
+  static inline isl::qpolynomial neginfty_on_domain(isl::space dim);
+  static inline isl::qpolynomial one_on_domain(isl::space dim);
+  inline isl::boolean plain_is_equal(const isl::qpolynomial &qp2) const;
+  inline isl::qpolynomial pow(unsigned int power) const;
+  inline isl::qpolynomial project_domain_on_params() const;
+  inline isl::qpolynomial scale_down_val(isl::val v) const;
+  inline isl::qpolynomial scale_val(isl::val v) const;
+  inline int sgn() const;
+  inline isl::qpolynomial sub(isl::qpolynomial qp2) const;
+  static inline isl::qpolynomial val_on_domain(isl::space space, isl::val val);
+  static inline isl::qpolynomial var_on_domain(isl::space dim, isl::dim type, unsigned int pos);
+  static inline isl::qpolynomial zero_on_domain(isl::space dim);
 };
 
 // declarations for isl::schedule
@@ -2165,6 +2348,8 @@ public:
   static inline isl::set from_pw_aff(isl::pw_aff pwaff);
   static inline isl::set from_pw_multi_aff(isl::pw_multi_aff pma);
   inline isl::basic_set_list get_basic_set_list() const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id() const;
   inline std::string get_tuple_name() const;
@@ -2335,6 +2520,8 @@ public:
   inline int find_dim_by_name(isl::dim type, const std::string &name) const;
   inline isl::space from_domain() const;
   inline isl::space from_range() const;
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
+  inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline isl::id get_tuple_id(isl::dim type) const;
   inline std::string get_tuple_name(isl::dim type) const;
   inline isl::boolean has_dim_id(isl::dim type, unsigned int pos) const;
@@ -2380,6 +2567,40 @@ public:
   inline isl::space zip() const;
 };
 
+// declarations for isl::term
+inline isl::term manage(__isl_take isl_term *ptr);
+inline isl::term give(__isl_take isl_term *ptr);
+
+
+class term {
+  friend inline isl::term manage(__isl_take isl_term *ptr);
+
+  isl_term *ptr = nullptr;
+
+  inline explicit term(__isl_take isl_term *ptr);
+
+public:
+  inline /* implicit */ term();
+  inline /* implicit */ term(const isl::term &obj);
+  inline /* implicit */ term(std::nullptr_t);
+  inline isl::term &operator=(isl::term obj);
+  inline ~term();
+  inline __isl_give isl_term *copy() const &;
+  inline __isl_give isl_term *copy() && = delete;
+  inline __isl_keep isl_term *get() const;
+  inline __isl_give isl_term *release();
+  inline bool is_null() const;
+  inline __isl_keep isl_term *keep() const;
+  inline __isl_give isl_term *take();
+  inline explicit operator bool() const;
+  inline isl::ctx get_ctx() const;
+
+  inline unsigned int dim(isl::dim type) const;
+  inline isl::val get_coefficient_val() const;
+  inline isl::aff get_div(unsigned int pos) const;
+  inline int get_exp(isl::dim type, unsigned int pos) const;
+};
+
 // declarations for isl::union_access_info
 inline isl::union_access_info manage(__isl_take isl_union_access_info *ptr);
 inline isl::union_access_info give(__isl_take isl_union_access_info *ptr);
@@ -2411,6 +2632,7 @@ public:
   inline std::string to_str() const;
 
   inline isl::union_flow compute_flow() const;
+  inline isl::union_access_info set_kill(isl::union_map kill) const;
   inline isl::union_access_info set_may_source(isl::union_map may_source) const;
   inline isl::union_access_info set_must_source(isl::union_map must_source) const;
   inline isl::union_access_info set_schedule(isl::schedule schedule) const;
@@ -2521,6 +2743,7 @@ public:
   static inline isl::union_map from_domain(isl::union_set uset);
   static inline isl::union_map from_domain_and_range(isl::union_set domain, isl::union_set range);
   static inline isl::union_map from_range(isl::union_set uset);
+  inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline uint32_t get_hash() const;
   inline isl::space get_space() const;
   inline isl::union_map gist(isl::union_map context) const;
@@ -2531,6 +2754,7 @@ public:
   inline isl::union_map intersect_domain(isl::union_set uset) const;
   inline isl::union_map intersect_params(isl::set set) const;
   inline isl::union_map intersect_range(isl::union_set uset) const;
+  inline isl::union_map intersect_range_factor_range(isl::union_map factor) const;
   inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::boolean is_bijective() const;
   inline isl::boolean is_disjoint(const isl::union_map &umap2) const;
@@ -2567,6 +2791,7 @@ public:
   inline isl::union_map range_factor_range() const;
   inline isl::union_map range_map() const;
   inline isl::union_map range_product(isl::union_map umap2) const;
+  inline isl::union_map remove_divs() const;
   inline isl::union_map remove_redundancies() const;
   inline isl::union_map reset_user() const;
   inline isl::union_map reverse() const;
@@ -2810,6 +3035,66 @@ public:
 
 };
 
+// declarations for isl::union_pw_qpolynomial
+inline isl::union_pw_qpolynomial manage(__isl_take isl_union_pw_qpolynomial *ptr);
+inline isl::union_pw_qpolynomial give(__isl_take isl_union_pw_qpolynomial *ptr);
+
+
+class union_pw_qpolynomial {
+  friend inline isl::union_pw_qpolynomial manage(__isl_take isl_union_pw_qpolynomial *ptr);
+
+  isl_union_pw_qpolynomial *ptr = nullptr;
+
+  inline explicit union_pw_qpolynomial(__isl_take isl_union_pw_qpolynomial *ptr);
+
+public:
+  inline /* implicit */ union_pw_qpolynomial();
+  inline /* implicit */ union_pw_qpolynomial(const isl::union_pw_qpolynomial &obj);
+  inline /* implicit */ union_pw_qpolynomial(std::nullptr_t);
+  inline explicit union_pw_qpolynomial(isl::ctx ctx, const std::string &str);
+  inline isl::union_pw_qpolynomial &operator=(isl::union_pw_qpolynomial obj);
+  inline ~union_pw_qpolynomial();
+  inline __isl_give isl_union_pw_qpolynomial *copy() const &;
+  inline __isl_give isl_union_pw_qpolynomial *copy() && = delete;
+  inline __isl_keep isl_union_pw_qpolynomial *get() const;
+  inline __isl_give isl_union_pw_qpolynomial *release();
+  inline bool is_null() const;
+  inline __isl_keep isl_union_pw_qpolynomial *keep() const;
+  inline __isl_give isl_union_pw_qpolynomial *take();
+  inline explicit operator bool() const;
+  inline isl::ctx get_ctx() const;
+  inline std::string to_str() const;
+
+  inline isl::union_pw_qpolynomial add(isl::union_pw_qpolynomial upwqp2) const;
+  inline isl::union_pw_qpolynomial add_pw_qpolynomial(isl::pw_qpolynomial pwqp) const;
+  inline isl::union_pw_qpolynomial align_params(isl::space model) const;
+  inline isl::union_pw_qpolynomial coalesce() const;
+  inline unsigned int dim(isl::dim type) const;
+  inline isl::union_set domain() const;
+  inline isl::union_pw_qpolynomial drop_dims(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::val eval(isl::point pnt) const;
+  inline isl::pw_qpolynomial extract_pw_qpolynomial(isl::space dim) const;
+  inline int find_dim_by_name(isl::dim type, const std::string &name) const;
+  inline isl::stat foreach_pw_qpolynomial(const std::function<isl::stat(isl::pw_qpolynomial)> &fn) const;
+  static inline isl::union_pw_qpolynomial from_pw_qpolynomial(isl::pw_qpolynomial pwqp);
+  inline isl::space get_space() const;
+  inline isl::union_pw_qpolynomial gist(isl::union_set context) const;
+  inline isl::union_pw_qpolynomial gist_params(isl::set context) const;
+  inline isl::union_pw_qpolynomial intersect_domain(isl::union_set uset) const;
+  inline isl::union_pw_qpolynomial intersect_params(isl::set set) const;
+  inline isl::boolean involves_nan() const;
+  inline isl::union_pw_qpolynomial mul(isl::union_pw_qpolynomial upwqp2) const;
+  inline isl::union_pw_qpolynomial neg() const;
+  inline isl::boolean plain_is_equal(const isl::union_pw_qpolynomial &upwqp2) const;
+  inline isl::union_pw_qpolynomial reset_user() const;
+  inline isl::union_pw_qpolynomial scale_down_val(isl::val v) const;
+  inline isl::union_pw_qpolynomial scale_val(isl::val v) const;
+  inline isl::union_pw_qpolynomial sub(isl::union_pw_qpolynomial upwqp2) const;
+  inline isl::union_pw_qpolynomial subtract_domain(isl::union_set uset) const;
+  inline isl::union_pw_qpolynomial to_polynomial(int sign) const;
+  static inline isl::union_pw_qpolynomial zero(isl::space dim);
+};
+
 // declarations for isl::union_set
 inline isl::union_set manage(__isl_take isl_union_set *ptr);
 inline isl::union_set give(__isl_take isl_union_set *ptr);
@@ -2858,6 +3143,7 @@ public:
   inline isl::set extract_set(isl::space dim) const;
   inline isl::stat foreach_point(const std::function<isl::stat(isl::point)> &fn) const;
   inline isl::stat foreach_set(const std::function<isl::stat(isl::set)> &fn) const;
+  inline isl::basic_set_list get_basic_set_list() const;
   inline uint32_t get_hash() const;
   inline isl::space get_space() const;
   inline isl::union_set gist(isl::union_set context) const;
@@ -2886,6 +3172,7 @@ public:
   inline isl::union_set preimage_union_pw_multi_aff(isl::union_pw_multi_aff upma) const;
   inline isl::union_set product(isl::union_set uset2) const;
   inline isl::union_set project_out(isl::dim type, unsigned int first, unsigned int n) const;
+  inline isl::union_set remove_divs() const;
   inline isl::union_set remove_redundancies() const;
   inline isl::union_set reset_user() const;
   inline isl::basic_set sample() const;
@@ -2970,6 +3257,7 @@ public:
   inline isl::val ceil() const;
   inline int cmp_si(long i) const;
   inline isl::val div(isl::val v2) const;
+  inline isl::val div_ui(unsigned long v2) const;
   inline isl::boolean eq(const isl::val &v2) const;
   inline isl::val floor() const;
   inline isl::val gcd(isl::val v2) const;
@@ -3243,6 +3531,22 @@ isl::val aff::get_constant_val() const {
   return manage(res);
 }
 
+isl::val aff::get_denominator_val() const {
+  auto res = isl_aff_get_denominator_val(get());
+  return manage(res);
+}
+
+std::string aff::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_aff_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
+isl::aff aff::get_div(int pos) const {
+  auto res = isl_aff_get_div(get(), pos);
+  return manage(res);
+}
+
 isl::local_space aff::get_domain_local_space() const {
   auto res = isl_aff_get_domain_local_space(get());
   return manage(res);
@@ -3280,6 +3584,11 @@ isl::aff aff::gist_params(isl::set context) const {
 
 isl::basic_set aff::gt_basic_set(isl::aff aff2) const {
   auto res = isl_aff_gt_basic_set(copy(), aff2.release());
+  return manage(res);
+}
+
+isl::set aff::gt_set(isl::aff aff2) const {
+  auto res = isl_aff_gt_set(copy(), aff2.release());
   return manage(res);
 }
 
@@ -3323,7 +3632,7 @@ isl::set aff::lt_set(isl::aff aff2) const {
   return manage(res);
 }
 
-isl::aff aff::mod_val(isl::val mod) const {
+isl::aff aff::mod(isl::val mod) const {
   auto res = isl_aff_mod_val(copy(), mod.release());
   return manage(res);
 }
@@ -3340,6 +3649,11 @@ isl::aff aff::mul(isl::aff aff2) const {
 
 isl::aff aff::nan_on_domain(isl::local_space ls) {
   auto res = isl_aff_nan_on_domain(ls.release());
+  return manage(res);
+}
+
+isl::set aff::ne_set(isl::aff aff2) const {
+  auto res = isl_aff_ne_set(copy(), aff2.release());
   return manage(res);
 }
 
@@ -3378,18 +3692,18 @@ isl::aff aff::pullback_aff(isl::aff aff2) const {
   return manage(res);
 }
 
-isl::aff aff::scale_down_ui(unsigned int f) const {
-  auto res = isl_aff_scale_down_ui(copy(), f);
+isl::aff aff::scale(isl::val v) const {
+  auto res = isl_aff_scale_val(copy(), v.release());
   return manage(res);
 }
 
-isl::aff aff::scale_down_val(isl::val v) const {
+isl::aff aff::scale_down(isl::val v) const {
   auto res = isl_aff_scale_down_val(copy(), v.release());
   return manage(res);
 }
 
-isl::aff aff::scale_val(isl::val v) const {
-  auto res = isl_aff_scale_val(copy(), v.release());
+isl::aff aff::scale_down_ui(unsigned int f) const {
+  auto res = isl_aff_scale_down_ui(copy(), f);
   return manage(res);
 }
 
@@ -4524,6 +4838,11 @@ isl::basic_map basic_map::from_multi_aff(isl::multi_aff maff) {
   return manage(res);
 }
 
+isl::basic_map basic_map::from_qpolynomial(isl::qpolynomial qp) {
+  auto res = isl_basic_map_from_qpolynomial(qp.release());
+  return manage(res);
+}
+
 isl::basic_map basic_map::from_range(isl::basic_set bset) {
   auto res = isl_basic_map_from_range(bset.release());
   return manage(res);
@@ -4531,6 +4850,17 @@ isl::basic_map basic_map::from_range(isl::basic_set bset) {
 
 isl::constraint_list basic_map::get_constraint_list() const {
   auto res = isl_basic_map_get_constraint_list(get());
+  return manage(res);
+}
+
+std::string basic_map::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_basic_map_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
+isl::aff basic_map::get_div(int pos) const {
+  auto res = isl_basic_map_get_div(get(), pos);
   return manage(res);
 }
 
@@ -5094,6 +5424,22 @@ isl::constraint_list basic_set::get_constraint_list() const {
   return manage(res);
 }
 
+isl::id basic_set::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_basic_set_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string basic_set::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_basic_set_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
+isl::aff basic_set::get_div(int pos) const {
+  auto res = isl_basic_set_get_div(get(), pos);
+  return manage(res);
+}
+
 isl::local_space basic_set::get_local_space() const {
   auto res = isl_basic_set_get_local_space(get());
   return manage(res);
@@ -5182,6 +5528,11 @@ isl::set basic_set::lexmax() const {
 
 isl::set basic_set::lexmin() const {
   auto res = isl_basic_set_lexmin(copy());
+  return manage(res);
+}
+
+isl::basic_set basic_set::lower_bound_val(isl::dim type, unsigned int pos, isl::val value) const {
+  auto res = isl_basic_set_lower_bound_val(copy(), static_cast<enum isl_dim_type>(type), pos, value.release());
   return manage(res);
 }
 
@@ -5302,6 +5653,11 @@ isl::basic_set basic_set::universe(isl::space dim) {
 
 isl::basic_map basic_set::unwrap() const {
   auto res = isl_basic_set_unwrap(copy());
+  return manage(res);
+}
+
+isl::basic_set basic_set::upper_bound_val(isl::dim type, unsigned int pos, isl::val value) const {
+  auto res = isl_basic_set_upper_bound_val(copy(), static_cast<enum isl_dim_type>(type), pos, value.release());
   return manage(res);
 }
 
@@ -5482,6 +5838,17 @@ isl::val constraint::get_coefficient_val(isl::dim type, int pos) const {
 
 isl::val constraint::get_constant_val() const {
   auto res = isl_constraint_get_constant_val(get());
+  return manage(res);
+}
+
+std::string constraint::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_constraint_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
+isl::aff constraint::get_div(int pos) const {
+  auto res = isl_constraint_get_div(get(), pos);
   return manage(res);
 }
 
@@ -6012,6 +6379,22 @@ isl::local_space local_space::from_domain() const {
   return manage(res);
 }
 
+isl::id local_space::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_local_space_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string local_space::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_local_space_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
+isl::aff local_space::get_div(int pos) const {
+  auto res = isl_local_space_get_div(get(), pos);
+  return manage(res);
+}
+
 isl::space local_space::get_space() const {
   auto res = isl_local_space_get_space(get());
   return manage(res);
@@ -6442,6 +6825,17 @@ isl::map map::from_union_map(isl::union_map umap) {
   return manage(res);
 }
 
+isl::id map::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_map_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string map::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_map_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
 uint32_t map::get_hash() const {
   auto res = isl_map_get_hash(get());
   return res;
@@ -6533,6 +6927,11 @@ isl::map map::intersect_domain(isl::set set) const {
   return manage(res);
 }
 
+isl::map map::intersect_domain_factor_range(isl::map factor) const {
+  auto res = isl_map_intersect_domain_factor_range(copy(), factor.release());
+  return manage(res);
+}
+
 isl::map map::intersect_params(isl::set params) const {
   auto res = isl_map_intersect_params(copy(), params.release());
   return manage(res);
@@ -6540,6 +6939,11 @@ isl::map map::intersect_params(isl::set params) const {
 
 isl::map map::intersect_range(isl::set set) const {
   auto res = isl_map_intersect_range(copy(), set.release());
+  return manage(res);
+}
+
+isl::map map::intersect_range_factor_range(isl::map factor) const {
+  auto res = isl_map_intersect_range_factor_range(copy(), factor.release());
   return manage(res);
 }
 
@@ -7062,12 +7466,12 @@ multi_aff::multi_aff(std::nullptr_t)
 multi_aff::multi_aff(__isl_take isl_multi_aff *ptr)
     : ptr(ptr) {}
 
-multi_aff::multi_aff(isl::aff aff) {
-  auto res = isl_multi_aff_from_aff(aff.release());
-  ptr = res;
-}
 multi_aff::multi_aff(isl::ctx ctx, const std::string &str) {
   auto res = isl_multi_aff_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+multi_aff::multi_aff(isl::aff aff) {
+  auto res = isl_multi_aff_from_aff(aff.release());
   ptr = res;
 }
 
@@ -7207,6 +7611,11 @@ isl::multi_aff multi_aff::from_range() const {
 
 isl::aff multi_aff::get_aff(int pos) const {
   auto res = isl_multi_aff_get_aff(get(), pos);
+  return manage(res);
+}
+
+isl::id multi_aff::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_multi_aff_get_dim_id(copy(), static_cast<enum isl_dim_type>(type), pos);
   return manage(res);
 }
 
@@ -7598,6 +8007,11 @@ isl::multi_pw_aff multi_pw_aff::from_range() const {
   return manage(res);
 }
 
+isl::id multi_pw_aff::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_multi_pw_aff_get_dim_id(copy(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
 isl::space multi_pw_aff::get_domain_space() const {
   auto res = isl_multi_pw_aff_get_domain_space(get());
   return manage(res);
@@ -7936,6 +8350,11 @@ isl::union_pw_aff multi_union_pw_aff::apply_aff(isl::aff aff) const {
   return manage(res);
 }
 
+isl::union_pw_aff multi_union_pw_aff::apply_pw_aff(isl::pw_aff pa) const {
+  auto res = isl_multi_union_pw_aff_apply_pw_aff(copy(), pa.release());
+  return manage(res);
+}
+
 isl::multi_union_pw_aff multi_union_pw_aff::apply_pw_multi_aff(isl::pw_multi_aff pma) const {
   auto res = isl_multi_union_pw_aff_apply_pw_multi_aff(copy(), pma.release());
   return manage(res);
@@ -8013,6 +8432,11 @@ isl::multi_union_pw_aff multi_union_pw_aff::from_union_map(isl::union_map umap) 
 
 isl::multi_union_pw_aff multi_union_pw_aff::from_union_pw_aff_list(isl::space space, isl::union_pw_aff_list list) {
   auto res = isl_multi_union_pw_aff_from_union_pw_aff_list(space.release(), list.release());
+  return manage(res);
+}
+
+isl::id multi_union_pw_aff::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_multi_union_pw_aff_get_dim_id(copy(), static_cast<enum isl_dim_type>(type), pos);
   return manage(res);
 }
 
@@ -8349,6 +8773,11 @@ isl::multi_val multi_val::from_range() const {
 
 isl::multi_val multi_val::from_val_list(isl::space space, isl::val_list list) {
   auto res = isl_multi_val_from_val_list(space.release(), list.release());
+  return manage(res);
+}
+
+isl::id multi_val::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_multi_val_get_dim_id(copy(), static_cast<enum isl_dim_type>(type), pos);
   return manage(res);
 }
 
@@ -8821,6 +9250,17 @@ isl::set pw_aff::ge_set(isl::pw_aff pwaff2) const {
   return manage(res);
 }
 
+isl::id pw_aff::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_pw_aff_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string pw_aff::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_pw_aff_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
 isl::space pw_aff::get_domain_space() const {
   auto res = isl_pw_aff_get_domain_space(get());
   return manage(res);
@@ -8936,7 +9376,7 @@ isl::pw_aff pw_aff::min(isl::pw_aff pwaff2) const {
   return manage(res);
 }
 
-isl::pw_aff pw_aff::mod_val(isl::val mod) const {
+isl::pw_aff pw_aff::mod(isl::val mod) const {
   auto res = isl_pw_aff_mod_val(copy(), mod.release());
   return manage(res);
 }
@@ -9026,13 +9466,13 @@ isl::pw_aff pw_aff::reset_user() const {
   return manage(res);
 }
 
-isl::pw_aff pw_aff::scale_down_val(isl::val f) const {
-  auto res = isl_pw_aff_scale_down_val(copy(), f.release());
+isl::pw_aff pw_aff::scale(isl::val v) const {
+  auto res = isl_pw_aff_scale_val(copy(), v.release());
   return manage(res);
 }
 
-isl::pw_aff pw_aff::scale_val(isl::val v) const {
-  auto res = isl_pw_aff_scale_val(copy(), v.release());
+isl::pw_aff pw_aff::scale_down(isl::val f) const {
+  auto res = isl_pw_aff_scale_down_val(copy(), f.release());
   return manage(res);
 }
 
@@ -9185,16 +9625,16 @@ pw_multi_aff::pw_multi_aff(std::nullptr_t)
 pw_multi_aff::pw_multi_aff(__isl_take isl_pw_multi_aff *ptr)
     : ptr(ptr) {}
 
-pw_multi_aff::pw_multi_aff(isl::ctx ctx, const std::string &str) {
-  auto res = isl_pw_multi_aff_read_from_str(ctx.release(), str.c_str());
-  ptr = res;
-}
 pw_multi_aff::pw_multi_aff(isl::multi_aff ma) {
   auto res = isl_pw_multi_aff_from_multi_aff(ma.release());
   ptr = res;
 }
 pw_multi_aff::pw_multi_aff(isl::pw_aff pa) {
   auto res = isl_pw_multi_aff_from_pw_aff(pa.release());
+  ptr = res;
+}
+pw_multi_aff::pw_multi_aff(isl::ctx ctx, const std::string &str) {
+  auto res = isl_pw_multi_aff_read_from_str(ctx.release(), str.c_str());
   ptr = res;
 }
 
@@ -9341,6 +9781,17 @@ isl::pw_multi_aff pw_multi_aff::from_multi_pw_aff(isl::multi_pw_aff mpa) {
 isl::pw_multi_aff pw_multi_aff::from_set(isl::set set) {
   auto res = isl_pw_multi_aff_from_set(set.release());
   return manage(res);
+}
+
+isl::id pw_multi_aff::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_pw_multi_aff_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string pw_multi_aff::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_pw_multi_aff_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
 }
 
 isl::space pw_multi_aff::get_domain_space() const {
@@ -9531,6 +9982,596 @@ isl::pw_multi_aff pw_multi_aff::union_lexmin(isl::pw_multi_aff pma2) const {
 
 isl::pw_multi_aff pw_multi_aff::zero(isl::space space) {
   auto res = isl_pw_multi_aff_zero(space.release());
+  return manage(res);
+}
+
+// implementations for isl::pw_qpolynomial
+isl::pw_qpolynomial manage(__isl_take isl_pw_qpolynomial *ptr) {
+  return pw_qpolynomial(ptr);
+}
+isl::pw_qpolynomial give(__isl_take isl_pw_qpolynomial *ptr) {
+  return manage(ptr);
+}
+
+
+pw_qpolynomial::pw_qpolynomial()
+    : ptr(nullptr) {}
+
+pw_qpolynomial::pw_qpolynomial(const isl::pw_qpolynomial &obj)
+    : ptr(obj.copy()) {}
+pw_qpolynomial::pw_qpolynomial(std::nullptr_t)
+    : ptr(nullptr) {}
+
+
+pw_qpolynomial::pw_qpolynomial(__isl_take isl_pw_qpolynomial *ptr)
+    : ptr(ptr) {}
+
+pw_qpolynomial::pw_qpolynomial(isl::ctx ctx, const std::string &str) {
+  auto res = isl_pw_qpolynomial_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
+pw_qpolynomial &pw_qpolynomial::operator=(isl::pw_qpolynomial obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+pw_qpolynomial::~pw_qpolynomial() {
+  if (ptr)
+    isl_pw_qpolynomial_free(ptr);
+}
+
+__isl_give isl_pw_qpolynomial *pw_qpolynomial::copy() const & {
+  return isl_pw_qpolynomial_copy(ptr);
+}
+
+__isl_keep isl_pw_qpolynomial *pw_qpolynomial::get() const {
+  return ptr;
+}
+
+__isl_give isl_pw_qpolynomial *pw_qpolynomial::release() {
+  isl_pw_qpolynomial *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool pw_qpolynomial::is_null() const {
+  return ptr == nullptr;
+}
+__isl_keep isl_pw_qpolynomial *pw_qpolynomial::keep() const {
+  return get();
+}
+
+__isl_give isl_pw_qpolynomial *pw_qpolynomial::take() {
+  return release();
+}
+
+pw_qpolynomial::operator bool() const {
+  return !is_null();
+}
+
+isl::ctx pw_qpolynomial::get_ctx() const {
+  return isl::ctx(isl_pw_qpolynomial_get_ctx(ptr));
+}
+
+
+std::string pw_qpolynomial::to_str() const {
+  char *Tmp = isl_pw_qpolynomial_to_str(get());
+  if (!Tmp)
+    return "";
+  std::string S(Tmp);
+  free(Tmp);
+  return S;
+}
+
+
+void pw_qpolynomial::dump() const {
+  isl_pw_qpolynomial_dump(get());
+}
+
+
+isl::pw_qpolynomial pw_qpolynomial::add(isl::pw_qpolynomial pwqp2) const {
+  auto res = isl_pw_qpolynomial_add(copy(), pwqp2.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::add_dims(isl::dim type, unsigned int n) const {
+  auto res = isl_pw_qpolynomial_add_dims(copy(), static_cast<enum isl_dim_type>(type), n);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::alloc(isl::set set, isl::qpolynomial qp) {
+  auto res = isl_pw_qpolynomial_alloc(set.release(), qp.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::coalesce() const {
+  auto res = isl_pw_qpolynomial_coalesce(copy());
+  return manage(res);
+}
+
+unsigned int pw_qpolynomial::dim(isl::dim type) const {
+  auto res = isl_pw_qpolynomial_dim(get(), static_cast<enum isl_dim_type>(type));
+  return res;
+}
+
+isl::set pw_qpolynomial::domain() const {
+  auto res = isl_pw_qpolynomial_domain(copy());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::drop_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_pw_qpolynomial_drop_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::val pw_qpolynomial::eval(isl::point pnt) const {
+  auto res = isl_pw_qpolynomial_eval(copy(), pnt.release());
+  return manage(res);
+}
+
+int pw_qpolynomial::find_dim_by_name(isl::dim type, const std::string &name) const {
+  auto res = isl_pw_qpolynomial_find_dim_by_name(get(), static_cast<enum isl_dim_type>(type), name.c_str());
+  return res;
+}
+
+isl::pw_qpolynomial pw_qpolynomial::fix_val(isl::dim type, unsigned int n, isl::val v) const {
+  auto res = isl_pw_qpolynomial_fix_val(copy(), static_cast<enum isl_dim_type>(type), n, v.release());
+  return manage(res);
+}
+
+isl::stat pw_qpolynomial::foreach_piece(const std::function<isl::stat(isl::set, isl::qpolynomial)> &fn) const {
+  auto fn_p = &fn;
+  auto fn_lambda = [](isl_set *arg_0, isl_qpolynomial *arg_1, void *arg_2) -> isl_stat {
+    auto *func = *static_cast<const std::function<isl::stat(isl::set, isl::qpolynomial)> **>(arg_2);
+    stat ret = (*func)(isl::manage(arg_0), isl::manage(arg_1));
+    return isl_stat(ret);
+  };
+  auto res = isl_pw_qpolynomial_foreach_piece(get(), fn_lambda, &fn_p);
+  return isl::stat(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::from_pw_aff(isl::pw_aff pwaff) {
+  auto res = isl_pw_qpolynomial_from_pw_aff(pwaff.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::from_qpolynomial(isl::qpolynomial qp) {
+  auto res = isl_pw_qpolynomial_from_qpolynomial(qp.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::from_range() const {
+  auto res = isl_pw_qpolynomial_from_range(copy());
+  return manage(res);
+}
+
+isl::space pw_qpolynomial::get_domain_space() const {
+  auto res = isl_pw_qpolynomial_get_domain_space(get());
+  return manage(res);
+}
+
+isl::space pw_qpolynomial::get_space() const {
+  auto res = isl_pw_qpolynomial_get_space(get());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::gist(isl::set context) const {
+  auto res = isl_pw_qpolynomial_gist(copy(), context.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::gist_params(isl::set context) const {
+  auto res = isl_pw_qpolynomial_gist_params(copy(), context.release());
+  return manage(res);
+}
+
+isl::boolean pw_qpolynomial::has_equal_space(const isl::pw_qpolynomial &pwqp2) const {
+  auto res = isl_pw_qpolynomial_has_equal_space(get(), pwqp2.get());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::insert_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_pw_qpolynomial_insert_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::intersect_domain(isl::set set) const {
+  auto res = isl_pw_qpolynomial_intersect_domain(copy(), set.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::intersect_params(isl::set set) const {
+  auto res = isl_pw_qpolynomial_intersect_params(copy(), set.release());
+  return manage(res);
+}
+
+isl::boolean pw_qpolynomial::involves_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_pw_qpolynomial_involves_dims(get(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::boolean pw_qpolynomial::involves_nan() const {
+  auto res = isl_pw_qpolynomial_involves_nan(get());
+  return manage(res);
+}
+
+isl::boolean pw_qpolynomial::is_zero() const {
+  auto res = isl_pw_qpolynomial_is_zero(get());
+  return manage(res);
+}
+
+isl::val pw_qpolynomial::max() const {
+  auto res = isl_pw_qpolynomial_max(copy());
+  return manage(res);
+}
+
+isl::val pw_qpolynomial::min() const {
+  auto res = isl_pw_qpolynomial_min(copy());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const {
+  auto res = isl_pw_qpolynomial_move_dims(copy(), static_cast<enum isl_dim_type>(dst_type), dst_pos, static_cast<enum isl_dim_type>(src_type), src_pos, n);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::mul(isl::pw_qpolynomial pwqp2) const {
+  auto res = isl_pw_qpolynomial_mul(copy(), pwqp2.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::neg() const {
+  auto res = isl_pw_qpolynomial_neg(copy());
+  return manage(res);
+}
+
+isl::boolean pw_qpolynomial::plain_is_equal(const isl::pw_qpolynomial &pwqp2) const {
+  auto res = isl_pw_qpolynomial_plain_is_equal(get(), pwqp2.get());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::pow(unsigned int exponent) const {
+  auto res = isl_pw_qpolynomial_pow(copy(), exponent);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::project_domain_on_params() const {
+  auto res = isl_pw_qpolynomial_project_domain_on_params(copy());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::reset_domain_space(isl::space dim) const {
+  auto res = isl_pw_qpolynomial_reset_domain_space(copy(), dim.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::reset_user() const {
+  auto res = isl_pw_qpolynomial_reset_user(copy());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::scale_down_val(isl::val v) const {
+  auto res = isl_pw_qpolynomial_scale_down_val(copy(), v.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::scale_val(isl::val v) const {
+  auto res = isl_pw_qpolynomial_scale_val(copy(), v.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::split_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_pw_qpolynomial_split_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::split_periods(int max_periods) const {
+  auto res = isl_pw_qpolynomial_split_periods(copy(), max_periods);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::sub(isl::pw_qpolynomial pwqp2) const {
+  auto res = isl_pw_qpolynomial_sub(copy(), pwqp2.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::subtract_domain(isl::set set) const {
+  auto res = isl_pw_qpolynomial_subtract_domain(copy(), set.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::to_polynomial(int sign) const {
+  auto res = isl_pw_qpolynomial_to_polynomial(copy(), sign);
+  return manage(res);
+}
+
+isl::pw_qpolynomial pw_qpolynomial::zero(isl::space dim) {
+  auto res = isl_pw_qpolynomial_zero(dim.release());
+  return manage(res);
+}
+
+// implementations for isl::qpolynomial
+isl::qpolynomial manage(__isl_take isl_qpolynomial *ptr) {
+  return qpolynomial(ptr);
+}
+isl::qpolynomial give(__isl_take isl_qpolynomial *ptr) {
+  return manage(ptr);
+}
+
+
+qpolynomial::qpolynomial()
+    : ptr(nullptr) {}
+
+qpolynomial::qpolynomial(const isl::qpolynomial &obj)
+    : ptr(obj.copy()) {}
+qpolynomial::qpolynomial(std::nullptr_t)
+    : ptr(nullptr) {}
+
+
+qpolynomial::qpolynomial(__isl_take isl_qpolynomial *ptr)
+    : ptr(ptr) {}
+
+
+qpolynomial &qpolynomial::operator=(isl::qpolynomial obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+qpolynomial::~qpolynomial() {
+  if (ptr)
+    isl_qpolynomial_free(ptr);
+}
+
+__isl_give isl_qpolynomial *qpolynomial::copy() const & {
+  return isl_qpolynomial_copy(ptr);
+}
+
+__isl_keep isl_qpolynomial *qpolynomial::get() const {
+  return ptr;
+}
+
+__isl_give isl_qpolynomial *qpolynomial::release() {
+  isl_qpolynomial *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool qpolynomial::is_null() const {
+  return ptr == nullptr;
+}
+__isl_keep isl_qpolynomial *qpolynomial::keep() const {
+  return get();
+}
+
+__isl_give isl_qpolynomial *qpolynomial::take() {
+  return release();
+}
+
+qpolynomial::operator bool() const {
+  return !is_null();
+}
+
+isl::ctx qpolynomial::get_ctx() const {
+  return isl::ctx(isl_qpolynomial_get_ctx(ptr));
+}
+
+
+
+void qpolynomial::dump() const {
+  isl_qpolynomial_dump(get());
+}
+
+
+isl::qpolynomial qpolynomial::add(isl::qpolynomial qp2) const {
+  auto res = isl_qpolynomial_add(copy(), qp2.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::add_dims(isl::dim type, unsigned int n) const {
+  auto res = isl_qpolynomial_add_dims(copy(), static_cast<enum isl_dim_type>(type), n);
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::align_params(isl::space model) const {
+  auto res = isl_qpolynomial_align_params(copy(), model.release());
+  return manage(res);
+}
+
+isl::stat qpolynomial::as_polynomial_on_domain(const isl::basic_set &bset, const std::function<isl::stat(isl::basic_set, isl::qpolynomial)> &fn) const {
+  auto fn_p = &fn;
+  auto fn_lambda = [](isl_basic_set *arg_0, isl_qpolynomial *arg_1, void *arg_2) -> isl_stat {
+    auto *func = *static_cast<const std::function<isl::stat(isl::basic_set, isl::qpolynomial)> **>(arg_2);
+    stat ret = (*func)(isl::manage(arg_0), isl::manage(arg_1));
+    return isl_stat(ret);
+  };
+  auto res = isl_qpolynomial_as_polynomial_on_domain(get(), bset.get(), fn_lambda, &fn_p);
+  return isl::stat(res);
+}
+
+unsigned int qpolynomial::dim(isl::dim type) const {
+  auto res = isl_qpolynomial_dim(get(), static_cast<enum isl_dim_type>(type));
+  return res;
+}
+
+isl::qpolynomial qpolynomial::drop_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_qpolynomial_drop_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::val qpolynomial::eval(isl::point pnt) const {
+  auto res = isl_qpolynomial_eval(copy(), pnt.release());
+  return manage(res);
+}
+
+isl::stat qpolynomial::foreach_term(const std::function<isl::stat(isl::term)> &fn) const {
+  auto fn_p = &fn;
+  auto fn_lambda = [](isl_term *arg_0, void *arg_1) -> isl_stat {
+    auto *func = *static_cast<const std::function<isl::stat(isl::term)> **>(arg_1);
+    stat ret = (*func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_qpolynomial_foreach_term(get(), fn_lambda, &fn_p);
+  return isl::stat(res);
+}
+
+isl::qpolynomial qpolynomial::from_aff(isl::aff aff) {
+  auto res = isl_qpolynomial_from_aff(aff.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::from_constraint(isl::constraint c, isl::dim type, unsigned int pos) {
+  auto res = isl_qpolynomial_from_constraint(c.release(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::from_term(isl::term term) {
+  auto res = isl_qpolynomial_from_term(term.release());
+  return manage(res);
+}
+
+isl::val qpolynomial::get_constant_val() const {
+  auto res = isl_qpolynomial_get_constant_val(get());
+  return manage(res);
+}
+
+isl::space qpolynomial::get_domain_space() const {
+  auto res = isl_qpolynomial_get_domain_space(get());
+  return manage(res);
+}
+
+isl::space qpolynomial::get_space() const {
+  auto res = isl_qpolynomial_get_space(get());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::gist(isl::set context) const {
+  auto res = isl_qpolynomial_gist(copy(), context.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::gist_params(isl::set context) const {
+  auto res = isl_qpolynomial_gist_params(copy(), context.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::homogenize() const {
+  auto res = isl_qpolynomial_homogenize(copy());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::infty_on_domain(isl::space dim) {
+  auto res = isl_qpolynomial_infty_on_domain(dim.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::insert_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_qpolynomial_insert_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::boolean qpolynomial::involves_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_qpolynomial_involves_dims(get(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::boolean qpolynomial::is_infty() const {
+  auto res = isl_qpolynomial_is_infty(get());
+  return manage(res);
+}
+
+isl::boolean qpolynomial::is_nan() const {
+  auto res = isl_qpolynomial_is_nan(get());
+  return manage(res);
+}
+
+isl::boolean qpolynomial::is_neginfty() const {
+  auto res = isl_qpolynomial_is_neginfty(get());
+  return manage(res);
+}
+
+isl::boolean qpolynomial::is_zero() const {
+  auto res = isl_qpolynomial_is_zero(get());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::move_dims(isl::dim dst_type, unsigned int dst_pos, isl::dim src_type, unsigned int src_pos, unsigned int n) const {
+  auto res = isl_qpolynomial_move_dims(copy(), static_cast<enum isl_dim_type>(dst_type), dst_pos, static_cast<enum isl_dim_type>(src_type), src_pos, n);
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::mul(isl::qpolynomial qp2) const {
+  auto res = isl_qpolynomial_mul(copy(), qp2.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::nan_on_domain(isl::space dim) {
+  auto res = isl_qpolynomial_nan_on_domain(dim.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::neg() const {
+  auto res = isl_qpolynomial_neg(copy());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::neginfty_on_domain(isl::space dim) {
+  auto res = isl_qpolynomial_neginfty_on_domain(dim.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::one_on_domain(isl::space dim) {
+  auto res = isl_qpolynomial_one_on_domain(dim.release());
+  return manage(res);
+}
+
+isl::boolean qpolynomial::plain_is_equal(const isl::qpolynomial &qp2) const {
+  auto res = isl_qpolynomial_plain_is_equal(get(), qp2.get());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::pow(unsigned int power) const {
+  auto res = isl_qpolynomial_pow(copy(), power);
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::project_domain_on_params() const {
+  auto res = isl_qpolynomial_project_domain_on_params(copy());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::scale_down_val(isl::val v) const {
+  auto res = isl_qpolynomial_scale_down_val(copy(), v.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::scale_val(isl::val v) const {
+  auto res = isl_qpolynomial_scale_val(copy(), v.release());
+  return manage(res);
+}
+
+int qpolynomial::sgn() const {
+  auto res = isl_qpolynomial_sgn(get());
+  return res;
+}
+
+isl::qpolynomial qpolynomial::sub(isl::qpolynomial qp2) const {
+  auto res = isl_qpolynomial_sub(copy(), qp2.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::val_on_domain(isl::space space, isl::val val) {
+  auto res = isl_qpolynomial_val_on_domain(space.release(), val.release());
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::var_on_domain(isl::space dim, isl::dim type, unsigned int pos) {
+  auto res = isl_qpolynomial_var_on_domain(dim.release(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+isl::qpolynomial qpolynomial::zero_on_domain(isl::space dim) {
+  auto res = isl_qpolynomial_zero_on_domain(dim.release());
   return manage(res);
 }
 
@@ -10555,6 +11596,17 @@ isl::basic_set_list set::get_basic_set_list() const {
   return manage(res);
 }
 
+isl::id set::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_set_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string set::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_set_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
 isl::space set::get_space() const {
   auto res = isl_set_get_space(get());
   return manage(res);
@@ -11243,6 +12295,17 @@ isl::space space::from_range() const {
   return manage(res);
 }
 
+isl::id space::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_space_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
+std::string space::get_dim_name(isl::dim type, unsigned int pos) const {
+  auto res = isl_space_get_dim_name(get(), static_cast<enum isl_dim_type>(type), pos);
+  std::string tmp(res);
+  return tmp;
+}
+
 isl::id space::get_tuple_id(isl::dim type) const {
   auto res = isl_space_get_tuple_id(get(), static_cast<enum isl_dim_type>(type));
   return manage(res);
@@ -11459,6 +12522,94 @@ isl::space space::zip() const {
   return manage(res);
 }
 
+// implementations for isl::term
+isl::term manage(__isl_take isl_term *ptr) {
+  return term(ptr);
+}
+isl::term give(__isl_take isl_term *ptr) {
+  return manage(ptr);
+}
+
+
+term::term()
+    : ptr(nullptr) {}
+
+term::term(const isl::term &obj)
+    : ptr(obj.copy()) {}
+term::term(std::nullptr_t)
+    : ptr(nullptr) {}
+
+
+term::term(__isl_take isl_term *ptr)
+    : ptr(ptr) {}
+
+
+term &term::operator=(isl::term obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+term::~term() {
+  if (ptr)
+    isl_term_free(ptr);
+}
+
+__isl_give isl_term *term::copy() const & {
+  return isl_term_copy(ptr);
+}
+
+__isl_keep isl_term *term::get() const {
+  return ptr;
+}
+
+__isl_give isl_term *term::release() {
+  isl_term *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool term::is_null() const {
+  return ptr == nullptr;
+}
+__isl_keep isl_term *term::keep() const {
+  return get();
+}
+
+__isl_give isl_term *term::take() {
+  return release();
+}
+
+term::operator bool() const {
+  return !is_null();
+}
+
+isl::ctx term::get_ctx() const {
+  return isl::ctx(isl_term_get_ctx(ptr));
+}
+
+
+
+
+unsigned int term::dim(isl::dim type) const {
+  auto res = isl_term_dim(get(), static_cast<enum isl_dim_type>(type));
+  return res;
+}
+
+isl::val term::get_coefficient_val() const {
+  auto res = isl_term_get_coefficient_val(get());
+  return manage(res);
+}
+
+isl::aff term::get_div(unsigned int pos) const {
+  auto res = isl_term_get_div(get(), pos);
+  return manage(res);
+}
+
+int term::get_exp(isl::dim type, unsigned int pos) const {
+  auto res = isl_term_get_exp(get(), static_cast<enum isl_dim_type>(type), pos);
+  return res;
+}
+
 // implementations for isl::union_access_info
 isl::union_access_info manage(__isl_take isl_union_access_info *ptr) {
   return union_access_info(ptr);
@@ -11542,6 +12693,11 @@ std::string union_access_info::to_str() const {
 
 isl::union_flow union_access_info::compute_flow() const {
   auto res = isl_union_access_info_compute_flow(copy());
+  return manage(res);
+}
+
+isl::union_access_info union_access_info::set_kill(isl::union_map kill) const {
+  auto res = isl_union_access_info_set_kill(copy(), kill.release());
   return manage(res);
 }
 
@@ -11940,6 +13096,11 @@ isl::union_map union_map::from_range(isl::union_set uset) {
   return manage(res);
 }
 
+isl::id union_map::get_dim_id(isl::dim type, unsigned int pos) const {
+  auto res = isl_union_map_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
+  return manage(res);
+}
+
 uint32_t union_map::get_hash() const {
   auto res = isl_union_map_get_hash(get());
   return res;
@@ -11987,6 +13148,11 @@ isl::union_map union_map::intersect_params(isl::set set) const {
 
 isl::union_map union_map::intersect_range(isl::union_set uset) const {
   auto res = isl_union_map_intersect_range(copy(), uset.release());
+  return manage(res);
+}
+
+isl::union_map union_map::intersect_range_factor_range(isl::union_map factor) const {
+  auto res = isl_union_map_intersect_range_factor_range(copy(), factor.release());
   return manage(res);
 }
 
@@ -12167,6 +13333,11 @@ isl::union_map union_map::range_map() const {
 
 isl::union_map union_map::range_product(isl::union_map umap2) const {
   auto res = isl_union_map_range_product(copy(), umap2.release());
+  return manage(res);
+}
+
+isl::union_map union_map::remove_divs() const {
+  auto res = isl_union_map_remove_divs(copy());
   return manage(res);
 }
 
@@ -12975,6 +14146,233 @@ void union_pw_multi_aff_list::dump() const {
 
 
 
+// implementations for isl::union_pw_qpolynomial
+isl::union_pw_qpolynomial manage(__isl_take isl_union_pw_qpolynomial *ptr) {
+  return union_pw_qpolynomial(ptr);
+}
+isl::union_pw_qpolynomial give(__isl_take isl_union_pw_qpolynomial *ptr) {
+  return manage(ptr);
+}
+
+
+union_pw_qpolynomial::union_pw_qpolynomial()
+    : ptr(nullptr) {}
+
+union_pw_qpolynomial::union_pw_qpolynomial(const isl::union_pw_qpolynomial &obj)
+    : ptr(obj.copy()) {}
+union_pw_qpolynomial::union_pw_qpolynomial(std::nullptr_t)
+    : ptr(nullptr) {}
+
+
+union_pw_qpolynomial::union_pw_qpolynomial(__isl_take isl_union_pw_qpolynomial *ptr)
+    : ptr(ptr) {}
+
+union_pw_qpolynomial::union_pw_qpolynomial(isl::ctx ctx, const std::string &str) {
+  auto res = isl_union_pw_qpolynomial_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
+union_pw_qpolynomial &union_pw_qpolynomial::operator=(isl::union_pw_qpolynomial obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+union_pw_qpolynomial::~union_pw_qpolynomial() {
+  if (ptr)
+    isl_union_pw_qpolynomial_free(ptr);
+}
+
+__isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial::copy() const & {
+  return isl_union_pw_qpolynomial_copy(ptr);
+}
+
+__isl_keep isl_union_pw_qpolynomial *union_pw_qpolynomial::get() const {
+  return ptr;
+}
+
+__isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial::release() {
+  isl_union_pw_qpolynomial *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool union_pw_qpolynomial::is_null() const {
+  return ptr == nullptr;
+}
+__isl_keep isl_union_pw_qpolynomial *union_pw_qpolynomial::keep() const {
+  return get();
+}
+
+__isl_give isl_union_pw_qpolynomial *union_pw_qpolynomial::take() {
+  return release();
+}
+
+union_pw_qpolynomial::operator bool() const {
+  return !is_null();
+}
+
+isl::ctx union_pw_qpolynomial::get_ctx() const {
+  return isl::ctx(isl_union_pw_qpolynomial_get_ctx(ptr));
+}
+
+
+std::string union_pw_qpolynomial::to_str() const {
+  char *Tmp = isl_union_pw_qpolynomial_to_str(get());
+  if (!Tmp)
+    return "";
+  std::string S(Tmp);
+  free(Tmp);
+  return S;
+}
+
+
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::add(isl::union_pw_qpolynomial upwqp2) const {
+  auto res = isl_union_pw_qpolynomial_add(copy(), upwqp2.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::add_pw_qpolynomial(isl::pw_qpolynomial pwqp) const {
+  auto res = isl_union_pw_qpolynomial_add_pw_qpolynomial(copy(), pwqp.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::align_params(isl::space model) const {
+  auto res = isl_union_pw_qpolynomial_align_params(copy(), model.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::coalesce() const {
+  auto res = isl_union_pw_qpolynomial_coalesce(copy());
+  return manage(res);
+}
+
+unsigned int union_pw_qpolynomial::dim(isl::dim type) const {
+  auto res = isl_union_pw_qpolynomial_dim(get(), static_cast<enum isl_dim_type>(type));
+  return res;
+}
+
+isl::union_set union_pw_qpolynomial::domain() const {
+  auto res = isl_union_pw_qpolynomial_domain(copy());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::drop_dims(isl::dim type, unsigned int first, unsigned int n) const {
+  auto res = isl_union_pw_qpolynomial_drop_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::val union_pw_qpolynomial::eval(isl::point pnt) const {
+  auto res = isl_union_pw_qpolynomial_eval(copy(), pnt.release());
+  return manage(res);
+}
+
+isl::pw_qpolynomial union_pw_qpolynomial::extract_pw_qpolynomial(isl::space dim) const {
+  auto res = isl_union_pw_qpolynomial_extract_pw_qpolynomial(get(), dim.release());
+  return manage(res);
+}
+
+int union_pw_qpolynomial::find_dim_by_name(isl::dim type, const std::string &name) const {
+  auto res = isl_union_pw_qpolynomial_find_dim_by_name(get(), static_cast<enum isl_dim_type>(type), name.c_str());
+  return res;
+}
+
+isl::stat union_pw_qpolynomial::foreach_pw_qpolynomial(const std::function<isl::stat(isl::pw_qpolynomial)> &fn) const {
+  auto fn_p = &fn;
+  auto fn_lambda = [](isl_pw_qpolynomial *arg_0, void *arg_1) -> isl_stat {
+    auto *func = *static_cast<const std::function<isl::stat(isl::pw_qpolynomial)> **>(arg_1);
+    stat ret = (*func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_union_pw_qpolynomial_foreach_pw_qpolynomial(get(), fn_lambda, &fn_p);
+  return isl::stat(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::from_pw_qpolynomial(isl::pw_qpolynomial pwqp) {
+  auto res = isl_union_pw_qpolynomial_from_pw_qpolynomial(pwqp.release());
+  return manage(res);
+}
+
+isl::space union_pw_qpolynomial::get_space() const {
+  auto res = isl_union_pw_qpolynomial_get_space(get());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::gist(isl::union_set context) const {
+  auto res = isl_union_pw_qpolynomial_gist(copy(), context.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::gist_params(isl::set context) const {
+  auto res = isl_union_pw_qpolynomial_gist_params(copy(), context.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::intersect_domain(isl::union_set uset) const {
+  auto res = isl_union_pw_qpolynomial_intersect_domain(copy(), uset.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::intersect_params(isl::set set) const {
+  auto res = isl_union_pw_qpolynomial_intersect_params(copy(), set.release());
+  return manage(res);
+}
+
+isl::boolean union_pw_qpolynomial::involves_nan() const {
+  auto res = isl_union_pw_qpolynomial_involves_nan(get());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::mul(isl::union_pw_qpolynomial upwqp2) const {
+  auto res = isl_union_pw_qpolynomial_mul(copy(), upwqp2.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::neg() const {
+  auto res = isl_union_pw_qpolynomial_neg(copy());
+  return manage(res);
+}
+
+isl::boolean union_pw_qpolynomial::plain_is_equal(const isl::union_pw_qpolynomial &upwqp2) const {
+  auto res = isl_union_pw_qpolynomial_plain_is_equal(get(), upwqp2.get());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::reset_user() const {
+  auto res = isl_union_pw_qpolynomial_reset_user(copy());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::scale_down_val(isl::val v) const {
+  auto res = isl_union_pw_qpolynomial_scale_down_val(copy(), v.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::scale_val(isl::val v) const {
+  auto res = isl_union_pw_qpolynomial_scale_val(copy(), v.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::sub(isl::union_pw_qpolynomial upwqp2) const {
+  auto res = isl_union_pw_qpolynomial_sub(copy(), upwqp2.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::subtract_domain(isl::union_set uset) const {
+  auto res = isl_union_pw_qpolynomial_subtract_domain(copy(), uset.release());
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::to_polynomial(int sign) const {
+  auto res = isl_union_pw_qpolynomial_to_polynomial(copy(), sign);
+  return manage(res);
+}
+
+isl::union_pw_qpolynomial union_pw_qpolynomial::zero(isl::space dim) {
+  auto res = isl_union_pw_qpolynomial_zero(dim.release());
+  return manage(res);
+}
+
 // implementations for isl::union_set
 isl::union_set manage(__isl_take isl_union_set *ptr) {
   return union_set(ptr);
@@ -13154,6 +14552,11 @@ isl::stat union_set::foreach_set(const std::function<isl::stat(isl::set)> &fn) c
   return isl::stat(res);
 }
 
+isl::basic_set_list union_set::get_basic_set_list() const {
+  auto res = isl_union_set_get_basic_set_list(get());
+  return manage(res);
+}
+
 uint32_t union_set::get_hash() const {
   auto res = isl_union_set_get_hash(get());
   return res;
@@ -13291,6 +14694,11 @@ isl::union_set union_set::product(isl::union_set uset2) const {
 
 isl::union_set union_set::project_out(isl::dim type, unsigned int first, unsigned int n) const {
   auto res = isl_union_set_project_out(copy(), static_cast<enum isl_dim_type>(type), first, n);
+  return manage(res);
+}
+
+isl::union_set union_set::remove_divs() const {
+  auto res = isl_union_set_remove_divs(copy());
   return manage(res);
 }
 
@@ -13548,6 +14956,11 @@ int val::cmp_si(long i) const {
 
 isl::val val::div(isl::val v2) const {
   auto res = isl_val_div(copy(), v2.release());
+  return manage(res);
+}
+
+isl::val val::div_ui(unsigned long v2) const {
+  auto res = isl_val_div_ui(copy(), v2);
   return manage(res);
 }
 

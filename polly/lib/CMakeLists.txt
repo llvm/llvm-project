@@ -60,7 +60,9 @@ add_library(PollyCore OBJECT
   Transform/FlattenAlgo.cpp
   Transform/ForwardOpTree.cpp
   Transform/DeLICM.cpp
+  Transform/ZoneAlgo.cpp
   Transform/Simplify.cpp
+  Transform/MaximalStaticExpansion.cpp
   ${POLLY_HEADER_FILES}
   )
 set_target_properties(PollyCore PROPERTIES FOLDER "Polly")

@@ -32,7 +32,8 @@ void func(int *ptr) {
 int
 main(int argc, char const *argv[])
 {
-  // This call returns 0 only if the CPU and the kernel support Intel(R) MPX.
+  // This call returns 0 only if the CPU and the kernel support
+  // Intel(R) Memory Protection Extensions (Intel(R) MPX).
   if (prctl(PR_MPX_ENABLE_MANAGEMENT, 0, 0, 0, 0) != 0)
         return -1;
 

@@ -32,7 +32,7 @@ namespace {
 class AArch64 final : public TargetInfo {
 public:
   AArch64();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
@@ -69,7 +69,7 @@ AArch64::AArch64() {
 }
 
 RelExpr AArch64::getRelExpr(uint32_t Type, const SymbolBody &S,
-                            const uint8_t *Loc) const {
+                            const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   default:
     return R_ABS;

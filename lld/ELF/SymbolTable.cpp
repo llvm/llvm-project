@@ -196,6 +196,7 @@ void SymbolTable::applySymbolRenames() {
     Symbol *Dst = KV.first;
     Symbol *Src = KV.second.Target;
     Dst->body()->copy(Src->body());
+    Dst->File = Src->File;
     Dst->Binding = KV.second.OriginalBinding;
   }
 }
@@ -266,8 +267,8 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
   if (!WasInserted && S->body()->Type != SymbolBody::UnknownType &&
       ((Type == STT_TLS) != S->body()->isTls())) {
     error("TLS attribute mismatch: " + toString(*S->body()) +
-          "\n>>> defined in " + toString(S->body()->File) +
-          "\n>>> defined in " + toString(File));
+          "\n>>> defined in " + toString(S->File) + "\n>>> defined in " +
+          toString(File));
   }
 
   return {S, WasInserted};
@@ -295,7 +296,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
   if (WasInserted ||
       (isa<SharedSymbol>(S->body()) && Visibility != STV_DEFAULT)) {
     S->Binding = Binding;
-    replaceBody<Undefined>(S, Name, IsLocal, StOther, Type, File);
+    replaceBody<Undefined>(S, File, Name, IsLocal, StOther, Type);
     return S;
   }
   if (Binding != STB_WEAK) {
@@ -303,7 +304,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
     if (B->isShared() || B->isLazy() || B->isUndefined())
       S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol>(B))
-      cast<SharedFile<ELFT>>(SS->File)->IsUsed = true;
+      SS->getFile<ELFT>()->IsUsed = true;
   }
   if (auto *L = dyn_cast<Lazy>(S->body())) {
     // An undefined weak will not fetch archive members, but we have to remember
@@ -388,7 +389,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
   int Cmp = compareDefined(S, WasInserted, Binding, N);
   if (Cmp > 0) {
     S->Binding = Binding;
-    replaceBody<DefinedCommon>(S, N, Size, Alignment, StOther, Type, File);
+    replaceBody<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
   } else if (Cmp == 0) {
     auto *C = dyn_cast<DefinedCommon>(S->body());
     if (!C) {
@@ -403,7 +404,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
 
     Alignment = C->Alignment = std::max(C->Alignment, Alignment);
     if (Size > C->Size)
-      replaceBody<DefinedCommon>(S, N, Size, Alignment, StOther, Type, File);
+      replaceBody<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
   }
   return S;
 }
@@ -417,7 +418,8 @@ static void warnOrError(const Twine &Msg) {
 
 static void reportDuplicate(SymbolBody *Sym, InputFile *NewFile) {
   warnOrError("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
-              toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
+              toString(Sym->getFile()) + "\n>>> defined in " +
+              toString(NewFile));
 }
 
 template <class ELFT>
@@ -463,8 +465,8 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
                                     Value, Name);
   if (Cmp > 0)
-    replaceBody<DefinedRegular>(S, Name, /*IsLocal=*/false, StOther, Type,
-                                Value, Size, Section, File);
+    replaceBody<DefinedRegular>(S, File, Name, /*IsLocal=*/false, StOther, Type,
+                                Value, Size, Section);
   else if (Cmp == 0)
     reportDuplicate<ELFT>(S->body(),
                           dyn_cast_or_null<InputSectionBase>(Section), Value);
@@ -508,8 +510,8 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
                                     /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)
-    replaceBody<DefinedRegular>(S, Name, /*IsLocal=*/false, StOther, Type, 0, 0,
-                                nullptr, F);
+    replaceBody<DefinedRegular>(S, F, Name, /*IsLocal=*/false, StOther, Type, 0,
+                                0, nullptr);
   else if (Cmp == 0)
     reportDuplicate(S->body(), F);
   return S;
@@ -540,7 +542,7 @@ Symbol *SymbolTable::addLazyArchive(ArchiveFile *F,
   StringRef Name = Sym.getName();
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyArchive>(S, *F, Sym, SymbolBody::UnknownType);
+    replaceBody<LazyArchive>(S, F, Sym, SymbolBody::UnknownType);
     return S;
   }
   if (!S->body()->isUndefined())
@@ -554,7 +556,7 @@ Symbol *SymbolTable::addLazyArchive(ArchiveFile *F,
   // this symbol as used when we added it to the symbol table, but we also need
   // to preserve its type. FIXME: Move the Type field to Symbol.
   if (S->isWeak()) {
-    replaceBody<LazyArchive>(S, *F, Sym, S->body()->Type);
+    replaceBody<LazyArchive>(S, F, Sym, S->body()->Type);
     return S;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
@@ -569,7 +571,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyObject>(S, Name, Obj, SymbolBody::UnknownType);
+    replaceBody<LazyObject>(S, &Obj, Name, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())
@@ -577,7 +579,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
 
   // See comment for addLazyArchive above.
   if (S->isWeak())
-    replaceBody<LazyObject>(S, Name, Obj, S->body()->Type);
+    replaceBody<LazyObject>(S, &Obj, Name, S->body()->Type);
   else if (InputFile *F = Obj.fetch())
     addFile<ELFT>(F);
 }
